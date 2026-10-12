@@ -38,6 +38,7 @@ public sealed class CrowdSimulationConfigLoader
     public CrowdSimulationConfig LoadConfig(ConfigCatalog catalog, ConfigConflictReport? report = null)
     {
         var entry = ConfigPipeline.RequireEntry(catalog, RelativePath, ConfigMergePolicy.DeepObject);
+        using ConfigMergeProvenance.Scope provenance = ConfigMergeProvenance.Open(RelativePath, report);
         JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
         if (merged == null)
         {

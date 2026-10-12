@@ -28,6 +28,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             ConfigConflictReport report = null,
             string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
+            using ConfigMergeProvenance.Scope provenance = ConfigMergeProvenance.Open(relativePath, report);
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (mergedObject == null)

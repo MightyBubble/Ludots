@@ -20,6 +20,7 @@ namespace Ludots.Core.Navigation.AgentProfiles
 
         public AgentProfileRegistry Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            using ConfigMergeProvenance.Scope provenance = ConfigMergeProvenance.Open(RelativePath, report);
             ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(
                 catalog,
                 RelativePath,

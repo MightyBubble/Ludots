@@ -172,14 +172,13 @@ public sealed partial class CrowdSimulationRuntime
         _configResolved = true;
 
         var catalog = engine.ConfigCatalog;
-        if (catalog == null || !catalog.TryGet(CrowdSimulationConfigPath, out var configEntry))
+        if (catalog == null || !catalog.TryGet(CrowdSimulationConfigPath, out _))
         {
             return false;
         }
 
-        var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
-        _configDto = CrowdSimulationConfig.Load(merged);
+        _configDto = new CrowdSimulationConfigLoader(engine.ConfigPipeline)
+            .LoadConfig(catalog, engine.ConfigConflictReport);
 
         if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {

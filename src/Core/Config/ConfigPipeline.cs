@@ -146,6 +146,12 @@ namespace Ludots.Core.Config
 
         public JsonNode? MergeFromCatalog(in ConfigCatalogEntry entry, ConfigConflictReport report)
         {
+            report = ConfigMergeProvenance.ResolveReport(entry.RelativePath, report);
+            if (report == null)
+            {
+                return MergeFromCatalog(in entry);
+            }
+
             var fragments = CollectFragmentsWithSources(in entry);
             return ConfigMerger.MergeManyWithReport(fragments, in entry, report);
         }
@@ -157,6 +163,7 @@ namespace Ludots.Core.Config
             in ConfigCatalogEntry entry, ConfigConflictReport report = null)
         {
             RequirePolicy(in entry, ConfigMergePolicy.ArrayById);
+            report = ConfigMergeProvenance.ResolveReport(entry.RelativePath, report);
             var fragments = CollectFragmentsWithSources(in entry);
             return ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
         }
@@ -168,6 +175,7 @@ namespace Ludots.Core.Config
             in ConfigCatalogEntry entry, ConfigConflictReport report = null)
         {
             RequirePolicy(in entry, ConfigMergePolicy.DeepObject);
+            report = ConfigMergeProvenance.ResolveReport(entry.RelativePath, report);
             var result = report != null
                 ? MergeFromCatalog(in entry, report)
                 : MergeFromCatalog(in entry);

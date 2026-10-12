@@ -18,6 +18,7 @@ namespace Ludots.Core.Config
 
         public void Load(string relativePath, ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            using ConfigMergeProvenance.Scope provenance = ConfigMergeProvenance.Open(relativePath, report);
             Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");

@@ -38,6 +38,14 @@ namespace Ludots.Core.Config
                 report.RecordFragment(entry.RelativePath, fragments[i].SourceUri);
             }
 
+            // 数组整段替换，胜出记最后一份片段，不记字段。
+            if (fragments.Count > 0 &&
+                entry.MergePolicy != ConfigMergePolicy.ArrayById &&
+                entry.MergePolicy != ConfigMergePolicy.ArrayAppend)
+            {
+                report.RecordFileWinner(entry.RelativePath, fragments[fragments.Count - 1].SourceUri);
+            }
+
             if (entry.MergePolicy == ConfigMergePolicy.ArrayById)
             {
                 var entries = MergeArrayByIdToEntriesCore(fragments, in entry, report);

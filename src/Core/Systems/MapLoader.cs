@@ -425,6 +425,7 @@ namespace Ludots.Core.Systems
 
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
         {
+            using ConfigMergeProvenance.Scope provenance = ConfigMergeProvenance.Open("Entities/templates.json", report);
             // This loads "Entities/templates.json" from Core and all Mods
             // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json", catalog, report);
