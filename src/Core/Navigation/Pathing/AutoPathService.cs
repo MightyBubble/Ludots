@@ -200,12 +200,47 @@ namespace Ludots.Core.Navigation.Pathing
             }
 
             CompiledAgentType agent = ResolveAgent(agentTypeId);
-            if (!_navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
+            if (_meshQueries != null && _meshQueries.TryGetValue(agent.Id, out NavQueryService cached))
+            {
+                return cached.TrySnapToSurface(worldXcm, worldZcm, out snappedXcm, out snappedZcm);
+            }
+
+            if (!_navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out NavQueryService query))
             {
                 return false;
             }
 
             return query.TrySnapToSurface(worldXcm, worldZcm, out snappedXcm, out snappedZcm);
+        }
+
+        public bool TryReadNavPublication(string agentTypeId, out int layer, out int profile, out uint revision)
+        {
+            layer = 0;
+            profile = 0;
+            revision = 0;
+            if (!_navMeshAvailable || _navRegistry == null)
+            {
+                return false;
+            }
+
+            CompiledAgentType agent = ResolveAgent(agentTypeId);
+            if (_meshQueries != null && _meshQueries.TryGetValue(agent.Id, out NavQueryService cached))
+            {
+                layer = cached.Layer;
+                profile = cached.Profile;
+                revision = cached.Store.Revision;
+                return true;
+            }
+
+            if (!_navRegistry.TryGetStore(agent.NavLayer, agent.NavProfileIndex, out NavTileStore store))
+            {
+                return false;
+            }
+
+            layer = agent.NavLayer;
+            profile = agent.NavProfileIndex;
+            revision = store.Revision;
+            return true;
         }
 
         private CompiledAgentType ResolveAgent(string agentTypeId)

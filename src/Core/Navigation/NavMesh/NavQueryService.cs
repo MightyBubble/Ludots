@@ -1,4 +1,5 @@
 using System;
+using DotRecast.Detour;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Navigation.NavMesh
@@ -79,15 +80,18 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private readonly NavTileStore _store;
         private readonly int _layer;
+        private readonly int _profile;
         private readonly NavAreaCostTable _areaCosts;
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
         private readonly int _originXcm;
         private readonly int _originZcm;
+        private IDtQueryFilter? _filter;
 
         public NavQueryService(
             NavTileStore store,
             int layer,
+            int profile,
             NavAreaCostTable areaCosts,
             int tileWidthCm,
             int tileHeightCm,
@@ -96,6 +100,7 @@ namespace Ludots.Core.Navigation.NavMesh
             : this(
                 store,
                 layer,
+                profile,
                 areaCosts,
                 Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
                 Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
@@ -107,6 +112,7 @@ namespace Ludots.Core.Navigation.NavMesh
         private NavQueryService(
             NavTileStore store,
             int layer,
+            int profile,
             NavAreaCostTable areaCosts,
             Fix64 tileWidthCm,
             Fix64 tileHeightCm,
@@ -115,12 +121,25 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
+            _profile = profile;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
             _originXcm = originXcm;
             _originZcm = originZcm;
         }
+
+        public int Layer => _layer;
+
+        public int Profile => _profile;
+
+        public NavTileStore Store => _store;
+
+        internal object? ResidentMesh => ResidentDetourNavMesh.MeshOrNull(_store);
+
+        internal int ResidentMeshBuildCount => ResidentDetourNavMesh.BuildCount(_store);
+
+        private IDtQueryFilter Filter => _filter ??= DetourNavQueryEngine.BuildDefaultFilter(_areaCosts);
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
         {
@@ -162,65 +181,24 @@ namespace Ludots.Core.Navigation.NavMesh
             outXcm = worldXcm;
             outZcm = worldZcm;
 
-            if (!TryProject(worldXcm, worldZcm, out NavLocation loc))
+            if (!TryProject(worldXcm, worldZcm, out _))
             {
                 return false;
             }
 
-            NavTile tile;
-            try
-            {
-                tile = _store.GetOrLoad(loc.TileId);
-            }
-            catch
-            {
-                return false;
-            }
-
-            if (_store.SnapshotLoadedTiles() is not { Length: > 0 } tiles)
+            int tileWidthCm = _tileWidthCm.RoundToInt();
+            int tileHeightCm = _tileHeightCm.RoundToInt();
+            if (!_store.TryRunStableRead(
+                    () => ResidentDetourNavMesh.Snap(_store, _layer, Filter, tileWidthCm, tileHeightCm, worldXcm, worldZcm),
+                    out SurfaceSnap snap,
+                    MaxStableRevisionAttempts) ||
+                !snap.Ok)
             {
                 return false;
             }
 
-            var navMesh = DetourNavQueryEngine.BuildNavMeshForSurfaceQueries(
-                tiles,
-                _layer,
-                _tileWidthCm.RoundToInt(),
-                _tileHeightCm.RoundToInt());
-            if (navMesh == null)
-            {
-                return false;
-            }
-
-            var query = new DotRecast.Detour.DtNavMeshQuery(navMesh);
-            var filter = DetourNavQueryEngine.BuildDefaultFilter(_areaCosts);
-
-            float tileWidthM = _tileWidthCm.RoundToInt() / 100f;
-            float tileHeightM = _tileHeightCm.RoundToInt() / 100f;
-            var extents = new DotRecast.Core.Numerics.RcVec3f(
-                MathF.Max(1f, tileWidthM * 0.5f),
-                256f,
-                MathF.Max(1f, tileHeightM * 0.5f));
-
-            var probe = new DotRecast.Core.Numerics.RcVec3f(worldXcm / 100f, 0f, worldZcm / 100f);
-            var status = query.FindNearestPoly(probe, extents, filter, out long polyRef, out _, out _);
-            if (status.Failed() || polyRef == 0)
-            {
-                return false;
-            }
-
-            // ClosestPointOnPoly (not ...Boundary): the boundary variant always projects onto the
-            // polygon edge, which would drag every agent to a triangle edge and break formation
-            // spacing. This variant returns the point unchanged when it already lies inside the
-            // polygon, and only pulls it to the closest point when it is genuinely outside.
-            status = query.ClosestPointOnPoly(polyRef, probe, out var closest, out _);
-            if (status.Failed())
-            {
-                return false;
-            }
-
-            outXcm = (int)MathF.Round(closest.X * 100f);
-            outZcm = (int)MathF.Round(closest.Z * 100f);
+            outXcm = snap.Xcm;
+            outZcm = snap.Zcm;
             return true;
         }
 
@@ -244,10 +222,10 @@ namespace Ludots.Core.Navigation.NavMesh
                 _store.GetOrLoad(LocateTile(startXcm, startZcm));
                 _store.GetOrLoad(LocateTile(goalXcm, goalZcm));
 
-                return DetourNavQueryEngine.FindPath(
-                    _store.SnapshotLoadedTiles(),
+                return ResidentDetourNavMesh.FindPath(
+                    _store,
                     _layer,
-                    _areaCosts,
+                    Filter,
                     _tileWidthCm.RoundToInt(),
                     _tileHeightCm.RoundToInt(),
                     startXcm,
