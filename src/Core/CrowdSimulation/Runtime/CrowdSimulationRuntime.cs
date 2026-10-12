@@ -19,6 +19,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -284,7 +285,20 @@ public sealed partial class CrowdSimulationRuntime
             engine.MapLoader.TemplateRegistry.GetAll(), _configDto!, mapConfig, agentProfiles);
 
         // ── 资产(走 VFS,跨 mod 解析,冲突即 fail-fast)──
-        var surface = NavSurfaceAsset.Read(OpenAsset(engine, "assets/" + runtimeConfig.SurfaceAsset));
+        string surfaceAssetPath = "assets/" + runtimeConfig.SurfaceAsset;
+        var surface = NavSurfaceAsset.Read(OpenAsset(engine, surfaceAssetPath));
+        string heightAssetPath = RequireHeightAssetPath(mapConfig, mapId);
+        var heightAsset = ContinuousHeightmapBinary.Read(OpenAsset(engine, heightAssetPath));
+        BoardConfig solverBoard = NavSolverDeclaration.RequireBoard(
+            mapConfig, NavSolverDeclaration.RequireMap(navmesh, mapConfig.Id));
+        NavSurfaceContract.ValidateWorldSize(
+            solverBoard.WidthCm,
+            solverBoard.HeightCm,
+            runtimeConfig.NavCellSizeCm,
+            surface,
+            surfaceAssetPath,
+            heightAsset,
+            heightAssetPath);
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(
             mapConfig,
             engine.MapLoader.TemplateRegistry.GetAll().Where(t => !string.IsNullOrWhiteSpace(t.Id))
@@ -295,8 +309,7 @@ public sealed partial class CrowdSimulationRuntime
         _mapSurfaceBlockers = mapSurface.Blockers;
         _mapSurfaceBridges = mapSurface.Bridges;
         var heights = NavHeightField.FromHeightmap(
-            ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
-            runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
+            heightAsset, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
         _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
         _deck = deck;
