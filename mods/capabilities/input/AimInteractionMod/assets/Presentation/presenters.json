@@ -321,56 +321,118 @@
     "rules": [
       {
         "event": {
-          "kind": "EntityCollectionMemberAdded",
-          "key": "aim.indicating"
+          "kind": "ContextActivated",
+          "key": "interaction.context.aim.click"
         },
         "command": {
           "kind": "CreatePresenter",
           "definitionId": "aim.range",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
         },
         "condition": {
-          "inline": "SourceHasVisualTransform"
+          "inline": "OwnerHasVisualTransform"
         }
       },
       {
         "event": {
-          "kind": "EntityCollectionMemberRemoved",
-          "key": "aim.indicating"
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.aim.click"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
           "definitionId": "aim.range",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
         }
       },
       {
         "event": {
-          "kind": "EntityCollectionMemberAdded",
-          "key": "aim.indicating"
+          "kind": "ContextActivated",
+          "key": "interaction.context.aim.click"
         },
         "command": {
           "kind": "CreatePresenter",
           "definitionId": "aim.line",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
         },
         "condition": {
-          "inline": "SourceHasVisualTransform"
+          "inline": "OwnerHasVisualTransform"
         }
       },
       {
         "event": {
-          "kind": "EntityCollectionMemberRemoved",
-          "key": "aim.indicating"
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.aim.click"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
           "definitionId": "aim.line",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.aim.release"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "aim.range",
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
+        },
+        "condition": {
+          "inline": "OwnerHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.aim.release"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "aim.range",
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.aim.release"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "aim.line",
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
+        },
+        "condition": {
+          "inline": "OwnerHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.aim.release"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "aim.line",
+          "scopeSource": "EventKeyId",
+          "ownerSource": "EventSourceCollectionMember",
+          "ownerCollection": "aim.actors"
         }
       },
       {

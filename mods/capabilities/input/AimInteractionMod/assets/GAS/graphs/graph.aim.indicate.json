@@ -29,11 +29,6 @@
         "op": "TargetListGet"
       },
       {
-        "id": "write",
-        "op": "WriteCollection",
-        "collectionKey": "aim.indicating"
-      },
-      {
         "id": "invoke_stick",
         "op": "InvokeGraph",
         "functionName": "graph.aim.apply_stick"
@@ -300,7 +295,7 @@
       {
         "from": "fc_sjump",
         "fromPort": "true",
-        "to": "write"
+        "to": "invoke_stick"
       },
       {
         "from": "fc_sjump",
@@ -320,7 +315,7 @@
       {
         "from": "fc_pjump",
         "fromPort": "true",
-        "to": "write"
+        "to": "invoke_stick"
       },
       {
         "from": "fc_pjump",
@@ -334,11 +329,6 @@
       },
       {
         "from": "fc_wf",
-        "fromPort": "next",
-        "to": "write"
-      },
-      {
-        "from": "write",
         "fromPort": "next",
         "to": "invoke_stick"
       },
@@ -365,12 +355,6 @@
         "from": "c0",
         "fromPort": "value",
         "to": "member",
-        "toPort": "value"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "write",
         "toPort": "value"
       },
       {

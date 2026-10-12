@@ -247,7 +247,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineIndicatorLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} | aimIndicating={DescribeCollectionByKey(engine, aimCollections, "aim.indicating")} | aimHover={DescribeCollectionByKey(engine, aimCollections, "aim.hover")}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} | aimHover={DescribeCollectionByKey(engine, aimCollections, "aim.hover")}");
             Assert.That(
                 DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
                 Does.Match("count=[1-9]"),
@@ -282,7 +282,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)} || aimIndicating={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "aim.indicating")}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)}");
             RightClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             Tick(engine, 2, frameTimesMs);
             Assert.That(

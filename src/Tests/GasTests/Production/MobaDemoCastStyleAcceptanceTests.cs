@@ -128,18 +128,15 @@ public sealed class MobaDemoCastStyleAcceptanceTests
     }
 
     [Test]
-    public void AimClick_WSubmitsOnThePressTick_AndAimIndicatingStaysEmpty()
+    public void AimClick_WSubmitsOnThePressTick_WithoutOpeningAim()
     {
         using GameEngine engine = CreateEngine(out TestInputBackend input);
         Entity hero = FindEntity(engine.World, "Hero");
         Press(engine, input, "<Keyboard>/F3");
         Assert.That(ReadCastMode(engine, hero), Is.EqualTo(AimClickMode), Diagnostics(engine));
 
-        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-            ?? throw new InvalidOperationException("EntityCollectionStore missing.");
         CommandIntentSubmissionBuffer submissions = engine.GetService(CoreServiceKeys.CommandIntentSubmissions)
             ?? throw new InvalidOperationException("CommandIntentSubmissions missing.");
-        Assert.That(CountCollectionMembers(collections, "aim.indicating"), Is.EqualTo(0));
         float speedBefore = ReadAttribute(engine.World, hero, "MoveSpeed");
         input.SetButton("<Keyboard>/w", true);
         int pressTick = -1;
@@ -170,7 +167,6 @@ public sealed class MobaDemoCastStyleAcceptanceTests
             Assert.That(cast.Slot, Is.EqualTo(1), Diagnostics(engine));
             Assert.That(cast.HasTarget, Is.False, Diagnostics(engine));
             Assert.That(IsDerivedContextActive(engine, hero, AimingContext), Is.False, Diagnostics(engine));
-            Assert.That(CountCollectionMembers(collections, "aim.indicating"), Is.EqualTo(0), Diagnostics(engine));
         });
 
         var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)

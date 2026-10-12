@@ -28,6 +28,8 @@ namespace Ludots.Core.Presentation.Presenters
         public Entity Target;
         public Entity Viewer;
         public PresenterCommandEntitySource OwnerSource;
+        public int OwnerCollectionKeyId;
+        public int OwnerMemberIndex;
         public Vector3 Position;
         public bool UseEventPosition;
         public bool HasParamPayload;

@@ -225,25 +225,26 @@
         "op": "HaltReturnInt"
       },
       {
+        "id": "is_click",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "is_release",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
         "id": "halt_ok",
         "op": "HaltReturnInt"
-      },
-      {
-        "id": "q_ind",
-        "op": "QueryFromCollection",
-        "collectionKey": "aim.indicating"
-      },
-      {
-        "id": "iget",
-        "op": "TargetListGet"
-      },
-      {
-        "id": "ialive",
-        "op": "LoadEntityPosValid"
-      },
-      {
-        "id": "ijump",
-        "op": "JumpIfFalse"
       },
       {
         "id": "read_tgt",
@@ -520,7 +521,7 @@
       {
         "from": "set_hover",
         "fromPort": "next",
-        "to": "q_ind"
+        "to": "is_click"
       },
       {
         "from": "hover_radius",
@@ -550,7 +551,7 @@
       {
         "from": "write_null",
         "fromPort": "next",
-        "to": "q_ind"
+        "to": "is_click"
       },
       {
         "from": "q_hover",
@@ -566,31 +567,6 @@
         "from": "near_jump",
         "fromPort": "false",
         "to": "null_get"
-      },
-      {
-        "from": "q_ind",
-        "fromPort": "next",
-        "to": "iget"
-      },
-      {
-        "from": "iget",
-        "fromPort": "next",
-        "to": "ialive"
-      },
-      {
-        "from": "ialive",
-        "fromPort": "next",
-        "to": "ijump"
-      },
-      {
-        "from": "ijump",
-        "fromPort": "false",
-        "to": "halt_ok"
-      },
-      {
-        "from": "ijump",
-        "fromPort": "true",
-        "to": "read_tgt"
       },
       {
         "from": "read_tgt",
@@ -686,6 +662,36 @@
         "from": "write_stick_off",
         "fromPort": "next",
         "to": "write_invalid"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "next",
+        "to": "click_jump"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "true",
+        "to": "read_tgt"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "false",
+        "to": "is_release"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "next",
+        "to": "release_jump"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "true",
+        "to": "read_tgt"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "halt_ok"
       }
     ],
     "valueEdges": [
@@ -1002,30 +1008,6 @@
         "toPort": "value"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "q_ind",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "iget",
-        "toPort": "value"
-      },
-      {
-        "from": "iget",
-        "fromPort": "value",
-        "to": "ialive",
-        "toPort": "source"
-      },
-      {
-        "from": "ialive",
-        "fromPort": "value",
-        "to": "ijump",
-        "toPort": "condition"
-      },
-      {
         "from": "member",
         "fromPort": "value",
         "to": "read_tgt",
@@ -1186,6 +1168,30 @@
         "fromPort": "value",
         "to": "write_point_off",
         "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "source"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "value",
+        "to": "click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "source"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "value",
+        "to": "release_jump",
+        "toPort": "condition"
       }
     ]
   }

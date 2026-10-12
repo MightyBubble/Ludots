@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
@@ -240,6 +241,10 @@ namespace Ludots.Core.Presentation.Systems
 
                 case InlineConditionKind.SourceHasVisualTransform:
                     return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
+
+                case InlineConditionKind.OwnerHasVisualTransform:
+                    Entity owner = ResolveCommandOwner(in rule.Command, in evt);
+                    return World.Has<VisualTransform>(owner);
 
                 case InlineConditionKind.EventMagnitudePositive:
                     return evt.Magnitude > 0f;
@@ -587,13 +592,39 @@ namespace Ludots.Core.Presentation.Systems
 
         }
 
-        private static Entity ResolveCommandOwner(in PresenterCommand cmd, in PresentationEvent evt)
+        private Entity ResolveCommandOwner(in PresenterCommand cmd, in PresentationEvent evt)
         {
-            return cmd.OwnerSource switch
+            if (cmd.OwnerSource == PresenterCommandEntitySource.EventTarget)
             {
-                PresenterCommandEntitySource.EventTarget => evt.Target,
-                _ => evt.Source,
-            };
+                return evt.Target;
+            }
+
+            if (cmd.OwnerSource != PresenterCommandEntitySource.EventSourceCollectionMember)
+            {
+                return evt.Source;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? raw) ||
+                raw is not EntityCollectionStore store)
+            {
+                throw new InvalidOperationException(
+                    "Presenter command ownerSource EventSourceCollectionMember requires a bound EntityCollectionStore.");
+            }
+
+            if (!store.TryGet(evt.Source, cmd.OwnerCollectionKeyId, out EntityCollectionHandle handle) ||
+                !store.TryGetEntityAt(handle, cmd.OwnerMemberIndex, out Entity member))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter command ownerSource EventSourceCollectionMember: subject {evt.Source} collection {cmd.OwnerCollectionKeyId} has no member at index {cmd.OwnerMemberIndex}.");
+            }
+
+            if (!World.IsAlive(member))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter command ownerSource EventSourceCollectionMember: member {member} at index {cmd.OwnerMemberIndex} of collection {cmd.OwnerCollectionKeyId} on subject {evt.Source} is not alive.");
+            }
+
+            return member;
         }
 
         private static Entity NormalizeOptionalEntity(Entity entity)

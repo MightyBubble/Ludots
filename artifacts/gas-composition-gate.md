@@ -22,6 +22,9 @@
 | 无目标 / 只单位 / 只地面 / 单位或地面 | 2 | `graph.aim.rule.none`、`graph.aim.rule.unit_only`、`graph.aim.rule.ground_only`、`graph.aim.rule.unit_or_ground` |
 | 哪颗技能用哪条规则 | 2 的数据 | `abilities.json` 的 `triggerGraphs` |
 | 槽位上的技能没有规则图接住 | 2 | 规则图写 `aim.rule.handled`，按下图读不到就 `Fail` |
+| 范围圈和指示线跟着情境开关 | 2 | `aim.rules` 订阅 `ContextActivated` / `ContextDeactivated`，key 是 `interaction.context.aim.click` 与 `interaction.context.aim.release` |
+| 指示器画在事件源拥有的集合成员上 | 0 | `PresenterCommandEntitySource.EventSourceCollectionMember`（`ownerCollection` + `ownerMemberIndex`），条件 `OwnerHasVisualTransform` |
+| 悬停圈 | 2 | 集合 `aim.hover` 的成员增减，presenter `aim.target` |
 
 ### 3. Reuse list
 
@@ -29,6 +32,7 @@
 - Queues / Systems: `TriggerManager.FireMapEvent` 同步派发；技能域挂载已有的 `AbilityId` 过滤
 - Resolvers / Registries: `AbilitySlotResolver`（槽位解析不重写）、`EventSchemaRegistry` 的传输元数据
 - Existing presets / graphs: `graph.aim.resolve_submit`、`graph.aim.indicate`、选中单位改绑的 hook
+- Presenter: 已有 `ContextActivated` / `ContextDeactivated`（事件源是情境主体）。指示器要画在主体拥有的集合成员上，所以命令增加通用的 `ownerSource=EventSourceCollectionMember`，不新增瞄准事件种类
 
 ### 4. New Layer 0 ops (if any)
 

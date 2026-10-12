@@ -20,16 +20,6 @@
         "intValue": 2
       },
       {
-        "id": "q_ind",
-        "op": "QueryFromCollection",
-        "collectionKey": "aim.indicating"
-      },
-      {
-        "id": "sub_ind",
-        "op": "WriteCollection",
-        "collectionKey": "aim.indicating"
-      },
-      {
         "id": "q_hov",
         "op": "QueryFromCollection",
         "collectionKey": "aim.hover"
@@ -98,16 +88,6 @@
       },
       {
         "from": "c2",
-        "fromPort": "next",
-        "to": "q_ind"
-      },
-      {
-        "from": "q_ind",
-        "fromPort": "next",
-        "to": "sub_ind"
-      },
-      {
-        "from": "sub_ind",
         "fromPort": "next",
         "to": "q_hov"
       },
@@ -182,18 +162,6 @@
         "from": "c1",
         "fromPort": "value",
         "to": "halt",
-        "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "q_ind",
-        "toPort": "source"
-      },
-      {
-        "from": "c2",
-        "fromPort": "value",
-        "to": "sub_ind",
         "toPort": "value"
       },
       {

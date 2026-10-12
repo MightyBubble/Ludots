@@ -345,7 +345,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                    $"range={TryReadFloat("aim.range_cm")} stick=({TryReadFloat("aim.stick.x")},{TryReadFloat("aim.stick.y")}) valid={TryReadInt("aim.stick.valid")} " +
                    $"slot={TryReadInt("aim.slot")} point={point} " +
                    $"hero={Format(Position(Hero))} near={Format(Position(Near))} stickDummy={Format(Position(StickDummy))} " +
-                   $"indicating={CollectionCount("aim.indicating")} hover={CollectionCount("aim.hover")} " +
+                   $"hover={CollectionCount("aim.hover")} " +
                    $"actors={CollectionCount("aim.actors")} command={CollectionCount("collection.command.source")} " +
                    $"triggers={TriggerErrors()} exec={DescribeExec()} order={DescribeActiveOrder()} drain={DrainReason()}";
         }
@@ -433,8 +433,8 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         {
             AimFor(surface, target);
             PressSlot(surface, slot);
-            WaitUntil(() => CollectionCount("aim.indicating") > 0, 4);
-            Assert.That(CollectionCount("aim.indicating"), Is.GreaterThan(0), Diag($"indicate slot {slot}"));
+            WaitUntil(AimGestureOpen, 4);
+            Assert.That(AimGestureOpen(), Is.True, Diag($"indicate slot {slot}"));
             if (target == null)
             {
                 Assert.That(CollectionCount("aim.hover"), Is.EqualTo(0), Diag($"hover slot {slot}"));
@@ -449,7 +449,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 Cancel(surface);
                 ReleaseSlot(surface, slot);
                 Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag($"cancel slot {slot}"));
-                Assert.That(CollectionCount("aim.indicating"), Is.EqualTo(0), Diag($"cancel indicating slot {slot}"));
+                Assert.That(AimGestureOpen(), Is.False, Diag($"cancel indicating slot {slot}"));
                 Assert.That(CollectionCount("aim.hover"), Is.EqualTo(0), Diag($"cancel hover slot {slot}"));
                 Settle();
                 return;
@@ -737,6 +737,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             }
 
             return registry.GetName(pref.DefaultCastModeId);
+        }
+
+        private bool AimGestureOpen()
+        {
+            string contexts = Contexts();
+            return contexts.Contains("interaction.context.aim.click", StringComparison.Ordinal) ||
+                contexts.Contains("interaction.context.aim.release", StringComparison.Ordinal);
         }
 
         private string Contexts()

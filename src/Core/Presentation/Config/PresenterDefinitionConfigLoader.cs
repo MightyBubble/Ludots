@@ -276,6 +276,8 @@ namespace Ludots.Core.Presentation.Config
             };
             CopyBindSpawnField(createCommand, bindSpawn, "scopeTag");
             CopyBindSpawnField(createCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerCollection");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerMemberIndex");
             CopyBindSpawnField(createCommand, bindSpawn, "useEventPosition");
 
             var destroyCommand = new JsonObject
@@ -285,6 +287,8 @@ namespace Ludots.Core.Presentation.Config
             };
             CopyBindSpawnField(destroyCommand, bindSpawn, "scopeTag");
             CopyBindSpawnField(destroyCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerCollection");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerMemberIndex");
 
             var spawnRule = new JsonObject
             {
@@ -941,7 +945,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] BindSpawnFields =
         {
             "template", "spawnedOn", "destroyedOn", "condition",
-            "scopeTag", "scopeSource", "ownerSource", "useEventPosition",
+            "scopeTag", "scopeSource", "ownerSource", "ownerCollection", "ownerMemberIndex", "useEventPosition",
         };
 
         private static readonly string[] BehaviorSlotFields =
@@ -1177,6 +1181,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] CommandFields =
         {
             "kind", "route", "definitionId", "scopeTag", "scopeSource", "ownerSource",
+            "ownerCollection", "ownerMemberIndex",
             "useEventPosition", "paramKey", "paramLane", "valueSource",
             "paramValue", "intValue", "vectorValue", "paramGraphProgramId",
             "vectorXSource", "vectorYSource", "vectorZSource", "vectorWSource",
@@ -1569,6 +1574,8 @@ namespace Ludots.Core.Presentation.Config
             bool hasVectorSources = HasCommandVectorSources(obj);
             bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
             PresenterCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
+            PresenterCommandEntitySource ownerSource = ParseCommandOwnerSource(obj, commandKind, context);
+            ParseOwnerCollection(obj, ownerSource, context, out int ownerCollectionKeyId, out int ownerMemberIndex);
             return new PresenterCommand
             {
                 CommandKind = commandKind,
@@ -1578,7 +1585,9 @@ namespace Ludots.Core.Presentation.Config
                 ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(obj["scopeTag"]),
                 ScopeSource = ParseCommandScopeSource(obj, commandKind, context),
-                OwnerSource = ParseCommandOwnerSource(obj, commandKind, context),
+                OwnerSource = ownerSource,
+                OwnerCollectionKeyId = ownerCollectionKeyId,
+                OwnerMemberIndex = ownerMemberIndex,
                 UseEventPosition = ParseCommandUseEventPosition(obj, commandKind, context),
                 HasParamPayload = hasParamPayload,
                 ParamKey = commandKind == PresenterCommandKind.SetParam || hasParamPayload
@@ -1716,6 +1725,10 @@ namespace Ludots.Core.Presentation.Config
                 : PresenterCommandValueSource.Fixed;
             int paramGraphProgramId = ParseExtensionCommandParamGraphProgramId(obj, hasParamPayload, valueSource, context);
             bool hasVectorSources = HasCommandVectorSources(obj);
+            PresenterCommandEntitySource ownerSource = obj["ownerSource"] != null
+                ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
+                : PresenterCommandEntitySource.EventSource;
+            ParseOwnerCollection(obj, ownerSource, context, out int ownerCollectionKeyId, out int ownerMemberIndex);
 
             return new PresenterCommand
             {
@@ -1730,9 +1743,9 @@ namespace Ludots.Core.Presentation.Config
                 ScopeSource = obj["scopeSource"] != null
                     ? ParseRequiredEnum<PresenterCommandScopeSource>(obj["scopeSource"], $"{context}.scopeSource")
                     : PresenterCommandScopeSource.Fixed,
-                OwnerSource = obj["ownerSource"] != null
-                    ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
-                    : PresenterCommandEntitySource.EventSource,
+                OwnerSource = ownerSource,
+                OwnerCollectionKeyId = ownerCollectionKeyId,
+                OwnerMemberIndex = ownerMemberIndex,
                 UseEventPosition = obj["useEventPosition"] != null &&
                     ParseRequiredBool(obj["useEventPosition"], $"{context}.useEventPosition"),
                 HasParamPayload = hasParamPayload,
@@ -1887,6 +1900,49 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return ParseRequiredEnum<PresenterCommandEntitySource>(node, $"{context}.ownerSource");
+        }
+
+        private void ParseOwnerCollection(
+            JsonObject obj,
+            PresenterCommandEntitySource ownerSource,
+            string context,
+            out int keyId,
+            out int index)
+        {
+            JsonNode? collection = obj["ownerCollection"];
+            JsonNode? indexNode = obj["ownerMemberIndex"];
+            if (ownerSource != PresenterCommandEntitySource.EventSourceCollectionMember)
+            {
+                if (collection != null || indexNode != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.ownerCollection is only valid when ownerSource is '{PresenterCommandEntitySource.EventSourceCollectionMember}'.");
+                }
+
+                keyId = 0;
+                index = 0;
+                return;
+            }
+
+            string name = ParseRequiredSemanticString(collection, $"{context}.ownerCollection");
+            keyId = _resolveEntityCollectionKeyId(name);
+            if (keyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.ownerCollection references unknown entity collection '{name}'.");
+            }
+
+            index = 0;
+            if (indexNode == null)
+            {
+                return;
+            }
+
+            index = ParseRequiredInt(indexNode, $"{context}.ownerMemberIndex");
+            if (index < 0)
+            {
+                throw new InvalidOperationException($"{context}.ownerMemberIndex must be >= 0.");
+            }
         }
 
         private static PresenterCommandScopeSource ParseCommandScopeSource(

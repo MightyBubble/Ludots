@@ -17,7 +17,7 @@
 
 `scheme.aim.kbm_skills` 与 `scheme.aim.gamepad_left` 写在瞄准能力 mod 里，因为换装的是通用键位，不是这一场的英雄。
 
-F1 `castMode.smart`，F2 `castMode.aim_release`（按住转向，松开下令），F3 `castMode.aim_click`（先打开指示器，再确认）。指示器集合是 `aim.indicating` 和 `aim.hover`，只在 F2/F3 的前台瞄准 context 里有成员。
+F1 `castMode.smart`，F2 `castMode.aim_release`（按住转向，松开下令），F3 `castMode.aim_click`（先打开指示器，再确认）。范围圈和指示线跟着 `interaction.context.aim.click` / `interaction.context.aim.release` 的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
 
 ## 怎么启动
 
@@ -33,4 +33,4 @@ scripts/run-mod-launcher.cmd cli launch preset:aim_control_schemes_raylib --adap
 dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --filter "FullyQualifiedName~AimControlSchemesShowcaseAcceptanceTests"
 ```
 
-覆盖每套方案 × 三种施法模式的下令（槽位、单位或地面点）、瞄准过程中的指示器集合、取消后不下令，以及从键鼠切到手柄后鼠标不再带动瞄准点、摇杆会带动。
+覆盖每套方案 × 三种施法模式的下令（槽位、单位或地面点）、瞄准手势打开时的悬停集合、取消后不下令，以及从键鼠切到手柄后鼠标不再带动瞄准点、摇杆会带动。
