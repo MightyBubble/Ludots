@@ -357,8 +357,6 @@ public sealed class CrowdMovementKernel
     /// <summary>
     /// 按下标切成互不重叠的区间。每个区间只写自己的槽；没有按完成先后插入的共享结构，
     /// 所以线程数和调度顺序不改变逐位结果。工人数 1 或长度不足 2 时就地执行。
-    /// 分离和意图的代价沿下标差很多（避让隔行，密集行会整段落进同一段）。
-    /// 每个工人分多段，空闲工人才能从别人的队列偷走还没做的段；一段做完才能偷，所以段要短。
     /// </summary>
     internal void RunRanges(int length, int phase, Fix64 dt)
     {
@@ -371,9 +369,6 @@ public sealed class CrowdMovementKernel
         }
 
         int workerCount = Math.Min(configured, length);
-        int chunkCount = phase is RangePhaseAvoidSolve or RangePhaseIntent
-            ? Math.Min(length, workerCount * StealableChunksPerWorker)
-            : workerCount;
         var scheduler = Arch.Core.World.SharedJobScheduler ?? throw new InvalidOperationException(
             $"sim.parallelWorkerCount = {configured} 需要已赋值的 World.SharedJobScheduler。");
         if (!scheduler.IsMainThread)
@@ -381,22 +376,22 @@ public sealed class CrowdMovementKernel
             throw new InvalidOperationException("群体运动并行步进必须在创建 World.SharedJobScheduler 的线程上调用。");
         }
 
-        if (_rangeJobs.Length < chunkCount)
+        if (_rangeJobs.Length < workerCount)
         {
-            var jobs = new IndexRangeJob[chunkCount];
+            var jobs = new IndexRangeJob[workerCount];
             for (int i = 0; i < _rangeJobs.Length; i++) jobs[i] = _rangeJobs[i];
-            for (int i = _rangeJobs.Length; i < chunkCount; i++) jobs[i] = new IndexRangeJob();
+            for (int i = _rangeJobs.Length; i < workerCount; i++) jobs[i] = new IndexRangeJob();
             _rangeJobs = jobs;
-            _rangeHandles = new JobHandle[chunkCount];
+            _rangeHandles = new JobHandle[workerCount];
         }
 
-        int baseCount = length / chunkCount;
-        int remainder = length % chunkCount;
+        int baseCount = length / workerCount;
+        int remainder = length % workerCount;
         int start = 0;
         var telemetry = Session.Telemetry;
         long workBefore = telemetry.ReadParallelWorkTicks();
         long wall0 = Stopwatch.GetTimestamp();
-        for (int w = 0; w < chunkCount; w++)
+        for (int w = 0; w < workerCount; w++)
         {
             int len = baseCount + (w < remainder ? 1 : 0);
             var job = _rangeJobs[w];
@@ -410,7 +405,7 @@ public sealed class CrowdMovementKernel
         }
 
         scheduler.Flush();
-        for (int w = 0; w < chunkCount; w++) _rangeHandles[w].Complete();
+        for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
         long wall = Stopwatch.GetTimestamp() - wall0;
         long work = telemetry.ReadParallelWorkTicks() - workBefore;
         telemetry.AddParallelWallTicks(wall);
@@ -446,8 +441,6 @@ public sealed class CrowdMovementKernel
 
         Session.Telemetry.AddParallelWorkTicks(Stopwatch.GetTimestamp() - t0);
     }
-
-    private const int StealableChunksPerWorker = 8;
 
     internal const int RangePhaseAvoidGather = 1;
     internal const int RangePhaseAvoidSolve = 2;
