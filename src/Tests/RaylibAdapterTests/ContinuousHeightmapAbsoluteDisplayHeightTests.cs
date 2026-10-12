@@ -96,7 +96,7 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void ResolveOceanVoidSentinelCm_FollowsAssetScaleAndDeclaration()
         {
-            // identity 缩放(原码=厘米):历史 0.88×65535 阈值逐位保持
+            // 仅当地图声明 OceanVoidFillAtSampleCeiling 且 identity 缩放时,阈值等于 ceil(0.88×65535)。
             var identity = new ContinuousHeightSampleScale(0, 1, 1);
             Assert.That(
                 RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelCm(
@@ -120,6 +120,115 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
+        public void FiniteDifferenceSpanCm_UsesOneStepWhenOneSideIsMissing()
+        {
+            Assert.That(
+                RaylibContinuousHeightmapRenderer.FiniteDifferenceSpanCm(25f, leftSampled: true, rightSampled: true),
+                Is.EqualTo(50f));
+            Assert.That(
+                RaylibContinuousHeightmapRenderer.FiniteDifferenceSpanCm(25f, leftSampled: true, rightSampled: false),
+                Is.EqualTo(25f),
+                "只采到一侧时分母仍用两倍步长会把坡度减半。");
+            Assert.That(
+                RaylibContinuousHeightmapRenderer.FiniteDifferenceSpanCm(25f, leftSampled: false, rightSampled: true),
+                Is.EqualTo(25f));
+        }
+
+        [Test]
+        public void BuildOverviewSampleSteps_UsesTheChunkUnderTheSample_AndThrowsWhenMissing()
+        {
+            var source = new TwoScaleHeightmapSource(declareOceanVoid: false, chunk0StepCm: 10f, chunk1StepCm: 40f);
+            RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(source, out float[] stepX, out float[] stepY, out float?[]? sentinel);
+            Assert.That(sentinel, Is.Null);
+            Assert.That(stepX[0], Is.EqualTo(10f));
+            Assert.That(stepY[0], Is.EqualTo(10f));
+
+            int slot = RaylibContinuousHeightmapRenderer.OverviewChunkSlot(source, 450f, 10f);
+            Assert.That(slot, Is.EqualTo(1));
+            Assert.That(stepX[slot], Is.EqualTo(40f));
+            Assert.That(stepY[slot], Is.EqualTo(40f));
+            Assert.That(stepX[slot], Is.Not.EqualTo(stepX[0]));
+
+            var missing = new TwoScaleHeightmapSource(declareOceanVoid: true, omitChunk: 1, chunk0StepCm: 10f, chunk1StepCm: 40f);
+            Assert.Throws<InvalidOperationException>(() =>
+                RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(missing, out _, out _, out _));
+        }
+
+        [Test]
+        public void BuildOverviewChunkTables_ResolvesSentinelPerChunkOnlyWhenDeclared()
+        {
+            var undeclared = new TwoScaleHeightmapSource(declareOceanVoid: false);
+            RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(undeclared, out _, out _, out float?[]? off);
+            Assert.That(off, Is.Null);
+
+            var declared = new TwoScaleHeightmapSource(declareOceanVoid: true);
+            int callsBefore = declared.TryGetChunkCalls;
+            RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(
+                declared, out _, out _, out float?[]? on);
+            Assert.That(declared.TryGetChunkCalls - callsBefore, Is.EqualTo(declared.ChunkColumns * declared.ChunkRows));
+            Assert.That(on, Is.Not.Null);
+            Assert.That(on![0], Is.EqualTo(57_671f));
+            int slot = RaylibContinuousHeightmapRenderer.OverviewChunkSlot(declared, 450f, 10f);
+            Assert.That(on[slot], Is.EqualTo(57_671f * 140_000f / 65_535f).Within(0.01f));
+            Assert.That(on[slot], Is.Not.EqualTo(on[0]));
+        }
+
+        [Test]
+        public void ResolveOceanVoidSentinelAtWorld_UsesTheChunkUnderTheSample()
+        {
+            var source = new TwoScaleHeightmapSource(declareOceanVoid: true);
+            float identity = RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelAtWorld(source, 10f, 10f)!.Value;
+            float crowd = RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelAtWorld(source, 450f, 10f)!.Value;
+
+            Assert.That(identity, Is.EqualTo(57_671f));
+            Assert.That(crowd, Is.EqualTo(57_671f * 140_000f / 65_535f).Within(0.01f));
+            Assert.That(crowd, Is.Not.EqualTo(identity));
+        }
+
+        [Test]
+        public void ResolveOceanVoidSentinelAtWorld_Undeclared_DoesNotReadChunks()
+        {
+            var source = new TwoScaleHeightmapSource(declareOceanVoid: false);
+            Assert.That(
+                RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelAtWorld(source, 450f, 10f),
+                Is.Null);
+            Assert.That(source.TryGetChunkCalls, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ResolveOceanVoidSentinelAtWorld_MissingChunk_Throws()
+        {
+            var source = new TwoScaleHeightmapSource(declareOceanVoid: true, omitChunk: 1);
+            Assert.Throws<InvalidOperationException>(() =>
+                RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelAtWorld(source, 450f, 10f));
+        }
+
+        [Test]
+        public void DeclaredCrowdScaleSentinel_KeepsSixHundredMeterMountain()
+        {
+            float sentinel = 57_671f * 140_000f / 65_535f;
+            float display = RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                60_000f,
+                seaLevelCm: 0f,
+                oceanVoidSentinelCm: sentinel);
+
+            Assert.That(display, Is.EqualTo(60_000f),
+                "crowd 缩放下已声明的哨兵约在 1232 m,600 m 山体必须保高。");
+        }
+
+        [Test]
+        public void UndeclaredSentinel_StillFlattensBelowSea()
+        {
+            float display = RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                -1_200f,
+                seaLevelCm: 0f,
+                oceanVoidSentinelCm: null);
+
+            Assert.That(display, Is.EqualTo(0f),
+                "哨兵未声明时,海平面以下的样本仍压到海平面。");
+        }
+
+        [Test]
         public void RenderProfileClone_PreservesOceanVoidFillFlag()
         {
             var profile = ContinuousHeightmapRenderProfile.CreateDefault();
@@ -130,15 +239,79 @@ namespace Ludots.Tests.RaylibAdapter
 
         private static ContinuousHeightmapRenderChunk CreateScaledChunk(ContinuousHeightSampleScale scale)
         {
+            return CreateScaledChunk(scale, 0, new WorldAabbCm(0, 0, 300, 300));
+        }
+
+        private static ContinuousHeightmapRenderChunk CreateScaledChunk(
+            ContinuousHeightSampleScale scale,
+            int chunkX,
+            WorldAabbCm bounds,
+            float sampleStepXCm = 300f,
+            float sampleStepYCm = 300f)
+        {
             ushort[] samples = new ushort[4];
             return new ContinuousHeightmapRenderChunk(
-                0, 0, new WorldAabbCm(0, 0, 300, 300),
-                2, 2, 300f, 300f,
+                chunkX, 0, bounds,
+                2, 2, sampleStepXCm, sampleStepYCm,
                 heightSamplesCm: default,
                 heightSamplesRaw: samples.AsMemory(),
                 sampleScale: scale,
                 storageLayout: ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled,
                 sampleStride: 2, layerSampleOffset: 0, revision: 1);
+        }
+
+        private sealed class TwoScaleHeightmapSource : IContinuousHeightmapRenderSource
+        {
+            private readonly ContinuousHeightmapRenderChunk[] _chunks;
+            private readonly int _omitChunk;
+
+            public TwoScaleHeightmapSource(
+                bool declareOceanVoid,
+                int omitChunk = -1,
+                float chunk0StepCm = 300f,
+                float chunk1StepCm = 300f)
+            {
+                _omitChunk = omitChunk;
+                var profile = ContinuousHeightmapRenderProfile.CreateDefault();
+                profile.OceanVoidFillAtSampleCeiling = declareOceanVoid;
+                RenderProfile = profile;
+                _chunks = new[]
+                {
+                    CreateScaledChunk(new ContinuousHeightSampleScale(0, 1, 1), 0, new WorldAabbCm(0, 0, 300, 300), chunk0StepCm, chunk0StepCm),
+                    CreateScaledChunk(new ContinuousHeightSampleScale(0, 140_000, 65_535), 1, new WorldAabbCm(300, 0, 300, 300), chunk1StepCm, chunk1StepCm),
+                };
+            }
+
+            public int TryGetChunkCalls { get; private set; }
+
+            public WorldAabbCm Bounds { get; } = new(0, 0, 600, 300);
+
+            public int ChunkColumns => 2;
+
+            public int ChunkRows => 1;
+
+            public int SamplesPerChunkColumn => 2;
+
+            public int SamplesPerChunkRow => 2;
+
+            public int DefaultLayerIndex => 0;
+
+            public int Revision => 1;
+
+            public ContinuousHeightmapRenderProfile RenderProfile { get; }
+
+            public bool TryGetChunk(int chunkX, int chunkY, out ContinuousHeightmapRenderChunk chunk)
+            {
+                TryGetChunkCalls++;
+                if (chunkY != 0 || (uint)chunkX >= (uint)_chunks.Length || chunkX == _omitChunk)
+                {
+                    chunk = default;
+                    return false;
+                }
+
+                chunk = _chunks[chunkX];
+                return true;
+            }
         }
 
         private static ContinuousHeightmapRenderChunk CreateInt16Chunk()

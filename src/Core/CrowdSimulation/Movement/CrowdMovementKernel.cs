@@ -15,9 +15,15 @@ public sealed class CrowdMovementKernel
     public required CrowdSpatialHash Hash { get; init; }
     /// <summary>意图输出(厘米/秒,按稠密序);马达层读它做一阶响应。</summary>
     public Fix64Vec2[] Intent = Array.Empty<Fix64Vec2>();
-    /// <summary>避让分离推力(厘米;每子步由分离求解写入,马达读)。</summary>
+    /// <summary>
+    /// 避让分离推力(厘米;每子步由分离求解写入,马达读)。
+    /// 按下标对齐稠密行,GatherUnits 不重读。将来若有退场,必须和稠密行同一次交换搬走,并且退场只能有这一个入口。
+    /// </summary>
     public Fix64Vec2[] Separation = Array.Empty<Fix64Vec2>();
-    /// <summary>静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。</summary>
+    /// <summary>
+    /// 静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。
+    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时随同一次交换搬走。
+    /// </summary>
     public byte[] Calm = Array.Empty<byte>();
     /// <summary>哈希序聚集缓冲(分离求解的逐格读取面,与参考 sepCtx 同构)。</summary>
     public Fix64[] GatherX = Array.Empty<Fix64>();
@@ -33,8 +39,10 @@ public sealed class CrowdMovementKernel
     /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
+    /// <summary>本 tick 接触合计。ScatterUnits 顺带把 ushort 加总,不再另扫一遍。</summary>
+    public int ContactSum;
 
-    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(单位稠密表是 append-only 的创建序),而 chunk
+    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(对拍会话只追加,创建序即行序)。chunk
     // 遍历按原型分桶不保稠密序——热路径不直接进 chunk,改为每 tick 一次 gather(组件→SoA)、
     // 子步全走 SoA、一次 scatter(SoA→组件)。World 解析从每单位每子步 ~16 次降到每 tick 9 次。
     public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
@@ -151,12 +159,16 @@ public sealed class CrowdMovementKernel
         }
 
         int gm = session.Groups.Groups.Count;
+        bool stampsReplaced = false;
         if (OrderMemo.Length < gm)
         {
             OrderMemo = new Movement.CrowdOrder?[gm];
             NavMemo = new Nav.NavContext?[gm];
             OrderStamp = new byte[gm];
             NavStamp = new byte[gm];
+            // 新戳全是 0。世代号若停在 255，下面的 ++ 会回绕成 0，全部被误判为命中。
+            GroupMemoEpoch = 0;
+            stampsReplaced = true;
         }
 
         if (OrderGate.Length < gm)
@@ -164,7 +176,8 @@ public sealed class CrowdMovementKernel
             OrderGate = new int[gm];
             NavGate = new int[gm];
         }
-        else if (GroupMemoEpoch == byte.MaxValue)
+
+        if (!stampsReplaced && GroupMemoEpoch == byte.MaxValue)
         {
             Array.Clear(OrderStamp, 0, gm);
             Array.Clear(NavStamp, 0, gm);
@@ -180,13 +193,29 @@ public sealed class CrowdMovementKernel
         var units = Session.Units;
         var world = Session.World;
         int n = units.Count;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int contacts = 0;
+        ushort[] contactCounts = Contacts;
+        int contactN = contactCounts.Length;
         for (int i = 0; i < n; i++)
         {
             var e = units.EntityAt(i);
             world.Set(e, new Ludots.Core.Components.WorldPositionCm { Value = Positions[i] });
             world.Set(e, States[i]);
             world.Set(e, Kins[i]);
+            if (i < contactN) contacts += contactCounts[i];
+            switch (States[i].State)
+            {
+                case (byte)CrowdUnitState.Idle: idle++; break;
+                case (byte)CrowdUnitState.Moving: moving++; break;
+                case (byte)CrowdUnitState.Arrived: arrived++; break;
+                case (byte)CrowdUnitState.Unreachable: unreachable++; break;
+                case (byte)CrowdUnitState.Jump: jumping++; break;
+            }
         }
+
+        ContactSum = contacts;
+        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
     }
 
     /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>

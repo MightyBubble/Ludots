@@ -319,7 +319,10 @@ public sealed class CrowdFog
             Occ[g * f2 + fy * FogCellsPerSide + fx] = 1;
         }
 
+        int refreshesBefore = Refreshes;
         for (int g = slot; g < VisionGroupCount; g += Period) Refresh(g);
+        int groups = Refreshes - refreshesBefore;
+        if (groups > 0) sim.Telemetry.MarkFogRefresh(groups);
     }
 
     private void Refresh(int g)
