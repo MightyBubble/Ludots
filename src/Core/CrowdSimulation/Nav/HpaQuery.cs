@@ -38,7 +38,7 @@ public static class HpaQuery
         public int TileCount;
         public readonly Result Found = new();
         public Fix64 Gu;
-        public int U;
+        public int RelaxFrom;
         public Fix64 HMul;
         public int GoalCell;
         public int NavCellsPerSide;
@@ -51,7 +51,7 @@ public static class HpaQuery
             if (!GScore.TryGetValue(v, out var gv) || ng < gv)
             {
                 GScore[v] = ng;
-                Parent[v] = U;
+                Parent[v] = RelaxFrom;
                 Heap.Push(ng + NavGridSteps.Octile(v % N2, GoalCell, NavCellsPerSide) * HMul, v);
             }
         }
@@ -181,7 +181,7 @@ public static class HpaQuery
         while (heap.Size > 0)
         {
             int u = heap.Pop();
-            s.U = u;
+            s.RelaxFrom = u;
             if (u == GoalKey) break;
             if (!closed.Add(u)) continue;
             expanded++;
