@@ -10,17 +10,18 @@
 
 结论: PASS
 
-一句话理由: 人群单位改走现有 RuntimeEntitySpawnQueue / RuntimeEntitySpawnSystem / EntityBuilder 与批车道；缺的批组件准入、逐实例初始化器、整批入队失败和空解析器归属都补在这条管线上。
+一句话理由: 人群单位仍走 RuntimeEntitySpawnSystem / EntityBuilder / 批车道。调用方批次用同一套物化入口 `Materialize`，不排空阶段队列。销毁仍是 ConsumeEntity；没有呈现消费者的世界当场走现有收尾。批组件准入挂在生成器实例上，不另开管线。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 模板物化 | 0 | RuntimeEntitySpawnSystem.SpawnTemplate / TemplateEntityBatchSpawner.TryCreateBatch |
-| 批组件准入 | 0 | TemplateBatchComponentAdmission + ComponentRegistry.Apply 探针 |
+| 模板物化 | 0 | RuntimeEntitySpawnSystem.Materialize 与 Update 共用 MaterializePrepared / 批车道 |
+| 批组件准入 | 0 | 生成器实例上的 TemplateBatchComponentAdmission；探针在临时世界，经 ComponentRegistry.Apply |
 | 逐实例写入 | 0 | IRuntimeSpawnInstanceInitializer，挂在生成系统实例上，WriteChunk 不 Add |
-| 销毁 | 0 | EntityLifecycleAtomicOps.ConsumeEntity |
-| 人群占槽与回执绑定 | 2 | CrowdSimUnits 只组请求、读回执、维护稠密表 |
+| 行序 | 0 | 物化之后只交换已创建行；原型不是稠密集则抛错 |
+| 销毁 | 0 | ConsumeEntity。不声明时一帧后收尾；DeclareNoConsumer 的世界同一次调用走 FinalizePublished |
+| 人群占槽与回执绑定 | 2 | CrowdSimUnits 只组请求、调 Materialize、读回执、维护稠密表 |
 
 ### 3. Reuse list
 
@@ -33,15 +34,15 @@
 
 | Op 名 | 单一职责 | 为何不能组合现有 op |
 |-------|----------|---------------------|
-| N/A | 未新增 spawn/lifecycle op 名 | 准入登记、初始化器 kind、`Materialize` 是现有生成系统的入口；不另排空阶段队列 |
+| N/A | 未新增 spawn/lifecycle op 名 | `Materialize` 是现有生成系统的第二条入口，不是第二条物化管线，也不排空阶段队列。DeclareNoConsumer 是世界声明，不是新 op |
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无新事务壳。`Materialize` 不写阶段队列。物化中途失败沿用生成系统现有的预检/抛错。
+必须原子 rollback 的步骤: 无新事务壳。`Materialize` 不写阶段队列；直接物化产生的子请求留在调用侧，不进阶段队列。物化中途失败沿用生成系统现有的预检/抛错。
 
 ### 6. Config SSOT
 
-行为配置落在: effect template / graph / catalog（路径）: 单位组件形状仍是 Entities/templates.json，经 ComponentRegistry。队列容量仍是 presentation.runtimeEntitySpawnQueueCapacity。无头队列长度取 sim.maxUnits。
+行为配置落在: effect template / graph / catalog（路径）: 单位组件形状仍是 Entities/templates.json，经 ComponentRegistry。引擎阶段队列容量仍是 presentation.runtimeEntitySpawnQueueCapacity。人群不往这条队列里放单位。无头回执队列长度取 sim.maxUnits；无头请求队列只是系统构造所需，容量 16，单位不经它。
 
 是否新增 JSON schema: NO
 
@@ -54,4 +55,4 @@
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: 登记自己的批组件，或在自己的系统实例上登记 IRuntimeSpawnInstanceInitializer。不改 Core enum。
+「下一个 Mod 变体」将修改: 在自己的生成系统实例上登记批组件或 IRuntimeSpawnInstanceInitializer。没有呈现消费者的世界调用 DeclareNoConsumer。不改 Core enum，不调用 RuntimeEntitySpawnSystem.Update 来排空别人的请求。
