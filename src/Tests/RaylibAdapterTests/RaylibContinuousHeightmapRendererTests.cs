@@ -63,19 +63,42 @@ public sealed class RaylibContinuousHeightmapRendererTests
     }
 
     [Test]
+    public void ResolveAbsoluteHeightBand_DefaultSpan_SaturatesAuthoredPeakInsteadOfOpenWater()
+    {
+        float band = RaylibContinuousHeightmapRenderer.ResolveAbsoluteHeightBand(
+            heightCm: 41_661f,
+            seaLevelCm: 0f,
+            absolutePeakSpanCm: ContinuousHeightmapRenderProfile.DefaultAbsoluteColorPeakSpanCm,
+            oceanVoidSentinelCm: null);
+
+        Assert.That(band, Is.EqualTo(1f).Within(0.0001f),
+            "默认色带跨度下,几何保住的山峰必须停在峰顶色,不能进负色带。");
+    }
+
+    [Test]
     public void ResolveAbsoluteHeightBand_TreatsOceanSentinelAbovePeakSpanAsOpenWater()
     {
         Assert.That(
             RaylibContinuousHeightmapRenderer.ResolveAbsoluteHeightBand(
                 heightCm: 2_132f,
                 seaLevelCm: 0f,
-                absolutePeakSpanCm: 5_000f),
+                absolutePeakSpanCm: 5_000f,
+                oceanVoidSentinelCm: null),
             Is.EqualTo(2_132f / 5_000f).Within(0.0001f));
         Assert.That(
             RaylibContinuousHeightmapRenderer.ResolveAbsoluteHeightBand(
                 heightCm: 59_563f,
                 seaLevelCm: 0f,
-                absolutePeakSpanCm: 5_000f),
+                absolutePeakSpanCm: 5_000f,
+                oceanVoidSentinelCm: null),
+            Is.EqualTo(1f).Within(0.0001f),
+            "未声明哨兵时,超出色带跨度的样本停在峰顶色。");
+        Assert.That(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteHeightBand(
+                heightCm: 59_563f,
+                seaLevelCm: 0f,
+                absolutePeakSpanCm: 5_000f,
+                oceanVoidSentinelCm: 57_671f),
             Is.LessThan(0f));
         Assert.That(
             RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
