@@ -53,21 +53,27 @@ public enum CrowdSimDiagnosticSection : byte
 }
 
 /// <summary>
-/// 两串逐 tick 摘要的第一处分歧。无分歧时 <see cref="Diverged"/> 为 false，Tick 为 -1。
-/// <see cref="Section"/> 是该 tick 上要报的断面名。<see cref="Diagnostic"/> 是同时有差的诊断断面。
+/// 两串逐 tick 摘要的分歧。合计与诊断分开报。
+/// <see cref="Diverged"/> 只表示合计断面不同，或共同前缀的合计一致但条数不同。
+/// 只有诊断断面不同时 <see cref="Diverged"/> 为 false，<see cref="Tick"/> 为 -1。
+/// <see cref="DiagnosticTick"/> 为 -1 表示诊断断面没有差。
 /// </summary>
 public readonly struct CrowdSimDigestDiff
 {
     public readonly bool Diverged;
     public readonly int Tick;
     public readonly string Section;
+    public readonly int DiagnosticTick;
     public readonly CrowdSimDiagnosticSection Diagnostic;
 
-    public CrowdSimDigestDiff(bool diverged, int tick, string section, CrowdSimDiagnosticSection diagnostic = default)
+    public CrowdSimDigestDiff(
+        bool diverged, int tick, string section,
+        int diagnosticTick = -1, CrowdSimDiagnosticSection diagnostic = default)
     {
         Diverged = diverged;
         Tick = tick;
         Section = section;
+        DiagnosticTick = diagnosticTick;
         Diagnostic = diagnostic;
     }
 
@@ -80,7 +86,7 @@ public readonly struct CrowdSimDigestDiff
 /// 每个定点字段按原始 int64 的低 32 位再高 32 位混合。
 /// 有运动栈的会话在 tick 末从内核 SoA 读；纯部署会话读组件。
 /// 诊断链（groups / jump / commands）用各自的域词起混，不接这条合计。默认不算。
-/// 算出的诊断词若为 0，会和开关关闭撞车，这里把 0 收成 1。
+/// 算出的诊断词若为 0，会和开关关闭撞车，这里把 0 挪到 32 位范围外，避免和算出的 1 相撞。
 /// </summary>
 public static class CrowdSimChecksum
 {
@@ -177,27 +183,52 @@ public static class CrowdSimChecksum
     }
 
     /// <summary>
-    /// 按 tick 对齐两串摘要，返回最早一个有任一断面不同的 tick。
-    /// 该 tick 上合计断面有差时，<see cref="CrowdSimDigestDiff.Section"/> 取 position、motion、state、avoidance 的第一个，
-    /// <see cref="CrowdSimDigestDiff.Diagnostic"/> 记下同时有差的诊断断面。
-    /// 合计断面相同、只有诊断断面有差时，Section 取 groups、jump、commands 的第一个，掩码仍列出全部有差的诊断断面。
-    /// 共同前缀一致但条数不同时 Tick 为 -2，Section 为空，掩码为 0。
+    /// 按 tick 对齐两串摘要，同时给出合计的第一处分歧和诊断的第一处分歧。
+    /// 合计断面按 position、motion、state、avoidance 取第一个。
+    /// 诊断掩码是该诊断 tick 上有差的 groups / jump / commands。
+    /// 共同前缀的合计一致但条数不同时，合计 Tick 为 -2，Section 为空。
     /// </summary>
     public static CrowdSimDigestDiff DiffDigest(
         IReadOnlyList<CrowdSimStateDigest> left,
         IReadOnlyList<CrowdSimStateDigest> right)
     {
         int common = Math.Min(left.Count, right.Count);
+        bool chained = false;
+        int chainedTick = -1;
+        string section = "";
+        bool diagnostic = false;
+        int diagnosticTick = -1;
+        var mask = CrowdSimDiagnosticSection.None;
         for (int i = 0; i < common; i++)
         {
-            if (TryFirstSection(left[i], right[i], out string section, out CrowdSimDiagnosticSection diagnostic))
-                return new CrowdSimDigestDiff(true, left[i].Tick, section, diagnostic);
+            bool chainedHere = TryFirstSection(left[i], right[i], out string name, out CrowdSimDiagnosticSection flags);
+            if (!chained && chainedHere)
+            {
+                chained = true;
+                chainedTick = left[i].Tick;
+                section = name;
+            }
+
+            if (!diagnostic && flags != CrowdSimDiagnosticSection.None)
+            {
+                diagnostic = true;
+                diagnosticTick = left[i].Tick;
+                mask = flags;
+            }
+
+            if (chained && diagnostic) break;
         }
 
-        if (left.Count != right.Count) return new CrowdSimDigestDiff(true, -2, "");
-        return CrowdSimDigestDiff.None;
+        if (!chained && left.Count != right.Count)
+            return new CrowdSimDigestDiff(true, -2, "", diagnostic ? diagnosticTick : -1, mask);
+        if (!chained && !diagnostic) return CrowdSimDigestDiff.None;
+        return new CrowdSimDigestDiff(chained, chained ? chainedTick : -1, section, diagnostic ? diagnosticTick : -1, mask);
     }
 
+    /// <summary>
+    /// 合计断面有差时返回 true，<paramref name="section"/> 是 position、motion、state、avoidance 的第一个。
+    /// <paramref name="diagnostic"/> 是这一对摘要上有差的诊断断面；只有诊断有差时返回 false。
+    /// </summary>
     public static bool TryFirstSection(
         in CrowdSimStateDigest left,
         in CrowdSimStateDigest right,
@@ -213,9 +244,6 @@ public static class CrowdSimChecksum
         if (left.Motion != right.Motion) { section = MotionSection; return true; }
         if (left.State != right.State) { section = StateSection; return true; }
         if (left.Avoidance != right.Avoidance) { section = AvoidanceSection; return true; }
-        if ((diagnostic & CrowdSimDiagnosticSection.Groups) != 0) { section = GroupsSection; return true; }
-        if ((diagnostic & CrowdSimDiagnosticSection.Jump) != 0) { section = JumpSection; return true; }
-        if ((diagnostic & CrowdSimDiagnosticSection.Commands) != 0) { section = CommandsSection; return true; }
         section = "";
         return false;
     }
@@ -241,7 +269,7 @@ public static class CrowdSimChecksum
 
     internal static uint Mix(uint h, uint v) => (h ^ v) * Prime;
 
-    private static ulong Seal(uint h) => h == 0 ? 1u : h;
+    private static ulong Seal(uint h) => h == 0 ? 1ul << 32 : h;
 
     private static uint MixI64(uint h, long raw) => Mix(Mix(h, (uint)raw), (uint)(raw >> 32));
 
@@ -285,14 +313,11 @@ public static class CrowdSimChecksum
         h = MixI64(h, leader.Hx.RawValue);
         h = MixI64(h, leader.Hy.RawValue);
         h = Mix(h, (uint)leader.PathCount);
-        if (leader.PathCount > 0)
+        for (int i = 0; i < leader.PathCount; i++)
         {
-            Fix64Vec2 first = leader.PathAt(0);
-            Fix64Vec2 last = leader.PathAt(leader.PathCount - 1);
-            h = MixI64(h, first.X.RawValue);
-            h = MixI64(h, first.Y.RawValue);
-            h = MixI64(h, last.X.RawValue);
-            h = MixI64(h, last.Y.RawValue);
+            Fix64Vec2 point = leader.PathAt(i);
+            h = MixI64(h, point.X.RawValue);
+            h = MixI64(h, point.Y.RawValue);
         }
 
         h = Mix(h, (uint)leader.Seg);
@@ -304,6 +329,7 @@ public static class CrowdSimChecksum
     {
         if (flow == null) return Mix(h, 0);
         h = Mix(h, 1);
+        h = Mix(h, (uint)flow.BuildRevision);
         h = Mix(h, (uint)flow.NavId);
         h = Mix(h, (uint)flow.Goal);
         h = Mix(h, (uint)flow.Reached);
