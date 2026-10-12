@@ -233,7 +233,8 @@ public class CrowdSimulationConfigTests
         cliff["areaId"] = "lava";
         var ex = Assert.Throws<InvalidOperationException>(
             () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));
-        Assert.That(ex!.Message, Does.Contain("terrainAreas.cliff"));
+        Assert.That(ex!.Message, Does.Contain("terrainAreas[4]"));
+        Assert.That(ex.Message, Does.Contain("cliff"));
         Assert.That(ex.Message, Does.Contain("lava"));
     }
 

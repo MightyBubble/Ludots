@@ -648,18 +648,28 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 for (int i = 0; i < terrainAreas.Count; i++)
                 {
                     string areaId = string.Empty;
-                    if (terrainAreas[i] is JsonObject row &&
-                        row["areaId"] is JsonValue value &&
-                        value.TryGetValue<string>(out string? parsed) &&
-                        parsed != null)
+                    string terrainId = string.Empty;
+                    if (terrainAreas[i] is JsonObject row)
                     {
-                        areaId = parsed;
+                        if (row["terrainId"] is JsonValue terrainValue &&
+                            terrainValue.TryGetValue<string>(out string? parsedTerrain) &&
+                            parsedTerrain != null)
+                        {
+                            terrainId = parsedTerrain;
+                        }
+
+                        if (row["areaId"] is JsonValue value &&
+                            value.TryGetValue<string>(out string? parsed) &&
+                            parsed != null)
+                        {
+                            areaId = parsed;
+                        }
                     }
 
                     if (areaId.Length == 0 || !areaIds.Contains(areaId))
                     {
                         throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}] references unknown area '{areaId}'.");
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}]（{terrainId}）references unknown area '{areaId}'.");
                     }
                 }
             }
