@@ -207,7 +207,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后只剩数据：再加一个取值和一个交互状态，规则图不用改 |
 | 12 | 指示器在按下后的下一拍才出现 | 切片 R 改成听 `ContextActivated` 后复测；还晚就查 presenter 规则阶段在帧内的顺序，不加特例 |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
-| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：摇杆清零只留 `interaction.context.aim.cast` 激活时的 `graph.aim.seed_stick`。冠军重绑图里的那次调用已删 |
+| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：槽位、落点、射程、目标、朝向和摇杆清零只写在 `graph.aim.prepare_actor`。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 和每个游戏的重绑路径也调用它 |
 | 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
 
 **待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
