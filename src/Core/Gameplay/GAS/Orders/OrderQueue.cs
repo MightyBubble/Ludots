@@ -54,7 +54,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public sealed class OrderQueue
     {
         private readonly Order[] _items;
-        private readonly Order[] _drainScratch;
         private readonly OrderAdmissionReservation[] _admissionReservationsScratch;
         private readonly OrderAdmissionResultBuffer _admissionResults;
         private int _head;
@@ -72,7 +71,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _admissionResults = admissionResults
                 ?? throw new ArgumentNullException(nameof(admissionResults));
             _items = new Order[capacity];
-            _drainScratch = new Order[capacity];
             _admissionReservationsScratch = new OrderAdmissionReservation[capacity];
         }
 
@@ -340,62 +338,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _count += orders.Length;
             CommitReservedBatch(orders, OrderSubmitResult.Queued);
             return OrderSubmitResult.Queued;
-        }
-
-        /// <summary>
-        /// 抽出一种订单类型，其余按原序留在队列里。共享批次整批抽走，避免拆开后批次不再连续。
-        /// 调用方缓冲区不够时抛错，不改队列。
-        /// </summary>
-        public int DrainOrderType(int orderTypeId, Span<Order> destination)
-        {
-            if (_count == 0) return 0;
-            int drained = 0;
-            int kept = 0;
-            for (int i = 0; i < _count;)
-            {
-                int index = (_head + i) % _items.Length;
-                Order first = _items[index];
-                int batch = first.AdmissionBatchId > 0 ? first.AdmissionBatchSize : 1;
-                if (batch <= 0 || i + batch > _count)
-                {
-                    throw new InvalidOperationException(
-                        $"OrderQueue admission batch size {batch} is invalid for count {_count}.");
-                }
-
-                bool take = first.OrderTypeId == orderTypeId;
-                if (take && drained + batch > destination.Length)
-                {
-                    throw new InvalidOperationException(
-                        $"OrderQueue drain of type {orderTypeId} needs {drained + batch} slots, destination holds {destination.Length}.");
-                }
-
-                for (int row = 0; row < batch; row++)
-                {
-                    Order item = _items[(_head + i + row) % _items.Length];
-                    if (take)
-                    {
-                        if (item.OrderTypeId != orderTypeId)
-                        {
-                            throw new InvalidOperationException(
-                                $"OrderQueue admission batch {first.AdmissionBatchId} mixes order types.");
-                        }
-
-                        destination[drained++] = item;
-                    }
-                    else
-                    {
-                        _drainScratch[kept++] = item;
-                    }
-                }
-
-                i += batch;
-            }
-
-            for (int i = 0; i < kept; i++) _items[i] = _drainScratch[i];
-            _head = 0;
-            _tail = kept == _items.Length ? 0 : kept;
-            _count = kept;
-            return drained;
         }
 
         public bool TryDequeueBatch(Span<Order> destination, out int count)

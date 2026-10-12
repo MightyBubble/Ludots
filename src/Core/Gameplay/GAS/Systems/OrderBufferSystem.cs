@@ -13,6 +13,12 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
+    /// <summary>
+    /// 按订单类型整批接手。调用返回前必须把要留下的字段拷走：出队后这片缓冲会给下一批用。
+    /// 校验要在副作用之前做完；这里抛出时批次仍在队列里。
+    /// </summary>
+    public delegate void ExternalOrderBatchConsumer(ReadOnlySpan<Order> batch);
+
     public sealed class OrderBufferSystem : BaseSystem<World, float>
     {
         private readonly IClock _clock;
@@ -25,6 +31,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderSubmitResult[] _incomingBatchResultsScratch;
         private readonly OrderAdmissionReservation[] _entityAdmissionReservationsScratch;
         private readonly bool _closeEntityIntakeOnUpdate;
+        private ExternalOrderBatchConsumer[]? _externalConsumers;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
@@ -168,12 +175,68 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        /// <summary>
+        /// 一种订单类型只登记一个外部消费者。重复登记直接报错。
+        /// </summary>
+        public void RegisterExternalOrderConsumer(int orderTypeId, ExternalOrderBatchConsumer consumer)
+        {
+            if (consumer == null)
+            {
+                throw new ArgumentNullException(nameof(consumer));
+            }
+
+            if (orderTypeId <= 0 || orderTypeId >= OrderTypeRegistry.MaxOrderTypes)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(orderTypeId),
+                    orderTypeId,
+                    $"order type id must be in 1..{OrderTypeRegistry.MaxOrderTypes - 1}.");
+            }
+
+            _externalConsumers ??= new ExternalOrderBatchConsumer[OrderTypeRegistry.MaxOrderTypes];
+            if (_externalConsumers[orderTypeId] != null)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.BUFFER.ERR.ExternalConsumerAlreadyRegistered: orderTypeId={orderTypeId}.");
+            }
+
+            _externalConsumers[orderTypeId] = consumer;
+        }
+
+        /// <summary>
+        /// 只消费队头连续的、已登记类型的批次。碰到未登记类型就停下，后面的单位订单留给本系统的常规接入。
+        /// 会话步进之前调用，本 tick 入队的群体订单能在运动前落地。
+        /// </summary>
+        public void DispatchExternalOrderConsumers()
+        {
+            if (_incomingOrders == null)
+            {
+                return;
+            }
+
+            while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int batchCount))
+            {
+                if (!TryGetExternalConsumer(_incomingBatchScratch[0].OrderTypeId, out ExternalOrderBatchConsumer consumer))
+                {
+                    return;
+                }
+
+                HandOffExternalConsumerBatch(batchCount, consumer);
+            }
+        }
+
         private void ProcessIncomingOrders(int currentStep)
         {
             if (_incomingOrders == null) return;
 
             while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int batchCount))
             {
+                if (TryGetExternalConsumer(_incomingBatchScratch[0].OrderTypeId, out ExternalOrderBatchConsumer consumer))
+                {
+                    HandOffExternalConsumerBatch(batchCount, consumer);
+                    continue;
+                }
+
                 if (batchCount == 1 && _incomingBatchScratch[0].AdmissionBatchId == 0)
                 {
                     ProcessSingleIncomingOrder(ref _incomingBatchScratch[0], currentStep);
@@ -181,6 +244,95 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 ProcessIncomingBatch(batchCount, currentStep);
+            }
+        }
+
+        private bool TryGetExternalConsumer(int orderTypeId, out ExternalOrderBatchConsumer consumer)
+        {
+            if (_externalConsumers != null && (uint)orderTypeId < (uint)_externalConsumers.Length)
+            {
+                ExternalOrderBatchConsumer? registered = _externalConsumers[orderTypeId];
+                if (registered != null)
+                {
+                    consumer = registered;
+                    return true;
+                }
+            }
+
+            consumer = null!;
+            return false;
+        }
+
+        private void HandOffExternalConsumerBatch(int batchCount, ExternalOrderBatchConsumer consumer)
+        {
+            int orderTypeId = _incomingBatchScratch[0].OrderTypeId;
+            for (int i = 1; i < batchCount; i++)
+            {
+                if (_incomingBatchScratch[i].OrderTypeId != orderTypeId)
+                {
+                    throw new InvalidOperationException(
+                        $"ORDER.BUFFER.ERR.ExternalConsumerBatchMixedOrderTypes: orderTypeId={orderTypeId}, row={i}, other={_incomingBatchScratch[i].OrderTypeId}.");
+                }
+            }
+
+            InitializeIncomingBatchScratch(batchCount);
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.EntityIntake, batchCount))
+            {
+                if (!_admissionResults.CanRecordCapacityFailures(OrderAdmissionStage.EntityIntake, batchCount))
+                {
+                    throw new InvalidOperationException(
+                        $"{OrderAdmissionResultBuffer.RejectionCapacityExceededError}: stage={OrderAdmissionStage.EntityIntake}, batchCount={batchCount}, rejectionCapacity={_admissionResults.RejectionCapacity}.");
+                }
+
+                DequeueReservedBatch(batchCount);
+                _admissionResults.RecordCapacityFailures(
+                    _incomingBatchScratch.AsSpan(0, batchCount),
+                    OrderAdmissionStage.EntityIntake);
+                _orderTypeRegistry.EnsureTerminalResultCapacity(batchCount);
+                for (int i = 0; i < batchCount; i++)
+                {
+                    OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                    PublishFailedTerminal(in _incomingBatchScratch[i], OrderSubmitResult.RejectedAdmissionCapacity);
+                }
+
+                return;
+            }
+
+            ReserveEntityAdmissions(batchCount);
+            bool committed = false;
+            bool dequeued = false;
+            try
+            {
+                consumer(_incomingBatchScratch.AsSpan(0, batchCount));
+                DequeueReservedBatch(batchCount);
+                dequeued = true;
+                for (int i = 0; i < batchCount; i++)
+                {
+                    CommitAdmission(
+                        in _entityAdmissionReservationsScratch[i],
+                        in _incomingBatchScratch[i],
+                        OrderSubmitResult.Activated);
+                    _entityAdmissionReservationsScratch[i] = default;
+                    OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                    IncomingRevision++;
+                }
+
+                committed = true;
+                ClearEntityAdmissionReservations(batchCount);
+            }
+            finally
+            {
+                if (!committed)
+                {
+                    CancelEntityAdmissions(batchCount);
+                    if (dequeued)
+                    {
+                        for (int i = 0; i < batchCount; i++)
+                        {
+                            OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        }
+                    }
+                }
             }
         }
 

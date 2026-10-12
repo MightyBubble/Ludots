@@ -446,6 +446,67 @@ public sealed class OrderAdmissionPipelineTests
         });
     }
 
+    [Test]
+    public void ExternalConsumer_PairsEntityIntake_AndSecondLargeBatchDoesNotFault()
+    {
+        const int batchSize = 64;
+        int capacity = batchSize * 2;
+        using var world = World.Create();
+        var firstActors = new Entity[batchSize];
+        var secondActors = new Entity[batchSize];
+        for (int i = 0; i < batchSize; i++)
+        {
+            firstActors[i] = world.Create();
+            secondActors[i] = world.Create();
+        }
+
+        var results = new OrderAdmissionResultBuffer(capacity, capacity);
+        var queue = new OrderQueue(capacity, results);
+        var system = new OrderBufferSystem(
+            world,
+            new DiscreteClock(),
+            CreateOrderTypes(),
+            new OrderRuleRegistry(),
+            results,
+            queue,
+            closeEntityIntakeOnUpdate: false);
+        int seen = 0;
+        system.RegisterExternalOrderConsumer(1, batch => seen += batch.Length);
+
+        var first = new Order[batchSize];
+        for (int i = 0; i < batchSize; i++)
+        {
+            first[i] = new Order { OrderTypeId = 1, PlayerId = 1, Actor = firstActors[i] };
+        }
+
+        results.BeginLogicStep();
+        Assert.That(queue.TryEnqueueSharedBatch(first), Is.EqualTo(OrderSubmitResult.Queued));
+        system.DispatchExternalOrderConsumers();
+        Assert.That(seen, Is.EqualTo(batchSize));
+        Assert.That(queue.Count, Is.EqualTo(0));
+        Assert.That(results.TryGet(first[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome paired), Is.True);
+        Assert.That(paired.Result, Is.EqualTo(OrderSubmitResult.Activated));
+        results.EndEntityIntake();
+        results.EndLogicStep();
+
+        results.BeginLogicStep();
+        Assert.That(results.IsTerminalFaulted, Is.False);
+        Assert.That(results.TryGet(first[0].OrderId, OrderAdmissionStage.GlobalIntake, out _), Is.False);
+
+        var second = new Order[batchSize];
+        for (int i = 0; i < batchSize; i++)
+        {
+            second[i] = new Order { OrderTypeId = 1, PlayerId = 1, Actor = secondActors[i] };
+        }
+
+        Assert.That(queue.TryEnqueueSharedBatch(second), Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.DoesNotThrow(() => system.DispatchExternalOrderConsumers());
+        Assert.That(results.IsTerminalFaulted, Is.False);
+        Assert.That(seen, Is.EqualTo(batchSize * 2));
+        Assert.That(results.TryGet(second[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome secondIntake), Is.True);
+        Assert.That(secondIntake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+    }
+
     private static OrderAdmissionResultBuffer CreateAdmissionResults(int capacity = 64) =>
         new(capacity, capacity);
 
