@@ -129,7 +129,7 @@ public sealed class ResidentDetourNavMeshTests
         InvalidOperationException first = Assert.Throws<InvalidOperationException>(() =>
             ResidentDetourNavMesh.FindPath(
                 service.Store, 0, filter, TileSizeCm, TileSizeCm,
-                originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000, 256));
+                originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000, 256))!;
         Assert.Throws<InvalidOperationException>(() =>
             ResidentDetourNavMesh.FindPath(
                 service.Store, 0, filter, TileSizeCm, TileSizeCm,
