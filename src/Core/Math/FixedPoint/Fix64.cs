@@ -151,10 +151,14 @@ namespace Ludots.Core.Mathematics.FixedPoint
 
         /// <summary>
         /// 除以正整数。商的 raw 等于被除数 raw 除以该整数，与 <see cref="operator /(Fix64, Fix64)"/> 逐位相同（向零截断）。
+        /// <paramref name="divisor"/> 小于等于 0 时抛出 <see cref="ArgumentOutOfRangeException"/>。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 DivPositiveInt(Fix64 value, int divisor)
-            => new Fix64(value.RawValue / divisor);
+        {
+            if (divisor <= 0) throw new ArgumentOutOfRangeException(nameof(divisor));
+            return new Fix64(value.RawValue / divisor);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 operator %(Fix64 a, Fix64 b) => new Fix64(a.RawValue % b.RawValue);

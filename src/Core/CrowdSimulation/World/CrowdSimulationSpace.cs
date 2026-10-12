@@ -29,6 +29,7 @@ public static class CrowdSimulationSpace
     /// 世界厘米 ÷ 格边长，向下取整得到格坐标，不钳制。
     /// <see cref="Fix64.FloorToInt"/>、<see cref="Fix64.ToLong"/>、<see cref="Fix64.ToInt"/> 都是算术右移，
     /// 与 <c>(worldCm / FromInt(navCellSizeCm)).ToLong()</c> 同值；先 <see cref="Fix64.Floor"/> 再取整也同值。
+    /// <paramref name="navCellSizeCm"/> 小于等于 0 时，<see cref="Fix64.DivPositiveInt"/> 抛出 <see cref="ArgumentOutOfRangeException"/>。
     /// </summary>
     public static int NavCellCoord(Fix64 worldCm, int navCellSizeCm)
         => Fix64.DivPositiveInt(worldCm, navCellSizeCm).FloorToInt();

@@ -1,3 +1,4 @@
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
 
@@ -30,5 +31,14 @@ public sealed class Fix64DivPositiveIntTests
                     $"raw {raw} / {divisor}");
             }
         }
+    }
+
+    [Test]
+    public void DivPositiveInt_RejectsNonPositiveDivisor()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Fix64.DivPositiveInt(Fix64.OneValue, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Fix64.DivPositiveInt(Fix64.FromRaw(long.MinValue), -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CrowdSimulationSpace.NavCellCoord(Fix64.FromInt(1), 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CrowdSimulationSpace.NavCellCoord(Fix64.FromInt(-1), -5));
     }
 }
