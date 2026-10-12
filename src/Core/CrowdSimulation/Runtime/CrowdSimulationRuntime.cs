@@ -15,13 +15,11 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -66,7 +64,6 @@ public sealed partial class CrowdSimulationRuntime
     }
     private string? _activeMapId;
     private bool _systemsInstalled;
-    private PresenterEntityRuntime? _presenterRuntime;
     private CrowdSimulation.Nav.Pathing.PathQueryService? _pathService;
     /// <summary>地图烘焙输入(回放会话重建结构仓与全新导航用;与活会话的仓互不共享可变栅格)。</summary>
     private CrowdSimulation.World.SurfaceGrid? _surfaceGrid;
@@ -87,7 +84,7 @@ public sealed partial class CrowdSimulationRuntime
 
     public CrowdSimSession? Session => _session;
     public Entity SessionEntity => _sessionEntity;
-    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见黑板)。</summary>
+    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
     /// <summary>人群遥测(类型化计数/采样;看板与调试面板只读)。</summary>
     public CrowdSimulationTelemetry Telemetry { get; } = new();
 
@@ -98,42 +95,14 @@ public sealed partial class CrowdSimulationRuntime
     /// 不再是"同输入重放"。只拦自动触发;RunReplay 与对拍语义本身不动。</summary>
     public void SuppressAutoReplay() => _autoReplayDone = true;
 
-    /// <summary>blackboard 键(呈现侧 ownerBlackboardFloat 绑定的数据契约)。</summary>
+    /// <summary>单位半径黑板键(呈现侧 ownerBlackboardFloat 绑定的数据契约,Activate 时注册一次)。</summary>
     public static class Keys
     {
         public const string UnitRadiusKey = "crowd_simulation.unit.radius_m";
-        public const string SessionTick = "crowd_simulation.session.tick";
-        public const string SessionUnits = "crowd_simulation.session.units";
-        public const string SessionSelected = "crowd_simulation.session.selected";
-        public const string SessionReplayStatus = "crowd_simulation.session.replay_status";
-        public const string SessionReplayDivergenceTick = "crowd_simulation.session.replay_divergence_tick";
-        // F02 迷雾 HUD(观察玩家 = 玩家 1 的视野组):可见/已探索 fog 格数、认知实体数、
-        // 残影数(认知有真相无)、乐观迷雾开关。渲染底座(W2)经迷雾查询面画图。
-        public const string SessionFogVisibleCells = "crowd_simulation.session.fog.visible_cells";
-        public const string SessionFogExploredCells = "crowd_simulation.session.fog.explored_cells";
-        public const string SessionFogBeliefEntities = "crowd_simulation.session.fog.belief_entities";
-        public const string SessionFogGhosts = "crowd_simulation.session.fog.ghosts";
-        public const string SessionFogTerrainOptimistic = "crowd_simulation.session.fog.terrain_optimistic";
-    }
-
-    /// <summary>统计键注册一次、缓存整型 id——逐 tick 写入不再做字符串哈希查表。</summary>
-    private static class StatKeyIds
-    {
-        public static readonly int Tick = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionTick);
-        public static readonly int Units = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionUnits);
-        public static readonly int Selected = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionSelected);
-        public static readonly int ReplayStatus = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionReplayStatus);
-        public static readonly int ReplayDivergenceTick = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionReplayDivergenceTick);
-        public static readonly int FogVisible = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogVisibleCells);
-        public static readonly int FogExplored = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogExploredCells);
-        public static readonly int FogBelief = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogBeliefEntities);
-        public static readonly int FogGhosts = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogGhosts);
-        public static readonly int FogTerrain = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogTerrainOptimistic);
     }
 
     /// <summary>迷雾观察口径(F02 演示):-1 = 全知 debug 视图(现状默认,玩家视角迷雾用键切换,
-    /// S7 spec 要求两种观察范围并存);≥ 0 = 只看该视野组。渲染底座(W2)读它决定画哪份
-    /// View(),HUD 计数恒按玩家 1 的视野组。</summary>
+    /// S7 spec 要求两种观察范围并存);≥ 0 = 只看该视野组。渲染底座(W2)读它决定画哪份 View()。</summary>
     public int FogViewGroup { get; set; } = -1;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
@@ -299,7 +268,6 @@ public sealed partial class CrowdSimulationRuntime
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 PresentationStableIdAllocator 服务。");
         var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 EntityCollectionStore 服务。");
-        _presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
 
         int sessionTemplateKeyId = templateKeys.GetId(SessionTemplateId);
         if (sessionTemplateKeyId <= 0)
@@ -311,8 +279,7 @@ public sealed partial class CrowdSimulationRuntime
         _sessionEntity = engine.World.Create(
             new Name { Value = "CrowdSimulation.Session" },
             new PresentationStableId { Value = stableIds.Allocate() },
-            new Gameplay.Spawning.EntityTemplateKeyRef { TemplateKeyId = sessionTemplateKeyId },
-            new BlackboardFloatBuffer());
+            new Gameplay.Spawning.EntityTemplateKeyRef { TemplateKeyId = sessionTemplateKeyId });
 
         // 单位模板映射:unitTypes[].templates 按(兵种 × 半径级)声明,模板自身声明 profile;
         // 在此预解析成 id 表并做闭包校验(与无头装配共用 CrowdSimPresentationWiring 同一口径)。
@@ -469,12 +436,10 @@ public sealed partial class CrowdSimulationRuntime
 
         if (session.TickCount % session.Config.FixedHz == 0)
         {
-            string presenters = _presenterRuntime?.BuildActiveDefinitionSummary(8) ?? "-";
+            // 只插值整数。呈现摘要与校验码格式化不在 tick 路径上;级别关闭时处理器不落字符串。
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={Units.CrowdSimChecksum.Format(hash)}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}");
         }
-
-        WriteStats(session);
     }
 
     /// <summary>回放:一次性世界重放同一指令日志,逐帧对拍校验码(不进引擎世界,不碰呈现)。</summary>
@@ -564,28 +529,6 @@ public sealed partial class CrowdSimulationRuntime
 
         if (ReplayDivergenceTick < 0 && _hashCount != replayHashes.Count) ReplayDivergenceTick = -2;
         ReplayStatus = ReplayDivergenceTick == -1 ? 1 : 2;
-    }
-
-    private void WriteStats(CrowdSimSession session)
-    {
-        var world = session.World;
-        if (!world.IsAlive(_sessionEntity)) return;
-        ref var blackboard = ref world.Get<BlackboardFloatBuffer>(_sessionEntity);
-        blackboard.Set(StatKeyIds.Tick, session.TickCount);
-        blackboard.Set(StatKeyIds.Units, session.Units.Count);
-        blackboard.Set(StatKeyIds.Selected, session.SelectedCount);
-        blackboard.Set(StatKeyIds.ReplayStatus, ReplayStatus);
-        blackboard.Set(StatKeyIds.ReplayDivergenceTick, ReplayDivergenceTick);
-        // F02 迷雾 HUD 计数:玩家 1 的视野组(无迷雾会话不写,呈现层回退缺省)
-        if (session.Fog is { } fog && session.Config.PairRules.IndexByPlayerId[1] is { } pIdx)
-        {
-            int g = fog.GroupOf[pIdx];
-            blackboard.Set(StatKeyIds.FogVisible, fog.VisibleCount[g]);
-            blackboard.Set(StatKeyIds.FogExplored, fog.ExploredCount[g]);
-            blackboard.Set(StatKeyIds.FogBelief, fog.Belief[g].Count);
-            blackboard.Set(StatKeyIds.FogGhosts, fog.GhostCount[g]);
-            blackboard.Set(StatKeyIds.FogTerrain, fog.Terrain ? 1 : 0);
-        }
     }
 
     private static string RequireHeightAssetPath(MapConfig mapConfig, MapId mapId)
