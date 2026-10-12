@@ -10,9 +10,10 @@ public sealed class MultiLayerFogFieldShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        var runtime = new FogShowcaseRuntime(FogShowcaseScenario.Create(
-            FogShowcaseKind.MultiLayer,
-            "MultiLayerFogFieldShowcaseMod"));
+        using Stream layers = context.GetResource("MultiLayerFogFieldShowcaseMod:assets/WarFog/showcase.json");
+        var runtime = new FogShowcaseRuntime(
+            FogShowcaseScenario.Create(FogShowcaseKind.MultiLayer, "MultiLayerFogFieldShowcaseMod"),
+            FogShowcaseLayerFile.Read(layers));
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

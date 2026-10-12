@@ -1,7 +1,8 @@
 {
   "capability": "FOG-2",
   "layers": [
-    { "id": "ground", "cellSizeCm": 100, "updateHz": 10 },
-    { "id": "air", "cellSizeCm": 250, "updateHz": 5 }
+    { "id": "ground", "key": "war-fog-ground", "cellSizeCm": 500, "updateHz": 20 },
+    { "id": "air", "key": "war-fog-air", "cellSizeCm": 750, "updateHz": 20 },
+    { "id": "detection", "key": "war-fog-detection", "cellSizeCm": 500, "updateHz": 20 }
   ]
 }
