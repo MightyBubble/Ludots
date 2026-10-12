@@ -111,10 +111,10 @@ public class S4DeployTruthTests
         return v;
     }
 
-    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed)
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, CrowdPairRules? pairRules = null)
     {
         CrowdTestScheduler.Ensure();
-        var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
+        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, pairRules);
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
