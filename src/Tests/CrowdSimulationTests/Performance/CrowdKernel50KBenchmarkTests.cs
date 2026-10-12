@@ -12,20 +12,17 @@ using CrowdSimulationTests.Parity;
 namespace CrowdSimulationTests.Performance;
 
 /// <summary>
-/// 50k 单位 tick 基准(自造场景:同图种 1337,spawnAt 50000 → 远点行军,200 tick 稳态窗):
-/// 逐 tick 墙钟计时,输出 平均/P50/P95/最大。数字写入 artifacts/benchmarks/
-/// crowd-kernel-50k-tick/(报告 md + trace.jsonl),供改造前后对照;场景确定(种子/脚本
-/// 固定),计时允许机器噪声——前后对照需同机同窗。
-/// 33 ms 是产品目标,用 Warn.If 标出,不当硬门。同一次运行里 4 工人对单线程的加速比:
-/// 负载约 0.7 时 19.2/36.9 ms = 1.92;4 个忙循环占满核时 56.3/43.1 ms = 0.76(并行更慢)。
-/// 加速比硬门高于 1 会在占核时红,低于 0.76 又抓不住退回单线程(加速比回到 1)。
-/// 因此这里不设墙钟或加速比硬断言。
+/// 50k 单位 tick 门(种子 1337,spawnAt 50000,远点行军,200 tick 稳态窗)。
+/// 迷雾不冻结:计时含运动内核、迷雾盖章、认知同步和校验码。
+/// P95 必须低于 33 ms。均值、P50、最大和当时的 load average 写入
+/// artifacts/benchmarks/crowd-kernel-50k-tick/。
 /// </summary>
 public sealed class CrowdKernel50KBenchmarkTests
 {
     private const int Units = 50000;
     private const int WarmupTicks = 40;
     private const int MeasuredTicks = 200;
+    private const double BudgetMs = 33.0;
 
     [Test]
     public void CrowdKernel_50K_TickTiming()
@@ -34,7 +31,6 @@ public sealed class CrowdKernel50KBenchmarkTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true;
 
         var script = new JsonArray
         {
@@ -50,6 +46,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         session.Commands.Schedule(session, commands);
 
         var elapsed = new double[MeasuredTicks];
+        string loadBefore = File.ReadAllText("/proc/loadavg").Trim();
         var watch = Stopwatch.StartNew();
         int ran = 0, guard = 64 * (WarmupTicks + MeasuredTicks) + 64;
         while (ran < WarmupTicks + MeasuredTicks)
@@ -63,7 +60,10 @@ public sealed class CrowdKernel50KBenchmarkTests
             ran++;
         }
 
+        string loadAfter = File.ReadAllText("/proc/loadavg").Trim();
         Assert.That(session.Units.Count, Is.EqualTo(Units), "基准单位数");
+        Assert.That(session.TruthNavFrozen, Is.False);
+        Assert.That(session.Telemetry.FogRefreshes, Is.GreaterThan(0), "计时窗必须走过迷雾刷新");
         Array.Sort(elapsed);
         double avg = 0;
         foreach (var v in elapsed) avg += v;
@@ -72,20 +72,21 @@ public sealed class CrowdKernel50KBenchmarkTests
         double p95 = elapsed[(int)(MeasuredTicks * 0.95)];
         double max = elapsed[^1];
 
-        bool metProductTarget = avg < 33.0;
         string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-kernel-50k-tick"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "trace.jsonl"),
-            $"{{\"units\":{Units},\"ticks\":{MeasuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4},\"productTargetMs\":33,\"productTargetMet\":{(metProductTarget ? "true" : "false")}}}\n");
+            $"{{\"units\":{Units},\"ticks\":{MeasuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4},\"budgetMs\":{BudgetMs},\"fogFrozen\":false,\"fogRefreshes\":{session.Telemetry.FogRefreshes},\"workers\":{session.Config.Sim.ParallelWorkerCount},\"loadBefore\":\"{loadBefore}\",\"loadAfter\":\"{loadAfter}\"}}\n");
         File.WriteAllText(Path.Combine(dir, "benchmark-report.md"),
-            $"# 50k 单位 tick 基准(自造场景:种子 1337,spawnAt 50000 → 远点行军,{MeasuredTicks} tick 稳态窗)\n\n" +
+            $"# 50k 单位 tick 门(种子 1337,spawnAt 50000,远点行军,{MeasuredTicks} tick 稳态窗)\n\n" +
             $"| 指标 | 毫秒/tick |\n|---|---|\n| 平均 | {avg:F4} |\n| P50 | {p50:F4} |\n| P95 | {p95:F4} |\n| 最大 | {max:F4} |\n\n" +
-            $"- 单位 {Units},预热 {WarmupTicks} tick(计时窗不含生成/下令)\n" +
-            $"- 逐 tick 墙钟(含停摆重试开销),前后对照需同机同窗\n" +
-            $"- 产品目标 33 ms: {(metProductTarget ? "达到" : "未达到")}（平均 {avg:F4} ms，P95 {p95:F4} ms）\n");
+            $"- 单位 {Units},预热 {WarmupTicks} tick(计时窗不含生成与下令)\n" +
+            $"- Release,迷雾不冻结,计时是推进成功的 session.Step(运动、迷雾、认知同步、校验码)\n" +
+            $"- 迷雾刷新 {session.Telemetry.FogRefreshes} 次,并行工人 {session.Config.Sim.ParallelWorkerCount}\n" +
+            $"- load average 测前 `{loadBefore}`,测后 `{loadAfter}`\n" +
+            $"- 硬门:P95 < {BudgetMs:F0} ms\n");
         TestContext.Out.WriteLine(
-            $"50k tick: avg={avg:F4}ms p50={p50:F4}ms p95={p95:F4}ms max={max:F4}ms product33={(metProductTarget ? "met" : "miss")} (units={session.Units.Count}, workers={session.Config.Sim.ParallelWorkerCount})");
-        Warn.If(avg, Is.GreaterThanOrEqualTo(33.0),
-            $"50k 稳态 tick 均值 {avg:F4} ms，未达到 33 ms 产品目标");
+            $"50k tick: avg={avg:F4}ms p50={p50:F4}ms p95={p95:F4}ms max={max:F4}ms fog={session.Telemetry.FogRefreshes} workers={session.Config.Sim.ParallelWorkerCount} loadBefore={loadBefore} loadAfter={loadAfter}");
+        Assert.That(p95, Is.LessThan(BudgetMs),
+            $"50k 稳态 P95 {p95:F4} ms,平均 {avg:F4} ms,最大 {max:F4} ms,未低于 {BudgetMs:F0} ms");
     }
 }
