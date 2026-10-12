@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Ludots.Core.Client;
+using Ludots.Core.Modding;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -145,7 +146,7 @@ public static class FogShowcaseLayerFile
 public sealed class FogShowcaseRuntime
 {
     private readonly FogShowcaseScenario _scenario;
-    private readonly FogShowcaseLayerSpec[]? _authoredLayers;
+    private readonly FogShowcaseLayerSpec[] _authoredLayers;
     private Entity _viewer = Entity.Null;
     private readonly Entity[] _occupants = new Entity[4];
     private FogLayerId _groundLayer;
@@ -156,10 +157,23 @@ public sealed class FogShowcaseRuntime
     private uint _detectionMask;
     private int _tick;
 
-    public FogShowcaseRuntime(FogShowcaseScenario scenario, FogShowcaseLayerSpec[]? authoredLayers = null)
+    public FogShowcaseRuntime(FogShowcaseScenario scenario, FogShowcaseLayerSpec[] authoredLayers)
     {
+        if (authoredLayers == null || authoredLayers.Length == 0)
+        {
+            throw new ArgumentException("WarFog/showcase.json 需要 layers。", nameof(authoredLayers));
+        }
+
         _scenario = scenario;
         _authoredLayers = authoredLayers;
+    }
+
+    public static FogShowcaseRuntime Load(IModContext context, FogShowcaseKind kind, string modName)
+    {
+        using Stream layers = context.GetResource($"{modName}:assets/WarFog/showcase.json");
+        return new FogShowcaseRuntime(
+            FogShowcaseScenario.Create(kind, modName),
+            FogShowcaseLayerFile.Read(layers));
     }
 
     public FogShowcaseScenario Scenario => _scenario;
@@ -274,19 +288,9 @@ public sealed class FogShowcaseRuntime
         FogCellMap cellMap = engine.GetService(CoreServiceKeys.VisionFogCellMap)
             ?? throw new InvalidOperationException($"{_scenario.ModName} requires VisionFogCellMap.");
 
-        if (_authoredLayers != null)
-        {
-            _groundLayer = RegisterAuthored(layers, "ground");
-            _airLayer = RegisterAuthored(layers, "air");
-            _detectionLayer = RegisterAuthored(layers, "detection");
-        }
-        else
-        {
-            // 固定步 20 Hz。updateHz 低于它时周期大于 1，层会从每 tick 盖章改成隔 tick。
-            _groundLayer = EnsureLayer(layers, "war-fog-ground", cellSizeCm: 500, updateHz: 20);
-            _airLayer = EnsureLayer(layers, "war-fog-air", cellSizeCm: 750, updateHz: 20);
-            _detectionLayer = EnsureLayer(layers, "war-fog-detection", cellSizeCm: 500, updateHz: 20);
-        }
+        _groundLayer = RegisterAuthored(layers, "ground");
+        _airLayer = RegisterAuthored(layers, "air");
+        _detectionLayer = RegisterAuthored(layers, "detection");
 
         if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
             seats != null)
@@ -474,7 +478,7 @@ public sealed class FogShowcaseRuntime
 
     private FogLayerId RegisterAuthored(FogLayerRegistry layers, string id)
     {
-        foreach (FogShowcaseLayerSpec spec in _authoredLayers!)
+        foreach (FogShowcaseLayerSpec spec in _authoredLayers)
         {
             if (spec.Id == id)
             {
@@ -488,7 +492,19 @@ public sealed class FogShowcaseRuntime
     private static FogLayerId EnsureLayer(FogLayerRegistry registry, string key, int cellSizeCm, int updateHz)
     {
         FogLayerId existing = registry.GetId(key);
-        return existing.Value > 0 ? existing : registry.Register(key, cellSizeCm, updateHz);
+        if (existing.Value <= 0)
+        {
+            return registry.Register(key, cellSizeCm, updateHz);
+        }
+
+        FogLayerDefinition definition = registry.Get(existing);
+        if (definition.CellSizeCm != cellSizeCm || definition.UpdateHz != updateHz)
+        {
+            throw new InvalidOperationException(
+                $"雾层 {key} 已登记为 {definition.CellSizeCm} cm / {definition.UpdateHz} Hz，文件要求 {cellSizeCm} cm / {updateHz} Hz。");
+        }
+
+        return existing;
     }
 }
 

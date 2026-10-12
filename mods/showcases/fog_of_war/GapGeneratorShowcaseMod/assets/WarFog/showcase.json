@@ -1,6 +1,29 @@
 {
   "capability": "FOG-6",
   "polarity": "Deny",
-  "denyModes": ["DenyDominates", "RevealDominates"],
-  "relationshipGated": true
+  "denyModes": [
+    "DenyDominates",
+    "RevealDominates"
+  ],
+  "relationshipGated": true,
+  "layers": [
+    {
+      "id": "ground",
+      "key": "war-fog-ground",
+      "cellSizeCm": 500,
+      "updateHz": 20
+    },
+    {
+      "id": "air",
+      "key": "war-fog-air",
+      "cellSizeCm": 750,
+      "updateHz": 20
+    },
+    {
+      "id": "detection",
+      "key": "war-fog-detection",
+      "cellSizeCm": 500,
+      "updateHz": 20
+    }
+  ]
 }

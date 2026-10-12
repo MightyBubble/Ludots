@@ -339,7 +339,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 `sharesVisionWith` 两个方向都成立才并进同一组，进图时这些玩家就指向同一份 `FogField`。只有单向、或没有这条关系时，不并组。绑定留在群体会话。`Vision/` 不写玩家号、队伍号。
 
-没有雾层，并且知识库没有未过期记录时，`VisionSystem.Update` 直接返回，不调用知识维护。有普通层时仍按发射器查询。层上的 `updateHz` 参与周期：`period = max(1, round(simHz / updateHz))`。`updateHz` 不低于仿真频率时周期是 1，每 tick 都处理。多层雾展厅的层从 `MultiLayerFogFieldShowcaseMod/assets/WarFog/showcase.json` 读：ground / air / detection，格边 500 / 750 / 500 cm，`updateHz` 20。文件缺字段或数值不合法就进图失败。其余雾展厅没有这份层文件，代码里的 `updateHz` 也是 20。引擎固定步 20 时周期是 1。
+没有雾层，并且知识库没有未过期记录时，`VisionSystem.Update` 直接返回，不调用知识维护。有普通层时仍按发射器查询。层上的 `updateHz` 参与周期：`period = max(1, round(simHz / updateHz))`。`updateHz` 不低于仿真频率时周期是 1，每 tick 都处理。每个雾展厅从自己的 `assets/WarFog/showcase.json` 读 ground / air / detection。现在这三层是格边 500 / 750 / 500 cm，`updateHz` 20。文件缺字段或数值不合法就进图失败。键已经登记过、但格边或 `updateHz` 和文件不同，也进图失败，信息里写出两侧的数。引擎固定步 20 时周期是 1。
 
 HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。座位没有、未占有、或解析不出 scope 时这两格计数保持 0。宿主每个视口经 `ISeatVisionScope` 取本机座位的 `ScopeKey`，只把这份雾贴到地形贴花。`Flow` / `Walkable` 仍优先占这个槽。座位没有 scope 时不贴雾，也不取缓冲里的第一份。`Vision/` 不写玩家号。群体侧 `CrowdSeatVisionScope` 用座位占有的玩家找到视野组，scope = 组号 + 1。雾展厅的座位 scope 是场景固定的 `ScopeKeyId`。调试配置可以写 `presentation.fogDecal` 四色（`unseen` / `explored` / `visible` / `denied`）；没写时贴花用呈现器原来的字节。
 

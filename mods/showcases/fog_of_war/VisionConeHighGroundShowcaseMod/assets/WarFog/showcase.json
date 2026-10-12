@@ -1,5 +1,33 @@
 {
   "capability": "FOG-3",
-  "apertures": ["disk", "cone", "box", "line"],
-  "verticalRule": { "enabled": true, "upTolerance": 0 }
+  "apertures": [
+    "disk",
+    "cone",
+    "box",
+    "line"
+  ],
+  "verticalRule": {
+    "enabled": true,
+    "upTolerance": 0
+  },
+  "layers": [
+    {
+      "id": "ground",
+      "key": "war-fog-ground",
+      "cellSizeCm": 500,
+      "updateHz": 20
+    },
+    {
+      "id": "air",
+      "key": "war-fog-air",
+      "cellSizeCm": 750,
+      "updateHz": 20
+    },
+    {
+      "id": "detection",
+      "key": "war-fog-detection",
+      "cellSizeCm": 500,
+      "updateHz": 20
+    }
+  ]
 }
