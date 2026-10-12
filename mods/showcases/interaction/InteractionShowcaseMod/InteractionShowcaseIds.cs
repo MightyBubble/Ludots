@@ -13,10 +13,6 @@ namespace InteractionShowcaseMod
         public const string IndicatorModeId = "Interaction.Mode.Indicator";
         public const string ActionModeId = "Interaction.Mode.Action";
 
-        public const string WowModeActionId = "Aim.CastMode.Smart";
-        public const string LolModeActionId = "Aim.CastMode.Smart";
-        public const string Sc2ModeActionId = "Aim.CastMode.AimClick";
-        public const string IndicatorModeActionId = "Aim.CastMode.AimRelease";
         public const string ActionModeActionId = "InteractionModeAction";
         public const string SelectionGroupRecall1ActionId = "SelectionGroupRecall1";
         public const string SelectionGroupRecall2ActionId = "SelectionGroupRecall2";

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
     <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\capabilities\entityinfo\EntityInfoPanelsMod\EntityInfoPanelsMod.csproj" />
     <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">

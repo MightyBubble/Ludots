@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
+using EntityCommandPanelMod.Runtime;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using InteractionShowcaseMod.Input;
@@ -58,6 +59,7 @@ namespace InteractionShowcaseMod.Runtime
             if (showcaseActive)
             {
                 _visibleUatFrame = 0;
+                EntityCommandPanelToolbarCatalog.Require(engine);
                 ActivateInputContext(input);
                 List<PossessedShowcaseRep> possessedReps = RequireShowcasePossessedReps(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!, possessedReps);
@@ -663,10 +665,6 @@ namespace InteractionShowcaseMod.Runtime
                 "SkillF",
                 "ActionAttack",
                 "RuneBurst",
-                InteractionShowcaseIds.WowModeActionId,
-                InteractionShowcaseIds.LolModeActionId,
-                InteractionShowcaseIds.Sc2ModeActionId,
-                InteractionShowcaseIds.IndicatorModeActionId,
                 InteractionShowcaseIds.ActionModeActionId,
                 InteractionShowcaseIds.SelectionGroupRecall1ActionId,
                 InteractionShowcaseIds.SelectionGroupRecall2ActionId,

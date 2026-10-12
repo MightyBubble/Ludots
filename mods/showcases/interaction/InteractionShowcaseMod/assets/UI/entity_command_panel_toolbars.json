@@ -1,0 +1,45 @@
+[
+  {
+    "id": "toolbar.interaction",
+    "title": "Reference Interactions",
+    "subtitle": "Same heroes, different gestures",
+    "maps": ["interaction_showcase_hub", "interaction_showcase_stress"],
+    "buttons": [
+      {
+        "id": "Interaction.Mode.WoW",
+        "label": "WoW / Target First",
+        "actionId": "Aim.CastMode.Smart"
+      },
+      {
+        "id": "Interaction.Mode.LoL",
+        "label": "LoL / Smart Cast",
+        "actionId": "Aim.CastMode.Smart",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.smart" }
+        }
+      },
+      {
+        "id": "Interaction.Mode.SC2",
+        "label": "SC2 / Aim Cast",
+        "actionId": "Aim.CastMode.AimClick",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.click" }
+        }
+      },
+      {
+        "id": "Interaction.Mode.Indicator",
+        "label": "LoL / Indicator Release",
+        "actionId": "Aim.CastMode.AimRelease",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.release" }
+        }
+      },
+      {
+        "id": "Interaction.Mode.Action",
+        "label": "Action / Context Scored",
+        "actionId": "InteractionModeAction",
+        "highlight": { "context": "interaction.context.interaction.context_scored" }
+      }
+    ]
+  }
+]

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using EntityCommandPanelMod.Runtime;
 using EntityInfoPanelsMod;
+using Ludots.Core.UI.EntityCommandPanels;
 using EntityInfoPanelsMod.UI;
 using InteractionShowcaseMod.Runtime;
 using Ludots.Core.Components;
@@ -159,13 +161,7 @@ namespace InteractionShowcaseMod.UI
                             BuildHeroChip(InteractionShowcaseIds.CommanderName, state.SelectedLabel.Contains(InteractionShowcaseIds.CommanderName, StringComparison.OrdinalIgnoreCase)))
                         .Wrap()
                         .Gap(8f),
-                    Ui.Row(
-                            BuildMapButton("Hub", state.MapId == InteractionShowcaseIds.HubMapId, _ => LoadShowcaseMap(InteractionShowcaseIds.HubMapId)),
-                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => SwitchMode(InteractionShowcaseIds.LolModeId)),
-                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => SwitchMode(InteractionShowcaseIds.Sc2ModeId)),
-                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => SwitchMode(InteractionShowcaseIds.ActionModeId)))
-                        .Wrap()
-                        .Gap(8f))
+                    BuildModeRow(includeHub: true, state))
                 .Gap(8f)
                 .Padding(14f)
                 .Radius(8f)
@@ -239,13 +235,7 @@ namespace InteractionShowcaseMod.UI
                         .FontSize(12f)
                         .Bold()
                         .Color("#F0C36B"),
-                    Ui.Row(
-                            BuildMapButton("Hub", state.MapId == InteractionShowcaseIds.HubMapId, _ => LoadShowcaseMap(InteractionShowcaseIds.HubMapId)),
-                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => SwitchMode(InteractionShowcaseIds.LolModeId)),
-                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => SwitchMode(InteractionShowcaseIds.Sc2ModeId)),
-                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => SwitchMode(InteractionShowcaseIds.ActionModeId)))
-                        .Wrap()
-                        .Gap(8f),
+                    BuildModeRow(includeHub: true, state),
                     Ui.Text(state.SchemeSummary)
                         .FontSize(12f)
                         .Color("#C7D0DD")
@@ -260,14 +250,7 @@ namespace InteractionShowcaseMod.UI
         {
             return Ui.Card(
                     Ui.Text("Reference Interactions").FontSize(12f).Bold().Color("#F0C36B"),
-                    Ui.Row(
-                            BuildActionButton("WoW", state.ActiveModeId == InteractionShowcaseIds.WowModeId, _ => SwitchMode(InteractionShowcaseIds.WowModeId)),
-                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => SwitchMode(InteractionShowcaseIds.LolModeId)),
-                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => SwitchMode(InteractionShowcaseIds.Sc2ModeId)),
-                            BuildActionButton("Indicator", state.ActiveModeId == InteractionShowcaseIds.IndicatorModeId, _ => SwitchMode(InteractionShowcaseIds.IndicatorModeId)),
-                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => SwitchMode(InteractionShowcaseIds.ActionModeId)))
-                        .Wrap()
-                        .Gap(8f),
+                    BuildModeRow(includeHub: false, state),
                     Ui.Text(state.ModeSummary)
                         .FontSize(12f)
                         .Color("#C7D0DD")
@@ -499,11 +482,47 @@ namespace InteractionShowcaseMod.UI
             _engine.LoadMap(mapId);
         }
 
+        private UiElementBuilder BuildModeRow(bool includeHub, InteractionShowcasePanelState state)
+        {
+            UiElementBuilder[] modes = BuildDeclaredModeButtons();
+            if (!includeHub)
+            {
+                return Ui.Row(modes).Wrap().Gap(8f);
+            }
+
+            var children = new UiElementBuilder[modes.Length + 1];
+            children[0] = BuildMapButton("Hub", state.MapId == InteractionShowcaseIds.HubMapId, _ => LoadShowcaseMap(InteractionShowcaseIds.HubMapId));
+            modes.CopyTo(children, 1);
+            return Ui.Row(children).Wrap().Gap(8f);
+        }
+
+        private UiElementBuilder[] BuildDeclaredModeButtons()
+        {
+            GameEngine engine = _engine ?? throw new InvalidOperationException("Interaction showcase panel is not mounted.");
+            EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
+            var views = new EntityCommandPanelToolbarButtonView[16];
+            int written = catalog.CopyVisibleButtons(engine, views, out int total);
+            if (written < total)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction showcase panel holds {views.Length} toolbar buttons, but {total} are visible.");
+            }
+
+            var elements = new UiElementBuilder[written];
+            for (int i = 0; i < written; i++)
+            {
+                string buttonId = views[i].ButtonId;
+                elements[i] = BuildActionButton(views[i].Label, views[i].Active, _ => SwitchMode(buttonId));
+            }
+
+            return elements;
+        }
+
         private void SwitchMode(string modeId)
         {
             if (_engine != null)
             {
-                InteractionShowCastModes.Activate(_engine, modeId);
+                EntityCommandPanelToolbarCatalog.Require(_engine).Activate(_engine, modeId);
             }
         }
 
@@ -517,8 +536,9 @@ namespace InteractionShowcaseMod.UI
             string selectionViewLabel = ResolveSelectionViewLabel(engine, selectionViewMode);
             int activeControlGroup = ResolveActiveControlGroup(engine);
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
-            string activeModeId = InteractionShowCastModes.GetActive(engine);
-            string activeModeName = InteractionShowCastModes.GetDisplayName(engine, activeModeId);
+            EntityCommandPanelToolbarCatalog toolbar = EntityCommandPanelToolbarCatalog.Require(engine);
+            string activeModeId = toolbar.ActiveButtonId(engine);
+            string activeModeName = toolbar.ButtonLabel(engine, activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
             BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);
