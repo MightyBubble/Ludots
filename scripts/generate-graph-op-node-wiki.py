@@ -342,6 +342,7 @@ FAMILY_USE_CASES = {
 # 描述表仍列出这些端口（编辑器要画引脚），但编译期允许不接。边界句由生成器写出，避免手改 wiki 被下一次生成抹掉。
 OPTIONAL_TARGET_BOUNDARY = {
     "SubmitAssignedOrder": "目标口可以不接。不接时这道令没有实体目标，落点仍由 a、b 给出。",
+    "AbilityAcceptsTargetKind": "`symbol` 只接受 `unit`、`ground` 或 `none`。`none` 独占：技能声明里不能和 `unit` 或 `ground` 写在一起，加载直接失败。技能没写 `targeting.targetKinds`、槽位是空的、或种类名不认识，节点直接失败，不会当成“都收”。`castRangeCm` 为 0 也不会自动变成 `none`。",
 }
 
 

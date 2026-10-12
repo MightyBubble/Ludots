@@ -13,7 +13,7 @@
 | 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Bool → 布尔槽 |
 | 输入端口（值边 toPort） | `source`（来源实体）、`value`（槽位整数） |
-| 特殊写法 | 结果写入 dst 寄存器；`symbol` 填 `unit` 或 `ground`（编译期解析） |
+| 特殊写法 | 结果写入 dst 寄存器；`symbol` 填 `unit`、`ground` 或独占的 `none`（编译期解析） |
 
 手册分册（全量字段与语义）：[算术与比较 · gr-op-02](../mod-editor-prd/config/gr-op-02-math.md)
 
@@ -43,7 +43,7 @@ ConstFloat → ConstInt → **AbilityAcceptsTargetKind**（本篇） → LoadExp
 ## 边界与更多用法
 
 - 图种边界：七种图全都能用，不必为它挑图种。
-- `symbol` 只接受 `unit` 或 `ground`。技能没写 `targeting.targetKinds`、槽位是空的、或种类名不认识，节点直接失败，不会当成“两种都收”。
+- `symbol` 只接受 `unit`、`ground` 或 `none`。`none` 独占：技能声明里不能和 `unit` 或 `ground` 写在一起，加载直接失败。技能没写 `targeting.targetKinds`、槽位是空的、或种类名不认识，节点直接失败，不会当成“都收”。`castRangeCm` 为 0 也不会自动变成 `none`。
 - 同类用法：伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。
 ## 怎么进
 

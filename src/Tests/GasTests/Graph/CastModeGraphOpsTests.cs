@@ -167,6 +167,30 @@ namespace Ludots.Tests.GasTests.Graph
 
             Run ground = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Ground), world, fixture.Api, "check", actor, actor);
             Assert.That(ground.Bools[ground.FeaturedDst], Is.EqualTo(0));
+
+            Run none = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.None), world, fixture.Api, "check", actor, actor);
+            Assert.That(none.Bools[none.FeaturedDst], Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AbilityAcceptsTargetKind_NoneFollowsItsOwnBit([Values("Effect", "Query")] string kind)
+        {
+            using var noneWorld = World.Create();
+            Fixture noneFixture = Fixture.Create(noneWorld, targetKinds: AbilityTargetKinds.NoneBit);
+            Entity noneActor = noneFixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
+
+            Run none = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.None), noneWorld, noneFixture.Api, "check", noneActor, noneActor);
+            Assert.That(none.Bools[none.FeaturedDst], Is.EqualTo(1));
+            Run unit = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Unit), noneWorld, noneFixture.Api, "check", noneActor, noneActor);
+            Assert.That(unit.Bools[unit.FeaturedDst], Is.EqualTo(0));
+            Run ground = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Ground), noneWorld, noneFixture.Api, "check", noneActor, noneActor);
+            Assert.That(ground.Bools[ground.FeaturedDst], Is.EqualTo(0));
+
+            using var bothWorld = World.Create();
+            Fixture bothFixture = Fixture.Create(bothWorld);
+            Entity bothActor = bothFixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
+            Run noneOnBoth = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.None), bothWorld, bothFixture.Api, "check", bothActor, bothActor);
+            Assert.That(noneOnBoth.Bools[noneOnBoth.FeaturedDst], Is.EqualTo(0));
         }
 
         [Test]
@@ -180,6 +204,7 @@ namespace Ludots.Tests.GasTests.Graph
                 CompileAndRun(AcceptsKindDoc("Effect", "self"), world, fixture.Api, "check", actor, actor));
             Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknown"));
             Assert.That(error.Message, Does.Contain("self"));
+            Assert.That(error.Message, Does.Contain(AbilityTargetKinds.None));
         }
 
         [Test]

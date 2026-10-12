@@ -1856,6 +1856,74 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void AbilityExecLoader_CompileAbility_AcceptsExclusiveNoneAndDoesNotInferItFromRange()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var none = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 1200,
+                    "impactEffect": "Effect.Guard.Impact",
+                    "targetKinds": ["none"]
+                  }
+                }
+                """)!.AsObject();
+            var noneDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(none, "Ability.Test.None", "GAS/abilities.json");
+            That(noneDef.Targeting.TargetKinds, Is.EqualTo(AbilityTargetKinds.NoneBit));
+            That(noneDef.Targeting.CastRangeCm, Is.EqualTo(1200f));
+
+            var zeroRangeUnit = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 0,
+                    "impactEffect": "Effect.Guard.Impact",
+                    "targetKinds": ["unit"]
+                  }
+                }
+                """)!.AsObject();
+            var unitDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(zeroRangeUnit, "Ability.Test.ZeroRangeUnit", "GAS/abilities.json");
+            That(unitDef.Targeting.TargetKinds, Is.EqualTo(AbilityTargetKinds.UnitBit));
+            That(unitDef.Targeting.CastRangeCm, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsNoneCombinedWithAnotherKind()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            string[][] combos =
+            {
+                new[] { "none", "unit" },
+                new[] { "none", "ground" },
+                new[] { "ground", "none" },
+            };
+            for (int i = 0; i < combos.Length; i++)
+            {
+                string listed = $"\"{combos[i][0]}\", \"{combos[i][1]}\"";
+                var obj = JsonNode.Parse(
+                    $$"""
+                    {
+                      "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                      "targeting": {
+                        "castRangeCm": 0,
+                        "impactEffect": "Effect.Guard.Impact",
+                        "targetKinds": [{{listed}}]
+                      }
+                    }
+                    """)!.AsObject();
+                var error = Throws<InvalidOperationException>(() =>
+                    Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.NoneMixed", "GAS/abilities.json"));
+                That(error!.Message, Does.Contain("lists 'none' together with another kind"));
+                That(error.Message, Does.Contain("'none' is exclusive"));
+            }
+        }
+
+        [Test]
         public void AbilityExecLoader_CompileAbility_RejectsRemovedIndicatorField()
         {
             var obj = JsonNode.Parse(

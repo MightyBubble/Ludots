@@ -844,13 +844,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (kindsNode is not JsonArray kindArray)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must be an array of 'unit' and/or 'ground'.");
+                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must be an array of 'unit', 'ground', and/or 'none'.");
             }
 
             if (kindArray.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must list at least one of 'unit' or 'ground'.");
+                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must list at least one of 'unit', 'ground', or 'none'.");
             }
 
             byte mask = 0;
@@ -867,7 +867,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (!AbilityTargetKinds.TryParse(token, out byte bit))
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds' has unknown kind '{token}'. Expected '{AbilityTargetKinds.Unit}' or '{AbilityTargetKinds.Ground}'.");
+                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds' has unknown kind '{token}'. Expected '{AbilityTargetKinds.Unit}', '{AbilityTargetKinds.Ground}', or '{AbilityTargetKinds.None}'.");
                 }
 
                 if ((mask & bit) != 0)
@@ -877,6 +877,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
 
                 mask |= bit;
+            }
+
+            if ((mask & AbilityTargetKinds.NoneBit) != 0 &&
+                (mask & (AbilityTargetKinds.UnitBit | AbilityTargetKinds.GroundBit)) != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' lists 'none' together with another kind. 'none' is exclusive.");
             }
 
             return mask;

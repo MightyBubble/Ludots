@@ -560,7 +560,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// B[Dst] = 1 when the ability on actor A at slot I[B] lists the target kind named by symbols[Imm].
-        /// Kind symbols are "unit" and "ground". An empty slot, a missing targeting block, or an unknown kind fails closed.
+        /// Kind symbols are "unit", "ground", and exclusive "none" (no target and no point).
+        /// An empty slot, a missing targeting block, or an unknown kind fails closed.
         /// </summary>
         AbilityAcceptsTargetKind = 536,
 

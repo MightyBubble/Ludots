@@ -27,7 +27,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["unit"],
       "castRangeCm": 900,
       "impactEffect": "Effect.Interaction.DuelBolt"
     }
@@ -88,7 +88,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Interaction.FireLance"
     },
@@ -122,7 +122,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["none"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.NovaPulse"
     },
@@ -281,7 +281,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["unit"],
       "castRangeCm": 480,
       "impactEffect": "Effect.Interaction.Challenge"
     }
@@ -342,7 +342,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["ground"],
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.CleaveCone"
     },
@@ -376,7 +376,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["none"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Shockwave"
     },
@@ -530,7 +530,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["unit"],
       "castRangeCm": 800,
       "impactEffect": "Effect.Interaction.SupportBeam"
     }
@@ -591,7 +591,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Interaction.VolleyLine"
     },
@@ -629,7 +629,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
+      "targetKinds": ["none"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Overclock"
     }

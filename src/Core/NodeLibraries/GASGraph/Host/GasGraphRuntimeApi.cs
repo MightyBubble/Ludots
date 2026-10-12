@@ -1227,7 +1227,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (!AbilityTargetKinds.TryParse(kind, out byte bit))
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknown: kind '{kind}' is not '{AbilityTargetKinds.Unit}' or '{AbilityTargetKinds.Ground}'.");
+                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknown: kind '{kind}' is not '{AbilityTargetKinds.Unit}', '{AbilityTargetKinds.Ground}', or '{AbilityTargetKinds.None}'.");
             }
 
             return (definition.Targeting.TargetKinds & bit) != 0;

@@ -130,7 +130,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// True when the ability on <paramref name="actor"/> at <paramref name="slot"/>
-        /// lists the target kind named by <paramref name="kindKeyId"/> (<c>unit</c> or <c>ground</c>).
+        /// lists the target kind named by <paramref name="kindKeyId"/> (<c>unit</c>, <c>ground</c>, or exclusive <c>none</c>).
         /// An empty slot, a missing targeting block, or an unknown kind fails closed.
         /// </summary>
         bool AbilityAcceptsTargetKind(Entity actor, int slot, int kindKeyId)

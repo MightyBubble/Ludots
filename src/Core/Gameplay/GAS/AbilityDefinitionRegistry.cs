@@ -76,8 +76,10 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public const string Unit = "unit";
         public const string Ground = "ground";
+        public const string None = "none";
         public const byte UnitBit = 1;
         public const byte GroundBit = 2;
+        public const byte NoneBit = 4;
 
         public static bool TryParse(string? token, out byte bit)
         {
@@ -90,6 +92,12 @@ namespace Ludots.Core.Gameplay.GAS
             if (string.Equals(token, Ground, StringComparison.Ordinal))
             {
                 bit = GroundBit;
+                return true;
+            }
+
+            if (string.Equals(token, None, StringComparison.Ordinal))
+            {
+                bit = NoneBit;
                 return true;
             }
 

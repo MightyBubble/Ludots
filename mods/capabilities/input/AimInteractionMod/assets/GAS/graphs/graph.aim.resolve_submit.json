@@ -136,6 +136,26 @@
         "symbol": "ground"
       },
       {
+        "id": "accept_none",
+        "op": "AbilityAcceptsTargetKind",
+        "symbol": "none"
+      },
+      {
+        "id": "none_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_none",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "submit_none",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
         "id": "unit_jump",
         "op": "JumpIfFalse"
       },
@@ -258,7 +278,7 @@
       {
         "from": "read_slot",
         "fromPort": "next",
-        "to": "accept_unit"
+        "to": "accept_none"
       },
       {
         "from": "accept_unit",
@@ -304,6 +324,31 @@
         "from": "ground_gate",
         "fromPort": "false",
         "to": "halt0"
+      },
+      {
+        "from": "accept_none",
+        "fromPort": "next",
+        "to": "none_jump"
+      },
+      {
+        "from": "none_jump",
+        "fromPort": "true",
+        "to": "q_none"
+      },
+      {
+        "from": "none_jump",
+        "fromPort": "false",
+        "to": "accept_unit"
+      },
+      {
+        "from": "q_none",
+        "fromPort": "next",
+        "to": "submit_none"
+      },
+      {
+        "from": "submit_none",
+        "fromPort": "next",
+        "to": "halt1"
       }
     ],
     "valueEdges": [
@@ -504,6 +549,36 @@
         "fromPort": "value",
         "to": "ground_gate",
         "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "accept_none",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "accept_none",
+        "toPort": "value"
+      },
+      {
+        "from": "accept_none",
+        "fromPort": "value",
+        "to": "none_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_none",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "submit_none",
+        "toPort": "value"
       }
     ]
   }

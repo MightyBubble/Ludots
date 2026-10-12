@@ -84,7 +84,7 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit"],
+      "targetKinds": ["none"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Heal.W"
     }
