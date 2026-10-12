@@ -227,6 +227,7 @@ namespace Ludots.Core.Config
                     if (IsDeleted(obj))
                     {
                         mergedNodes.Remove(id);
+                        _firstSourceById.Remove(id);
                         report?.RecordDeleted(entry.RelativePath, id, src);
                         for (int oi = orderedIds.Count - 1; oi >= 0; oi--)
                         {
@@ -262,7 +263,10 @@ namespace Ludots.Core.Config
             for (int i = 0; i < orderedIds.Count; i++)
             {
                 if (mergedNodes.TryGetValue(orderedIds[i], out var n) && n is JsonObject jObj)
-                    result.Add(new MergedConfigEntry(orderedIds[i], jObj));
+                {
+                    _firstSourceById.TryGetValue(orderedIds[i], out string? source);
+                    result.Add(new MergedConfigEntry(orderedIds[i], jObj, source ?? string.Empty));
+                }
             }
             return result;
         }

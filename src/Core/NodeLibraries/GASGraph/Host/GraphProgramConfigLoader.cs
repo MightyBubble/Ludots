@@ -31,6 +31,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         // Hook weaving source: the authored documents in compile order, consumed by
         // the weave pass after registration (WeaveHooks) and cleared afterwards.
         private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
+        private readonly Dictionary<string, string> _pendingOwningMods = new(StringComparer.OrdinalIgnoreCase);
 
         public GraphProgramConfigLoader(
             ConfigPipeline pipeline,
@@ -70,6 +71,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _pendingOutputSchemas.Clear();
             _pendingSourceMaps.Clear();
             _pendingDocuments.Clear();
+            _pendingOwningMods.Clear();
             _outputSchemas?.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
@@ -77,7 +79,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             var sorted = new List<(string Id, JsonObject Node)>(merged.Count);
             for (int i = 0; i < merged.Count; i++)
+            {
                 sorted.Add((merged[i].Id, merged[i].Node));
+                _pendingOwningMods[merged[i].Id] = TriggerGraphHookWeaver.OwningMod(merged[i].SourceUri);
+            }
             sorted.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
 
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
@@ -237,8 +242,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _entityCollections,
                 _builtinHandlers,
                 _enums,
-                _opRegistry);
+                _opRegistry,
+                _pendingOwningMods);
             _pendingDocuments.Clear();
+            _pendingOwningMods.Clear();
         }
 
         /// <summary>

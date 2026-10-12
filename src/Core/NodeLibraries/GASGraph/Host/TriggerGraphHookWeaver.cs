@@ -42,6 +42,51 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     {
         public const string HookCycleError = "GAS.GRAPH.ERR.HookInvokeCycle";
 
+        /// <summary>
+        /// Mod id carried by a config source uri (<c>{modId}:assets/...</c>, or the token
+        /// before the first colon for core assets). Empty when the uri has no owner.
+        /// </summary>
+        public static string OwningMod(string? sourceUri)
+        {
+            if (string.IsNullOrWhiteSpace(sourceUri))
+            {
+                return string.Empty;
+            }
+
+            const string marker = ":assets/";
+            int assets = sourceUri.IndexOf(marker, StringComparison.Ordinal);
+            if (assets > 0)
+            {
+                return sourceUri.Substring(0, assets);
+            }
+
+            int colon = sourceUri.IndexOf(':');
+            return colon > 0 ? sourceUri.Substring(0, colon) : string.Empty;
+        }
+
+        private static void RequireSameMod(HookRecord hook, IReadOnlyDictionary<string, string> owningMods)
+        {
+            string callerMod = RequireOwningMod(owningMods, hook.CallerGraphId);
+            string targetMod = RequireOwningMod(owningMods, hook.Target.TargetGraphId);
+            if (!string.Equals(callerMod, targetMod, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraphHookWeaver: mod '{callerMod}' graph '{hook.CallerGraphId}' cannot hook graph " +
+                    $"'{hook.Target.TargetGraphId}' declared by mod '{targetMod}'.");
+            }
+        }
+
+        private static string RequireOwningMod(IReadOnlyDictionary<string, string> owningMods, string graphId)
+        {
+            if (!owningMods.TryGetValue(graphId, out string? mod) || string.IsNullOrWhiteSpace(mod))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraphHookWeaver: graph '{graphId}' has no owning mod; hook weaving needs the registration source.");
+            }
+
+            return mod;
+        }
+
         private sealed class HookRecord
         {
             public HookRecord(
@@ -86,7 +131,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntityCollectionStore? entityCollections = null,
             BuiltinHandlerRegistry? builtinHandlers = null,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
-            GasGraphOpRegistry? opRegistry = null)
+            GasGraphOpRegistry? opRegistry = null,
+            IReadOnlyDictionary<string, string>? owningMods = null)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
             if (documents == null) throw new ArgumentNullException(nameof(documents));
@@ -113,6 +159,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (hooks.Count == 0)
             {
                 return;
+            }
+
+            if (owningMods == null)
+            {
+                throw new InvalidOperationException(
+                    "TriggerGraphHookWeaver: hook entries require each graph's owning mod; none was supplied.");
+            }
+
+            for (int i = 0; i < hooks.Count; i++)
+            {
+                RequireSameMod(hooks[i], owningMods);
             }
 
             DetectCycles(hooks);
