@@ -646,21 +646,6 @@ public sealed class MassNavigationConfigLoader
         ConfigConflictReport report,
         string relativePath = DefaultRelativePath)
     {
-        if (TryLoad(catalog, report, out MassNavigationConfig? config, relativePath))
-        {
-            return config;
-        }
-
-        throw new InvalidOperationException($"MassNavigation runtime config '{relativePath}' must be registered in config_catalog.json.");
-    }
-
-    public bool TryLoad(
-        ConfigCatalog catalog,
-        ConfigConflictReport report,
-        [NotNullWhen(true)] out MassNavigationConfig? config,
-        string relativePath = DefaultRelativePath)
-    {
-        config = null;
         if (catalog == null)
         {
             throw new ArgumentNullException(nameof(catalog));
@@ -688,8 +673,7 @@ public sealed class MassNavigationConfigLoader
             throw new InvalidOperationException($"MassNavigation runtime requires config '{relativePath}' through ConfigPipeline.");
         }
 
-        config = MassNavigationConfig.Load(merged);
-        return true;
+        return MassNavigationConfig.Load(merged);
     }
 }
 

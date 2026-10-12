@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
@@ -231,25 +230,23 @@ public sealed class MassNavigationRuntime
 
         const string relativePath = MassNavigationConfigLoader.DefaultRelativePath;
         ConfigCatalog? catalog = engine.ConfigCatalog;
-        JsonObject? merged = null;
-        if (catalog != null && catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
+        string context = $"地图 \"{mapId}\" 的 solver 是 {NavSolverDeclaration.MassNavigation}";
+        if (catalog == null || !catalog.TryGet(relativePath, out _))
         {
-            if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation runtime config '{relativePath}' must use DeepObject merge policy.");
-            }
-
-            merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport);
+            throw new InvalidOperationException($"{context}，但 {relativePath} 缺失。");
         }
 
-        if (merged == null)
+        MassNavigationConfig loaded;
+        try
         {
-            throw new InvalidOperationException(
-                $"地图 \"{mapId}\" 的 solver 是 {NavSolverDeclaration.MassNavigation}，但 {relativePath} 缺失或合并为空。");
+            loaded = new MassNavigationConfigLoader(engine.ConfigPipeline)
+                .Load(catalog, engine.ConfigConflictReport, relativePath);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException($"{context}：{ex.Message}", ex);
         }
 
-        MassNavigationConfig loaded = MassNavigationConfig.Load(merged);
         AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
         loaded.AgentProfiles.BindAgentProfiles(agentProfiles);
