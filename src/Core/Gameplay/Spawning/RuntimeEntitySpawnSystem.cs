@@ -152,6 +152,11 @@ namespace Ludots.Core.Gameplay.Spawning
 
         public int LargestTemplateBatch => _templateBatchSpawner.LargestCreatedBatch;
 
+        public void RegisterBatchComponent<T>(string componentName) where T : unmanaged
+        {
+            _templateBatchSpawner.RegisterBatchComponent<T>(componentName);
+        }
+
         /// <summary>返回 1 基 kind。初始化器挂在这个系统实例上，不进进程静态，避免回放和活会话串世界。</summary>
         public ushort RegisterInstanceInitializer(IRuntimeSpawnInstanceInitializer initializer)
         {

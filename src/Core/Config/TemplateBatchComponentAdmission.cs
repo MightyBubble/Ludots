@@ -8,53 +8,51 @@ using Arch.Core;
 namespace Ludots.Core.Config;
 
 /// <summary>
-/// 批车道组件准入。登记的类型用 <see cref="ComponentRegistry"/> 在探针实体上落一次 JSON，
-/// 再把那份 struct 抄进批 chunk。JSON 仍是组件形状的唯一来源，不另写一套解析。
+/// 批车道组件准入，归一个生成器实例所有。登记的类型用 <see cref="ComponentRegistry"/> 在临时世界上落一次 JSON，
+/// 再把那份 struct 抄进批 chunk。JSON 仍是组件形状的唯一来源。探针不进调用方的世界。
 /// <see cref="Generation"/> 变化后，生成器里已缓存的模板描述作废重算——登记可以晚于第一次查询。
+/// 同名同类型再登记是空操作，给会话重载用；同名不同类型直接抛错。
 /// </summary>
-internal static class TemplateBatchComponentAdmission
+internal sealed class TemplateBatchComponentAdmission
 {
-    private static readonly Dictionary<string, Admission> ByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Admission> _byName = new(StringComparer.Ordinal);
 
-    static TemplateBatchComponentAdmission()
-    {
-        Register<Spatial.SpatialBounds>("SpatialBounds");
-        Register<Spatial.SpatialBox3D>("SpatialBox3D");
-        Register<Spatial.SpatialFootprint2D>("SpatialFootprint2D");
-    }
+    public int Generation { get; private set; }
 
-    public static int Generation { get; private set; }
-
-    public static void Register<T>(string componentName) where T : unmanaged
+    public void Register<T>(string componentName) where T : unmanaged
     {
         if (string.IsNullOrWhiteSpace(componentName))
         {
             throw new ArgumentException("Admitted batch component name is required.", nameof(componentName));
         }
 
-        if (ByName.ContainsKey(componentName))
+        if (_byName.TryGetValue(componentName, out Admission? existing))
         {
+            if (existing is Admission<T>)
+            {
+                return;
+            }
+
             throw new InvalidOperationException($"SPAWN.BATCH.ERR.DuplicateAdmission: '{componentName}' is already admitted.");
         }
 
-        ByName.Add(componentName, new Admission<T>(componentName));
+        _byName.Add(componentName, new Admission<T>(componentName));
         Generation++;
     }
 
-    public static bool IsAdmitted(string componentName)
+    public bool IsAdmitted(string componentName)
     {
-        return !string.IsNullOrWhiteSpace(componentName) && ByName.ContainsKey(componentName);
+        return !string.IsNullOrWhiteSpace(componentName) && _byName.ContainsKey(componentName);
     }
 
-    public static AdmittedComponentSeed[] ProbeAll(
-        World world,
+    public AdmittedComponentSeed[] ProbeAll(
         string templateId,
         IReadOnlyDictionary<string, JsonNode> components)
     {
         List<AdmittedComponentSeed>? seeds = null;
         foreach ((string name, JsonNode node) in components)
         {
-            if (!ByName.TryGetValue(name, out Admission? admission))
+            if (!_byName.TryGetValue(name, out Admission? admission))
             {
                 continue;
             }
@@ -66,7 +64,7 @@ internal static class TemplateBatchComponentAdmission
             }
 
             seeds ??= new List<AdmittedComponentSeed>(2);
-            seeds.Add(admission.Probe(world, $"Entity template '{templateId}'", node));
+            seeds.Add(admission.Probe($"Entity template '{templateId}'", node));
         }
 
         return seeds == null || seeds.Count == 0
@@ -76,7 +74,7 @@ internal static class TemplateBatchComponentAdmission
 
     private abstract class Admission
     {
-        public abstract AdmittedComponentSeed Probe(World world, string context, JsonNode data);
+        public abstract AdmittedComponentSeed Probe(string context, JsonNode data);
     }
 
     private sealed class Admission<T> : Admission where T : unmanaged
@@ -88,19 +86,20 @@ internal static class TemplateBatchComponentAdmission
             _name = name;
         }
 
-        public override AdmittedComponentSeed Probe(World world, string context, JsonNode data)
+        public override AdmittedComponentSeed Probe(string context, JsonNode data)
         {
-            Entity probe = world.Create();
+            using World probeWorld = World.Create();
+            Entity probe = probeWorld.Create();
             try
             {
                 ComponentRegistry.Apply(probe, _name, data, context);
-                if (!world.Has<T>(probe))
+                if (!probeWorld.Has<T>(probe))
                 {
                     throw new InvalidOperationException(
                         $"{context}: component '{_name}' is admitted for batch spawn but ComponentRegistry did not add {typeof(T).Name}.");
                 }
 
-                T value = world.Get<T>(probe);
+                T value = probeWorld.Get<T>(probe);
                 byte[] bytes = new byte[Unsafe.SizeOf<T>()];
                 Unsafe.WriteUnaligned(ref MemoryMarshal.GetArrayDataReference(bytes), value);
                 return new AdmittedComponentSeed(Component<T>.Signature, (ref Chunk chunk, int componentIndex) =>
@@ -110,9 +109,9 @@ internal static class TemplateBatchComponentAdmission
             }
             finally
             {
-                if (world.IsAlive(probe))
+                if (probeWorld.IsAlive(probe))
                 {
-                    world.Destroy(probe);
+                    probeWorld.Destroy(probe);
                 }
             }
         }

@@ -59,11 +59,6 @@ public sealed class CrowdSimUnits
     private readonly RuntimeEntitySpawnReceipt[] _receiptScratch;
     private readonly CrowdUnitSpawnInitializer _initializer;
 
-    static CrowdSimUnits()
-    {
-        TemplateBatchComponentAdmission.Register<CrowdSimulationAgent>("CrowdSimulationAgent");
-    }
-
     public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring presentation)
     {
         if (capacity > SlotMask + 1) throw new ArgumentOutOfRangeException(nameof(capacity), "单位容量超过句柄槽位上限。");
@@ -110,6 +105,7 @@ public sealed class CrowdSimUnits
 
         _initializer = new CrowdUnitSpawnInitializer(this);
         _initializerKind = _spawns.RegisterInstanceInitializer(_initializer);
+        _spawns.RegisterBatchComponent<CrowdSimulationAgent>("CrowdSimulationAgent");
         Clear();
     }
 
