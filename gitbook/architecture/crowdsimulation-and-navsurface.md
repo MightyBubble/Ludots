@@ -328,7 +328,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **结构仓补桥(F02 对齐)**:地图桥实体以实体身份进认知仓(`InstallMapBridges`:span 即导出端从参考仓读出的 path 足迹,不进地面栅格/碰撞——桥面层仍由 UpperLayerBake 独立烘焙,S1–S7 地面口径零接触);导出器地图实体的写出序改为参考 id 序(不排序),两端实体 id 逐位同构——认知的逐 id 语义(残影/遗忘/共享)以此为前提。
 - **修复的潜伏缺陷(迷雾暴露)**:① 结构仓 RemoveEntity 从不清 _ids(死 id 留表);② CrowdIssueOrder 重组用玩家号当表序下标(SpawnAt 传的是 id-1);③ 规划器打单位指令标扫指令簿,回收组号的陈旧链接会命中(改为组的 OrderId 字段,同参考端 g.order.id);④ S1 测试镜像了导出器旧的实体排序(两端同步去排序)。
 - **对拍(导出器 S7-b 块 + `S7FogTruthTests`,360 tick × 120 单位,种子 1337,迷雾开启口径——不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)**:脚本 = 部署 → 行军 → 未知建筑(t5 放置初始视盘外,t24 发现,发现前后认知槽 1→0)→ 拆除残影(t90 slot2,t96 再见遗忘)→ reveal/obscure/forget → fogShare 并组(t230)→ fogTerrain 开关对照(t260/t330)。**迷雾 digest**（s7fog.bin 每组每 tick visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev + 全局槽账 seq/switches/entry/dormant/beliefCount）。换到 `FogField` 之后，可见格和已探索格的验收是 `Baselines/l76-fog.json`（`L76FogGateTests`）：每组每采样可见格 |Δ| ≤ max(4, ceil(0.01×前))，脚本结束时已探索 |Δ| ≤ max(8, ceil(0.01×前))，双向共享的对称差为 0。digest 段还在；s1337 上与 bin 一致就继续比。认知变体的内容一致性由槽字段决定，结构 op 报告和轨迹另计。实测:digest 全程逐位、ops 2 笔全字段、轨迹 p50=0.08/p99=0.45cm;到达判定骑线(L18 族)使末段停车晚 1–9 tick——状态翻转 99 处全为 Moving↔Arrived 到达对(非到达翻转零容忍),末态带 5000(实测 3491);contacts 对齐门 0.5% + ±3(实测 0.147%,直方 [±1:57,±2:3,±3:3],到达时多邻骑线)。**truth 冻结口径**:会话属性 TruthNavFrozen(同参考端 __S7_TRUTH_NAV__ 导出补丁语义)——S5/S7 既有测试置位,旧真值原样全等(已验逐字节);S4 纯部署会话不建迷雾。
-- **真机**:S4Deploy 演示脚本追加迷雾命令(reveal/obscure/forget/fogTerrain 对照,12000 单位按认知改道,autoReplay 回放对称);玩家 1 的可见数、已探索数读该组 FogField，残影仍在 CrowdFog，调试展开的 HUD 按下标读取;会话累计(重烘、迷雾刷新、等路、规划)在 `CrowdSimulationTelemetry`。乐观开关仍是迷雾状态本身。FogViewGroup 口径(-1 = 全知 debug 视图默认,键切玩家视角,S7 spec 两观察范围并存)与 View(g) 查询面交给迷雾渲染底座(W2)绘制——本单不做渲染。
+- **真机**:S4Deploy 演示脚本追加迷雾命令(reveal/obscure/forget/fogTerrain 对照,12000 单位按认知改道,autoReplay 回放对称);本机座位视野组的可见数、已探索数读该组 FogField，没有座位时这两格计数是 0；残影仍在 CrowdFog，调试展开的 HUD 按下标读取;会话累计(重烘、迷雾刷新、等路、规划)在 `CrowdSimulationTelemetry`。乐观开关仍是迷雾状态本身。画面由 `FogGlobalFieldVisualProjector` 投出。宿主按本机视口座位的视野组 `ScopeKey` 选地形贴花；座位没有 scope 时不贴雾。
 - **范围边界记档**:LOS 开启(fogSight)的 sight 采样为 C# 双精度域,不是对拍口径(真值场景 LOS 关);sharesFlow 的跨槽流场共享统计(beliefFlowShares)不移植(判定已移植,统计无对拍面);认知槽的 sleep 在全拷贝变体下为显式免操作(容量由淘汰保证)。
 
 ## 玩家可见雾
@@ -339,9 +339,11 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 `sharesVisionWith` 两个方向都成立才并进同一组，进图时这些玩家就指向同一份 `FogField`。只有单向、或没有这条关系时，不并组。绑定留在群体会话。`Vision/` 不写玩家号、队伍号。
 
-没有雾层，并且知识库没有未过期记录时，`VisionSystem.Update` 直接返回，不调用知识维护。有普通层时仍按发射器查询。层上的 `updateHz` 参与周期：`period = max(1, round(simHz / updateHz))`。`updateHz` 不低于仿真频率时周期是 1，每 tick 都处理。现有雾展厅原来写的 10 Hz / 5 Hz 并没有被系统读过，行为是每 tick 盖章；这些层的 `updateHz` 改成引擎固定步 20，周期仍是 1。
+没有雾层，并且知识库没有未过期记录时，`VisionSystem.Update` 直接返回，不调用知识维护。有普通层时仍按发射器查询。层上的 `updateHz` 参与周期：`period = max(1, round(simHz / updateHz))`。`updateHz` 不低于仿真频率时周期是 1，每 tick 都处理。多层雾展厅的层从 `MultiLayerFogFieldShowcaseMod/assets/WarFog/showcase.json` 读：ground / air / detection，格边 500 / 750 / 500 cm，`updateHz` 20。文件缺字段或数值不合法就进图失败。其余雾展厅没有这份层文件，代码里的 `updateHz` 也是 20。引擎固定步 20 时周期是 1。
 
-HUD 的可见数、已探索数从 `FogField` 读。`reveal` / `obscure` / `forget` / `fogShare` 仍由群体命令写这一份场：揭示把未见格标成已探索并对账足迹，遮蔽清掉当前可见并挡住后续盖章直到到期，遗忘把命令格写回未见，并组把可见和已探索按格并进存活组。
+HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。座位没有、未占有、或解析不出 scope 时这两格计数保持 0。宿主每个视口经 `ISeatVisionScope` 取本机座位的 `ScopeKey`，只把这份雾贴到地形贴花。`Flow` / `Walkable` 仍优先占这个槽。座位没有 scope 时不贴雾，也不取缓冲里的第一份。`Vision/` 不写玩家号。群体侧 `CrowdSeatVisionScope` 用座位占有的玩家找到视野组，scope = 组号 + 1。雾展厅的座位 scope 是场景固定的 `ScopeKeyId`。调试配置可以写 `presentation.fogDecal` 四色（`unseen` / `explored` / `visible` / `denied`）；没写时贴花用呈现器原来的字节。
+
+`reveal` / `obscure` / `forget` / `fogShare` 仍由群体命令写这一份场：揭示把未见格标成已探索并对账足迹，遮蔽清掉当前可见并挡住后续盖章直到到期，遗忘把命令格写回未见。`fogShare` 低组号存活，可见和已探索按格 OR，信念仍在 `CrowdFog` 里并进存活组，玩家改挂存活组。源 scope 用 `FogFieldStore.Remove` 从存储摘掉，`Update` 不再给它盖章。认知导航版本和到达集合对照 L75 基线还没做，等 L75。
 
 ## 当前缺口（诚实清单）
 

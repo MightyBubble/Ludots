@@ -48,7 +48,7 @@ VisionResolver -> FogField(ChunkedField2D<CellVisibility>) -> FogGlobalFieldVisu
 
 普通层由 `VisionSystem` 查询 `VisionEmitterCm`，再交给 `VisionResolver` 写入 `FogField`。层的 `updateHz` 决定本 tick 是否处理：`period = max(1, round(simHz / updateHz))`，`updateHz` 不低于仿真频率时周期为 1。标成外部盖章的层不走这条查询，调用方用 `VisionBulkStamp` 把圆盘直接写入已有的 `FogField`；`VisionSystem` 不扫描单位，也不把这一层刚写入的可见格收成已探索。当前地图没有雾层，并且 `KnowledgeProjectionStore` 没有未过期记录时，`Update` 直接返回，不跑知识维护。
 
-群体的玩家可见雾使用外部盖章，和规划用的信念不是同一份数据。共享关系的绑定不在 `Vision/` 里。
+群体的玩家可见雾使用外部盖章，和规划用的信念不是同一份数据。共享关系的绑定不在 `Vision/` 里。宿主选地形贴花时，迷雾只取本机座位解析出的 `ScopeKey`；解析失败就不贴这份雾。这个选择在 `Vision/` 外面。`fogShare` 把被并掉的 scope 从 `FogFieldStore` 摘掉，之后不再盖章。
 
 ## 当前实现入口
 
