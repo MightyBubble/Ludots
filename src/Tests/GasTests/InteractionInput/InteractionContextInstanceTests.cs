@@ -189,6 +189,64 @@ namespace Ludots.Tests.GAS
 
 
         [Test]
+        public void ActivateContext_OmittedParentFollowsTheRunningMount()
+        {
+            using World world = NewWorld(out var runtime, out var profiles, out _, out _);
+            var api = new GasGraphRuntimeApi(world);
+            api.BindContextInstances(runtime);
+            Entity subject = world.Create();
+            int battleId = profiles.ProfileIdRegistry.GetId(BattleProfile);
+            world.Add(subject, new InteractionContextInstance { ContextId = battleId });
+
+            Assert.That(
+                () => api.ActivateContext(subject, Key(AimProfile), ContextOpEncoding.OwnMountParent),
+                Throws.InvalidOperationException.With.Message.Contains("ActivateContextOutsideMount"));
+
+            api.PushContextMount(subject, battleId);
+            api.ActivateContext(subject, Key(AimProfile), ContextOpEncoding.OwnMountParent);
+
+            InteractionContextInstances derived = world.Get<InteractionContextInstances>(subject);
+            Assert.That(derived.Count, Is.EqualTo(1));
+            Assert.That(derived[0].ParentContextId, Is.EqualTo(battleId));
+        }
+
+        [Test]
+        public void ActivateContext_ExplicitZeroParentStaysUnconstrained()
+        {
+            using World world = NewWorld(out var runtime, out _, out _, out _);
+            var api = new GasGraphRuntimeApi(world);
+            api.BindContextInstances(runtime);
+            Entity subject = world.Create();
+
+            api.ActivateContext(subject, Key(AimProfile), 0);
+
+            Assert.That(world.Get<InteractionContextInstances>(subject)[0].ParentContextId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Publish_ForwardsLifecycleToTheMapDispatcher()
+        {
+            using World world = NewWorld(out var runtime, out var profiles, out _, out _);
+            Entity subject = world.Create();
+            var seen = new List<(PresentationEventKind Kind, int ProfileId)>();
+            runtime.ContextLifecycleDispatcher = (kind, entity, profileId) =>
+            {
+                Assert.That(entity, Is.EqualTo(subject));
+                seen.Add((kind, profileId));
+            };
+
+            runtime.Activate(subject, Key(AimProfile), 0);
+            runtime.Deactivate(subject, Key(AimProfile));
+
+            int aimId = profiles.ProfileIdRegistry.GetId(AimProfile);
+            Assert.That(seen, Is.EqualTo(new[]
+            {
+                (PresentationEventKind.ContextActivated, aimId),
+                (PresentationEventKind.ContextDeactivated, aimId),
+            }));
+        }
+
+        [Test]
         public void GraphApi_ActivateAndDeactivateContext_DispatchToKernel()
         {
             using World world = NewWorld(out var runtime, out var profiles, out _, out _);

@@ -1374,6 +1374,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectDerivedAttributeSideEffect(nameof(ActivateContext));
             var contextInstances = _contextInstances
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            if (parentContextKeyId == ContextOpEncoding.OwnMountParent)
+            {
+                if (_contextMountDepth <= 0)
+                {
+                    throw new InvalidOperationException("GAS.GRAPH.ERR.ActivateContextOutsideMount");
+                }
+
+                parentContextKeyId = contextInstances.RequireConfigKeyId(
+                    _contextMountProfiles[_contextMountDepth - 1]);
+            }
+
             contextInstances.Activate(subject, contextKeyId, parentContextKeyId);
         }
 

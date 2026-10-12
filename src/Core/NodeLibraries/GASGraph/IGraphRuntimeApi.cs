@@ -171,10 +171,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// Activates an interaction context instance on the subject: context and
-        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
-        /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
-        /// declared parents that are not active. Default rejects — the engine binds a context
-        /// instance runtime to serve it.
+        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). The graph
+        /// encoding uses <c>0xFFFF</c> for "the mount currently running this graph"; the
+        /// engine resolves that sentinel before the kernel sees it, and a graph outside any
+        /// mount fails closed. Idempotent-failure on an already-active context; fail-closed
+        /// on dead subjects, unknown key ids, and declared parents that are not active.
+        /// Default rejects — the engine binds a context instance runtime to serve it.
         /// </summary>
         void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
         {

@@ -61,6 +61,29 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
+        /// Map-event bridge set by the engine. Publish stays presentation-local; the engine
+        /// probes TriggerGraph subscribers and fires the matching map event. Null in tests
+        /// that only observe the presentation stream.
+        /// </summary>
+        public Action<PresentationEventKind, Entity, int>? ContextLifecycleDispatcher { get; set; }
+
+        /// <summary>
+        /// Config key of an installed profile. An unnamed profile id fails closed — the
+        /// mount stack must not invent a parent key.
+        /// </summary>
+        public int RequireConfigKeyId(int profileId)
+        {
+            string name = _profiles.ProfileIdRegistry.GetName(profileId);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextMountUnnamed: profile id {profileId} has no name.");
+            }
+
+            return Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(name);
+        }
+
+        /// <summary>
         /// Read contract for the active-context layout this runtime's writers own: copies the
         /// subject's active profile ids newest-first (derived instances in reverse activation
         /// order, then the base mount). Returns the count copied; destination too small fails
@@ -343,6 +366,8 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException(
                     $"PresentationEventStream is full while publishing {kind} for context id {instance.ContextId}.");
             }
+
+            ContextLifecycleDispatcher?.Invoke(kind, subject, instance.ContextId);
         }
 
         private void RequireAliveSubject(Entity subject, string operation)
