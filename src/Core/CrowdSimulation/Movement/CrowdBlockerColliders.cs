@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -34,7 +35,7 @@ public sealed class CrowdBlockerColliders
     internal static CrowdBlockerColliders CreateReusable(int navCellsPerSide)
     {
         int n2 = navCellsPerSide * navCellsPerSide;
-        var colliders = new CrowdBlockerColliders(new int[n2 + 1], new int[n2 * 2], new (Fix64, Fix64, Fix64, Fix64)[256])
+        var colliders = new CrowdBlockerColliders(new int[n2 + 1], new int[n2 * 2], new (Fix64, Fix64, Fix64, Fix64)[CrowdSimulationLimits.HotPathSpanReserve])
         {
             _counts = new int[n2],
         };
@@ -61,7 +62,7 @@ public sealed class CrowdBlockerColliders
     {
         if (_pending == _colliders.Length)
         {
-            int cap = Math.Max(_pending + 64, _colliders.Length * 2);
+            int cap = Math.Max(_pending + CrowdSimulationLimits.HotPathSlotReserve, _colliders.Length * 2);
             Array.Resize(ref _colliders, cap);
         }
 

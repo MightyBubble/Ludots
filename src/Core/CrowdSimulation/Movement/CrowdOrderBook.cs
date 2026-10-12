@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.CrowdSimulation.Units;
 
@@ -129,7 +130,7 @@ public sealed class CrowdOrderBook
     public CrowdOrderBook()
     {
         for (int i = 0; i < 32; i++) _orders.Push(new CrowdOrder());
-        for (int i = 0; i < 64; i++) _links.Push(new CrowdOrderGroupLink());
+        for (int i = 0; i < CrowdSimulationLimits.HotPathSlotReserve; i++) _links.Push(new CrowdOrderGroupLink());
     }
 
     public IReadOnlyList<CrowdOrder> List => _list;

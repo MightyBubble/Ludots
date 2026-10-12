@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
@@ -143,19 +144,19 @@ public sealed class NavContext
     /// 初始烘焙留下的小集合不回收：它们一加边就会再分配。</summary>
     internal void PrefillRebakePools()
     {
-        AreaCompScratch.EnsureCapacity(256);
-        TileScratch.EnsureCapacity(64);
-        TileSeenScratch.EnsureCapacity(64);
-        ChangedTileList.EnsureCapacity(64);
-        SameTiles.EnsureCapacity(64);
+        AreaCompScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSpanReserve);
+        TileScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        TileSeenScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        ChangedTileList.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        SameTiles.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
         ReachOut?.EnsureCapacity(512);
         if (ReachOut != null) _ = ReachOut.Values.Count;
-        while (ReachSetPool.Count < 256) ReachSetPool.Push(new HashSet<int>(128));
+        while (ReachSetPool.Count < CrowdSimulationLimits.HotPathSpanReserve) ReachSetPool.Push(new HashSet<int>(128));
         if (Links != null)
         {
             Links.CompOut.EnsureCapacity(512);
             _ = Links.CompOut.Values.Count;
-            while (Links.CompSetPool.Count < 256) Links.CompSetPool.Push(new HashSet<int>(128));
+            while (Links.CompSetPool.Count < CrowdSimulationLimits.HotPathSpanReserve) Links.CompSetPool.Push(new HashSet<int>(128));
         }
     }
 

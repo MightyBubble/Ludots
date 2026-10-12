@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 
 namespace Ludots.Core.CrowdSimulation.Nav.Recast;
 
@@ -9,7 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Nav.Recast;
 /// </summary>
 internal sealed class TileBakeScratch
 {
-    public readonly int N;
+    public readonly int NavCellsPerTile;
     public readonly int Nn;
     public readonly int MaxVerts;
     public readonly int PolyMax;
@@ -75,7 +76,7 @@ internal sealed class TileBakeScratch
 
     public TileBakeScratch(int navCellsPerTile, int maxVertsPerPoly)
     {
-        N = navCellsPerTile;
+        NavCellsPerTile = navCellsPerTile;
         Nn = navCellsPerTile * navCellsPerTile;
         MaxVerts = maxVertsPerPoly;
         PolyMax = Nn;
@@ -111,10 +112,10 @@ internal sealed class TileBakeScratch
         Loops = new List<List<int>>[maxR];
         for (int i = 0; i < maxR; i++) Loops[i] = new List<List<int>>(4);
         Raw = new List<int>(Nn * 3);
-        Keep = new List<int>(64);
-        OutIdx = new List<int>(64);
+        Keep = new List<int>(CrowdSimulationLimits.HotPathSlotReserve);
+        OutIdx = new List<int>(CrowdSimulationLimits.HotPathSlotReserve);
         _loopPool = new List<int>[128];
-        for (int i = 0; i < _loopPool.Length; i++) _loopPool[i] = new List<int>(256);
+        for (int i = 0; i < _loopPool.Length; i++) _loopPool[i] = new List<int>(CrowdSimulationLimits.HotPathSpanReserve);
         _loopPoolCount = _loopPool.Length;
 
         StableOrder.Ensure(ref Polys.HoleRank, Nn);
@@ -182,9 +183,9 @@ internal sealed class TileBakeScratch
         {
             var grown = new List<int>[_loopPool.Length * 2];
             Array.Copy(_loopPool, grown, _loopPool.Length);
-            for (int i = _loopPool.Length; i < grown.Length; i++) grown[i] = new List<int>(256);
+            for (int i = _loopPool.Length; i < grown.Length; i++) grown[i] = new List<int>(CrowdSimulationLimits.HotPathSpanReserve);
             // 池在构造时已按轮廓上限留够;这里只在超出时长大,调用方会在对拍里看见。
-            return new List<int>(256);
+            return new List<int>(CrowdSimulationLimits.HotPathSpanReserve);
         }
 
         var list = _loopPool[--_loopPoolCount];

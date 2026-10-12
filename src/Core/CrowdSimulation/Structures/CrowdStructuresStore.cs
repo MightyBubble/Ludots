@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.World;
@@ -87,12 +88,12 @@ public sealed class CrowdStructuresStore
         ReachCm = maxRadius;
         Colliders = CrowdBlockerColliders.CreateReusable(NavCellsPerSide);
         _rasterPrio = new int[n2];
-        _ids.EnsureCapacity(64);
-        _tpl.EnsureCapacity(64);
-        _footprint.EnsureCapacity(64);
-        _navArea.EnsureCapacity(64);
-        _blocker.EnsureCapacity(64);
-        _lifetime.EnsureCapacity(64);
+        _ids.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _tpl.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _footprint.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _navArea.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _blocker.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _lifetime.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 
     /// <summary>建仓:静态地图阻挡物按模板 id <c>building</c>(rect 阻挡)入仓获得实体 id。
@@ -426,13 +427,13 @@ public sealed class CrowdStructuresStore
     /// <summary>实体表在装载后留出空位。tick 内新增的少数实体命中已有槽,不再扩容。</summary>
     private void ReserveEntitySlots()
     {
-        int cap = _ids.Count + 64;
+        int cap = _ids.Count + CrowdSimulationLimits.HotPathSlotReserve;
         _ids.EnsureCapacity(cap);
         _tpl.EnsureCapacity(cap);
         _footprint.EnsureCapacity(cap);
         _navArea.EnsureCapacity(cap);
         _blocker.EnsureCapacity(cap);
         _lifetime.EnsureCapacity(cap);
-        _dueExpiryIds.EnsureCapacity(64);
+        _dueExpiryIds.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 }

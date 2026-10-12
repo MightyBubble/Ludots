@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -85,8 +86,8 @@ public sealed class HpaGraph
     private int[] _nCells = Array.Empty<int>();
     private int[] _nIntra = Array.Empty<int>();
     private int[] _nCross = Array.Empty<int>();
-    private readonly List<int> _snap = new(64);
-    private readonly List<int> _snapUp = new(64);
+    private readonly List<int> _snap = new(CrowdSimulationLimits.HotPathSlotReserve);
+    private readonly List<int> _snapUp = new(CrowdSimulationLimits.HotPathSlotReserve);
     private readonly List<Fix64> _snapCost = new(32);
     private readonly List<int> _bakeCells = new(512);
     private readonly List<int> _bakeUp = new(512);
@@ -502,7 +503,7 @@ public sealed class HpaGraph
         if (cx >= navTilesPerSide - 1) { g.BorderE[cl] = Array.Empty<int>(); g._nE[cl] = 0; return; }
         int x0 = (cx + 1) * navCellsPerTile - 1, ys = cl / navTilesPerSide * navCellsPerTile;
         ScanBorder(g, nav.Passable, g.MaxEntranceWidthNavCells, ys * navCellsPerSide + x0, navCellsPerSide, 1, navCellsPerTile);
-        g.BorderE[cl] = g.PlaceInts(g.BorderE[cl], g._border.Count, 64);
+        g.BorderE[cl] = g.PlaceInts(g.BorderE[cl], g._border.Count, CrowdSimulationLimits.HotPathSlotReserve);
         g._nE[cl] = g._border.Count;
     }
 
@@ -512,7 +513,7 @@ public sealed class HpaGraph
         if (cy >= navTilesPerSide - 1) { g.BorderS[cl] = Array.Empty<int>(); g._nS[cl] = 0; return; }
         int y0 = (cy + 1) * navCellsPerTile - 1, xs = cl % navTilesPerSide * navCellsPerTile;
         ScanBorder(g, nav.Passable, g.MaxEntranceWidthNavCells, y0 * navCellsPerSide + xs, 1, navCellsPerSide, navCellsPerTile);
-        g.BorderS[cl] = g.PlaceInts(g.BorderS[cl], g._border.Count, 64);
+        g.BorderS[cl] = g.PlaceInts(g.BorderS[cl], g._border.Count, CrowdSimulationLimits.HotPathSlotReserve);
         g._nS[cl] = g._border.Count;
     }
 
@@ -553,14 +554,14 @@ public sealed class HpaGraph
 
         if (east)
         {
-            g.UpE[cl] = g.PlaceInts(g.UpE[cl], list.Count, 64);
+            g.UpE[cl] = g.PlaceInts(g.UpE[cl], list.Count, CrowdSimulationLimits.HotPathSlotReserve);
             g._nUpE[cl] = list.Count;
             g.UpECost[cl] = g.PlaceCosts(g.UpECost[cl], costs.Count, 32);
             g._nUpEc[cl] = costs.Count;
         }
         else
         {
-            g.UpS[cl] = g.PlaceInts(g.UpS[cl], list.Count, 64);
+            g.UpS[cl] = g.PlaceInts(g.UpS[cl], list.Count, CrowdSimulationLimits.HotPathSlotReserve);
             g._nUpS[cl] = list.Count;
             g.UpSCost[cl] = g.PlaceCosts(g.UpSCost[cl], costs.Count, 32);
             g._nUpSc[cl] = costs.Count;
@@ -964,7 +965,7 @@ public sealed class HpaGraph
             return block;
         }
 
-        int startCap = Math.Max(count + 1, 64);
+        int startCap = Math.Max(count + 1, CrowdSimulationLimits.HotPathSlotReserve);
         int edgeCap = Math.Max(edgeSlots, 4096);
         var freshStart = new int[startCap];
         for (int i = 0; i < count; i++) freshStart[i + 1] = freshStart[i] + outE[i].Count;

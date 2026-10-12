@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -201,7 +202,7 @@ public static class NavContextBaker
         nav.UnionParent = new int[n2 * 2];
         nav.UnionDense = new int[n2 * 2];
         nav.ErodeRow = new byte[n2];
-        nav.PrevTiles = new NavTileEntry?[64];
+        nav.PrevTiles = new NavTileEntry?[CrowdSimulationLimits.HotPathSlotReserve];
         nav.PrefillRebakePools();
         return nav;
     }

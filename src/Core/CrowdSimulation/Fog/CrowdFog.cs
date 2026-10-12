@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -103,15 +104,15 @@ public sealed class CrowdFog
         EntRev = new long[VisionGroupCount];
         Rev = new long[VisionGroupCount];
         ObsN = new ushort[VisionGroupCount * f2];
-        _reconcileDone = new HashSet<int>(Math.Max(16, store.EntityIds.Count + 64));
+        _reconcileDone = new HashSet<int>(Math.Max(16, store.EntityIds.Count + CrowdSimulationLimits.HotPathSlotReserve));
         _idx = new HashSet<int>[f2];
         for (int c = 0; c < f2; c++) _idx[c] = new HashSet<int>(4);
-        int cellSlots = Math.Max(16, store.EntityIds.Count + 64);
+        int cellSlots = Math.Max(16, store.EntityIds.Count + CrowdSimulationLimits.HotPathSlotReserve);
         _cellsOf = new List<int>?[cellSlots];
-        for (int i = 0; i < 64; i++) _cellListPool.Push(new List<int>(8));
+        for (int i = 0; i < CrowdSimulationLimits.HotPathSlotReserve; i++) _cellListPool.Push(new List<int>(8));
         Belief = new Dictionary<int, (int, CrowdStructureFootprint)>[VisionGroupCount];
         Tiles = new HashSet<int>[VisionGroupCount];
-        int beliefCap = Math.Max(16, store.EntityIds.Count + 64);
+        int beliefCap = Math.Max(16, store.EntityIds.Count + CrowdSimulationLimits.HotPathSlotReserve);
         for (int g = 0; g < VisionGroupCount; g++)
         {
             Belief[g] = new Dictionary<int, (int, CrowdStructureFootprint)>(beliefCap);

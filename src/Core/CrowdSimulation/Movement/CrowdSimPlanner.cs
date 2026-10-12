@@ -18,9 +18,9 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// </summary>
 public sealed class CrowdSimPlanner
 {
-    private const int GroupScratch = 256;
+    private const int GroupScratch = CrowdSimulationLimits.HotPathSpanReserve;
     private const int LeaderPoolCount = 32;
-    private const int PathCapacity = 256;
+    private const int PathCapacity = CrowdSimulationLimits.HotPathSpanReserve;
 
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
@@ -68,7 +68,7 @@ public sealed class CrowdSimPlanner
     private readonly HashSet<int> _reachWant = new(GroupScratch);
     private readonly HashSet<int> _reachLost = new(GroupScratch);
     private readonly Dictionary<long, bool> _reachPairMemo = new(GroupScratch);
-    private readonly Dictionary<int, bool> _nearestOk = new(64);
+    private readonly Dictionary<int, bool> _nearestOk = new(CrowdSimulationLimits.HotPathSlotReserve);
     private int _nrBest;
     private long _nrBd;
     private int _nrTx;
@@ -146,7 +146,7 @@ public sealed class CrowdSimPlanner
         _reachWant.EnsureCapacity(GroupScratch);
         _reachLost.EnsureCapacity(GroupScratch);
         _reachPairMemo.EnsureCapacity(GroupScratch);
-        _nearestOk.EnsureCapacity(64);
+        _nearestOk.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
         _dirtyByNav.EnsureCapacity(16);
         for (int i = 0; i < GroupScratch; i++)
         {

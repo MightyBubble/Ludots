@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
@@ -402,7 +403,7 @@ public static class CrowdNavRebake
         int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
         var upComp = nav.UpComp ??= new int[n2];
         Array.Fill(upComp, -1);
-        var reach = nav.ReachOut ??= new Dictionary<int, HashSet<int>>(64);
+        var reach = nav.ReachOut ??= new Dictionary<int, HashSet<int>>(CrowdSimulationLimits.HotPathSlotReserve);
         nav.ReleaseReachGraph(reach);
         if (links != null)
         {

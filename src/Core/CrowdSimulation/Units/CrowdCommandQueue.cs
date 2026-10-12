@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
@@ -18,7 +19,7 @@ public readonly record struct CrowdCommand(int Tick, CrowdSimCommand Cmd);
 /// </summary>
 public sealed class CrowdCommandQueue
 {
-    private readonly List<(int Tick, CrowdSimCommand Cmd)> _log = new(64);
+    private readonly List<(int Tick, CrowdSimCommand Cmd)> _log = new(CrowdSimulationLimits.HotPathSlotReserve);
     private List<(int Tick, CrowdSimCommand Cmd)> _queue = new();
     private int _head;
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -39,7 +40,7 @@ public sealed class CrowdRebakeReport
     /// <summary>受影响导航摘要:逐上下文脏 tile 与类别。</summary>
     public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
     /// <summary>受影响 tile 并集(升序;参考端 stats.dirtyTiles 同源)。</summary>
-    public List<int> UnionTiles { get; set; } = new(256);
+    public List<int> UnionTiles { get; set; } = new(CrowdSimulationLimits.HotPathSpanReserve);
     /// <summary>结构足迹包围盒(厘米;报告语义,不参与对拍)。</summary>
     public (Fix64 MinX, Fix64 MinY, Fix64 MaxX, Fix64 MaxY) Bbox { get; set; }
 }
