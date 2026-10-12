@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
