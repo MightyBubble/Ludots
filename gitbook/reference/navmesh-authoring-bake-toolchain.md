@@ -100,7 +100,7 @@ Speed stays out of `AgentProfileRegistry`. MassNavigationFlow keeps movement spe
 |---|---:|---|---|
 | `profiles[].id` | profile id | `NavMeshProfileRegistry` | Capability profile. Agent profiles point here with `navProfileId` |
 | `profiles[].maxClimbCm` | cm | Recast `walkableClimb`; CDT/logic filtering target | Maximum step/climb height for this capability |
-| `profiles[].maxSlopeDeg` | degrees | Recast `walkableSlopeAngle`; target source for CDT slope filtering | Authoring-facing slope knob. Crowd treats `0` as no slope limit |
+| `profiles[].maxSlopeDeg` | degrees | Recast `walkableSlopeAngle`; target source for CDT slope filtering | Omit means unlimited. `0` and negative values are rejected at load. Recast bake requires a value `> 0` and `< 90` |
 | `profiles[].cellSizeCm` | cm | optional Recast column size | `0` or omitted means the baker derives it from the agent radius. A crowd session requires every capability it uses to share one positive value; that value is the nav cell size |
 | `profiles[].jump` | cm / nav cells / cost | optional | `upCm`, `downCm`, `rangeNavCells`, `cost`, each `> 0` |
 | `areas[].id` / `areaId` / `slopeFree` | name / 0..255 / bool | polygon area and crowd slope exemption | No `cost` on the area |
@@ -138,7 +138,7 @@ Terrain classification and traversal cost are separate:
 | Concept | Source | Rule |
 |---|---|---|
 | `areaId` / tags | terrain SSOT | Stored on terrain/polygons/cells and propagated into `NavTile.TriAreaIds` |
-| per-agent cost | `Navigation/pathing.json` | `agentTypes[].navMesh.areaCosts[]` maps `areaId` to `cost`. Optional `speedDivisor` equals `cost` when omitted. Optional `passable: false` excludes the area |
+| per-agent cost | `Navigation/pathing.json` | `agentTypes.<id>.navMesh.areaCosts[]` maps `areaId` to `cost`. `agentTypes` is id-keyed. Optional `speedDivisor` equals `cost` when omitted; both must be `> 0`. Optional `passable: false` excludes the area. An unlisted area costs 1 and stays passable |
 | impassable terrain | explicit block policy | Prefer explicit blocked/forbidden rule over fake infinite cost |
 | obstacle layer | authored obstacle sink + nav layer | Obstacles block only matching configured layer id |
 
@@ -146,9 +146,8 @@ Example pathing snippet:
 
 ```json
 {
-  "agentTypes": [
-    {
-      "id": "infantry",
+  "agentTypes": {
+    "infantry": {
       "profileId": "light",
       "selection": {
         "mode": "PreferMesh",
@@ -172,7 +171,7 @@ Example pathing snippet:
         "tagCostRules": []
       }
     }
-  ]
+  }
 }
 ```
 

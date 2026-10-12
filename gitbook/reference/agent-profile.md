@@ -37,14 +37,14 @@ Every profile id is case-sensitive. Missing fields, unknown fields, duplicate id
 | `beamCm` | cm | AgentProfile registry | NodeGraph edge `widthCm` passability | `>= 0` |
 | `mass` | scalar | AgentProfile registry | MassNavigationFlow resolve share and dominance | `> 0` |
 | `layer` | integer | AgentProfile registry | NavTile layer | `>= 0` |
-| `navProfileId` | name | AgentProfile registry | `Navigation/navmesh.json` `profiles[]` | Required. Several bodies may share one capability. Bake uses the agent whose id equals the capability id when more than one body points at it |
+| `navProfileId` | name | AgentProfile registry | `Navigation/navmesh.json` `profiles.<id>` | Required. Several bodies may share one capability. Recast bake reads `agentProfileId` on that capability and resolves the body with Require. A capability that is not Recast-baked may omit `agentProfileId` |
 
 Speed is not part of this registry. MassNavigation keeps `speedCmPerSecond` in `MassNavigationConfig.agentProfiles.profiles[]`. Crowd units write `speedCmPerSecond` on the unit template component `CrowdSimulationAgent`. That number is the initial speed. Agent type and terrain area together decide cost, speed divisor, and passability in `pathing.json`.
 
 ## Consumers
 
-- `Navigation/navmesh.json` keeps capability profiles: `maxClimbCm`, `maxSlopeDeg`, optional `cellSizeCm`, optional `jump`. Areas carry `id`, `areaId`, and `slopeFree`, and do not carry `cost`. Agent profiles point at a capability with `navProfileId`.
-- `Navigation/pathing.json` keeps route strategy fields. Its `agentTypes[]` entries reference AgentProfile ids and must not define `layer`; the layer comes from the AgentProfile. `selection` and `nodeGraph` may be omitted. AutoPath throws when it compiles an agent type that has no `selection`. `areaCosts[]` may set `speedDivisor` (absent means the same number as `cost`) and `passable` (`false` excludes the area).
+- `Navigation/navmesh.json` keeps capability profiles as an id-keyed object: `maxClimbCm`, optional `maxSlopeDeg` (omit means unlimited; `0` and negative values are rejected; Recast bake requires `> 0` and `< 90`), optional `cellSizeCm`, optional `jump`, and `agentProfileId` when Recast bakes the profile. Catalog order is the ordinal sort of the keys. Areas are an id-keyed object of `areaId` and `slopeFree`, and do not carry `cost`. Agent profiles point at a capability with `navProfileId`.
+- `Navigation/pathing.json` keeps route strategy fields. `agentTypes` is an id-keyed object; catalog order is the ordinal sort of the keys. Entries reference AgentProfile ids and must not define `layer`; the layer comes from the AgentProfile. `selection` and `nodeGraph` may be omitted. AutoPath throws when it compiles an agent type that has no `selection`, and `ResolveAgent` throws on a blank or unknown id. `areaCosts[]` may set `speedDivisor` (absent means the same number as `cost`; both must be `> 0`) and `passable` (`false` excludes the area). An area that is not listed costs 1 and stays passable.
 - `MassNavigationConfig.json` keeps execution strategy fields: `heavy`, `visualScale`, `speedCmPerSecond`, `everyNth`, `nthOffset`. It must not define `navMass` or `bodyRadiusCm`; MassNavigationFlow resolves `mass` and `radiusCm` through AgentProfile.
 - NodeGraph transport capacity checks compare `draftCm` to edge `depthCm` and `beamCm` to edge `widthCm`. A zero profile value means the agent does not require that capacity dimension; a zero edge value means the edge has no limit for that dimension.
 

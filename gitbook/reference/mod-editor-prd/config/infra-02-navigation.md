@@ -12,16 +12,15 @@
     "id": "Small",
     "radiusCm": 30.0, "heightCm": 180.0,
     "clearanceCm": 40.0, "draftCm": 0.0, "beamCm": 0.0,
-    "mass": 1.0, "layer": 0
+    "mass": 1.0, "layer": 0, "navProfileId": "Small"
   }
 ]
 ```
 
 ```json
 {
-  "agentTypes": [
-    {
-      "id": "Humanoid",
+  "agentTypes": {
+    "Humanoid": {
       "profileId": "Small",
       "selection": {
         "mode": "PreferMesh",
@@ -31,7 +30,7 @@
       "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1.0 } ] },
       "nodeGraph": { }
     }
-  ]
+  }
 }
 ```
 
@@ -39,9 +38,9 @@
 {
   "mode": "offline",
   "algorithm": "recast",
-  "profiles": [ { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 } ],
+  "profiles": { "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" } },
   "layers": [ { "id": "Ground", "layer": 0 } ],
-  "areas": [ { "id": "Default", "areaId": 0, "cost": 1.0 } ],
+  "areas": { "Default": { "areaId": 0, "slopeFree": false } },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 1,
     "includeNeighborTiles": true,
@@ -71,7 +70,7 @@
 
 ## 3. 文件结构
 
-`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，agentTypes 数组在根对象内）、`navmesh.json`（DeepObject）。
+`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，`agentTypes` 以 id 为键）、`navmesh.json`（DeepObject，`profiles` 与 `areas` 以 id 为键）。
 
 ## 4. 运行时加载效果
 

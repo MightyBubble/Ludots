@@ -39,7 +39,7 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
   Nav/                               NavContextBaker（分类 / 腐蚀 / 连通域 / 链接）
                                      UpperLayerBake（桥面层栅格化与烘焙、portal 合并）
                                      NavContext / NavLinkSet（上下文产物）
-  CrowdSimulationAgent.cs            单位组件：profileId、agentTypeId、speedCmPerSecond、personalRadiusCm、pushPriority、special
+  CrowdSimulationAgent.cs            单位组件：profileId、agentTypeId、speedCmPerSecond、personalRadiusCm、pushPriority、bulkDeploy
 mods/capabilities/navigation/CrowdSimulationMod/
   assets/config_catalog.json         登记正式配置。调试文件由提供它的 Mod 自己登记
   assets/Navigation/agent_profiles.json
@@ -119,11 +119,11 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 `CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`。导航格边长、能力档、区域和移动类型写在同目录的 `Navigation/navmesh.json` 与 `Navigation/pathing.json`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的地表和出生点。
 
-`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。单位模板上的 `CrowdSimulationAgent` 写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`。模板速度是起步速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 管这一格把速度除掉多少，不写时与 `cost` 相同；`passable` 为 false 时这一格不可进。`special` 为 true 的模板不参与批量部署。同一移动类型的模板必须速度相同、`special` 相同。它不再带参数默认值。只加载它、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
+`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。单位模板上的 `CrowdSimulationAgent` 必写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`bulkDeploy`。速度按模板各写各的。领队步速取本组已生成成员的模板速度最小值；子步数取本图绑定模板里的最大速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 不写时等于 `cost`，两者都必须大于 0。没列出的区域代价是 1，可通行。`passable` 为 false 时群体代价记 0，Detour 过滤掉这一区域。`bulkDeploy` 为 true 的模板参与批量部署。只加载能力 Mod、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
 
-地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。地形类型到导航区域、`.navsurface` 路径写在 `Navigation/navmesh.json` 的 `maps.<mapId>`：`terrainAreas` 的键顺序就是 `.navsurface` 的地形编号，`surfaceAsset` 是这份栅格。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
+地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。`Navigation/navmesh.json` 的 `maps.<mapId>.agentTypes` 是这张图要绑定的 pathing agent type id 数组，顺序就是群体的 AgentTypeIndex。`maps.<mapId>.terrainAreas` 是有序数组，每项 `{ terrainId, areaId }`，数组下标就是 `.navsurface` 的地形编号。`.navsurface` 路径写在 `maps.<mapId>.boards.<name>.surfaceAsset`。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
 
-覆盖走 DeepObject：后加载的 Mod 按键合并。留在群体配置里的 `formations`、`structures.templates` 以 id 为键，改一项只写那一项。值为 `null` 会拒绝。写成数组也会拒绝。`navmesh.json` 的 `profiles`、`areas` 和 `pathing.json` 的 `agentTypes` 是数组，覆盖时整表替换。`maps` 按地图 id 合并。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。
+覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是键的序数排序。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.agentTypes` 仍是数组，按下标使用，不按键名重排。`maps` 按地图 id 合并。带导航标签的地图和群体地图都必须写 `agentTypes`，缺了就报这个键。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。
 
 时钟由各地图 Mod 的 `assets/Engine/clock.json` 写 `FixedHz`。引擎要求这个值 ≥ 1。群体配置不再另设 10 到 240 的范围。全局变速走 TimeFlow，不走群体配置。
 
@@ -230,14 +230,14 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S4-a 交付：部署单位与指令回放内核（本次）
 
-- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（模板写真：profileId / agentTypeId / speedCmPerSecond / personalRadiusCm / pushPriority / special）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
+- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（模板写真：profileId / agentTypeId / speedCmPerSecond / personalRadiusCm / pushPriority / bulkDeploy）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
 - **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有模板资产,保持最小组件集直接创建,组件值与演示路径逐位相同。出生算法（盐流/环形搜索/编组/散布）留在内核,只换了实体创建机制;S4/S5 真值测试原样全绿。
 - **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
 - **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
 - **指令队列与回放**（core/commands.js CommandQueue 移植）：指令是数据,tick 边界执行;日志 = 完整输入,回放 = 新会话 + 同一日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
 - **对拍（`S4DeployTruthTests`,3 种子）**：同一份脚本（spawn 12000 → 框选 → 点名生成 20 → 全选 → 清空）逐帧校验码与沙盒一致（150 帧 × 3）;12020 个单位逐条（玩家 / 模板 / 半径级 / 组 / 位置原始值）一致;同一份记录回放两次校验码相同。
 - **踩过的坑（已固化）**：S0 配置的 `deploy.bases` 玩家 4 出生点 y 写成了玩家 2 的值（0.65 → 0.7 份额,部署差 416 格才发现;组号全对上但中心全错,按"组-中心-RNG 值"三层对拍才定位）;镜像侧量化函数把位置乘法也取整,奇数半档比 Ludots 少 50 个原始单位;参考实现玩家 0 基与 Ludots 玩家号 1..P 的换算只在 `PlayerOwner` 与脚本数据边界做一次,内部编号序不受影响。
-- **配置增量**：`world.seed`（生成盐,进覆盖配置）。`CrowdSimulationAgent.special` 为 true 的模板不参与批量部署。
+- **配置增量**：`world.seed`（生成盐,进覆盖配置）。`CrowdSimulationAgent.bulkDeploy` 为 true 的模板参与批量部署。
 
 ## S4-b 交付：部署演示纯数据化——单位进 presenter 管线（本次）
 

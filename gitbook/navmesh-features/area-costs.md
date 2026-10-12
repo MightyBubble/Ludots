@@ -14,7 +14,7 @@
 
 `areaId/tags` 是跨玩法共享的区域分类，属于地图/地形领域。导航、区域效果、视野等消费方各自解释分类；导航代价不能写回地形格、语义 sidecar 或 NavTile。
 
-这不是待新建的矩阵系统。主线的 `Navigation/pathing.json` 已通过 `agentTypes[].navMesh.areaCosts[]` 表达每个 Agent 的一行代价数据。
+这不是待新建的矩阵系统。主线的 `Navigation/pathing.json` 已通过 `agentTypes.<id>.navMesh.areaCosts[]` 表达每个 Agent 的一行代价数据。`agentTypes` 以 id 为键。
 
 ## 2. 结构
 
@@ -22,7 +22,7 @@
 |---|---|---|
 | areaId / tags | 地图/地形分类 | 导航烘焙传播分类；其他玩法直接消费同一分类 |
 | 半径、身高、层 | AgentProfile | 决定几何可行性，按 profileId 引用 |
-| 每个 Agent 的区域代价 | PathingConfig.agentTypes[].navMesh.areaCosts | 当前 Agent 编译成自己的 NavAreaCostTable |
+| 每个 Agent 的区域代价 | PathingConfig.agentTypes.<id>.navMesh.areaCosts | 当前 Agent 编译成自己的 NavAreaCostTable |
 | 路径和总成本 | 查询结果 | 使用本次请求的 AgentTypeId、分类和代价表 |
 | 区域效果、视野规则 | 各玩法消费方 | 以同一 areaId/tags 查自己的规则，不依赖导航 cost |
 
@@ -40,13 +40,12 @@
 
 ### 3.2 工具功能
 
-复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
+复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`agentTypes` 以 id 为键，写成数组会拒绝。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`，两者都必须大于 0。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。没列出的区域代价是 1，可通行。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
 
 ```json
 {
-  "agentTypes": [
-    {
-      "id": "scout",
+  "agentTypes": {
+    "scout": {
       "profileId": "infantry",
       "navMesh": {
         "areaCosts": [
@@ -55,8 +54,7 @@
         ]
       }
     },
-    {
-      "id": "carrier",
+    "carrier": {
       "profileId": "infantry",
       "navMesh": {
         "areaCosts": [
@@ -65,7 +63,7 @@
         ]
       }
     }
-  ]
+  }
 }
 ```
 

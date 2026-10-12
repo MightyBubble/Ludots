@@ -192,17 +192,24 @@ writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, nu
 
 // ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
 // 不写 pairRules，也不写已删除的 relations。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
-// 地形类型到区域、.navsurface 路径写在 navmesh.json 的 maps.<mapId>，不写进群体配置。
+// 地形类型到区域写在 navmesh.json 的 maps.<mapId>.terrainAreas（有序数组）。
+// .navsurface 路径写在 maps.<mapId>.boards.default.surfaceAsset。agentTypes 点名这张图要绑定的移动类型。
 const cmPart = (num, den) => Math.round(worldCm * num / den);
-const terrainAreaById = { water: 'deep', shore: 'shallow', land: 'open', mountain: 'rough', cliff: 'sheer' };
-const terrainAreas = {};
+const terrainAreaById = { water: 'deep', shore: 'shallow', land: 'Default', mountain: 'rough', cliff: 'sheer' };
+const terrainAreas = [];
 for (const terrain of config.terrainTypes) {
   const area = terrainAreaById[terrain.id];
   if (!area) throw new Error(`地形类型 ${terrain.id} 没有导航区域。maps.${mapId}.terrainAreas 只认 water/shore/land/mountain/cliff。`);
-  terrainAreas[terrain.id] = area;
+  terrainAreas.push({ terrainId: terrain.id, areaId: area });
 }
 writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
-  maps: { [mapId]: { terrainAreas, surfaceAsset: `terrain/${mapId}.navsurface` } },
+  maps: {
+    [mapId]: {
+      agentTypes: ['foot', 'hull', 'climber', 'amphib', 'leaper'],
+      terrainAreas,
+      boards: { default: { surfaceAsset: `terrain/${mapId}.navsurface` } },
+    },
+  },
 }, null, 2));
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
   world: { seed },
