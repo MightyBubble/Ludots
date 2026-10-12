@@ -17,5 +17,10 @@
   {
     "Path": "UI/entity_command_panel_slot_actions.json",
     "Policy": "DeepObject"
+  },
+  {
+    "Path": "UI/entity_command_panel_toolbars.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
   }
 ]
