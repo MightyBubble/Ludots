@@ -760,6 +760,55 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void MobaAndInteractionShowcases_DoNotAuthorRetiredAimCastMechanics()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "mods", "showcases", "moba_demo"),
+                Path.Combine(repoRoot, "mods", "showcases", "interaction")
+            };
+            string[] forbidden =
+            {
+                "AbilityAim",
+                "CastCommit",
+                "smart_cast",
+                "indicator_cast",
+                "press_release"
+            };
+            var hits = new List<string>();
+            for (int dirIndex = 0; dirIndex < directories.Length; dirIndex++)
+            {
+                string dir = directories[dirIndex];
+                Assert.That(Directory.Exists(dir), Is.True, $"Missing {dir}");
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) ||
+                        relative.Contains("/obj/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string ext = Path.GetExtension(file);
+                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "MOBA and interaction showcases cast through AimInteractionMod. Retired aim/cast mechanism names must not return:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
         public void Epic322_ChampionSandboxPresentation_DoesNotBypassPresenterRules()
         {
             var repoRoot = FindRepoRoot();
