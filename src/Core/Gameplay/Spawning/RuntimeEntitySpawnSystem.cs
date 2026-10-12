@@ -202,6 +202,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 {
                     if (TryCopyTemplateBatch(peek.TemplateId, out int batchCount) && batchCount > 0)
                     {
+                        // 阶段队列：多于一条才走批车道。单独一条留在单车道，不预挂 PresentationLifecycleState。
+                        // Materialize 不走这里，见 MaterializeCohortUsesBatchLane。
                         if (batchCount > 1)
                         {
                             PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
@@ -242,8 +244,10 @@ namespace Ludots.Core.Gameplay.Spawning
         }
 
         /// <summary>
-        /// 同步物化调用方给出的这批请求。批车道、初始化器、回执、归属和 presenter 引导
-        /// 与 <see cref="Update"/> 出队之后的路径相同，不读不写阶段队列。
+        /// 同步物化调用方给出的这批请求，不读不写阶段队列。
+        /// 把这次 span 当成同一批：批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导规则。
+        /// 没有直接引导、但有不能编进直接引导的 EntitySpawned 规则时抛错，不生成实体。
+        /// <see cref="Update"/> 仍是多于一条才走批车道，单独一条留在单车道。
         /// 模板 children 在这次调用里继续物化，也不进阶段队列。
         /// EffectProcessing 里的 <see cref="Update"/> 仍只排空阶段队列。
         /// </summary>
@@ -282,16 +286,13 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 RuntimeEntitySpawnRequest peek = requests[index];
                 if (peek.Kind == RuntimeEntitySpawnKind.Template &&
-                    !HasComponentPatches(in peek) &&
-                    !string.IsNullOrWhiteSpace(peek.TemplateId) &&
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
-                    _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
+                    MaterializeCohortUsesBatchLane(in peek, template))
                 {
+                    RequireMaterializeDirectPresenter(peek.TemplateId);
                     int batchCount = CopyTemplateBatchFromSpan(requests, index);
                     if (batchCount >= 1)
                     {
-                        // 单个也走批车道。单条 lane 不挂 PresentationLifecycleState（无头没有 presenter），
-                        // 和批车道的签名会拆成两个原型，行交换就看不到整张稠密表。
                         PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
                         MaterializeCopiedTemplateBatch(peek.TemplateId, template, batchCount);
                         index += batchCount;
@@ -301,6 +302,46 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 MaterializePrepared(in peek, PreflightSingleSpawnBeforeDrain(in peek));
                 index++;
+            }
+        }
+
+        /// <summary>
+        /// Materialize 把调用方的 span 当成同一批。
+        /// 批车道兼容、且请求本身是批成员的，不论条数都走批车道。
+        /// presenter 只走直接引导规则。父链接和 attachment 不是批成员，仍走单车道。
+        /// </summary>
+        private bool MaterializeCohortUsesBatchLane(in RuntimeEntitySpawnRequest request, EntityTemplate template)
+        {
+            return request.Kind == RuntimeEntitySpawnKind.Template
+                && !HasComponentPatches(in request)
+                && !string.IsNullOrWhiteSpace(request.TemplateId)
+                && _templateBatchSpawner.IsBatchCompatible(request.TemplateId, template)
+                && IsTemplateBatchMember(request.TemplateId, request.InstanceInitializerKind, in request);
+        }
+
+        /// <summary>
+        /// 批车道会写上 PresentationLifecycleState，生命周期系统就不再发布 EntitySpawned。
+        /// 没有直接引导规则时，只能靠那次发布才能建 presenter 的模板不能进这条车道。
+        /// </summary>
+        private void RequireMaterializeDirectPresenter(string templateId)
+        {
+            if (_presenterBootstrap == null)
+            {
+                return;
+            }
+
+            int templateKeyId = _templateKeys.GetId(templateId);
+            if (templateKeyId <= 0)
+            {
+                return;
+            }
+
+            bool hasDirect = HasDirectEntitySpawnBootstrap(templateKeyId);
+            if (!hasDirect && _presenterBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.MaterializePresenter: template '{templateId}' has EntitySpawned presenter rules that are not direct bootstrap. " +
+                    "Materialize sends every batch-compatible request through the batch lane, which only creates presenters from direct bootstrap rules.");
             }
         }
 

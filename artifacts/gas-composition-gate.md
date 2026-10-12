@@ -10,13 +10,13 @@
 
 结论: PASS
 
-一句话理由: 人群单位仍走 RuntimeEntitySpawnSystem / EntityBuilder / 批车道。调用方批次用同一套物化入口 `Materialize`，不排空阶段队列。销毁仍是 ConsumeEntity；没有呈现消费者的世界当场走现有收尾。批组件准入挂在生成器实例上，不另开管线。
+一句话理由: 人群单位仍走 RuntimeEntitySpawnSystem / EntityBuilder。`Materialize` 不排空阶段队列；批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导。阶段队列的 `Update` 仍是多于一条才走批车道。销毁仍是 ConsumeEntity；没有呈现消费者的世界当场走现有收尾。批组件准入挂在生成器实例上，不另开管线。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 模板物化 | 0 | RuntimeEntitySpawnSystem.Materialize 与 Update 共用 MaterializePrepared / 批车道 |
+| 模板物化 | 0 | Update：多于一条走批车道，一条走单车道。Materialize：批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导 |
 | 批组件准入 | 0 | 生成器实例上的 TemplateBatchComponentAdmission；探针在临时世界，经 ComponentRegistry.Apply |
 | 逐实例写入 | 0 | IRuntimeSpawnInstanceInitializer，挂在生成系统实例上，WriteChunk 不 Add |
 | 行序 | 0 | 物化之后只交换已创建行；原型不是稠密集则抛错 |
