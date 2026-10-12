@@ -288,20 +288,13 @@ namespace Ludots.Core.Gameplay.Spawning
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
                 {
                     int batchCount = CopyTemplateBatchFromSpan(requests, index);
-                    if (batchCount > 1)
+                    if (batchCount >= 1)
                     {
+                        // 单个也走批车道。单条 lane 不挂 PresentationLifecycleState（无头没有 presenter），
+                        // 和批车道的签名会拆成两个原型，行交换就看不到整张稠密表。
                         PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
                         MaterializeCopiedTemplateBatch(peek.TemplateId, template, batchCount);
                         index += batchCount;
-                        continue;
-                    }
-
-                    if (batchCount == 1)
-                    {
-                        RuntimeEntitySpawnRequest singleRequest = _batchRequests[0];
-                        SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in singleRequest);
-                        MaterializePrepared(in singleRequest, in singleRelationshipPlan);
-                        index++;
                         continue;
                     }
                 }
