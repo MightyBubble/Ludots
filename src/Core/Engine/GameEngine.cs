@@ -2287,26 +2287,11 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
             RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // Local IMC projection: mode components on possessed reps and the mounted
-            // active interaction context diff into per-seat (seatId, contextId, op) commands;
-            // handler resolution mirrors scheme activation — per-seat channel handler where one
-            // exists, the sole-seat global handler otherwise. Runs after possession sync so the
-            // same tick's possession is what gets projected.
-            RegisterSystem(
-                new Ludots.Core.Input.Systems.InputContextProjectionSystem(
-                    World,
-                    GlobalContext,
-                    interactionModeMap,
-                    interactionContextProfileRegistry,
-                    seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
-                        ? channel.Handler
-                        : GetService(CoreServiceKeys.InputHandler)),
-                SystemGroup.InputCollection);
             // Context trigger gate — the world-side active context set diff
             // mounts/unmounts profile-declared triggers[] graphs on the context subject and
             // runs the onActivated/onDeactivated lifecycle slot bodies at the mount window
-            // boundaries; simulation-side twin of the local IMC projection above (observers
-            // and all context writers included, not only local seats).
+            // boundaries. Observers and every context writer are included, not only local seats.
+            // The local IMC projection runs later, after ability exec has mounted its context.
             var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerMountSystem(
                 World,
                 TriggerManager,
@@ -2401,6 +2386,20 @@ namespace Ludots.Core.Engine
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             // RFC-0065 CTX-6: exec lifecycle mount/reclaim of the entity-mounted active context.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextProfileRegistry, abilityDefinitions, controlDomainQuery), SystemGroup.AbilityActivation);
+            // IMC projection sits after the exec mount. Input is sampled at the start of the
+            // next platform frame, before the following logic step, so the handler must already
+            // carry this tick's context IMC when the logic tick returns. Projecting in
+            // InputCollection misses a context that AbilityActivation mounts later in the same tick.
+            RegisterSystem(
+                new Ludots.Core.Input.Systems.InputContextProjectionSystem(
+                    World,
+                    GlobalContext,
+                    interactionModeMap,
+                    interactionContextProfileRegistry,
+                    seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
+                        ? channel.Handler
+                        : GetService(CoreServiceKeys.InputHandler)),
+                SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
 
