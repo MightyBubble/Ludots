@@ -259,7 +259,19 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: agentIndex);
         }
 
-        _ = RequireAgentType(authoredAgent.AgentTypeId);
+        // 命令组校验只记失败。模板上的未知 agentTypeId 在地图绑定点抛。
+        if (!TryResolveAgentType(authoredAgent.AgentTypeId, out _))
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.InvalidRequest,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 2,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
 
         if (!float.IsFinite(destinationWorldCm.X) || !float.IsFinite(destinationWorldCm.Y))
         {
