@@ -44,6 +44,9 @@ public sealed class HpaGraph
     public required int NodeCount { get; set; }
     public required int EdgeCount { get; set; }
 
+    /// <summary>簇内边数组的活前缀长度。数组本身可能更长，尾部是重烘空位。</summary>
+    public int IntraPrefix(int cluster) => _nIntra[cluster];
+
     // 查询暂存(不可重入:每次查询独占;并行作业须各自持有)
     public NavMinHeap Heap = new(4096);
     public Fix64[] Dist => _dist;

@@ -29,8 +29,9 @@ public class HpaLocalEquivalenceTests
         for (int cl = 0; cl < hpa.Blocks.Length; cl++)
         {
             var cells = hpa.Cells[cl];
+            int live = hpa.Blocks[cl].CellCount;
             int groundCount = 0;
-            while (groundCount < cells.Length && cells[groundCount] < nav.NavCellsPerSide * nav.NavCellsPerSide) groundCount++;
+            while (groundCount < live && cells[groundCount] < nav.NavCellsPerSide * nav.NavCellsPerSide) groundCount++;
             if (groundCount == 0) continue;
             clusters++;
 
@@ -40,7 +41,8 @@ public class HpaLocalEquivalenceTests
             {
                 HpaQuery.TileDijkstra(nav, cl, cells[i], dist, heap);
                 var row = new HashSet<int>();
-                for (int k = 0; k < hpa.Intra[cl].Length; k += 2)
+                int intraCount = hpa.IntraPrefix(cl);
+                for (int k = 0; k < intraCount; k += 2)
                 {
                     int a = hpa.Intra[cl][k], b = hpa.Intra[cl][k + 1];
                     if (a != i || b >= groundCount) continue;

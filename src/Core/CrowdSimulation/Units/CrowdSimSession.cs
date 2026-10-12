@@ -231,12 +231,48 @@ public sealed class CrowdSimSession
     public void NotifyRebake(CrowdRebakeReport report)
     {
         Telemetry.MarkRebake();
-        RebakeReported?.Invoke(report);
+        LastRebakeReport = report;
+        // 会话上的报告对象下一次重烘会原地改写。有监听者时交出当时的值，没有监听者不分配。
+        if (RebakeReported != null) RebakeReported.Invoke(CopyRebakeReport(report));
         Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
             $"CrowdSimulation rebake: kind={(report.Kind == CrowdRebakeReport.KindPlace ? "place" : "remove")} " +
             $"tiles={report.Tiles} contexts={report.Contexts} costOnly={report.CostOnly} " +
             $"cacheHits={report.Hits} misses={report.Misses} orders={report.Orders} refreshes={report.Refreshes} " +
             $"evicted={report.Evicted} stuck={report.Stuck} (tick {report.ExecTick}→{report.ReportTick})");
+    }
+
+    private static CrowdRebakeReport CopyRebakeReport(CrowdRebakeReport report)
+    {
+        var rows = new List<CrowdNavRebakeContextResult>(report.ContextResults.Count);
+        for (int i = 0; i < report.ContextResults.Count; i++)
+        {
+            var row = report.ContextResults[i];
+            rows.Add(new CrowdNavRebakeContextResult
+            {
+                NavId = row.NavId,
+                Kind = row.Kind,
+                DirtyTiles = new List<int>(row.DirtyTiles),
+            });
+        }
+
+        return new CrowdRebakeReport
+        {
+            ExecTick = report.ExecTick,
+            ReportTick = report.ReportTick,
+            Kind = report.Kind,
+            Tiles = report.Tiles,
+            Contexts = report.Contexts,
+            CostOnly = report.CostOnly,
+            Hits = report.Hits,
+            Misses = report.Misses,
+            Orders = report.Orders,
+            Refreshes = report.Refreshes,
+            Evicted = report.Evicted,
+            Stuck = report.Stuck,
+            Bbox = report.Bbox,
+            ContextResults = rows,
+            UnionTiles = new List<int>(report.UnionTiles),
+        };
     }
 
     public NavContext NavFor(int layer, int r) => NavByLayerRadius[(layer, r)];

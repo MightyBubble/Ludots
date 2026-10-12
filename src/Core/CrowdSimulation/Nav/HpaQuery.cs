@@ -92,7 +92,8 @@ public static class HpaQuery
         g.Clear(); parent.Clear(); closed.Clear(); heap.Clear();
         var hMul = nav.MinCost;
         var sb = blocks[sc];
-        for (int i = 0; i < sb.Cells.Length; i++)
+        // Cells 尾部是增量重烘留下的空位。活节点数是 CellCount，扫 Length 会把空位里的 0 当成格号。
+        for (int i = 0; i < sb.CellCount; i++)
         {
             int c = sb.Cells[i];
             if (c >= n2) continue; // 桥面节点不会被纯地面的起点 Dijkstra 到达
