@@ -459,7 +459,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     entry.NormalizedRefire,
                     entry.Priority,
                     entry.ParsedHook != null,
-                    entry.Action);
+                    entry.Action,
+                    entry.NormalizedBudget);
             }
 
             return compiled;
@@ -633,6 +634,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
+        private static string NormalizeEntryBudget(
+            string? budget,
+            string graphId,
+            string entryLabel,
+            List<GraphDiagnostic> diagnostics)
+        {
+            string token = (budget ?? string.Empty).Trim();
+            if (token.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            if (string.Equals(token, TriggerGraphEntry.BudgetSingleSlice, StringComparison.Ordinal))
+            {
+                return TriggerGraphEntry.BudgetSingleSlice;
+            }
+
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                $"TriggerGraph graph '{graphId}' entry '{entryLabel}' budget must be '{TriggerGraphEntry.BudgetSingleSlice}' or omitted (got '{token}').",
+                entryLabel));
+            return string.Empty;
+        }
+
         private static List<TriggerGraphEntryConfig> ValidateTriggerGraphEntries(
             GraphControlFlowDocument document,
             Dictionary<string, int> nodeIndices,
@@ -661,6 +685,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 string label = (authored[i].Label ?? string.Empty).Trim();
                 string shown = label.Length > 0 ? label : $"entries[{i}]";
+                authored[i].NormalizedBudget = NormalizeEntryBudget(authored[i].Budget, graphId, shown, diagnostics);
                 if (label.Length == 0)
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,

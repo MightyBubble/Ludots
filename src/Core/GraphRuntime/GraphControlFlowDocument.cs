@@ -45,6 +45,10 @@ namespace Ludots.Core.GraphRuntime
         public TriggerGraphEntryFilters ParsedFilters { get; set; }
         /// <summary>Normalized refire policy ("ignore"/"restart"); default "ignore".</summary>
         public string NormalizedRefire { get; set; } = TriggerGraphEntry.RefireIgnore;
+        /// <summary>Authoring <c>budget</c>. Empty, or <see cref="TriggerGraphEntry.BudgetSingleSlice"/>.</summary>
+        public string? Budget { get; set; }
+        /// <summary>Normalized budget token; empty when the entry has no slice requirement.</summary>
+        public string NormalizedBudget { get; set; } = string.Empty;
         /// <summary>Normalized hook target produced by entry validation; null = plain dispatch entry.</summary>
         public TriggerGraphHookTargetConfig? ParsedHook { get; set; }
     }

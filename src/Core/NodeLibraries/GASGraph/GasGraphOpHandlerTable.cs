@@ -537,7 +537,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (cursor.Status == GraphExecutionStatus.Halted)
             {
-                return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
+                return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps, 0);
             }
 
             if (cursor.CallStackCount < 0 || cursor.CallStackCount > state.CallStack.Length)
@@ -574,7 +574,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         program.Length,
                         invokeDepth,
                         GraphExecutionStatus.BudgetSuspended);
-                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, treeSteps);
+                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, treeSteps, stepsThisSlice);
                 }
 
                 if ((uint)pc >= (uint)program.Length)
@@ -686,7 +686,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         program.Length,
                         invokeDepth,
                         GraphExecutionStatus.Halted);
-                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
+                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps, stepsThisSlice);
                 }
 
                 if (op == 0)
@@ -760,7 +760,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         program.Length,
                         invokeDepth,
                         GraphExecutionStatus.Yielded);
-                    return new GraphSliceResult(GraphExecutionStatus.Yielded, returnInt, cursor.Steps);
+                    return new GraphSliceResult(GraphExecutionStatus.Yielded, returnInt, cursor.Steps, stepsThisSlice);
                 }
 
                 if (state.Status == GraphExecutionStatus.Halted)
@@ -775,7 +775,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         program.Length,
                         invokeDepth,
                         GraphExecutionStatus.Halted);
-                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
+                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps, stepsThisSlice);
                 }
             }
 
@@ -789,7 +789,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 program.Length,
                 invokeDepth,
                 GraphExecutionStatus.BudgetSuspended);
-            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
+            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps, stepsThisSlice);
         }
 
         private static void PersistSliceState(

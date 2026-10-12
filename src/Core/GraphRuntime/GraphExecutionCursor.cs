@@ -74,10 +74,16 @@ namespace Ludots.Core.GraphRuntime
     public readonly struct GraphSliceResult
     {
         public GraphSliceResult(GraphExecutionStatus status, int returnInt, int steps)
+            : this(status, returnInt, steps, steps)
+        {
+        }
+
+        public GraphSliceResult(GraphExecutionStatus status, int returnInt, int steps, int sliceSteps)
         {
             Status = status;
             ReturnInt = returnInt;
             Steps = steps;
+            SliceSteps = sliceSteps;
         }
 
         public GraphExecutionStatus Status { get; }
@@ -87,5 +93,8 @@ namespace Ludots.Core.GraphRuntime
         public bool Running => Status == GraphExecutionStatus.Running;
         public int ReturnInt { get; }
         public int Steps { get; }
+
+        /// <summary>Instructions charged to this slice. InvokeGraph callees are not included.</summary>
+        public int SliceSteps { get; }
     }
 }

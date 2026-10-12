@@ -207,6 +207,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             }
 
                             break;
+                        case "budget":
+                            if (field.Value is not JsonValue budgetValue || !budgetValue.TryGetValue<string>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'budget' must be a string.");
+                            }
+
+                            break;
                         case "filters":
                             RequireTriggerGraphEntryFiltersShape(obj, graphId, i, field.Value);
                             break;
@@ -217,7 +225,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             break;
                         default:
                             throw new InvalidOperationException(
-                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, action, start, once, refire, priority, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
+                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, action, start, once, refire, priority, budget, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
                     }
                 }
 
