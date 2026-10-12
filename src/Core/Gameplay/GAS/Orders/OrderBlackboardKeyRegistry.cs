@@ -30,7 +30,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        // Shared name→id path for every blackboard key. Builtins keep their fixed ids; other names register at or above 10_000.
+        // Inline names (graphs, presenters, effects) register here. Order-type fields do not: they resolve with TryGetId after orderBlackboardKeys is loaded, so an undeclared or case-mismatched name fails closed instead of minting a second id.
         public static int Resolve(string key) => Register(key);
 
         public static bool TryGetId(string key, out int id)

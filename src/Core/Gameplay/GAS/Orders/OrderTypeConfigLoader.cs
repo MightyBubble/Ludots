@@ -214,15 +214,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private static int ResolveBlackboardKeyFromString(string text, string key, string path, string fieldName)
         {
-            try
+            if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
             {
-                return OrderBlackboardKeyRegistry.Resolve(text);
+                return blackboardKey;
             }
-            catch (ArgumentException ex)
-            {
-                throw new InvalidOperationException(
-                    $"Order type '{key}' in '{path}' has invalid {fieldName} '{text}'.", ex);
-            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.");
         }
 
         private static int RequireInt(int? value, string key, string path, string fieldName)
@@ -509,7 +506,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                         return -1;
                     }
 
-                    return OrderBlackboardKeyRegistry.Resolve(text);
+                    if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
+                    {
+                        return blackboardKey;
+                    }
+
+                    throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.");
                 }
             }
 
