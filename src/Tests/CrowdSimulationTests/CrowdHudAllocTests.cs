@@ -67,8 +67,8 @@ public sealed class CrowdHudAllocTests
             demo,
             new RouteVisualBuffer(),
             overlay,
-            () => session,
             () => null,
+            () => session,
             presentation);
 
         overlay.Clear();
