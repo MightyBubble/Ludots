@@ -364,10 +364,10 @@ public sealed class CrowdMovementKernel
         if (length <= 0) return;
         if (length == 1 || configured == 1)
         {
-            long workBefore = Session.Telemetry.ReadParallelWorkTicks();
-            long wall0 = Stopwatch.GetTimestamp();
+            long serialWorkBefore = Session.Telemetry.ReadParallelWorkTicks();
+            long serialWall0 = Stopwatch.GetTimestamp();
             ExecuteRange(phase, 0, length, 1, dt);
-            RecordRangeParallel(phase, wall0, workBefore);
+            RecordRangeParallel(phase, serialWall0, serialWorkBefore);
             return;
         }
 
