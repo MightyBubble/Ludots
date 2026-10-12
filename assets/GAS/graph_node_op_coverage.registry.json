@@ -417,6 +417,7 @@
         "Effect",
         "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_ClampTargetToRange",
@@ -441,6 +442,7 @@
         "TriggerGraph",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_CompareEqEntity",
