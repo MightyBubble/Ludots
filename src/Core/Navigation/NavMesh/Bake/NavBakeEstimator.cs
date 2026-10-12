@@ -467,15 +467,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         buffer[1] = cell.WaterHeightLevel;
                         buffer[2] = (byte)cell.SurfaceFlags;
                         buffer[3] = cell.AreaId;
-                        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(4, 4), BitConverter.SingleToInt32Bits(cell.Cost));
                         for (int edge = 0; edge < 3; edge++)
                         {
-                            buffer[8 + edge] = context.Terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
+                            buffer[4 + edge] = context.Terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
                                 ? (byte)1
                                 : (byte)0;
                         }
 
-                        hash.AppendData(buffer.Slice(0, 11));
+                        hash.AppendData(buffer.Slice(0, 7));
                     }
                 }
             }
