@@ -177,9 +177,9 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 | 项 | 错在哪 | 怎么改 |
 |----|--------|--------|
-| Core 技能定义上的 `targeting.targetKinds` + `AbilityAcceptsTargetKind`（op 536） | Core 穷举玩法参数，和已删的 `indicator` / `TargetShape` 是同一种做法 | 切片 R 在做：全部撤掉；目标规则写在技能 `triggerGraphs` 引用的共用规则图里；Core 只补「按技能 id 派发事件」「按槽位读技能 id」两件通用能力 |
+| Core 技能定义上的 `targeting.targetKinds` + `AbilityAcceptsTargetKind`（op 536） | Core 穷举玩法参数，和已删的 `indicator` / `TargetShape` 是同一种做法 | **已改**：全部撤掉，536 号空着。目标规则是能力 mod 的共用规则图 `graph.aim.rule.{none,unit_only,ground_only,unit_or_ground}`，技能在 `triggerGraphs` 里引用；按下图读槽位技能（`LoadSlotAbilityId` 538），用 `DispatchMapEvent` 的技能路由派 `Aim.Rule.Press` / `Aim.Rule.Resolve`，没有规则图接手就 `Fail`。四张规则图各带一遍施法方式判断，下一行改完后删掉 |
 | Core 里固定了「施法方式」这一维：`InteractionPref.DefaultCastModeId` / `OverrideCastModeIds`、`Input/cast_modes.json`、`IsCastMode` / `SetCastMode`（531/532） | 和 `targetKinds` 同病：施法方式是 MOBA 词，三消没有。Core 自己从不读它，只有 mod 图读 | 改成通用偏好键：mod 在 `Input/interaction_prefs.json` 声明偏好键和取值目录，`InteractionPref` 存固定容量的（键, 值）对，玩家级 + 按技能模板覆盖；op 换成 `IsPref` / `SetPref`（键、值都是符号）。施法方式变成能力 mod 声明的一个键。命令意图、派发档案两个字段保留，因为 Core 的下单排干自己读它们 |
-| 指示器靠 `aim.indicating` 集合开关 | 这个集合只是在镜像「某个瞄准状态开着」 | 切片 R 在做：presenter 规则直接听 `ContextActivated` / `ContextDeactivated`（按 context id），删掉这个集合 |
+| 指示器靠 `aim.indicating` 集合开关 | 这个集合只是在镜像「某个瞄准状态开着」 | **已改**：`aim.rules` 听点击 / 松开两个状态的 `ContextActivated` / `ContextDeactivated`，画在主体 `aim.actors` 第 0 个成员上（`ownerSource: EventSourceCollectionMember`）；范围表演按（定义, 范围键, 事件主体）销毁，瞄准中换演员也删得掉。集合已删，Core 集合角色里的 `AimAffected` 也删了 |
 | 游戏专属钩子织进共用能力图：交互展示 `bind_aim_actor` / `shape_indicate` / `shape_clear`，冠军 `bind_aim_actor` / `nearest_hostile_assist` | 钩子织入是全局的，装上就对所有游戏生效，越过了游戏 mod 的职责。现在没有启动预设同时装两个游戏，所以还没炸 | 切片 R 之后逐个搬走：绑演员进共用进入图，形状跟交互状态走，就近辅助瞄准进规则图；五个钩子删光。加载期规则：`hookAnchor` 只能指向本 mod 的图，跨 mod 定制一律走事件 |
 | 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | 半径和关系过滤搬进技能引用的规则图；友方技能引用另一张规则图 |
 | 展示 mod 里还有施法方式 C#：冠军 `ChampionSkillCastModes.cs` + `ChampionSkillCastModeToolbarProvider.cs`，交互展示 `InteractionShowCastModes.cs` | 两份 C# 各读一份 `cast_mode_toolbar.json`，重复造轮子，还直读 `InteractionPref` 判断高亮 | `EntityCommandPanelMod` 出一份通用数据工具栏：按钮 = 输入动作 id（走现有 `InjectButtonPress`），高亮 = 偏好键取值或某个 context 是否开着。两份 C# 删掉 |
@@ -187,6 +187,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`）。`user://` 按宿主传入的用户数据根展开。缺根在引擎初始化时报 `userDataRoot`。坏文件报路径。存的方案 id 不在允许集里直接抛。测试引擎每次传一个新的临时目录 |
 | 座位 `controlSchemeId` 在 SHOW-6 以外可以留空 | 空值保持当前已激活的方案，这是 `ParticipantBindingResolver` 的合同 | 已知，这轮不改。`CoreInputMod` 收尾时关掉：启动必须声明方案，缺了就报错 |
 | `allowedSchemes` 里同一个 id 出现两次 | 追加合并只往后接，不去重 | 已知。校验读到重复 id 直接失败关闭 |
+| Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | 改名为输入采样，和小地图指针那一片一起做。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 是各自领域的词，不归这条线 |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**
