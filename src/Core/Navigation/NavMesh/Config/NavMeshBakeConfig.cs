@@ -91,6 +91,9 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
     public sealed class NavMapNavBoardsConfig
     {
+        /// <summary>navmesh、mass-navigation 或 crowd-simulation。一张图只有这一个值。</summary>
+        public string Solver { get; set; }
+
         public Dictionary<string, NavTileGridConfig> Boards { get; set; } = new Dictionary<string, NavTileGridConfig>();
 
         /// <summary>

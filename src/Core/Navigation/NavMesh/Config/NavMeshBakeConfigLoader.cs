@@ -331,8 +331,14 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                     RequireOnlyProperties(
                         mapObj,
                         $"NavMeshBakeConfig.maps.{mapEntry.Key}",
-                        Array.Empty<string>(),
+                        new[] { "solver" },
                         new[] { "boards", "terrainAreas", "navProfiles", "navAreas" });
+                    string solver = RequireString(mapObj, "solver", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                    if (!NavSolverDeclaration.IsKnown(solver))
+                    {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.solver 必须是 {NavSolverDeclaration.AllowedList}，当前是 \"{solver}\"。");
+                    }
                     if (mapObj.ContainsKey("navProfiles"))
                     {
                         RequireNavProfiles(mapObj, mapEntry.Key);
@@ -381,6 +387,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                                 throw new InvalidOperationException(
                                     $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key} must declare tileWorldWidthCm and tileWorldHeightCm together.");
                             }
+                        }
+
+                        if (boards.Count != 1)
+                        {
+                            throw new InvalidOperationException(
+                                $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards 声明了 {boards.Count} 块板。一张图只能有一块求解器板；不写 boards 时用地图的 RootBoard。");
                         }
                     }
                 }

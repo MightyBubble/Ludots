@@ -166,6 +166,7 @@ const seaLevelCm = Math.round(world.thresholds.seaH * HS * 100);
 const peakSpanCm = Math.max(100, Math.round((1 - world.thresholds.seaH) * HS * 100));
 const mapJson = {
   Id: mapId,
+  RootBoard: 'default',
   Tags: ['crowd_simulation'],
   Tuning: { LoadedChunkCapacity: 256 },
   Boards: [{
@@ -205,6 +206,7 @@ for (const terrain of config.terrainTypes) {
 writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
   maps: {
     [mapId]: {
+      solver: 'crowd-simulation',
       navAreas: ['Default', 'shallow', 'rough', 'sheer', 'deep', 'road', 'deck', 'flooded', 'burning'],
       terrainAreas,
     },

@@ -9,6 +9,7 @@ using Ludots.Core.MovePlanning;
 using Ludots.Core.Movement;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -23,16 +24,25 @@ public sealed class MassNavigationRuntime
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private MassNavigationSimulationRuntime? _simulation;
+    private string? _activeMapId;
+    private NavMeshBakeConfig? _navmesh;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+            !NavSolverDeclaration.Is(RequireNavmesh(engine), mapId.Value, NavSolverDeclaration.MassNavigation))
         {
             return false;
         }
 
+        if (_activeMapId != null && !string.Equals(_activeMapId, mapId.Value, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"大规模导航仍绑在地图 \"{_activeMapId}\"，聚焦 \"{mapId.Value}\" 之前要先挂起或卸载。");
+        }
+
+        _activeMapId = mapId.Value;
         EnsureSystemsInstalled(engine, config);
         MassNavigationSimulationRuntime simulation = EnsureSimulationRuntime(engine, config);
         MassNavigationRuntimeBinding binding = RequireRuntimeBinding(engine);
@@ -45,7 +55,7 @@ public sealed class MassNavigationRuntime
 
         try
         {
-            BindBoardWorld(engine);
+            BindBoardWorld(engine, mapId);
             if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
             {
                 EnsureScenario(engine);
@@ -53,6 +63,7 @@ public sealed class MassNavigationRuntime
         }
         catch
         {
+            _activeMapId = null;
             binding.Clear(mapId, simulation);
             simulation.ReleaseLoadedChunkContribution();
             throw;
@@ -80,7 +91,8 @@ public sealed class MassNavigationRuntime
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+            _activeMapId == null ||
+            !string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal))
         {
             return false;
         }
@@ -102,6 +114,7 @@ public sealed class MassNavigationRuntime
 
         engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
         _simulation?.ReleaseLoadedChunkContribution();
+        _activeMapId = null;
         if (unloadScenario)
         {
             _simulation?.ClearAuthoredRuntimeBindings(engine.World);
@@ -227,12 +240,36 @@ public sealed class MassNavigationRuntime
         _scenarioSpawned = true;
     }
 
-    private void BindBoardWorld(GameEngine engine)
+    private NavMeshBakeConfig RequireNavmesh(GameEngine engine)
+    {
+        if (_navmesh != null)
+        {
+            return _navmesh;
+        }
+
+        if (engine.TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig loaded) && loaded != null)
+        {
+            _navmesh = loaded;
+            return loaded;
+        }
+
+        AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
+        _navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
+            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        engine.SetService(CoreServiceKeys.NavMeshBakeConfig, _navmesh);
+        return _navmesh;
+    }
+
+    private void BindBoardWorld(GameEngine engine, MapId mapId)
     {
         MapSession session = engine.CurrentMapSession
             ?? throw new InvalidOperationException("MassNavigation runtime requires an active MapSession.");
-        var board = session.PrimaryBoard
-            ?? throw new InvalidOperationException("MassNavigation runtime requires a primary board.");
+        NavMapNavBoardsConfig mapNav = NavSolverDeclaration.RequireMap(RequireNavmesh(engine), mapId.Value);
+        string boardName = NavSolverDeclaration.RequireBoard(session.MapConfig, mapNav).Name;
+        var board = session.GetBoard(boardName)
+            ?? throw new InvalidOperationException(
+                $"地图 \"{mapId.Value}\" 的求解器板 \"{boardName}\" 没有装进会话。");
         MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("binding the board world");
         if (board.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
         {

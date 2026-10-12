@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -17,7 +17,7 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// 内核不读文件、不读全局单例。世界距离在组装层用 double 做厘米 ÷ 导航格长，再
 /// <c>Fix64.FromDouble</c> 成交格数；其余长度仍是厘米 Fix64。内核坐标保持厘米。
 /// </summary>
-public sealed class CrowdSimulationConfigLoader
+public static class CrowdSimulationConfigLoader
 {
     public const string RelativePath = "CrowdSimulationConfig.json";
 
@@ -27,41 +27,11 @@ public sealed class CrowdSimulationConfigLoader
     /// 格长 ≥ 1 米时被平方的量 ≤ 46340.5,平方仍小于 2^31。</summary>
     public const int MinFogCellSizeCm = CrowdReferenceMeters.CentimetersPerMeter;
 
-    private readonly ConfigPipeline _pipeline;
-
-    public CrowdSimulationConfigLoader(ConfigPipeline pipeline)
-    {
-        _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
-    }
-
-    /// <summary>经 catalog 合并并解析 CrowdSimulationConfig.json（DeepObject）。</summary>
-    public CrowdSimulationConfig LoadConfig(ConfigCatalog catalog, ConfigConflictReport? report = null)
-    {
-        var entry = ConfigPipeline.RequireEntry(catalog, RelativePath, ConfigMergePolicy.DeepObject);
-        JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-        if (merged == null)
-        {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 没有任何来源提供该文件（标准参数在 CrowdSimulationStandardMod，地图事实在地图 Mod）。");
-        }
-
-        return CrowdSimulationConfig.Load(merged);
-    }
-
-    /// <summary>求解器互斥（LU-19）：两份配置 mapId 相同才冲突。</summary>
-    public static void EnsureSolverExclusive(string? massNavigationMapId, string crowdSimulationMapId)
-    {
-        if (string.Equals(massNavigationMapId, crowdSimulationMapId, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: 地图 \"{crowdSimulationMapId}\" 同时启用了 CrowdSimulation 与 MassNavigation 求解器；一张地图只能使用其中一个。");
-        }
-    }
-
     /// <summary>
     /// LU-20：校验并组装只读运行时配置。输入全部来自 Ludots 已加载的数据。
     /// </summary>
     /// <param name="config">catalog 合并后的 CrowdSimulationConfig.json。</param>
-    /// <param name="map">地图（Boards / Teams / Players / Entities）。聚焦的地图 id 就是会话地图。</param>
+    /// <param name="map">地图（Boards / Teams / Players / Entities）。聚焦的地图 id 就是会话地图。求解器板取 navmesh 里声明的那一块，没声明则取 RootBoard。</param>
     /// <param name="profiles">Navigation/agent_profiles.json 注册表。只消费单位模板点名的档案。</param>
     /// <param name="navmesh">Navigation/navmesh.json。区域、能力档、maps.&lt;mapId&gt; 的地形事实。</param>
     /// <param name="pathing">Navigation/pathing.json。移动类型与区域代价。</param>
@@ -95,13 +65,14 @@ public sealed class CrowdSimulationConfigLoader
         var bound = BindNavigation(config, map, profiles, navmesh, pathing, templates);
 
         string mapFile = $"Maps/{map.Id}.json";
-
-        if (map.Boards.Count == 0)
+        NavMapNavBoardsConfig mapNav = NavSolverDeclaration.RequireMap(navmesh, map.Id);
+        if (!string.Equals(mapNav.Solver, NavSolverDeclaration.CrowdSimulation, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException($"{mapFile}: Boards 不能为空（CrowdSimulation 世界需要一块正方形板）。");
+            throw new InvalidOperationException(
+                $"地图 \"{map.Id}\" 的 solver 是 \"{mapNav.Solver}\"，群体会话只接受 {NavSolverDeclaration.CrowdSimulation}。");
         }
 
-        var board = map.Boards[0];
+        BoardConfig board = NavSolverDeclaration.RequireBoard(map, mapNav);
         int navCellSizeCm = bound.NavCellSizeCm;
 
         // 迷雾格长由作者写成厘米,必须整除导航格;派生倍数是栅格算法量,范围仍是 1..32。
@@ -121,31 +92,31 @@ public sealed class CrowdSimulationConfigLoader
 
         if (board.WidthCm != board.HeightCm)
         {
-            throw new InvalidOperationException($"{mapFile}: Boards[0] 必须是正方形（WidthCm {board.WidthCm} ≠ HeightCm {board.HeightCm}）。");
+            throw new InvalidOperationException($"{mapFile}: 求解器板 \"{board.Name}\" 必须是正方形（WidthCm {board.WidthCm} ≠ HeightCm {board.HeightCm}）。");
         }
 
         if (board.Anchor == null)
         {
             throw new InvalidOperationException(
-                $"{mapFile}: Boards[0].Anchor 必须给出，且 LocalXCm、LocalYCm、WorldXCm、WorldYCm 均为 0。");
+                $"{mapFile}: 求解器板 \"{board.Name}\" 的 Anchor 必须给出，且 LocalXCm、LocalYCm、WorldXCm、WorldYCm 均为 0。");
         }
 
         if (board.Anchor.LocalXCm != 0 || board.Anchor.LocalYCm != 0
             || board.Anchor.WorldXCm != 0 || board.Anchor.WorldYCm != 0)
         {
             throw new InvalidOperationException(
-                $"{mapFile}: Boards[0].Anchor 的 LocalXCm、LocalYCm、WorldXCm、WorldYCm 必须为 0（当前 {board.Anchor.LocalXCm}, {board.Anchor.LocalYCm}, {board.Anchor.WorldXCm}, {board.Anchor.WorldYCm}）。");
+                $"{mapFile}: 求解器板 \"{board.Name}\" 的 Anchor 的 LocalXCm、LocalYCm、WorldXCm、WorldYCm 必须为 0（当前 {board.Anchor.LocalXCm}, {board.Anchor.LocalYCm}, {board.Anchor.WorldXCm}, {board.Anchor.WorldYCm}）。");
         }
 
         if (board.WidthCm % navCellSizeCm != 0)
         {
-            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 profiles.cellSizeCm（{navCellSizeCm}）整除。");
+            throw new InvalidOperationException($"{mapFile}: 求解器板 \"{board.Name}\" 的 WidthCm（{board.WidthCm}）必须能被 profiles.cellSizeCm（{navCellSizeCm}）整除。");
         }
 
         int navCellCount = board.WidthCm / navCellSizeCm;
         if (navCellCount < 16 || navCellCount > 1024)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 每边导航格数 = {navCellCount}（Boards[0].WidthCm / profiles.cellSizeCm），需为 ≥ 16、≤ 1024 的整数");
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 每边导航格数 = {navCellCount}（求解器板 \"{board.Name}\" 的 WidthCm / profiles.cellSizeCm），需为 ≥ 16、≤ 1024 的整数");
         }
 
         int navTileSizeCm = config.Navtile.SizeCm;

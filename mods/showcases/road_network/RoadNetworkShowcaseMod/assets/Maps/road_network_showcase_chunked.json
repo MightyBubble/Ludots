@@ -1,5 +1,6 @@
 {
   "Id": "road_network_showcase_chunked",
+  "RootBoard": "default",
   "Tuning": {
     "LoadedChunkCapacity": 256
   },

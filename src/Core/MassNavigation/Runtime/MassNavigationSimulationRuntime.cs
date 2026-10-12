@@ -341,7 +341,7 @@ public sealed class MassNavigationSimulationRuntime
 
         ValidateInitialSolverWindow(boardWorldSize);
         _loadedChunkContributor ??= loadedChunks.AcquireContributor(
-            $"MassNavigation:{Config.MapId}",
+            "MassNavigation",
             _loadedChunkCapacity);
         try
         {

@@ -68,7 +68,7 @@ public sealed class MassNavigationOrderAdapterInstallContractTests
         bool activated = runtime.HandleMapFocused(engine, new MapId(ParticipantMapId));
 
         Assert.That(activated, Is.False,
-            "Maps without a matching MassNavigationConfig.mapId must not activate the mass-navigation runtime.");
+            "A map whose solver is not mass-navigation must not activate the mass-navigation runtime.");
         Assert.That(CountSystems<MovePlanOrderProjectionSystem>(engine, SystemGroup.AbilityActivation), Is.Zero);
     }
 

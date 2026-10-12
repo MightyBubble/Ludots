@@ -1,5 +1,6 @@
 {
   "Id": "crowd_physics_arena",
+  "RootBoard": "default",
   "Tuning": {
     "LoadedChunkCapacity": 256
   },

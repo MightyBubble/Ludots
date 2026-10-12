@@ -21,6 +21,12 @@ internal sealed class CrowdSimulationDebugConfig
     public static CrowdSimulationDebugConfig Load(JsonObject debug)
     {
         ArgumentNullException.ThrowIfNull(debug);
+        if (debug["session"] is JsonObject session && session.ContainsKey("autostart"))
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationDebug.json: 已删除 session.autostart。群体会话随地图焦点创建，挂起时释放。哪张图跑群体模拟，在 Navigation/navmesh.json 的 maps.<mapId>.solver 写 crowd-simulation。");
+        }
+
         CrowdSimulationDebugConfig cfg;
         try
         {
@@ -53,7 +59,6 @@ internal sealed class CrowdDebugWorker
 
 internal sealed class CrowdDebugSession
 {
-    public bool Autostart { get; init; }
     public CrowdDebugScriptEntry[]? Script { get; init; }
     public int? AutoReplayAtTick { get; init; }
     public string? CameraId { get; init; }

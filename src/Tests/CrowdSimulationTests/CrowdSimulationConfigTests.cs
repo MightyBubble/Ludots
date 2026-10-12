@@ -187,16 +187,6 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void DualSolver_SameMap_IsRejected()
-    {
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => CrowdSimulationConfigLoader.EnsureSolverExclusive("crowd_simulation_demo", "crowd_simulation_demo"));
-        Assert.That(ex!.Message, Does.Contain("一张地图只能使用其中一个"));
-        Assert.DoesNotThrow(() => CrowdSimulationConfigLoader.EnsureSolverExclusive("other_map", "crowd_simulation_demo"));
-        Assert.DoesNotThrow(() => CrowdSimulationConfigLoader.EnsureSolverExclusive(null, "crowd_simulation_demo"));
-    }
-
-    [Test]
     public void RetiredVersionKey_IsRejected()
     {
         var json = TestDefaults.DefaultConfigJson();

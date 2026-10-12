@@ -3379,7 +3379,7 @@ public static class LauncherEvidenceRecorder
         MassNavigationSnapshot crossing = timeline.First(snapshot => snapshot.Step == "003_crossing_order");
         MassNavigationSnapshot remote = timeline.First(snapshot => snapshot.Step == "004_remote_minimap_jump");
         MassNavigationSnapshot returned = timeline.First(snapshot => snapshot.Step == "005_return_original_area");
-        string expectedMapId = simulation.Config.MapId;
+        string expectedMapId = "mass_navigation";
         int firstMoveSampleCount = CountMovedMassNavigationSamples(commandSource, afterOrder, MassNavigationMovementSampleThresholdCm);
         int secondMoveSampleCount = CountMovedMassNavigationSamples(beforeCrossing, crossing, MassNavigationMovementSampleThresholdCm);
         float firstMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(commandSource, afterOrder);
