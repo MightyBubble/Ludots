@@ -313,6 +313,20 @@ app.MapGet("/api/mods", () =>
     return Results.Ok(new { ok = true, mods });
 });
 
+app.MapGet("/api/mods/{modId}/config-provenance", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        ConfigProvenanceSnapshot snapshot = EditorRepo.LoadConfigProvenance(repoRoot, modId);
+        return Results.Ok(new { ok = true, files = snapshot.Files });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
 app.MapGet("/api/mods/{modId}/thumbnail", (string modId) =>
 {
     var mods = launcher.DiscoverMods();
@@ -4758,6 +4772,19 @@ static class EditorRepo
             ModsById = mods,
             LoadOrder = order
         };
+    }
+
+    public static ConfigProvenanceSnapshot LoadConfigProvenance(string repoRoot, string targetModId)
+    {
+        ModContext ctx = CreateContext(repoRoot, targetModId);
+        var mounts = new List<ConfigModMount>(ctx.LoadOrder.Count);
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            ModInfo mod = ctx.ModsById[ctx.LoadOrder[i]];
+            mounts.Add(new ConfigModMount(mod.Id, mod.RootPath));
+        }
+
+        return ConfigMergeProvenance.Capture(Path.Combine(repoRoot, "assets"), mounts);
     }
 
     public static List<string> DiscoverMaps(ModContext ctx)
