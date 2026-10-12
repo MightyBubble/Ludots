@@ -239,5 +239,47 @@ namespace Ludots.Tests.GAS
 
             Assert.That(allocated, Is.EqualTo(0));
         }
+
+        [Test]
+        public void MembershipNotify_SkipsWhenUnsubscribed_AndReportsAddThenRemove()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            Entity first = world.Create();
+            Entity second = world.Create();
+            var registry = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var store = new EntityCollectionStore(registry);
+            var descriptor = EntityCollectionDescriptor.Create(
+                "collection.command.source",
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            int keyId = registry.Register("collection.command.source");
+            var events = new List<(int KeyId, Entity Member, bool Added)>();
+            bool listen = false;
+            store.MembershipNotifyProbe = _ => listen;
+            store.MembershipChanged = (eventOwner, eventKey, member, added) =>
+            {
+                Assert.That(eventOwner, Is.EqualTo(owner));
+                events.Add((eventKey, member, added));
+            };
+
+            store.Replace(owner, descriptor, new[] { first });
+            Assert.That(events, Is.Empty, "no subscriber means no membership event and no diff work");
+
+            listen = true;
+            store.Replace(owner, descriptor, new[] { first });
+            Assert.That(events, Is.Empty, "an unchanged member set does not emit");
+
+            store.Replace(owner, descriptor, new[] { first, second });
+            store.Replace(owner, descriptor, new[] { second });
+            store.Remove(owner, keyId);
+
+            Assert.That(events, Is.EqualTo(new[]
+            {
+                (keyId, second, true),
+                (keyId, first, false),
+                (keyId, second, false),
+            }));
+        }
     }
 }

@@ -157,6 +157,22 @@ namespace Ludots.Core.Scripting
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
                 new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
             }),
+            new(GameEvents.EntityCollectionMembershipChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("collectionKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.CollectionKeyId),
+                new("memberEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.MemberEntity),
+                new("ownerEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.OwnerEntity),
+            }),
+            new(GameEvents.ContextActivated.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("contextKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextKeyId),
+            }),
+            new(GameEvents.ContextDeactivated.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("contextKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextKeyId),
+            }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.
             new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]

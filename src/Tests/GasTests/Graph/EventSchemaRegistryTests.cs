@@ -38,6 +38,38 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void MembershipAndContextEvents_AreMapScopedWithTheirPayloadKeys()
+        {
+            var registry = new EventSchemaRegistry();
+            Assert.That(GameEvents.IsMapScoped(GameEvents.EntityCollectionMembershipChanged.Value), Is.True);
+            Assert.That(GameEvents.IsMapScoped(GameEvents.ContextActivated.Value), Is.True);
+            Assert.That(GameEvents.IsMapScoped(GameEvents.ContextDeactivated.Value), Is.True);
+
+            Assert.That(registry.TryGet(GameEvents.EntityCollectionMembershipChanged.Value, out EventSchema membership), Is.True);
+            Assert.That(membership.Scope, Is.EqualTo(EventScope.Map));
+            Assert.That(membership.Params.Select(p => p.PayloadKey).ToArray(), Is.EqualTo(new[]
+            {
+                MapTriggerEventPayloadKeys.CollectionKeyId,
+                MapTriggerEventPayloadKeys.MemberEntity,
+                MapTriggerEventPayloadKeys.OwnerEntity,
+            }));
+
+            Assert.That(registry.TryGet(GameEvents.ContextActivated.Value, out EventSchema activated), Is.True);
+            Assert.That(activated.Params.Select(p => p.PayloadKey).ToArray(), Is.EqualTo(new[]
+            {
+                MapTriggerEventPayloadKeys.SourceEntity,
+                MapTriggerEventPayloadKeys.ContextKeyId,
+            }));
+
+            var ctx = new ScriptContext();
+            ctx.Set(MapTriggerEventPayloadKeys.CollectionKeyId, 1);
+            ctx.Set(MapTriggerEventPayloadKeys.MemberEntity, Entity.Null);
+            Assert.That(
+                () => registry.ValidateFirePayload(GameEvents.EntityCollectionMembershipChanged, ctx),
+                Throws.InvalidOperationException);
+        }
+
+        [Test]
         public void BuiltinSchemas_CoverPayloadBearingEvents()
         {
             var registry = new EventSchemaRegistry();
@@ -54,6 +86,9 @@ namespace Ludots.Tests.Gas.Graph
                 GameEvents.CalendarCyclePhaseExited.Value,
                 GameEvents.CalendarEraChanged.Value,
                 GameEvents.CalendarDayPhaseChanged.Value,
+                GameEvents.EntityCollectionMembershipChanged.Value,
+                GameEvents.ContextActivated.Value,
+                GameEvents.ContextDeactivated.Value,
             };
 
             foreach (string eventName in payloadBearing)

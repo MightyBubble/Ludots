@@ -54,6 +54,10 @@ namespace Ludots.Core.Scripting
         public const string CalendarPhaseIndex = "Calendar.PhaseIndex";          // int
         // fires a schema-less map event carrying the final entity set plus the set semantics;
         public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
+        public const string CollectionKeyId = "MapTrigger.CollectionKeyId";      // int (ConfigKey id of the collection key)
+        public const string MemberEntity = "MapTrigger.MemberEntity";            // Entity
+        public const string OwnerEntity = "MapTrigger.OwnerEntity";              // Entity
+        public const string ContextKeyId = "MapTrigger.ContextKeyId";            // int (ConfigKey id of the interaction context profile)
 
         /// <summary>
         /// Whether a string is one of the constants above (reflection-built once); the

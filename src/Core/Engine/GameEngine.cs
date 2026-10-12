@@ -908,6 +908,7 @@ namespace Ludots.Core.Engine
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var inputCollectionKeyDeclarations = LoadInputCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            WireEntityCollectionMembershipEvents(entityCollectionStore);
             var intIdCollectionStore = new IntIdCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
@@ -1808,6 +1809,7 @@ namespace Ludots.Core.Engine
                 interactionContextProfileRegistry,
                 presentationEventStream,
                 GameSession);
+            WireContextLifecycleEvents(interactionContextInstances, interactionContextProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
             gasGraphApi.BindContextInstances(interactionContextInstances);
             MapLoader.SetInitialInteractionContexts(interactionContextProfileRegistry);

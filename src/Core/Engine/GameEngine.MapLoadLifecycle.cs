@@ -4,8 +4,12 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
@@ -287,6 +291,100 @@ namespace Ludots.Core.Engine
             }
 
             return ctx;
+        }
+
+        private void WireEntityCollectionMembershipEvents(EntityCollectionStore store)
+        {
+            store.MembershipNotifyProbe = owner =>
+            {
+                if (!World.IsAlive(owner) || !World.TryGet(owner, out MapEntity mapEntity))
+                {
+                    return false;
+                }
+
+                MapSession? session = MapSessions?.GetSession(mapEntity.MapId);
+                return session != null &&
+                    TriggerManager.HasMapEventSubscribers(session.MapId, GameEvents.EntityCollectionMembershipChanged);
+            };
+            store.MembershipChanged = (owner, keyId, member, _) =>
+            {
+                if (!World.IsAlive(owner) || !World.TryGet(owner, out MapEntity mapEntity))
+                {
+                    return;
+                }
+
+                MapSession? session = MapSessions?.GetSession(mapEntity.MapId);
+                if (session == null ||
+                    !TriggerManager.HasMapEventSubscribers(session.MapId, GameEvents.EntityCollectionMembershipChanged))
+                {
+                    return;
+                }
+
+                string keyName = store.KeyRegistry.GetName(keyId);
+                if (string.IsNullOrEmpty(keyName))
+                {
+                    throw new InvalidOperationException(
+                        $"COLLECTION.ERR.MembershipEventUnknownKey: collection key id {keyId} has no name.");
+                }
+
+                ScriptContext ctx = CreateContext();
+                ctx.Set(CoreServiceKeys.MapId, session.MapId);
+                ctx.Set(CoreServiceKeys.MapSession, session);
+                if (session.MapConfig?.Tags != null)
+                {
+                    ctx.Set(CoreServiceKeys.MapTags, session.MapConfig.Tags);
+                }
+
+                ctx.Set(MapTriggerEventPayloadKeys.CollectionKeyId, ConfigKeyRegistry.Register(keyName));
+                ctx.Set(MapTriggerEventPayloadKeys.MemberEntity, member);
+                ctx.Set(MapTriggerEventPayloadKeys.OwnerEntity, owner);
+                ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, owner);
+                TriggerManager.FireMapEvent(session.MapId, GameEvents.EntityCollectionMembershipChanged, ctx);
+            };
+        }
+
+        private void WireContextLifecycleEvents(
+            InteractionContextInstanceRuntime runtime,
+            InteractionContextProfileRegistry profiles)
+        {
+            runtime.ContextLifecycleDispatcher = (kind, subject, profileId) =>
+            {
+                EventKey eventKey = kind == PresentationEventKind.ContextActivated
+                    ? GameEvents.ContextActivated
+                    : kind == PresentationEventKind.ContextDeactivated
+                        ? GameEvents.ContextDeactivated
+                        : throw new InvalidOperationException(
+                            $"GAS.GRAPH.ERR.ContextLifecycleKind: {kind} is not a context lifecycle.");
+                if (!World.IsAlive(subject) || !World.TryGet(subject, out MapEntity mapEntity))
+                {
+                    return;
+                }
+
+                MapSession? session = MapSessions?.GetSession(mapEntity.MapId);
+                if (session == null || !TriggerManager.HasMapEventSubscribers(session.MapId, eventKey))
+                {
+                    return;
+                }
+
+                string name = profiles.ProfileIdRegistry.GetName(profileId);
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.ContextLifecycleUnnamed: profile id {profileId} has no name.");
+                }
+
+                ScriptContext ctx = CreateContext();
+                ctx.Set(CoreServiceKeys.MapId, session.MapId);
+                ctx.Set(CoreServiceKeys.MapSession, session);
+                if (session.MapConfig?.Tags != null)
+                {
+                    ctx.Set(CoreServiceKeys.MapTags, session.MapConfig.Tags);
+                }
+
+                ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, subject);
+                ctx.Set(MapTriggerEventPayloadKeys.ContextKeyId, ConfigKeyRegistry.Register(name));
+                TriggerManager.FireMapEvent(session.MapId, eventKey, ctx);
+            };
         }
 
         private void WireMapVariableChangedDispatcher(MapSession session)
