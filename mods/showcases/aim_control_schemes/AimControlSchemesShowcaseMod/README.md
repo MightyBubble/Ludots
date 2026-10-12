@@ -2,7 +2,7 @@
 
 一个英雄、三具假人，把同一套瞄准图放在四套设备方案里跑。本目录没有 C# 工程。
 
-施法模式不是方案上的字段。进图时 `interaction_prefs.json` 的种子是 `castMode.smart`。F1 / F2 / F3 调 `SetCastMode`，四套方案共用这三张图。
+施法手感不是方案上的字段。进图时 `interaction_prefs.json` 把 `pref.aim.cast_mode` 种成 `interaction.context.aim.smart`。F1 / F2 / F3 调 `graph.aim.set_cast_mode`，四套方案共用这张图。
 
 ## 四套方案差在哪
 
@@ -17,7 +17,7 @@
 
 `scheme.aim.kbm_skills` 与 `scheme.aim.gamepad_left` 写在瞄准能力 mod 里，因为换装的是通用键位，不是这一场的英雄。
 
-F1 `castMode.smart`，F2 `castMode.aim_release`（按住转向，松开下令），F3 `castMode.aim_click`（先打开指示器，再确认）。范围圈和指示线跟着 `interaction.context.aim.click` / `interaction.context.aim.release` 的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
+F1 `interaction.context.aim.smart`（按下就提交），F2 `interaction.context.aim.release`（按住转向，松开下令），F3 `interaction.context.aim.click`（先打开指示器，再确认）。范围圈和指示线跟着点击 / 松开两个状态的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
 
 ## 怎么启动
 

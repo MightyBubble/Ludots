@@ -11,7 +11,7 @@
 | `scheme.aim.kbm_skills` | 光标 | 左键 `Aim.Primary`：敌对单位攻击，否则移动；空格确认 |
 | `scheme.aim.gamepad_left` | 左摇杆 | 左摇杆同时驱动 `Aim.Stick` 和 `axisMove` |
 
-施法模式看玩家的 `InteractionPref`。种子是 `castMode.smart`。F1 / F2 / F3 分别写成智能、松开施法、点击确认。
+施法手感看玩家偏好键 `pref.aim.cast_mode`。种子是 `interaction.context.aim.smart`。F1 / F2 / F3 经 `graph.aim.set_cast_mode` 写成智能、松开、点击三个手势状态。
 
 ```
 scripts/run-mod-launcher.cmd cli launch preset:aim_control_schemes_raylib --adapter raylib
