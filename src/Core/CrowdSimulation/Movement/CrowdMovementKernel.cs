@@ -157,6 +157,7 @@ public sealed class CrowdMovementKernel
         }
 
         int gm = session.Groups.Groups.Count;
+        bool stampsReplaced = false;
         if (OrderMemo.Length < gm)
         {
             OrderMemo = new Movement.CrowdOrder?[gm];
@@ -165,6 +166,7 @@ public sealed class CrowdMovementKernel
             NavStamp = new byte[gm];
             // 新戳全是 0。世代号若停在 255，下面的 ++ 会回绕成 0，全部被误判为命中。
             GroupMemoEpoch = 0;
+            stampsReplaced = true;
         }
 
         if (OrderGate.Length < gm)
@@ -172,7 +174,8 @@ public sealed class CrowdMovementKernel
             OrderGate = new int[gm];
             NavGate = new int[gm];
         }
-        else if (GroupMemoEpoch == byte.MaxValue)
+
+        if (!stampsReplaced && GroupMemoEpoch == byte.MaxValue)
         {
             Array.Clear(OrderStamp, 0, gm);
             Array.Clear(NavStamp, 0, gm);
