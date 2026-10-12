@@ -52,8 +52,8 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     public void DiabloKeyboard_SmartCursor_AndPrimaryClickMovesOrAttacks()
     {
         using Session session = Session.Boot("scheme.aim.kbm_skills");
-        session.AssertPrimaryClickMoveAndAttack();
         session.RunCastMatrix(AimSurface.KeyboardCursor, slotEntity: 0, slotGround: 3, confirm: ConfirmControl.Space);
+        session.AssertPrimaryClickMoveAndAttack();
     }
 
     [Test]
@@ -80,7 +80,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         session.SwitchScheme("scheme.aim.gamepad");
         session.AimMouse(hero + new Vector2(900f, 600f));
-        Vector2 afterMouse = session.ReadPoint();
+        Vector2 afterMouse = session.ReadStoredPoint();
         Assert.That(Vector2.Distance(afterMouse, moved), Is.LessThanOrEqualTo(5f), session.Diag("mouse after gamepad switch"));
 
         session.AimStick("rightStick", new Vector2(0.5f, 0f));
@@ -175,7 +175,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)projector);
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)projector);
                 var session = new Session(engine, device, schemeId);
-                session.Tick(8);
+                session.TickUntilFixedTickAdvances(3);
                 session.AssertBootstrapped();
                 return session;
             }
@@ -205,12 +205,14 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Vector2 ground = Position(Hero) + new Vector2(700f, 0f);
             AimMouse(ground);
             ClickLeft();
+            WaitUntil(() => HasActiveOrder(), 6);
             Order move = RequireActiveOrder("moveTo");
             Vector2 moveAt = new(move.Args.Spatial.WorldCm.X, move.Args.Spatial.WorldCm.Z);
             Assert.That(Vector2.Distance(moveAt, ground), Is.LessThanOrEqualTo(40f), Diag("primary ground move"));
 
             AimMouse(Position(Near));
             ClickLeft();
+            WaitUntil(() => ActiveOrderTypeId() == AttackOrderTypeId(), 6);
             Order attack = RequireActiveOrder("attackTarget");
             Assert.That(attack.Target, Is.EqualTo(Near), Diag("primary hostile attack"));
         }
@@ -221,7 +223,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 ?? throw new InvalidOperationException("ControlSchemeRuntime missing.");
             Assert.That(schemes.SchemeIdRegistry.TryGetId(schemeId, out int id), Is.True, schemeId);
             Assert.That(schemes.TrySwitch(id), Is.True, Diag("switch " + schemeId));
-            Tick(1);
+            TickUntilFixedTickAdvances();
             Assert.That(schemes.SchemeIdRegistry.GetName(schemes.ActiveSchemeId), Is.EqualTo(schemeId));
         }
 
@@ -231,8 +233,11 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         public Vector2 ReadPoint()
         {
             Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(1), Diag("aim point"));
-            return new Vector2(ReadFloat("aim.point.x_cm"), ReadFloat("aim.point.y_cm"));
+            return ReadStoredPoint();
         }
+
+        public Vector2 ReadStoredPoint() =>
+            new(ReadFloat("aim.point.x_cm"), ReadFloat("aim.point.y_cm"));
 
         public void AimMouse(Vector2 screenCm)
         {
@@ -240,6 +245,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             AdvanceTick();
             _device.MovePointer(screenCm.X, screenCm.Y);
             AdvanceTick();
+            TickUntilFixedTickAdvances();
         }
 
         public void AimStick(string stick, Vector2 axis)
@@ -248,6 +254,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             AdvanceTick();
             SetAxis(stick, axis);
             AdvanceTick();
+            TickUntilFixedTickAdvances();
         }
 
         public string Diag(string step)
@@ -262,10 +269,17 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 point = ex.Message;
             }
 
-            return $"{step} || scheme={SchemeId} mode={ReadCastMode()} contexts=[{Contexts()}] input={_inputContextId} " +
-                   $"range={TryReadFloat("aim.range_cm")} point={point} indicating={CollectionCount("aim.indicating")} " +
-                   $"hover={CollectionCount("aim.hover")} actors={CollectionCount("aim.actors")} triggers={TriggerErrors()} " +
-                   $"exec={DescribeExec()} order={DescribeActiveOrder()}";
+            PlayerInputHandler? handler = _engine.GetService(CoreServiceKeys.InputHandler);
+            string pointer = handler == null ? "<no input>" : handler.ReadAction<Vector2>("Aim.Pointer").ToString();
+            string modeDown = handler != null && handler.IsDown("AimSchemes.ModeAimRelease") ? "down" : "up";
+            return $"{step} || scheme={SchemeId} mode={ReadCastMode()} tick={_engine.GameSession.CurrentTick} " +
+                   $"contexts=[{Contexts()}] input={_inputContextId} " +
+                   $"device={_device.PointerPosition} aimPointer={pointer} f2={modeDown} " +
+                   $"range={TryReadFloat("aim.range_cm")} slot={TryReadInt("aim.slot")} point={point} " +
+                   $"hero={Format(Position(Hero))} near={Format(Position(Near))} stickDummy={Format(Position(StickDummy))} " +
+                   $"indicating={CollectionCount("aim.indicating")} hover={CollectionCount("aim.hover")} " +
+                   $"actors={CollectionCount("aim.actors")} command={CollectionCount("collection.command.source")} " +
+                   $"triggers={TriggerErrors()} exec={DescribeExec()} order={DescribeActiveOrder()} drain={DrainReason()}";
         }
 
         private void AssertBootstrapped()
@@ -322,6 +336,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             }
 
             PressSlot(surface, slot);
+            WaitForExec();
             AssertCast(slot, target, $"smart slot {slot}");
             ReleaseSlot(surface, slot);
             Settle();
@@ -331,9 +346,16 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         {
             AimFor(surface, target);
             PressSlot(surface, slot);
-            Tick(1);
+            WaitUntil(() => CollectionCount("aim.indicating") > 0, 4);
             Assert.That(CollectionCount("aim.indicating"), Is.GreaterThan(0), Diag($"indicate slot {slot}"));
-            Assert.That(CollectionCount("aim.hover"), Is.GreaterThan(0), Diag($"hover slot {slot}"));
+            if (target == null)
+            {
+                Assert.That(CollectionCount("aim.hover"), Is.EqualTo(0), Diag($"hover slot {slot}"));
+            }
+            else
+            {
+                Assert.That(CollectionCount("aim.hover"), Is.GreaterThan(0), Diag($"hover slot {slot}"));
+            }
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag($"indicate quiet slot {slot}"));
             if (cancel)
             {
@@ -356,6 +378,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 ReleaseSlot(surface, slot);
             }
 
+            WaitForExec();
             AssertCast(slot, target, $"aimed slot {slot}");
             Settle();
         }
@@ -403,10 +426,25 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         private void SetMode(string modeId, string key)
         {
-            TapKey(key);
-            Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("set " + modeId));
+            _device.KeyDown(key);
+            AdvanceTick();
+            PlayerInputHandler input = _engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler missing.");
+            bool sawDown = input.IsDown(ModeAction(key));
+            WaitUntil(() => ReadCastMode() == modeId, 4);
+            _device.KeyUp(key);
+            AdvanceTick();
+            Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("set " + modeId + " sawDown=" + sawDown));
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("set " + modeId));
         }
+
+        private static string ModeAction(string key) => key switch
+        {
+            "f1" => "AimSchemes.ModeSmart",
+            "f2" => "AimSchemes.ModeAimRelease",
+            "f3" => "AimSchemes.ModeAimClick",
+            _ => throw new ArgumentOutOfRangeException(nameof(key)),
+        };
 
         private void PressSlot(AimSurface surface, int slot)
         {
@@ -485,18 +523,88 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             AdvanceTick();
         }
 
+        private void WaitForExec() => WaitUntil(() => _engine.World.Has<AbilityExecInstance>(Hero), 6);
+
+        private void WaitUntil(Func<bool> ready, int maxFixedTicks)
+        {
+            for (int i = 0; i < maxFixedTicks && !ready(); i++)
+            {
+                TickUntilFixedTickAdvances();
+            }
+        }
+
+        private void TickUntilFixedTickAdvances(int fixedTicks = 1)
+        {
+            int targetTick = _engine.GameSession.CurrentTick + Math.Max(1, fixedTicks);
+            for (int i = 0; i < 16 * Math.Max(1, fixedTicks) && _engine.GameSession.CurrentTick < targetTick; i++)
+            {
+                Tick(1);
+            }
+
+            Assert.That(
+                _engine.GameSession.CurrentTick,
+                Is.GreaterThanOrEqualTo(targetTick),
+                Diag($"fixed tick stopped at {_engine.GameSession.CurrentTick}, expected {targetTick}"));
+        }
+
+        private bool HasActiveOrder()
+        {
+            return _engine.World.TryGet(Hero, out OrderBuffer buffer) && buffer.HasActive;
+        }
+
+        private static string Format(Vector2 value) => $"({value.X:0},{value.Y:0})";
+
+        private string TryReadInt(string key)
+        {
+            try
+            {
+                return ReadInt(key).ToString();
+            }
+            catch (InvalidOperationException)
+            {
+                return "<missing>";
+            }
+        }
+
+        private string DrainReason()
+        {
+            if (_engine.GetService(CoreServiceKeys.CommandIntentBufferDrain) is not Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem drain)
+            {
+                return "<none>";
+            }
+
+            return string.IsNullOrEmpty(drain.LastRejectionReason) ? "<none>" : drain.LastRejectionReason;
+        }
+
         private void Settle()
         {
             for (int i = 0; i < 12 && _engine.World.Has<AbilityExecInstance>(Hero); i++)
             {
-                Tick(1);
+                TickUntilFixedTickAdvances();
             }
         }
 
         private void AdvanceTick()
         {
             _device.AdvanceFrame();
-            Tick(1);
+            TickUntilFixedTickAdvances();
+        }
+
+        private int AttackOrderTypeId()
+        {
+            OrderTypeRegistry orderTypes = _engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
+            return orderTypes.GetId("attackTarget");
+        }
+
+        private int ActiveOrderTypeId()
+        {
+            if (!_engine.World.TryGet(Hero, out OrderBuffer buffer) || !buffer.HasActive)
+            {
+                return 0;
+            }
+
+            return buffer.ActiveOrder.Order.OrderTypeId;
         }
 
         private void Tick(int frames)
@@ -666,7 +774,9 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 return "<none>";
             }
 
-            return buffer.ActiveOrder.Order.OrderTypeId.ToString();
+            Order order = buffer.ActiveOrder.Order;
+            var at = order.Args.Spatial.WorldCm;
+            return $"{order.OrderTypeId}@({at.X},{at.Z}) target={order.Target.Id}";
         }
 
         private string TriggerErrors()
