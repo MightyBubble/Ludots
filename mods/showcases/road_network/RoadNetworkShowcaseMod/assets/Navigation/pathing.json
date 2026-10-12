@@ -1,7 +1,6 @@
 {
-  "agentTypes": [
-    {
-      "id": "RoadColumn",
+  "agentTypes": {
+    "RoadColumn": {
       "profileId": "Small",
       "selection": {
         "mode": "PreferGraph",
@@ -12,7 +11,10 @@
       },
       "navMesh": {
         "areaCosts": [
-          { "areaId": 0, "cost": 1.0 }
+          {
+            "areaId": 0,
+            "cost": 1.0
+          }
         ]
       },
       "nodeGraph": {
@@ -23,8 +25,7 @@
         "tagCostRules": []
       }
     },
-    {
-      "id": "Humanoid",
+    "Humanoid": {
       "profileId": "Small",
       "selection": {
         "mode": "PreferGraph",
@@ -35,7 +36,10 @@
       },
       "navMesh": {
         "areaCosts": [
-          { "areaId": 0, "cost": 1.0 }
+          {
+            "areaId": 0,
+            "cost": 1.0
+          }
         ]
       },
       "nodeGraph": {
@@ -46,5 +50,5 @@
         "tagCostRules": []
       }
     }
-  ]
+  }
 }

@@ -883,6 +883,13 @@ public sealed class MassNavigationRouteExecutionSink
 
             if (MassNavigationProfileRegistry.TryGetId(agentType.ProfileId, out int profileId))
             {
+                PathingAgentTypeConfig existing = _agentTypesByProfileId[profileId];
+                if (existing != null)
+                {
+                    throw new InvalidOperationException(
+                        $"PathingConfig.agentTypes '{agentType.Id}' and '{existing.Id}' share profileId '{agentType.ProfileId}'.");
+                }
+
                 _agentTypesByProfileId[profileId] = agentType;
             }
         }

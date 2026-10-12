@@ -4316,9 +4316,19 @@ namespace Ludots.Core.Engine
             var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
-            // Capability profiles copied so every agent navProfileId resolves are not tile stores.
-            // Only profiles reached from pathing agent types are materialized.
-            var referencedNavProfiles = NavProfileIndicesReferencedByPathing(profileRegistry, agentProfiles);
+            PathingConfig declaredPathing = SelectMapAgentTypes(bakeConfig, mapId);
+            List<NavMeshAgentProfileConfig> capabilityProfiles = NavMapDeclaration.CapabilityProfiles(bakeConfig, declaredPathing, agentProfiles);
+            var referencedNavProfiles = new HashSet<int>();
+            for (int i = 0; i < capabilityProfiles.Count; i++)
+            {
+                if (!profileRegistry.TryGetIndex(capabilityProfiles[i].Id, out int profileIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"NavMeshBakeConfig.profiles '{capabilityProfiles[i].Id}' is not registered.");
+                }
+
+                referencedNavProfiles.Add(profileIndex);
+            }
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
 
@@ -4444,7 +4454,7 @@ namespace Ludots.Core.Engine
                     SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
                     Terrain = LogicTerrain,
                     Obstacles = runtimeObstacles,
-                    Config = BakeConfigForReferencedProfiles(bakeConfig, referencedNavProfiles),
+                    Config = NavMapDeclaration.WithProfiles(bakeConfig, capabilityProfiles),
                     AgentProfiles = agentProfiles,
                     Targets = new[] { new NavBakeTileCoord(0, 0) },
                     BuildConfig = new NavBuildConfig(
@@ -4467,34 +4477,6 @@ namespace Ludots.Core.Engine
             {
                 navigableBoard.NavServices = navRegistry;
             }
-        }
-
-        // Incremental rebuild publishes one tile store per referenced profile.
-        // Profiles kept only so navProfileId resolves have no store and must not be baked.
-        private static NavMeshBakeConfig BakeConfigForReferencedProfiles(
-            NavMeshBakeConfig bakeConfig,
-            HashSet<int> referencedNavProfiles)
-        {
-            var profiles = new List<NavMeshAgentProfileConfig>(referencedNavProfiles.Count);
-            for (int i = 0; i < bakeConfig.Profiles.Count; i++)
-            {
-                if (referencedNavProfiles.Contains(i))
-                {
-                    profiles.Add(bakeConfig.Profiles[i]);
-                }
-            }
-
-            return new NavMeshBakeConfig
-            {
-                Mode = bakeConfig.Mode,
-                Algorithm = bakeConfig.Algorithm,
-                Profiles = profiles,
-                Layers = bakeConfig.Layers,
-                Areas = bakeConfig.Areas,
-                Maps = bakeConfig.Maps,
-                RuntimeIncremental = bakeConfig.RuntimeIncremental,
-                TerrainFeed = bakeConfig.TerrainFeed,
-            };
         }
 
         internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig)
@@ -4555,7 +4537,6 @@ namespace Ludots.Core.Engine
                 rebuildQueue.Dispose();
             }
 
-            RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
             RemoveService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles);
@@ -4572,7 +4553,17 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var pathingCatalog = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var bakeForPathing = LoadNavMeshBakeConfig();
+            SetService(CoreServiceKeys.NavMeshBakeConfig, bakeForPathing);
+            var pathingConfig = pathingCatalog;
+            if (bakeForPathing.Maps != null &&
+                bakeForPathing.Maps.TryGetValue(session.MapId.Value, out var mapNav) &&
+                mapNav?.AgentTypes is { Count: > 0 })
+            {
+                pathingConfig = NavMapDeclaration.SelectAgentTypes(pathingCatalog, mapNav.AgentTypes, session.MapId.Value);
+            }
+
             var pathStore = new PathStore(PathStoreMaxPaths, PathStoreMaxPointsPerPath);
             LoadedGraphRuntime loadedGraphRuntime = null;
             IPathService nodeGraphService = null;
@@ -4733,11 +4724,36 @@ namespace Ludots.Core.Engine
             return new NavMeshPathServiceAdapter(navRegistry, navProfiles, agentProfiles, pathingConfig, pathStore);
         }
 
+        private NavMeshBakeConfig _navMeshBakeConfig;
+
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
         {
+            if (_navMeshBakeConfig != null)
+            {
+                return _navMeshBakeConfig;
+            }
+
+            if (TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig loaded) && loaded != null)
+            {
+                _navMeshBakeConfig = loaded;
+                return loaded;
+            }
+
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
-            return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+            _navMeshBakeConfig = new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+            return _navMeshBakeConfig;
+        }
+
+        private PathingConfig SelectMapAgentTypes(NavMeshBakeConfig bakeConfig, string mapId)
+        {
+            if (bakeConfig.Maps == null || !bakeConfig.Maps.TryGetValue(mapId, out var mapNav) || mapNav?.AgentTypes == null || mapNav.AgentTypes.Count == 0)
+            {
+                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.agentTypes is required.");
+            }
+
+            var pathingCatalog = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            return NavMapDeclaration.SelectAgentTypes(pathingCatalog, mapNav.AgentTypes, mapId);
         }
 
         private string ResolveSingleExistingUri(string relPath)
@@ -4781,33 +4797,6 @@ namespace Ludots.Core.Engine
             }
             uri = null;
             return false;
-        }
-
-        private HashSet<int> NavProfileIndicesReferencedByPathing(
-            NavMeshProfileRegistry profileRegistry,
-            AgentProfileRegistry agentProfiles)
-        {
-            var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            var referenced = new HashSet<int>();
-            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
-            {
-                PathingAgentTypeConfig agentType = pathingConfig.AgentTypes[i];
-                AgentProfileConfig body = agentProfiles.Require(agentType.ProfileId, $"PathingConfig.agentTypes[{agentType.Id}]");
-                if (!profileRegistry.TryGetIndex(body.NavProfileId, out int profileIndex))
-                {
-                    throw new InvalidOperationException(
-                        $"PathingConfig.agentTypes[{agentType.Id}] agent profile '{body.Id}' references nav profile '{body.NavProfileId}', which is not in NavMeshBakeConfig.profiles.");
-                }
-
-                referenced.Add(profileIndex);
-            }
-
-            if (referenced.Count == 0)
-            {
-                throw new InvalidOperationException("PathingConfig.agentTypes does not reference any nav profile.");
-            }
-
-            return referenced;
         }
 
         public void LoadEntryMap(string mapId)

@@ -176,20 +176,31 @@ public sealed partial class CrowdSimulationRuntime
 
     public bool HandleMapSuspended(GameEngine engine, MapId mapId) => HandleMapUnloaded(engine, mapId);
 
-    private static bool IsCrowdMap(GameEngine engine, string mapId)
+    private NavMeshBakeConfig _navmesh;
+
+    private NavMeshBakeConfig RequireLoadedNavmesh(GameEngine engine)
     {
-        var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
-            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
-        var navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
-            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
-        if (navmesh.Maps == null || !navmesh.Maps.TryGetValue(mapId, out var entry) || entry == null)
+        if (_navmesh != null)
         {
-            return false;
+            return _navmesh;
         }
 
-        return (entry.TerrainAreas != null && entry.TerrainAreas.Count > 0)
-            || !string.IsNullOrWhiteSpace(entry.SurfaceAsset);
+        if (engine.TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig loaded) && loaded != null)
+        {
+            _navmesh = loaded;
+            return loaded;
+        }
+
+        var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
+        _navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
+            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        engine.SetService(CoreServiceKeys.NavMeshBakeConfig, _navmesh);
+        return _navmesh;
     }
+
+    private bool IsCrowdMap(GameEngine engine, string mapId)
+        => CrowdMapDeclaration.IsCrowdMap(RequireLoadedNavmesh(engine), mapId);
 
     private bool TryEnsureConfig(GameEngine engine)
     {
@@ -248,8 +259,7 @@ public sealed partial class CrowdSimulationRuntime
         // 装载只取单位模板点名的档案。全局注册表里的其它体型不进半径级。
         var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
-        var navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
-            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var navmesh = RequireLoadedNavmesh(engine);
         var pathing = new PathingConfigLoader(engine.ConfigPipeline)
             .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
         var templateFacts = CrowdUnitTemplateFacts.FromTemplates(engine.MapLoader.TemplateRegistry.GetAll());

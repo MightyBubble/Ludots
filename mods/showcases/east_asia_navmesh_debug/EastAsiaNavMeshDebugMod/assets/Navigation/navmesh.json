@@ -1,36 +1,18 @@
 {
   "mode": "offline",
   "algorithm": "recast",
-  "profiles": [
-    {
-      "id": "Small",
-      "maxClimbCm": 40,
-      "maxSlopeDeg": 45
-    },
-    {
-      "id": "Medium",
-      "maxClimbCm": 45,
-      "maxSlopeDeg": 45
-    },
-    {
-      "id": "Large",
-      "maxClimbCm": 50,
-      "maxSlopeDeg": 40
-    }
-  ],
   "layers": [
     {
       "id": "Ground",
       "layer": 0
     }
   ],
-  "areas": [
-    {
-      "id": "Default",
+  "areas": {
+    "Default": {
       "areaId": 0,
       "slopeFree": false
     }
-  ],
+  },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 1,
     "includeNeighborTiles": true,
@@ -45,7 +27,10 @@
           "tileWorldWidthCm": 228544,
           "tileWorldHeightCm": 228544
         }
-      }
+      },
+      "agentTypes": [
+        "StrategyFoot"
+      ]
     }
   }
 }

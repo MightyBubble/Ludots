@@ -36,10 +36,11 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
 
         var foot = runtime.AgentTypes[0];
-        Assert.That(foot.SpeedCmPerSecond, Is.EqualTo(Fix64.FromInt(1400)));
-        // road 在 areas 下标 5；foot 对 road 代价 0.7。
+        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSecond),
+            Is.All.EqualTo(Fix64.FromInt(1400)));
+        // road 的 areaId 是 5；foot 对 road 代价 0.7。
         Assert.That(foot.CostByArea[5], Is.EqualTo(Fix64.FromDouble(0.7)));
-        // deep 下标 4 未写 = 不可通行（0）。
+        // deep 的 areaId 是 4，pathing 写了 passable:false，代价为 0。
         Assert.That(foot.CostByArea[4], Is.EqualTo(Fix64.Zero));
 
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
@@ -137,7 +138,7 @@ public class CrowdSimulationConfigTests
     public void AreaCost_ReferencingUnknownArea_IsRejected()
     {
         var pathingJson = TestDefaults.DefaultPathingJson();
-        pathingJson["agentTypes"]![0]!["navMesh"]!["areaCosts"]!.AsArray().Add(
+        pathingJson["agentTypes"]!["foot"]!["navMesh"]!["areaCosts"]!.AsArray().Add(
             JsonNode.Parse("""{"areaId":99,"cost":1}""")!);
         var ex = Assert.Throws<InvalidOperationException>(
             () => TestDefaults.Assemble(pathing: TestDefaults.ParsePathing(pathingJson)));
@@ -146,7 +147,7 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void TemplateAgentType_NotInPathing_IsRejected()
+    public void TemplateAgentType_NotDeclaredByMap_IsNotBound()
     {
         var templates = TestDefaults.DemoTemplates();
         var first = templates[0];
@@ -158,11 +159,40 @@ public class CrowdSimulationConfigTests
             SpeedCmPerSecond = first.SpeedCmPerSecond,
             PersonalRadiusCm = first.PersonalRadiusCm,
             PushPriority = first.PushPriority,
-            Special = first.Special,
+            BulkDeploy = first.BulkDeploy,
         };
+        var runtime = TestDefaults.Assemble(templates: templates);
+        Assert.That(runtime.Profiles.Any(p => p.Id == first.ProfileId), Is.False);
+        Assert.That(runtime.Profiles.Count, Is.EqualTo(19));
+    }
+
+    [Test]
+    public void DeclaredAgentType_WithoutTemplate_IsRejected()
+    {
+        var templates = TestDefaults.DemoTemplates();
+        for (int i = 0; i < templates.Count; i++)
+        {
+            if (templates[i].AgentTypeId != "foot")
+            {
+                continue;
+            }
+
+            var item = templates[i];
+            templates[i] = new CrowdUnitTemplateFacts
+            {
+                TemplateId = item.TemplateId,
+                ProfileId = item.ProfileId,
+                AgentTypeId = "ghost",
+                SpeedCmPerSecond = item.SpeedCmPerSecond,
+                PersonalRadiusCm = item.PersonalRadiusCm,
+                PushPriority = item.PushPriority,
+                BulkDeploy = item.BulkDeploy,
+            };
+        }
+
         var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
-        Assert.That(ex!.Message, Does.Contain("ghost"));
-        Assert.That(ex.Message, Does.Contain("不在 Navigation/pathing.json"));
+        Assert.That(ex!.Message, Does.Contain("foot"));
+        Assert.That(ex.Message, Does.Contain("没有 CrowdSimulationAgent 模板"));
     }
 
     [Test]
@@ -198,7 +228,9 @@ public class CrowdSimulationConfigTests
     public void TerrainAreas_UnknownArea_IsRejected()
     {
         var navmesh = TestDefaults.DefaultNavmeshJson();
-        navmesh["maps"]!["crowd_simulation_demo"]!["terrainAreas"]!["cliff"] = "lava";
+        var terrainAreas = navmesh["maps"]!["crowd_simulation_demo"]!["terrainAreas"]!.AsArray();
+        JsonObject cliff = terrainAreas.Select(n => n!.AsObject()).Single(row => row["terrainId"]!.GetValue<string>() == "cliff");
+        cliff["areaId"] = "lava";
         var ex = Assert.Throws<InvalidOperationException>(
             () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));
         Assert.That(ex!.Message, Does.Contain("terrainAreas.cliff"));
@@ -209,13 +241,7 @@ public class CrowdSimulationConfigTests
     public void JumpCost_BelowMinAreaCost_IsRejected()
     {
         var navmesh = TestDefaults.DefaultNavmeshJson();
-        foreach (var node in navmesh["profiles"]!.AsArray())
-        {
-            if (node!["id"]!.GetValue<string>() == "leaper")
-            {
-                node["jump"]!["cost"] = 0.5;
-            }
-        }
+        navmesh["profiles"]!["leaper"]!["jump"]!["cost"] = 0.5;
 
         var ex = Assert.Throws<InvalidOperationException>(
             () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));

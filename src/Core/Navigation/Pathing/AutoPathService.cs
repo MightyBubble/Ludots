@@ -26,7 +26,6 @@ namespace Ludots.Core.Navigation.Pathing
         private readonly bool _navMeshAvailable;
 
         private readonly Dictionary<string, CompiledAgentType> _agents;
-        private readonly CompiledAgentType _defaultAgent;
 
         private NodeGraphPathScratch _graphScratch = new NodeGraphPathScratch();
         private int[] _nodeIdsScratch = Array.Empty<int>();
@@ -45,21 +44,7 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
         }
 
         public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -74,21 +59,7 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
         }
 
         public AutoPathService(NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -103,21 +74,7 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
         }
 
         public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -132,21 +89,7 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
         }
 
         public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
@@ -161,21 +104,7 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)
@@ -262,8 +191,36 @@ namespace Ludots.Core.Navigation.Pathing
 
         private CompiledAgentType ResolveAgent(string agentTypeId)
         {
-            if (!string.IsNullOrWhiteSpace(agentTypeId) && _agents.TryGetValue(agentTypeId, out var a)) return a;
-            return _defaultAgent;
+            if (string.IsNullOrWhiteSpace(agentTypeId))
+            {
+                throw new InvalidOperationException("Path request requires an agent type id.");
+            }
+
+            if (_agents.TryGetValue(agentTypeId, out CompiledAgentType agent))
+            {
+                return agent;
+            }
+
+            throw new InvalidOperationException($"Path request agent type '{agentTypeId}' is not in PathingConfig.agentTypes.");
+        }
+
+        private Dictionary<string, CompiledAgentType> CompileAgents(PathingConfig config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+            var agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            int compiled = 0;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                PathingAgentTypeConfig agent = config.AgentTypes[i];
+                if (agent == null) continue;
+                CompiledAgentType compiledAgent = CompileAgent(agent);
+                agents[compiledAgent.Id] = compiledAgent;
+                compiled++;
+            }
+
+            if (compiled == 0) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            return agents;
         }
 
         private bool TrySolveGraph(in PathRequest request, in CompiledAgentType agent, out PathResult result, out float travelCost)

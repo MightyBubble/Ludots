@@ -17,7 +17,7 @@ public sealed class CrowdUnitTemplateFacts
     public required Fix64 SpeedCmPerSecond { get; init; }
     public required Fix64 PersonalRadiusCm { get; init; }
     public required Fix64 PushPriority { get; init; }
-    public bool Special { get; init; }
+    public required bool BulkDeploy { get; init; }
 
     public static List<CrowdUnitTemplateFacts> FromTemplates(IEnumerable<EntityTemplate> templates)
     {
@@ -44,6 +44,7 @@ public sealed class CrowdUnitTemplateFacts
     public static CrowdUnitTemplateFacts Parse(string templateId, JsonObject obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
+        RejectRetiredKeys(obj);
         string Prefix(string field) => $"Entities/templates.json: 模板 \"{templateId}\" 的 CrowdSimulationAgent.{field}";
         return new CrowdUnitTemplateFacts
         {
@@ -53,8 +54,37 @@ public sealed class CrowdUnitTemplateFacts
             SpeedCmPerSecond = RequirePositive(obj, "speedCmPerSecond", Prefix("speedCmPerSecond")),
             PersonalRadiusCm = RequirePositive(obj, "personalRadiusCm", Prefix("personalRadiusCm")),
             PushPriority = RequirePriority(obj, "pushPriority", Prefix("pushPriority")),
-            Special = obj["special"] is { } special ? special.GetValue<bool>() : false,
+            BulkDeploy = RequireBool(obj, "bulkDeploy", Prefix("bulkDeploy")),
         };
+    }
+
+    public static void RejectRetiredKeys(JsonObject obj)
+    {
+        if (obj.ContainsKey("agentType"))
+        {
+            throw new InvalidOperationException("CrowdSimulationAgent 已删除 agentType，改用 agentTypeId。");
+        }
+
+        if (obj.ContainsKey("radiusClassCm") || obj.ContainsKey("radiusCm"))
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId；个人半径写 personalRadiusCm。");
+        }
+
+        if (obj.ContainsKey("special"))
+        {
+            throw new InvalidOperationException("CrowdSimulationAgent 已删除 special，改用 bulkDeploy（true 参与批量部署）。");
+        }
+    }
+
+    private static bool RequireBool(JsonObject obj, string name, string path)
+    {
+        if (obj[name] is not JsonValue value || !value.TryGetValue<bool>(out bool flag))
+        {
+            throw new InvalidOperationException($"{path} 需为布尔值。");
+        }
+
+        return flag;
     }
 
     private static string RequireString(JsonObject obj, string name, string path)

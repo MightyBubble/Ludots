@@ -51,16 +51,16 @@ namespace Ludots.Tests.Gas
             {
               "mode": "runtime-incremental",
               "algorithm": "recast",
-              "profiles": [
-                { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 },
-                { "id": "Medium", "maxClimbCm": 45, "maxSlopeDeg": 45 },
-                { "id": "Large", "maxClimbCm": 50, "maxSlopeDeg": 40 }
-              ],
+              "profiles": {
+                "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" },
+                "Medium": { "maxClimbCm": 45, "maxSlopeDeg": 45, "agentProfileId": "Medium" },
+                "Large": { "maxClimbCm": 50, "maxSlopeDeg": 40, "agentProfileId": "Large" }
+              },
               "layers": [{ "id": "ground", "layer": 0 }],
-              "areas": [
-                { "id": "mud", "areaId": 1, "slopeFree": false },
-                { "id": "road", "areaId": 2, "slopeFree": false }
-              ],
+              "areas": {
+                "mud": { "areaId": 1, "slopeFree": false },
+                "road": { "areaId": 2, "slopeFree": false }
+              },
               "runtimeIncremental": {
                 "tileBudgetPerFixedTick": 4,
                 "includeNeighborTiles": true,

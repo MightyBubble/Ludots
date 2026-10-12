@@ -1,14 +1,40 @@
 {
   "maps": {
     "crowd_simulation_s2024": {
-      "terrainAreas": {
-        "water": "deep",
-        "shore": "shallow",
-        "land": "open",
-        "mountain": "rough",
-        "cliff": "sheer"
+      "terrainAreas": [
+        {
+          "terrainId": "water",
+          "areaId": "deep"
+        },
+        {
+          "terrainId": "shore",
+          "areaId": "shallow"
+        },
+        {
+          "terrainId": "land",
+          "areaId": "Default"
+        },
+        {
+          "terrainId": "mountain",
+          "areaId": "rough"
+        },
+        {
+          "terrainId": "cliff",
+          "areaId": "sheer"
+        }
+      ],
+      "boards": {
+        "default": {
+          "surfaceAsset": "terrain/crowd_simulation_s2024.navsurface"
+        }
       },
-      "surfaceAsset": "terrain/crowd_simulation_s2024.navsurface"
+      "agentTypes": [
+        "foot",
+        "hull",
+        "climber",
+        "amphib",
+        "leaper"
+      ]
     }
   }
 }

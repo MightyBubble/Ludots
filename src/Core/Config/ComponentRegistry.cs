@@ -1984,6 +1984,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
             }
 
+            Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.RejectRetiredKeys(obj);
             ValidateProperties(
                 obj,
                 "CrowdSimulationAgent",
@@ -1992,7 +1993,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 "speedCmPerSecond",
                 "personalRadiusCm",
                 "pushPriority",
-                "special");
+                "bulkDeploy");
             var facts = Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.Parse("template", obj);
             entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent
             {
@@ -2001,7 +2002,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 SpeedCmPerSecond = facts.SpeedCmPerSecond,
                 PersonalRadiusCm = facts.PersonalRadiusCm,
                 PushPriority = facts.PushPriority,
-                Special = facts.Special,
+                BulkDeploy = facts.BulkDeploy,
             });
         }
 

@@ -411,7 +411,7 @@ public sealed class CrowdMovementKernel
             for (int li = 0; li < leaders.Count; li++)
             {
                 leaders[li].Step(
-                    Session.LayerSpeedCmPerSecond(leaders[li].LayerIdx),
+                    leaders[li].PaceCmPerSecond,
                     LeaderSpeed, turnK, faceStep, dt,
                     Session.Config.NavCellSizeCm, Session.Config.NavCellsPerSide);
             }

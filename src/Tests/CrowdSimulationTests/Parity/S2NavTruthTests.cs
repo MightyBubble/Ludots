@@ -118,13 +118,7 @@ public class S2NavTruthTests
         var navmeshJson = TestDefaults.StandardNavmeshJson();
         var seedNav = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir("s1337"), "Navigation", "navmesh.json")))!;
         ConfigPipeline.DeepMerge(navmeshJson, seedNav);
-        foreach (var node in navmeshJson["profiles"]!.AsArray())
-        {
-            if (node!["id"]!.GetValue<string>() == "leaper")
-            {
-                node["jump"]!["downCm"] = 5000;
-            }
-        }
+        navmeshJson["profiles"]!["leaper"]!["jump"]!["downCm"] = 5000;
 
         var map = System.Text.Json.JsonSerializer.Deserialize<Ludots.Core.Config.MapConfig>(
             File.ReadAllText(Path.Combine(S1Dir("s1337"), "Maps", "crowd_simulation_s1337.json")),

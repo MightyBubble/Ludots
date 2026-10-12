@@ -44,21 +44,40 @@ namespace Ludots.Core.Navigation.Pathing.Config
         private static void ValidateRaw(JsonObject root)
         {
             RequireOnlyProperties(root, "PathingConfig", "agentTypes");
-            if (root["agentTypes"] is not JsonArray agentTypes || agentTypes.Count == 0)
+            if (root["agentTypes"] is JsonArray)
             {
-                throw new InvalidOperationException("PathingConfig.agentTypes must be a non-empty explicit array.");
+                throw new InvalidOperationException("PathingConfig.agentTypes 以 id 为键的对象，不再使用数组。");
             }
 
-            for (int i = 0; i < agentTypes.Count; i++)
+            if (root["agentTypes"] is not JsonObject agentTypes || agentTypes.Count == 0)
             {
-                if (agentTypes[i] is not JsonObject agent)
+                throw new InvalidOperationException("PathingConfig.agentTypes 必须是非空的、以 id 为键的对象。");
+            }
+
+            foreach (var agentEntry in agentTypes)
+            {
+                if (string.IsNullOrWhiteSpace(agentEntry.Key))
                 {
-                    throw new InvalidOperationException($"PathingConfig.agentTypes[{i}] must be an object.");
+                    throw new InvalidOperationException("PathingConfig.agentTypes 的键不能为空。");
                 }
 
-                string agentPath = $"PathingConfig.agentTypes[{i}]";
-                RequireOnlyProperties(agent, agentPath, new[] { "id", "profileId", "navMesh" }, new[] { "selection", "nodeGraph" });
-                RequireString(agent, "id", agentPath);
+                if (agentEntry.Value is null)
+                {
+                    throw new InvalidOperationException($"PathingConfig.agentTypes.{agentEntry.Key} 为 null。以 id 为键的对象不接受 null。");
+                }
+
+                if (agentEntry.Value is not JsonObject agent)
+                {
+                    throw new InvalidOperationException($"PathingConfig.agentTypes.{agentEntry.Key} must be an object.");
+                }
+
+                string agentPath = $"PathingConfig.agentTypes.{agentEntry.Key}";
+                if (agent.ContainsKey("id"))
+                {
+                    throw new InvalidOperationException($"{agentPath} 的 id 由键给出，对象内不要再写 id。");
+                }
+
+                RequireOnlyProperties(agent, agentPath, new[] { "profileId", "navMesh" }, new[] { "selection", "nodeGraph" });
                 RequireString(agent, "profileId", agentPath);
 
                 if (agent.ContainsKey("selection"))

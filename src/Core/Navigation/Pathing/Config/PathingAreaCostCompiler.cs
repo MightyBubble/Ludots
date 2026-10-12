@@ -30,19 +30,9 @@ namespace Ludots.Core.Navigation.Pathing.Config
                         throw new InvalidOperationException($"Invalid pathing areaId: {area.AreaId}");
                     }
 
-                    if (area.Cost <= 0d || double.IsNaN(area.Cost))
-                    {
-                        throw new InvalidOperationException($"Invalid pathing cost for areaId={area.AreaId}");
-                    }
-
-                    double speedDivisor = area.SpeedDivisor ?? area.Cost;
-                    if (speedDivisor <= 0d || double.IsNaN(speedDivisor))
-                    {
-                        throw new InvalidOperationException($"Invalid pathing speedDivisor for areaId={area.AreaId}");
-                    }
-
-                    costs[area.AreaId] = Fix64.FromDouble(area.Cost);
-                    if (area.Passable == false)
+                    ResolvedPathingAreaCost resolved = PathingAreaCosts.Resolve(area);
+                    costs[area.AreaId] = Fix64.FromDouble(resolved.Cost);
+                    if (!resolved.Passable)
                     {
                         impassable[area.AreaId] = true;
                     }
@@ -50,12 +40,6 @@ namespace Ludots.Core.Navigation.Pathing.Config
             }
 
             return new NavAreaCostTable(costs, impassable);
-        }
-
-        public static Fix64 SpeedDivisor(PathingAreaCostConfig area)
-        {
-            double value = area.SpeedDivisor ?? area.Cost;
-            return Fix64.FromDouble(value);
         }
     }
 }

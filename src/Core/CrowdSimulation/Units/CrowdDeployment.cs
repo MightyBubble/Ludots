@@ -30,12 +30,6 @@ public static class CrowdDeployment
         sim.Groups.Reset();
         sim.SetSelectedCount(0);
 
-        var types = new List<int>();
-        for (int t = 0; t < cfg.UnitTypes.Count; t++)
-        {
-            if (!cfg.UnitTypes[t].Special) types.Add(t);
-        }
-
         var radiusClasses = DistinctRadiusClasses(cfg);
         int playerCount = cfg.Deploy.Bases.Count;
         var perPlayer = new List<CrowdNavGroupSet.Group>[playerCount];
@@ -46,11 +40,15 @@ public static class CrowdDeployment
             var list = new List<CrowdNavGroupSet.Group>();
             var b = cfg.Deploy.Bases[p];
             int bx = (int)(b.XCm / cfg.NavCellSizeCm), by = (int)(b.YCm / cfg.NavCellSizeCm);
-            foreach (int t in types)
+            for (int t = 0; t < cfg.UnitTypes.Count; t++)
             {
                 for (int r = 0; r < radiusClasses.Count; r++)
                 {
                     int l = cfg.UnitTypes[t].AgentTypeIndex;
+                    if (!ProfileOf(cfg, l, r).BulkDeploy)
+                    {
+                        continue;
+                    }
                     var nav = sim.NavFor(l, r);
                     if (nav.Cells.Length == 0) continue;
                     var centerCells = new List<int>();

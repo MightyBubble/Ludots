@@ -6,7 +6,10 @@
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "agentTypes": [
+        "Humanoid"
+      ]
     },
     "navmesh_debug_openworld": {
       "boards": {
@@ -14,7 +17,10 @@
           "tileWorldWidthCm": 25600,
           "tileWorldHeightCm": 25600
         }
-      }
+      },
+      "agentTypes": [
+        "Humanoid"
+      ]
     },
     "navmesh_debug_vhtm": {
       "boards": {
@@ -22,7 +28,10 @@
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "agentTypes": [
+        "Humanoid"
+      ]
     }
   }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Ludots.Core.Navigation.NavMesh.Bake;
 
 namespace Ludots.Core.Navigation.NavMesh.Config
@@ -7,8 +8,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     {
         public string Mode { get; set; } = string.Empty;
         public string Algorithm { get; set; } = string.Empty;
+
+        [JsonConverter(typeof(NavMeshProfileCatalogConverter))]
         public List<NavMeshAgentProfileConfig> Profiles { get; set; } = new List<NavMeshAgentProfileConfig>();
+
         public List<NavLayerConfig> Layers { get; set; } = new List<NavLayerConfig>();
+
+        [JsonConverter(typeof(NavMeshAreaCatalogConverter))]
         public List<NavMeshAreaConfig> Areas { get; set; } = new List<NavMeshAreaConfig>();
 
         /// <summary>Per-map nav tile grids keyed by map id then board name (#1567: nav-owned home).</summary>
@@ -27,7 +33,18 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     {
         public string Id { get; set; } = string.Empty;
         public int MaxClimbCm { get; set; }
-        public float MaxSlopeDeg { get; set; }
+
+        /// <summary>
+        /// 省略表示不限坡度。写出 0 或负数会被装载拒绝。
+        /// Recast 烘焙必须有正的坡度上限，在烘焙时校验。
+        /// </summary>
+        public float? MaxSlopeDeg { get; set; }
+
+        /// <summary>
+        /// 烘焙这个能力档时使用的体型 id，经 AgentProfileRegistry.Require 解析。
+        /// Recast 烘焙必填，在烘焙时校验；不经 Recast 烘焙的能力档（群体模拟）可以不写。
+        /// </summary>
+        public string AgentProfileId { get; set; }
 
         /// <summary>
         /// Recast column size in centimeters for a continuous-height source.
@@ -76,12 +93,18 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     {
         public Dictionary<string, NavTileGridConfig> Boards { get; set; } = new Dictionary<string, NavTileGridConfig>();
 
-        /// <summary>地形类型 id → 导航区域 id。对象键顺序就是地形类型下标。</summary>
-        public Dictionary<string, string> TerrainAreas { get; set; }
-
         /// <summary>
-        /// 群体模拟的 .navsurface（地形类型栅格）。不是高度文件，也不是 Board.DataFile。
+        /// 本图启用的 pathing agentTypes id。数组顺序就是群体 AgentTypeIndex，不按键名重排。
         /// </summary>
-        public string SurfaceAsset { get; set; }
+        public List<string> AgentTypes { get; set; }
+
+        /// <summary>有序绑定。数组下标就是 .navsurface 里的地形类型编号。</summary>
+        public List<NavTerrainAreaBinding> TerrainAreas { get; set; }
+    }
+
+    public sealed class NavTerrainAreaBinding
+    {
+        public string TerrainId { get; set; } = string.Empty;
+        public string AreaId { get; set; } = string.Empty;
     }
 }

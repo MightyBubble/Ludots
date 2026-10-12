@@ -1,0 +1,14 @@
+{
+  "maps": {
+    "champion_skill_sandbox": {
+      "agentTypes": [
+        "Champion"
+      ]
+    },
+    "champion_skill_stress": {
+      "agentTypes": [
+        "Champion"
+      ]
+    }
+  }
+}

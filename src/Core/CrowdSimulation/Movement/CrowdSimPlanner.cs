@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -500,9 +501,30 @@ public sealed class CrowdSimPlanner
                 continue;
             }
 
+            Fix64 pace = Fix64.MaxValue;
+            int paced = 0;
+            foreach (int gid in bucket)
+            {
+                foreach (int i in membersByGroup[gid])
+                {
+                    Fix64 speed = session.World.Get<CrowdSimulationAgent>(units.EntityAt(i)).SpeedCmPerSecond;
+                    if (speed < pace)
+                    {
+                        pace = speed;
+                    }
+
+                    paced++;
+                }
+            }
+
+            if (paced == 0)
+            {
+                throw new InvalidOperationException("领队路径没有成员，无法取模板速度。");
+            }
+
             var leader = new CrowdLeader(
                 ToVec2Path(leaderResult.Points, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
-                o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAheadNavCells * navCellCm);
+                o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAheadNavCells * navCellCm, pace);
 
             // 质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
             Fix64 cx = Fix64.Zero, cy = Fix64.Zero;

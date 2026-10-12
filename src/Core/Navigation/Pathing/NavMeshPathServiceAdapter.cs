@@ -8,12 +8,8 @@ namespace Ludots.Core.Navigation.Pathing
 {
     public sealed class NavMeshPathServiceAdapter : IPathService
     {
-        private readonly NavQueryServiceRegistry _navRegistry;
-        private readonly NavMeshProfileRegistry _navProfiles;
-        private readonly AgentProfileRegistry _agentProfiles;
-        private readonly PathingConfig _pathing;
         private readonly PathStore _store;
-        private readonly Dictionary<string, int> _agentIndex;
+        private readonly Dictionary<string, NavQueryService> _queries;
 
         public NavMeshPathServiceAdapter(
             NavQueryServiceRegistry navRegistry,
@@ -22,24 +18,42 @@ namespace Ludots.Core.Navigation.Pathing
             PathingConfig pathing,
             PathStore store)
         {
-            _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
-            _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
-            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
-            _pathing = pathing ?? throw new ArgumentNullException(nameof(pathing));
+            _ = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
+            _ = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _ = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
+            _ = pathing ?? throw new ArgumentNullException(nameof(pathing));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             if (pathing.AgentTypes == null || pathing.AgentTypes.Count == 0)
             {
                 throw new InvalidOperationException("PathingConfig.agentTypes must define at least one agent type for navmesh path service bootstrap.");
             }
 
-            _agentIndex = new Dictionary<string, int>(pathing.AgentTypes.Count, StringComparer.Ordinal);
+            _queries = new Dictionary<string, NavQueryService>(pathing.AgentTypes.Count, StringComparer.Ordinal);
             for (int i = 0; i < pathing.AgentTypes.Count; i++)
             {
                 PathingAgentTypeConfig agent = pathing.AgentTypes[i]
                     ?? throw new InvalidOperationException("PathingConfig.agentTypes contains null.");
-                if (string.IsNullOrWhiteSpace(agent.Id) || !_agentIndex.TryAdd(agent.Id, i))
+                if (string.IsNullOrWhiteSpace(agent.Id))
                 {
-                    throw new InvalidOperationException($"PathingConfig.agentTypes contains a missing or duplicate id '{agent?.Id}'.");
+                    throw new InvalidOperationException("PathingConfig.agentTypes contains a missing id.");
+                }
+
+                AgentProfileConfig body = agentProfiles.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
+                if (!navProfiles.TryGetIndex(body.NavProfileId, out int profileIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"PathingConfig.agentTypes[{agent.Id}] agent profile '{body.Id}' references nav profile '{body.NavProfileId}', which is not registered.");
+                }
+
+                if (!navRegistry.TryCreateQuery(body.Layer, profileIndex, PathingAreaCostCompiler.Compile(agent.NavMesh), out NavQueryService query))
+                {
+                    throw new InvalidOperationException(
+                        $"PathingConfig.agentTypes[{agent.Id}] cannot create a navmesh query for layer {body.Layer}, nav profile '{body.NavProfileId}'.");
+                }
+
+                if (!_queries.TryAdd(agent.Id, query))
+                {
+                    throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agent.Id}'.");
                 }
             }
         }
@@ -58,7 +72,11 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
-            NavQueryService query = ResolveQuery(request.AgentTypeId);
+            if (string.IsNullOrWhiteSpace(request.AgentTypeId) || !_queries.TryGetValue(request.AgentTypeId, out NavQueryService query))
+            {
+                throw new InvalidOperationException(
+                    $"NavMesh path request agent type '{request.AgentTypeId}' is not in PathingConfig.agentTypes.");
+            }
             int maxPoints = request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath;
             int maxPortals = Math.Max(0, maxPoints - 2);
 
@@ -107,33 +125,5 @@ namespace Ludots.Core.Navigation.Pathing
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
         }
 
-        private NavQueryService ResolveQuery(string agentTypeId)
-        {
-            if (string.IsNullOrWhiteSpace(agentTypeId))
-            {
-                throw new InvalidOperationException("NavMesh path request requires an agent type id.");
-            }
-
-            if (!_agentIndex.TryGetValue(agentTypeId, out int index))
-            {
-                throw new InvalidOperationException($"NavMesh path request agent type '{agentTypeId}' is not in PathingConfig.agentTypes.");
-            }
-
-            PathingAgentTypeConfig agent = _pathing.AgentTypes[index];
-            AgentProfileConfig body = _agentProfiles.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
-            if (!_navProfiles.TryGetIndex(body.NavProfileId, out int profileIndex))
-            {
-                throw new InvalidOperationException(
-                    $"PathingConfig.agentTypes[{agent.Id}] agent profile '{body.Id}' references nav profile '{body.NavProfileId}', which is not registered.");
-            }
-
-            if (!_navRegistry.TryCreateQuery(body.Layer, profileIndex, PathingAreaCostCompiler.Compile(agent.NavMesh), out NavQueryService query))
-            {
-                throw new InvalidOperationException(
-                    $"PathingConfig.agentTypes[{agent.Id}] cannot create a navmesh query for layer {body.Layer}, nav profile '{body.NavProfileId}'.");
-            }
-
-            return query;
-        }
     }
 }

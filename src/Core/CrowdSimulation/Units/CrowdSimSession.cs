@@ -36,9 +36,12 @@ public sealed class CrowdSimSession
         Commands = new CrowdCommandQueue();
         Orders = new CrowdOrderBook();
 
-        // 子步数:单步位移不超过 maxStepCells 格(封顶 maxSubSteps)——与参考实现同推导
+        // 子步数取本图实际绑定模板的最大速度。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
         Fix64 maxSpeed = Fix64.Zero;
-        foreach (var a in config.AgentTypes) maxSpeed = Fix64.Max(maxSpeed, a.SpeedCmPerSecond);
+        for (int i = 0; i < config.Profiles.Count; i++)
+        {
+            maxSpeed = Fix64.Max(maxSpeed, config.Profiles[i].SpeedCmPerSecond);
+        }
         Fix64 simDt = config.Sim.SimSecondsPerTickSecond / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;
         int needed = (int)Fix64.Ceiling(maxSpeed * config.Movement.SpeedCapRatio * simDt /
@@ -88,9 +91,6 @@ public sealed class CrowdSimSession
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
-
-    /// <summary>移动类型(层) → 速度(领队步伐用)。</summary>
-    public Fix64 LayerSpeedCmPerSecond(int layerIdx) => Config.AgentTypes[layerIdx].SpeedCmPerSecond;
 
     public void EnableMovement(CrowdMovementKernel kernel, CrowdSimPlanner planner)
     {

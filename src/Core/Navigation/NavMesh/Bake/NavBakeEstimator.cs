@@ -188,7 +188,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 NavMeshAgentProfileConfig navProfile = context.Config.Profiles[i]
                     ?? throw new InvalidOperationException($"NavBakeContext.config.profiles[{i}] is null.");
-                AgentProfileConfig agentProfile = context.AgentProfiles.ResolveForNavProfile(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
+                AgentProfileConfig agentProfile = context.Algorithm == NavBakeAlgorithmKind.Recast
+                    ? NavCapabilityBakeBody.RequireRecast(context.AgentProfiles, navProfile)
+                    : null;
                 int profileTileX = maxTileSizeXVoxels;
                 int profileTileZ = maxTileSizeZVoxels;
                 int profileCellCm = cellCm;
@@ -328,7 +330,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxClimbCm >= 0.");
             }
 
-            if (navProfile.MaxSlopeDeg < 0f || navProfile.MaxSlopeDeg >= 90f || float.IsNaN(navProfile.MaxSlopeDeg))
+            float slopeDeg = algorithm == NavBakeAlgorithmKind.Recast
+                ? NavCapabilityBakeBody.RequireRecastSlope(navProfile)
+                : navProfile.MaxSlopeDeg ?? 0f;
+            if (algorithm != NavBakeAlgorithmKind.Recast &&
+                navProfile.MaxSlopeDeg is float authoredSlope &&
+                (authoredSlope < 0f || authoredSlope >= 90f || float.IsNaN(authoredSlope)))
             {
                 throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxSlopeDeg >= 0 and < 90.");
             }
@@ -368,12 +375,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return new NavBakeProfileEstimate
             {
                 ProfileId = navProfile.Id,
-                AgentRadiusCm = agentProfile.RadiusCm,
-                AgentHeightCm = agentProfile.HeightCm,
-                AgentClearanceCm = agentProfile.ClearanceCm,
+                AgentRadiusCm = agentProfile?.RadiusCm ?? 0f,
+                AgentHeightCm = agentProfile?.HeightCm ?? 0f,
+                AgentClearanceCm = agentProfile?.ClearanceCm ?? 0f,
                 MaxClimbCm = navProfile.MaxClimbCm,
-                MaxSlopeDeg = navProfile.MaxSlopeDeg,
-                MinWalkableUpDot = MathF.Cos(navProfile.MaxSlopeDeg * MathF.PI / 180f),
+                MaxSlopeDeg = slopeDeg,
+                MinWalkableUpDot = MathF.Cos(slopeDeg * MathF.PI / 180f),
                 RecastCellSizeCm = recastCellSizeCm,
                 RecastCellHeightCm = recastCellHeightCm,
                 RecastColumnsPerAxis = columnsPerAxis,
@@ -559,13 +566,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             for (int i = 0; i < profiles.Count; i++)
             {
                 NavMeshAgentProfileConfig navProfile = profiles[i];
-                AgentProfileConfig agent = agentProfiles.ResolveForNavProfile(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
+                AgentProfileConfig agent = string.IsNullOrWhiteSpace(navProfile.AgentProfileId)
+                    ? null
+                    : agentProfiles.Require(navProfile.AgentProfileId, $"NavMeshBakeConfig.profiles.{navProfile.Id}.agentProfileId");
+                string slopeText = navProfile.MaxSlopeDeg?.ToString("R", CultureInfo.InvariantCulture) ?? "unlimited";
                 sb.Append(navProfile.Id).Append(':')
                     .Append(navProfile.MaxClimbCm).Append(':')
-                    .Append(navProfile.MaxSlopeDeg.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.RadiusCm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.HeightCm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.ClearanceCm.ToString("R", CultureInfo.InvariantCulture)).Append(';');
+                    .Append(slopeText).Append(':')
+                    .Append((agent?.RadiusCm ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(':')
+                    .Append((agent?.HeightCm ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(':')
+                    .Append((agent?.ClearanceCm ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(';');
             }
             sb.Append('|');
         }

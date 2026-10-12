@@ -1,48 +1,27 @@
 {
   "mode": "offline",
   "algorithm": "recast",
-  "profiles": [
-    {
-      "id": "Small",
-      "maxClimbCm": 40,
-      "maxSlopeDeg": 45
-    },
-    {
-      "id": "Medium",
-      "maxClimbCm": 45,
-      "maxSlopeDeg": 45
-    },
-    {
-      "id": "Large",
-      "maxClimbCm": 50,
-      "maxSlopeDeg": 40
-    },
-    {
-      "id": "foot",
+  "profiles": {
+    "foot": {
       "maxClimbCm": 0,
       "maxSlopeDeg": 24,
       "cellSizeCm": 6250
     },
-    {
-      "id": "hull",
+    "hull": {
       "maxClimbCm": 0,
-      "maxSlopeDeg": 0,
       "cellSizeCm": 6250
     },
-    {
-      "id": "climber",
+    "climber": {
       "maxClimbCm": 0,
       "maxSlopeDeg": 38,
       "cellSizeCm": 6250
     },
-    {
-      "id": "amphib",
+    "amphib": {
       "maxClimbCm": 0,
       "maxSlopeDeg": 20,
       "cellSizeCm": 6250
     },
-    {
-      "id": "leaper",
+    "leaper": {
       "maxClimbCm": 0,
       "maxSlopeDeg": 30,
       "cellSizeCm": 6250,
@@ -53,60 +32,51 @@
         "cost": 2
       }
     }
-  ],
+  },
   "layers": [
     {
       "id": "Ground",
       "layer": 0
     }
   ],
-  "areas": [
-    {
-      "id": "open",
-      "areaId": 0,
-      "slopeFree": false
-    },
-    {
-      "id": "shallow",
+  "areas": {
+    "shallow": {
       "areaId": 1,
       "slopeFree": false
     },
-    {
-      "id": "rough",
+    "rough": {
       "areaId": 2,
       "slopeFree": false
     },
-    {
-      "id": "sheer",
+    "sheer": {
       "areaId": 3,
       "slopeFree": false
     },
-    {
-      "id": "deep",
+    "deep": {
       "areaId": 4,
       "slopeFree": true
     },
-    {
-      "id": "road",
+    "road": {
       "areaId": 5,
       "slopeFree": false
     },
-    {
-      "id": "deck",
+    "deck": {
       "areaId": 6,
       "slopeFree": true
     },
-    {
-      "id": "flooded",
+    "flooded": {
       "areaId": 7,
       "slopeFree": true
     },
-    {
-      "id": "burning",
+    "burning": {
       "areaId": 8,
       "slopeFree": false
+    },
+    "Default": {
+      "areaId": 0,
+      "slopeFree": false
     }
-  ],
+  },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 1,
     "includeNeighborTiles": true,

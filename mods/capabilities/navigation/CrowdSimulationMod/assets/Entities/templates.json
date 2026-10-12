@@ -10,7 +10,8 @@
         "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 600,
-        "pushPriority": 2
+        "pushPriority": 2,
+        "bulkDeploy": true
       }
     }
   },
@@ -25,7 +26,8 @@
         "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1200,
-        "pushPriority": 3
+        "pushPriority": 3,
+        "bulkDeploy": true
       }
     }
   },
@@ -40,7 +42,8 @@
         "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1800,
-        "pushPriority": 4
+        "pushPriority": 4,
+        "bulkDeploy": true
       }
     }
   },
@@ -55,7 +58,8 @@
         "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 2400,
-        "pushPriority": 5
+        "pushPriority": 5,
+        "bulkDeploy": true
       }
     }
   },
@@ -70,7 +74,8 @@
         "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 600,
-        "pushPriority": 2
+        "pushPriority": 2,
+        "bulkDeploy": true
       }
     }
   },
@@ -85,7 +90,8 @@
         "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1200,
-        "pushPriority": 3
+        "pushPriority": 3,
+        "bulkDeploy": true
       }
     }
   },
@@ -100,7 +106,8 @@
         "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1800,
-        "pushPriority": 4
+        "pushPriority": 4,
+        "bulkDeploy": true
       }
     }
   },
@@ -115,7 +122,8 @@
         "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 2400,
-        "pushPriority": 5
+        "pushPriority": 5,
+        "bulkDeploy": true
       }
     }
   },
@@ -130,7 +138,8 @@
         "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 600,
-        "pushPriority": 3
+        "pushPriority": 3,
+        "bulkDeploy": true
       }
     }
   },
@@ -145,7 +154,8 @@
         "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1200,
-        "pushPriority": 4
+        "pushPriority": 4,
+        "bulkDeploy": true
       }
     }
   },
@@ -160,7 +170,8 @@
         "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1800,
-        "pushPriority": 5
+        "pushPriority": 5,
+        "bulkDeploy": true
       }
     }
   },
@@ -175,7 +186,8 @@
         "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 2400,
-        "pushPriority": 6
+        "pushPriority": 6,
+        "bulkDeploy": true
       }
     }
   },
@@ -190,7 +202,8 @@
         "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 600,
-        "pushPriority": 1
+        "pushPriority": 1,
+        "bulkDeploy": true
       }
     }
   },
@@ -205,7 +218,8 @@
         "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1200,
-        "pushPriority": 2
+        "pushPriority": 2,
+        "bulkDeploy": true
       }
     }
   },
@@ -220,7 +234,8 @@
         "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1800,
-        "pushPriority": 3
+        "pushPriority": 3,
+        "bulkDeploy": true
       }
     }
   },
@@ -235,7 +250,8 @@
         "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 2400,
-        "pushPriority": 4
+        "pushPriority": 4,
+        "bulkDeploy": true
       }
     }
   },
@@ -251,7 +267,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "special": true
+        "bulkDeploy": false
       }
     }
   },
@@ -267,7 +283,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "special": true
+        "bulkDeploy": false
       }
     }
   },
@@ -283,7 +299,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "special": true
+        "bulkDeploy": false
       }
     }
   },
@@ -299,7 +315,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "special": true
+        "bulkDeploy": false
       }
     }
   },

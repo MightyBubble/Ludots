@@ -55,9 +55,8 @@ namespace Ludots.Tests.Gas
 
             File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "pathing.json"), """
             {
-              "agentTypes": [
-                {
-                  "id": "Humanoid",
+              "agentTypes": {
+                "Humanoid": {
                   "profileId": "Small",
                   "selection": {
                     "mode": "AutoCheapest",
@@ -79,7 +78,7 @@ namespace Ludots.Tests.Gas
                     "tagCostRules": []
                   }
                 }
-              ]
+              }
             }
             """);
 

@@ -19,8 +19,14 @@ public sealed class CrowdLeader
 
     public CrowdLeader(
         IReadOnlyList<Fix64Vec2> pathCm, int layerIdx, NavContext nav,
-        bool fixedHeading, Fix64Vec2? face, Fix64 lookAheadCm)
+        bool fixedHeading, Fix64Vec2? face, Fix64 lookAheadCm, Fix64 paceCmPerSecond)
     {
+        if (paceCmPerSecond <= Fix64.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(paceCmPerSecond), "领队步伐必须 > 0。");
+        }
+
+        PaceCmPerSecond = paceCmPerSecond;
         if (pathCm.Count < 2) throw new ArgumentException("领队路径至少两个点。", nameof(pathCm));
         _path = new Fix64Vec2[pathCm.Count];
         for (int i = 0; i < pathCm.Count; i++) _path[i] = pathCm[i];
@@ -43,6 +49,8 @@ public sealed class CrowdLeader
     }
 
     public int LayerIdx { get; }
+    /// <summary>同组已生成单位的模板速度最小值（厘米/秒）。</summary>
+    public Fix64 PaceCmPerSecond { get; }
     public NavContext Nav { get; internal set; }
     public bool Fixed { get; }
     public Fix64Vec2? Face { get; }

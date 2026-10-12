@@ -69,11 +69,11 @@ public static class TestDefaults
 
     public static void SetCapabilityCellSizeCm(JsonObject navmesh, int cellSizeCm)
     {
-        foreach (var node in navmesh["profiles"]!.AsArray())
+        foreach (var node in navmesh["profiles"]!.AsObject())
         {
-            if (node?["cellSizeCm"] != null)
+            if (node.Value?["cellSizeCm"] != null)
             {
-                node["cellSizeCm"] = cellSizeCm;
+                node.Value["cellSizeCm"] = cellSizeCm;
             }
         }
     }

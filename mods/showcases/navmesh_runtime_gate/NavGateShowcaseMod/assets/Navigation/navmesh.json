@@ -1,41 +1,29 @@
 {
   "mode": "runtime-incremental",
   "algorithm": "recast",
-  "profiles": [
-    {
-      "id": "Small",
+  "profiles": {
+    "Small": {
       "maxClimbCm": 40,
-      "maxSlopeDeg": 55
-    },
-    {
-      "id": "Medium",
-      "maxClimbCm": 45,
-      "maxSlopeDeg": 45
-    },
-    {
-      "id": "Large",
-      "maxClimbCm": 50,
-      "maxSlopeDeg": 40
+      "maxSlopeDeg": 55,
+      "agentProfileId": "Small"
     }
-  ],
+  },
   "layers": [
     {
       "id": "ground",
       "layer": 0
     }
   ],
-  "areas": [
-    {
-      "id": "mud",
+  "areas": {
+    "mud": {
       "areaId": 1,
       "slopeFree": false
     },
-    {
-      "id": "road",
+    "road": {
       "areaId": 2,
       "slopeFree": false
     }
-  ],
+  },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 4,
     "includeNeighborTiles": true,
@@ -50,7 +38,10 @@
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "agentTypes": [
+        "Humanoid"
+      ]
     }
   }
 }

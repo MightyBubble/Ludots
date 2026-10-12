@@ -10,7 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// 导航上下文烘焙（buildNavContext 的 S2 子集移植）：
 /// 分类（代价 × 坡度 × 阻挡）→ 净空腐蚀 → 可走格表 → 连通域 → 跳跃链接。
 /// 每格分类的唯一语义输入是导航区域栅格：代价 = 移动类型行[区域]；
-/// 未定价区域不可走;非 slopeFree 区域坡度超过 profile 上限不可走;阻挡格不可走。
+/// 未列出的区域代价为 1、可通行；passable 为 false 的区域代价为 0、不可走；非 slopeFree 区域坡度超过 profile 上限不可走；阻挡格不可走。
 /// </summary>
 public static class NavContextBaker
 {
@@ -168,7 +168,7 @@ public static class NavContextBaker
 
         var nav = new NavContext
         {
-            Id = CrowdSimulationSpace.NavContextId(agent.Layer, clearanceCells),
+            Id = CrowdSimulationSpace.NavContextId(agent.AgentTypeIndex, clearanceCells),
             LayerIndex = agentTypeIndex,
             ClearanceNavCells = clearanceCells,
             NavCellsPerSide = navCellsPerSide,

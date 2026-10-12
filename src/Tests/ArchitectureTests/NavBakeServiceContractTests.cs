@@ -509,7 +509,7 @@ namespace Ludots.Tests.Architecture
         public void NavBakeEstimator_UsesRealContextAndReportsBudgetFromTargetsLayersProfiles()
         {
             var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast);
-            config.Profiles.Add(new NavMeshAgentProfileConfig { Id = "Large", MaxClimbCm = 75, MaxSlopeDeg = 30 });
+            config.Profiles.Add(new NavMeshAgentProfileConfig { Id = "Large", AgentProfileId = "Large", MaxClimbCm = 75, MaxSlopeDeg = 30 });
             config.Layers.Add(new NavLayerConfig { Id = "Bridge", Layer = 1 });
             var context = new NavBakeContext
             {
@@ -670,13 +670,13 @@ namespace Ludots.Tests.Architecture
                 """
                 {
                   "mode": "offline",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
+                  "profiles": {
+                    "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" }
+                  },
                   "layers": [
                     { "id": "Ground", "layer": 0 }
                   ],
-                  "areas": [],
+                  "areas": {},
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 1,
                     "includeNeighborTiles": true,
@@ -703,13 +703,13 @@ namespace Ludots.Tests.Architecture
                 {
                   "mode": "offline",
                   "algorithm": "Recast",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
+                  "profiles": {
+                    "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" }
+                  },
                   "layers": [
                     { "id": "Ground", "layer": 0 }
                   ],
-                  "areas": [],
+                  "areas": {},
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 1,
                     "includeNeighborTiles": true,
@@ -740,13 +740,13 @@ namespace Ludots.Tests.Architecture
                 {
                   "mode": "offline",
                   "algorithm": "recast",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
+                  "profiles": {
+                    "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" }
+                  },
                   "layers": [
                     { "id": "Ground", "layer": 0 }
                   ],
-                  "areas": []
+                  "areas": {}
                 }
                 """);
 
@@ -790,17 +790,17 @@ namespace Ludots.Tests.Architecture
                 WriteNavigationNavmesh(targetRoot,
                     """
                     {
-                      "profiles": [
-                        { "id": "Small", "maxClimbCm": 55, "maxSlopeDeg": 38 },
-                        { "id": "ModHeavy", "maxClimbCm": 65, "maxSlopeDeg": 30 }
-                      ],
+                      "profiles": {
+                        "Small": { "maxClimbCm": 55, "maxSlopeDeg": 38, "agentProfileId": "Small" },
+                        "ModHeavy": { "maxClimbCm": 65, "maxSlopeDeg": 30, "agentProfileId": "ModHeavy" }
+                      },
                       "layers": [
                         { "id": "Ground", "layer": 0 },
                         { "id": "Air", "layer": 1 }
                       ],
-                      "areas": [
-                        { "id": "Road", "areaId": 1, "slopeFree": false }
-                      ]
+                      "areas": {
+                        "Road": { "areaId": 1, "slopeFree": false }
+                      }
                     }
                     """);
 
@@ -812,9 +812,8 @@ namespace Ludots.Tests.Architecture
                 Assert.That(context.AgentProfiles.Require("DepScout", "test").RadiusCm, Is.EqualTo(22f).Within(0.0001f));
                 Assert.That(context.AgentProfiles.Require("ModHeavy", "test").Mass, Is.EqualTo(3.5f).Within(0.0001f));
                 Assert.That(context.Config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmRecast));
-                Assert.That(context.Config.Profiles.Count, Is.EqualTo(2));
-                Assert.That(context.Config.Profiles[0].Id, Is.EqualTo("Small"));
-                Assert.That(context.Config.Profiles[0].MaxClimbCm, Is.EqualTo(55));
+                Assert.That(context.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "ModHeavy", "Small" }));
+                Assert.That(context.Config.Profiles.Single(profile => profile.Id == "Small").MaxClimbCm, Is.EqualTo(55));
                 Assert.That(context.Config.Layers.Count, Is.EqualTo(2));
                 Assert.That(context.Config.Areas.Count, Is.EqualTo(1));
                 Assert.That(context.Config.RuntimeIncremental.TileBudgetPerFixedTick, Is.EqualTo(4));
@@ -853,13 +852,13 @@ namespace Ludots.Tests.Architecture
                     {
                       "mode": "offline",
                       "algorithm": "cdt",
-                      "profiles": [
-                        { "id": "Small", "maxClimbCm": 12, "maxSlopeDeg": 20 }
-                      ],
+                      "profiles": {
+                        "Small": { "maxClimbCm": 12, "maxSlopeDeg": 20, "agentProfileId": "Small" }
+                      },
                       "layers": [
                         { "id": "Ground", "layer": 0 }
                       ],
-                      "areas": [],
+                      "areas": {},
                       "runtimeIncremental": {
                         "tileBudgetPerFixedTick": 2,
                         "includeNeighborTiles": false,
@@ -1102,7 +1101,7 @@ namespace Ludots.Tests.Architecture
                 Algorithm = algorithm,
                 Profiles = new List<NavMeshAgentProfileConfig>
                 {
-                    new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
+                    new NavMeshAgentProfileConfig { Id = "Small", AgentProfileId = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
                 },
                 Layers = new List<NavLayerConfig>
                 {
@@ -1276,13 +1275,13 @@ namespace Ludots.Tests.Architecture
                 {
                   "mode": "offline",
                   "algorithm": "recast",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
+                  "profiles": {
+                    "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" }
+                  },
                   "layers": [
                     { "id": "Ground", "layer": 0 }
                   ],
-                  "areas": [],
+                  "areas": {},
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 4,
                     "includeNeighborTiles": true,

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Ludots.Core.Navigation.Pathing.Config
 {
     public sealed class PathingConfig
     {
+        [JsonConverter(typeof(PathingAgentTypeCatalogConverter))]
         public List<PathingAgentTypeConfig> AgentTypes { get; set; } = new();
     }
 
@@ -45,7 +47,7 @@ namespace Ludots.Core.Navigation.Pathing.Config
         public double Cost { get; set; }
 
         /// <summary>
-        /// 缺省等于 cost。这是 schema 默认，装载器不另写一个数；读取处用 cost 补这个空值。
+        /// 缺省等于 cost。这是 schema 默认。唯一读取处是 <see cref="PathingAreaCosts.Resolve"/>。
         /// </summary>
         public double? SpeedDivisor { get; set; }
 

@@ -1,7 +1,6 @@
 {
-  "agentTypes": [
-    {
-      "id": "foot",
+  "agentTypes": {
+    "foot": {
       "profileId": "foot_r100",
       "navMesh": {
         "areaCosts": [
@@ -28,12 +27,26 @@
           {
             "areaId": 8,
             "cost": 8
+          },
+          {
+            "areaId": 2,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 4,
+            "cost": 1,
+            "passable": false
           }
         ]
       }
     },
-    {
-      "id": "hull",
+    "hull": {
       "profileId": "hull_r100",
       "navMesh": {
         "areaCosts": [
@@ -48,12 +61,41 @@
           {
             "areaId": 7,
             "cost": 1.2
+          },
+          {
+            "areaId": 0,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 2,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 5,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 6,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 8,
+            "cost": 1,
+            "passable": false
           }
         ]
       }
     },
-    {
-      "id": "climber",
+    "climber": {
       "profileId": "climber_r100",
       "navMesh": {
         "areaCosts": [
@@ -84,12 +126,21 @@
           {
             "areaId": 8,
             "cost": 8
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 4,
+            "cost": 1,
+            "passable": false
           }
         ]
       }
     },
-    {
-      "id": "amphib",
+    "amphib": {
       "profileId": "amphib_r100",
       "navMesh": {
         "areaCosts": [
@@ -116,12 +167,26 @@
           {
             "areaId": 7,
             "cost": 1
+          },
+          {
+            "areaId": 2,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 8,
+            "cost": 1,
+            "passable": false
           }
         ]
       }
     },
-    {
-      "id": "leaper",
+    "leaper": {
       "profileId": "leaper_r100",
       "navMesh": {
         "areaCosts": [
@@ -152,9 +217,19 @@
           {
             "areaId": 8,
             "cost": 6
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 4,
+            "cost": 1,
+            "passable": false
           }
         ]
       }
     }
-  ]
+  }
 }
