@@ -2135,7 +2135,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryRadius(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryRadius(s.TargetPosCm, ins.ImmF, s.Targets));
+            float radius = (ins.Flags & GraphControlFlowCompiler.QueryValueFromRegisterFlag) != 0
+                ? s.F[ins.A]
+                : ins.ImmF;
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryRadius(s.TargetPosCm, radius, s.Targets));
         }
 
         private static void HandleQueryCone(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2158,7 +2161,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             in GraphInstruction ins,
             Ludots.Core.Spatial.SpatialQueryResult result)
         {
-            if (ins.Flags > 1)
+            const int capacityMask = 1;
+            const int allowedFlags = capacityMask | GraphControlFlowCompiler.QueryValueFromRegisterFlag;
+            if ((ins.Flags & ~allowedFlags) != 0)
             {
                 throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.InvalidSpatialQueryCapacityPolicy: flags={ins.Flags}.");
@@ -2170,14 +2175,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"GAS.GRAPH.ERR.InvalidSpatialQueryResult: count={result.Count}, dropped={result.Dropped}, capacity={s.Targets.Length}.");
             }
 
-            if (result.Dropped > 0 && ins.Flags == 0)
+            int capacity = ins.Flags & capacityMask;
+            if (result.Dropped > 0 && capacity == 0)
             {
                 throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.SpatialQueryIncomplete: count={result.Count}, dropped={result.Dropped}.");
             }
 
             s.TargetList.SetCount(result.Count);
-            if (ins.Flags == 1)
+            if (capacity == 1)
             {
                 s.I[ins.Dst] = result.Dropped;
             }
@@ -2217,11 +2223,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryFilterRelationship(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
+            int relationshipTypeId = (ins.Flags & GraphControlFlowCompiler.QueryValueFromRegisterFlag) != 0
+                ? s.I[ins.B]
+                : ins.Dst;
             s.TargetList.SetCount(s.Api.FilterTeamRelationship(
                 s.Targets,
                 s.TargetList.Count,
                 s.E[ins.A],
-                ins.Dst));
+                relationshipTypeId));
         }
 
         // ── Aggregation ──

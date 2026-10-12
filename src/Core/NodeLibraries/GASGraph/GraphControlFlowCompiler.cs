@@ -72,6 +72,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string WhileOp = GraphAuthoringSugar.While;
         public const string UntilOp = GraphAuthoringSugar.Until;
 
+        /// <summary>
+        /// Instruction flag bit: the op's immediate (radius, or relationship type id) comes
+        /// from a value register. Spatial capacity policy uses bit 0 only, so this bit is
+        /// applied after that policy overwrites <see cref="GraphInstruction.Flags"/>.
+        /// </summary>
+        public const byte QueryValueFromRegisterFlag = 2;
+
         private readonly struct SugarScratch
         {
             public SugarScratch(byte intReg, byte boolReg, byte? stateReg = null)
@@ -2568,11 +2575,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             switch (op.NodeOp)
             {
                 case GraphNodeOp.ConstInt:
+                    if (!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue != 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': ConstInt carries relationshipType only when intValue is 0.", node.Id));
+                    }
+
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.ConstInt,
                         Dst = outputRegisters[nodeIndex],
-                        Imm = node.IntValue
+                        Imm = !string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue == 0
+                            ? Intern(symbolToIndex, symbols, node.RelationshipType)
+                            : node.IntValue,
+                        Flags = (byte)(!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue == 0 ? 1 : 0)
                     };
                     definedInts[outputRegisters[nodeIndex]] = true;
                     SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.ConstInt), GraphControlFlowPorts.Enter);

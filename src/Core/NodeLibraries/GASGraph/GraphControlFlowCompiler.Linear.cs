@@ -71,6 +71,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.QueryRadius:
                     RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)) && node.RadiusCm != 0f)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': QueryRadius takes radiusCm or a value edge, not both.", node.Id));
+                    }
+
                     break;
 
                 case GraphNodeOp.QuerySortStable:
@@ -492,7 +498,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (op.NodeOp == GraphNodeOp.QueryFilterRelationship)
                     {
-                        RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                        bool relationshipFromValue = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value));
+                        bool relationshipFromSymbol = !string.IsNullOrWhiteSpace(node.RelationshipType);
+                        if (relationshipFromValue == relationshipFromSymbol)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                                $"Node '{node.Id}': QueryFilterRelationship takes relationshipType or a value edge, exactly one.", node.Id));
+                        }
                     }
 
                     break;
@@ -1098,7 +1110,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.ConstInt:
-                    instruction.Imm = node.IntValue;
+                    if (!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue != 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': ConstInt carries relationshipType only when intValue is 0.", node.Id));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue == 0)
+                    {
+                        instruction.Flags = 1;
+                        instruction.Imm = Intern(symbolToIndex, symbols, node.RelationshipType);
+                    }
+                    else
+                    {
+                        instruction.Imm = node.IntValue;
+                    }
+
                     break;
 
                 case GraphNodeOp.LoadCaster:
@@ -1122,10 +1149,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.QueryRadius:
+                {
+                    bool radiusFromValue = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value));
                     instruction.Flags = 0;
-                    instruction.ImmF = node.RadiusCm;
+                    if (radiusFromValue)
+                    {
+                        instruction.A = ResolveValueInput(
+                            node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    }
+                    else
+                    {
+                        instruction.ImmF = node.RadiusCm;
+                    }
+
                     ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    if (radiusFromValue)
+                    {
+                        instruction.Flags |= QueryValueFromRegisterFlag;
+                    }
+
                     break;
+                }
 
                 case GraphNodeOp.QuerySortStable:
                     break;
@@ -1758,7 +1803,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                    {
+                        instruction.B = ResolveValueInput(
+                            node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        instruction.Flags = QueryValueFromRegisterFlag;
+                        instruction.Dst = 0;
+                    }
+                    else
+                    {
+                        instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    }
+
                     break;
 
                 case GraphNodeOp.TargetListGet:

@@ -169,12 +169,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, PrefOpEncoding.UnpackSymbolOther(ins.Imm))));
                         break;
                     case GraphNodeOp.ActivateContext:
+                        int parentKeyId;
+                        if (ins.Dst == byte.MaxValue)
+                        {
+                            parentKeyId = ContextOpEncoding.OwnMountParent;
+                        }
+                        else
+                        {
+                            string parentSymbol = ResolveSymbol(symbols, ins.Dst);
+                            parentKeyId = string.Equals(
+                                parentSymbol,
+                                ContextOpEncoding.UnconstrainedParent,
+                                StringComparison.Ordinal)
+                                ? 0
+                                : ConfigKeyRegistry.Register(parentSymbol);
+                        }
+
                         ins.Imm = ContextOpEncoding.Pack(
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
-                            ins.Dst == byte.MaxValue
-                                ? 0
-                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                            parentKeyId);
                         ins.Dst = 0;
+                        break;
+                    case GraphNodeOp.ConstInt:
+                        if (ins.Flags == 1)
+                        {
+                            ins.Imm = symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Imm));
+                            ins.Flags = 0;
+                        }
+
                         break;
                     case GraphNodeOp.DeactivateContext:
                     case GraphNodeOp.IsContextActive:
@@ -324,7 +346,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.RelationshipEnsureLink:
                     case GraphNodeOp.RelationshipRemoveLink:
                     case GraphNodeOp.QueryFilterRelationship:
-                        ins.Dst = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        if ((ins.Flags & GraphControlFlowCompiler.QueryValueFromRegisterFlag) == 0)
+                        {
+                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        }
+
                         break;
                     case GraphNodeOp.RelationshipQueryOutgoing:
                     case GraphNodeOp.RelationshipQueryIncoming:

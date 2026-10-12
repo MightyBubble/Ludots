@@ -467,7 +467,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.ConstInt:
-                    instruction.Imm = node.IntValue;
+                    if (!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue != 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': ConstInt carries relationshipType only when intValue is 0.", node.Id));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue == 0)
+                    {
+                        instruction.Flags = 1;
+                        instruction.Imm = Intern(symbolToIndex, symbols, node.RelationshipType);
+                    }
+                    else
+                    {
+                        instruction.Imm = node.IntValue;
+                    }
+
                     break;
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadPointerScreenX:
@@ -475,10 +490,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
                 case GraphNodeOp.QueryRadius:
+                {
+                    bool radiusFromValue = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value));
+                    if (radiusFromValue && node.RadiusCm != 0f)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': QueryRadius takes radiusCm or a value edge, not both.", node.Id));
+                    }
+
                     instruction.Flags = 0;
-                    instruction.ImmF = node.RadiusCm;
+                    if (radiusFromValue)
+                    {
+                        instruction.A = ResolveValueInput(
+                            node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    }
+                    else
+                    {
+                        instruction.ImmF = node.RadiusCm;
+                    }
+
                     ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    if (radiusFromValue)
+                    {
+                        instruction.Flags |= QueryValueFromRegisterFlag;
+                    }
+
                     break;
+                }
                 case GraphNodeOp.QuerySortStable:
                     break;
                 case GraphNodeOp.QueryLimit:
