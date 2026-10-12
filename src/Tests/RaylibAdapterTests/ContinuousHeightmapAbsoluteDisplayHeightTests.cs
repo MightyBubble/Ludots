@@ -96,7 +96,7 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void ResolveOceanVoidSentinelCm_FollowsAssetScaleAndDeclaration()
         {
-            // identity 缩放(原码=厘米):历史 0.88×65535 阈值逐位保持
+            // 仅当地图声明 OceanVoidFillAtSampleCeiling 且 identity 缩放时,阈值等于 ceil(0.88×65535)。
             var identity = new ContinuousHeightSampleScale(0, 1, 1);
             Assert.That(
                 RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelCm(
@@ -162,6 +162,31 @@ namespace Ludots.Tests.RaylibAdapter
             var source = new TwoScaleHeightmapSource(declareOceanVoid: true, omitChunk: 1);
             Assert.Throws<InvalidOperationException>(() =>
                 RaylibContinuousHeightmapRenderer.ResolveOceanVoidSentinelAtWorld(source, 450f, 10f));
+        }
+
+        [Test]
+        public void DeclaredCrowdScaleSentinel_KeepsSixHundredMeterMountain()
+        {
+            float sentinel = 57_671f * 140_000f / 65_535f;
+            float display = RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                60_000f,
+                seaLevelCm: 0f,
+                oceanVoidSentinelCm: sentinel);
+
+            Assert.That(display, Is.EqualTo(60_000f),
+                "crowd 缩放下已声明的哨兵约在 1232 m,600 m 山体必须保高。");
+        }
+
+        [Test]
+        public void UndeclaredSentinel_StillFlattensBelowSea()
+        {
+            float display = RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                -1_200f,
+                seaLevelCm: 0f,
+                oceanVoidSentinelCm: null);
+
+            Assert.That(display, Is.EqualTo(0f),
+                "哨兵未声明时,海平面以下的样本仍压到海平面。");
         }
 
         [Test]
