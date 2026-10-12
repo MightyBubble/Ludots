@@ -9,20 +9,24 @@
         "Command",
         "Stop",
         "QueueModifier",
-        "Aim.Slot4.Release",
-        "CastModeSmart",
-        "CastModeIndicator",
-        "CastModePressRelease"
+        "Aim.Slot4.Release"
       ],
       "triggers": [
-        { "trigger": "graph.core.select_begin" },
-        { "trigger": "graph.core.hover_tick" },
-        { "trigger": "graph.champion.move" },
-        { "trigger": "graph.champion.stop" },
-        { "trigger": "graph.champion.held_channel_end" },
-        { "trigger": "graph.champion.set_cast_mode_smart" },
-        { "trigger": "graph.champion.set_cast_mode_aim_release" },
-        { "trigger": "graph.champion.set_cast_mode_aim_click" }
+        {
+          "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.champion.move"
+        },
+        {
+          "trigger": "graph.champion.stop"
+        },
+        {
+          "trigger": "graph.champion.held_channel_end"
+        }
       ],
       "onActivated": [
         "graph.champion.enter_aim_cast"

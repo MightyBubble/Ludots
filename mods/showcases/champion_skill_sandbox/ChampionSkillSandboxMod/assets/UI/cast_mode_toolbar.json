@@ -3,21 +3,21 @@
     {
       "buttonId": "ChampionSkillSandbox.Mode.SmartCast",
       "label": "Quick",
-      "actionId": "CastModeSmart",
+      "actionId": "Aim.CastMode.Smart",
       "castModeId": "castMode.smart",
       "accent": "#F6C35B"
     },
     {
       "buttonId": "ChampionSkillSandbox.Mode.Indicator",
       "label": "Indicator",
-      "actionId": "CastModeIndicator",
+      "actionId": "Aim.CastMode.AimRelease",
       "castModeId": "castMode.aim_release",
       "accent": "#61C3FF"
     },
     {
       "buttonId": "ChampionSkillSandbox.Mode.PressReleaseAim",
       "label": "RTS",
-      "actionId": "CastModePressRelease",
+      "actionId": "Aim.CastMode.AimClick",
       "castModeId": "castMode.aim_click",
       "accent": "#93E07A"
     }

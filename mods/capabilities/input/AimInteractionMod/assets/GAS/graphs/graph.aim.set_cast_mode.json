@@ -1,0 +1,127 @@
+[
+  {
+    "id": "graph.aim.set_cast_mode",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Aim.CastMode.Smart",
+        "action": "Aim.CastMode.Smart",
+        "start": "rep_smart",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.CastMode.AimClick",
+        "action": "Aim.CastMode.AimClick",
+        "start": "rep_click",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.CastMode.AimRelease",
+        "action": "Aim.CastMode.AimRelease",
+        "start": "rep_release",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep_smart",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_smart",
+        "op": "SetCastMode",
+        "mode": "castMode.smart"
+      },
+      {
+        "id": "rep_click",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_click",
+        "op": "SetCastMode",
+        "mode": "castMode.aim_click"
+      },
+      {
+        "id": "rep_release",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_release",
+        "op": "SetCastMode",
+        "mode": "castMode.aim_release"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep_smart",
+        "fromPort": "next",
+        "to": "set_smart"
+      },
+      {
+        "from": "set_smart",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_click",
+        "fromPort": "next",
+        "to": "set_click"
+      },
+      {
+        "from": "set_click",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_release",
+        "fromPort": "next",
+        "to": "set_release"
+      },
+      {
+        "from": "set_release",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep_smart",
+        "fromPort": "value",
+        "to": "set_smart",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_click",
+        "fromPort": "value",
+        "to": "set_click",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_release",
+        "fromPort": "value",
+        "to": "set_release",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

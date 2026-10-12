@@ -11,6 +11,9 @@
         },
         {
           "trigger": "graph.aim.track_stick"
+        },
+        {
+          "trigger": "graph.aim.set_cast_mode"
         }
       ],
       "onActivated": [

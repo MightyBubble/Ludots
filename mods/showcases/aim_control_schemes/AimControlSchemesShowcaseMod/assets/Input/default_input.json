@@ -1,21 +1,5 @@
 {
-  "actions": [
-    {
-      "id": "AimSchemes.ModeSmart",
-      "name": "AimSchemes_ModeSmart",
-      "type": "Button"
-    },
-    {
-      "id": "AimSchemes.ModeAimRelease",
-      "name": "AimSchemes_ModeAimRelease",
-      "type": "Button"
-    },
-    {
-      "id": "AimSchemes.ModeAimClick",
-      "name": "AimSchemes_ModeAimClick",
-      "type": "Button"
-    }
-  ],
+  "actions": [],
   "contexts": [
     {
       "id": "AimSchemes.Controls",
@@ -27,15 +11,15 @@
           "path": "<Mouse>/Pos"
         },
         {
-          "actionId": "AimSchemes.ModeSmart",
+          "actionId": "Aim.CastMode.Smart",
           "path": "<Keyboard>/f1"
         },
         {
-          "actionId": "AimSchemes.ModeAimRelease",
+          "actionId": "Aim.CastMode.AimRelease",
           "path": "<Keyboard>/f2"
         },
         {
-          "actionId": "AimSchemes.ModeAimClick",
+          "actionId": "Aim.CastMode.AimClick",
           "path": "<Keyboard>/f3"
         }
       ]

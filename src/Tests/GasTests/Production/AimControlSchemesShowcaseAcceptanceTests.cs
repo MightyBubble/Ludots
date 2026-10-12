@@ -330,7 +330,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
             PlayerInputHandler? handler = _engine.GetService(CoreServiceKeys.InputHandler);
             string pointer = handler == null ? "<no input>" : handler.ReadAction<Vector2>("Aim.Pointer").ToString();
-            string modeDown = handler != null && handler.IsDown("AimSchemes.ModeAimRelease") ? "down" : "up";
+            string modeDown = handler != null && handler.IsDown("Aim.CastMode.AimRelease") ? "down" : "up";
             return $"{step} || scheme={SchemeId} mode={ReadCastMode()} tick={_engine.GameSession.CurrentTick} " +
                    $"contexts=[{Contexts()}] input={_inputContextId} " +
                    $"device={_device.PointerPosition} aimPointer={pointer} f2={modeDown} " +
@@ -519,9 +519,9 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         private static string ModeAction(string key) => key switch
         {
-            "f1" => "AimSchemes.ModeSmart",
-            "f2" => "AimSchemes.ModeAimRelease",
-            "f3" => "AimSchemes.ModeAimClick",
+            "f1" => "Aim.CastMode.Smart",
+            "f2" => "Aim.CastMode.AimRelease",
+            "f3" => "Aim.CastMode.AimClick",
             _ => throw new ArgumentOutOfRangeException(nameof(key)),
         };
 

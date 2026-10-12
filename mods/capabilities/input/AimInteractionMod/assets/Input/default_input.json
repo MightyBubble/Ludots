@@ -76,6 +76,21 @@
       "id": "Aim.Primary",
       "name": "Aim_Primary",
       "type": "Button"
+    },
+    {
+      "id": "Aim.CastMode.Smart",
+      "name": "Aim_CastMode_Smart",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.CastMode.AimClick",
+      "name": "Aim_CastMode_AimClick",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.CastMode.AimRelease",
+      "name": "Aim_CastMode_AimRelease",
+      "type": "Button"
     }
   ],
   "contexts": [
