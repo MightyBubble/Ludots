@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Config;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 
 namespace Ludots.Core.Navigation.NavMesh.Config
 {
     /// <summary>
     /// maps.&lt;mapId&gt;.solver 是这张图跑哪一种移动求解器的唯一声明。
-    /// 求解器板写在 maps.&lt;mapId&gt;.boards 里，而且只能有一块；没写时用地图的 RootBoard。
+    /// 求解器板写在 maps.&lt;mapId&gt;.boards 里，而且只能有一块；没写时用 <see cref="MapManager.ResolveRootBoard"/>。
     /// </summary>
     public static class NavSolverDeclaration
     {
@@ -54,7 +55,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         }
 
         /// <summary>
-        /// 已声明的那一块板的名字。boards 缺省时返回 null，调用方改用 RootBoard。
+        /// 已声明的那一块板的名字。boards 缺省时返回 null，调用方改用 <see cref="MapManager.ResolveRootBoard"/>。
         /// </summary>
         public static string DeclaredBoardName(NavMapNavBoardsConfig mapNav, string mapId)
         {
@@ -87,17 +88,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public static BoardConfig RequireBoard(MapConfig map, NavMapNavBoardsConfig mapNav)
         {
             ArgumentNullException.ThrowIfNull(map);
+            ArgumentNullException.ThrowIfNull(mapNav);
             string declared = DeclaredBoardName(mapNav, map.Id);
-            string name = declared;
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(declared))
             {
-                name = map.RootBoard;
-            }
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new InvalidOperationException(
-                    $"地图 \"{map.Id}\" 没有在 Navigation/navmesh.json 的 maps.{map.Id}.boards 声明求解器板，也没有 RootBoard。");
+                return MapManager.ResolveRootBoardFor(map, map.Id);
             }
 
             BoardConfig found = null;
@@ -106,14 +101,14 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 for (int i = 0; i < map.Boards.Count; i++)
                 {
                     BoardConfig board = map.Boards[i];
-                    if (board == null || !string.Equals(board.Name, name, StringComparison.Ordinal))
+                    if (board == null || !string.Equals(board.Name, declared, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
 
                     if (found != null)
                     {
-                        throw new InvalidOperationException($"地图 \"{map.Id}\" 有多块名为 \"{name}\" 的板。");
+                        throw new InvalidOperationException($"地图 \"{map.Id}\" 有多块名为 \"{declared}\" 的板。");
                     }
 
                     found = board;
@@ -122,7 +117,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
             if (found == null)
             {
-                throw new InvalidOperationException($"地图 \"{map.Id}\" 的求解器板 \"{name}\" 不在 Boards 里。");
+                throw new InvalidOperationException($"地图 \"{map.Id}\" 的求解器板 \"{declared}\" 不在 Boards 里。");
             }
 
             return found;

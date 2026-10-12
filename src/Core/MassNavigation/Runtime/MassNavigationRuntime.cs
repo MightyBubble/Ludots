@@ -7,6 +7,7 @@ using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Movement;
+using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -25,6 +26,8 @@ public sealed class MassNavigationRuntime
     private bool _scenarioSpawned;
     private MassNavigationSimulationRuntime? _simulation;
     private string? _activeMapId;
+    // 挂起留下仿真对象，但绑定已经清掉。下一张聚焦的大规模地图若不是这一张，先卸载再对着新会话建仿真。
+    private string? _suspendedMapId;
     private NavMeshBakeConfig? _navmesh;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
@@ -42,6 +45,14 @@ public sealed class MassNavigationRuntime
                 $"大规模导航仍绑在地图 \"{_activeMapId}\"，聚焦 \"{mapId.Value}\" 之前要先挂起或卸载。");
         }
 
+        if (_suspendedMapId != null && !string.Equals(_suspendedMapId, mapId.Value, StringComparison.Ordinal))
+        {
+            _activeMapId = _suspendedMapId;
+            ReleaseMapState(engine, new MapId(_suspendedMapId), unloadScenario: true);
+        }
+
+        _suspendedMapId = null;
+        SolverAgentExclusivity.RejectCrowdSimulationAgent(engine.World, mapId);
         _activeMapId = mapId.Value;
         EnsureSystemsInstalled(engine, config);
         MassNavigationSimulationRuntime simulation = EnsureSimulationRuntime(engine, config);
@@ -79,12 +90,31 @@ public sealed class MassNavigationRuntime
 
     public bool HandleMapSuspended(GameEngine engine, MapId mapId)
     {
-        return ReleaseMapState(engine, mapId, unloadScenario: false);
+        bool released = ReleaseMapState(engine, mapId, unloadScenario: false);
+        if (released)
+        {
+            _suspendedMapId = mapId.Value;
+        }
+
+        return released;
     }
 
     public bool HandleMapUnloaded(GameEngine engine, MapId mapId)
     {
-        return ReleaseMapState(engine, mapId, unloadScenario: true);
+        if (_activeMapId == null &&
+            _suspendedMapId != null &&
+            string.Equals(_suspendedMapId, mapId.Value, StringComparison.Ordinal))
+        {
+            _activeMapId = _suspendedMapId;
+        }
+
+        bool released = ReleaseMapState(engine, mapId, unloadScenario: true);
+        if (string.Equals(_suspendedMapId, mapId.Value, StringComparison.Ordinal))
+        {
+            _suspendedMapId = null;
+        }
+
+        return released;
     }
 
     private bool ReleaseMapState(GameEngine engine, MapId mapId, bool unloadScenario)

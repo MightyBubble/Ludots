@@ -8,13 +8,13 @@ using NUnit.Framework;
 namespace CrowdSimulationTests.Integration;
 
 /// <summary>
-/// 调试目录项不在能力 Mod 上。S1 不带调试文件时正式配置照常装，聚焦仍建会话，但不接路径服务。
+/// 调试目录项不在能力 Mod 上。S1 不带调试文件时正式配置照常装，聚焦建会话并接路径服务。
 /// 登记了调试项但没有任何片段，聚焦时抛错。
 /// </summary>
 public class CrowdDebugCatalogTests
 {
     [Test]
-    public void S1Focus_WithoutDebugFile_ActivatesSessionWithoutMovement()
+    public void S1Focus_WithoutDebugFile_ActivatesSessionWithPlanner()
     {
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
@@ -30,7 +30,7 @@ public class CrowdDebugCatalogTests
         var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession);
         Assert.That(session, Is.Not.Null);
         Assert.That(session!.Config.MapId, Is.EqualTo("crowd_simulation_s1337"));
-        Assert.That(session.Planner, Is.Null);
+        Assert.That(session.Planner, Is.Not.Null);
     }
 
     [Test]

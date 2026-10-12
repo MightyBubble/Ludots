@@ -47,7 +47,6 @@ public class EnginePipelineIntegrationTests
 """);
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationDebug.json"), """
 {
-  "worker": { "planTimeoutMs": 5000 },
   "session": {
     "script": [
       { "tick": 0, "cmd": { "type": "spawn", "count": 24 } },

@@ -1,6 +1,5 @@
 {
   "Id": "mass_navigation",
-  "RootBoard": "default",
   "Tuning": {
     "LoadedChunkCapacity": 256
   },

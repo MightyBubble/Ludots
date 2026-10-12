@@ -1,6 +1,5 @@
 {
   "Id": "formation_capability_showcase",
-  "RootBoard": "default",
   "Tuning": {
     "LoadedChunkCapacity": 512
   },

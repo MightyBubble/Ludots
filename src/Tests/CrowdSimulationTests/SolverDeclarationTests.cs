@@ -1,13 +1,20 @@
 using System.Text.Json.Nodes;
+using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.NavMesh.Config;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
 
 /// <summary>
-/// maps.&lt;mapId&gt;.solver 是移动求解器的唯一声明。求解器板要么是 boards 里那一块，要么是 RootBoard。
+/// maps.&lt;mapId&gt;.solver 是移动求解器的唯一声明。求解器板要么是 boards 里那一块，要么走 MapManager.ResolveRootBoard。
 /// </summary>
 [TestFixture]
 public sealed class SolverDeclarationTests
@@ -73,6 +80,26 @@ public sealed class SolverDeclarationTests
     }
 
     [Test]
+    public void OmittedRootBoard_UsesTheFirstBoard()
+    {
+        MapConfig map = TestDefaults.DemoMap();
+        map.Boards.Insert(0, new BoardConfig { Name = "decoy", WidthCm = 100, HeightCm = 50 });
+        BoardConfig board = NavSolverDeclaration.RequireBoard(map, new NavMapNavBoardsConfig());
+        Assert.That(board.Name, Is.EqualTo("decoy"));
+        Assert.That(board, Is.SameAs(MapManager.ResolveRootBoardFor(map, map.Id)));
+    }
+
+    [Test]
+    public void RootBoard_Match_IgnoresCase()
+    {
+        MapConfig map = TestDefaults.DemoMap();
+        map.RootBoard = "DEFAULT";
+        BoardConfig board = NavSolverDeclaration.RequireBoard(map, new NavMapNavBoardsConfig());
+        Assert.That(board.Name, Is.EqualTo("default"));
+        Assert.That(board, Is.SameAs(MapManager.ResolveRootBoardFor(map, map.Id)));
+    }
+
+    [Test]
     public void DeclaredBoard_IsUsed_WhenItIsNotTheFirstBoard()
     {
         JsonObject navmesh = TestDefaults.DefaultNavmeshJson();
@@ -108,6 +135,35 @@ public sealed class SolverDeclarationTests
             () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(json), pairRules: TestDefaults.DemoPairRules()))!;
         Assert.That(ex.Message, Does.Contain(NavSolverDeclaration.MassNavigation));
         Assert.That(ex.Message, Does.Contain(NavSolverDeclaration.CrowdSimulation));
+    }
+
+    [Test]
+    public void CrowdMap_RejectsMassNavigationAgent()
+    {
+        using World world = World.Create();
+        var mapId = new MapId("crowd_simulation_demo");
+        Entity entity = world.Create(new MapEntity { MapId = mapId }, new MassNavigationAgent());
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => SolverAgentExclusivity.RejectMassNavigationAgent(world, mapId))!;
+        Assert.That(ex.Message, Does.Contain(mapId.Value));
+        Assert.That(ex.Message, Does.Contain(entity.Id.ToString()));
+        Assert.That(ex.Message, Does.Contain("MassNavigationAgent"));
+
+        Entity otherMap = world.Create(
+            new MapEntity { MapId = new MapId("other") },
+            new CrowdSimulationAgent());
+        Assert.DoesNotThrow(() => SolverAgentExclusivity.RejectCrowdSimulationAgent(world, mapId));
+        Assert.That(otherMap.Id, Is.GreaterThanOrEqualTo(0));
+    }
+
+    [Test]
+    public void PlanTimeoutMs_IsRetiredFromDebug()
+    {
+        var debug = JsonNode.Parse("""{ "worker": { "planTimeoutMs": 5000 } }""")!.AsObject();
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationDebugConfig.Load(debug))!;
+        Assert.That(ex.Message, Does.Contain("已删除 worker.planTimeoutMs"));
+        Assert.That(ex.Message, Does.Contain("CrowdSimulationConfig.json"));
     }
 
     [Test]

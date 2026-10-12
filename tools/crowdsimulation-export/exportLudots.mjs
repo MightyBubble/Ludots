@@ -166,7 +166,6 @@ const seaLevelCm = Math.round(world.thresholds.seaH * HS * 100);
 const peakSpanCm = Math.max(100, Math.round((1 - world.thresholds.seaH) * HS * 100));
 const mapJson = {
   Id: mapId,
-  RootBoard: 'default',
   Tags: ['crowd_simulation'],
   Tuning: { LoadedChunkCapacity: 256 },
   Boards: [{

@@ -1,6 +1,5 @@
 {
   "Id": "crowd_simulation_s7",
-  "RootBoard": "default",
   "Tags": [
     "crowd_simulation"
   ],

@@ -601,6 +601,17 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MapId_IsARetiredKey()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            config["mapId"] = "mass_navigation";
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => MassNavigationConfig.Load(config))!;
+            Assert.That(ex.Message, Does.Contain("已删除 mapId"));
+            Assert.That(ex.Message, Does.Contain("mass-navigation"));
+        }
+
+        [Test]
         public void LargeWorldMap_UsesContinuousHeightmapCameraProfile()
         {
             string modRoot = MassNavigationModRoot();

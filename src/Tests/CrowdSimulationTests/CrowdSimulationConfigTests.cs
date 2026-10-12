@@ -15,6 +15,27 @@ namespace CrowdSimulationTests;
 public class CrowdSimulationConfigTests
 {
     [Test]
+    public void PlanTimeoutMs_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["worker"]!.AsObject().Remove("planTimeoutMs");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("planTimeoutMs"));
+    }
+
+    [Test]
+    public void PlanTimeoutMs_MustBePositive()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["worker"]!["planTimeoutMs"] = 0;
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("worker.planTimeoutMs"));
+        Assert.That(ex.Message, Does.Contain("> 0"));
+    }
+
+    [Test]
     public void DefaultConfig_Assembles_AgainstDemoMap()
     {
         var runtime = TestDefaults.Assemble();

@@ -1,7 +1,4 @@
 {
-  "worker": {
-    "planTimeoutMs": 5000
-  },
   "session": {
     "script": [
       {

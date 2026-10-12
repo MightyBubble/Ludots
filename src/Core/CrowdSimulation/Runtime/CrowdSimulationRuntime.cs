@@ -19,6 +19,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
@@ -218,24 +219,24 @@ public sealed partial class CrowdSimulationRuntime
             ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
         _configDto = CrowdSimulationConfig.Load(merged);
 
+        _planTimeout = TimeSpan.FromMilliseconds(_configDto.Worker.PlanTimeoutMs);
+
         if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {
             _debug = null;
-            _planTimeout = null;
             return true;
         }
 
         var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
         _debug = CrowdSimulationDebugConfig.Load(debugMerged);
-        _planTimeout = _debug.PlanTimeout;
         _presentation = _debug.Presentation;
         return true;
     }
 
     private TimeSpan RequirePlanTimeout()
         => _planTimeout ?? throw new InvalidOperationException(
-            "CrowdSimulationDebug.json: 路径服务需要 worker.planTimeoutMs。");
+            "CrowdSimulationConfig.json: 路径服务需要 worker.planTimeoutMs。");
 
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
@@ -272,6 +273,7 @@ public sealed partial class CrowdSimulationRuntime
             _configDto!, mapConfig, agentProfiles, navmesh, pathing, templateFacts,
             (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
 
+        SolverAgentExclusivity.RejectMassNavigationAgent(engine.World, mapId);
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
         // 与配置门禁构成同一条装载检查链;失败即报错,不进入烘焙与生成。
         CrowdSimulationAuthoringContract.Validate(
@@ -374,14 +376,11 @@ public sealed partial class CrowdSimulationRuntime
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
         // (有结构仓时 Blockers 跟随仓的活 CSR,这里的静态索引不生效)
         _pathService?.Dispose();
-        _pathService = null;
-        if (_planTimeout is { } planTimeout)
-        {
-            _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, planTimeout, _session.ResolveNavContext);
-            var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
-            var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
-            _session.EnableMovement(kernel, planner);
-        }
+        TimeSpan planTimeout = RequirePlanTimeout();
+        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, planTimeout, _session.ResolveNavContext);
+        var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
+        var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
+        _session.EnableMovement(kernel, planner);
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 

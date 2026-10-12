@@ -1,7 +1,4 @@
 {
-  "worker": {
-    "planTimeoutMs": 5000
-  },
   "presentation": {
     "kind": "path",
     "title": "CrowdSimulation S3 · 两点路径与固定生效帧",
