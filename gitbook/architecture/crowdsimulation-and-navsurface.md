@@ -231,7 +231,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（速度、个人半径、推挤优先级、special，以及生成时写入的档案下标和移动类型下标；profileId / agentTypeId 留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
 - **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有单独的组件集：测试装配把 CrowdSimulationMod 的模板挂进 VFS，再经同一条 EntityBuilder.UseTemplate 实例化。出生算法（盐流/环形搜索/编组/散布）留在内核;S4/S5 真值测试原样全绿。
 - **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
-- **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。同一条 Mix 在 `position`、`motion`、`state`、`avoidance` 四处留下断面，合计等于最后的 `avoidance` 断面。分区怎么对、哪些状态没进去，见下方「校验码分区」。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
+- **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。同一条 Mix 在 `position`、`motion`、`state`、`avoidance` 四处留下断面，合计等于最后的 `avoidance` 断面。诊断断面另起 Mix，不进合计。分区怎么对，见下方「校验码分区」。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
 - **指令队列与回放**（core/commands.js CommandQueue 移植）：指令是数据,tick 边界执行;日志 = 完整输入,回放 = 新会话 + 同一日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
 - **对拍（`S4DeployTruthTests`,3 种子）**：同一份脚本（spawn 12000 → 框选 → 点名生成 20 → 全选 → 清空）逐帧校验码与沙盒一致（150 帧 × 3）;12020 个单位逐条（玩家 / 模板 / 半径级 / 组 / 位置原始值）一致;同一份记录回放两次校验码相同。
 - **踩过的坑（已固化）**：S0 配置的 `deploy.bases` 玩家 4 出生点 y 写成了玩家 2 的值（0.65 → 0.7 份额,部署差 416 格才发现;组号全对上但中心全错,按"组-中心-RNG 值"三层对拍才定位）;镜像侧量化函数把位置乘法也取整,奇数半档比 Ludots 少 50 个原始单位;参考实现玩家 0 基与 Ludots 玩家号 1..P 的换算只在 `PlayerOwner` 与脚本数据边界做一次,内部编号序不受影响。
@@ -277,21 +277,29 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ### 校验码分区
 
-合计仍是一条 FNV-1a 32（`CrowdSimChecksum`）。`Compute` 沿这条 Mix 记下四个断面：`position`、`motion`、`state`、`avoidance`。后一个断面从前一个的结果接着混。`Total` 等于最后一个断面 `avoidance`。四个分区按这个顺序接完，合计就是这条 Mix 的终态。`ComputeValue` 返回 `Total`。S4 真值比对的是这个合计，词序和以前相同。
+合计仍是一条 FNV-1a 32（`CrowdSimChecksum`）。`Compute` 沿这条 Mix 记下四个断面：`position`、`motion`、`state`、`avoidance`。后一个断面从前一个的结果接着混。`Total` 等于最后一个断面 `avoidance`。四个分区按这个顺序接完，合计就是这条 Mix 的终态。`ComputeValue` 返回 `Total`。S4 真值与回放逐位一致只认这个合计，词序和以前相同。
 
-各断面里的词：
+诊断断面另起三条 Mix，域词分开，不写进 `Total`。它们只把分歧指到子系统。词可以随定位需要改，不冻结成真值。`CrowdSimSession.DiagnosticDigest` 默认关，三个诊断词为 0。打开之后每个成功 tick 都算。`CrowdSimulationRuntime` 在自动回放已武装（`autoReplayAtTick` ≥ 0）时从第一 tick 打开，回放会话复制同一个开关。50k 计时门走默认关：`jump` 要再扫一遍全部单位。
+
+合计断面里的词：
 
 - `position`：本 tick、单位数，然后所有单位的 x，再所有单位的 y。定点按原始 int64 先低 32 位、后高 32 位。
 - `motion`：vx、vy、slotX、slotY、blend、stall。一个字段走完所有单位，再下一个字段。
 - `state`：state、group、句柄、order、mode、level。到达写在 state 里。句柄里是槽位和代。单位当前挂着的 order 号在这一段。
 - `avoidance`：分离的 x、y，calm，最后相位一词。没有运动内核时这几词是 0。
 
-`CrowdSimChecksum.DiffDigest` 按 tick 对齐两串摘要，找出第一处不同，报这个 tick 和该 tick 上第一个不同的断面名。比对顺序是 position、motion、state、avoidance。后段接续前段，更早的词变了，后面的断面会跟着变，函数只报第一个。回放对拍用同一个函数。`CrowdSimulationRuntime` 的分歧日志写 `divergenceTick` 和 `section`。HUD 在分歧 tick 后面带上这个断面名。两边条数对不上、共同前缀又一致时，tick 为 -2，section 为空。
+诊断断面（开关打开时）：
 
-下面这些会改下一 tick，但没有进合计。把它们混进去会改掉已经冻结的 S4 真值：
+- `groups`：按组槽走，空槽记 0。活组记 `OrderId`、`Goal`、`GoalComp`、`Planning`、`StateSeq`、`LosAll`。领队和上一任领队记位置、朝向、路径点数、首尾路点、段号、是否走完。流场记 `NavId`、`Goal`、`Reached`，以及目标格上的长度，不扫整张积分场。后面接指令簿（id、玩家、模式、去重键、组链接）和在途规划（到期 tick、组目标、请求号、导航版本、刷新队列的组号）。
+- `jump`：每个单位的 `RestCm`、`JumpToCm`、`JumpT`、`JumpLengthCm`。没有运动内核时读组件；缺组件则这六词为 0。
+- `commands`：未执行条数，再按队列顺序混每条的 tick、种类和载荷字段（坐标、数量、形状串、模板串、区域顶点）。
 
-- 还没执行的指令队列；订单簿上的目标、领队位置、路径和朝向；组上的 `OrderId`、`Goal`、`GoalComp`、流场；在途规划。单位身上的 order 号已经在 `state`，意图读的是组上的 `OrderId`。命令执行或路径落地的那个 tick，变化出现在 state、motion 或 position。
-- 休息锚点 `RestCm`，跳跃落点、已用时间和长度。到达后的唤醒和跳跃积分会读。运动断面只有上面六个词。
+`CrowdSimChecksum.DiffDigest` 取两边最早一个有任一断面不同的 tick。这一 tick 上合计断面有差时，`Section` 取 position、motion、state、avoidance 里的第一个，`Diagnostic` 掩码记下同时有差的诊断断面。合计断面相同、只有诊断断面有差时，`Section` 取 groups、jump、commands 里的第一个，掩码仍列出全部有差的诊断断面。后段合计接续前段，更早的词变了，后面的合计断面会跟着变，函数只报第一个合计断面。回放对拍用同一个函数。分歧日志在 `section` 后附 `diag=`；掩码为空则不附。HUD 同样。两边条数对不上、共同前缀又一致时，tick 为 -2，section 为空，掩码为 0。
+
+开关关闭时诊断词恒为 0。对拍两边要用同一个开关，否则诊断断面会整段报差。
+
+下面这些仍会影响下一 tick，合计和诊断都不收：
+
 - 体型上的速度、个人半径、推挤优先级。生成之后不随 tick 改写。本 tick 改它们，下一 tick 的运动或避让才会露出来。
 - 迷雾格、认知槽、重烘任务、下一次生成用的随机流序号。导航格本身也不在摘要里。
 - 选中标记。它是呈现态，校验码不读。
