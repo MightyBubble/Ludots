@@ -28,7 +28,6 @@ public sealed class CrowdSimPresentationWiring
     /// （无头、回放）。自建的是同一个类型，不是另一套物化。
     /// </summary>
     public RuntimeEntitySpawnSystem? Spawns { get; init; }
-    public RuntimeEntitySpawnQueue? SpawnQueue { get; init; }
     public RuntimeEntitySpawnReceiptQueue? SpawnReceipts { get; init; }
     public int SpawnReceiptChannelId { get; init; }
     /// <summary>[unitType][radiusClass] → (模板 id, 模板键 id)。会话激活时按单位模板的

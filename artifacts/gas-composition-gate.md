@@ -33,11 +33,11 @@
 
 | Op 名 | 单一职责 | 为何不能组合现有 op |
 |-------|----------|---------------------|
-| N/A | 未新增 spawn/lifecycle op 名 | 准入登记、初始化器 kind、EnqueueAllOrThrow 是现有生成 op 的参数和失败合同 |
+| N/A | 未新增 spawn/lifecycle op 名 | 准入登记、初始化器 kind、`Materialize` 是现有生成系统的入口；不另排空阶段队列 |
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: EnqueueAllOrThrow 在空间不足时一条都不写。物化中途失败沿用生成系统现有的预检/抛错，不另做一套回滚壳。
+必须原子 rollback 的步骤: 无新事务壳。`Materialize` 不写阶段队列。物化中途失败沿用生成系统现有的预检/抛错。
 
 ### 6. Config SSOT
 

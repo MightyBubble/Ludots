@@ -31,8 +31,8 @@ public readonly record struct CrowdUnitSpawnRequest(
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
 /// 带 CrowdSimulationAgent、CrowdSimulationUnitState、WorldPositionCm、PlayerOwner。
 /// 管理层只持稠密序、槽位代数组与空闲槽池。
-/// 单位经 RuntimeEntitySpawnRequest 进入 RuntimeEntitySpawnSystem；本类只登记逐实例事实，
-/// 并在指令边界调用同一次 Update。批内写入由挂在该系统实例上的初始化器完成。
+/// 单位经 RuntimeEntitySpawnRequest 进入 RuntimeEntitySpawnSystem.Materialize；本类只登记逐实例事实。
+/// 批内写入由挂在该系统实例上的初始化器完成。不排空阶段队列。
 /// </summary>
 public sealed class CrowdSimUnits
 {
@@ -43,7 +43,6 @@ public sealed class CrowdSimUnits
     private readonly ArchWorld _world;
     private readonly CrowdSimPresentationWiring _presentation;
     private readonly RuntimeEntitySpawnSystem _spawns;
-    private readonly RuntimeEntitySpawnQueue _spawnQueue;
     private readonly RuntimeEntitySpawnReceiptQueue _receipts;
     private readonly int _receiptChannelId;
     private readonly ushort _initializerKind;
@@ -80,8 +79,6 @@ public sealed class CrowdSimUnits
         if (presentation.Spawns != null)
         {
             _spawns = presentation.Spawns;
-            _spawnQueue = presentation.SpawnQueue ?? throw new InvalidOperationException(
-                "CrowdSimulation 引擎接线给了 RuntimeEntitySpawnSystem，但没有 RuntimeEntitySpawnQueue。");
             _receipts = presentation.SpawnReceipts ?? throw new InvalidOperationException(
                 "CrowdSimulation 引擎接线给了 RuntimeEntitySpawnSystem，但没有 RuntimeEntitySpawnReceiptQueue。");
             _receiptChannelId = presentation.SpawnReceiptChannelId;
@@ -97,13 +94,12 @@ public sealed class CrowdSimUnits
                 throw new InvalidOperationException("CrowdSimulation 无头接线需要 EntityTemplateKeyRegistry。");
             }
 
-            _spawnQueue = new RuntimeEntitySpawnQueue(queueCapacity);
             _receipts = new RuntimeEntitySpawnReceiptQueue(queueCapacity);
             var channels = new RuntimeEntitySpawnReceiptChannelRegistry();
             _receiptChannelId = channels.Register(ReceiptChannelName);
             _spawns = new RuntimeEntitySpawnSystem(
                 world,
-                _spawnQueue,
+                new RuntimeEntitySpawnQueue(16),
                 presentation.TemplateRegistry,
                 presentation.TemplateKeys,
                 presentation.StableIds,
@@ -160,8 +156,8 @@ public sealed class CrowdSimUnits
     }
 
     /// <summary>
-    /// 把尚未绑定的单位按模板分组送进生成队列，并立刻调用本世界的 RuntimeEntitySpawnSystem.Update。
-    /// 没有待生成单位时直接返回。队列里已有别的请求，或空间不够整批，都抛错，不截断。
+    /// 把尚未绑定的单位按模板分组，调用 RuntimeEntitySpawnSystem.Materialize。
+    /// 没有待生成单位时直接返回。不入阶段队列，也不排空别人的请求。
     /// </summary>
     public void MaterializePending()
     {
@@ -206,16 +202,10 @@ public sealed class CrowdSimUnits
             uniqueKeys[uniqueCount++] = key;
         }
 
-        if (_spawnQueue.Count != 0)
-        {
-            throw new InvalidOperationException(
-                $"SPAWN.RUNTIME.ERR.QueueBusy: crowd materialize requires an empty spawn queue, count={_spawnQueue.Count}.");
-        }
-
+        int written = 0;
         for (int u = 0; u < uniqueCount; u++)
         {
             int key = uniqueKeys[u];
-            int written = 0;
             for (int dense = first; dense < first + pending; dense++)
             {
                 ref readonly PendingUnit item = ref _pending[dense];
@@ -240,16 +230,9 @@ public sealed class CrowdSimUnits
                     InstanceInitializerIndex = dense,
                 };
             }
-
-            _spawnQueue.EnqueueAllOrThrow(_requestScratch.AsSpan(0, written));
         }
 
-        _spawns.Update(0f);
-        if (_spawnQueue.Count != 0)
-        {
-            throw new InvalidOperationException(
-                $"SPAWN.RUNTIME.ERR.CrowdMaterializeIncomplete: remaining={_spawnQueue.Count}.");
-        }
+        _spawns.Materialize(_requestScratch.AsSpan(0, written));
 
         int got = _receipts.DetachChannel(_receiptChannelId, _receiptScratch.AsSpan(0, pending));
         if (got != pending)

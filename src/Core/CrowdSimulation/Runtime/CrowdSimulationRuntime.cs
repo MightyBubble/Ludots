@@ -340,8 +340,6 @@ public sealed partial class CrowdSimulationRuntime
 
         var spawnSystem = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnSystem)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 RuntimeEntitySpawnSystem 服务。");
-        var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
-            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 RuntimeEntitySpawnQueue 服务。");
         var spawnReceipts = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 RuntimeEntitySpawnReceiptQueue 服务。");
         var spawnChannels = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
@@ -362,7 +360,6 @@ public sealed partial class CrowdSimulationRuntime
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),
             Collections = collections,
             Spawns = spawnSystem,
-            SpawnQueue = spawnQueue,
             SpawnReceipts = spawnReceipts,
             SpawnReceiptChannelId = spawnChannelId,
         };

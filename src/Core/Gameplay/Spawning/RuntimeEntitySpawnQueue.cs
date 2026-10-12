@@ -162,26 +162,6 @@ namespace Ludots.Core.Gameplay.Spawning
             return writable;
         }
 
-        /// <summary>
-        /// 整段写入，空间不够则一条都不写。
-        /// <see cref="EnqueueMany"/> 仍按原合同截断并保持顺序，已有调用方不变。
-        /// </summary>
-        public void EnqueueAllOrThrow(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
-        {
-            if (requests.Length > FreeCapacity)
-            {
-                throw new InvalidOperationException(
-                    $"SPAWN.RUNTIME.ERR.QueueCapacity: requested {requests.Length}, free {FreeCapacity}, capacity {Capacity}.");
-            }
-
-            int written = EnqueueMany(requests);
-            if (written != requests.Length)
-            {
-                throw new InvalidOperationException(
-                    $"SPAWN.RUNTIME.ERR.QueueCapacity: wrote {written} of {requests.Length}.");
-            }
-        }
-
         public bool TryDequeue(out RuntimeEntitySpawnRequest request)
         {
             if (_count == 0)

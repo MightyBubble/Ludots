@@ -1410,6 +1410,59 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_Materialize_LeavesSharedQueueUntouched()
+        {
+            UnitTypeRegistry.Clear();
+            try
+            {
+                int queuedType = UnitTypeRegistry.Register("QueuedWolf");
+                int directType = UnitTypeRegistry.Register("DirectWolf");
+                using World world = World.Create();
+                var queue = new RuntimeEntitySpawnQueue(4);
+                var system = new RuntimeEntitySpawnSystem(
+                    world,
+                    queue,
+                    new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }")),
+                    new EntityTemplateKeyRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator());
+                That(queue.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.UnitType,
+                    UnitTypeId = queuedType,
+                    WorldPositionCm = Fix64Vec2.FromInt(1, 1),
+                }), Is.True);
+
+                system.Materialize(new[]
+                {
+                    new RuntimeEntitySpawnRequest
+                    {
+                        Kind = RuntimeEntitySpawnKind.UnitType,
+                        UnitTypeId = directType,
+                        WorldPositionCm = Fix64Vec2.FromInt(9, 9),
+                    },
+                });
+
+                That(queue.Count, Is.EqualTo(1));
+                That(queue.TryPeek(out RuntimeEntitySpawnRequest stillQueued), Is.True);
+                That(stillQueued.UnitTypeId, Is.EqualTo(queuedType));
+                int direct = 0;
+                int queued = 0;
+                var query = new QueryDescription().WithAll<Name>();
+                world.Query(in query, (ref Name name) =>
+                {
+                    if (name.Value == "Unit:DirectWolf") direct++;
+                    if (name.Value == "Unit:QueuedWolf") queued++;
+                });
+                That(direct, Is.EqualTo(1));
+                That(queued, Is.EqualTo(0));
+            }
+            finally
+            {
+                UnitTypeRegistry.Clear();
+            }
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_ConfiguredOnSpawnEffect_RequiresEffectRequestQueue()
         {
             UnitTypeRegistry.Clear();

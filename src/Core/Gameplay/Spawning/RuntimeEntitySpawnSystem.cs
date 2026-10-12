@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -204,13 +205,7 @@ namespace Ludots.Core.Gameplay.Spawning
                                 break;
                             }
 
-                            if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
-                            {
-                                throw new InvalidOperationException(
-                                    $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
-                                    "The production path must stay on the validated bulk lane.");
-                            }
-
+                            MaterializeCopiedTemplateBatch(peek.TemplateId, template, batchCount);
                             continue;
                         }
 
@@ -221,11 +216,7 @@ namespace Ludots.Core.Gameplay.Spawning
                         }
 
                         var singleRequest = _batchRequests[0];
-                        var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
-                        PublishSpawnReceipt(in singleRequest, spawnedSingle);
-                        PublishOnSpawnEffect(in singleRequest, spawnedSingle);
-                        MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
-                        MountTemplateInitialInteractionContext(spawnedSingle, peek.TemplateId, template);
+                        MaterializePrepared(in singleRequest, in singleRelationshipPlan);
                         continue;
                     }
 
@@ -241,22 +232,123 @@ namespace Ludots.Core.Gameplay.Spawning
                     break;
                 }
 
-                var spawned = request.Kind switch
-                {
-                    RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request, in relationshipPlan),
-                    RuntimeEntitySpawnKind.Template => SpawnTemplate(request, in relationshipPlan),
-                    RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request, in relationshipPlan),
-                    _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
-                };
+                MaterializePrepared(in request, in relationshipPlan);
+            }
+        }
 
-                PublishOnSpawnEffect(in request, spawned);
-                PublishSpawnReceipt(in request, spawned);
-                if (request.Kind == RuntimeEntitySpawnKind.Template &&
-                    TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+        /// <summary>
+        /// 同步物化调用方给出的这批请求。批车道、初始化器、回执、归属和 presenter 引导
+        /// 与 <see cref="Update"/> 出队之后的路径相同，不读不写阶段队列。
+        /// 模板 children 在这次调用里继续物化，也不进阶段队列。
+        /// EffectProcessing 里的 <see cref="Update"/> 仍只排空阶段队列。
+        /// </summary>
+        public void Materialize(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
+        {
+            if (_materializingDirect)
+            {
+                throw new InvalidOperationException("SPAWN.RUNTIME.ERR.MaterializeReentered");
+            }
+
+            _materializingDirect = true;
+            try
+            {
+                MaterializeSpan(requests);
+                int cursor = 0;
+                while (_directChildren != null && cursor < _directChildren.Count)
                 {
-                    MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
-                    MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
+                    RuntimeEntitySpawnRequest child = _directChildren[cursor++];
+                    MaterializeSpan(MemoryMarshal.CreateReadOnlySpan(ref child, 1));
                 }
+            }
+            finally
+            {
+                _materializingDirect = false;
+                _directChildren?.Clear();
+            }
+        }
+
+        private bool _materializingDirect;
+        private List<RuntimeEntitySpawnRequest>? _directChildren;
+
+        private void MaterializeSpan(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
+        {
+            int index = 0;
+            while (index < requests.Length)
+            {
+                RuntimeEntitySpawnRequest peek = requests[index];
+                if (peek.Kind == RuntimeEntitySpawnKind.Template &&
+                    !HasComponentPatches(in peek) &&
+                    !string.IsNullOrWhiteSpace(peek.TemplateId) &&
+                    TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
+                    _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
+                {
+                    int batchCount = CopyTemplateBatchFromSpan(requests, index);
+                    if (batchCount > 1)
+                    {
+                        PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                        MaterializeCopiedTemplateBatch(peek.TemplateId, template, batchCount);
+                        index += batchCount;
+                        continue;
+                    }
+
+                    if (batchCount == 1)
+                    {
+                        RuntimeEntitySpawnRequest singleRequest = _batchRequests[0];
+                        SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in singleRequest);
+                        MaterializePrepared(in singleRequest, in singleRelationshipPlan);
+                        index++;
+                        continue;
+                    }
+                }
+
+                MaterializePrepared(in peek, PreflightSingleSpawnBeforeDrain(in peek));
+                index++;
+            }
+        }
+
+        private int CopyTemplateBatchFromSpan(ReadOnlySpan<RuntimeEntitySpawnRequest> requests, int index)
+        {
+            string templateId = requests[index].TemplateId;
+            ushort initializerKind = requests[index].InstanceInitializerKind;
+            int count = 0;
+            while (index + count < requests.Length &&
+                   count < _batchRequests.Length &&
+                   IsTemplateBatchMember(templateId, initializerKind, requests[index + count]))
+            {
+                _batchRequests[count] = requests[index + count];
+                count++;
+            }
+
+            return count;
+        }
+
+        private void MaterializeCopiedTemplateBatch(string templateId, EntityTemplate template, int batchCount)
+        {
+            if (!TrySpawnTemplateBatch(templateId, template, batchCount))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch spawn failed after template '{templateId}' was classified as batch-compatible. " +
+                    "The production path must stay on the validated bulk lane.");
+            }
+        }
+
+        private void MaterializePrepared(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
+        {
+            var spawned = request.Kind switch
+            {
+                RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request, in relationshipPlan),
+                RuntimeEntitySpawnKind.Template => SpawnTemplate(request, in relationshipPlan),
+                RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request, in relationshipPlan),
+                _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
+            };
+
+            PublishOnSpawnEffect(in request, spawned);
+            PublishSpawnReceipt(in request, spawned);
+            if (request.Kind == RuntimeEntitySpawnKind.Template &&
+                TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+            {
+                MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
             }
         }
 
@@ -528,6 +620,22 @@ namespace Ludots.Core.Gameplay.Spawning
 
         }
 
+        private void EnqueueFollowup(in RuntimeEntitySpawnRequest request, string parentTemplateId, string childTemplateId)
+        {
+            if (_materializingDirect)
+            {
+                _directChildren ??= new List<RuntimeEntitySpawnRequest>(4);
+                _directChildren.Add(request);
+                return;
+            }
+
+            if (!_requests.TryEnqueue(in request))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{parentTemplateId}', child='{childTemplateId}'.");
+            }
+        }
+
         private void EnqueueChildNodes(
             List<EntityTemplateChild> children,
             in RuntimeEntitySpawnRequest request,
@@ -611,11 +719,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     InstanceId = request.InstanceId,
                     AddressablePath = childPath,
                 };
-                if (!_requests.TryEnqueue(in childRequest))
-                {
-                    throw new InvalidOperationException(
-                        $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
-                }
+                EnqueueFollowup(in childRequest, request.TemplateId, child.Template);
             }
         }
 
