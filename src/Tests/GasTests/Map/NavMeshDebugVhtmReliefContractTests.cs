@@ -47,16 +47,36 @@ namespace Ludots.Tests.Gas
               "dependencies": { "LudotsCoreMod": "^1.0.0" }
             }
             """);
+            File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "pathing.json"), """
+            {
+              "agentTypes": {
+                "Humanoid": {
+                  "profileId": "Small",
+                  "navMesh": {
+                    "areaCosts": [
+                      { "areaId": 0, "cost": 1.0 },
+                      { "areaId": 1, "cost": 1.0 },
+                      { "areaId": 2, "cost": 1.0 }
+                    ]
+                  }
+                }
+              }
+            }
+            """);
             File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "navmesh.json"), """
             {
               "mode": "runtime-incremental",
               "algorithm": "recast",
-              "profiles": [{ "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }],
+              "profiles": {
+                "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" },
+                "Medium": { "maxClimbCm": 45, "maxSlopeDeg": 45, "agentProfileId": "Medium" },
+                "Large": { "maxClimbCm": 50, "maxSlopeDeg": 40, "agentProfileId": "Large" }
+              },
               "layers": [{ "id": "ground", "layer": 0 }],
-              "areas": [
-                { "id": "mud", "areaId": 1, "cost": 2.0 },
-                { "id": "road", "areaId": 2, "cost": 0.7 }
-              ],
+              "areas": {
+                "mud": { "areaId": 1, "slopeFree": false },
+                "road": { "areaId": 2, "slopeFree": false }
+              },
               "runtimeIncremental": {
                 "tileBudgetPerFixedTick": 4,
                 "includeNeighborTiles": true,

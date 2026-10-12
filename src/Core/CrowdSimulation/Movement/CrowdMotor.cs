@@ -113,8 +113,8 @@ public static class CrowdMotor
             // 格边界上与参考的 1 ulp 差属双数值系残余,不可在此框架内消除。
             int cx = CrowdSimulationSpace.NavCellCoord(px, navCellSizeCm), cy = CrowdSimulationSpace.NavCellCoord(py, navCellSizeCm);
             Fix64 spd = k.Speeds[i];
-            Fix64 costHere = (lv != 0 ? nav.UpCost : nav.Cost)[cy * navN + cx];
-            spd = spd / (costHere == Fix64.Zero ? Fix64.OneValue : costHere);
+            Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cy * navN + cx];
+            spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
             Fix64 slow2 = spd * spd * stop2;
 
             // 静止单位(闲置/到达/不可达)对轻接触(deadband)不让步,软让步并停稳

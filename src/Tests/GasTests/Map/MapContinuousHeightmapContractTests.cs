@@ -47,16 +47,16 @@ namespace Ludots.Tests.Gas
                 "draftCm": 0,
                 "beamCm": 0,
                 "mass": 1,
-                "layer": 0
+                "layer": 0,
+                "navProfileId": "Small"
               }
             ]
             """);
 
             File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "pathing.json"), """
             {
-              "agentTypes": [
-                {
-                  "id": "Humanoid",
+              "agentTypes": {
+                "Humanoid": {
                   "profileId": "Small",
                   "selection": {
                     "mode": "AutoCheapest",
@@ -78,7 +78,7 @@ namespace Ludots.Tests.Gas
                     "tagCostRules": []
                   }
                 }
-              ]
+              }
             }
             """);
 

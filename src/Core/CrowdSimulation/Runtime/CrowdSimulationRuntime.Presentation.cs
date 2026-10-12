@@ -40,7 +40,7 @@ public sealed partial class CrowdSimulationRuntime
     public bool ReleasePathPresentation(GameEngine engine, MapId mapId)
     {
         if (_pathDemo == null || _configDto == null || _presentation == null) return false;
-        if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
+        if (!string.Equals(mapId.Value, _focusedCrowdMapId, StringComparison.Ordinal)) return false;
         if (_presentation.Kind != CrowdPresentationConfig.KindPath) return false;
         DetachPath(engine);
         if (_projectorSlot != null) _projectorSlot.Current = null;
@@ -50,7 +50,7 @@ public sealed partial class CrowdSimulationRuntime
     public bool ReleaseDeployPresentation(GameEngine engine, MapId mapId)
     {
         if (_deployDemo == null || _configDto == null || _presentation == null) return false;
-        if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
+        if (!string.Equals(mapId.Value, _focusedCrowdMapId, StringComparison.Ordinal)) return false;
         if (_presentation.Kind != CrowdPresentationConfig.KindDeploy) return false;
         DetachDeploy(engine);
         if (_projectorSlot != null) _projectorSlot.Current = null;

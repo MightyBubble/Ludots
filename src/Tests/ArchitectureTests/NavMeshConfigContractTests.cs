@@ -125,24 +125,26 @@ namespace Ludots.Tests.Architecture
         {
             string repoRoot = FindRepoRoot();
             JsonObject navmesh = ReadObject(Path.Combine(repoRoot, "assets", "Navigation", "navmesh.json"));
-            JsonArray navProfiles = navmesh["profiles"]?.AsArray()
+            JsonObject navProfiles = navmesh["profiles"]?.AsObject()
                 ?? throw new InvalidOperationException("Navigation/navmesh.json profiles missing.");
-            foreach (JsonNode? node in navProfiles)
+            foreach (var entry in navProfiles)
             {
-                JsonObject profile = node?.AsObject()
+                JsonObject profile = entry.Value?.AsObject()
                     ?? throw new InvalidOperationException("Navigation/navmesh.json profile entries must be objects.");
                 Assert.That(profile.ContainsKey("radiusCm"), Is.False);
                 Assert.That(profile.ContainsKey("heightCm"), Is.False);
+                Assert.That(profile.ContainsKey("id"), Is.False);
             }
 
             JsonObject pathing = ReadObject(Path.Combine(repoRoot, "assets", "Navigation", "pathing.json"));
-            JsonArray agentTypes = pathing["agentTypes"]?.AsArray()
+            JsonObject agentTypes = pathing["agentTypes"]?.AsObject()
                 ?? throw new InvalidOperationException("Navigation/pathing.json agentTypes missing.");
-            foreach (JsonNode? node in agentTypes)
+            foreach (var entry in agentTypes)
             {
-                JsonObject agentType = node?.AsObject()
+                JsonObject agentType = entry.Value?.AsObject()
                     ?? throw new InvalidOperationException("Navigation/pathing.json agentTypes entries must be objects.");
                 Assert.That(agentType.ContainsKey("layer"), Is.False);
+                Assert.That(agentType.ContainsKey("id"), Is.False);
             }
         }
 
@@ -286,6 +288,7 @@ namespace Ludots.Tests.Architecture
                 new AgentProfileConfig
                 {
                     Id = "Small",
+                    NavProfileId = "Small",
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,
@@ -300,13 +303,13 @@ namespace Ludots.Tests.Architecture
                 {
                   "mode": "offline",
                   "algorithm": "recast",
-                  "profiles": [
-                    { "id": "Small", "radiusCm": 30, "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
+                  "profiles": {
+                    "Small": { "radiusCm": 30, "maxClimbCm": 40, "maxSlopeDeg": 45 }
+                  },
                   "layers": [
                     { "id": "Ground", "layer": 0 }
                   ],
-                  "areas": [],
+                  "areas": {},
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 1,
                     "includeNeighborTiles": true,
@@ -319,16 +322,15 @@ namespace Ludots.Tests.Architecture
                 pathingJson:
                 """
                 {
-                  "agentTypes": [
-                    {
-                      "id": "Humanoid",
+                  "agentTypes": {
+                    "Humanoid": {
                       "profileId": "Small",
                       "layer": 0,
                       "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
                       "navMesh": { "areaCosts": [] },
                       "nodeGraph": { "projectionMaxRadiusCm": 1, "useDynamicOverlay": false, "forbiddenTagsAny": [], "requiredTagsAll": [], "tagCostRules": [] }
                     }
-                  ]
+                  }
                 }
                 """);
 
@@ -414,8 +416,15 @@ namespace Ludots.Tests.Architecture
             {
                 ["mode"] = "offline",
                 ["algorithm"] = "recast",
-                ["profiles"] = new System.Text.Json.Nodes.JsonArray(
-                    new System.Text.Json.Nodes.JsonObject { ["id"] = "Small", ["maxClimbCm"] = 40, ["maxSlopeDeg"] = 55 }),
+                ["profiles"] = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["Small"] = new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["maxClimbCm"] = 40,
+                        ["maxSlopeDeg"] = 55,
+                        ["agentProfileId"] = "Small"
+                    }
+                },
                 ["layers"] = new System.Text.Json.Nodes.JsonArray(
                     new System.Text.Json.Nodes.JsonObject { ["id"] = "ground", ["layer"] = 0 })
             };
@@ -429,7 +438,15 @@ namespace Ludots.Tests.Architecture
             }
             var mapsNode = navmesh["maps"] as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
             navmesh["maps"] = mapsNode;
-            var mapNode = new System.Text.Json.Nodes.JsonObject();
+            var mapNode = new System.Text.Json.Nodes.JsonObject
+            {
+                ["navProfiles"] = new System.Text.Json.Nodes.JsonArray(
+                    System.Text.Json.Nodes.JsonValue.Create("Small"),
+                    System.Text.Json.Nodes.JsonValue.Create("Medium"),
+                    System.Text.Json.Nodes.JsonValue.Create("Large")),
+                ["navAreas"] = new System.Text.Json.Nodes.JsonArray(
+                    System.Text.Json.Nodes.JsonValue.Create("Default"))
+            };
             mapsNode[mapId] = mapNode;
             var boardsNode = new System.Text.Json.Nodes.JsonObject();
             mapNode["boards"] = boardsNode;

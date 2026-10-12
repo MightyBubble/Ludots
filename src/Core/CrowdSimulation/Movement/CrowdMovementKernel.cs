@@ -144,9 +144,9 @@ public sealed class CrowdMovementKernel
             kins[i] = world.Get<CrowdSimulation.Units.CrowdSimulationKinematics>(e);
             positions[i] = world.Get<Ludots.Core.Components.WorldPositionCm>(e).Value;
             var agent = world.Get<CrowdSimulationAgent>(e);
-            speeds[i] = agent.ResolvedSpeed;
-            radii[i] = agent.ResolvedPersonalRadiusCm;
-            push[i] = agent.ResolvedPushPriority;
+            speeds[i] = agent.SpeedCmPerSecond;
+            radii[i] = agent.PersonalRadiusCm;
+            push[i] = agent.PushPriority;
             playerIdx[i] = playerIndex[world.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(e).PlayerId];
         }
 
@@ -411,7 +411,7 @@ public sealed class CrowdMovementKernel
             for (int li = 0; li < leaders.Count; li++)
             {
                 leaders[li].Step(
-                    Session.LayerSpeedCmPerSecond(leaders[li].LayerIdx),
+                    leaders[li].PaceCmPerSecond,
                     LeaderSpeed, turnK, faceStep, dt,
                     Session.Config.NavCellSizeCm, Session.Config.NavCellsPerSide);
             }

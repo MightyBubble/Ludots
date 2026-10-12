@@ -23,7 +23,6 @@ namespace Ludots.Core.Navigation.NavMesh
                 if (p == null) throw new InvalidOperationException("NavMeshBakeConfig.profiles contains null.");
                 if (string.IsNullOrWhiteSpace(p.Id)) throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
                 if (_indexById.ContainsKey(p.Id)) throw new InvalidOperationException($"Duplicate NavMesh profile id: {p.Id}");
-                agentProfiles.Require(p.Id, "NavMeshBakeConfig.profiles");
                 _indexById[p.Id] = i;
                 _idsByIndex.Add(p.Id);
             }

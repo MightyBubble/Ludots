@@ -88,21 +88,22 @@ public sealed class RuntimeJumpCapability
 public sealed class RuntimeAgentType
 {
     public required string Id { get; init; }
-    public required int Layer { get; init; }
-    /// <summary>代价 1 地面上的速度（厘米 / 仿真秒）。</summary>
-    public required Fix64 SpeedCmPerSecond { get; init; }
-    public required int PushPriority { get; init; }
+    /// <summary>
+    /// 被单位模板引用的 pathing agent type，按合并后的属性顺序编号。
+    /// 体型档案的 layer 是 NavTile 层，不参与这个编号。
+    /// </summary>
+    public required int AgentTypeIndex { get; init; }
     public required int NavProfileIndex { get; init; }
-    /// <summary>按导航区域下标的通行代价；0 = 不可通行（配置中未写的区域）。</summary>
+    /// <summary>按下标 = areaId 的通行代价。passable 为 false 时为 0。</summary>
     public required Fix64[] CostByArea { get; init; }
+    /// <summary>按下标 = areaId 的速度除数。未写 speedDivisor 时与代价相同；不可通行为 0。</summary>
+    public required Fix64[] SpeedDivisorByArea { get; init; }
 }
 
 public sealed class RuntimeUnitType
 {
     public required string Id { get; init; }
     public required int AgentTypeIndex { get; init; }
-    /// <summary>特殊单位(不参与批量部署,只能由生成工具点名)。</summary>
-    public bool Special { get; init; }
     /// <summary>半径级(厘米)→ 单位实体模板 id;生成管线按(兵种 × 半径级)实例化模板。</summary>
     public required IReadOnlyDictionary<int, string>? TemplatesByRadiusCm { get; init; }
 }
@@ -113,12 +114,16 @@ public sealed class RuntimeAgentProfile
     public required Fix64 RadiusCm { get; init; }
     /// <summary>个人避让半径（厘米）= 半径 × avoidanceRadiusScale。</summary>
     public required Fix64 PersonalRadiusCm { get; init; }
-    /// <summary>推挤优先级（移动类型份额 + 半径级份额）。</summary>
+    /// <summary>推挤优先级，来自单位模板，不再由半径级份额合成。</summary>
     public required Fix64 PushPriority { get; init; }
+    /// <summary>该模板的速度（厘米 / 仿真秒）。领队步伐取同组最小，子步数取实际绑定模板的最大。</summary>
+    public required Fix64 SpeedCmPerSecond { get; init; }
+    /// <summary>true 不参与批量部署。同一移动类型的模板不必相同。</summary>
+    public required bool Special { get; init; }
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>
     public required int ClearanceNavCells { get; init; }
-    /// <summary>导航上下文 id = layer × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + clearance（数值键，禁止字符串拼接）。</summary>
+    /// <summary>导航上下文 id = AgentTypeIndex × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + clearance（数值键，禁止字符串拼接）。</summary>
     public required int NavContextId { get; init; }
 }
 

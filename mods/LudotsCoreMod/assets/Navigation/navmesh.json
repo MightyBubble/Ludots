@@ -6,7 +6,15 @@
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "navProfiles": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     },
     "navmesh_debug_openworld": {
       "boards": {
@@ -14,7 +22,13 @@
           "tileWorldWidthCm": 25600,
           "tileWorldHeightCm": 25600
         }
-      }
+      },
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     },
     "navmesh_debug_vhtm": {
       "boards": {
@@ -22,7 +36,13 @@
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     }
   }
 }

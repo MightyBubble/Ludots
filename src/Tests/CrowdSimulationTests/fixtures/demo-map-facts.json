@@ -1,8 +1,4 @@
 {
-  "mapId": "crowd_simulation_demo",
-  "world": {
-    "surfaceAsset": "terrain/crowd_simulation_demo.navsurface"
-  },
   "deploy": {
     "bases": [
       {

@@ -109,6 +109,7 @@ using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Hosting;
@@ -4315,8 +4316,19 @@ namespace Ludots.Core.Engine
                 ?? throw new InvalidOperationException("NavMesh bootstrap requires AgentProfiles.");
             var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
-            var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
+            if (bakeConfig.Maps == null ||
+                !bakeConfig.Maps.TryGetValue(mapId, out var declaredMap) ||
+                declaredMap?.NavProfiles == null ||
+                declaredMap.NavProfiles.Count == 0)
+            {
+                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.navProfiles is required.");
+            }
+
+            List<NavMeshAgentProfileConfig> capabilityProfiles = NavMapDeclaration.ResolveNavProfiles(
+                bakeConfig,
+                declaredMap.NavProfiles,
+                mapId);
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
 
@@ -4384,9 +4396,13 @@ namespace Ludots.Core.Engine
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
-                for (int pi = 0; pi < profileRegistry.Count; pi++)
+                for (int pi = 0; pi < capabilityProfiles.Count; pi++)
                 {
-                    int profileIndex = pi;
+                    if (!profileRegistry.TryGetIndex(capabilityProfiles[pi].Id, out int profileIndex))
+                    {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.profiles '{capabilityProfiles[pi].Id}' is not registered.");
+                    }
                     var uriCache = new Dictionary<NavTileId, string>(256);
 
                     string ResolveTileUri(NavTileId id)
@@ -4437,7 +4453,7 @@ namespace Ludots.Core.Engine
                     SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
                     Terrain = LogicTerrain,
                     Obstacles = runtimeObstacles,
-                    Config = bakeConfig,
+                    Config = NavMapDeclaration.WithProfiles(bakeConfig, capabilityProfiles),
                     AgentProfiles = agentProfiles,
                     Targets = new[] { new NavBakeTileCoord(0, 0) },
                     BuildConfig = new NavBuildConfig(
@@ -4520,7 +4536,6 @@ namespace Ludots.Core.Engine
                 rebuildQueue.Dispose();
             }
 
-            RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
             RemoveService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles);
@@ -4537,7 +4552,11 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var pathingCatalog = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var bakeForPathing = LoadNavMeshBakeConfig();
+            SetService(CoreServiceKeys.NavMeshBakeConfig, bakeForPathing);
+            var pathingConfig = pathingCatalog;
+
             var pathStore = new PathStore(PathStoreMaxPaths, PathStoreMaxPointsPerPath);
             LoadedGraphRuntime loadedGraphRuntime = null;
             IPathService nodeGraphService = null;
@@ -4554,11 +4573,34 @@ namespace Ludots.Core.Engine
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
+            string mapId = session.MapId.Value;
+            NavMapAgentBinding mapBinding = NavMapAgentBinding.Create(
+                mapId,
+                IsNavTagged(session.MapConfig),
+                bakeForPathing,
+                pathingConfig,
+                agentProfiles,
+                CrowdAgentTypeIds(bakeForPathing, mapId));
+            NavSessionBinding.Set(mapBinding);
+            if (mapBinding.BoundAgents.Count > 0)
+            {
+                var referencedAgentProfiles = new List<string>(mapBinding.BoundAgents.Count);
+                for (int i = 0; i < mapBinding.BoundAgents.Count; i++)
+                {
+                    PathingAgentTypeConfig agent = mapBinding.BoundAgents[i];
+                    referencedAgentProfiles.Add(agent.ProfileId);
+                    PathingAreaCosts.RequireComplete(agent, mapBinding.NavAreas);
+                }
+
+                NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(bakeForPathing, agentProfiles, referencedAgentProfiles);
+            }
+
             var graphEdgeCostOverlay = GetService(CoreServiceKeys.GraphEdgeCostOverlay);
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
-            bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
+            bool requiresNavMeshPathing = mapBinding.RequiresMeshQueries;
             bool requiresOnlyDirectPathing = RequiresOnlyDirectPathing(pathingConfig);
+            var meshScope = new NavMapQueryScope(mapId, mapBinding.MeshQueryProfileIds);
 
             if (loadedGraphRuntime == null && !hasNavServices && !requiresOnlyDirectPathing)
             {
@@ -4582,20 +4624,20 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
+                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore, meshScope);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay, meshScope);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
                 {
-                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay, meshScope);
                 }
             }
             else if (loadedGraphRuntime != null)
             {
-                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay, meshScope);
             }
             else
             {
@@ -4613,6 +4655,7 @@ namespace Ludots.Core.Engine
 
         private void ClearPathingServices()
         {
+            NavSessionBinding.Clear();
             RemoveService(CoreServiceKeys.PathingConfig);
             RemoveService(CoreServiceKeys.PathStore);
             RemoveService(CoreServiceKeys.PathService);
@@ -4644,29 +4687,49 @@ namespace Ludots.Core.Engine
             return false;
         }
 
-        private static bool RequiresNavMeshPathing(PathingConfig pathingConfig)
+        private static bool IsNavTagged(MapConfig mapConfig)
         {
-            if (pathingConfig?.AgentTypes == null)
+            if (mapConfig?.Tags == null)
             {
                 return false;
             }
 
-            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            for (int i = 0; i < mapConfig.Tags.Count; i++)
             {
-                var agent = pathingConfig.AgentTypes[i];
-                if (agent == null)
-                {
-                    continue;
-                }
-
-                if (agent.Selection?.Mode == PathSelectionMode.AutoCheapest ||
-                    agent.Selection?.Mode == PathSelectionMode.PreferMesh)
+                if (string.Equals(mapConfig.Tags[i], MapTags.FeatureNavMeshOn.Name, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private List<string> CrowdAgentTypeIds(NavMeshBakeConfig bake, string mapId)
+        {
+            var ids = new List<string>();
+            if (bake?.Maps == null ||
+                !bake.Maps.TryGetValue(mapId, out NavMapNavBoardsConfig mapNav) ||
+                mapNav?.TerrainAreas == null ||
+                mapNav.TerrainAreas.Count == 0 ||
+                MapLoader?.TemplateRegistry == null)
+            {
+                return ids;
+            }
+
+            foreach (EntityTemplate template in MapLoader.TemplateRegistry.GetAll())
+            {
+                if (template?.Components == null ||
+                    !template.Components.TryGetValue("CrowdSimulationAgent", out JsonNode node) ||
+                    node is not JsonObject obj)
+                {
+                    continue;
+                }
+
+                ids.Add(CrowdUnitTemplateFacts.Parse(template.Id, obj).AgentTypeId);
+            }
+
+            return ids;
         }
 
         private static bool RequiresOnlyDirectPathing(PathingConfig pathingConfig)
@@ -4693,71 +4756,31 @@ namespace Ludots.Core.Engine
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
             AgentProfileRegistry agentProfiles,
-            PathStore pathStore)
+            PathStore pathStore,
+            NavMapQueryScope meshScope)
         {
-            if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
-            {
-                throw new InvalidOperationException("PathingConfig.agentTypes must define at least one agent type for navmesh path service bootstrap.");
-            }
-
-            var agent = pathingConfig.AgentTypes[0];
-            if (agent == null || !navProfiles.TryGetIndex(agent.ProfileId, out int profileIndex))
-            {
-                throw new InvalidOperationException(
-                    $"PathingConfig default agent profileId '{agent?.ProfileId ?? "<null>"}' is not registered in navmesh profiles.");
-            }
-
-            AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
-            var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
-            {
-                throw new InvalidOperationException(
-                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");
-            }
-
-            return new NavMeshPathServiceAdapter(query, pathStore);
+            return new NavMeshPathServiceAdapter(navRegistry, navProfiles, agentProfiles, pathingConfig, pathStore, meshScope);
         }
 
-        private static NavAreaCostTable BuildPathNavAreaCosts(PathingNavMeshConfig cfg)
-        {
-            var arr = new Fix64[256];
-            for (int i = 0; i < arr.Length; i++)
-            {
-                arr[i] = Fix64.OneValue;
-            }
-
-            if (cfg?.AreaCosts != null)
-            {
-                for (int i = 0; i < cfg.AreaCosts.Count; i++)
-                {
-                    var area = cfg.AreaCosts[i];
-                    if (area == null)
-                    {
-                        continue;
-                    }
-
-                    if (area.AreaId < 0 || area.AreaId > 255)
-                    {
-                        throw new InvalidOperationException($"Invalid pathing areaId: {area.AreaId}");
-                    }
-
-                    if (area.Cost <= 0f || float.IsNaN(area.Cost))
-                    {
-                        throw new InvalidOperationException($"Invalid pathing cost for areaId={area.AreaId}");
-                    }
-
-                    arr[area.AreaId] = Fix64.FromFloat(area.Cost);
-                }
-            }
-
-            return new NavAreaCostTable(arr);
-        }
+        private NavMeshBakeConfig _navMeshBakeConfig;
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
         {
+            if (_navMeshBakeConfig != null)
+            {
+                return _navMeshBakeConfig;
+            }
+
+            if (TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig loaded) && loaded != null)
+            {
+                _navMeshBakeConfig = loaded;
+                return loaded;
+            }
+
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
-            return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+            _navMeshBakeConfig = new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+            return _navMeshBakeConfig;
         }
 
         private string ResolveSingleExistingUri(string relPath)
@@ -4801,24 +4824,6 @@ namespace Ludots.Core.Engine
             }
             uri = null;
             return false;
-        }
-
-        private static NavAreaCostTable BuildAreaCostTable(NavMeshBakeConfig cfg)
-        {
-            var arr = new Fix64[256];
-            for (int i = 0; i < arr.Length; i++) arr[i] = Fix64.OneValue;
-            if (cfg?.Areas != null)
-            {
-                for (int i = 0; i < cfg.Areas.Count; i++)
-                {
-                    var a = cfg.Areas[i];
-                    if (a == null) continue;
-                    if (a.AreaId < 0 || a.AreaId > 255) throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid areaId: {a.AreaId}");
-                    if (a.Cost <= 0) throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid cost for areaId={a.AreaId}");
-                    arr[a.AreaId] = Fix64.FromFloat(a.Cost);
-                }
-            }
-            return new NavAreaCostTable(arr);
         }
 
         public void LoadEntryMap(string mapId)

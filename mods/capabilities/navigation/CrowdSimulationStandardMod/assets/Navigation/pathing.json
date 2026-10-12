@@ -1,0 +1,235 @@
+{
+  "agentTypes": {
+    "foot": {
+      "profileId": "foot_r100",
+      "navMesh": {
+        "areaCosts": [
+          {
+            "areaId": 0,
+            "cost": 1
+          },
+          {
+            "areaId": 1,
+            "cost": 1.3
+          },
+          {
+            "areaId": 5,
+            "cost": 0.7
+          },
+          {
+            "areaId": 6,
+            "cost": 1
+          },
+          {
+            "areaId": 7,
+            "cost": 3
+          },
+          {
+            "areaId": 8,
+            "cost": 8
+          },
+          {
+            "areaId": 2,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 4,
+            "cost": 1,
+            "passable": false
+          }
+        ]
+      }
+    },
+    "hull": {
+      "profileId": "hull_r100",
+      "navMesh": {
+        "areaCosts": [
+          {
+            "areaId": 4,
+            "cost": 1
+          },
+          {
+            "areaId": 1,
+            "cost": 1.6
+          },
+          {
+            "areaId": 7,
+            "cost": 1.2
+          },
+          {
+            "areaId": 0,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 2,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 5,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 6,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 8,
+            "cost": 1,
+            "passable": false
+          }
+        ]
+      }
+    },
+    "climber": {
+      "profileId": "climber_r100",
+      "navMesh": {
+        "areaCosts": [
+          {
+            "areaId": 0,
+            "cost": 1
+          },
+          {
+            "areaId": 1,
+            "cost": 1.4
+          },
+          {
+            "areaId": 2,
+            "cost": 1.8
+          },
+          {
+            "areaId": 5,
+            "cost": 0.8
+          },
+          {
+            "areaId": 6,
+            "cost": 1
+          },
+          {
+            "areaId": 7,
+            "cost": 3.5
+          },
+          {
+            "areaId": 8,
+            "cost": 8
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 4,
+            "cost": 1,
+            "passable": false
+          }
+        ]
+      }
+    },
+    "amphib": {
+      "profileId": "amphib_r100",
+      "navMesh": {
+        "areaCosts": [
+          {
+            "areaId": 4,
+            "cost": 1.5
+          },
+          {
+            "areaId": 1,
+            "cost": 1
+          },
+          {
+            "areaId": 0,
+            "cost": 1.1
+          },
+          {
+            "areaId": 5,
+            "cost": 0.9
+          },
+          {
+            "areaId": 6,
+            "cost": 1
+          },
+          {
+            "areaId": 7,
+            "cost": 1
+          },
+          {
+            "areaId": 2,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 8,
+            "cost": 1,
+            "passable": false
+          }
+        ]
+      }
+    },
+    "leaper": {
+      "profileId": "leaper_r100",
+      "navMesh": {
+        "areaCosts": [
+          {
+            "areaId": 1,
+            "cost": 1.2
+          },
+          {
+            "areaId": 0,
+            "cost": 1
+          },
+          {
+            "areaId": 2,
+            "cost": 1.6
+          },
+          {
+            "areaId": 5,
+            "cost": 0.8
+          },
+          {
+            "areaId": 6,
+            "cost": 1
+          },
+          {
+            "areaId": 7,
+            "cost": 3
+          },
+          {
+            "areaId": 8,
+            "cost": 6
+          },
+          {
+            "areaId": 3,
+            "cost": 1,
+            "passable": false
+          },
+          {
+            "areaId": 4,
+            "cost": 1,
+            "passable": false
+          }
+        ]
+      }
+    }
+  }
+}

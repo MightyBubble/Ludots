@@ -188,7 +188,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 NavMeshAgentProfileConfig navProfile = context.Config.Profiles[i]
                     ?? throw new InvalidOperationException($"NavBakeContext.config.profiles[{i}] is null.");
-                AgentProfileConfig agentProfile = context.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
+                AgentProfileConfig agentProfile = context.Algorithm == NavBakeAlgorithmKind.Recast
+                    ? NavCapabilityBakeBody.RequireRecast(context.AgentProfiles, navProfile)
+                    : NavCapabilityBakeBody.RequireBody(context.AgentProfiles, navProfile);
                 int profileTileX = maxTileSizeXVoxels;
                 int profileTileZ = maxTileSizeZVoxels;
                 int profileCellCm = cellCm;
@@ -328,9 +330,28 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxClimbCm >= 0.");
             }
 
-            if (navProfile.MaxSlopeDeg < 0f || navProfile.MaxSlopeDeg >= 90f || float.IsNaN(navProfile.MaxSlopeDeg))
+            float slopeDeg;
+            float minWalkableUpDot;
+            if (algorithm == NavBakeAlgorithmKind.Recast)
             {
-                throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxSlopeDeg >= 0 and < 90.");
+                slopeDeg = NavCapabilityBakeBody.RequireRecastSlope(navProfile);
+                minWalkableUpDot = MathF.Cos(slopeDeg * MathF.PI / 180f);
+            }
+            else if (navProfile.MaxSlopeDeg is not float authoredSlope)
+            {
+                // 省略 = 不限坡度。180° 只是估计字段的占位，行走点积固定为 -1，不把 0 当成不限。
+                slopeDeg = 180f;
+                minWalkableUpDot = -1f;
+            }
+            else if (authoredSlope <= 0f || authoredSlope >= 90f || float.IsNaN(authoredSlope))
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.profile '{navProfile.Id}'.maxSlopeDeg 省略表示不限坡度；写出的值必须 > 0 且 < 90。");
+            }
+            else
+            {
+                slopeDeg = authoredSlope;
+                minWalkableUpDot = MathF.Cos(slopeDeg * MathF.PI / 180f);
             }
 
             float recastCellSizeCm = 0f;
@@ -368,12 +389,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return new NavBakeProfileEstimate
             {
                 ProfileId = navProfile.Id,
-                AgentRadiusCm = agentProfile.RadiusCm,
-                AgentHeightCm = agentProfile.HeightCm,
-                AgentClearanceCm = agentProfile.ClearanceCm,
+                AgentRadiusCm = agentProfile?.RadiusCm ?? 0f,
+                AgentHeightCm = agentProfile?.HeightCm ?? 0f,
+                AgentClearanceCm = agentProfile?.ClearanceCm ?? 0f,
                 MaxClimbCm = navProfile.MaxClimbCm,
-                MaxSlopeDeg = navProfile.MaxSlopeDeg,
-                MinWalkableUpDot = MathF.Cos(navProfile.MaxSlopeDeg * MathF.PI / 180f),
+                MaxSlopeDeg = slopeDeg,
+                MinWalkableUpDot = minWalkableUpDot,
                 RecastCellSizeCm = recastCellSizeCm,
                 RecastCellHeightCm = recastCellHeightCm,
                 RecastColumnsPerAxis = columnsPerAxis,
@@ -467,15 +488,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         buffer[1] = cell.WaterHeightLevel;
                         buffer[2] = (byte)cell.SurfaceFlags;
                         buffer[3] = cell.AreaId;
-                        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(4, 4), BitConverter.SingleToInt32Bits(cell.Cost));
                         for (int edge = 0; edge < 3; edge++)
                         {
-                            buffer[8 + edge] = context.Terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
+                            buffer[4 + edge] = context.Terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
                                 ? (byte)1
                                 : (byte)0;
                         }
 
-                        hash.AppendData(buffer.Slice(0, 11));
+                        hash.AppendData(buffer.Slice(0, 7));
                     }
                 }
             }
@@ -560,13 +580,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             for (int i = 0; i < profiles.Count; i++)
             {
                 NavMeshAgentProfileConfig navProfile = profiles[i];
-                AgentProfileConfig agent = agentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
+                AgentProfileConfig agent = NavCapabilityBakeBody.RequireBody(agentProfiles, navProfile);
+                string slopeText = navProfile.MaxSlopeDeg?.ToString("R", CultureInfo.InvariantCulture) ?? "unlimited";
                 sb.Append(navProfile.Id).Append(':')
                     .Append(navProfile.MaxClimbCm).Append(':')
-                    .Append(navProfile.MaxSlopeDeg.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.RadiusCm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.HeightCm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
-                    .Append(agent.ClearanceCm.ToString("R", CultureInfo.InvariantCulture)).Append(';');
+                    .Append(slopeText).Append(':')
+                    .Append((agent?.RadiusCm ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(':')
+                    .Append((agent?.HeightCm ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(':')
+                    .Append((agent?.ClearanceCm ?? 0f).ToString("R", CultureInfo.InvariantCulture)).Append(';');
             }
             sb.Append('|');
         }

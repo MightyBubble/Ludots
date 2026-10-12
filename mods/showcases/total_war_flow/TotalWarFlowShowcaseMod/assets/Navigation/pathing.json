@@ -1,7 +1,6 @@
 {
-  "agentTypes": [
-    {
-      "id": "tw.agent",
+  "agentTypes": {
+    "tw.agent": {
       "profileId": "tw.agent",
       "selection": {
         "mode": "PreferMesh",
@@ -26,5 +25,5 @@
         "tagCostRules": []
       }
     }
-  ]
+  }
 }

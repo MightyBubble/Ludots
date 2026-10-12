@@ -157,10 +157,21 @@ public class S1SurfaceTruthTests
         ConfigPipeline.DeepMerge(merged, overlay);
         var config = CrowdSimulationConfig.Load(merged);
 
+        var navmeshJson = TestDefaults.StandardNavmeshJson();
+        var seedNav = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "Navigation", "navmesh.json")))!;
+        ConfigPipeline.DeepMerge(navmeshJson, seedNav);
+
         var mapJson = File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json"));
         var map = JsonSerializer.Deserialize<MapConfig>(mapJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdSimulationConfigLoader.Load(
-            config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz, TestDefaults.DemoPairRules());
+            config,
+            map,
+            TestDefaults.DemoProfiles(),
+            TestDefaults.ParseNavmesh(navmeshJson),
+            TestDefaults.DemoPathing(),
+            TestDefaults.DemoTemplates(),
+            TestDefaults.FixedHz,
+            TestDefaults.DemoPairRules());
     }
 
     internal static CrowdSimulationMapSurface LoadMapSurface(string seed)

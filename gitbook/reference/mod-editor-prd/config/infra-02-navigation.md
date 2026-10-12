@@ -12,16 +12,15 @@
     "id": "Small",
     "radiusCm": 30.0, "heightCm": 180.0,
     "clearanceCm": 40.0, "draftCm": 0.0, "beamCm": 0.0,
-    "mass": 1.0, "layer": 0
+    "mass": 1.0, "layer": 0, "navProfileId": "Small"
   }
 ]
 ```
 
 ```json
 {
-  "agentTypes": [
-    {
-      "id": "Humanoid",
+  "agentTypes": {
+    "Humanoid": {
       "profileId": "Small",
       "selection": {
         "mode": "PreferMesh",
@@ -31,7 +30,7 @@
       "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1.0 } ] },
       "nodeGraph": { }
     }
-  ]
+  }
 }
 ```
 
@@ -39,9 +38,9 @@
 {
   "mode": "offline",
   "algorithm": "recast",
-  "profiles": [ { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 } ],
+  "profiles": { "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" } },
   "layers": [ { "id": "Ground", "layer": 0 } ],
-  "areas": [ { "id": "Default", "areaId": 0, "cost": 1.0 } ],
+  "areas": { "Default": { "areaId": 0, "slopeFree": false } },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 1,
     "includeNeighborTiles": true,
@@ -60,18 +59,19 @@
 | agent_profiles | `clearanceCm` | 净空需求，通道加宽 |
 | agent_profiles | `draftCm`/`beamCm` | 纵向/横向附加体量（载具类） |
 | agent_profiles | `mass`/`layer` | 推挤质量与导航层 |
-| pathing | `agentTypes[].profileId` | 绑定体型档案 |
+| pathing | `agentTypes.<id>.profileId` | 绑定体型档案 |
 | pathing | `selection.mode` + 权重 | 网格/图选路偏好（如 PreferMesh） |
-| pathing | `navMesh.areaCosts` | 面积通过代价（泥地贵、大路便宜） |
+| pathing | `navMesh.areaCosts` | 面积通过代价（泥地贵、大路便宜）；本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` |
 | pathing | `nodeGraph.*` | 图投影：projectionMaxRadiusCm、useDynamicOverlay、tag 规则 |
 | navmesh | `mode`/`algorithm` | offline + recast（现状唯一组合） |
-| navmesh | `profiles[].maxClimbCm/maxSlopeDeg` | 逐体型的可爬高度与坡度上限 |
+| navmesh | `profiles.<id>.maxClimbCm` / `maxSlopeDeg` | 能力档可爬高度；`maxSlopeDeg` 省略表示不限坡度，显式 0 或负数拒绝，Recast 烘焙要求正数 |
+| navmesh | `profiles.<id>.agentProfileId` | 这个能力档烘焙使用的体型，必填 |
 | navmesh | `layers`/`areas` | 导航层与面积类型定义 |
 | navmesh | `runtimeIncremental.tileBudgetPerFixedTick` | 每固定步瓦片重建预算（增量分摊） |
 
 ## 3. 文件结构
 
-`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，agentTypes 数组在根对象内）、`navmesh.json`（DeepObject）。
+`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，`agentTypes` 以 id 为键）、`navmesh.json`（DeepObject，`profiles` 与 `areas` 以 id 为键）。带导航标签的地图在 `maps.<mapId>.navProfiles` 列出要烘焙的能力档。绑定了移动类型的地图写 `maps.<mapId>.navAreas`。本图绑定集上的 `areaCosts` 必须覆盖这些区域。核心 Humanoid 保持 PreferMesh，Mod 不要覆盖。能力档必写 `agentProfileId`。
 
 ## 4. 运行时加载效果
 
@@ -83,8 +83,9 @@
 |---|---|
 | agent_profiles 为空 | 启动失败（至少一体型） |
 | agentTypes 为空/缺 profileId | 启动失败，指明条目 |
-| areaCosts 引用未声明 area | 启动失败 |
-| 烘焙参数（坡度/爬高/预算）越界 | 启动失败 |
+| areaCosts 少了本图 navAreas 里的一行，或 areas 为 null | 启动失败 |
+| 带导航标签的地图缺 navProfiles，或列出的能力档没有瓦片 | 启动失败 |
+| 显式 maxSlopeDeg 为 0 或负数，或 Recast 要烘焙的能力档没有正坡度 | 启动失败 |
 
 ## 6. 实例
 

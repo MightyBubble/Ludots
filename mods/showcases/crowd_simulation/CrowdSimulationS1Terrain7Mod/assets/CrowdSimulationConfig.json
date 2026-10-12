@@ -1,8 +1,6 @@
 {
-  "mapId": "crowd_simulation_s7",
   "world": {
-    "seed": 7,
-    "surfaceAsset": "terrain/crowd_simulation_s7.navsurface"
+    "seed": 7
   },
   "deploy": {
     "bases": [

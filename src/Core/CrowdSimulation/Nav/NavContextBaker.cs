@@ -10,7 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// 导航上下文烘焙（buildNavContext 的 S2 子集移植）：
 /// 分类（代价 × 坡度 × 阻挡）→ 净空腐蚀 → 可走格表 → 连通域 → 跳跃链接。
 /// 每格分类的唯一语义输入是导航区域栅格：代价 = 移动类型行[区域]；
-/// 未定价区域不可走;非 slopeFree 区域坡度超过 profile 上限不可走;阻挡格不可走。
+/// 未列出的区域代价为 1、可通行；passable 为 false 的区域代价为 0、不可走；非 slopeFree 区域坡度超过 profile 上限不可走；阻挡格不可走。
 /// </summary>
 public static class NavContextBaker
 {
@@ -42,20 +42,26 @@ public static class NavContextBaker
 
         // classify
         var cost = new Fix64[n2];
+        var speedDivisor = new Fix64[n2];
         var walk = new byte[n2];
         var row = agent.CostByArea;
+        var speedRow = agent.SpeedDivisorByArea;
         var area = surface.Area;
         var blocked = surface.Blocked;
         var slope = heights.Slope;
         for (int i = 0; i < n2; i++)
         {
-            Fix64 c = row[area[i]];
-            if (c > Fix64.Zero && !config.NavAreas[area[i]].SlopeFree && slope[i] > maxSlope)
+            int areaIndex = area[i];
+            Fix64 c = row[areaIndex];
+            Fix64 d = speedRow[areaIndex];
+            if (c > Fix64.Zero && !config.NavAreas[areaIndex].SlopeFree && slope[i] > maxSlope)
             {
                 c = Fix64.Zero;
+                d = Fix64.Zero;
             }
 
             cost[i] = c;
+            speedDivisor[i] = d;
             walk[i] = c > Fix64.Zero && blocked[i] == 0 ? (byte)1 : (byte)0;
         }
 
@@ -80,6 +86,7 @@ public static class NavContextBaker
         var portal = new byte[n2];
         var upArea = new byte[n2];
         var upCost = new Fix64[n2];
+        var upSpeedDivisor = new Fix64[n2];
         if (deck.TileOrder.Length > 0)
         {
             UpperLayerBake.BakeDeck(config, agentTypeIndex, clearanceCells, walk, deck.AreaIndex, deck.PortalFlag, upPass, portal);
@@ -90,6 +97,7 @@ public static class NavContextBaker
                 {
                     upArea[i] = (byte)(deck.AreaIndex[i] - 1);
                     upCost[i] = agent.CostByArea[upArea[i]];
+                    upSpeedDivisor[i] = agent.SpeedDivisorByArea[upArea[i]];
                 }
             }
 
@@ -160,11 +168,12 @@ public static class NavContextBaker
 
         var nav = new NavContext
         {
-            Id = CrowdSimulationSpace.NavContextId(agent.Layer, clearanceCells),
+            Id = CrowdSimulationSpace.NavContextId(agent.AgentTypeIndex, clearanceCells),
             LayerIndex = agentTypeIndex,
             ClearanceNavCells = clearanceCells,
             NavCellsPerSide = navCellsPerSide,
             Cost = cost,
+            SpeedDivisor = speedDivisor,
             Walk = walk,
             Passable = passable,
             Cells = cellList.ToArray(),
@@ -175,6 +184,7 @@ public static class NavContextBaker
             Portal = portal,
             UpArea = upArea,
             UpCost = upCost,
+            UpSpeedDivisor = upSpeedDivisor,
             Tiles = tiles,
             UpperTiles = upperTiles,
             MinCost = minCost,

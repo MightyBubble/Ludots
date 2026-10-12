@@ -1009,6 +1009,7 @@ namespace Ludots.Tests.Presentation
                 new AgentProfileConfig
                 {
                     Id = "light",
+                    NavProfileId = "light",
                     RadiusCm = 20,
                     HeightCm = 180,
                     ClearanceCm = 40,

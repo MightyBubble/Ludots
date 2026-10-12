@@ -7,12 +7,15 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Pathing.Config;
 
 namespace CrowdSimulationTests;
 
 /// <summary>
 /// S0 测试夹具：标准参数 Mod 的全量参数，叠上无头演示图的地图事实
-/// （mapId、地表、出生点、s7barrier）。体型档案仍在能力 Mod。
+/// （出生点、s7barrier）。导航区域、能力档、移动类型和单位模板分别来自
+/// navmesh.json、pathing.json 与能力 Mod 的模板。
 /// </summary>
 public static class TestDefaults
 {
@@ -30,11 +33,60 @@ public static class TestDefaults
     public static CrowdSimulationConfig DefaultConfig()
         => CrowdSimulationConfig.Load(DefaultConfigJson());
 
+    public static JsonObject StandardNavmeshJson()
+        => (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "navmesh.json")))!;
+
+    public static JsonObject DefaultNavmeshJson()
+    {
+        var merged = StandardNavmeshJson();
+        var facts = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("fixtures", "demo-navmesh.json")))!;
+        ConfigPipeline.DeepMerge(merged, facts);
+        return merged;
+    }
+
+    public static JsonObject DefaultPathingJson()
+        => (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "pathing.json")))!;
+
+    public static NavMeshBakeConfig ParseNavmesh(JsonObject json, AgentProfileRegistry? profiles = null)
+        => NavMeshBakeConfigLoader.Parse(json, profiles ?? DemoProfiles());
+
+    public static PathingConfig ParsePathing(JsonObject json)
+        => PathingConfigLoader.Parse(json);
+
+    public static NavMeshBakeConfig DemoNavmesh()
+        => ParseNavmesh(DefaultNavmeshJson());
+
+    public static PathingConfig DemoPathing()
+        => ParsePathing(DefaultPathingJson());
+
+    public static List<CrowdUnitTemplateFacts> DemoTemplates()
+    {
+        var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
+            File.ReadAllText(Path.Combine("assets", "crowdmod", "Entities", "templates.json")),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        return CrowdUnitTemplateFacts.FromTemplates(templates);
+    }
+
+    public static void SetCapabilityCellSizeCm(JsonObject navmesh, int cellSizeCm)
+    {
+        foreach (var node in navmesh["profiles"]!.AsObject())
+        {
+            if (node.Value?["cellSizeCm"] != null)
+            {
+                node.Value["cellSizeCm"] = cellSizeCm;
+            }
+        }
+    }
+
     public static MapConfig DemoMap()
     {
         return new MapConfig
         {
             Id = "crowd_simulation_demo",
+            ContinuousHeightmap = new Ludots.Core.Presentation.Terrain.ContinuousHeightmapBindingConfig
+            {
+                Asset = "assets/terrain/crowd_simulation_demo.height",
+            },
             Boards = new List<BoardConfig>
             {
                 new BoardConfig { WidthCm = WorldCm, HeightCm = WorldCm },
@@ -99,7 +151,10 @@ public static class TestDefaults
         CrowdSimulationConfig? config = null,
         MapConfig? map = null,
         AgentProfileRegistry? profiles = null,
-        CrowdPairRules? pairRules = null)
+        CrowdPairRules? pairRules = null,
+        NavMeshBakeConfig? navmesh = null,
+        PathingConfig? pathing = null,
+        IReadOnlyList<CrowdUnitTemplateFacts>? templates = null)
     {
         bool implicitDemoMap = map == null;
         map ??= DemoMap();
@@ -114,10 +169,14 @@ public static class TestDefaults
             pairRules = DemoPairRules();
         }
 
+        profiles ??= DemoProfiles();
         return CrowdSimulationConfigLoader.Load(
             config ?? DefaultConfig(),
             map,
-            profiles ?? DemoProfiles(),
+            profiles,
+            navmesh ?? DemoNavmesh(),
+            pathing ?? DemoPathing(),
+            templates ?? DemoTemplates(),
             FixedHz,
             pairRules);
     }

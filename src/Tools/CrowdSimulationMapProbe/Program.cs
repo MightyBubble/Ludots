@@ -14,6 +14,8 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;
@@ -625,8 +627,28 @@ public static class Program
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
+        var profiles = new AgentProfileRegistry(profileList);
+        var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "navmesh.json")))!;
+        string seedNavPath = Path.Combine(seedDir, "Navigation", "navmesh.json");
+        if (File.Exists(seedNavPath))
+        {
+            ConfigPipeline.DeepMerge(navmeshJson, (JsonObject)JsonNode.Parse(File.ReadAllText(seedNavPath))!);
+        }
+
+        var pathing = PathingConfigLoader.Parse(
+            (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "pathing.json")))!);
+        var unitTemplates = JsonSerializer.Deserialize<List<EntityTemplate>>(
+            File.ReadAllText(Path.Combine(capabilityDir, "Entities", "templates.json")),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var runtime = CrowdSimulationConfigLoader.Load(
-            config, map, new AgentProfileRegistry(profileList), ReadSeedFixedHz(seedDir), ProjectSeedMap(seedDir, config, map));
+            config,
+            map,
+            profiles,
+            NavMeshBakeConfigLoader.Parse(navmeshJson, profiles),
+            pathing,
+            CrowdUnitTemplateFacts.FromTemplates(unitTemplates),
+            ReadSeedFixedHz(seedDir),
+            ProjectSeedMap(seedDir, config, map));
 
         var surface = NavSurfaceAsset.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.navsurface")));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);

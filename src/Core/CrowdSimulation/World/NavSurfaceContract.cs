@@ -16,7 +16,7 @@ public static class NavSurfaceContract
         if (asset.TerrainTypeIds.Length != config.TerrainTypeIds.Count)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: 地形类型表 {asset.TerrainTypeIds.Length} 项，与 CrowdSimulationConfig.world.terrainTypes（{config.TerrainTypeIds.Count} 项）不一致。");
+                $"{assetPath(config)}: 地形类型表 {asset.TerrainTypeIds.Length} 项，与 maps.{config.MapId}.terrainAreas（{config.TerrainTypeIds.Count} 项）不一致。");
         }
 
         for (int i = 0; i < asset.TerrainTypeIds.Length; i++)
@@ -37,7 +37,7 @@ public static class NavSurfaceContract
         if (asset.NavCellSizeCm != config.NavCellSizeCm)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: navCellSizeCm = {asset.NavCellSizeCm}，与 world.navCellSizeCm = {config.NavCellSizeCm} 不符。");
+                $"{assetPath(config)}: navCellSizeCm = {asset.NavCellSizeCm}，与 profiles.cellSizeCm = {config.NavCellSizeCm} 不符。");
         }
     }
 

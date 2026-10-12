@@ -1,0 +1,12 @@
+{
+  "maps": {
+    "mass_navigation": {
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
+    }
+  }
+}

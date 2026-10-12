@@ -22,7 +22,7 @@ public sealed class SpatialVocabularyContractTests
     private static readonly HashSet<string> DimensionlessConfigNames = new(StringComparer.Ordinal)
     {
         "Version", "Seed", "WorldSeed", "Cost", "Layer", "PushPriority", "NavProfileIndex",
-        "CostByArea", "AgentTypeIndex", "NavContextId", "MaxVertsPerPoly",
+        "CostByArea", "SpeedDivisorByArea", "AgentTypeIndex", "NavContextId", "MaxVertsPerPoly",
         "NavCellsPerTile", "NavCellsPerSide", "NavCellsPerFogCell", "FogCellsPerSide",
         "MaxRebuildsPerTick", "MaxRefreshesPerTick", "LeaderSpeed",
         "CatchUp", "ClumpSlack", "Aspect", "MaxSubSteps", "SimSecondsPerTickSecond", "SimSecondsPerTickSecondRaw",

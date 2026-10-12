@@ -1,0 +1,12 @@
+{
+  "maps": {
+    "crowd_physics_arena": {
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
+    }
+  }
+}

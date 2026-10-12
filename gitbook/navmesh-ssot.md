@@ -96,7 +96,7 @@ MassNavigation
 | 能力 | 唯一归属 | 不应放在哪里 |
 |---|---|---|
 | 跨域区域分类 | Map/Terrain 的 areaId/tags（#372）；导航只消费 | 地形 cost、Nav 私有词汇表 |
-| Agent 通行代价 | `PathingConfig.agentTypes[].navMesh.areaCosts` | 地图分类、sidecar 或几何 profile |
+| Agent 通行代价 | `PathingConfig.agentTypes.<id>.navMesh.areaCosts` | 地图分类、sidecar 或几何 profile |
 | 地形源读取与快照 | `NavBakeSource` adapter | Web 私有格式、showcase 私有 loader |
 | 配置合并与校验 | `ConfigPipeline` + `NavMeshBakeConfigLoader` | CLI 手写默认值、编辑器自行解释 JSON |
 | 烘焙 | `NavBakeContext` + `NavBakeService` + `INavBakeAlgorithm` | CLI/Bridge 各写一套 bake loop |
@@ -253,7 +253,7 @@ NavMesh 负责“哪里能走”和“路径是什么”；MassNavigation 负责
 }
 ```
 
-示例表达目标概念，不是可直接复制的当前 schema。区域分类按 [#372](https://github.com/MightyBubble/Ludots/issues/372) 只存 `areaId/tags`；代价沿用现有 `Navigation/pathing.json` 的 `agentTypes[].navMesh.areaCosts[]`，逐 Agent 解释区域，不放在地图声明里。示例和双 Agent 验收见 [区域分类与 Agent 通行代价](navmesh-features/area-costs.md)。单改某 Agent 的代价不重烘焙几何，也不改变另一 Agent 的策略。时间预算用于估算和诊断，提交数量不保证后台工作在同一 tick 完成。
+示例表达目标概念，不是可直接复制的当前 schema。区域分类按 [#372](https://github.com/MightyBubble/Ludots/issues/372) 只存 `areaId/tags`；代价沿用现有 `Navigation/pathing.json` 的 `agentTypes.<id>.navMesh.areaCosts[]`，逐 Agent 解释区域，不放在地图声明里。示例和双 Agent 验收见 [区域分类与 Agent 通行代价](navmesh-features/area-costs.md)。单改某 Agent 的代价不重烘焙几何，也不改变另一 Agent 的策略。时间预算用于估算和诊断，提交数量不保证后台工作在同一 tick 完成。
 
 配置规则：
 
@@ -436,7 +436,7 @@ UAT 证据至少包括：启动 preset、Agent Bridge `/health` 两次且 `pumpC
 - 真实 NavTileStore overlay、N 开关、后台障碍重烤和生产帧 NavMesh pass 已进入 main。
 - Agent Bridge 已有导航空间探针和查询工具。
 - 此前导航专项审计记录为架构回归 91/91 通过（本次文档修改未重跑运行时测试）；`.height` 单瓦片烘焙及走性 PNG 导出通过。
-- `PathingConfig` 与 `AutoPathService` 已按 Agent 编译区域代价表；`LogicTerrainCell.Cost`、`NavMeshBakeConfig.Areas[].Cost` 仍是待清理残留。纯 NavMesh 引导仍用首个 Agent 的 query adapter，不能宣称所有入口都按请求身份选择策略，详见 [区域代价现状](navmesh-features/area-costs.md)。
+- `PathingConfig` 与 `AutoPathService` 已按 Agent 编译区域代价表。`LogicTerrainCell.Cost` 和 `NavMeshBakeConfig.Areas[].Cost` 已删除。区域写 `id`、`areaId`、`slopeFree`。`areaCosts[]` 可写 `speedDivisor`（不写等于 `cost`）和 `passable`（`false` 为不可进）。纯 NavMesh 入口要求请求写明 `AgentTypeId`。详见 [区域代价现状](navmesh-features/area-costs.md)。
 - 当前配置仍由 `NavMeshBakeConfig` 的 `mode/algorithm/profiles/layers/areas/runtimeIncremental` 主导，`NavBakeContext` 仍直接接收 `LogicTerrainField`。
 - 多板 registry、board 身份路径、非零 origin、两轴 tile 尺寸和完整 source snapshot 尚未达到目标合同。
 - 此前审计的运行时 4 个场景中 2 个通过、2 个失败（本次未重跑）：一个未在固定 tick 窗口内等到 revision，另一个路径绕行通过但小队未全部抵达。

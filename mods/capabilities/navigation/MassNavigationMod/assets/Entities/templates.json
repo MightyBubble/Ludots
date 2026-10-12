@@ -68,7 +68,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "profileId": "light",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -116,7 +117,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "profileId": "heavy",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -164,7 +166,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "profileId": "light",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -212,7 +215,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "profileId": "heavy",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -260,7 +264,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "profileId": "light",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -308,7 +313,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "profileId": "heavy",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -356,7 +362,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "light"
+        "profileId": "light",
+        "agentTypeId": "Humanoid"
       }
     }
   },
@@ -404,7 +411,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "heavy"
+        "profileId": "heavy",
+        "agentTypeId": "Humanoid"
       }
     }
   },

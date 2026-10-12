@@ -59,6 +59,7 @@ namespace Ludots.Tests.Architecture
             var agent = new AgentProfileConfig
             {
                 Id = "tw.agent",
+                NavProfileId = "tw.agent",
                 RadiusCm = 30,
                 HeightCm = 200,
                 ClearanceCm = 50,

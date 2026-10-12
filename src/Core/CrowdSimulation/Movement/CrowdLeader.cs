@@ -19,8 +19,14 @@ public sealed class CrowdLeader
 
     public CrowdLeader(
         IReadOnlyList<Fix64Vec2> pathCm, int layerIdx, NavContext nav,
-        bool fixedHeading, Fix64Vec2? face, Fix64 lookAheadCm)
+        bool fixedHeading, Fix64Vec2? face, Fix64 lookAheadCm, Fix64 paceCmPerSecond)
     {
+        if (paceCmPerSecond <= Fix64.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(paceCmPerSecond), "领队步伐必须 > 0。");
+        }
+
+        PaceCmPerSecond = paceCmPerSecond;
         if (pathCm.Count < 2) throw new ArgumentException("领队路径至少两个点。", nameof(pathCm));
         _path = new Fix64Vec2[pathCm.Count];
         for (int i = 0; i < pathCm.Count; i++) _path[i] = pathCm[i];
@@ -43,6 +49,8 @@ public sealed class CrowdLeader
     }
 
     public int LayerIdx { get; }
+    /// <summary>同组已生成单位的模板速度最小值（厘米/秒）。</summary>
+    public Fix64 PaceCmPerSecond { get; }
     public NavContext Nav { get; internal set; }
     public bool Fixed { get; }
     public Fix64Vec2? Face { get; }
@@ -151,8 +159,8 @@ public sealed class CrowdLeader
         Fix64 ox = XCm, oy = YCm;
         // 桥面层:地面不可走但桥面可走时,步速吃桥面代价而不是水下代价
         int cell = CrowdSimulationSpace.CellAt(XCm, YCm, navCellSizeCm, navCellsPerSide);
-        Fix64 cost = Nav.Passable[cell] != 0 ? Nav.Cost[cell] : Nav.UpPass[cell] != 0 ? Nav.UpCost[cell] : Fix64.OneValue;
-        Fix64 rem = (speedCmPerSecond / (cost == Fix64.Zero ? Fix64.OneValue : cost)) * pace * dt;
+        Fix64 div = Nav.Passable[cell] != 0 ? Nav.SpeedDivisor[cell] : Nav.UpPass[cell] != 0 ? Nav.UpSpeedDivisor[cell] : Fix64.OneValue;
+        Fix64 rem = (speedCmPerSecond / (div == Fix64.Zero ? Fix64.OneValue : div)) * pace * dt;
         while (rem > Fix64.Zero && Seg < n)
         {
             Fix64 tx = _path[Seg].X - XCm, ty = _path[Seg].Y - YCm;

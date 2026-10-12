@@ -19,7 +19,7 @@ Current code now has the shared bake route for CLI and Editor Bridge. Remaining 
 | Area | Current status | Contract for the next implementation |
 |---|---|---|
 | Grid / HexGrid production bake | CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose `MutableGridLogicTerrainField` for `Grid`, `VertexMapLogicTerrainField` for `HexGrid`; `NodeGraph` fails fast because it does not bake navmesh | Keep all production bake adapters on `NavBakeContext` + `NavBakeService`; do not reintroduce a topology-private bake entry |
-| Terrain classification | React terrain stride-4 preserves `areaId` and blocked flags into logic terrain and nav bake; `LogicTerrainCell.Cost` still exists as a design smell | NAV-14 must move terrain classification to map/terrain SSOT and keep cost as per-agent consumer data |
+| Terrain classification | React terrain stride-4 preserves `areaId` and blocked flags into logic terrain and nav bake. `LogicTerrainCell` has no `Cost`. Navmesh areas carry `id`, `areaId`, and `slopeFree` | Cost stays on `pathing.json` `agentTypes[].navMesh.areaCosts[]` |
 | Pipeline order | Visual and logic terrain can still drift in authoring shape | NAV-15 must enforce `Board -> ContinuousHeightmap -> LogicTerrain -> NavMesh` and fail on conflicting independent sources |
 | Editor surface | React editor can paint height, blocked cells, `areaId`, obstacles, agent/profile/layer config, estimate bake cost, and call Bridge Recast bake through the shared context | The final product should persist the official ContinuousHeightmap/terrain-classification assets once NAV-15 closes the single-source contract |
 | Raylib debug | Debug draw and primitive buffers exist, but navmesh inspection needs a dedicated accurate view | Raylib must render cached tile geometry from `NavTile` data, not frame-by-frame disconnected line commands |
@@ -87,9 +87,10 @@ Ludots world-space authoring uses centimeters. This matches the Unreal-style con
 | `draftCm` | cm | not a navmesh bake knob | NodeGraph transport depth requirement |
 | `beamCm` | cm | not a navmesh bake knob | NodeGraph transport width requirement |
 | `mass` | scalar | not a bake knob | MassNavigationFlow resolve share / dominance |
-| `layer` | integer | selects nav query layer for this profile | runtime pathing layer identity |
+| `layer` | integer | NavTile layer for this body | runtime pathing layer identity |
+| `navProfileId` | profile id | capability profile in `navmesh.json` `profiles[]` | required; the bake resolver uses the agent whose id matches the capability when several bodies share it |
 
-Speed stays out of `AgentProfileRegistry`; it belongs to MassNavigationFlow movement strategy.
+Speed stays out of `AgentProfileRegistry`. MassNavigationFlow keeps movement speed in its own config. Crowd units write `speedCmPerSecond` on the `CrowdSimulationAgent` template component; that value is the initial speed.
 
 ### Bake Profile
 
@@ -97,9 +98,12 @@ Speed stays out of `AgentProfileRegistry`; it belongs to MassNavigationFlow move
 
 | Field | Unit | Current consumer | Design rule |
 |---|---:|---|---|
-| `profiles[].id` | profile id | `NavMeshProfileRegistry` | Must reference an `AgentProfile` id exactly |
-| `profiles[].maxClimbCm` | cm | Recast `walkableClimb`; CDT/logic filtering target | Maximum step/climb height for this agent profile |
-| `profiles[].maxSlopeDeg` | degrees | Recast `walkableSlopeAngle`; target source for CDT slope filtering | Authoring-facing slope knob |
+| `profiles[].id` | profile id | `NavMeshProfileRegistry` | Capability profile. Agent profiles point here with `navProfileId` |
+| `profiles[].maxClimbCm` | cm | Recast `walkableClimb`; CDT/logic filtering target | Maximum step/climb height for this capability |
+| `profiles[].maxSlopeDeg` | degrees | Recast `walkableSlopeAngle`; target source for CDT slope filtering | Omit means unlimited. `0` and negative values are rejected at load. Recast bake requires a value `> 0` and `< 90` |
+| `profiles[].cellSizeCm` | cm | optional Recast column size | `0` or omitted means the baker derives it from the agent radius. A crowd session requires every capability it uses to share one positive value; that value is the nav cell size |
+| `profiles[].jump` | cm / nav cells / cost | optional | `upCm`, `downCm`, `rangeNavCells`, `cost`, each `> 0` |
+| `areas[].id` / `areaId` / `slopeFree` | name / 0..255 / bool | polygon area and crowd slope exemption | No `cost` on the area |
 | `layers[].id` | string | obstacle carve + artifact path | Semantic layer id, strict casing |
 | `layers[].layer` | int | `NavTileId.Layer` | Stored layer index |
 | `runtimeIncremental.tileBudgetPerFixedTick` | tiles | runtime rebuild queue | Publish pacing, not bake quality |
@@ -134,7 +138,7 @@ Terrain classification and traversal cost are separate:
 | Concept | Source | Rule |
 |---|---|---|
 | `areaId` / tags | terrain SSOT | Stored on terrain/polygons/cells and propagated into `NavTile.TriAreaIds` |
-| per-agent cost | `Navigation/pathing.json` | `agentTypes[].navMesh.areaCosts[]` maps `areaId -> cost` for that agent type |
+| per-agent cost | `Navigation/pathing.json` | `agentTypes.<id>.navMesh.areaCosts[]` maps `areaId` to `cost`. `agentTypes` is id-keyed. Optional `speedDivisor` equals `cost` when omitted; both must be `> 0`. Optional `passable: false` excludes the area. Completeness is the map's bound agents times `maps.<mapId>.navAreas`. A missing row is a load error. `areas == null` throws |
 | impassable terrain | explicit block policy | Prefer explicit blocked/forbidden rule over fake infinite cost |
 | obstacle layer | authored obstacle sink + nav layer | Obstacles block only matching configured layer id |
 
@@ -142,9 +146,8 @@ Example pathing snippet:
 
 ```json
 {
-  "agentTypes": [
-    {
-      "id": "infantry",
+  "agentTypes": {
+    "infantry": {
       "profileId": "light",
       "selection": {
         "mode": "PreferMesh",
@@ -168,7 +171,7 @@ Example pathing snippet:
         "tagCostRules": []
       }
     }
-  ]
+  }
 }
 ```
 

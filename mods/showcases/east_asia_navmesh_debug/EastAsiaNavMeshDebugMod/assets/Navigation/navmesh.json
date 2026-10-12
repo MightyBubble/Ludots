@@ -1,26 +1,18 @@
 {
   "mode": "offline",
   "algorithm": "recast",
-  "profiles": [
-    {
-      "id": "Small",
-      "maxClimbCm": 40,
-      "maxSlopeDeg": 45
-    }
-  ],
   "layers": [
     {
       "id": "Ground",
       "layer": 0
     }
   ],
-  "areas": [
-    {
-      "id": "Default",
+  "areas": {
+    "Default": {
       "areaId": 0,
-      "cost": 1.0
+      "slopeFree": false
     }
-  ],
+  },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 1,
     "includeNeighborTiles": true,
@@ -35,7 +27,14 @@
           "tileWorldWidthCm": 228544,
           "tileWorldHeightCm": 228544
         }
-      }
+      },
+      "navProfiles": [
+        "Small",
+        "Medium"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     }
   }
 }

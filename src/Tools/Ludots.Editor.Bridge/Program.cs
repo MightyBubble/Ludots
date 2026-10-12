@@ -1830,7 +1830,7 @@ app.MapPost("/api/nav/query-recast-react", async (HttpRequest req) =>
     NavAreaCostTable areaCosts;
     try
     {
-        areaCosts = BuildEditorNavAreaCostTable(bakeConfigContext.Config, payload.AreaCosts);
+        areaCosts = BuildEditorNavAreaCostTable(payload.AreaCosts);
     }
     catch (Exception ex)
     {
@@ -4326,26 +4326,10 @@ static byte[] SerializeNavTile(NavTile tile)
     return stream.ToArray();
 }
 
-static NavAreaCostTable BuildEditorNavAreaCostTable(
-    NavMeshBakeConfig cfg,
-    IReadOnlyList<NavAreaCostOverride>? overrides)
+static NavAreaCostTable BuildEditorNavAreaCostTable(IReadOnlyList<NavAreaCostOverride>? overrides)
 {
     var arr = new Fix64[256];
     for (int i = 0; i < arr.Length; i++) arr[i] = Fix64.OneValue;
-
-    if (cfg?.Areas != null)
-    {
-        for (int i = 0; i < cfg.Areas.Count; i++)
-        {
-            NavAreaCostConfig? area = cfg.Areas[i];
-            if (area == null) continue;
-            if (area.AreaId < 0 || area.AreaId > 255)
-                throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid areaId: {area.AreaId}");
-            if (area.Cost <= 0f || float.IsNaN(area.Cost))
-                throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid cost for areaId={area.AreaId}");
-            arr[area.AreaId] = Fix64.FromFloat(area.Cost);
-        }
-    }
 
     if (overrides != null)
     {

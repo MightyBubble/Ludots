@@ -1,8 +1,6 @@
 {
-  "mapId": "crowd_simulation_s2024",
   "world": {
-    "seed": 2024,
-    "surfaceAsset": "terrain/crowd_simulation_s2024.navsurface"
+    "seed": 2024
   },
   "deploy": {
     "bases": [

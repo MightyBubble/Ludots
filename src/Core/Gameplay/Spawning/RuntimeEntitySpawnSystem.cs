@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -1021,6 +1022,11 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void ApplyTemplateKey(Entity entity, string templateId)
         {
+            if (TryGetTemplate(templateId, out EntityTemplate boundTemplate))
+            {
+                NavSessionBinding.RequireMassNavigationTemplate(boundTemplate);
+            }
+
             int templateKeyId = _templateKeys.GetId(templateId);
             if (templateKeyId <= 0)
             {

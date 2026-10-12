@@ -67,8 +67,12 @@ public class TemplatePipelineIntegrationTests
             var templateNode = wiring.TemplateRegistry.Get(templateId)!.Components["CrowdSimulationAgent"]!;
             Assert.That(agent.ProfileId, Is.EqualTo(templateNode["profileId"]!.GetValue<string>()),
                 $"单位 {handle:x} profileId 应来自模板写真");
-            Assert.That(agent.RadiusCm, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["radiusCm"]!.GetValue<int>())),
-                $"单位 {handle:x} 半径应来自模板写真");
+            Assert.That(agent.AgentTypeId, Is.EqualTo(templateNode["agentTypeId"]!.GetValue<string>()),
+                $"单位 {handle:x} agentTypeId 应来自模板写真");
+            Assert.That(agent.PersonalRadiusCm, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["personalRadiusCm"]!.GetValue<int>())),
+                $"单位 {handle:x} 个人半径应来自模板写真");
+            Assert.That(agent.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["pushPriority"]!.GetValue<int>())),
+                $"单位 {handle:x} 推挤优先级应来自模板写真");
             Assert.That(agent.SpeedCmPerSecond, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSecond"]!.GetValue<int>())),
                 $"单位 {handle:x} 速度应来自模板写真");
             seenProfiles.Add(agent.ProfileId);

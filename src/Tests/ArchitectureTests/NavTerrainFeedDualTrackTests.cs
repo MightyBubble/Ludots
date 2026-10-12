@@ -235,7 +235,7 @@ namespace Ludots.Tests.Architecture
         public void Loader_AuthoredArea63_IsRejected()
         {
             Assert.Throws<InvalidOperationException>(
-                () => LoadTempNavConfig(null, areasOverride: "\"areas\": [ { \"id\": \"Bad\", \"areaId\": 63, \"cost\": 1 } ]"));
+                () => LoadTempNavConfig(null, areasOverride: "\"areas\": { \"Bad\": { \"areaId\": 63, \"slopeFree\": false } }"));
         }
 
         private static MutableGridLogicTerrainField FlatTerrain()
@@ -288,12 +288,12 @@ namespace Ludots.Tests.Architecture
         private static string LoadTempNavConfig(string? terrainFeedValue, string? areasOverride = null)
         {
             string terrainLine = terrainFeedValue == null ? string.Empty : $"  \"terrainFeed\": {terrainFeedValue},\n";
-            string areasLine = areasOverride ?? "\"areas\": []";
+            string areasLine = areasOverride ?? "\"areas\": {}";
             string json = "{\n" +
                 "  \"mode\": \"offline\",\n" +
                 "  \"algorithm\": \"recast\",\n" +
                 terrainLine +
-                "  \"profiles\": [ { \"id\": \"Small\", \"maxClimbCm\": 40, \"maxSlopeDeg\": 45 } ],\n" +
+                "  \"profiles\": { \"Small\": { \"maxClimbCm\": 40, \"maxSlopeDeg\": 45, \"agentProfileId\": \"Small\" } },\n" +
                 "  \"layers\": [ { \"id\": \"Ground\", \"layer\": 0 } ],\n" +
                 "  " + areasLine + ",\n" +
                 "  \"runtimeIncremental\": {\n" +

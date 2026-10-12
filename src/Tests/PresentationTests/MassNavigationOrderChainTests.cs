@@ -310,6 +310,7 @@ public sealed class MassNavigationOrderChainTests
             new AgentProfileConfig
             {
                 Id = "light",
+                NavProfileId = "light",
                 RadiusCm = 20,
                 HeightCm = 180,
                 ClearanceCm = 40,

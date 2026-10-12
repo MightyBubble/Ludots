@@ -7,6 +7,7 @@ using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Platform.Abstractions;
 
@@ -26,14 +27,16 @@ namespace Ludots.Core.Navigation.Pathing
         private readonly bool _navMeshAvailable;
 
         private readonly Dictionary<string, CompiledAgentType> _agents;
-        private readonly CompiledAgentType _defaultAgent;
+        private readonly Dictionary<string, NavQueryService> _meshQueries;
+        private readonly string _mapId;
+        private readonly bool _meshScopeSpecified;
 
         private NodeGraphPathScratch _graphScratch = new NodeGraphPathScratch();
         private int[] _nodeIdsScratch = Array.Empty<int>();
         private int[] _xScratch = Array.Empty<int>();
         private int[] _yScratch = Array.Empty<int>();
 
-        public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
             _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
@@ -45,24 +48,13 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
             _graph = null;
@@ -74,24 +66,13 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graphRuntime = null;
             _graph = null;
@@ -103,24 +84,13 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
             _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
@@ -132,24 +102,13 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
             _graph = null;
@@ -161,21 +120,10 @@ namespace Ludots.Core.Navigation.Pathing
             _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-
-            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
-            _defaultAgent = default;
-            for (int i = 0; i < config.AgentTypes.Count; i++)
-            {
-                var a = config.AgentTypes[i];
-                if (a == null) continue;
-                var compiled = CompileAgent(a);
-                _agents[compiled.Id] = compiled;
-                if (i == 0) _defaultAgent = compiled;
-            }
-
-            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)
@@ -262,8 +210,36 @@ namespace Ludots.Core.Navigation.Pathing
 
         private CompiledAgentType ResolveAgent(string agentTypeId)
         {
-            if (!string.IsNullOrWhiteSpace(agentTypeId) && _agents.TryGetValue(agentTypeId, out var a)) return a;
-            return _defaultAgent;
+            if (string.IsNullOrWhiteSpace(agentTypeId))
+            {
+                throw new InvalidOperationException("Path request requires an agent type id.");
+            }
+
+            if (_agents.TryGetValue(agentTypeId, out CompiledAgentType agent))
+            {
+                return agent;
+            }
+
+            throw new InvalidOperationException($"Path request agent type '{agentTypeId}' is not in PathingConfig.agentTypes.");
+        }
+
+        private Dictionary<string, CompiledAgentType> CompileAgents(PathingConfig config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+            var agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            int compiled = 0;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                PathingAgentTypeConfig agent = config.AgentTypes[i];
+                if (agent == null) continue;
+                CompiledAgentType compiledAgent = CompileAgent(agent);
+                agents[compiledAgent.Id] = compiledAgent;
+                compiled++;
+            }
+
+            if (compiled == 0) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+            return agents;
         }
 
         private bool TrySolveGraph(in PathRequest request, in CompiledAgentType agent, out PathResult result, out float travelCost)
@@ -382,6 +358,12 @@ namespace Ludots.Core.Navigation.Pathing
         {
             travelCost = 0f;
 
+            if (_meshScopeSpecified && (_meshQueries == null || !_meshQueries.ContainsKey(agent.Id)))
+            {
+                throw new InvalidOperationException(
+                    NavMapQueryScope.MissingQueryMessage(_mapId, agent.Id, agent.NavProfileId));
+            }
+
             if (!_navMeshAvailable)
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 22);
@@ -397,7 +379,16 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
-            if (!navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
+            NavQueryService query;
+            if (_meshScopeSpecified)
+            {
+                if (_meshQueries == null || !_meshQueries.TryGetValue(agent.Id, out query))
+                {
+                    throw new InvalidOperationException(
+                        NavMapQueryScope.MissingQueryMessage(_mapId, agent.Id, agent.NavProfileId));
+                }
+            }
+            else if (!navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out query))
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.NotReady, default, expanded: 0, errorCode: 21);
                 return false;
@@ -461,16 +452,67 @@ namespace Ludots.Core.Navigation.Pathing
             return new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, 0, errorCode: 33);
         }
 
+        private Dictionary<string, NavQueryService> InstallMeshQueries(PathingConfig config, NavMapQueryScope scope)
+        {
+            if (!scope.IsSpecified)
+            {
+                return null;
+            }
+
+            var queries = new Dictionary<string, NavQueryService>(StringComparer.OrdinalIgnoreCase);
+            if (!_navMeshAvailable || _navRegistry == null)
+            {
+                return queries;
+            }
+
+            var meshProfiles = new HashSet<string>(scope.NavProfileIds, StringComparer.Ordinal);
+            if (config.AgentTypes == null)
+            {
+                return queries;
+            }
+
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                PathingAgentTypeConfig agent = config.AgentTypes[i];
+                if (agent == null || !NavMapAgentBinding.SelectsMesh(agent) || !_agents.TryGetValue(agent.Id, out CompiledAgentType compiled))
+                {
+                    continue;
+                }
+
+                if (!meshProfiles.Contains(compiled.NavProfileId))
+                {
+                    continue;
+                }
+
+                if (!_navRegistry.TryCreateQuery(compiled.NavLayer, compiled.NavProfileIndex, compiled.NavAreaCosts, out NavQueryService query))
+                {
+                    throw new InvalidOperationException(
+                        $"地图 {scope.MapId} 的移动类型 \"{compiled.Id}\"（能力档 \"{compiled.NavProfileId}\"）无法建立网格查询。");
+                }
+
+                queries[compiled.Id] = query;
+            }
+
+            return queries;
+        }
+
         private CompiledAgentType CompileAgent(PathingAgentTypeConfig cfg)
         {
             AgentProfileConfig agentProfile = _agentProfiles.Require(cfg.ProfileId, $"PathingConfig.agentTypes[{cfg.Id}]");
-            int profileIndex = -1;
-            if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(cfg.ProfileId, out profileIndex)))
+            if (cfg.Selection == null)
             {
-                throw new InvalidOperationException($"Unknown navmesh profileId: {cfg.ProfileId}");
+                throw new InvalidOperationException(
+                    $"PathingConfig.agentTypes[{cfg.Id}] has no selection. AutoPath cannot compile an agent type without selection.");
             }
 
-            var areaCosts = BuildAreaCosts(cfg.NavMesh);
+            int profileIndex = -1;
+            if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(agentProfile.NavProfileId, out profileIndex)))
+            {
+                throw new InvalidOperationException(
+                    $"PathingConfig.agentTypes[{cfg.Id}] agent profile '{agentProfile.Id}' references unknown nav profile '{agentProfile.NavProfileId}'.");
+            }
+
+            var areaCosts = PathingAreaCostCompiler.Compile(cfg.NavMesh);
             var edgeFilter = PathingNodeGraphPolicyCompiler.CompileEdgeFilter(cfg.NodeGraph);
             var edgeRules = PathingNodeGraphPolicyCompiler.CompileEdgeRules(cfg.NodeGraph);
             bool useEdgeFilter = cfg.NodeGraph != null && (cfg.NodeGraph.RequiredTagsAll.Count > 0 || cfg.NodeGraph.ForbiddenTagsAny.Count > 0);
@@ -481,6 +523,7 @@ namespace Ludots.Core.Navigation.Pathing
             return new CompiledAgentType(
                 id: cfg.Id,
                 navLayer: agentProfile.Layer,
+                navProfileId: agentProfile.NavProfileId,
                 navProfileIndex: profileIndex,
                 navAreaCosts: areaCosts,
                 useGraphEdgeFilter: useEdgeFilter,
@@ -490,25 +533,7 @@ namespace Ludots.Core.Navigation.Pathing
                 useDynamicOverlay: cfg.NodeGraph?.UseDynamicOverlay ?? false,
                 agentDraftCm: agentProfile.DraftCm,
                 agentBeamCm: agentProfile.BeamCm,
-                selection: cfg.Selection ?? new PathingSelectionConfig());
-        }
-
-        private static NavAreaCostTable BuildAreaCosts(PathingNavMeshConfig cfg)
-        {
-            var arr = new Fix64[256];
-            for (int i = 0; i < arr.Length; i++) arr[i] = Fix64.OneValue;
-            if (cfg?.AreaCosts != null)
-            {
-                for (int i = 0; i < cfg.AreaCosts.Count; i++)
-                {
-                    var a = cfg.AreaCosts[i];
-                    if (a == null) continue;
-                    if (a.AreaId < 0 || a.AreaId > 255) throw new InvalidOperationException($"Invalid areaId: {a.AreaId}");
-                    if (a.Cost <= 0f || float.IsNaN(a.Cost)) throw new InvalidOperationException($"Invalid cost for areaId={a.AreaId}");
-                    arr[a.AreaId] = Fix64.FromFloat(a.Cost);
-                }
-            }
-            return new NavAreaCostTable(arr);
+                selection: cfg.Selection);
         }
 
         private static void EnsureCapacity<T>(ref T[] array, int required)
@@ -533,6 +558,7 @@ namespace Ludots.Core.Navigation.Pathing
         {
             public readonly string Id;
             public readonly int NavLayer;
+            public readonly string NavProfileId;
             public readonly int NavProfileIndex;
             public readonly NavAreaCostTable NavAreaCosts;
             public readonly bool UseGraphEdgeFilter;
@@ -547,6 +573,7 @@ namespace Ludots.Core.Navigation.Pathing
             public CompiledAgentType(
                 string id,
                 int navLayer,
+                string navProfileId,
                 int navProfileIndex,
                 NavAreaCostTable navAreaCosts,
                 bool useGraphEdgeFilter,
@@ -560,6 +587,7 @@ namespace Ludots.Core.Navigation.Pathing
             {
                 Id = id;
                 NavLayer = navLayer;
+                NavProfileId = navProfileId;
                 NavProfileIndex = navProfileIndex;
                 NavAreaCosts = navAreaCosts;
                 UseGraphEdgeFilter = useGraphEdgeFilter;

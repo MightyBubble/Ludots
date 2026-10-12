@@ -98,11 +98,11 @@ flowchart TD
 
 ## 群体模拟
 
-群体模拟的格不从 `CellCm` 派生。权威定义在架构页层级表的 `NavCell`、`NavTile`（群体）、`FogCell`、`AvoidanceHashCell`。标准参数在 `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json`，文件不再带 `version`。下表的旧键出现即失败。怎么拆 Mod、怎么覆盖、时钟写在哪，见架构页「作者怎么配」。
+群体模拟的格不从 `CellCm` 派生。权威定义在架构页层级表的 `NavCell`、`NavTile`（群体）、`FogCell`、`AvoidanceHashCell`。导航格边长写在 `Navigation/navmesh.json` 的能力档 `profiles[].cellSizeCm`。其余标准参数在 `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json`，文件不再带 `version`。下表的旧键出现即失败。怎么拆 Mod、怎么覆盖、时钟写在哪，见架构页「作者怎么配」。
 
 | 配置 | 目标概念 | 单位 | 标准值 | 含义 / 约束 |
 |---|---|---:|---:|---|
-| `world.navCellSizeCm` | `NavCell` | cm | 6250 | 导航格边长。每边数 = 板宽 ÷ 边长，16..1024，不进配置。板格 `Boards[].Grid.CellSizeCm` 不参与这条换算。 |
+| `profiles[].cellSizeCm` | `NavCell` | cm | 6250 | 导航格边长。每边数 = 板宽 ÷ 边长，16..1024，不进配置。板格 `Boards[].Grid.CellSizeCm` 不参与这条换算。 |
 | `navtile.sizeCm` | `NavTile`（群体） | cm | 100000 | 导航 tile 边长，也是 HPA 的一块。整除导航格边长；派生格数 4..128；整除每边导航格数。地形 navmesh 的 64 板格足迹是另一行。 |
 | `fog.cellSizeCm` | `FogCell` | cm | 25000 | 群体迷雾格边长。≥ 100 cm，整除导航格边长，派生倍数 1..32。主干 Vision 的迷雾格写在 `assets/Vision/fog_layers.json` 的 `fog_layers[].cellSizeCm`，owner 分开。 |
 | `navmesh.minRegionNavCellArea` | 区域阈值 | 导航格² | 12 | 栅格算法量，数字是格数。 |
@@ -111,13 +111,13 @@ flowchart TD
 | `flowfield.corridorPaddingNavTiles` | 走廊外扩 | 导航 tile | 1 | tile 掩码外扩。 |
 | `movement.maxStepNavCells` | 子步上限 | 导航格 | 0.45 | 防穿格。 |
 | `structures.portalReachNavCells` | 桥头 | 导航格 | 4 | 腐蚀半径。 |
-| 跳跃 `rangeNavCells` | 跳跃 | 导航格 | 按 profile | 与 `.navsurface` 候选的格距比较。 |
+| `profiles[].jump.rangeNavCells` | 跳跃 | 导航格 | 按能力档 | 写在 `Navigation/navmesh.json`。与 `.navsurface` 候选的格距比较。 |
 | `formation.magicBoxPadCm` | 点选框外扩 | cm | 6250 | 世界厘米，与包围盒厘米坐标比较。 |
 | `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0.02 | 0..1。 |
-| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 100000 / 37500 / 2187.5 / 6250 / 12500 / 9375 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
+| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 100000 / 37500 / 2187.5 / 6250 / 12500 / 9375 | 装载时 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。 |
 | `formation.magicBoxMaxSpreadCm` | 点选框最大跨度 | cm | 250000 | 直接当厘米用，`Fix64.FromDouble`。 |
-| `movement.wakeDistanceCm` | 唤醒 | cm | 12500 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
-| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 187500 / 125000 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
+| `movement.wakeDistanceCm` | 唤醒 | cm | 12500 | 装载时 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。 |
+| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 187500 / 125000 | 装载时 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。 |
 | `fog.visionCm` / `fog.eyeCm` | 视野 / 眼高 | cm | 80000 / 1000 | 视野半径相对迷雾格有上限。 |
 | `spawn.groupSpacingScale` | 团间距 | 无量纲 | 2.2 | 乘个人半径。旧键 `spawn.clusterSpacing`。 |
 | `formations.<id>.spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 1 或 1.8 / 1.1 | 乘直径或个人间距。键是阵型 id。 |

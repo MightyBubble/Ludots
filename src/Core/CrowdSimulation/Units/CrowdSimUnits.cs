@@ -13,7 +13,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
-/// <summary>一次单位生成的实例输入:出生格算出的位置 + 配置解析出的默认仿真参数(模板缺省字段的回落值)。</summary>
+/// <summary>一次单位生成的实例输入。仿真参数在单位模板上，这里只带出生位置和体型半径（呈现环）。</summary>
 public readonly record struct CrowdUnitSpawnRequest(
     Fix64 XCm,
     Fix64 YCm,
@@ -21,15 +21,11 @@ public readonly record struct CrowdUnitSpawnRequest(
     int RadiusClass,
     int GroupId,
     int PlayerId,
-    string ProfileId,
-    Fix64 RadiusCm,
-    Fix64 PersonalRadiusCm,
-    Fix64 SpeedCmPerSecond,
-    Fix64 PushPriority);
+    Fix64 RadiusCm);
 
 /// <summary>
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
-/// 带 CrowdSimulationAgent(模板写真 + 配置补全的仿真参数)、CrowdSimulationUnitState(仿真身份)、
+/// 带 CrowdSimulationAgent(模板写真)、CrowdSimulationUnitState(仿真身份)、
 /// WorldPositionCm、PlayerOwner。管理层只持三件东西:稠密序(创建序)、
 /// 槽位代数组与空闲槽池——与参考实现 units 的 18 位槽位 + 14 位代句柄同构,
 /// 句柄稳定且回放可复现。
@@ -73,7 +69,7 @@ public sealed class CrowdSimUnits
     public int FreeTop => _freeTop;
 
     /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径(内核热路径读组件,不走字符串档案查表)。</summary>
-    public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).ResolvedPersonalRadiusCm;
+    public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).PersonalRadiusCm;
 
     /// <summary>生成一个单位;满容量返回 -1(失败不留痕迹)。
     /// 实体由模板生成管线实例化(模板写真组件 + Mod 作者附加组件都落到实体),再由钩子
@@ -104,7 +100,6 @@ public sealed class CrowdSimUnits
             .WithEntityContext($"CrowdSimulation unit '{templateId}'")
             .Build();
 
-        CompleteAgent(entity, in unit);
         SetOrAdd(entity, new CrowdSimulationUnitState { Slot = slot, GroupId = unit.GroupId, State = 0, Mode = 0, Level = 0, Order = 0 });
         SetOrAdd(entity, new CrowdSimulationKinematics());
         SetOrAdd(entity, new WorldPositionCm { Value = posCm });
@@ -125,19 +120,6 @@ public sealed class CrowdSimUnits
         SetOrAdd(entity, new Ludots.Core.Presentation.Components.ContinuousHeightmapSampleState());
         SetRadiusBlackboard(entity, in unit);
         return entity;
-    }
-
-    /// <summary>模板缺省的仿真参数按配置默认值补全(配置分层:unitTypes/agentTypes 是默认值层);
-    /// 补全后内核只读本组件,不再做字符串档案查表。</summary>
-    private void CompleteAgent(Entity entity, in CrowdUnitSpawnRequest unit)
-    {
-        var agent = _world.Get<CrowdSimulationAgent>(entity);
-        agent.RadiusClassCm ??= (int)unit.RadiusCm.ToInt();
-        agent.SpeedCmPerSecond ??= unit.SpeedCmPerSecond;
-        agent.RadiusCm ??= unit.RadiusCm;
-        agent.PersonalRadiusCm ??= unit.PersonalRadiusCm;
-        agent.PushPriority ??= unit.PushPriority;
-        _world.Set(entity, agent);
     }
 
     private void SetRadiusBlackboard(Entity entity, in CrowdUnitSpawnRequest unit)

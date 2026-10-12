@@ -1,31 +1,29 @@
 {
   "mode": "runtime-incremental",
   "algorithm": "recast",
-  "profiles": [
-    {
-      "id": "Small",
+  "profiles": {
+    "Small": {
       "maxClimbCm": 40,
-      "maxSlopeDeg": 55
+      "maxSlopeDeg": 55,
+      "agentProfileId": "Small"
     }
-  ],
+  },
   "layers": [
     {
       "id": "ground",
       "layer": 0
     }
   ],
-  "areas": [
-    {
-      "id": "mud",
+  "areas": {
+    "mud": {
       "areaId": 1,
-      "cost": 2.0
+      "slopeFree": false
     },
-    {
-      "id": "road",
+    "road": {
       "areaId": 2,
-      "cost": 0.7
+      "slopeFree": false
     }
-  ],
+  },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 4,
     "includeNeighborTiles": true,
@@ -40,7 +38,13 @@
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     }
   }
 }
