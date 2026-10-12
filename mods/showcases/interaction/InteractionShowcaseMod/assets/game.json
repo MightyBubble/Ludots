@@ -12,8 +12,7 @@
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1,
-      "controlSchemeId": "scheme.aim.kbm"
+      "playerId": 1
     }
   ]
 }

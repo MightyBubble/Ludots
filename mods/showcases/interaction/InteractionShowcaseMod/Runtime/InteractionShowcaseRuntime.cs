@@ -425,7 +425,14 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             EnsureShowcaseInputSchema(input);
+            if (!input.HasContext(InteractionShowcaseInputContexts.AimKbm))
+            {
+                throw new InvalidOperationException(
+                    $"Missing input context: {InteractionShowcaseInputContexts.AimKbm}");
+            }
+
             input.PushContext(InteractionShowcaseInputContexts.Showcase);
+            input.PushContext(InteractionShowcaseInputContexts.AimKbm);
             _inputContextActive = true;
         }
 
@@ -436,6 +443,7 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
+            input.PopContext(InteractionShowcaseInputContexts.AimKbm);
             input.PopContext(InteractionShowcaseInputContexts.Showcase);
             _inputContextActive = false;
         }
