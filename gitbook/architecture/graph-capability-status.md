@@ -200,12 +200,12 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 4 | 原先 `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 已落地。目录策略仍是 DeepObject：管线没有「对象根加一条按 id 合并的数组」这一档，加载器把现成的 DeepObject 和 ArrayById 拼在一起。`schemes` / `profiles` 按 `id` 字段级合并，后加载的字段赢，`inputContexts` 和 `rules` 整段替换。`allowedSchemes` 用 `ArrayAppendFields` 追加，重复 id 在校验里失败关闭。和根资产、能力 mod 相同的副本已从游戏 mod 删掉 |
 | 5 | 原先地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 已落地。进图读的就是 `game.json` 的 `startupLocalSeats[].controlSchemeId`（写进 `MapLaunchContext.LocalSeats`）。SHOW-6 改成「启动方案必须显式声明」，空了报这个字段名。交互展示座位是 `scheme.aim.kbm`。没写这个字段的其他座位仍保持运行时已经激活的方案，这是 `ParticipantBindingResolver` 的既有合同 |
 | 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | DEC-15 修订已定：方案只是键位档案，不带偏好。Core 在切方案时发通用事件（新旧方案 id），能力 mod 的图收到后用 `SetPref` 写施法方式 |
-| 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | 输入动作允许带一个整型参数（绑定数据声明），按下图只留一个入口，从入口载荷读槽号。加槽只改绑定，不改能力图 |
+| 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | **已改**：绑定的 `intValue` 随按下和松开写进快照和回放，`graph.aim.press` 与 `graph.aim.release_confirm` 各留一个入口并从 `MapTrigger.BindingInt` 读槽号，方案展示用 `t` / `y` 绑第 5、6 槽 |
 | 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | **已改**：按下图只 `ActivateContextFromPref`（542），取值就是手势状态 id。即时施放是 `interaction.context.aim.smart`，`onActivated` 提交后 `DeactivateOwnContext`。加一种方式是新 profile 加进键 `pref.aim.cast_mode` 的取值，规则图不用改 |
 | 9 | 指示器只有一种形状 | 切片 R 之后形状跟着规则图开的目标状态走：每种形状一个共用目标 context + 一条 presenter 规则，技能引用对应规则图 |
-| 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | 入口可声明 `budget: single-slice`，装载期按静态最长路径算步数，超了直接报错。输入入口默认要求这一条 |
+| 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | **已改**：入口写 `budget: "single-slice"` 后，装载按切片同一套计步算最长路径，超过 64 步就报图名、入口、步数和预算；瞄准的输入入口都标了，指针和摇杆追踪把采样留在宿主，其余放进调用图 |
 | 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后只剩数据：再加一个取值和一个交互状态，规则图不用改 |
-| 12 | 指示器在按下后的下一拍才出现 | 切片 R 改成听 `ContextActivated` 后复测；还晚就查 presenter 规则阶段在帧内的顺序，不加特例 |
+| 12 | 指示器在按下后的下一拍才出现 | **已改**：按下那一拍 `aim.range` 和 `aim.line` 已经挂在瞄准演员上 |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
 | 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：槽位、落点、射程、目标、朝向和摇杆清零只写在 `graph.aim.prepare_actor`。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 和每个游戏的重绑路径也调用它 |
 | 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
@@ -214,7 +214,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **还没删的 `CoreInputMod` 部分：** 小地图指针交互改走前台交互状态（删 `MinimapInputConsumer` / `PointerInputCaptured` / `interactionActions`）；`collection.command.source` 换成各 mod 自己的集合；最后删 `CoreInputMod` 目录和它的依赖，去掉 `Default_Gameplay`，启动交互状态找不到就报错，加禁名守卫。
 
-**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → 第 7、10 条 → `CoreInputMod` 收尾。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
 ### 3.4 不要当成这轮图能力去合
 
