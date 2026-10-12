@@ -223,7 +223,6 @@
 - [读活指针横向](LoadPointerScreenX.md) — 活指针横向停在 42，读数进伤害链。
 - [读活指针纵向](LoadPointerScreenY.md) — 活指针纵向停在 42，读数进伤害链。
 - [负债翻面成正数](NegFloat.md) — 负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。
-- [问这一槽接不接受这种目标](AbilityAcceptsTargetKind.md) — 图按槽位读技能声明的目标种类。
 - [问这个情境还在不在](IsContextActive.md) — 图先把情境挂上，再问它是不是还在。
 - [问这个槽是不是这种施法](IsCastMode.md) — 图拿代表记下的施法方式，对槽位上那条技能。
 - [隔空落子](SetWorldPosition.md) — 不用挪动命令，一枚棋子从图里被放到了指定点。

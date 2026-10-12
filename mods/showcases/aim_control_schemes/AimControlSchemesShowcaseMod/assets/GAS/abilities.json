@@ -10,8 +10,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
@@ -27,8 +27,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
@@ -44,8 +44,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
@@ -61,8 +61,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }

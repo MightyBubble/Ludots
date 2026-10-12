@@ -50,16 +50,6 @@ public sealed class GraphOpsNodeGalleryCastModeAcceptanceTests
     }
 
     [Test]
-    public void AbilityAcceptsTargetKindVignette_QuotesAnAcceptedKind()
-    {
-        using var runtime = new GraphOpsNodeGalleryRuntime();
-        runtime.BindOp("AbilityAcceptsTargetKind");
-        runtime.EnsureWorld();
-        runtime.Tick(0.35f);
-        AssertDetail(runtime, "AbilityAcceptsTargetKind");
-    }
-
-    [Test]
     public void LoadSlotAbilityIdVignette_QuotesTheInstalledAbilityId()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

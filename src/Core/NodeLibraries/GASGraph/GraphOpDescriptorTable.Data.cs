@@ -367,7 +367,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadSlotAbilityId, LinearQueryScript, GraphValueType.Int, portSourceValue, queryOut: GraphValueType.Int, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.IsContextActive, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.Fail, LinearQueryScript, GraphValueType.Void, linearPorts: noPorts, queryPorts: noPorts, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.AbilityAcceptsTargetKind, LinearQueryScript, GraphValueType.Bool, portSourceValue, queryOut: GraphValueType.Bool, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
 
             var table = new GraphOpDescriptor[GraphVmLimits.HandlerTableSize];
             for (int i = 0; i < rows.Count; i++)

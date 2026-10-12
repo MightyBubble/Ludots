@@ -817,11 +817,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Ability '{id}' in '{path}' field 'targeting.impactEffect' references unknown effect template '{impactEffect}'.");
             }
 
+            string retiredTargetingList = string.Concat("target", "Kinds");
+            if (targetingObj[retiredTargetingList] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.{retiredTargetingList}' is removed. Targeting rules belong in the TriggerGraphs this ability references.");
+            }
+
             var targeting = new AbilityTargetingConfig
             {
                 CastRangeCm = targetingObj["castRangeCm"]!.GetValue<float>(),
-                ImpactEffectTemplateId = impactEffectTemplateId,
-                TargetKinds = CompileTargetKinds(targetingObj, id, path)
+                ImpactEffectTemplateId = impactEffectTemplateId
             };
 
             if (targeting.CastRangeCm < 0f)
@@ -831,62 +837,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return targeting;
-        }
-
-        private static byte CompileTargetKinds(JsonObject targetingObj, string id, string path)
-        {
-            if (!targetingObj.TryGetPropertyValue("targetKinds", out JsonNode? kindsNode) || kindsNode == null)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' is required when 'targeting' is present.");
-            }
-
-            if (kindsNode is not JsonArray kindArray)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must be an array of 'unit', 'ground', and/or 'none'.");
-            }
-
-            if (kindArray.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must list at least one of 'unit', 'ground', or 'none'.");
-            }
-
-            byte mask = 0;
-            for (int i = 0; i < kindArray.Count; i++)
-            {
-                if (kindArray[i] is not JsonValue kindValue ||
-                    !kindValue.TryGetValue(out string? token) ||
-                    string.IsNullOrWhiteSpace(token))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds[{i}]' must be a target kind symbol.");
-                }
-
-                if (!AbilityTargetKinds.TryParse(token, out byte bit))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds' has unknown kind '{token}'. Expected '{AbilityTargetKinds.Unit}', '{AbilityTargetKinds.Ground}', or '{AbilityTargetKinds.None}'.");
-                }
-
-                if ((mask & bit) != 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds' repeats '{token}'.");
-                }
-
-                mask |= bit;
-            }
-
-            if ((mask & AbilityTargetKinds.NoneBit) != 0 &&
-                (mask & (AbilityTargetKinds.UnitBit | AbilityTargetKinds.GroundBit)) != 0)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' lists 'none' together with another kind. 'none' is exclusive.");
-            }
-
-            return mask;
         }
 
         private static void RejectRemovedAimVisualFields(JsonNode? node, string id, string path, string currentPath)

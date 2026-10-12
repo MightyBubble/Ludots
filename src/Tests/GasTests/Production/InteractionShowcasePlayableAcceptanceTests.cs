@@ -234,7 +234,7 @@ namespace Ludots.Tests.GAS.Production
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
             Assert.That(ringOverlays, Is.EqualTo(baselineRings),
-                "Shockwave declares targetKinds none, so the press casts without an aim indicator. " + vanguardIndicatorDiagnostics);
+                "Shockwave's rule graph submits on press, so the hold does not open an aim indicator. " + vanguardIndicatorDiagnostics);
             Assert.That(
                 vanguardTargetHealthDuringHold,
                 Is.LessThan(vanguardTargetHealthBeforeR),

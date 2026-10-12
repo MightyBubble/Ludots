@@ -16,14 +16,59 @@
         "op": "LoadCaster"
       },
       {
-        "id": "invoke",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.resolve_submit"
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
       },
       {
-        "id": "deact",
-        "op": "DeactivateContext",
-        "context": "interaction.context.aim.click"
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt_dead",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "write_handled",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
+      },
+      {
+        "id": "load_ability",
+        "op": "LoadSlotAbilityId"
+      },
+      {
+        "id": "load_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "dispatch",
+        "op": "DispatchMapEvent",
+        "event": "Aim.Rule.Resolve"
+      },
+      {
+        "id": "read_handled",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
       },
       {
         "id": "c1",
@@ -31,70 +76,228 @@
         "intValue": 1
       },
       {
-        "id": "halt",
+        "id": "eq_handled",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "handled_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "fail",
+        "op": "Fail",
+        "message": "AimRuleUnhandled"
+      },
+      {
+        "id": "deact",
+        "op": "DeactivateContext",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "halt_ok",
         "op": "HaltReturnInt"
-      },
-      {
-        "id": "load_queue_mod",
-        "op": "LoadEntryPayloadInt",
-        "payloadKey": "MapTrigger.Modifiers"
-      },
-      {
-        "id": "store_queue_mod",
-        "op": "StoreArgInt",
-        "argKey": "MapTrigger.Modifiers"
       }
     ],
     "controlEdges": [
       {
         "from": "rep",
         "fromPort": "next",
-        "to": "load_queue_mod"
+        "to": "actors"
       },
       {
-        "from": "invoke",
+        "from": "actors",
         "fromPort": "next",
-        "to": "deact"
+        "to": "c0"
       },
       {
-        "from": "deact",
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt_dead"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "write_handled"
+      },
+      {
+        "from": "write_handled",
+        "fromPort": "next",
+        "to": "load_ability"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "next",
+        "to": "load_mod"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "next",
+        "to": "dispatch"
+      },
+      {
+        "from": "dispatch",
+        "fromPort": "next",
+        "to": "read_handled"
+      },
+      {
+        "from": "read_handled",
         "fromPort": "next",
         "to": "c1"
       },
       {
         "from": "c1",
         "fromPort": "next",
-        "to": "halt"
+        "to": "eq_handled"
       },
       {
-        "from": "load_queue_mod",
+        "from": "eq_handled",
         "fromPort": "next",
-        "to": "store_queue_mod"
+        "to": "handled_jump"
       },
       {
-        "from": "store_queue_mod",
+        "from": "handled_jump",
+        "fromPort": "true",
+        "to": "deact"
+      },
+      {
+        "from": "deact",
         "fromPort": "next",
-        "to": "invoke"
+        "to": "halt_ok"
+      },
+      {
+        "from": "handled_jump",
+        "fromPort": "false",
+        "to": "fail"
       }
     ],
     "valueEdges": [
       {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_dead",
+        "toPort": "value"
+      },
+      {
         "from": "c1",
         "fromPort": "value",
-        "to": "halt",
+        "to": "halt_ok",
         "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_ability",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_ability",
+        "toPort": "value"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "value",
+        "to": "dispatch",
+        "toPort": "ability"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "value",
+        "to": "dispatch",
+        "toPort": "modifiers"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "read_handled",
+        "fromPort": "value",
+        "to": "eq_handled",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "eq_handled",
+        "toPort": "b"
+      },
+      {
+        "from": "eq_handled",
+        "fromPort": "value",
+        "to": "handled_jump",
+        "toPort": "condition"
       },
       {
         "from": "rep",
         "fromPort": "value",
         "to": "deact",
         "toPort": "source"
-      },
-      {
-        "from": "load_queue_mod",
-        "fromPort": "value",
-        "to": "store_queue_mod",
-        "toPort": "value"
       }
     ]
   }

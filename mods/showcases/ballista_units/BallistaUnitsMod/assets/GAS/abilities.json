@@ -19,7 +19,6 @@
    ]
   },
   "targeting": {
-   "targetKinds": ["unit", "ground"],
    "castRangeCm": 900,
    "impactEffect": "Effect.Ballista.BoltProjectile"
   }
@@ -44,7 +43,6 @@
    ]
   },
   "targeting": {
-   "targetKinds": ["unit", "ground"],
    "castRangeCm": 900,
    "impactEffect": "Effect.Ballista.Bolt"
   }

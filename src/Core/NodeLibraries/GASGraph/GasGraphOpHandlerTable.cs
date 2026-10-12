@@ -401,7 +401,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadAbilityCastRange or
                 GraphNodeOp.LoadSlotAbilityId or
                 GraphNodeOp.Fail or
-                GraphNodeOp.AbilityAcceptsTargetKind or
                 GraphNodeOp.IsContextActive
                     => EffectOperationMetadata.Pure(description),
 
@@ -985,7 +984,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
             Register(GraphNodeOp.IsContextActive, HandleIsContextActive, "IsContextActive graph opcode.");
             Register(GraphNodeOp.Fail, HandleFail, "Fail graph opcode.");
-            Register(GraphNodeOp.AbilityAcceptsTargetKind, HandleAbilityAcceptsTargetKind, "AbilityAcceptsTargetKind graph opcode.");
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
@@ -1863,11 +1861,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity subject = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.B[ins.Dst] = (byte)(s.Api.IsContextActive(subject, ins.Imm) ? 1 : 0);
-        }
-
-        private static void HandleAbilityAcceptsTargetKind(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            s.B[ins.Dst] = (byte)(s.Api.AbilityAcceptsTargetKind(s.E[ins.A], s.I[ins.B], ins.Imm) ? 1 : 0);
         }
 
         private static void HandleFail(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

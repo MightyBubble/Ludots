@@ -37,8 +37,8 @@
         "PressReleaseAimCast": "Release key, then confirm blink"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 440,
       "impactEffect": "Effect.Champion.Ezreal.ArcaneShift"
     }
@@ -75,8 +75,8 @@
         "PressReleaseAimCast": "Release key, then confirm mark shot"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
     }
@@ -113,8 +113,8 @@
         "PressReleaseAimCast": "Release key, then confirm line shot"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 840,
       "impactEffect": "Effect.Champion.Ezreal.MysticShot"
     }
@@ -151,8 +151,8 @@
         "PressReleaseAimCast": "Release key, then confirm barrage direction"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 2200,
       "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
     }
@@ -232,8 +232,8 @@
         "PressReleaseAimCast": "Release key, then confirm engage"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 320,
       "impactEffect": "Effect.Champion.Garen.DecisiveStrike"
     }
@@ -270,8 +270,8 @@
         "PressReleaseAimCast": "Release key, then confirm execute"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Champion.Garen.DemacianJustice"
     }
@@ -308,8 +308,8 @@
         "PressReleaseAimCast": "Release key, then confirm spin"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Champion.Garen.Judgment"
     }
@@ -346,8 +346,8 @@
         "PressReleaseAimCast": "Release key, then confirm beacon"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Champion.Geomancer.RunicBeacon"
     }
@@ -384,8 +384,8 @@
         "PressReleaseAimCast": "Release key, then confirm rune field"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Champion.Geomancer.RuneField"
     }
@@ -422,8 +422,8 @@
         "PressReleaseAimCast": "Release key, then confirm pillar"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Champion.Geomancer.StonePillar"
     }
@@ -460,8 +460,8 @@
         "PressReleaseAimCast": "Release key, then confirm beam"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 920,
       "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
     }
@@ -498,8 +498,8 @@
         "PressReleaseAimCast": "Release key, then confirm gate"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 640,
       "impactEffect": "Effect.Champion.Jayce.Cannon.AccelerationGate"
     }
@@ -536,8 +536,8 @@
         "PressReleaseAimCast": "Release key, then confirm charge"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Champion.Jayce.Cannon.HyperCharge"
     }
@@ -574,8 +574,8 @@
         "PressReleaseAimCast": "Release key, then confirm shock blast"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 880,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
     }
@@ -612,8 +612,8 @@
         "PressReleaseAimCast": "Release key, then confirm shock ring"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Champion.Jayce.Hammer.LightningField"
     }
@@ -650,8 +650,8 @@
         "PressReleaseAimCast": "Release key, then confirm cone"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 300,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
     }
@@ -688,8 +688,8 @@
         "PressReleaseAimCast": "Release key, then confirm leap"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
     }
@@ -806,8 +806,8 @@
         "PressReleaseAimCast": "Release key, then confirm melee sweep"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 180,
       "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
     }
@@ -844,8 +844,8 @@
         "PressReleaseAimCast": "Release key, then confirm fireball"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
     }
@@ -882,8 +882,8 @@
         "PressReleaseAimCast": "Release key, then confirm laser"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1400,
       "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
     }
@@ -920,8 +920,8 @@
         "PressReleaseAimCast": "Release key, then confirm heal"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 900,
       "impactEffect": "Effect.ChampionStress.Priest.Heal"
     }
@@ -958,8 +958,8 @@
         "PressReleaseAimCast": "Release key, then confirm beacon"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.SpellEngineer.SpellBeacon"
     }
@@ -996,8 +996,8 @@
         "PressReleaseAimCast": "Release key, then confirm well"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.SpellEngineer.GravityWell"
     }
@@ -1039,8 +1039,8 @@
         "PressReleaseAimCast": "Release key, then confirm arena"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 700,
       "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
     }
@@ -1081,8 +1081,8 @@
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1050,
       "impactEffect": "Effect.Champion.SpellEngineer.GuidedLaser"
     }

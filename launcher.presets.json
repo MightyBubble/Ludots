@@ -3764,16 +3764,7 @@
       "adapterId": "raylib",
       "buildMode": "auto"
     },
-    {
-      "id": "capability_standard_graph_op_AbilityAcceptsTargetKind_raylib",
-      "name": "Graph Op AbilityAcceptsTargetKind Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_AbilityAcceptsTargetKind"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
+        {
       "id": "capability_standard_graph_op_SetCastMode_raylib",
       "name": "Graph Op SetCastMode Raylib",
       "selectors": [

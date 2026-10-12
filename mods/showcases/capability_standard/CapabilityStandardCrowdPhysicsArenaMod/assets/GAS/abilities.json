@@ -31,7 +31,6 @@
       "hintText": "Knock nearby squads away from the impact point"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.CrowdArena.Shockwave.SpawnEpicenter"
     }
@@ -68,7 +67,6 @@
       "hintText": "Release a rolling boulder with authored initial velocity"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.CrowdArena.Boulder.Spawn"
     }

@@ -26,8 +26,8 @@
         "Cooldown.Arcweaver.Q"
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_only"],
     "targeting": {
-      "targetKinds": ["unit"],
       "castRangeCm": 900,
       "impactEffect": "Effect.Interaction.DuelBolt"
     }
@@ -54,8 +54,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Interaction.BlinkStep"
     },
@@ -87,8 +87,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Interaction.FireLance"
     },
@@ -121,8 +121,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.none"],
     "targeting": {
-      "targetKinds": ["none"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.NovaPulse"
     },
@@ -154,8 +154,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.ArcDash"
     },
@@ -242,8 +242,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 780,
       "impactEffect": "Effect.Interaction.RuneBurst"
     },
@@ -280,8 +280,8 @@
         "Cooldown.Vanguard.Q"
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_only"],
     "targeting": {
-      "targetKinds": ["unit"],
       "castRangeCm": 480,
       "impactEffect": "Effect.Interaction.Challenge"
     }
@@ -308,8 +308,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 440,
       "impactEffect": "Effect.Interaction.BannerLeap"
     },
@@ -341,8 +341,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.CleaveCone"
     },
@@ -375,8 +375,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.none"],
     "targeting": {
-      "targetKinds": ["none"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Shockwave"
     },
@@ -408,8 +408,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 300,
       "impactEffect": "Effect.Interaction.ChargeDash"
     },
@@ -491,8 +491,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Interaction.GroundSlam"
     },
@@ -529,8 +529,8 @@
         "Cooldown.Commander.Q"
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_only"],
     "targeting": {
-      "targetKinds": ["unit"],
       "castRangeCm": 800,
       "impactEffect": "Effect.Interaction.SupportBeam"
     }
@@ -557,8 +557,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 560,
       "impactEffect": "Effect.Interaction.TacticalJump"
     },
@@ -590,8 +590,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Interaction.VolleyLine"
     },
@@ -628,8 +628,8 @@
         "Cooldown.Commander.R"
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.none"],
     "targeting": {
-      "targetKinds": ["none"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Overclock"
     }
@@ -656,8 +656,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.ground_only"],
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 320,
       "impactEffect": "Effect.Interaction.ThrustJump"
     },
@@ -739,8 +739,8 @@
         }
       ]
     },
+    "triggerGraphs": ["graph.aim.rule.unit_or_ground"],
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 820,
       "impactEffect": "Effect.Interaction.OrbitalStrike"
     },

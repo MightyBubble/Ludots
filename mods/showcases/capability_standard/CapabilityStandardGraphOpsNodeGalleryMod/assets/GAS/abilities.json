@@ -23,7 +23,6 @@
       ]
     },
     "targeting": {
-      "targetKinds": ["unit"],
       "castRangeCm": 640,
       "impactEffect": "Effect.GraphOps.ChainOpening"
     }

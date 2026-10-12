@@ -72,45 +72,10 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 
-    public static class AbilityTargetKinds
-    {
-        public const string Unit = "unit";
-        public const string Ground = "ground";
-        public const string None = "none";
-        public const byte UnitBit = 1;
-        public const byte GroundBit = 2;
-        public const byte NoneBit = 4;
-
-        public static bool TryParse(string? token, out byte bit)
-        {
-            if (string.Equals(token, Unit, StringComparison.Ordinal))
-            {
-                bit = UnitBit;
-                return true;
-            }
-
-            if (string.Equals(token, Ground, StringComparison.Ordinal))
-            {
-                bit = GroundBit;
-                return true;
-            }
-
-            if (string.Equals(token, None, StringComparison.Ordinal))
-            {
-                bit = NoneBit;
-                return true;
-            }
-
-            bit = 0;
-            return false;
-        }
-    }
-
     public struct AbilityTargetingConfig
     {
         public float CastRangeCm;
         public int ImpactEffectTemplateId;
-        public byte TargetKinds;
     }
 
     /// <summary>

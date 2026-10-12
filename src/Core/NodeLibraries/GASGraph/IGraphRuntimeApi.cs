@@ -138,16 +138,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// True when the ability on <paramref name="actor"/> at <paramref name="slot"/>
-        /// lists the target kind named by <paramref name="kindKeyId"/> (<c>unit</c>, <c>ground</c>, or exclusive <c>none</c>).
-        /// An empty slot, a missing targeting block, or an unknown kind fails closed.
-        /// </summary>
-        bool AbilityAcceptsTargetKind(Entity actor, int slot, int kindKeyId)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AbilityDefinitionsUnavailable");
-        }
-
-        /// <summary>
         /// Activates an interaction context instance on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
         /// on an already-active context; fail-closed on dead subjects, unknown key ids, and

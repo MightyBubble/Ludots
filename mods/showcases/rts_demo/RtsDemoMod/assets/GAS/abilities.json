@@ -48,7 +48,6 @@
       "hintText": "选择可进驻建筑，把当前单位挂入建筑关系。"
     },
     "targeting": {
-      "targetKinds": ["unit"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.Rts.Shared.EnterGarrison"
     }
@@ -115,7 +114,6 @@
       "hintText": "War3 式农民驻场施工，完工后自动脱离。"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 1600,
       "impactEffect": "Effect.Rts.War3.CreateLumberMillSite"
     }
@@ -159,7 +157,6 @@
       "hintText": "War3 式带工人进驻施工，可继续收容驻军。"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 1500,
       "impactEffect": "Effect.Rts.War3.CreateGuardTowerSite"
     }
@@ -236,7 +233,6 @@
       "hintText": "C&C 式拍地而起，短暂升起后即可运作。"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 2200,
       "impactEffect": "Effect.Rts.Cnc.PlacePowerPlant"
     }
@@ -269,7 +265,6 @@
       "hintText": "C&C 式重型生产建筑，落地即进入短施工态。"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 2200,
       "impactEffect": "Effect.Rts.Cnc.PlaceRefinery"
     }
@@ -481,7 +476,6 @@
       "hintText": "SC2 神族式地面折跃，单位在落点短暂成型。"
     },
     "targeting": {
-      "targetKinds": ["ground"],
       "castRangeCm": 2600,
       "impactEffect": "Effect.Rts.Sc2.WarpZealot"
     }
@@ -525,7 +519,6 @@
       "hintText": "虫族 Drone 会被吸入建筑，完工时自身消失。"
     },
     "targeting": {
-      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1500,
       "impactEffect": "Effect.Rts.Zerg.MorphSpawningPool"
     }

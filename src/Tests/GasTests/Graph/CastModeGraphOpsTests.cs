@@ -23,7 +23,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.Graph
 {
     /// <summary>
-    /// Cast-mode and ground-point ops: compile on the kinds Slice E will author, then execute.
+    /// Cast-mode, slot-ability, and ground-point ops.
     /// Symbol immediates go through the same config-key patch as SetInteractionMode.
     /// </summary>
     [TestFixture]
@@ -161,85 +161,6 @@ namespace Ludots.Tests.GasTests.Graph
             Assert.That(error.Message, Does.Contain(AbilityName));
         }
 
-        [Test]
-        public void AbilityAcceptsTargetKind_FollowsTheAuthoredSet([Values("Effect", "Query")] string kind)
-        {
-            using var world = World.Create();
-            Fixture fixture = Fixture.Create(world, targetKinds: AbilityTargetKinds.UnitBit);
-            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
-
-            Run unit = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Unit), world, fixture.Api, "check", actor, actor);
-            Assert.That(unit.Bools[unit.FeaturedDst], Is.EqualTo(1));
-
-            Run ground = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Ground), world, fixture.Api, "check", actor, actor);
-            Assert.That(ground.Bools[ground.FeaturedDst], Is.EqualTo(0));
-
-            Run none = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.None), world, fixture.Api, "check", actor, actor);
-            Assert.That(none.Bools[none.FeaturedDst], Is.EqualTo(0));
-        }
-
-        [Test]
-        public void AbilityAcceptsTargetKind_NoneFollowsItsOwnBit([Values("Effect", "Query")] string kind)
-        {
-            using var noneWorld = World.Create();
-            Fixture noneFixture = Fixture.Create(noneWorld, targetKinds: AbilityTargetKinds.NoneBit);
-            Entity noneActor = noneFixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
-
-            Run none = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.None), noneWorld, noneFixture.Api, "check", noneActor, noneActor);
-            Assert.That(none.Bools[none.FeaturedDst], Is.EqualTo(1));
-            Run unit = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Unit), noneWorld, noneFixture.Api, "check", noneActor, noneActor);
-            Assert.That(unit.Bools[unit.FeaturedDst], Is.EqualTo(0));
-            Run ground = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Ground), noneWorld, noneFixture.Api, "check", noneActor, noneActor);
-            Assert.That(ground.Bools[ground.FeaturedDst], Is.EqualTo(0));
-
-            using var bothWorld = World.Create();
-            Fixture bothFixture = Fixture.Create(bothWorld);
-            Entity bothActor = bothFixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
-            Run noneOnBoth = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.None), bothWorld, bothFixture.Api, "check", bothActor, bothActor);
-            Assert.That(noneOnBoth.Bools[noneOnBoth.FeaturedDst], Is.EqualTo(0));
-        }
-
-        [Test]
-        public void AbilityAcceptsTargetKind_UnknownKind_FailsNamingTheSymbol()
-        {
-            using var world = World.Create();
-            Fixture fixture = Fixture.Create(world, targetKinds: AbilityTargetKinds.GroundBit);
-            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
-
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-                CompileAndRun(AcceptsKindDoc("Effect", "self"), world, fixture.Api, "check", actor, actor));
-            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknown"));
-            Assert.That(error.Message, Does.Contain("self"));
-            Assert.That(error.Message, Does.Contain(AbilityTargetKinds.None));
-        }
-
-        [Test]
-        public void AbilityAcceptsTargetKind_MissingTargeting_FailsNamingTheAbility()
-        {
-            using var world = World.Create();
-            Fixture fixture = Fixture.Create(world, withTargeting: false);
-            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
-
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-                CompileAndRun(AcceptsKindDoc("Effect", AbilityTargetKinds.Unit), world, fixture.Api, "check", actor, actor));
-            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindNoTargeting"));
-            Assert.That(error.Message, Does.Contain(AbilityName));
-        }
-
-        [Test]
-        public void AbilityAcceptsTargetKind_EmptySlot_FailsNamingActorAndSlot()
-        {
-            using var world = World.Create();
-            Fixture fixture = Fixture.Create(world);
-            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: false);
-
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-                CompileAndRun(AcceptsKindDoc("Effect", AbilityTargetKinds.Unit), world, fixture.Api, "check", actor, actor));
-            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindSlotEmpty"));
-            Assert.That(error.Message, Does.Contain(actor.ToString()));
-            Assert.That(error.Message, Does.Contain("slot 0"));
-        }
-
         private static GraphControlFlowDocument IsCastModeDoc(string kind, string mode)
         {
             var doc = new GraphControlFlowDocument
@@ -327,38 +248,6 @@ namespace Ludots.Tests.GasTests.Graph
                     new GraphControlFlowValueEdge("y", "value", "point", "b"),
                 },
             };
-        }
-
-        private static GraphControlFlowDocument AcceptsKindDoc(string kind, string symbol)
-        {
-            var doc = new GraphControlFlowDocument
-            {
-                Id = "tests.graph.accepts-kind." + kind,
-                Kind = kind,
-                Entry = "slot",
-                Nodes =
-                {
-                    new GraphControlFlowNode { Id = "slot", Op = "ConstInt", IntValue = 0 },
-                    new GraphControlFlowNode { Id = "actor", Op = "LoadCaster" },
-                    new GraphControlFlowNode { Id = "check", Op = "AbilityAcceptsTargetKind", Symbol = symbol },
-                },
-                ControlEdges =
-                {
-                    new GraphControlFlowEdge("slot", "next", "actor"),
-                    new GraphControlFlowEdge("actor", "next", "check"),
-                },
-                ValueEdges =
-                {
-                    new GraphControlFlowValueEdge("actor", "value", "check", "source"),
-                    new GraphControlFlowValueEdge("slot", "value", "check", "value"),
-                },
-            };
-            if (kind == "TriggerGraph")
-            {
-                doc.Entries.Add(new TriggerGraphEntryConfig { Label = "probe", Event = "EntityAliveCountChanged", Start = "slot" });
-            }
-
-            return doc;
         }
 
         private static GraphControlFlowDocument LoadSlotAbilityDoc(string kind)
@@ -488,35 +377,73 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         [Test]
-        public void AimPress_NoneCheck_WithChampionBindHook_StaysInsideTheSlice()
+        public void AimPress_RuleHandoff_StaysInsideTheSlice()
         {
             string repo = FindRepoRoot();
             JsonSerializerOptions json = StrictJsonOptions.CreateCamelCase(includeFields: true);
-            string pressPath = Path.Combine(repo, "mods/capabilities/input/AimInteractionMod/assets/GAS/graphs/graph.aim.press.json");
+            string aimDir = Path.Combine(repo, "mods/capabilities/input/AimInteractionMod/assets/GAS/graphs");
             var schemas = new EventSchemaRegistry();
-            int champion = MeasureWovenPress(
-                pressPath,
-                Path.Combine(repo, "mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/graphs/graph.champion.bind_aim_actor.json"),
-                "graph.champion.rebind_aim_actor",
-                json,
-                schemas);
-            int interaction = MeasureWovenPress(
-                pressPath,
-                Path.Combine(repo, "mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/graphs/graph.interaction.bind_aim_actor.json"),
-                "graph.interaction.rebind_aim_actor",
-                json,
-                schemas);
+            var modifiers = new EventParamSchema("modifiers", EventParamType.Int, "Aim.Modifiers");
+            schemas.RegisterCustom(new EventSchema("Aim.Rule.Press", EventScope.Map, new[] { modifiers }));
+            schemas.RegisterCustom(new EventSchema("Aim.Rule.Resolve", EventScope.Map, new[] { modifiers }));
+
+            string pressPath = Path.Combine(aimDir, "graph.aim.press.json");
+            string confirmPath = Path.Combine(aimDir, "graph.aim.confirm.json");
+            string releasePath = Path.Combine(aimDir, "graph.aim.release_confirm.json");
+            string championHook = Path.Combine(
+                repo,
+                "mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/graphs/graph.champion.bind_aim_actor.json");
+            string interactionHook = Path.Combine(
+                repo,
+                "mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/graphs/graph.interaction.bind_aim_actor.json");
+            int champion = MeasureWovenPress(pressPath, championHook, "graph.champion.rebind_aim_actor", json, schemas);
+            int interaction = MeasureWovenPress(pressPath, interactionHook, "graph.interaction.rebind_aim_actor", json, schemas);
             int moba = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
             int aimSchemes = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
+            int championConfirm = MeasureWovenPress(confirmPath, championHook, "graph.champion.rebind_aim_actor", json, schemas);
+            int interactionConfirm = MeasureWovenPress(confirmPath, interactionHook, "graph.interaction.rebind_aim_actor", json, schemas);
+            int championRelease = MeasureWovenPress(releasePath, championHook, "graph.champion.rebind_aim_actor", json, schemas);
+            int interactionRelease = MeasureWovenPress(releasePath, interactionHook, "graph.interaction.rebind_aim_actor", json, schemas);
+            int ruleNone = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.none.json"), null, null, json, schemas);
+            int ruleUnit = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.unit_only.json"), null, null, json, schemas);
+            int ruleGround = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.ground_only.json"), null, null, json, schemas);
+            int ruleBoth = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.unit_or_ground.json"), null, null, json, schemas);
+
+            foreach (string path in Directory.GetFiles(aimDir, "graph.aim.*.json"))
+            {
+                GraphControlFlowDocument doc = LoadGraph(path, json);
+                for (int i = 0; i < doc.Nodes.Count; i++)
+                {
+                    if (string.Equals(doc.Nodes[i].Op, "InvokeGraph", StringComparison.Ordinal) &&
+                        !string.IsNullOrWhiteSpace(doc.Nodes[i].FunctionName))
+                    {
+                        GraphIdRegistry.Register(doc.Nodes[i].FunctionName!);
+                    }
+                }
+
+                RegisterGraph(new GraphProgramRegistry(), doc, schemas);
+            }
 
             TestContext.Out.WriteLine(
-                $"woven graph.aim.press longest host path: champion={champion} interaction={interaction} moba={moba} aim_schemes={aimSchemes}");
+                "woven aim host paths: " +
+                $"press champion={champion} interaction={interaction} moba={moba} aim_schemes={aimSchemes}; " +
+                $"confirm champion={championConfirm} interaction={interactionConfirm}; " +
+                $"release champion={championRelease} interaction={interactionRelease}; " +
+                $"rule none={ruleNone} unit={ruleUnit} ground={ruleGround} both={ruleBoth}");
             Assert.Multiple(() =>
             {
-                Assert.That(champion, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "champion");
-                Assert.That(interaction, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "interaction");
-                Assert.That(moba, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "moba");
-                Assert.That(aimSchemes, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "aim_schemes");
+                Assert.That(champion, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "press champion");
+                Assert.That(interaction, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "press interaction");
+                Assert.That(moba, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "press moba");
+                Assert.That(aimSchemes, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "press aim_schemes");
+                Assert.That(championConfirm, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "confirm champion");
+                Assert.That(interactionConfirm, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "confirm interaction");
+                Assert.That(championRelease, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "release champion");
+                Assert.That(interactionRelease, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "release interaction");
+                Assert.That(ruleNone, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule none");
+                Assert.That(ruleUnit, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule unit");
+                Assert.That(ruleGround, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule ground");
+                Assert.That(ruleBoth, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule both");
             });
         }
 
@@ -528,7 +455,6 @@ namespace Ludots.Tests.GasTests.Graph
             EventSchemaRegistry schemas)
         {
             GraphControlFlowDocument press = LoadGraph(pressPath, json);
-            GraphIdRegistry.Register("graph.aim.resolve_submit");
             if (invokeTarget != null)
             {
                 GraphIdRegistry.Register(invokeTarget);
@@ -651,8 +577,7 @@ namespace Ludots.Tests.GasTests.Graph
 
             public static Fixture Create(
                 World world,
-                bool withTargeting = true,
-                byte targetKinds = AbilityTargetKinds.UnitBit | AbilityTargetKinds.GroundBit)
+                bool withTargeting = true)
             {
                 var modes = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 modes.Register(Smart);
@@ -667,7 +592,6 @@ namespace Ludots.Tests.GasTests.Graph
                     {
                         CastRangeCm = 640f,
                         ImpactEffectTemplateId = 1,
-                        TargetKinds = targetKinds,
                     };
                 }
 

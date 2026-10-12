@@ -1,0 +1,461 @@
+[
+  {
+    "id": "graph.aim.rule.unit_or_ground",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "press",
+        "event": "Aim.Rule.Press",
+        "start": "p0",
+        "refire": "restart"
+      },
+      {
+        "label": "resolve",
+        "event": "Aim.Rule.Resolve",
+        "start": "p1",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "p0",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 4
+      },
+      {
+        "id": "p1",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 4
+      },
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actor_query",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt_dead",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "write_handled",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
+      },
+      {
+        "id": "mode_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "mode_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "is_click",
+        "op": "IsCastMode",
+        "mode": "castMode.aim_click"
+      },
+      {
+        "id": "click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "act_click",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.click",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "is_release",
+        "op": "IsCastMode",
+        "mode": "castMode.aim_release"
+      },
+      {
+        "id": "release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "act_release",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.release",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "is_smart",
+        "op": "IsCastMode",
+        "mode": "castMode.smart"
+      },
+      {
+        "id": "smart_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "load_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Aim.Modifiers"
+      },
+      {
+        "id": "store_mod",
+        "op": "StoreArgInt",
+        "argKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "invoke",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.resolve_submit"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "fail",
+        "op": "Fail",
+        "message": "UnmatchedCastMode"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "p0",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "p1",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actor_query"
+      },
+      {
+        "from": "actor_query",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt_dead"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "write_handled"
+      },
+      {
+        "from": "write_handled",
+        "fromPort": "next",
+        "to": "mode_eq"
+      },
+      {
+        "from": "mode_eq",
+        "fromPort": "next",
+        "to": "mode_jump"
+      },
+      {
+        "from": "mode_jump",
+        "fromPort": "true",
+        "to": "load_mod"
+      },
+      {
+        "from": "mode_jump",
+        "fromPort": "false",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "is_click"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "next",
+        "to": "click_jump"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "true",
+        "to": "act_click"
+      },
+      {
+        "from": "act_click",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "false",
+        "to": "is_release"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "next",
+        "to": "release_jump"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "true",
+        "to": "act_release"
+      },
+      {
+        "from": "act_release",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "is_smart"
+      },
+      {
+        "from": "is_smart",
+        "fromPort": "next",
+        "to": "smart_jump"
+      },
+      {
+        "from": "smart_jump",
+        "fromPort": "true",
+        "to": "load_mod"
+      },
+      {
+        "from": "smart_jump",
+        "fromPort": "false",
+        "to": "fail"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "next",
+        "to": "store_mod"
+      },
+      {
+        "from": "store_mod",
+        "fromPort": "next",
+        "to": "invoke"
+      },
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "halt_ok"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_dead",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actor_query",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "value"
+      },
+      {
+        "from": "p0",
+        "fromPort": "value",
+        "to": "mode_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "mode_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "mode_eq",
+        "fromPort": "value",
+        "to": "mode_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "target"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "target"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_smart",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "is_smart",
+        "toPort": "target"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "is_smart",
+        "toPort": "value"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "value",
+        "to": "click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_click",
+        "toPort": "source"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "value",
+        "to": "release_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_release",
+        "toPort": "source"
+      },
+      {
+        "from": "is_smart",
+        "fromPort": "value",
+        "to": "smart_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "value",
+        "to": "store_mod",
+        "toPort": "value"
+      }
+    ]
+  }
+]

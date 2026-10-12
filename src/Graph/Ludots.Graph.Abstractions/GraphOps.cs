@@ -559,13 +559,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Fail = 535,
 
         /// <summary>
-        /// B[Dst] = 1 when the ability on actor A at slot I[B] lists the target kind named by symbols[Imm].
-        /// Kind symbols are "unit", "ground", and exclusive "none" (no target and no point).
-        /// An empty slot, a missing targeting block, or an unknown kind fails closed.
-        /// </summary>
-        AbilityAcceptsTargetKind = 536,
-
-        /// <summary>
         /// E[A] = source; F[Dst] = FacingDirection.AngleRad converted to degrees (atan2 convention, not wrapped to 0–360).
         /// A dead source or a source without FacingDirection fails closed.
         /// </summary>

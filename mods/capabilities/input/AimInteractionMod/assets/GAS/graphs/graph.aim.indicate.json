@@ -34,6 +34,11 @@
         "collectionKey": "aim.indicating"
       },
       {
+        "id": "invoke_stick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.apply_stick"
+      },
+      {
         "id": "read_tgt",
         "op": "ReadBlackboardEntity",
         "blackboardKey": "aim.target"
@@ -121,132 +126,6 @@
         "blackboardKey": "aim.range_cm"
       },
       {
-        "id": "sk_one",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "sk_sv",
-        "op": "ReadBlackboardInt",
-        "blackboardKey": "aim.stick.valid"
-      },
-      {
-        "id": "sk_eq",
-        "op": "CompareEqInt"
-      },
-      {
-        "id": "sk_jump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "sk_sx",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.stick.x"
-      },
-      {
-        "id": "sk_sy",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.stick.y"
-      },
-      {
-        "id": "sk_rng",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.range_cm"
-      },
-      {
-        "id": "sk_ox",
-        "op": "LoadEntityPosX"
-      },
-      {
-        "id": "sk_oy",
-        "op": "LoadEntityPosY"
-      },
-      {
-        "id": "sk_oxf",
-        "op": "IntToFloat"
-      },
-      {
-        "id": "sk_oyf",
-        "op": "IntToFloat"
-      },
-      {
-        "id": "sk_mx",
-        "op": "MulFloat"
-      },
-      {
-        "id": "sk_my",
-        "op": "MulFloat"
-      },
-      {
-        "id": "sk_px",
-        "op": "AddFloat"
-      },
-      {
-        "id": "sk_py",
-        "op": "AddFloat"
-      },
-      {
-        "id": "sk_set",
-        "op": "SetTargetPos"
-      },
-      {
-        "id": "sk_wx",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.x_cm"
-      },
-      {
-        "id": "sk_wy",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.y_cm"
-      },
-      {
-        "id": "sk_wv",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.point.valid"
-      },
-      {
-        "id": "sk_assist",
-        "op": "QueryRadius",
-        "queryCapacityPolicy": "RequireComplete",
-        "radiusCm": 400
-      },
-      {
-        "id": "sk_hostile",
-        "op": "QueryFilterRelationship",
-        "relationshipType": "Hostile"
-      },
-      {
-        "id": "sk_nearest",
-        "op": "AggMinByDistance"
-      },
-      {
-        "id": "sk_alive",
-        "op": "LoadEntityPosValid"
-      },
-      {
-        "id": "sk_ajump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "sk_wt",
-        "op": "WriteBlackboardEntity",
-        "blackboardKey": "aim.target"
-      },
-      {
-        "id": "sk_c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
-        "id": "sk_null",
-        "op": "TargetListGet"
-      },
-      {
-        "id": "sk_wnull",
-        "op": "WriteBlackboardEntity",
-        "blackboardKey": "aim.target"
-      },
-      {
         "id": "fc_one",
         "op": "ConstInt",
         "intValue": 1
@@ -307,11 +186,6 @@
         "from": "member",
         "fromPort": "next",
         "to": "read_slot"
-      },
-      {
-        "from": "write",
-        "fromPort": "next",
-        "to": "sk_one"
       },
       {
         "from": "read_tgt",
@@ -409,156 +283,6 @@
         "to": "fc_one"
       },
       {
-        "from": "sk_one",
-        "fromPort": "next",
-        "to": "sk_sv"
-      },
-      {
-        "from": "sk_sv",
-        "fromPort": "next",
-        "to": "sk_eq"
-      },
-      {
-        "from": "sk_eq",
-        "fromPort": "next",
-        "to": "sk_jump"
-      },
-      {
-        "from": "sk_jump",
-        "fromPort": "false",
-        "to": "read_tgt"
-      },
-      {
-        "from": "sk_sx",
-        "fromPort": "next",
-        "to": "sk_sy"
-      },
-      {
-        "from": "sk_sy",
-        "fromPort": "next",
-        "to": "sk_rng"
-      },
-      {
-        "from": "sk_rng",
-        "fromPort": "next",
-        "to": "sk_ox"
-      },
-      {
-        "from": "sk_ox",
-        "fromPort": "next",
-        "to": "sk_oy"
-      },
-      {
-        "from": "sk_oy",
-        "fromPort": "next",
-        "to": "sk_oxf"
-      },
-      {
-        "from": "sk_oxf",
-        "fromPort": "next",
-        "to": "sk_oyf"
-      },
-      {
-        "from": "sk_oyf",
-        "fromPort": "next",
-        "to": "sk_mx"
-      },
-      {
-        "from": "sk_mx",
-        "fromPort": "next",
-        "to": "sk_my"
-      },
-      {
-        "from": "sk_my",
-        "fromPort": "next",
-        "to": "sk_px"
-      },
-      {
-        "from": "sk_px",
-        "fromPort": "next",
-        "to": "sk_py"
-      },
-      {
-        "from": "sk_py",
-        "fromPort": "next",
-        "to": "sk_set"
-      },
-      {
-        "from": "sk_set",
-        "fromPort": "next",
-        "to": "sk_wx"
-      },
-      {
-        "from": "sk_wx",
-        "fromPort": "next",
-        "to": "sk_wy"
-      },
-      {
-        "from": "sk_wy",
-        "fromPort": "next",
-        "to": "sk_wv"
-      },
-      {
-        "from": "sk_wv",
-        "fromPort": "next",
-        "to": "sk_assist"
-      },
-      {
-        "from": "sk_assist",
-        "fromPort": "next",
-        "to": "sk_hostile"
-      },
-      {
-        "from": "sk_hostile",
-        "fromPort": "next",
-        "to": "sk_nearest"
-      },
-      {
-        "from": "sk_nearest",
-        "fromPort": "next",
-        "to": "sk_alive"
-      },
-      {
-        "from": "sk_alive",
-        "fromPort": "next",
-        "to": "sk_ajump"
-      },
-      {
-        "from": "sk_jump",
-        "fromPort": "true",
-        "to": "sk_sx"
-      },
-      {
-        "from": "sk_ajump",
-        "fromPort": "true",
-        "to": "sk_wt"
-      },
-      {
-        "from": "sk_wt",
-        "fromPort": "next",
-        "to": "read_tgt"
-      },
-      {
-        "from": "sk_ajump",
-        "fromPort": "false",
-        "to": "sk_c99"
-      },
-      {
-        "from": "sk_c99",
-        "fromPort": "next",
-        "to": "sk_null"
-      },
-      {
-        "from": "sk_null",
-        "fromPort": "next",
-        "to": "sk_wnull"
-      },
-      {
-        "from": "sk_wnull",
-        "fromPort": "next",
-        "to": "read_tgt"
-      },
-      {
         "from": "fc_one",
         "fromPort": "next",
         "to": "fc_sv"
@@ -612,6 +336,16 @@
         "from": "fc_wf",
         "fromPort": "next",
         "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "invoke_stick"
+      },
+      {
+        "from": "invoke_stick",
+        "fromPort": "next",
+        "to": "read_tgt"
       }
     ],
     "valueEdges": [
@@ -745,216 +479,6 @@
         "from": "load_range",
         "fromPort": "value",
         "to": "write_range",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_sv",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_sv",
-        "fromPort": "value",
-        "to": "sk_eq",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_one",
-        "fromPort": "value",
-        "to": "sk_eq",
-        "toPort": "b"
-      },
-      {
-        "from": "sk_eq",
-        "fromPort": "value",
-        "to": "sk_jump",
-        "toPort": "condition"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_sx",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_sy",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_rng",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_ox",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_oy",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_ox",
-        "fromPort": "value",
-        "to": "sk_oxf",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_oy",
-        "fromPort": "value",
-        "to": "sk_oyf",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_sx",
-        "fromPort": "value",
-        "to": "sk_mx",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_rng",
-        "fromPort": "value",
-        "to": "sk_mx",
-        "toPort": "b"
-      },
-      {
-        "from": "sk_sy",
-        "fromPort": "value",
-        "to": "sk_my",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_rng",
-        "fromPort": "value",
-        "to": "sk_my",
-        "toPort": "b"
-      },
-      {
-        "from": "sk_oxf",
-        "fromPort": "value",
-        "to": "sk_px",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_mx",
-        "fromPort": "value",
-        "to": "sk_px",
-        "toPort": "b"
-      },
-      {
-        "from": "sk_oyf",
-        "fromPort": "value",
-        "to": "sk_py",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_my",
-        "fromPort": "value",
-        "to": "sk_py",
-        "toPort": "b"
-      },
-      {
-        "from": "sk_px",
-        "fromPort": "value",
-        "to": "sk_set",
-        "toPort": "a"
-      },
-      {
-        "from": "sk_py",
-        "fromPort": "value",
-        "to": "sk_set",
-        "toPort": "b"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_wx",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_px",
-        "fromPort": "value",
-        "to": "sk_wx",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_wy",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_py",
-        "fromPort": "value",
-        "to": "sk_wy",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_wv",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_one",
-        "fromPort": "value",
-        "to": "sk_wv",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_hostile",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_nearest",
-        "fromPort": "value",
-        "to": "sk_alive",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_alive",
-        "fromPort": "value",
-        "to": "sk_ajump",
-        "toPort": "condition"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_wt",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_nearest",
-        "fromPort": "value",
-        "to": "sk_wt",
-        "toPort": "value"
-      },
-      {
-        "from": "sk_c99",
-        "fromPort": "value",
-        "to": "sk_null",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sk_wnull",
-        "toPort": "source"
-      },
-      {
-        "from": "sk_null",
-        "fromPort": "value",
-        "to": "sk_wnull",
         "toPort": "value"
       },
       {

@@ -38,6 +38,51 @@
           "graphId": "graph.aim.resolve_submit",
           "nodeId": "actors"
         }
+      },
+      {
+        "label": "bind_confirm",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.confirm",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_release",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.release_confirm",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_ground",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.resolve_ground",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_unit",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.resolve_unit",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_none",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.submit_none",
+          "nodeId": "actors"
+        }
       }
     ],
     "nodes": [

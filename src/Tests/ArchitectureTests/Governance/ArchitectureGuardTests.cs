@@ -671,6 +671,7 @@ namespace Ludots.Tests.Architecture.Governance
             string modsDir = Path.Combine(repoRoot, "mods");
             Assert.That(Directory.Exists(modsDir), Is.True, $"Missing {modsDir}");
 
+            string retiredKindList = string.Concat("target", "Kinds");
             string[] forbiddenKeys =
             {
                 "indicator",
@@ -678,7 +679,8 @@ namespace Ludots.Tests.Architecture.Governance
                 "areaPresenterId",
                 "rangeCirclePresenterId",
                 "previewPresenterId",
-                "presenterId"
+                "presenterId",
+                retiredKindList,
             };
 
             var hits = new List<string>();
@@ -696,7 +698,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm, targeting.impactEffect, and targeting.targetKinds. Aim visuals must be event-condition-action presenter rules:\n" +
+                    "Ability configs must not declare removed aim visuals or a targeting kind list. Visuals belong in presenter rules. Targeting rules belong in the TriggerGraphs the ability references:\n" +
                     string.Join("\n", hits));
             }
         }

@@ -1774,8 +1774,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                   },
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact",
-                    "targetKinds": ["unit", "ground"]
+                    "impactEffect": "Effect.Guard.Impact"
                   }
                 }
                 """)!.AsObject();
@@ -1793,134 +1792,60 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(def.HasTargeting, Is.True);
             That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
             That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
-            That(def.Targeting.TargetKinds, Is.EqualTo((byte)(AbilityTargetKinds.UnitBit | AbilityTargetKinds.GroundBit)));
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_RejectsTargetingWithoutTargetKinds()
+        public void AbilityExecLoader_CompileAbility_AcceptsTargetingWithoutAKindList()
         {
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
-            var obj = JsonNode.Parse(
-                """
-                {
-                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-                  "targeting": {
-                    "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
-                  }
-                }
-                """)!.AsObject();
-
-            var ex = Throws<InvalidOperationException>(() =>
-                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.NoKinds", "GAS/abilities.json"));
-
-            That(ex!.Message, Does.Contain("targeting.targetKinds"));
-            That(ex.Message, Does.Contain("required"));
-        }
-
-        [Test]
-        public void AbilityExecLoader_CompileAbility_RejectsUnknownAndRepeatedTargetKinds()
-        {
-            EffectTemplateIdRegistry.Clear();
-            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
-            var unknown = JsonNode.Parse(
-                """
-                {
-                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-                  "targeting": {
-                    "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact",
-                    "targetKinds": ["self"]
-                  }
-                }
-                """)!.AsObject();
-            var unknownError = Throws<InvalidOperationException>(() =>
-                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(unknown, "Ability.Test.BadKind", "GAS/abilities.json"));
-            That(unknownError!.Message, Does.Contain("unknown kind 'self'"));
-
-            var repeated = JsonNode.Parse(
-                """
-                {
-                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-                  "targeting": {
-                    "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact",
-                    "targetKinds": ["unit", "unit"]
-                  }
-                }
-                """)!.AsObject();
-            var repeatedError = Throws<InvalidOperationException>(() =>
-                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(repeated, "Ability.Test.RepeatedKind", "GAS/abilities.json"));
-            That(repeatedError!.Message, Does.Contain("repeats 'unit'"));
-        }
-
-        [Test]
-        public void AbilityExecLoader_CompileAbility_AcceptsExclusiveNoneAndDoesNotInferItFromRange()
-        {
-            EffectTemplateIdRegistry.Clear();
-            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
-            var none = JsonNode.Parse(
+            var ranged = JsonNode.Parse(
                 """
                 {
                   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
                   "targeting": {
                     "castRangeCm": 1200,
-                    "impactEffect": "Effect.Guard.Impact",
-                    "targetKinds": ["none"]
+                    "impactEffect": "Effect.Guard.Impact"
                   }
                 }
                 """)!.AsObject();
-            var noneDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(none, "Ability.Test.None", "GAS/abilities.json");
-            That(noneDef.Targeting.TargetKinds, Is.EqualTo(AbilityTargetKinds.NoneBit));
-            That(noneDef.Targeting.CastRangeCm, Is.EqualTo(1200f));
+            var rangedDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(ranged, "Ability.Test.Ranged", "GAS/abilities.json");
+            That(rangedDef.HasTargeting, Is.True);
+            That(rangedDef.Targeting.CastRangeCm, Is.EqualTo(1200f));
 
-            var zeroRangeUnit = JsonNode.Parse(
+            var zero = JsonNode.Parse(
                 """
                 {
                   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
                   "targeting": {
                     "castRangeCm": 0,
-                    "impactEffect": "Effect.Guard.Impact",
-                    "targetKinds": ["unit"]
+                    "impactEffect": "Effect.Guard.Impact"
                   }
                 }
                 """)!.AsObject();
-            var unitDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(zeroRangeUnit, "Ability.Test.ZeroRangeUnit", "GAS/abilities.json");
-            That(unitDef.Targeting.TargetKinds, Is.EqualTo(AbilityTargetKinds.UnitBit));
-            That(unitDef.Targeting.CastRangeCm, Is.EqualTo(0f));
+            var zeroDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(zero, "Ability.Test.ZeroRange", "GAS/abilities.json");
+            That(zeroDef.HasTargeting, Is.True);
+            That(zeroDef.Targeting.CastRangeCm, Is.EqualTo(0f));
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_RejectsNoneCombinedWithAnotherKind()
+        public void AbilityExecLoader_CompileAbility_RejectsRetiredTargetingKindList()
         {
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
-            string[][] combos =
-            {
-                new[] { "none", "unit" },
-                new[] { "none", "ground" },
-                new[] { "ground", "none" },
-            };
-            for (int i = 0; i < combos.Length; i++)
-            {
-                string listed = $"\"{combos[i][0]}\", \"{combos[i][1]}\"";
-                var obj = JsonNode.Parse(
-                    $$"""
-                    {
-                      "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-                      "targeting": {
-                        "castRangeCm": 0,
-                        "impactEffect": "Effect.Guard.Impact",
-                        "targetKinds": [{{listed}}]
-                      }
-                    }
-                    """)!.AsObject();
-                var error = Throws<InvalidOperationException>(() =>
-                    Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.NoneMixed", "GAS/abilities.json"));
-                That(error!.Message, Does.Contain("lists 'none' together with another kind"));
-                That(error.Message, Does.Contain("'none' is exclusive"));
-            }
+            string field = string.Concat("target", "Kinds");
+            var obj = JsonNode.Parse(
+                "{" +
+                "\"exec\":{\"clockId\":\"FixedFrame\",\"items\":[{\"kind\":\"End\",\"tick\":0}]}," +
+                "\"targeting\":{\"castRangeCm\":620,\"impactEffect\":\"Effect.Guard.Impact\",\"" + field + "\":[\"unit\"]}" +
+                "}")!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.RetiredKindList", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting." + field));
+            That(ex.Message, Does.Contain("is removed"));
+            That(ex.Message, Does.Contain("TriggerGraphs"));
         }
 
         [Test]
