@@ -502,9 +502,9 @@ namespace Ludots.Client.Raylib.Rendering
             state.Pixels[pixel + 3] = a;
         }
 
-        public static Color ResolveFogColor(byte visibility)
+        public static Color ResolveFogColor(byte visibility, FogDecalPalette palette)
         {
-            ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
+            ResolveFogColorBytes(visibility, palette, out byte r, out byte g, out byte b, out byte a);
             return new Color(r, g, b, a);
         }
 
@@ -758,52 +758,16 @@ namespace Ludots.Client.Raylib.Rendering
             out byte b,
             out byte a)
         {
-            if (palette != null)
+            if (palette == null)
             {
-                FogDecalColor color = palette.For(visibility);
-                r = color.R;
-                g = color.G;
-                b = color.B;
-                a = color.A;
-                return;
+                throw new InvalidOperationException("迷雾贴花缺少调色板，需要 presentation.fogDecal。");
             }
 
-            ResolveFogColorBytes(visibility, out r, out g, out b, out a);
-        }
-
-        private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)
-        {
-            // 市面主流三态战争迷雾合同:不可见=黑(高不透明)、已探索不可见=暗化(中不透明黑)、
-            // 可见=清晰(全透明);Denied 是数据模型多出的遮蔽态,渲染保留暗红提示不丢信息。
-            switch (visibility)
-            {
-                case FogVisibilityVisible:
-                    r = 0;
-                    g = 0;
-                    b = 0;
-                    a = 0;
-                    return;
-                case FogVisibilityExplored:
-                    r = 0;
-                    g = 0;
-                    b = 0;
-                    a = 148;
-                    return;
-                case FogVisibilityDenied:
-                    r = 64;
-                    g = 8;
-                    b = 16;
-                    a = 214;
-                    return;
-                case FogVisibilityUnseen:
-                    r = 0;
-                    g = 0;
-                    b = 0;
-                    a = 232;
-                    return;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(visibility), visibility, "Unsupported fog visibility.");
-            }
+            FogDecalColor color = palette.For(visibility);
+            r = color.R;
+            g = color.G;
+            b = color.B;
+            a = color.A;
         }
 
         private void UploadDirtyRects(FieldTextureState state)

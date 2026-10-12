@@ -16,6 +16,12 @@
       "heightPx": 118,
       "keys": "左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢 · V 视图 {view}"
     },
+    "fogDecal": {
+      "unseen": [0, 0, 0, 232],
+      "explored": [0, 0, 0, 148],
+      "visible": [0, 0, 0, 0],
+      "denied": [64, 8, 16, 214]
+    },
     "path": {
       "truthAsset": "assets/CrowdSimulation/parity/s3c-query-truth.json",
       "actions": {

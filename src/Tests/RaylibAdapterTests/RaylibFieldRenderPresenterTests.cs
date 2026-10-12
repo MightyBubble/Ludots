@@ -31,7 +31,7 @@ public sealed class RaylibFieldRenderPresenterTests
         field.SetDenied(new FogCell(2, 0));
         ProjectFog(buffer, field);
 
-        var presenter = new RaylibFieldRenderPresenter();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
         ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
 
         Assert.That(plans.Length, Is.EqualTo(1));
@@ -51,7 +51,7 @@ public sealed class RaylibFieldRenderPresenterTests
         Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(1, 0), out Color explored), Is.True);
         Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(2, 0), out Color denied), Is.True);
         Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(3, 0), out Color unseen), Is.True);
-        Assert.That(visible, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible)));
+        Assert.That(visible, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, MarketPalette())));
         Assert.That(explored.a, Is.GreaterThan(visible.a));
         Assert.That(denied.r, Is.GreaterThan(denied.g));
         Assert.That(unseen.a, Is.GreaterThan(explored.a));
@@ -60,11 +60,19 @@ public sealed class RaylibFieldRenderPresenterTests
     [Test]
     public void ResolveFogColor_MatchesMarketThreeStateFogContract()
     {
-        // 不可见=黑、已探索不可见=暗化、可见=清晰;Denied 保留暗红遮蔽提示
-        Color visible = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible);
-        Color explored = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Explored);
-        Color unseen = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Unseen);
-        Color denied = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Denied);
+        GlobalFieldVisualBuffer buffer = CreateBuffer(out _, out FogField field);
+        field.SetVisible(new FogCell(0, 0));
+        ProjectFog(buffer, field);
+        var missing = new RaylibFieldRenderPresenter();
+        InvalidOperationException absent = Assert.Throws<InvalidOperationException>(
+            () => missing.BuildTexturePlan(buffer))!;
+        Assert.That(absent.Message, Does.Contain("presentation.fogDecal"));
+
+        FogDecalPalette palette = MarketPalette();
+        Color visible = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, palette);
+        Color explored = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Explored, palette);
+        Color unseen = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Unseen, palette);
+        Color denied = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Denied, palette);
 
         Assert.That(visible.a, Is.EqualTo(0), "可见=清晰(全透明)。");
         Assert.That(explored.r | explored.g | explored.b, Is.EqualTo(0), "已探索暗化取黑。");
@@ -324,7 +332,7 @@ public sealed class RaylibFieldRenderPresenterTests
         }
         ProjectFog(buffer, field);
 
-        var presenter = new RaylibFieldRenderPresenter();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
         presenter.BuildTexturePlan(buffer);
         presenter.BuildTexturePlan(buffer);
         _ = presenter.LastFieldCellCount;
@@ -388,7 +396,7 @@ public sealed class RaylibFieldRenderPresenterTests
         buffer.BeginFrame();
         buffer.Upsert(descriptor, cells, dirtyRects);
 
-        var presenter = new RaylibFieldRenderPresenter();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
         // GetAllocatedBytesForCurrentThread is approximate under tiered JIT / concurrent GC;
         // retry the measured window so cold-runner noise cannot flake the zero-alloc contract.
         long allocated = long.MaxValue;
@@ -436,6 +444,12 @@ public sealed class RaylibFieldRenderPresenterTests
             $"BuildTexturePlan fell below the CI wall-clock floor ({CiPlanHzFloor:F0}Hz): {planHz:F1}Hz " +
             "— this is a real regression, not runner jitter.");
     }
+
+    private static FogDecalPalette MarketPalette() => new(
+        new FogDecalColor(0, 0, 0, 232),
+        new FogDecalColor(0, 0, 0, 148),
+        new FogDecalColor(0, 0, 0, 0),
+        new FogDecalColor(64, 8, 16, 214));
 
     private static GlobalFieldVisualBuffer CreateBuffer(out FogLayerId layerId, out FogField field)
     {

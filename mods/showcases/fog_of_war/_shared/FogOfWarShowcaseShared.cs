@@ -94,7 +94,7 @@ public readonly struct FogShowcaseLayerSpec
 
 public static class FogShowcaseLayerFile
 {
-    public static FogShowcaseLayerSpec[] Read(Stream stream)
+    public static (FogShowcaseLayerSpec[] Layers, FogDecalPalette Palette) Read(Stream stream)
     {
         using JsonDocument doc = JsonDocument.Parse(stream);
         if (!doc.RootElement.TryGetProperty("layers", out JsonElement layers) || layers.ValueKind != JsonValueKind.Array)
@@ -113,7 +113,7 @@ public static class FogShowcaseLayerFile
             specs[i++] = new FogShowcaseLayerSpec(id, key, cellSizeCm, updateHz);
         }
 
-        return specs;
+        return (specs, FogDecalPalette.Read(doc.RootElement, "WarFog/showcase.json"));
     }
 
     private static string RequireString(JsonElement layer, string name)
@@ -147,6 +147,7 @@ public sealed class FogShowcaseRuntime
 {
     private readonly FogShowcaseScenario _scenario;
     private readonly FogShowcaseLayerSpec[] _authoredLayers;
+    private readonly FogDecalPalette _palette;
     private Entity _viewer = Entity.Null;
     private readonly Entity[] _occupants = new Entity[4];
     private FogLayerId _groundLayer;
@@ -157,7 +158,7 @@ public sealed class FogShowcaseRuntime
     private uint _detectionMask;
     private int _tick;
 
-    public FogShowcaseRuntime(FogShowcaseScenario scenario, FogShowcaseLayerSpec[] authoredLayers)
+    public FogShowcaseRuntime(FogShowcaseScenario scenario, FogShowcaseLayerSpec[] authoredLayers, FogDecalPalette palette)
     {
         if (authoredLayers == null || authoredLayers.Length == 0)
         {
@@ -166,14 +167,14 @@ public sealed class FogShowcaseRuntime
 
         _scenario = scenario;
         _authoredLayers = authoredLayers;
+        _palette = palette ?? throw new ArgumentNullException(nameof(palette));
     }
 
     public static FogShowcaseRuntime Load(IModContext context, FogShowcaseKind kind, string modName)
     {
         using Stream layers = context.GetResource($"{modName}:assets/WarFog/showcase.json");
-        return new FogShowcaseRuntime(
-            FogShowcaseScenario.Create(kind, modName),
-            FogShowcaseLayerFile.Read(layers));
+        (FogShowcaseLayerSpec[] specs, FogDecalPalette palette) = FogShowcaseLayerFile.Read(layers);
+        return new FogShowcaseRuntime(FogShowcaseScenario.Create(kind, modName), specs, palette);
     }
 
     public FogShowcaseScenario Scenario => _scenario;
@@ -288,6 +289,7 @@ public sealed class FogShowcaseRuntime
         FogCellMap cellMap = engine.GetService(CoreServiceKeys.VisionFogCellMap)
             ?? throw new InvalidOperationException($"{_scenario.ModName} requires VisionFogCellMap.");
 
+        engine.SetService(CoreServiceKeys.FogDecalPalette, _palette);
         _groundLayer = RegisterAuthored(layers, "ground");
         _airLayer = RegisterAuthored(layers, "air");
         _detectionLayer = RegisterAuthored(layers, "detection");
