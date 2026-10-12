@@ -106,6 +106,11 @@ namespace EntityCommandPanelMod.Runtime
 
         public int CopyVisibleButtons(GameEngine engine, Span<EntityCommandPanelToolbarButtonView> destination, out int total)
         {
+            return CopyVisibleButtons(engine, TrySoleRep(engine), destination, out total);
+        }
+
+        public int CopyVisibleButtons(GameEngine engine, Entity rep, Span<EntityCommandPanelToolbarButtonView> destination, out int total)
+        {
             if (!TryGetVisible(engine, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 total = 0;
@@ -119,7 +124,7 @@ namespace EntityCommandPanelMod.Runtime
                 return 0;
             }
 
-            bool[] active = Evaluate(engine, toolbar);
+            bool[] active = Evaluate(engine, toolbar, rep);
             for (int i = 0; i < count; i++)
             {
                 destination[i] = ToView(toolbar.Buttons[i], active[i]);
@@ -135,7 +140,7 @@ namespace EntityCommandPanelMod.Runtime
                 return 0;
             }
 
-            bool[] active = Evaluate(engine, toolbar);
+            bool[] active = Evaluate(engine, toolbar, TrySoleRep(engine));
             uint revision = 0;
             for (int i = 0; i < active.Length; i++)
             {
@@ -150,8 +155,13 @@ namespace EntityCommandPanelMod.Runtime
 
         public string ActiveButtonId(GameEngine engine)
         {
+            return ActiveButtonId(engine, TrySoleRep(engine));
+        }
+
+        public string ActiveButtonId(GameEngine engine, Entity rep)
+        {
             ToolbarDeclaration toolbar = RequireVisible(engine);
-            bool[] active = Evaluate(engine, toolbar);
+            bool[] active = Evaluate(engine, toolbar, rep);
             string? found = null;
             for (int i = 0; i < active.Length; i++)
             {
@@ -284,10 +294,15 @@ namespace EntityCommandPanelMod.Runtime
             return false;
         }
 
-        private bool[] Evaluate(GameEngine engine, ToolbarDeclaration toolbar)
+        private static Entity TrySoleRep(GameEngine engine)
+        {
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ? rep : Entity.Null;
+        }
+
+        private bool[] Evaluate(GameEngine engine, ToolbarDeclaration toolbar, Entity rep)
         {
             var active = new bool[toolbar.Buttons.Length];
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
+            if (rep == Entity.Null || !engine.World.IsAlive(rep))
             {
                 return active;
             }

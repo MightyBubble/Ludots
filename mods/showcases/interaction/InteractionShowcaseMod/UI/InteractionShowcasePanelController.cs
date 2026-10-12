@@ -500,8 +500,9 @@ namespace InteractionShowcaseMod.UI
         {
             GameEngine engine = _engine ?? throw new InvalidOperationException("Interaction showcase panel is not mounted.");
             EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
+            Entity rep = RequireHeroRep(engine);
             var views = new EntityCommandPanelToolbarButtonView[16];
-            int written = catalog.CopyVisibleButtons(engine, views, out int total);
+            int written = catalog.CopyVisibleButtons(engine, rep, views, out int total);
             if (written < total)
             {
                 throw new InvalidOperationException(
@@ -526,6 +527,17 @@ namespace InteractionShowcaseMod.UI
             }
         }
 
+        private static Entity RequireHeroRep(GameEngine engine)
+        {
+            if (!InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity rep))
+            {
+                throw new InvalidOperationException(
+                    "Interaction showcase toolbar requires a local seat possessing the hero player rep.");
+            }
+
+            return rep;
+        }
+
         private static InteractionShowcasePanelState BuildState(GameEngine engine, string mapId)
         {
             string selectedLabel = ResolveSelectedLabel(engine);
@@ -537,7 +549,8 @@ namespace InteractionShowcaseMod.UI
             int activeControlGroup = ResolveActiveControlGroup(engine);
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
             EntityCommandPanelToolbarCatalog toolbar = EntityCommandPanelToolbarCatalog.Require(engine);
-            string activeModeId = toolbar.ActiveButtonId(engine);
+            Entity hero = RequireHeroRep(engine);
+            string activeModeId = toolbar.ActiveButtonId(engine, hero);
             string activeModeName = toolbar.ButtonLabel(engine, activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
