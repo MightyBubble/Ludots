@@ -38,7 +38,7 @@ public sealed class CrowdSimUnits
 {
     public const int SlotBits = 18, SlotMask = (1 << SlotBits) - 1, GenMask = (1 << 14) - 1;
     public const string ReceiptChannelName = "crowd_simulation.units";
-    private const int MaxTemplateKeysPerDeploy = 64;
+    private const int MaxTemplateKeysPerDeploy = 48;
 
     private readonly ArchWorld _world;
     private readonly CrowdSimPresentationWiring _presentation;
