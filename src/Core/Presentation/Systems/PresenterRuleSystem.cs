@@ -547,6 +547,12 @@ namespace Ludots.Core.Presentation.Systems
                 _ => cmd.ScopeTag,
             };
 
+            Entity scopeSubject = ResolveScopeSubject(in cmd, in evt);
+            bool scopedDestroy = cmd.CommandKind == PresenterCommandKind.DestroyScopedPresenter;
+            Entity drawnOwner = scopedDestroy
+                ? scopeSubject
+                : ResolveCommandOwner(in cmd, in evt);
+
             var emitted = cmd;
             emitted.RouteStrategy = ResolveRouteStrategy(in cmd);
             emitted.ScopeTag = scopeId;
@@ -554,7 +560,8 @@ namespace Ludots.Core.Presentation.Systems
             emitted.AnchorKind = cmd.UseEventPosition
                 ? Commands.PresentationAnchorKind.WorldPosition
                 : Commands.PresentationAnchorKind.Entity;
-            emitted.Source = ResolveCommandOwner(in cmd, in evt);
+            emitted.Source = drawnOwner;
+            emitted.ScopeSubject = scopeSubject;
             emitted.Target = evt.Target;
             emitted.Viewer = evt.Viewer;
             emitted.Position = cmd.UseEventPosition ? evt.Position : default;
@@ -590,6 +597,13 @@ namespace Ludots.Core.Presentation.Systems
                     $"PresenterCommandBuffer overflowed while emitting {emitted.CommandKind} from {evt.Kind}; capacity={_commands.Capacity}.");
             }
 
+        }
+
+        private static Entity ResolveScopeSubject(in PresenterCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.OwnerSource == PresenterCommandEntitySource.EventTarget
+                ? evt.Target
+                : evt.Source;
         }
 
         private Entity ResolveCommandOwner(in PresenterCommand cmd, in PresentationEvent evt)

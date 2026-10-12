@@ -136,7 +136,7 @@ namespace Ludots.Core.Presentation.Systems
                         {
                             _runtime.TryGetActiveScopedInstance(
                                 cmd.PresenterDefinitionId,
-                                cmd.Source,
+                                ScopeIdentity(in cmd),
                                 cmd.ScopeTag,
                                 cmd.AnchorKind,
                                 cmd.Position,
@@ -271,7 +271,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 _runtime.TryGetActiveScopedInstance(
                     cmd.PresenterDefinitionId,
-                    cmd.Source,
+                    ScopeIdentity(in cmd),
                     cmd.ScopeTag,
                     cmd.AnchorKind,
                     cmd.Position,
@@ -647,6 +647,11 @@ namespace Ludots.Core.Presentation.Systems
             _runtime.InitializeTransform(presenter, definition);
         }
 
+        private static Entity ScopeIdentity(in PresenterCommand cmd)
+        {
+            return cmd.ScopeSubject != Entity.Null ? cmd.ScopeSubject : cmd.Source;
+        }
+
         private void HandleDestroyScopedPresenter(in PresenterCommand cmd)
         {
             if (cmd.PresenterDefinitionId <= 0)
@@ -660,22 +665,18 @@ namespace Ludots.Core.Presentation.Systems
                     $"DestroyScopedPresenter requires a positive scopeTag, got {cmd.ScopeTag}.");
             }
 
-            if (cmd.Source != Entity.Null && !World.IsAlive(cmd.Source))
-            {
-                return;
-            }
-
+            Entity scopeSubject = ScopeIdentity(in cmd);
             bool found = cmd.UseEventPosition
                 ? _runtime.TryGetActiveScopedInstance(
                     cmd.PresenterDefinitionId,
-                    cmd.Source,
+                    scopeSubject,
                     cmd.ScopeTag,
                     cmd.AnchorKind,
                     cmd.Position,
                     out Entity presenter)
                 : _runtime.TryGetUniqueActiveScopedInstanceByScope(
                     cmd.PresenterDefinitionId,
-                    cmd.Source,
+                    scopeSubject,
                     cmd.ScopeTag,
                     out presenter);
 
@@ -709,7 +710,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (cmd.ScopeTag > 0 &&
                     _runtime.TryGetActiveScopedInstance(
                         cmd.PresenterDefinitionId,
-                        cmd.Source,
+                        ScopeIdentity(in cmd),
                         cmd.ScopeTag,
                         cmd.AnchorKind,
                         cmd.Position,
@@ -734,7 +735,8 @@ namespace Ludots.Core.Presentation.Systems
                 _stableIds.Allocate(),
                 parentEntity,
                 definition,
-                _stableIds.Allocate);
+                _stableIds.Allocate,
+                cmd.ScopeSubject);
 
             ApplyRelationContext(entity, in cmd);
             ApplyCreateParamPayload(entity, in cmd);
@@ -825,7 +827,7 @@ namespace Ludots.Core.Presentation.Systems
                 return false;
             if (!_runtime.TryGetActiveScopedInstance(
                     cmd.PresenterDefinitionId,
-                    cmd.Source,
+                    ScopeIdentity(in cmd),
                     cmd.ScopeTag,
                     cmd.AnchorKind,
                     cmd.Position,
