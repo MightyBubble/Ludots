@@ -25,6 +25,14 @@ public struct CrowdSimulationPhaseTicks
     public long Checksum;
     public long ParallelWork;
     public long ParallelWall;
+    public long GatherWall;
+    public long GatherWork;
+    public long SolveWall;
+    public long SolveWork;
+    public long IntentWall;
+    public long IntentWork;
+    public long MotorWall;
+    public long MotorWork;
 
     public readonly long Accounted =>
         Command + Rebake + Plan + Gather + Hash + Separation + Leader + Intent + Motor + Scatter + Fog + Belief + Refresh + Checksum;
@@ -47,6 +55,14 @@ public struct CrowdSimulationPhaseTicks
         Checksum += sample.Checksum;
         ParallelWork += sample.ParallelWork;
         ParallelWall += sample.ParallelWall;
+        GatherWall += sample.GatherWall;
+        GatherWork += sample.GatherWork;
+        SolveWall += sample.SolveWall;
+        SolveWork += sample.SolveWork;
+        IntentWall += sample.IntentWall;
+        IntentWork += sample.IntentWork;
+        MotorWall += sample.MotorWall;
+        MotorWork += sample.MotorWork;
     }
 }
 
@@ -150,6 +166,32 @@ public sealed class CrowdSimulationTelemetry
     internal void AddRefreshTicks(long ticks) => _phaseFrame.Refresh += ticks;
     internal void AddChecksumTicks(long ticks) => _phaseFrame.Checksum += ticks;
     internal void AddParallelWallTicks(long ticks) => _phaseFrame.ParallelWall += ticks;
+
+    internal long ReadParallelWorkTicks() => Volatile.Read(ref _phaseFrame.ParallelWork);
+
+    internal void AddGatherParallel(long wall, long work)
+    {
+        _phaseFrame.GatherWall += wall;
+        _phaseFrame.GatherWork += work;
+    }
+
+    internal void AddSolveParallel(long wall, long work)
+    {
+        _phaseFrame.SolveWall += wall;
+        _phaseFrame.SolveWork += work;
+    }
+
+    internal void AddIntentParallel(long wall, long work)
+    {
+        _phaseFrame.IntentWall += wall;
+        _phaseFrame.IntentWork += work;
+    }
+
+    internal void AddMotorParallel(long wall, long work)
+    {
+        _phaseFrame.MotorWall += wall;
+        _phaseFrame.MotorWork += work;
+    }
 
     /// <summary>区间在工人线程上执行,只累加这一格。</summary>
     internal void AddParallelWorkTicks(long ticks) => Interlocked.Add(ref _phaseFrame.ParallelWork, ticks);

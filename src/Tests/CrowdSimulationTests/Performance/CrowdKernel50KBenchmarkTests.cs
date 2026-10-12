@@ -209,7 +209,11 @@ public sealed class CrowdKernel50KBenchmarkTests
             $"scatter={Ms(ticks.Scatter) / d:F3} fog={Ms(ticks.Fog) / d:F3} belief={Ms(ticks.Belief) / d:F3} " +
             $"plan={Ms(ticks.Plan) / d:F3} leader={Ms(ticks.Leader) / d:F3} refresh={Ms(ticks.Refresh) / d:F3} " +
             $"cmd={Ms(ticks.Command) / d:F3} rebake={Ms(ticks.Rebake) / d:F3} accounted={Ms(ticks.Accounted) / d:F3} " +
-            $"parWork={Ms(ticks.ParallelWork) / d:F3} parWall={Ms(ticks.ParallelWall) / d:F3}";
+            $"parWork={Ms(ticks.ParallelWork) / d:F3} parWall={Ms(ticks.ParallelWall) / d:F3} " +
+            $"gWall={Ms(ticks.GatherWall) / d:F3} gWork={Ms(ticks.GatherWork) / d:F3} " +
+            $"sWall={Ms(ticks.SolveWall) / d:F3} sWork={Ms(ticks.SolveWork) / d:F3} " +
+            $"iWall={Ms(ticks.IntentWall) / d:F3} iWork={Ms(ticks.IntentWork) / d:F3} " +
+            $"mWall={Ms(ticks.MotorWall) / d:F3} mWork={Ms(ticks.MotorWork) / d:F3}";
     }
 
     private static string DescribeSpike(

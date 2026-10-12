@@ -388,6 +388,8 @@ public sealed class CrowdMovementKernel
         int baseCount = length / workerCount;
         int remainder = length % workerCount;
         int start = 0;
+        var telemetry = Session.Telemetry;
+        long workBefore = telemetry.ReadParallelWorkTicks();
         long wall0 = Stopwatch.GetTimestamp();
         for (int w = 0; w < workerCount; w++)
         {
@@ -404,7 +406,16 @@ public sealed class CrowdMovementKernel
 
         scheduler.Flush();
         for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
-        Session.Telemetry.AddParallelWallTicks(Stopwatch.GetTimestamp() - wall0);
+        long wall = Stopwatch.GetTimestamp() - wall0;
+        long work = telemetry.ReadParallelWorkTicks() - workBefore;
+        telemetry.AddParallelWallTicks(wall);
+        switch (phase)
+        {
+            case RangePhaseAvoidGather: telemetry.AddGatherParallel(wall, work); break;
+            case RangePhaseAvoidSolve: telemetry.AddSolveParallel(wall, work); break;
+            case RangePhaseIntent: telemetry.AddIntentParallel(wall, work); break;
+            case RangePhaseMotor: telemetry.AddMotorParallel(wall, work); break;
+        }
     }
 
     private void ExecuteRange(int phase, int start, int end, Fix64 dt)
