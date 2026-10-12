@@ -50,7 +50,7 @@ public static class CrowdDeployment
                         continue;
                     }
                     var nav = sim.NavFor(l, r);
-                    if (nav.Cells.Length == 0) continue;
+                    if (nav.CellCount == 0) continue;
                     var centerCells = new List<int>();
                     for (int k = 0; k < dp.CentersPerGroup; k++)
                     {
@@ -152,13 +152,16 @@ public static class CrowdDeployment
         var x = (Fix64.FromInt(cell % navCellsPerSide) + e + rng.Next() * w) * navCellSizeCm;
         var y = (Fix64.FromInt(cell / navCellsPerSide) + e + rng.Next() * w) * navCellSizeCm;
         var profile = ProfileOf(cfg, g.LayerIdx, g.RIdx);
+        int profileIndex = ProfileIndexOf(cfg, g.LayerIdx, g.RIdx);
         // PlayerOwner 用 Ludots 玩家号(1..P;组内索引 0 基只服务于 RNG 与编号序)
         var unit = new CrowdUnitSpawnRequest(
             x, y,
             t, g.RIdx,
             g.Id,
             cfg.Deploy.Bases[g.Player].PlayerId,
-            profile.RadiusCm);
+            profile.RadiusCm,
+            profileIndex,
+            profile.AgentTypeIndex);
         int dense = sim.Units.Add(in unit);
         if (dense < 0) return dense;
         // 槽位复用不带陈旧推挤;新单位 calm=0,首次求解前必醒
@@ -175,6 +178,20 @@ public static class CrowdDeployment
         {
             var p = cfg.Profiles[i];
             if (p.AgentTypeIndex == agentTypeIndex && (int)p.RadiusCm.ToInt() == radiusClasses[rIdx]) return p;
+        }
+
+        throw new InvalidOperationException($"代理体型缺失: 移动类型 {agentTypeIndex} × 半径级 {rIdx}。");
+    }
+
+    /// <summary><see cref="ProfileOf"/> 在 <see cref="CrowdSimulationRuntimeConfig.Profiles"/> 里的下标。</summary>
+    public static int ProfileIndexOf(CrowdSimulationRuntimeConfig cfg, int agentTypeIndex, int rIdx)
+    {
+        var radiusClasses = DistinctRadiusClasses(cfg);
+        int radiusCm = radiusClasses[rIdx];
+        for (int i = 0; i < cfg.Profiles.Count; i++)
+        {
+            var p = cfg.Profiles[i];
+            if (p.AgentTypeIndex == agentTypeIndex && (int)p.RadiusCm.ToInt() == radiusCm) return i;
         }
 
         throw new InvalidOperationException($"代理体型缺失: 移动类型 {agentTypeIndex} × 半径级 {rIdx}。");

@@ -18,6 +18,10 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// </summary>
 public sealed class CrowdSimPlanner
 {
+    private const int GroupScratch = CrowdSimulationLimits.HotPathSpanReserve;
+    private const int LeaderPoolCount = 32;
+    private const int PathCapacity = CrowdSimulationLimits.HotPathSpanReserve;
+
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
     private readonly List<PendingPlan> _pending = new();
@@ -33,60 +37,136 @@ public sealed class CrowdSimPlanner
     private bool _loggedFirstPlan;
     private bool _loggedFirstApply;
 
+    // 规划与反应的暂存都在构造时留够。调用不嵌套:Plan / FinishOrder / React 串行,用完即还。
+    private readonly int[] _compTally = new int[1 << 16];
+    private readonly List<int> _compsInOrder = new(16);
+    private readonly Dictionary<int, List<int>> _membersByGroup = new(GroupScratch);
+    private readonly Stack<List<int>> _memberLists = new(GroupScratch);
+    private readonly List<List<int>> _memberListsInUse = new(GroupScratch);
+    private readonly Stack<PendingOrder> _orderPool = new(8);
+    private readonly Stack<PendingGroup> _groupPool = new(GroupScratch);
+    private readonly Stack<PendingLeader> _leaderReqPool = new(32);
+    private readonly Stack<PendingPlan> _planPool = new(4);
+    private readonly Stack<PendingRefresh> _refreshPool = new(16);
+    private readonly Stack<CrowdLeader> _leaderPool = new(LeaderPoolCount);
+    private readonly List<PendingOrder> _pendingOrders = new(8);
+    private readonly Dictionary<int, List<int>> _byLayer = new(8);
+    private readonly List<int> _layersInOrder = new(8);
+    private readonly Stack<List<int>> _layerBuckets = new(8);
+    private readonly List<List<int>> _layerBucketsInUse = new(8);
+    private readonly Dictionary<int, LiveGroup> _live = new(GroupScratch);
+    private readonly List<(Fix64 Width, IReadOnlyList<int> Members)> _blocks = new(8);
+    private readonly List<int> _bucketIds = new(16);
+    private readonly List<Fix64Vec2> _pathScratch = new(PathCapacity);
+    private readonly Dictionary<int, List<int>> _dirtyByNav = new(16);
+    private readonly List<List<int>> _dirtyTileLists = new(16);
+    private readonly HashSet<int> _underway = new(GroupScratch);
+    private readonly Dictionary<int, Fix64> _reachByGroup = new(GroupScratch);
+    private readonly List<CrowdOrder> _reactOrders = new(8);
+    private readonly HashSet<int> _orderSet = new(8);
+    private readonly List<CrowdNavGroupSet.Group> _hit = new(GroupScratch);
+    private readonly HashSet<int> _reachWant = new(GroupScratch);
+    private readonly HashSet<int> _reachLost = new(GroupScratch);
+    private readonly Dictionary<long, bool> _reachPairMemo = new(GroupScratch);
+    private readonly Dictionary<int, bool> _nearestOk = new(CrowdSimulationLimits.HotPathSlotReserve);
+    private int _nrBest;
+    private long _nrBd;
+    private int _nrTx;
+    private int _nrTy;
+    private int _nrFrom;
+    private int _nrSide;
+    private NavContext _nrNav = null!;
+    private byte[] _nrPass = null!;
+
     /// <summary>路径服务(RT-05:结构变更与在途路径计算共用同一份导航态,经它的互斥锁串行)。</summary>
     public PathQueryService Service => _service;
     /// <summary>当前待刷新流场的队列长度(重烘报告字段)。</summary>
     public int RefreshQueueCount => _refreshQueue.Count;
 
+    private struct LiveGroup
+    {
+        public PendingGroup Pg;
+    }
+
     private sealed class PendingPlan
     {
-        public required int DueTick { get; init; }
-        public required List<PendingOrder> Orders { get; init; }
+        public int DueTick;
+        public readonly List<PendingOrder> Orders = new(8);
     }
 
     private sealed class PendingOrder
     {
-        public required CrowdOrder Order { get; init; }
-        public required List<PendingGroup> Groups { get; init; }
-        public required List<PendingLeader> Leaders { get; init; }
+        public CrowdOrder Order = null!;
+        public readonly List<PendingGroup> Groups = new(8);
+        public readonly List<PendingLeader> Leaders = new(4);
     }
 
     private sealed class PendingGroup
     {
-        public required int GroupId { get; init; }
-        public required int PlanSeq { get; init; }
-        public required int NavId { get; init; }
-        public required int Goal { get; init; }
-        public required int RequestId { get; init; }
+        public int GroupId;
+        public int PlanSeq;
+        public int NavId;
+        public int Goal;
+        public int RequestId;
         /// <summary>请求时的导航版本:答复落帧时版本变了 = 陈旧答复,按 裁决。</summary>
-        public required int Version { get; init; }
+        public int Version;
     }
 
     /// <summary>流场刷新的到点答复(S7 队伍反应:同走廊在新导航上重建流场,领队与槽位不动)。</summary>
     private sealed class PendingRefresh
     {
-        public required int RequestId { get; init; }
-        public required int DueTick { get; init; }
-        public required int GroupId { get; init; }
-        public required CrowdNavGroupSet.Group Group { get; init; }
-        public required int Seq { get; init; }
-        public required int NavId { get; init; }
-        public required int Version { get; init; }
+        public int RequestId;
+        public int DueTick;
+        public int GroupId;
+        public CrowdNavGroupSet.Group Group = null!;
+        public int Seq;
+        public int NavId;
+        public int Version;
     }
 
     private sealed class PendingLeader
     {
-        public required int StrictestGroupId { get; init; }
-        public required int[] BucketGroupIds { get; init; }
-        public required int StartCell { get; init; }
-        public required int RequestId { get; init; }
-        public required CrowdLeader? Prev { get; init; }
+        public int StrictestGroupId;
+        public int[] BucketGroupIds = new int[8];
+        public int BucketCount;
+        public int StartCell;
+        public int RequestId;
+        public CrowdLeader? Prev;
     }
 
     public CrowdSimPlanner(CrowdSimSession session, PathQueryService service)
     {
         _session = session;
         _service = service;
+        _membersByGroup.EnsureCapacity(GroupScratch);
+        _live.EnsureCapacity(GroupScratch);
+        _underway.EnsureCapacity(GroupScratch);
+        _reachByGroup.EnsureCapacity(GroupScratch);
+        _reachWant.EnsureCapacity(GroupScratch);
+        _reachLost.EnsureCapacity(GroupScratch);
+        _reachPairMemo.EnsureCapacity(GroupScratch);
+        _nearestOk.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _dirtyByNav.EnsureCapacity(16);
+        for (int i = 0; i < GroupScratch; i++)
+        {
+            _groupPool.Push(new PendingGroup());
+            _memberLists.Push(new List<int>(8));
+        }
+
+        for (int i = 0; i < LeaderPoolCount; i++) _leaderPool.Push(new CrowdLeader(PathCapacity));
+        for (int i = 0; i < 8; i++)
+        {
+            _orderPool.Push(new PendingOrder());
+            _layerBuckets.Push(new List<int>(8));
+            _planPool.Push(new PendingPlan());
+        }
+
+        for (int i = 0; i < 32; i++) _leaderReqPool.Push(new PendingLeader());
+        for (int i = 0; i < 16; i++)
+        {
+            _refreshPool.Push(new PendingRefresh());
+            _dirtyTileLists.Add(new List<int>(8));
+        }
     }
 
     public int PendingCount => _pending.Count;
@@ -106,15 +186,17 @@ public sealed class CrowdSimPlanner
         var session = _session;
         var cfg = session.Config;
         int navCellsPerSide = cfg.NavCellsPerSide;
-        foreach (var o in orders)
+        for (int orderIndex = 0; orderIndex < orders.Count; orderIndex++)
         {
+            var o = orders[orderIndex];
+            for (int li = 0; li < o.Leaders.Count; li++) _leaderPool.Push(o.Leaders[li]);
             o.Leaders.Clear();
             foreach (var link in o.Groups)
             {
                 var g = session.Groups.Groups[link.GroupId]!;
                 g.Goal = CrowdDeployment.NearestPassable(session.ResolveNavContext(g.NavId), link.GoalCell);
                 g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
-                g.Flow = null;
+                if (g.Flow != null) RecycleFlow(g);
                 g.Leader = null;
                 g.Planning = true;
                 g.StateSeq++;
@@ -122,13 +204,14 @@ public sealed class CrowdSimPlanner
         }
 
         // 目标不可达 → 换最近的可达格:按组员多数所在连通域判定
-        foreach (var o in orders)
+        for (int orderIndex = 0; orderIndex < orders.Count; orderIndex++)
         {
+            var o = orders[orderIndex];
             foreach (var link in o.Groups)
             {
                 var g = session.Groups.Groups[link.GroupId]!;
-                var tally = new Dictionary<int, int>();
-                var compsInOrder = new List<int>(); // 计数并列取首见者:与参考端 Map 插入序同语义,不依赖字典枚举序
+                var compsInOrder = _compsInOrder;
+                compsInOrder.Clear();
                 var units = session.Units;
                 for (int i = 0; i < units.Count; i++)
                 {
@@ -136,16 +219,19 @@ public sealed class CrowdSimPlanner
                     if (st.GroupId != g.Id) continue;
                     int cell = CellOfUnit(session, i, st);
                     int c = CompAtLevel(session, g, cell, st.Level);
-                    if (!tally.ContainsKey(c)) compsInOrder.Add(c);
-                    tally[c] = tally.TryGetValue(c, out var cnt) ? cnt + 1 : 1;
+                    int slot = TallySlot(c);
+                    if (_compTally[slot] == 0) compsInOrder.Add(c);
+                    _compTally[slot]++;
                 }
 
                 int best = -1, bestN = 0;
                 foreach (var c in compsInOrder)
                 {
-                    int cnt = tally[c];
+                    int cnt = _compTally[TallySlot(c)];
                     if (c >= 0 && cnt > bestN) { best = c; bestN = cnt; }
                 }
+
+                for (int ci = 0; ci < compsInOrder.Count; ci++) _compTally[TallySlot(compsInOrder[ci])] = 0;
 
                 if (best < 0 || (g.Goal >= 0 && session.ResolveNavContext(g.NavId).CanReach(best, g.GoalComp))) continue;
                 g.Goal = NearestReachable(session.ResolveNavContext(g.NavId), best, link.GoalCell, navCellsPerSide);
@@ -155,13 +241,15 @@ public sealed class CrowdSimPlanner
         }
 
         // 逐单位:成员/可达性/状态;跳跃中的单位从落点出发规划
-        var membersByGroup = new Dictionary<int, List<int>>();
-        foreach (var o in orders)
+        var membersByGroup = _membersByGroup;
+        ReturnMembers();
+        for (int orderIndex = 0; orderIndex < orders.Count; orderIndex++)
         {
+            var o = orders[orderIndex];
             foreach (var link in o.Groups)
             {
                 var g = session.Groups.Groups[link.GroupId]!;
-                membersByGroup[g.Id] = new List<int>();
+                membersByGroup[g.Id] = RentMembers();
             }
         }
 
@@ -206,12 +294,16 @@ public sealed class CrowdSimPlanner
         }
 
         // 发请求:组流场(代表格→目标)+ 每(指令×移动类型)一条领队路径(最严净空导航,联合质心起点)
-        var pendingOrders = new List<PendingOrder>();
-        foreach (var o in orders)
+        var pendingOrders = _pendingOrders;
+        pendingOrders.Clear();
+        for (int orderIndex = 0; orderIndex < orders.Count; orderIndex++)
         {
-            var po = new PendingOrder { Order = o, Groups = new(), Leaders = new() };
-            var byLayer = new Dictionary<int, List<int>>();
-            var layersInOrder = new List<int>(); // 层序=组声明首见序,决定领队块追加序(与参考端 Map 同)
+            var o = orders[orderIndex];
+            var po = RentOrder();
+            po.Order = o;
+            var byLayer = _byLayer;
+            var layersInOrder = _layersInOrder;
+            ReturnLayers();
             foreach (var link in o.Groups)
             {
                 var g = session.Groups.Groups[link.GroupId]!;
@@ -224,10 +316,17 @@ public sealed class CrowdSimPlanner
 
                 int repCell = RepresentativeCell(session, mem);
                 int reqId = _service.Request(new PathQuery(g.NavId, repCell, g.Goal, 0), tick);
-                po.Groups.Add(new PendingGroup { GroupId = g.Id, PlanSeq = ++_seq, NavId = g.NavId, Goal = g.Goal, RequestId = reqId, Version = session.ResolveNavContext(g.NavId).Version });
+                var pg = RentGroup();
+                pg.GroupId = g.Id;
+                pg.PlanSeq = ++_seq;
+                pg.NavId = g.NavId;
+                pg.Goal = g.Goal;
+                pg.RequestId = reqId;
+                pg.Version = session.ResolveNavContext(g.NavId).Version;
+                po.Groups.Add(pg);
                 if (!byLayer.TryGetValue(g.LayerIdx, out var bucket))
                 {
-                    byLayer[g.LayerIdx] = bucket = new List<int>();
+                    byLayer[g.LayerIdx] = bucket = RentLayer();
                     layersInOrder.Add(g.LayerIdx);
                 }
 
@@ -273,28 +372,36 @@ public sealed class CrowdSimPlanner
 
                 foreach (int gid in bucket) session.Groups.Groups[gid]!.PrevLeader = null;
                 int leaderReq = _service.Request(new PathQuery(strictest.NavId, lc, strictest.Goal, 0), tick);
-                po.Leaders.Add(new PendingLeader
-                {
-                    StrictestGroupId = strictestId,
-                    BucketGroupIds = bucket.ToArray(),
-                    StartCell = lc,
-                    RequestId = leaderReq,
-                    Prev = prev,
-                });
+                var pl = RentLeaderReq();
+                pl.StrictestGroupId = strictestId;
+                if (bucket.Count > pl.BucketGroupIds.Length) pl.BucketGroupIds = new int[Math.Max(bucket.Count, pl.BucketGroupIds.Length * 2)];
+                for (int bi = 0; bi < bucket.Count; bi++) pl.BucketGroupIds[bi] = bucket[bi];
+                pl.BucketCount = bucket.Count;
+                pl.StartCell = lc;
+                pl.RequestId = leaderReq;
+                pl.Prev = prev;
+                po.Leaders.Add(pl);
             }
 
+            ReturnLayers();
             if (po.Groups.Count > 0) pendingOrders.Add(po);
+            else RecycleOrder(po);
         }
 
+        ReturnMembers();
         if (pendingOrders.Count > 0)
         {
-            _pending.Add(new PendingPlan { DueTick = tick + _session.Config.Planning.LatencyTicks, Orders = pendingOrders });
+            var plan = RentPlan();
+            plan.DueTick = tick + _session.Config.Planning.LatencyTicks;
+            plan.Orders.Clear();
+            for (int pi = 0; pi < pendingOrders.Count; pi++) plan.Orders.Add(pendingOrders[pi]);
+            _pending.Add(plan);
             if (!_loggedFirstPlan)
             {
                 _loggedFirstPlan = true;
                 int groups = 0, leaders = 0;
                 foreach (var po in pendingOrders) { groups += po.Groups.Count; leaders += po.Leaders.Count; }
-                Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
+                Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
                     $"CrowdSimulation first plan at tick {tick}: orders={pendingOrders.Count} groups={groups} leaders={leaders}.");
             }
         }
@@ -351,11 +458,13 @@ public sealed class CrowdSimPlanner
         for (int i = 0; i < k; i++)
         {
             ApplyPlan(_pending[i], stale);
+            RecyclePlan(_pending[i]);
         }
 
         for (int i = 0; i < rk; i++)
         {
             ApplyRefresh(_pendingRefreshes[i]);
+            _refreshPool.Push(_pendingRefreshes[i]);
         }
 
         if (k > 0) _pending.RemoveRange(0, k);
@@ -368,6 +477,7 @@ public sealed class CrowdSimPlanner
             if (orders.Count > 0) Plan(orders, tick);
         }
 
+        if (k > 0) _session.Telemetry.MarkPlans(k);
         if (k > 0 && !_loggedFirstApply)
         {
             _loggedFirstApply = true;
@@ -383,7 +493,8 @@ public sealed class CrowdSimPlanner
         foreach (var po in plan.Orders)
         {
             var o = po.Order;
-            var live = new Dictionary<int, (PendingGroup Pg, PathResult Result)>();
+            var live = _live;
+            live.Clear();
             foreach (var pg in po.Groups)
             {
                 var result = _service.AwaitDue(pg.RequestId);
@@ -403,8 +514,10 @@ public sealed class CrowdSimPlanner
                 var nav = _session.ResolveNavContext(g.NavId);
                 if (nav.Version != pg.Version || g.NavId != pg.NavId) stale.Add(g);
                 g.Flow = result.Flow;
+                result.Flow = null;
+                _service.ReleaseReply(result);
                 g.Planning = false;
-                live[pg.GroupId] = (pg, result);
+                live[pg.GroupId] = new LiveGroup { Pg = pg };
             }
 
             FinishOrder(po, live);
@@ -412,7 +525,7 @@ public sealed class CrowdSimPlanner
     }
 
     /// <summary>领队 + 阵型槽位 + 到达足印(finishOrder 移植;质心与朝向继承按落帧时刻的成员位置)。</summary>
-    private void FinishOrder(PendingOrder po, Dictionary<int, (PendingGroup Pg, PathResult Result)> live)
+    private void FinishOrder(PendingOrder po, Dictionary<int, LiveGroup> live)
     {
         var o = po.Order;
         var session = _session;
@@ -422,14 +535,21 @@ public sealed class CrowdSimPlanner
         Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
 
         // 成员名单按落帧时刻重收(请求后单位可能移动)
-        var membersByGroup = new Dictionary<int, List<int>>();
+        var membersByGroup = _membersByGroup;
+        ReturnMembers();
         var units = session.Units;
         for (int i = 0; i < units.Count; i++)
         {
             var st = session.World.Get<CrowdSimulationUnitState>(units.EntityAt(i));
             if (st.Order == o.Id && st.GroupId >= 0 && live.ContainsKey(st.GroupId))
             {
-                (membersByGroup.TryGetValue(st.GroupId, out var m) ? m : membersByGroup[st.GroupId] = new List<int>()).Add(i);
+                if (!membersByGroup.TryGetValue(st.GroupId, out var m))
+                {
+                    m = RentMembers();
+                    membersByGroup[st.GroupId] = m;
+                }
+
+                m.Add(i);
             }
         }
 
@@ -459,15 +579,23 @@ public sealed class CrowdSimPlanner
             total += mem.Count;
         }
 
-        if (total == 0) return;
+        if (total == 0)
+        {
+            ReturnMembers();
+            return;
+        }
+
         var shape = CrowdFormations.ShapeOf(cfg.Formations, o.ShapeId);
-        var blocks = new List<(Fix64 Width, IReadOnlyList<int> Members)>();
+        var blocks = _blocks;
+        blocks.Clear();
         Fix64 ext = Fix64.Zero;
         foreach (var pl in po.Leaders)
         {
-            var bucket = new List<int>();
-            foreach (int gid in pl.BucketGroupIds)
+            var bucket = _bucketIds;
+            bucket.Clear();
+            for (int bi = 0; bi < pl.BucketCount; bi++)
             {
+                int gid = pl.BucketGroupIds[bi];
                 if (live.ContainsKey(gid)) bucket.Add(gid);
             }
 
@@ -522,9 +650,11 @@ public sealed class CrowdSimPlanner
                 throw new InvalidOperationException("领队路径没有成员，无法取模板速度。");
             }
 
-            var leader = new CrowdLeader(
-                ToVec2Path(leaderResult.Points, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
+            var leader = RentLeader();
+            leader.Reset(
+                ToVec2Path(leaderResult, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
                 o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAheadNavCells * navCellCm, pace);
+            Recycle(leaderResult);
 
             // 质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
             Fix64 cx = Fix64.Zero, cy = Fix64.Zero;
@@ -560,7 +690,7 @@ public sealed class CrowdSimPlanner
             }
 
             o.Leaders.Add(leader);
-            var mem = new List<int>();
+            var mem = RentMembers();
             foreach (int gid in bucket)
             {
                 var g = session.Groups.Groups[gid]!;
@@ -617,22 +747,34 @@ public sealed class CrowdSimPlanner
             foreach (var b in blocks) w2 += b.Width;
             o.ReachCells = (int)((w2 / 2 + Fix64Math.Sqrt(area)) / navCellCm + fc.SettleRadiusNavCells).ToLong();
         }
+
+        ReturnMembers();
     }
 
     private static bool strictestPassable(NavContext nav, int cell) => nav.Passable[cell] != 0;
 
-    /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×navCellSizeCm 换算。</summary>
-    private static List<Fix64Vec2> ToVec2Path(Fix64[] points, int navCellSizeCm)
+    /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×navCellSizeCm 换算。只读活前缀。</summary>
+    private List<Fix64Vec2> ToVec2Path(PathResult result, int navCellSizeCm)
     {
         Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
-        var path = new List<Fix64Vec2>(points.Length / 2);
-        for (int i = 0; i + 1 < points.Length; i += 2) path.Add(new Fix64Vec2(points[i] * navCellCm, points[i + 1] * navCellCm));
+        var path = _pathScratch;
+        path.Clear();
+        var points = result.Points;
+        int n = result.PointCount;
+        if (points == null) return path;
+        for (int i = 0; i + 1 < n; i += 2) path.Add(new Fix64Vec2(points[i] * navCellCm, points[i + 1] * navCellCm));
         return path;
     }
 
     private void Recycle(PathResult result)
     {
-        if (result.Flow is { } f) RecycleFlow(f);
+        if (result.Flow is { } f)
+        {
+            result.Flow = null;
+            RecycleFlow(f);
+        }
+
+        _service.ReleaseReply(result);
     }
 
     private void RecycleFlow(CrowdNavGroupSet.Group g)
@@ -675,6 +817,8 @@ public sealed class CrowdSimPlanner
 
         if (g.Flow is { } old) RecycleFlow(old);
         g.Flow = result.Flow;
+        result.Flow = null;
+        _service.ReleaseReply(result);
     }
 
     /// <summary>队伍反应(reactRebake 移植):对看到本次变更的组逐个判定——目标被挡 → 重规划指令;
@@ -683,16 +827,33 @@ public sealed class CrowdSimPlanner
     public List<CrowdOrder> ReactRebake(IReadOnlyList<CrowdNavRebakeContextResult> dirty)
     {
         var session = _session;
-        var dirtyByNav = new Dictionary<int, List<int>>();
-        foreach (var r in dirty)
+        var dirtyByNav = _dirtyByNav;
+        for (int i = 0; i < _dirtyTileLists.Count; i++) _dirtyTileLists[i].Clear();
+        dirtyByNav.Clear();
+        int tileList = 0;
+        for (int ri = 0; ri < dirty.Count; ri++)
         {
-            if (r.DirtyTiles.Count > 0) dirtyByNav[r.NavId] = r.DirtyTiles;
+            var r = dirty[ri];
+            if (r.DirtyTiles.Count == 0) continue;
+            List<int> copy;
+            if (tileList < _dirtyTileLists.Count) copy = _dirtyTileLists[tileList];
+            else
+            {
+                copy = new List<int>(r.DirtyTiles.Count);
+                _dirtyTileLists.Add(copy);
+            }
+
+            tileList++;
+            for (int ti = 0; ti < r.DirtyTiles.Count; ti++) copy.Add(r.DirtyTiles[ti]);
+            dirtyByNav[r.NavId] = copy;
         }
 
         int navCellsPerSide = session.Config.NavCellsPerSide;
         var units = session.Units;
-        var underway = new HashSet<int>();
-        var reach = new Dictionary<int, Fix64>();
+        var underway = _underway;
+        var reach = _reachByGroup;
+        underway.Clear();
+        reach.Clear();
         for (int i = 0; i < units.Count; i++)
         {
             var entity = units.EntityAt(i);
@@ -705,11 +866,16 @@ public sealed class CrowdSimPlanner
             if (!reach.TryGetValue(g0.Id, out var cur) || len > cur) reach[g0.Id] = len;
         }
 
-        var orders = new List<CrowdOrder>();
-        var orderSet = new HashSet<int>();
-        var hit = new List<CrowdNavGroupSet.Group>();
-        foreach (var g in session.Groups.Groups)
+        var orders = _reactOrders;
+        var orderSet = _orderSet;
+        var hit = _hit;
+        orders.Clear();
+        orderSet.Clear();
+        hit.Clear();
+        var groupList = session.Groups.Groups;
+        for (int gi = 0; gi < groupList.Count; gi++)
         {
+            var g = groupList[gi];
             if (g == null || g.Count == 0 || g.OrderId == 0) continue;
             if (!dirtyByNav.TryGetValue(g.NavId, out var tiles) || tiles.Count == 0) continue;
             if (g.Planning) continue; // 在途规划由落帧裁决处理
@@ -745,10 +911,13 @@ public sealed class CrowdSimPlanner
     /// <summary>行进中成员(脚下格 / 跳跃落点格)的连通域不再可达目标 = 该组的路被切断。</summary>
     private HashSet<int> ReachLost(CrowdSimSession session, List<CrowdNavGroupSet.Group> hit)
     {
-        var want = new HashSet<int>();
+        var want = _reachWant;
+        var lost = _reachLost;
+        var memo = _reachPairMemo;
+        want.Clear();
+        lost.Clear();
+        memo.Clear();
         foreach (var g in hit) want.Add(g.Id);
-        var lost = new HashSet<int>();
-        var memo = new Dictionary<(int GroupId, int Comp), bool>();
         var units = session.Units;
         for (int i = 0; i < units.Count; i++)
         {
@@ -761,7 +930,7 @@ public sealed class CrowdSimPlanner
             int cell = CellOfUnit(session, i, st);
             int c = nav.CompAt(cell, st.Level);
             if (c < 0) continue;
-            var key = (st.GroupId, c);
+            long key = ((long)st.GroupId << 32) ^ (uint)c;
             if (!memo.TryGetValue(key, out var ok)) memo[key] = ok = nav.CanReach(c, g.GoalComp);
             if (!ok) lost.Add(st.GroupId);
         }
@@ -778,19 +947,15 @@ public sealed class CrowdSimPlanner
         Fix64 step = Fix64.FromInt(navCellSizeCm) / 2, e = Fix64.FromInt(navCellSizeCm) / 4;
         var pass = nav.Passable;
         var up = nav.UpPass;
-        bool bad(int c) => pass[c] == 0 && up[c] == 0;
-        bool blockedAt(Fix64 x, Fix64 y) =>
-            bad(CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide)) && bad(CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide)) &&
-            bad(CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide)) && bad(CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
-        var path = leader.Path;
         Fix64 ax = leader.XCm, ay = leader.YCm;
-        for (int k = leader.Seg; k < path.Count; k++)
+        for (int k = leader.Seg; k < leader.PathCount; k++)
         {
-            Fix64 bx = path[k].X, by = path[k].Y;
+            var point = leader.PathAt(k);
+            Fix64 bx = point.X, by = point.Y;
             int m = (int)Fix64.Ceiling(CrowdFix.Hypot(bx - ax, by - ay) / step).ToLong();
             for (int s = 1; s <= m; s++)
             {
-                if (blockedAt(ax + (bx - ax) * s / m, ay + (by - ay) * s / m)) return true;
+                if (LeaderBlockedAt(pass, up, ax + (bx - ax) * s / m, ay + (by - ay) * s / m, e, navCellSizeCm, navCellsPerSide)) return true;
             }
 
             ax = bx;
@@ -799,6 +964,16 @@ public sealed class CrowdSimPlanner
 
         return false;
     }
+
+    private static bool LeaderBlockedAt(byte[] pass, byte[] up, Fix64 x, Fix64 y, Fix64 e, int navCellSizeCm, int navCellsPerSide)
+    {
+        return LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide))
+            && LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide))
+            && LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide))
+            && LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
+    }
+
+    private static bool LeaderCellBad(byte[] pass, byte[] up, int c) => pass[c] == 0 && up[c] == 0;
 
     /// <summary>变更是否落在组的剩余路线上(onRemainingRoute 移植):走廊掩码触到脏 tile,
     /// 且脏 tile 内存在某成员剩余路线长度可达的格——只用掩码会把身后的变更也算进来。</summary>
@@ -858,25 +1033,27 @@ public sealed class CrowdSimPlanner
         var req = new PathQuery(g.NavId, 0, g.Goal, 0) { CorridorMask = g.Flow!.Mask };
         int id = _service.Request(req, tick);
         g.StateSeq++;
-        _pendingRefreshes.Add(new PendingRefresh
-        {
-            RequestId = id,
-            DueTick = tick + _session.Config.Planning.RefreshLatencyTicks,
-            GroupId = g.Id,
-            Group = g,
-            Seq = g.StateSeq,
-            NavId = g.NavId,
-            Version = nav.Version,
-        });
+        if (!_refreshPool.TryPop(out var pr)) pr = new PendingRefresh();
+        pr.RequestId = id;
+        pr.DueTick = tick + _session.Config.Planning.RefreshLatencyTicks;
+        pr.GroupId = g.Id;
+        pr.Group = g;
+        pr.Seq = g.StateSeq;
+        pr.NavId = g.NavId;
+        pr.Version = nav.Version;
+        _pendingRefreshes.Add(pr);
     }
 
     /// <summary>落帧裁决(afterStalePlan 移植):陈旧答复的组——无场或目标被挡 → 重规划;
     /// 否则按现行导航刷新流场。返回需要重规划的指令。</summary>
     private List<CrowdOrder> AfterStalePlan(List<CrowdNavGroupSet.Group> stale)
     {
-        var orders = new List<CrowdOrder>();
-        var orderSet = new HashSet<int>();
-        var hit = new List<CrowdNavGroupSet.Group>();
+        var orders = _reactOrders;
+        var orderSet = _orderSet;
+        var hit = _hit;
+        orders.Clear();
+        orderSet.Clear();
+        hit.Clear();
         foreach (var g in stale)
         {
             if (!_session.Groups.TryGet(g.Id, out var live) || live != g || g.OrderId == 0 || g.Planning || g.Goal < 0) continue;
@@ -897,8 +1074,10 @@ public sealed class CrowdSimPlanner
     private static void AddOrder(
         CrowdSimSession session, List<CrowdOrder> orders, HashSet<int> seen, CrowdNavGroupSet.Group g)
     {
-        foreach (var o in session.Orders.List)
+        var orderList = session.Orders.List;
+        for (int oi = 0; oi < orderList.Count; oi++)
         {
+            var o = orderList[oi];
             if (o.Id != g.OrderId) continue;
             if (seen.Add(o.Id)) orders.Add(o);
             return;
@@ -927,22 +1106,27 @@ public sealed class CrowdSimPlanner
     /// 行进中 → ReachLost / 领队线被挡裁决;驻扎组 → 流场不属于新导航才刷新(真相流场经
     /// sharesFlow 判定可复用——不是纯优化,刷新计数是对拍面)。stale = 原位揭示踩到真变
     /// tile 的组(只刷新,不重规划)。返回需重规划的指令。</summary>
-    public List<CrowdOrder> Retarget(IReadOnlyList<CrowdNavGroupSet.Group> moved, HashSet<CrowdNavGroupSet.Group>? stale = null)
+    public List<CrowdOrder> Retarget(List<CrowdNavGroupSet.Group> moved, HashSet<CrowdNavGroupSet.Group>? stale = null)
     {
         var session = _session;
         var units = session.Units;
-        var underway = new HashSet<int>();
+        var underway = _underway;
+        underway.Clear();
         for (int i = 0; i < units.Count; i++)
         {
             var st = session.World.Get<CrowdSimulationUnitState>(units.EntityAt(i));
             if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Jump) underway.Add(st.GroupId);
         }
 
-        var orders = new List<CrowdOrder>();
-        var orderSet = new HashSet<int>();
-        var hit = new List<CrowdNavGroupSet.Group>();
-        foreach (var g in moved)
+        var orders = _reactOrders;
+        var orderSet = _orderSet;
+        var hit = _hit;
+        orders.Clear();
+        orderSet.Clear();
+        hit.Clear();
+        for (int gi = 0; gi < moved.Count; gi++)
         {
+            var g = moved[gi];
             if (g.Count == 0 || g.OrderId == 0) continue;
             if (g.Planning) continue; // 在途规划由落帧裁决
             if (g.Goal < 0) continue;
@@ -1036,42 +1220,156 @@ public sealed class CrowdSimPlanner
     }
 
     /// <summary>离 target 最近且从 fromComp 可达的可走格(环形外扩,平手取格号小者)。</summary>
-    private static int NearestReachable(NavContext nav, int fromComp, int target, int navCellsPerSide)
+    private int NearestReachable(NavContext nav, int fromComp, int target, int navCellsPerSide)
     {
         if (fromComp < 0) return -1;
         int tx = target % navCellsPerSide, ty = target / navCellsPerSide;
-        var pass = nav.Passable;
-        var ok = new Dictionary<int, bool>();
+        _nrPass = nav.Passable;
+        _nearestOk.Clear();
+        _nrBest = -1;
+        _nrBd = long.MaxValue;
+        _nrTx = tx;
+        _nrTy = ty;
+        _nrFrom = fromComp;
+        _nrSide = navCellsPerSide;
+        _nrNav = nav;
         int best = -1;
         long bd = long.MaxValue;
-        for (int r = 0; r < navCellsPerSide && (long)r * r <= bd; r++)
+        for (int r = 0; r < navCellsPerSide && (long)r * r <= _nrBd; r++)
         {
             int x0 = tx - r, x1 = tx + r, y0 = ty - r, y1 = ty + r;
             for (int y = Math.Max(0, y0); y <= Math.Min(navCellsPerSide - 1, y1); y++)
             {
                 if (y == y0 || y == y1)
                 {
-                    for (int x = Math.Max(0, x0); x <= Math.Min(navCellsPerSide - 1, x1); x++) Test(x, y);
+                    for (int x = Math.Max(0, x0); x <= Math.Min(navCellsPerSide - 1, x1); x++) TestNearest(x, y);
                 }
                 else
                 {
-                    if (x0 >= 0) Test(x0, y);
-                    if (x1 < navCellsPerSide && r != 0) Test(x1, y);
+                    if (x0 >= 0) TestNearest(x0, y);
+                    if (x1 < navCellsPerSide && r != 0) TestNearest(x1, y);
                 }
             }
         }
 
-        return best;
+        return _nrBest;
+    }
 
-        void Test(int x, int y)
+    private void TestNearest(int x, int y)
+    {
+        int c = y * _nrSide + x;
+        if (_nrPass[c] == 0) return;
+        long dx = x - _nrTx, dy = y - _nrTy, d = dx * dx + dy * dy;
+        if (d > _nrBd || (d == _nrBd && c > _nrBest)) return;
+        int k = _nrNav.Comp[c];
+        if (!_nearestOk.TryGetValue(k, out bool reachable)) _nearestOk[k] = reachable = _nrNav.CanReach(_nrFrom, k);
+        if (reachable)
         {
-            int c = y * navCellsPerSide + x;
-            if (pass[c] == 0) return;
-            long dx = x - tx, dy = y - ty, d = dx * dx + dy * dy;
-            if (d > bd || (d == bd && c > best)) return;
-            int k = nav.Comp[c];
-            if (!ok.TryGetValue(k, out bool r)) ok[k] = r = nav.CanReach(fromComp, k);
-            if (r) { best = c; bd = d; }
+            _nrBest = c;
+            _nrBd = d;
         }
+    }
+
+    private int TallySlot(int comp)
+    {
+        int slot = comp + 2;
+        if ((uint)slot >= (uint)_compTally.Length)
+        {
+            throw new InvalidOperationException($"连通域编号 {comp} 超出规划计数表。");
+        }
+
+        return slot;
+    }
+
+    private List<int> RentMembers()
+    {
+        if (!_memberLists.TryPop(out var list)) list = new List<int>(8);
+        list.Clear();
+        _memberListsInUse.Add(list);
+        return list;
+    }
+
+    private void ReturnMembers()
+    {
+        for (int i = 0; i < _memberListsInUse.Count; i++)
+        {
+            _memberListsInUse[i].Clear();
+            _memberLists.Push(_memberListsInUse[i]);
+        }
+
+        _memberListsInUse.Clear();
+        _membersByGroup.Clear();
+    }
+
+    private List<int> RentLayer()
+    {
+        if (!_layerBuckets.TryPop(out var list)) list = new List<int>(8);
+        list.Clear();
+        _layerBucketsInUse.Add(list);
+        return list;
+    }
+
+    private void ReturnLayers()
+    {
+        for (int i = 0; i < _layerBucketsInUse.Count; i++)
+        {
+            _layerBucketsInUse[i].Clear();
+            _layerBuckets.Push(_layerBucketsInUse[i]);
+        }
+
+        _layerBucketsInUse.Clear();
+        _byLayer.Clear();
+        _layersInOrder.Clear();
+    }
+
+    private PendingOrder RentOrder()
+    {
+        if (!_orderPool.TryPop(out var order)) order = new PendingOrder();
+        order.Groups.Clear();
+        order.Leaders.Clear();
+        return order;
+    }
+
+    private PendingGroup RentGroup()
+    {
+        if (!_groupPool.TryPop(out var group)) group = new PendingGroup();
+        return group;
+    }
+
+    private PendingLeader RentLeaderReq()
+    {
+        if (!_leaderReqPool.TryPop(out var leader)) leader = new PendingLeader();
+        leader.Prev = null;
+        leader.BucketCount = 0;
+        return leader;
+    }
+
+    private PendingPlan RentPlan()
+    {
+        if (!_planPool.TryPop(out var plan)) plan = new PendingPlan();
+        plan.Orders.Clear();
+        return plan;
+    }
+
+    private CrowdLeader RentLeader()
+    {
+        if (!_leaderPool.TryPop(out var leader)) leader = new CrowdLeader(PathCapacity);
+        return leader;
+    }
+
+    private void RecycleOrder(PendingOrder order)
+    {
+        for (int i = 0; i < order.Groups.Count; i++) _groupPool.Push(order.Groups[i]);
+        order.Groups.Clear();
+        for (int i = 0; i < order.Leaders.Count; i++) _leaderReqPool.Push(order.Leaders[i]);
+        order.Leaders.Clear();
+        _orderPool.Push(order);
+    }
+
+    private void RecyclePlan(PendingPlan plan)
+    {
+        for (int i = 0; i < plan.Orders.Count; i++) RecycleOrder(plan.Orders[i]);
+        plan.Orders.Clear();
+        _planPool.Push(plan);
     }
 }

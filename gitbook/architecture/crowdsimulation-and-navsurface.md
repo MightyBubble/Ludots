@@ -65,21 +65,19 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 ## 与主干平行组件的存留理由
 
-内核里有四组与主干既有设施功能平行的组件，每组对应参考实现（CrowdSimulation Web 沙盒）的一个文件。它们是逐 op 对拍的移植面，替换即破对拍，处置原则是保留并写明对应物：
+行为对拍（2026-10-09）之后，下面五处仍不收进主干对应物。每处写自己还在的原因，不用「替换即破对拍」一句盖过去。结构性字段（部署位置、抽象图弹出序、指令日志）仍然逐位。领队折线和接触子集走的是已经写明的行为带宽。这次五处都没有换成主干类型。
 
-- `Nav/NavMinHeap` ↔ 主干 `Collections/Fix64PriorityQueue<T>`。参考对应物 `engine/heap.js`。移植保持同构：穴插法上滤 / 下滤、同级并列取左孩子、Fix64 键 + int 值并行数组、零逐节点分配。S3-b 抽象图拓扑逐位 FNV 对拍挂在它的弹出序上；换泛型堆需要重新证明同键并列的弹出序一致，对拍表面不动。
-- `Units/CrowdSimRng` ↔ 主干 `Engine/Randomization/RngStreamService`。参考对应物 `engine/noise.js` 的 mulberry32。两者算法不同（RngStream 是 xorshift32，CrowdSimRng 是 mulberry32）、输出转换不同（RngStream 的 NextFloat01 是 24 位整数 ÷ (2²⁴−1)，CrowdSimRng 是 u32 ÷ 2³² 直进 Fix64 原始值——二进分数，精确）；盐流合同也不同：部署按指令加盐（`CrowdDeployment` 用 worldSeed × spawnSeq 组合派生每条指令自己的流），RngStreamService 是先声明后取用的命名流注册表。S4 部署对拍要求 12020 个单位位置原始值逐位一致，换流必破。
-- `Units/CrowdSimCommands` + `CrowdCommandQueue` ↔ 主干 `Persistence/ReplayRecorder`。参考对应物 `engine/core/commands.js` 的 CommandQueue。指令队列是内核输入面：tick 边界执行、submit 现场记日志、schedule 与存量按 tick 归并、迟到指令按实际执行 tick 记录；载荷在入队边界一次解析为 struct（`CrowdSimCommand.Parse`），JsonNode 不进队列/日志/回放；日志 = 完整输入，回放 = 新会话 + 同一日志。它记录的是仿真输入指令，不是引擎权威帧，两者不是同一类东西的两种实现。
-- `Nav/NavFunnel` ↔ 主干 `Navigation/NavMesh/Bake/FunnelAlgorithm`。参考对应物 `engine/navquery.js` 的漏斗。判等语义是硬分界：NavFunnel 全 Fix64 精确等（`ax == rx`，与参考实现的 JS 数值严格等一致），主干版是 float32 Vector2 + 1e-6 容差近似等；漏斗折线是领队路径的直接输入，退化 portal 处顶点差一位，后续 600 tick 轨迹全变。
-- `Movement/CrowdSpatialHash` ↔ 主干 `Spatial/SpatialHashGrid` 与空间划分全家桶（`ISpatialQueryService` 等）。参考对应物 `engine/core/spatialHash.js`。它不只是查询结构：环预计算、逐单位 itemRing、邻接槽位表、唤醒岛、stride 行错峰共同决定**接触枚举顺序**，而枚举顺序在双预算（maxNeighbors/maxScan）截断下直接决定解出的接触子集（L13 实证：格几何差一点都不行）。主干空间结构的语义是"就近查询"，不保证任何遍历序，换用即破逐位。
-
-四件均非历史遗留（各有活跃消费者与对拍义务），无收编项。
+- `Nav/NavMinHeap` 对 `Collections/Fix64PriorityQueue<T>`。参考对应物 `engine/heap.js`。比较规则已经对齐：同键不上升，下滤时同键留左孩子。仍单独留着，是因为 Dijkstra 用的是 Fix64 键和 int 下标两列，弹出后不把死槽写成 default。`Fix64PriorityQueue<int>` 把键和值包进一个结点，`Clear` 会把死槽清零。S3-b 抽象图拓扑的 FNV 挂在这个弹出序上，弹出序是结构性字段。替换前要用现有拓扑对拍证明弹出序没变。这次不换。
+- `Units/CrowdSimRng` 对 `Engine/Randomization/RngStreamService`。参考对应物 `engine/noise.js` 的 mulberry32。两条流算法不同（RngStream 是 xorshift32），输出也不同（RngStream 的 NextFloat01 是 24 位整数 ÷ (2²⁴−1)；CrowdSimRng 是 u32 ÷ 2³²，直接进 Fix64 原始值）。部署按指令加盐：`CrowdDeployment` 用 worldSeed × spawnSeq 给每条指令自己的流。RngStreamService 是先声明后取用的命名流。生成位置是结构性字段，S4 要求 12020 个单位的位置原始值逐位一致。换流会改这些位置。
+- `Units/CrowdSimCommands` + `CrowdCommandQueue` 对 `Persistence/ReplayRecorder`。参考对应物 `engine/core/commands.js` 的 CommandQueue。指令队列是内核输入面：tick 边界执行、submit 现场记日志、schedule 与存量按 tick 归并、迟到指令按实际执行 tick 记录。载荷在入队边界一次解析为 struct（`CrowdSimCommand.Parse`），JsonNode 不进队列、日志和回放。日志是完整输入，回放是新会话加上同一份日志。它记的是仿真输入指令，不是引擎权威帧。帧合同装不下这份日志，见下一节。
+- `Nav/NavFunnel` 对 `Navigation/NavMesh/Bake/FunnelAlgorithm`。参考对应物 `engine/navquery.js` 的漏斗。判等不同：NavFunnel 用 Fix64 精确等（`ax == rx`），主干是 float32 Vector2 加 1e-6 容差。漏斗折线直接喂给领队。退化 portal 上差一个顶点，后续轨迹会走出 S5 已写明的位置带宽。这次不换。
+- `Movement/CrowdSpatialHash` 对 `Spatial/SpatialHashGrid`。参考对应物 `engine/core/spatialHash.js`。它不只是就近查询。环预计算、逐单位 itemRing、邻接槽位表、唤醒岛、stride 行错峰一起决定接触的枚举顺序。maxNeighbors / maxScan 截断时，顺序决定看见哪些邻居。接触计数的行为门（S5-b 双容忍线）挂在这个子集上。格几何差一点，截断后的邻居集就不同。主干空间结构不保证遍历序，也没有这几张表。这次不换。
 
 ### 指令日志能否由 ReplayRecorder 承载：不能
 
 边缘接入评估的结论：记录面留在 `CrowdCommandQueue`，内核语义不变。指令载荷 struct 化（类型/玩家/坐标/形状/选项在边界一次成形）后逐条复核过：第 2、3 条原样成立，第 1 条换了论据、结论不变。阻塞理由：
 
-1. 帧合同装不下，与指令侧表示无关——struct 化前装不下 JSON 指令，struct 化后也装不下 struct 指令。`AuthoritativeAction` =（ActionId 字符串，Vector3 float32，三个布尔），且帧内 ActionId 按字典序严格唯一、浮点必须有限：同 tick 多条指令的提交顺序（归并语义是"同 tick 先到先执行"）没有落点；变长载荷（poly 顶点）与任意字符串（type / shape / template）同样没有无损落点。把序列化指令塞进 ActionId 是新的有损适配层，压在逐位对拍的输入上。
+1. 帧合同装不下，与指令侧表示无关——struct 化前装不下 JSON 指令，struct 化后也装不下 struct 指令。`AuthoritativeAction` =（ActionId 字符串，Vector3 float32，三个布尔），且帧内 ActionId 按字典序严格唯一、浮点必须有限：同 tick 多条指令的提交顺序（归并语义是"同 tick 先到先执行"）没有落点；变长载荷（poly 顶点）与任意字符串（type / shape / template）同样没有无损落点。把序列化指令塞进 ActionId 是新的有损适配层，压在指令日志这份结构性输入上。
 2. 检查点生产者不存在（struct 化不涉及）。`ReplayRecorder.SetCheckpoint` 要求 `WorldSaveSnapshot`（engine.World 二进制 + ModSetHash / RegistryFingerprint 头），只能由 `WorldSnapshotService.Capture(GameEngine, boundary)` 产出；对拍与回放会话是一次性 `ArchWorld.Create()`（无 GameEngine，无 save participant 注册表）。
 3. 播放端同样要 `GameEngine` + `WorldRestoreService`（`ReplayPlayer.PlayFromCheckpoint`）；crowd 回放契约"新会话 + 同一日志"已由 `CrowdSimulationRuntime.RunReplay` 与 `S4DeployTruthTests`（同一记录回放两次校验码相同）覆盖，换播放端不增加能力，只增加依赖。
 
@@ -119,7 +117,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 `CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`。导航格边长、能力档、区域和移动类型写在同目录的 `Navigation/navmesh.json` 与 `Navigation/pathing.json`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的地表和出生点。
 
-`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。单位模板上的 `CrowdSimulationAgent` 必写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。速度按模板各写各的。领队步速取本组已生成成员的模板速度最小值；子步数取本图绑定模板里的最大速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 不写时等于 `cost`，两者都必须大于 0。本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` 里的每一个区域；排除写 `passable: false`，不能省略行，缺行也不当成代价 1 或不可通行。`areas` 为 null 直接报错。绑定集是体型 `navProfileId` 落在这张图 `navProfiles` 里的 pathing 类型，加上本图群体单位模板点名的 `agentTypeId`。没进绑定集的类型不校验，也不建网格查询。核心 `Humanoid` 保持 `PreferMesh`，Mod 的 pathing 不要再写它。`passable` 为 false 时群体代价记 0，Detour 过滤掉这一区域。`special` 为 true 的模板不参与批量部署。群体运行时只绑定被单位模板引用的 agent type，pathing 里没有模板的类型不进运行时表。只加载能力 Mod、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
+`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。单位模板上的 `CrowdSimulationAgent` 必写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。这些字符串留在模板和配置里。生成时把档案下标、移动类型下标，以及模板上已经写成定点数的速度、个人半径、推挤优先级，写进实体上的 `CrowdSimulationAgent`。组件没有字符串字段，tick 里不再解析 id。速度按模板各写各的。领队步速取本组已生成成员的模板速度最小值；子步数取本图绑定模板里的最大速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 不写时等于 `cost`，两者都必须大于 0。本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` 里的每一个区域；排除写 `passable: false`，不能省略行，缺行也不当成代价 1 或不可通行。`areas` 为 null 直接报错。绑定集是体型 `navProfileId` 落在这张图 `navProfiles` 里的 pathing 类型，加上本图群体单位模板点名的 `agentTypeId`。没进绑定集的类型不校验，也不建网格查询。核心 `Humanoid` 保持 `PreferMesh`，Mod 的 pathing 不要再写它。`passable` 为 false 时群体代价记 0，Detour 过滤掉这一区域。`special` 为 true 的模板不参与批量部署。群体运行时只绑定被单位模板引用的 agent type，pathing 里没有模板的类型不进运行时表。只加载能力 Mod、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
 
 地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。群体的 AgentTypeIndex 是被单位模板引用的 pathing agent type，按合并后的属性顺序编号。`maps.<mapId>.terrainAreas` 是有序数组，每项 `{ terrainId, areaId }`，数组下标就是 `.navsurface` 的地形编号。`.navsurface` 从地图的 `ContinuousHeightmap.asset` 推导：去掉 `assets/` 前缀，把 `.height` 换成 `.navsurface`。带导航标签的地图用 `maps.<mapId>.navProfiles` 列出要烘焙和装载瓦片库的能力档 id，数组顺序就是烘焙顺序。绑定了移动类型的地图写 `maps.<mapId>.navAreas`（区域 id 数组）。`terrainAreas` 的 `areaId` 必须是它的子集；结构模板会动态铺上的 `deck`、`road`、`flooded`、`burning` 也写进去。没有 nav 标签，或没有 `navProfiles`，启动时不建网格查询。查询只给 PreferMesh / AutoCheapest、且体型 `navProfileId` 在这张图 `navProfiles` 里的类型。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，地图把模板绑进会话就失败，报文带模板 id 和 agent id。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
 
@@ -230,8 +228,8 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S4-a 交付：部署单位与指令回放内核（本次）
 
-- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（模板写真：profileId / agentTypeId / speedCmPerSecond / personalRadiusCm / pushPriority / special）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
-- **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有模板资产,保持最小组件集直接创建,组件值与演示路径逐位相同。出生算法（盐流/环形搜索/编组/散布）留在内核,只换了实体创建机制;S4/S5 真值测试原样全绿。
+- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（速度、个人半径、推挤优先级、special，以及生成时写入的档案下标和移动类型下标；profileId / agentTypeId 留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
+- **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有单独的组件集：测试装配把 CrowdSimulationMod 的模板挂进 VFS，再经同一条 EntityBuilder.UseTemplate 实例化。出生算法（盐流/环形搜索/编组/散布）留在内核;S4/S5 真值测试原样全绿。
 - **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
 - **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
 - **指令队列与回放**（core/commands.js CommandQueue 移植）：指令是数据,tick 边界执行;日志 = 完整输入,回放 = 新会话 + 同一日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
@@ -242,7 +240,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S4-b 交付：部署演示纯数据化——单位进 presenter 管线（本次）
 
 - **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`,MassNavigationRuntime 同款形态）在地图聚焦时按配置目录合并出的 CrowdSimulationConfig + CrowdSimulationDebug 建会话——会话跑在**引擎世界**上（此前演示 mod 在侧世界 `ArchWorld.Create()` 起会话,呈现管线根本看不见单位,这是 S4 演示最初看不到单位的根因）,tick 由系统组的 FixedHz 驱动,会话与运行时注册成服务。S1/S3 演示 mod 的同款 Load 样板后续都往这里收。
-- **单位接入呈现投影（不造第二条路）**：`CrowdSimUnits.Add` 在接线存在时给单位挂齐呈现预置件——`PresentationStableId` + `EntityTemplateKeyRef`（模板键来自单位模板 id，按移动类型和半径级映射）+ `PreviousWorldPositionCm` + `VisualTransform` + `CullState` + `ContinuousHeightmapSampleState` + 半径黑板。之后 `PresentationEntityLifecycleSystem` 按 presenters.json 规则数据驱动地建/毁 presenter,与生成队列出生的实体同一条路。无头对拍与回放传 null 接线,组件一个不挂,71/71 逐位不变。
+- **单位接入呈现投影（不造第二条路）**：`CrowdSimUnits.Add` 在接线存在时给单位挂齐呈现预置件——`PresentationStableId` + `EntityTemplateKeyRef`（模板键来自单位模板 id，按移动类型和半径级映射）+ `PreviousWorldPositionCm` + `VisualTransform` + `CullState` + `ContinuousHeightmapSampleState` + 半径黑板。之后 `PresentationEntityLifecycleSystem` 按 presenters.json 规则数据驱动地建/毁 presenter,与生成队列出生的实体同一条路。无头对拍与回放使用同一套生成接线，呈现预置件照挂；校验码不读这些呈现字段。
 - **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + 新增的 `TeamColorPalette` 服务（`deploy.bases[].color` 是配置数据;`PresenterBehaviorSystem` 优先读调色板,未注册回退原双色解析,旧场景零影响）;选中环 = select 指令执行时镜像进实体集合仓的 `selected` 集合,presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中,镜像不进对拍口径。
 - **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——会话只物化单位模板点名的档案，不把注册表里其余体型当成半径级;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
@@ -293,24 +291,17 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **Clear/重部署**：当前 `CrowdSimUnits.Clear()` 对模板道单位直接 `World.Destroy`,不经过
   呈现生命周期——已记为已知缺口,与呈现接线改造同轨补齐（呈现实体两帧销毁后再重建稠密表）。
 
-## 热路径数据面：gather → SoA → scatter（内核改造，本次）
+## 热路径数据面：chunk 收拢 → SoA → 写回
 
-对拍行序 = 单位稠密序（`CrowdSimUnits._dense` 是 append-only 创建序，真值 bin 的行序），
-而 ECS chunk 遍历按原型分桶（人群单位有头less/模板两条生成道 = 两个原型），不保稠密序——
-热路径不能直接换成 chunk 迭代。取而代之的形状：**每 tick 一次 gather（组件 → 内核 SoA，
-含 `CrowdSimulationAgent` 的解析值——managed 组件不进子步热环）→ 子步（哈希重建 / 避让 /
-领队 / 意图 / 马达）全走 SoA → tick 末一次 scatter（SoA → 组件）**。World 解析从每单位每
-子步约 16 次降到每 tick 9 次（6 读 3 写）；意图层的指令簿线性扫与认知槽字典解析改组级
-备忘（指令簿与槽切换只在 tick 边界变，gather 时失效）。校验码在 tick 末从 SoA 读
-（scatter 后同值）；无运动栈的纯部署会话保留组件直读路径，两条路径值等价。
-语义不变式：结构 op / 指令都发生在 gather 之前的 tick 边界，子步间没有任何组件读者，
-scatter 写回的即子步终值——对拍逐位不变由 S1–S7 全部真值测试钉住。
+子步的地址是稠密下标。空间哈希的桶、分离、接触计数和并行区间都按下标读写，还要随机读邻居。Arch 的查询按原型分块，一块 chunk 盖不住整张稠密表，查询顺序也不是稠密序。单位模板的组件集可以不同。以前把原因写成「无头和模板两条生成道、两个原型」。无头那条生成道已经不在，这个说法作废。剩下的原因是：稠密表是创建序，槽位经 `_sparse` 映回；chunk 序是原型序；中间没有一张跨 chunk 的连续 Span 可以拿来做下标划分。
 
-50k 单位 tick 基准（自造场景：种子 1337、spawnAt 50000、远点行军、200 tick 稳态窗、
-逐 tick 墙钟、Debug 构建、同机同窗前后对照，`CrowdKernel50KBenchmarkTests` 落
-`artifacts/benchmarks/crowd-kernel-50k-tick/`）：改造前平均 333.1 / P50 332.8 /
-P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / 最大 319.6 ms
-（约 −30%）。计时窗不含生成与下令；数字允许机器噪声，前后对照需同机同窗。
+每个 tick 用缓存的 `QueryDescription` 把单位列扫一遍，按槽位映回稠密下标，收成 SoA。子步只读写这张表。tick 末按同一下标写回 chunk 列，不对单个单位做 `World.Get` / `World.Set`。迷雾盖章读的是刚写完的位置和玩家下标，不再按实体回查。指令和结构变更都在这次收拢之前。子步中间没有别的读者要看组件。校验码在 tick 末读 SoA。没有运动内核的部署会话仍直接读组件。意图层的指令簿线性扫和认知槽解析仍是组级备忘，只在 tick 边界失效。规划发生在收拢之前，它改的是组件，下一次收拢能看见。
+
+50k 单位 tick 门（种子 1337、按 deploy.bases 生成 50000、四座基地各下一令远点行军、预热 40 tick、测量 200 tick，`CrowdKernel50KBenchmarkTests`）。Release，迷雾不冻结。计时是推进成功的 `session.Step`，含运动、迷雾刷新、认知同步和校验码。硬门只在优化构建上生效：P95 < 33 ms。Debug 记下数字，然后记为未测。并行工人 4，迷雾刷新 60 次。开测时读 1 分钟 load；高于核数就每 5 秒再读，最多等 180 秒，到期仍高也开测，不重跑。
+
+2026-10-12，4 核。开测 1 分钟 load 1.76，核数 4，等待 0 ms：平均 25.80 / P50 25.26 / P95 30.46 / 最大 31.86 ms。数字在 `artifacts/benchmarks/crowd-kernel-50k-tick/`。
+
+更早的 Debug、迷雾冻结、gather 改造对照：改造前平均 333.1 / P50 332.8 / P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / 最大 319.6 ms。那组不是现在这道门。
 
 ## S7-a 交付：结构动态化内核——建造/拆除/寿命 + 脏 tile 增量重烘 + HPA 增量 + 队伍反应（本次）
 
@@ -337,7 +328,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 - **结构仓补桥(F02 对齐)**:地图桥实体以实体身份进认知仓(`InstallMapBridges`:span 即导出端从参考仓读出的 path 足迹,不进地面栅格/碰撞——桥面层仍由 UpperLayerBake 独立烘焙,S1–S7 地面口径零接触);导出器地图实体的写出序改为参考 id 序(不排序),两端实体 id 逐位同构——认知的逐 id 语义(残影/遗忘/共享)以此为前提。
 - **修复的潜伏缺陷(迷雾暴露)**:① 结构仓 RemoveEntity 从不清 _ids(死 id 留表);② CrowdIssueOrder 重组用玩家号当表序下标(SpawnAt 传的是 id-1);③ 规划器打单位指令标扫指令簿,回收组号的陈旧链接会命中(改为组的 OrderId 字段,同参考端 g.order.id);④ S1 测试镜像了导出器旧的实体排序(两端同步去排序)。
 - **对拍(导出器 S7-b 块 + `S7FogTruthTests`,360 tick × 120 单位,种子 1337,迷雾开启口径——不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)**:脚本 = 部署 → 行军 → 未知建筑(t5 放置初始视盘外,t24 发现,发现前后认知槽 1→0)→ 拆除残影(t90 slot2,t96 再见遗忘)→ reveal/obscure/forget → fogShare 并组(t230)→ fogTerrain 开关对照(t260/t330)。**迷雾 digest 逐位硬门**(s7fog.bin 每组每 tick visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev + 全局槽账 seq/switches/entry/dormant/beliefCount——整数集合态无带宽;认知变体的内容一致性由槽字段唯一决定 + 结构 op 报告逐字段 + 轨迹背书)。实测:digest 全程逐位、ops 2 笔全字段、轨迹 p50=0.08/p99=0.45cm;到达判定骑线(L18 族)使末段停车晚 1–9 tick——状态翻转 99 处全为 Moving↔Arrived 到达对(非到达翻转零容忍),末态带 5000(实测 3491);contacts 对齐门 0.5% + ±3(实测 0.147%,直方 [±1:57,±2:3,±3:3],到达时多邻骑线)。**truth 冻结口径**:会话属性 TruthNavFrozen(同参考端 __S7_TRUTH_NAV__ 导出补丁语义)——S5/S7 既有测试置位,旧真值原样全等(已验逐字节);S4 纯部署会话不建迷雾。
-- **真机**:S4Deploy 演示脚本追加迷雾命令(reveal/obscure/forget/fogTerrain 对照,12000 单位按认知改道,autoReplay 回放对称);HUD 黑板键(crowd_simulation.session.fog.*)暴露玩家 1 视野组的可见/探索/认知/残影计数与乐观开关;FogViewGroup 口径(-1 = 全知 debug 视图默认,键切玩家视角,S7 spec 两观察范围并存)与 View(g) 查询面交给迷雾渲染底座(W2)绘制——本单不做渲染。
+- **真机**:S4Deploy 演示脚本追加迷雾命令(reveal/obscure/forget/fogTerrain 对照,12000 单位按认知改道,autoReplay 回放对称);玩家 1 视野组的可见、探索、残影计数在迷雾刷新时维护,调试展开的 HUD 按下标读取;会话累计(重烘、迷雾刷新、等路、规划)在 `CrowdSimulationTelemetry`。乐观开关仍是迷雾状态本身。FogViewGroup 口径(-1 = 全知 debug 视图默认,键切玩家视角,S7 spec 两观察范围并存)与 View(g) 查询面交给迷雾渲染底座(W2)绘制——本单不做渲染。
 - **范围边界记档**:LOS 开启(fogSight)的 sight 采样为 C# 双精度域,不是对拍口径(真值场景 LOS 关);sharesFlow 的跨槽流场共享统计(beliefFlowShares)不移植(判定已移植,统计无对拍面);认知槽的 sleep 在全拷贝变体下为显式免操作(容量由淘汰保证)。
 ## 当前缺口（诚实清单）
 

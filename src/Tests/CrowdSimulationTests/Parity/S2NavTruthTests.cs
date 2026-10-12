@@ -64,7 +64,7 @@ public class S2NavTruthTests
             var t = truthContexts[i]!;
             var c = contexts[i];
             if (c.Id != t["navId"]!.GetValue<int>()) failures.Add($"context[{i}] navId {c.Id} ≠ {t["navId"]!.GetValue<int>()}");
-            if (c.Cells.Length != t["passableCount"]!.GetValue<int>()) failures.Add($"{t["agentType"]} 可走格数 {c.Cells.Length} ≠ {t["passableCount"]!.GetValue<int>()}");
+            if (c.CellCount != t["passableCount"]!.GetValue<int>()) failures.Add($"{t["agentType"]} 可走格数 {c.CellCount} ≠ {t["passableCount"]!.GetValue<int>()}");
             if (c.CompCount != t["compCount"]!.GetValue<int>()) failures.Add($"{t["agentType"]} 连通域数 {c.CompCount} ≠ {t["compCount"]!.GetValue<int>()}");
             if ((c.Links?.Count ?? 0) != t["linkCount"]!.GetValue<int>()) failures.Add($"{t["agentType"]} 链接数 {c.Links?.Count ?? 0} ≠ {t["linkCount"]!.GetValue<int>()}");
         }

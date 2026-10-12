@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -17,16 +16,18 @@ public readonly record struct PathQuery(int NavContextId, int StartCell, int Goa
 /// <summary>路径答复:折线 + 方向图(流场);不可达时 Points 为 null。</summary>
 public sealed class PathResult
 {
-    public required PathQuery Query { get; init; }
-    public required bool Reachable { get; init; }
-    public required CorridorQuery.Branch Branch { get; init; }
-    /// <summary>拉直折线(格单位,x, y 平铺);链接层来自流场路点链。</summary>
-    public required Fix64[]? Points { get; init; }
-    /// <summary>逐路点层号(null = 全地面)。</summary>
-    public required int[]? PointLayers { get; init; }
+    public PathQuery Query { get; set; }
+    public bool Reachable { get; set; }
+    public CorridorQuery.Branch Branch { get; set; }
+    /// <summary>拉直折线(格单位,x, y 平铺)。活前缀是 <see cref="PointCount"/>；链接层来自流场路点链。</summary>
+    public Fix64[]? Points { get; set; }
+    public int PointCount { get; set; }
+    /// <summary>逐路点层号(null = 全地面)。活前缀是 <see cref="LayerCount"/>。</summary>
+    public int[]? PointLayers { get; set; }
+    public int LayerCount { get; set; }
     /// <summary>方向图(调用方持有;弃用经 PathQueryService.Recycle 还池)。</summary>
-    public required FlowField? Flow { get; init; }
-    public required byte[]? CorridorMask { get; init; }
+    public FlowField? Flow { get; set; }
+    public byte[]? CorridorMask { get; set; }
 }
 
 /// <summary>路径服务故障:请求超过 planTimeoutMs 未返回(报错,绝不重试或换算法)。</summary>
@@ -56,13 +57,15 @@ public sealed class PathQueryService : IDisposable
     /// 导航上下文,经本锁串行——任何在途计算恰好看见其请求之前生效的全部结构 op,时序不进结果。
     /// (参考端用 worker 私有镜像 + 消息序达到同一契约;C# 单份状态省镜像内存。)</summary>
     private readonly object _navGate = new();
-    private readonly Queue<(int Id, PathQuery Query)> _pending = new();
-    private readonly Dictionary<int, PathResult> _replies = new();
-    private readonly Dictionary<int, int> _dueTick = new();
-    private readonly Dictionary<int, long> _sentAtMs = new();
-    private readonly HashSet<int> _discarded = new();
+    private readonly Queue<(int Id, PathQuery Query)> _pending;
+    private readonly Dictionary<int, PathResult> _replies;
+    private readonly Dictionary<int, int> _dueTick;
+    private readonly Dictionary<int, long> _sentAtMs;
+    private readonly HashSet<int> _discarded;
     private readonly List<Thread> _workers = new();
     private readonly System.Collections.Concurrent.ConcurrentBag<FlowPool> _pools = new();
+    private readonly Dictionary<PathResult, ReplySlot> _slotOf;
+    private readonly object _slotGate = new();
     private int _workerTarget;
     private bool _disposed;
     private int _seq;
@@ -96,8 +99,26 @@ public sealed class PathQueryService : IDisposable
         _config = config;
         _latencyTicks = config.Planning.LatencyTicks;
         _planTimeout = planTimeout;
+        int slots = ReplySlotCapacity(config);
+        _pending = new Queue<(int Id, PathQuery Query)>(slots);
+        _replies = new Dictionary<int, PathResult>(slots);
+        _dueTick = new Dictionary<int, int>(slots);
+        _sentAtMs = new Dictionary<int, long>(slots);
+        _discarded = new HashSet<int>(slots);
+        _slotOf = new Dictionary<PathResult, ReplySlot>(slots);
         if (workerThreads < 1) throw new ArgumentOutOfRangeException(nameof(workerThreads));
         SetWorkerCount(workerThreads);
+    }
+
+    /// <summary>
+    /// 同时在途的答复上限:刷新预算占满延迟窗,再加一组规划突发。
+    /// 槽和请求表按这个数一次备好,稳态不再因为多一个在途请求而涨容。
+    /// </summary>
+    private static int ReplySlotCapacity(CrowdSimulationRuntimeConfig config)
+    {
+        int refresh = config.Planning.MaxRefreshesPerTick * config.Planning.RefreshLatencyTicks;
+        if (refresh < 1) refresh = 1;
+        return refresh + Ludots.Core.CrowdSimulation.CrowdSimulationLimits.HotPathSlotReserve;
     }
 
     /// <summary>切换后台线程数(1 / 2 / 4);在途任务继续,答复内容不变。</summary>
@@ -154,7 +175,6 @@ public sealed class PathQueryService : IDisposable
     /// <summary>生效帧取答复:没算完就阻塞等待(仿真暂停,结果仍于生效帧生效);超时即故障。</summary>
     public PathResult AwaitDue(int id)
     {
-        var sw = Stopwatch.StartNew();
         bool waited = false;
         lock (_gate)
         {
@@ -203,12 +223,53 @@ public sealed class PathQueryService : IDisposable
         flow.OriginPool?.Give(flow);
     }
 
+    /// <summary>折线缓冲归还 worker。流场另走 <see cref="Recycle(FlowField)"/>，两者寿命不同。</summary>
+    public void ReleaseReply(PathResult result)
+    {
+        ReplySlot? slot;
+        lock (_slotGate)
+        {
+            if (!_slotOf.TryGetValue(result, out slot) || !slot.InUse) return;
+            slot.InUse = false;
+        }
+
+        lock (slot.Owner.Gate) slot.Owner.Free.Push(slot);
+    }
+
+    private void Track(ReplySlot slot)
+    {
+        lock (_slotGate)
+        {
+            if (!_slotOf.ContainsKey(slot.Result)) _slotOf.Add(slot.Result, slot);
+        }
+    }
+
     private void WorkerLoop(object? state)
     {
         int workerIndex = (int)state!;
-        var pool = new FlowPool(_config.NavCellsPerSide, _config.Flowfield.PoolCapacity);
+        int refreshInFlight = _config.Planning.MaxRefreshesPerTick * _config.Planning.RefreshLatencyTicks;
+        if (refreshInFlight < 1) refreshInFlight = 1;
+        int flowCapacity = _config.Flowfield.PoolCapacity + refreshInFlight;
+        var pool = new FlowPool(_config.NavCellsPerSide, flowCapacity);
         _pools.Add(pool);
-        var scratch = new CorridorQuery.Scratch(_config.Hpa.NavCellsPerTile * _config.Hpa.NavCellsPerTile);
+        int navTilesPerSide = _config.NavCellsPerSide / _config.Hpa.NavCellsPerTile;
+        int tileCount = navTilesPerSide * navTilesPerSide;
+        for (int i = 0; i < flowCapacity; i++)
+        {
+            var primedFlow = pool.Take();
+            primedFlow.LkBuf ??= new int[pool.GroundCount];
+            primedFlow.MaskBuf ??= new byte[tileCount];
+            pool.Give(primedFlow);
+        }
+        var buffers = new WorkerBuffers(_config.Hpa.NavCellsPerTile * _config.Hpa.NavCellsPerTile);
+        buffers.EnsureMasks(tileCount);
+        for (int i = 0; i < ReplySlotCapacity(_config); i++)
+        {
+            var primed = new ReplySlot(buffers) { Mask = new byte[tileCount] };
+            Track(primed);
+            lock (buffers.Gate) buffers.Free.Push(primed);
+        }
+
         for (; ; )
         {
             (int Id, PathQuery Query) job;
@@ -236,7 +297,7 @@ public sealed class PathQueryService : IDisposable
             {
                 lock (_navGate)
                 {
-                    result = Compute(job.Query, pool, scratch);
+                    result = Compute(job.Query, pool, buffers);
                 }
             }
             catch (Exception ex)
@@ -252,7 +313,17 @@ public sealed class PathQueryService : IDisposable
 
             lock (_gate)
             {
-                if (!_discarded.Remove(job.Id)) _replies[job.Id] = result;
+                if (_discarded.Remove(job.Id))
+                {
+                    if (result.Flow != null) pool.Give(result.Flow);
+                    result.Flow = null;
+                    ReleaseReply(result);
+                }
+                else
+                {
+                    _replies[job.Id] = result;
+                }
+
                 Monitor.PulseAll(_gate);
             }
         }
@@ -269,7 +340,15 @@ public sealed class PathQueryService : IDisposable
         lock (_navGate) return action();
     }
 
-    private PathResult Compute(PathQuery q, FlowPool pool, CorridorQuery.Scratch scratch)
+    /// <summary>
+    /// 状态是值类型，委托在调用方做成静态字段。tick 里不要传捕获变量的 lambda。
+    /// </summary>
+    public T RunExclusive<TState, T>(TState state, Func<TState, T> action)
+    {
+        lock (_navGate) return action(state);
+    }
+
+    private PathResult Compute(PathQuery q, FlowPool pool, WorkerBuffers buffers)
     {
         // F02:变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)
         var nav = q.NavContextId < Fog.CrowdBeliefNavs.BeliefStride
@@ -277,60 +356,156 @@ public sealed class PathQueryService : IDisposable
             : _variantResolver!(q.NavContextId);
         int navCellsPerSide = nav.NavCellsPerSide;
         int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
+        int tiles = navTilesPerSide * navTilesPerSide;
+        buffers.EnsureMasks(tiles);
+        var slot = buffers.Rent();
+        Track(slot);
         if (q.CorridorMask != null)
         {
             // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
-            var padRegion = FlowFieldBuilder.PadMask(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles);
-            var region = FlowFieldBuilder.OrMask(padRegion, q.CorridorMask);
-            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, region, pool);
-            return new PathResult
-            {
-                Query = q,
-                Reachable = true,
-                Branch = CorridorQuery.Branch.None,
-                Points = null,
-                PointLayers = null,
-                Flow = refreshed,
-                CorridorMask = q.CorridorMask,
-            };
+            FlowFieldBuilder.PadMaskInto(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+            FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CorridorMask, buffers.Union);
+            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
+            Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, refreshed, q.CorridorMask);
+            return slot.Result;
         }
 
-        var mask = new byte[navTilesPerSide * navTilesPerSide];
-        mask[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
-        var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, mask, q.Level, scratch);
-        var padded = FlowFieldBuilder.PadMask(mask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles);
-        var flow = FlowFieldBuilder.Build(nav, q.GoalCell, padded, pool);
+        Array.Clear(buffers.Corridor, 0, tiles);
+        buffers.Corridor[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
+        var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch);
+        FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+        var flow = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Pad, pool);
 
-        Fix64[]? points;
+        Fix64[]? points = null;
+        int pointCount = 0;
         int[]? layers = null;
+        int layerCount = 0;
         if (corridor.Points != null && nav.Links == null)
         {
             points = corridor.Points;
+            pointCount = corridor.PointCount;
         }
         else
         {
             // 链接层 / 无走廊:领队折线从流场路点链描出
-            var fp = CorridorQuery.FlowPoints(flow, q.StartCell);
-            points = fp?.Points;
-            layers = fp?.Layers;
+            var fp = CorridorQuery.FlowPoints(flow, q.StartCell, buffers.Scratch);
+            if (fp != null)
+            {
+                points = fp.Value.Points;
+                pointCount = fp.Value.PointCount;
+                layers = fp.Value.Layers;
+                layerCount = fp.Value.LayerCount;
+            }
         }
 
         if (points == null)
         {
             pool.Give(flow);
             flow = null;
+            pointCount = 0;
+            layerCount = 0;
+            layers = null;
         }
 
-        return new PathResult
+        if (slot.Mask.Length != tiles) slot.Mask = new byte[tiles];
+        Array.Copy(buffers.Corridor, slot.Mask, tiles);
+        Fill(slot, q, points != null, corridor.Kind, points, pointCount, layers, layerCount, flow, slot.Mask);
+        return slot.Result;
+    }
+
+    private void Fill(
+        ReplySlot slot,
+        PathQuery query,
+        bool reachable,
+        CorridorQuery.Branch branch,
+        Fix64[]? points,
+        int pointCount,
+        int[]? layers,
+        int layerCount,
+        FlowField? flow,
+        byte[]? mask)
+    {
+        if (pointCount > 0)
         {
-            Query = q,
-            Reachable = points != null,
-            Branch = corridor.Kind,
-            Points = points,
-            PointLayers = layers,
-            Flow = flow,
-            CorridorMask = mask,
-        };
+            if (slot.Points.Length < pointCount)
+                slot.Points = new Fix64[Math.Max(pointCount, slot.Points.Length * 2)];
+
+            Array.Copy(points!, slot.Points, pointCount);
+        }
+
+        if (layerCount > 0)
+        {
+            if (slot.Layers.Length < layerCount)
+            {
+                slot.Layers = new int[Math.Max(layerCount, slot.Layers.Length * 2)];
+            }
+
+            Array.Copy(layers!, slot.Layers, layerCount);
+        }
+
+        var result = slot.Result;
+        result.Query = query;
+        result.Reachable = reachable;
+        result.Branch = branch;
+        result.PointCount = pointCount;
+        result.Points = pointCount == 0 ? null : slot.Points;
+        result.LayerCount = layerCount;
+        result.PointLayers = layerCount == 0 ? null : slot.Layers;
+        result.Flow = flow;
+        result.CorridorMask = mask;
+    }
+
+    /// <summary>一份 worker 私有暂存。答复槽跨线程交回主线程，算完即与暂存脱开。</summary>
+    private sealed class WorkerBuffers
+    {
+        public WorkerBuffers(int tileCellCount)
+        {
+            Scratch = new CorridorQuery.Scratch(tileCellCount);
+        }
+
+        public readonly object Gate = new();
+        public readonly CorridorQuery.Scratch Scratch;
+        public readonly Stack<ReplySlot> Free = new();
+        public byte[] Corridor = Array.Empty<byte>();
+        public byte[] Pad = Array.Empty<byte>();
+        public byte[] Union = Array.Empty<byte>();
+
+        public void EnsureMasks(int tiles)
+        {
+            if (Corridor.Length == tiles) return;
+            Corridor = new byte[tiles];
+            Pad = new byte[tiles];
+            Union = new byte[tiles];
+        }
+
+        public ReplySlot Rent()
+        {
+            ReplySlot slot;
+            lock (Gate)
+            {
+                if (Free.Count > 0) slot = Free.Pop();
+                else slot = new ReplySlot(this);
+            }
+
+            slot.InUse = true;
+            return slot;
+        }
+    }
+
+    private sealed class ReplySlot
+    {
+        public ReplySlot(WorkerBuffers owner)
+        {
+            Owner = owner;
+            Result = new PathResult();
+        }
+
+        public readonly WorkerBuffers Owner;
+        public readonly PathResult Result;
+        public bool InUse;
+        public Fix64[] Points = new Fix64[4096];
+        public int[] Layers = new int[2048];
+        public byte[] Mask = Array.Empty<byte>();
     }
 
     private void FailLocked(string message)

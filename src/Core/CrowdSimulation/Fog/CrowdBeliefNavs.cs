@@ -400,6 +400,7 @@ public sealed class CrowdBeliefNavs
             Walk = (byte[])t.Walk.Clone(),
             Passable = (byte[])t.Passable.Clone(),
             Cells = (int[])t.Cells.Clone(),
+            CellCount = t.CellCount,
             Comp = (int[])t.Comp.Clone(),
             CompCount = t.CompCount,
             Links = links,

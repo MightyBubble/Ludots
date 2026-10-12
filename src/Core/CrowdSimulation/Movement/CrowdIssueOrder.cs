@@ -124,7 +124,7 @@ public static class CrowdIssueOrder
             }
 
             int goalCell = CrowdSimulationSpace.CellAtStrict(tx, ty, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
-            order.Groups.Add(new CrowdOrderGroupLink { GroupId = g.Id, GoalCell = goalCell });
+            order.Groups.Add(sim.Orders.RentLink(g.Id, goalCell));
             g.OrderId = order.Id;
         }
 

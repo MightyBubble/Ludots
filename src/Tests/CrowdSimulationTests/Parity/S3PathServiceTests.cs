@@ -88,6 +88,7 @@ public class S3PathServiceTests
             foreach (var r in results.Values)
             {
                 if (r.Flow != null) service.Recycle(r.Flow);
+                service.ReleaseReply(r);
             }
         }
 
@@ -111,6 +112,7 @@ public class S3PathServiceTests
         Assert.That(service.Waits, Is.EqualTo(1), "等待次数按请求计一次");
         Assert.That(result.Query.StartCell, Is.EqualTo(start));
         if (result.Flow != null) service.Recycle(result.Flow);
+        service.ReleaseReply(result);
     }
 
     [Test]
@@ -139,6 +141,7 @@ public class S3PathServiceTests
         Assert.That(result.Query.StartCell, Is.EqualTo(_pairs[1].Start));
         Assert.That(service.Faulted, Is.False);
         if (result.Flow != null) service.Recycle(result.Flow);
+        service.ReleaseReply(result);
     }
 
     [Test]
@@ -153,6 +156,7 @@ public class S3PathServiceTests
         var result = service.AwaitDue(id);
         Assert.That(result.Query.NavContextId, Is.EqualTo(navId));
         if (result.Flow != null) service.Recycle(result.Flow);
+        service.ReleaseReply(result);
     }
 
     // 答复全量滚动哈希:分支 / 可达 / 折线 / 层标 / 流场(目标 / 到达数 / 掩码 / integ / len / wp / lk)
@@ -164,11 +168,11 @@ public class S3PathServiceTests
         void Byte(byte v) => h = (h ^ v) * prime;
         void I32(int v) { for (int b = 0; b < 4; b++) Byte((byte)(v >> (b * 8))); }
         void I64(long v) { for (int b = 0; b < 8; b++) Byte((byte)(v >> (b * 8))); }
-        void F64s(Ludots.Core.Mathematics.FixedPoint.Fix64[]? values)
+        void F64s(Ludots.Core.Mathematics.FixedPoint.Fix64[]? values, int count)
         {
             if (values == null) { I32(-1); return; }
-            I32(values.Length);
-            foreach (var v in values) I64(v.RawValue);
+            I32(count);
+            for (int i = 0; i < count; i++) I64(values[i].RawValue);
         }
 
         foreach (var navId in _navs.Keys.OrderBy(v => v))
@@ -179,9 +183,9 @@ public class S3PathServiceTests
                 var r = results[(navId, p)];
                 Byte((byte)r.Branch);
                 Byte((byte)(r.Reachable ? 1 : 0));
-                F64s(r.Points);
+                F64s(r.Points, r.PointCount);
                 if (r.PointLayers == null) I32(-1);
-                else { I32(r.PointLayers.Length); foreach (int v in r.PointLayers) I32(v); }
+                else { I32(r.LayerCount); for (int i = 0; i < r.LayerCount; i++) I32(r.PointLayers[i]); }
                 if (r.Flow == null) { I32(-1); continue; }
                 I32(r.Flow.Goal);
                 I32(r.Flow.Reached);

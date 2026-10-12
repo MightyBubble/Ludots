@@ -751,11 +751,13 @@ public sealed class LauncherService
     private static ProcessStartInfo CreateAppStartInfo(string appAssemblyPath, string workingDirectory, string arguments)
     {
         var (fileName, fullArguments) = BuildAppRunnerCommand(appAssemblyPath, arguments);
-        return new ProcessStartInfo(fileName, fullArguments)
+        var startInfo = new ProcessStartInfo(fileName, fullArguments)
         {
             WorkingDirectory = workingDirectory,
             UseShellExecute = false
         };
+        LauncherProcessEnvironment.Apply(startInfo);
+        return startInfo;
     }
 
     private static string QuoteProcessArgument(string argument)
@@ -784,7 +786,15 @@ public sealed class LauncherService
             catalog,
             LoadPresets(),
             browserProviderOverride);
-        WriteLaunchGraphDocument(result.Plan);
+        if (result.Plan.IsExecutableTarget)
+        {
+            WriteLaunchGraphDocument(result.Plan);
+        }
+        else
+        {
+            WriteRuntimeBootstrap(result.Plan);
+        }
+
         return result;
     }
 
@@ -2553,6 +2563,7 @@ public sealed class LauncherService
                     WorkingDirectory = artifact.WorkingDirectory,
                     UseShellExecute = false
                 };
+                LauncherProcessEnvironment.Apply(startInfo);
                 startInfo.ArgumentList.Add("exec");
                 startInfo.ArgumentList.Add("--roll-forward");
                 startInfo.ArgumentList.Add("Major");
@@ -3248,6 +3259,7 @@ public sealed class LauncherService
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
+        LauncherProcessEnvironment.Apply(startInfo);
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Failed to start process '{fileName}'.");
         var processExited = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

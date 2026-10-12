@@ -11,15 +11,15 @@ public sealed class CrowdNavGroupSet
 {
     public sealed class Group
     {
-        public required int Id { get; init; }
-        public required int Player { get; init; }
-        public required int LayerIdx { get; init; }
-        public required int RIdx { get; init; }
+        public int Id { get; set; }
+        public int Player { get; set; }
+        public int LayerIdx { get; set; }
+        public int RIdx { get; set; }
         /// <summary>当前规划句柄(F02 双句柄之"认知"):真相号或认知变体号(槽切换时重挂)。
         /// 意图/领队/规划读它;马达物理读 BodyNavId(永远真相)。</summary>
         public int NavId { get; set; }
         /// <summary>真相句柄(F02 双句柄之"身体"):生成时定,不再变。</summary>
-        public required int BodyNavId { get; init; }
+        public int BodyNavId { get; set; }
         public int Count { get; set; }
         /// <summary>所属指令 id(0 = 无指令);组不复制指令数据。</summary>
         public int OrderId { get; set; }
@@ -44,6 +44,7 @@ public sealed class CrowdNavGroupSet
 
     private readonly List<Group?> _groups = new();
     private readonly Stack<int> _free = new();
+    private readonly Stack<Group> _objects = new();
 
     public IReadOnlyList<Group?> Groups => _groups;
     public int FreeCount => _free.Count;
@@ -64,7 +65,23 @@ public sealed class CrowdNavGroupSet
     {
         int id = _free.Count > 0 ? _free.Pop() : _groups.Count;
         if (id >= MaxGroups) throw new System.InvalidOperationException($"导航组上限 {MaxGroups}  exceeded。");
-        var g = new Group { Id = id, Player = player, LayerIdx = layerIdx, RIdx = rIdx, NavId = navId, BodyNavId = navId, Count = 0 };
+        if (!_objects.TryPop(out var g)) g = new Group();
+        g.Id = id;
+        g.Player = player;
+        g.LayerIdx = layerIdx;
+        g.RIdx = rIdx;
+        g.NavId = navId;
+        g.BodyNavId = navId;
+        g.Count = 0;
+        g.OrderId = 0;
+        g.Leader = null;
+        g.Flow = null;
+        g.Goal = -1;
+        g.GoalComp = -2;
+        g.Planning = false;
+        g.LosAll = false;
+        g.PrevLeader = null;
+        g.StateSeq = 0;
         if (id == _groups.Count) _groups.Add(g);
         else _groups[id] = g;
         return g;
@@ -75,10 +92,17 @@ public sealed class CrowdNavGroupSet
     {
         for (int i = 0; i < _groups.Count; i++)
         {
-            if (_groups[i] is { Count: 0 })
+            if (_groups[i] is { Count: 0 } empty)
             {
+                if (empty.Flow is { } flow)
+                {
+                    flow.OriginPool?.Give(flow);
+                    empty.Flow = null;
+                }
+
                 _groups[i] = null;
                 _free.Push(i);
+                _objects.Push(empty);
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -16,10 +17,10 @@ public sealed class CrowdRebakeReport
     public const byte KindRemove = 2;
 
     /// <summary>op 执行 tick(阶段 0,指令内)。</summary>
-    public required int ExecTick { get; init; }
+    public int ExecTick { get; set; }
     /// <summary>报告发布 tick(最后阶段;切片全在指令内时与 ExecTick 相同)。</summary>
     public int ReportTick { get; set; }
-    public required byte Kind { get; init; }
+    public byte Kind { get; set; }
     /// <summary>受影响 tile 并集大小(全部上下文去重)。</summary>
     public int Tiles { get; set; }
     /// <summary>看到变化的上下文数。</summary>
@@ -37,9 +38,9 @@ public sealed class CrowdRebakeReport
     public int Evicted { get; set; }
     public int Stuck { get; set; }
     /// <summary>受影响导航摘要:逐上下文脏 tile 与类别。</summary>
-    public required List<CrowdNavRebakeContextResult> ContextResults { get; init; }
+    public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
     /// <summary>受影响 tile 并集(升序;参考端 stats.dirtyTiles 同源)。</summary>
-    public required List<int> UnionTiles { get; set; }
+    public List<int> UnionTiles { get; set; } = new(CrowdSimulationLimits.HotPathSpanReserve);
     /// <summary>结构足迹包围盒(厘米;报告语义,不参与对拍)。</summary>
     public (Fix64 MinX, Fix64 MinY, Fix64 MaxX, Fix64 MaxY) Bbox { get; set; }
 }
@@ -49,18 +50,18 @@ public sealed class CrowdRebakeReport
 /// 任何新指令或结构变更先把未完 job 收尾。</summary>
 public sealed class CrowdRebakeJob
 {
-    public required (int X0, int Y0, int X1, int Y1) Rect { get; init; }
-    public required byte Kind { get; init; }
-    public required CrowdStructureFootprint Fp { get; init; }
-    public required List<CrowdNavRebakeContextResult> ContextResults { get; init; }
-    public required int Contexts { get; init; }
-    public required int CostOnly { get; init; }
-    public required int Hits { get; init; }
-    public required int Misses { get; init; }
-    public required int ExecTick { get; init; }
+    public (int X0, int Y0, int X1, int Y1) Rect { get; set; }
+    public byte Kind { get; set; }
+    public CrowdStructureFootprint Fp { get; set; }
+    public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
+    public int Contexts { get; set; }
+    public int CostOnly { get; set; }
+    public int Hits { get; set; }
+    public int Misses { get; set; }
+    public int ExecTick { get; set; }
     public int LastTick { get; set; }
     public int Stage { get; set; }
-    public List<CrowdOrder>? Orders { get; set; }
+    public List<CrowdOrder> Orders { get; } = new(8);
     public int Evicted { get; set; }
     public int Stuck { get; set; }
     /// <summary>反应末的流场刷新队列长快照(阶段 1;报告字段在阶段 2 发布,队列已被每 tick 预算排空)。</summary>
@@ -147,18 +148,7 @@ public static class CrowdStructureOps
         var planner = sim.Planner!;
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
-        List<CrowdNavRebakeContextResult> dirty;
-        var cache0 = cache;
-        dirty = planner.Service.RunExclusive(() =>
-        {
-            var results = CrowdNavRebake.RebakeContexts(sim.Navs.Values, sim.RebakeSources!, sim.Structures!, rect, cache0);
-            if (sim.VerifyIncrementalNav)
-            {
-                CrowdNavRebake.VerifyAgainstFullBake(sim.Navs, sim.RebakeSources!, sim.Structures!);
-            }
-
-            return results;
-        });
+        var dirty = planner.Service.RunExclusive(new RebakeCall(sim, rect, cache), RebakeExclusive);
         // F02:真相重烘完 → 认知分歧重推导(参考端 truthChanged 同点)。参考端的
         // detach/settle(变体在真相重烘前私享 tile)不需要——C# 变体是全拷贝(裁定 ①),
         // 真相重烘写不到变体自有的数组。
@@ -171,65 +161,96 @@ public static class CrowdStructureOps
             if (r.Kind == CrowdNavRebake.KindCost) costOnly++;
         }
 
-        var job = new CrowdRebakeJob
-        {
-            Rect = rect,
-            Kind = kind,
-            Fp = fp,
-            ContextResults = dirty,
-            Contexts = contexts,
-            CostOnly = costOnly,
-            Hits = cache.Hits - h0,
-            Misses = cache.Misses - m0,
-            ExecTick = sim.TickCount,
-            LastTick = sim.TickCount,
-            Stage = 0,
-        };
+        var job = sim.RebakeScratch ??= new CrowdRebakeJob();
+        job.Rect = rect;
+        job.Kind = kind;
+        job.Fp = fp;
+        job.ContextResults = dirty;
+        job.Contexts = contexts;
+        job.CostOnly = costOnly;
+        job.Hits = cache.Hits - h0;
+        job.Misses = cache.Misses - m0;
+        job.ExecTick = sim.TickCount;
+        job.LastTick = sim.TickCount;
+        job.Stage = 0;
+        job.Orders.Clear();
+        job.Evicted = 0;
+        job.Stuck = 0;
+        job.Refreshes = 0;
         sim.RebakeJob = job;
         if (sim.Config.Planning.RebakeSlices > 1) return null;
         FinishRebake(sim);
         return sim.LastRebakeReport;
     }
 
+    private readonly struct RebakeCall
+    {
+        public readonly CrowdSimSession Sim;
+        public readonly (int X0, int Y0, int X1, int Y1) Rect;
+        public readonly NavTileCache Cache;
+
+        public RebakeCall(CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect, NavTileCache cache)
+        {
+            Sim = sim;
+            Rect = rect;
+            Cache = cache;
+        }
+    }
+
+    private static readonly Func<RebakeCall, List<CrowdNavRebakeContextResult>> RebakeExclusive = static call =>
+    {
+        var navs = call.Sim.Navs as Dictionary<int, NavContext>
+            ?? throw new InvalidOperationException("导航表必须是 Dictionary，重烘按具体枚举器遍历。");
+        var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Rect, call.Cache);
+        if (call.Sim.VerifyIncrementalNav)
+        {
+            CrowdNavRebake.VerifyAgainstFullBake(call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!);
+        }
+
+        return results;
+    };
+
     /// <summary>阶段 1:队伍反应(重规划清单 + 流场刷新)、唤醒变更附近休眠单位、挤离新阻挡。</summary>
     private static void StageReaction(CrowdSimSession sim, CrowdRebakeJob job)
     {
         var planner = sim.Planner!;
-        job.Orders = planner.ReactRebake(job.ContextResults);
+        var built = planner.ReactRebake(job.ContextResults);
+        job.Orders.Clear();
+        for (int i = 0; i < built.Count; i++) job.Orders.Add(built[i]);
         // 刷新队列长在反应末快照(参考端 s0.refreshes 同点);每 tick 预算会在步末排空队列
         job.Refreshes = planner.RefreshQueueCount;
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
+        job.Stuck = sim.EvictStuck;
     }
 
     /// <summary>阶段 2:受影响指令重规划(固定生效帧)+ 发布报告。</summary>
     private static void StagePublish(CrowdSimSession sim, CrowdRebakeJob job)
     {
         var planner = sim.Planner!;
-        if (job.Orders is { Count: > 0 } orders) planner.Plan(orders, sim.TickCount);
+        if (job.Orders.Count > 0) planner.Plan(job.Orders, sim.TickCount);
         var bbox = job.Fp.Bbox();
-        var report = new CrowdRebakeReport
-        {
-            ExecTick = job.ExecTick,
-            // 报告可见的 tick 边界:阶段 2 在本 tick 推进中完成,步末 TickCount 再 +1——
-            // 与参考端采样(advance 返回后的 tickCount)同值
-            ReportTick = sim.TickCount + 1,
-            Kind = job.Kind,
-            ContextResults = job.ContextResults,
-            Contexts = job.Contexts,
-            CostOnly = job.CostOnly,
-            Hits = job.Hits,
-            Misses = job.Misses,
-            Orders = job.Orders?.Count ?? 0,
-            Refreshes = job.Refreshes,
-            Evicted = job.Evicted,
-            Stuck = job.Stuck,
-            Bbox = bbox,
-            UnionTiles = new List<int>(),
-        };
+        var report = sim.ReportScratch ??= new CrowdRebakeReport();
+        report.ExecTick = job.ExecTick;
+        // 报告可见的 tick 边界:阶段 2 在本 tick 推进中完成,步末 TickCount 再 +1——
+        // 与参考端采样(advance 返回后的 tickCount)同值
+        report.ReportTick = sim.TickCount + 1;
+        report.Kind = job.Kind;
+        report.ContextResults = job.ContextResults;
+        report.Contexts = job.Contexts;
+        report.CostOnly = job.CostOnly;
+        report.Hits = job.Hits;
+        report.Misses = job.Misses;
+        report.Orders = job.Orders.Count;
+        report.Refreshes = job.Refreshes;
+        report.Evicted = job.Evicted;
+        report.Stuck = job.Stuck;
+        report.Bbox = bbox;
         int union = 0;
-        var seen = new HashSet<int>();
-        var unionTiles = new List<int>();
+        var seen = sim.RebakeUnionSeen;
+        seen.Clear();
+        var unionTiles = report.UnionTiles;
+        unionTiles.Clear();
         foreach (var r in job.ContextResults)
         {
             foreach (int t in r.DirtyTiles)
@@ -242,9 +263,19 @@ public static class CrowdStructureOps
             }
         }
 
-        unionTiles.Sort();
+        for (int i = 1; i < unionTiles.Count; i++)
+        {
+            int value = unionTiles[i];
+            int j = i - 1;
+            while (j >= 0 && unionTiles[j] > value)
+            {
+                unionTiles[j + 1] = unionTiles[j];
+                j--;
+            }
+
+            unionTiles[j + 1] = value;
+        }
         report.Tiles = union;
-        report.UnionTiles = unionTiles;
         sim.LastRebakeReport = report;
         sim.NotifyRebake(report);
     }
@@ -257,7 +288,8 @@ public static class CrowdStructureOps
         if (kernel == null) return;
         int navCellSizeCm = sim.Config.NavCellSizeCm;
         Fix64 rMax = Fix64.Zero;
-        foreach (var p in sim.Config.Profiles) rMax = Fix64.Max(rMax, p.PersonalRadiusCm);
+        var profiles = sim.Config.Profiles;
+        for (int i = 0; i < profiles.Count; i++) rMax = Fix64.Max(rMax, profiles[i].PersonalRadiusCm);
         Fix64 ax = Fix64.FromInt(rect.X0 * navCellSizeCm), ay = Fix64.FromInt(rect.Y0 * navCellSizeCm);
         Fix64 bx = Fix64.FromInt(rect.X1 * navCellSizeCm), by = Fix64.FromInt(rect.Y1 * navCellSizeCm);
         var units = sim.Units;
@@ -286,7 +318,9 @@ public static class CrowdStructureOps
         if (kernel == null || store == null) return 0;
         int navCellsPerSide = sim.Config.NavCellsPerSide, navCellSizeCm = sim.Config.NavCellSizeCm;
         int padCells = 0;
-        foreach (var nav in sim.Navs.Values) padCells = Math.Max(padCells, 2 * nav.ClearanceNavCells);
+        var navs = sim.Navs as Dictionary<int, NavContext>
+            ?? throw new InvalidOperationException("导航表必须是 Dictionary，挤离按具体枚举器遍历。");
+        foreach (var kv in navs) padCells = Math.Max(padCells, 2 * kv.Value.ClearanceNavCells);
         Fix64 ax = Fix64.FromInt(Math.Max(0, rect.X0 - padCells) * navCellSizeCm);
         Fix64 ay = Fix64.FromInt(Math.Max(0, rect.Y0 - padCells) * navCellSizeCm);
         Fix64 bx = Fix64.FromInt(Math.Min(navCellsPerSide, rect.X1 + padCells) * navCellSizeCm);
@@ -344,6 +378,7 @@ public static class CrowdStructureOps
         }
 
         sim.EvictStuck = stuck;
+        if (stuck > 0) sim.Telemetry.MarkEvictStuck(stuck);
         return moved;
     }
 

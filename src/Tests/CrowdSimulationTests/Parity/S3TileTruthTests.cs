@@ -122,23 +122,37 @@ public class S3TileTruthTests
         w.Write(n);
         w.Write(entries.Count);
 
-        void WI32(BinaryWriter w2, int[] arr) { w2.Write(arr.Length); foreach (var v in arr) w2.Write(v); }
-        void WF32(BinaryWriter w2, int[] arr) { w2.Write(arr.Length); foreach (var v in arr) w2.Write((float)v); }
-        void WU8(BinaryWriter w2, byte[] arr) { w2.Write(arr.Length); foreach (var v in arr) w2.Write(v); }
+        void WI32(BinaryWriter w2, int[] arr, int length)
+        {
+            w2.Write(length);
+            for (int i = 0; i < length; i++) w2.Write(arr[i]);
+        }
+
+        void WF32(BinaryWriter w2, int[] arr, int length)
+        {
+            w2.Write(length);
+            for (int i = 0; i < length; i++) w2.Write((float)arr[i]);
+        }
+
+        void WU8(BinaryWriter w2, byte[] arr, int length)
+        {
+            w2.Write(length);
+            for (int i = 0; i < length; i++) w2.Write(arr[i]);
+        }
 
         void WriteEntry(BinaryWriter w2, NavTileEntry e)
         {
             w2.Write(e.Count);
             w2.Write(e.RegionCount);
-            WF32(w2, e.Vx); WF32(w2, e.Vy);
-            WI32(w2, e.PolyStart); WI32(w2, e.PolyVerts);
-            WI32(w2, e.NeiStart); WI32(w2, e.Nei); WI32(w2, e.NeiA); WI32(w2, e.NeiB);
-            WI32(w2, e.BMinX); WI32(w2, e.BMinY); WI32(w2, e.BMaxX); WI32(w2, e.BMaxY);
-            WI32(w2, e.PolyOf);
-            WI32(w2, e.BorderPoly);
-            WU8(w2, e.BorderSide);
-            WI32(w2, e.BorderLo); WI32(w2, e.BorderHi);
-            WU8(w2, e.BorderRev);
+            WF32(w2, e.Vx, e.LiveVertices); WF32(w2, e.Vy, e.LiveVertices);
+            WI32(w2, e.PolyStart, e.LivePolyStart); WI32(w2, e.PolyVerts, e.LivePolyVerts);
+            WI32(w2, e.NeiStart, e.LiveNeiStart); WI32(w2, e.Nei, e.LiveNeighbors); WI32(w2, e.NeiA, e.LiveNeighbors); WI32(w2, e.NeiB, e.LiveNeighbors);
+            WI32(w2, e.BMinX, e.LiveBoxes); WI32(w2, e.BMinY, e.LiveBoxes); WI32(w2, e.BMaxX, e.LiveBoxes); WI32(w2, e.BMaxY, e.LiveBoxes);
+            WI32(w2, e.PolyOf, e.PolyOf.Length);
+            WI32(w2, e.BorderPoly, e.LiveBorders);
+            WU8(w2, e.BorderSide, e.LiveBorders);
+            WI32(w2, e.BorderLo, e.LiveBorders); WI32(w2, e.BorderHi, e.LiveBorders);
+            WU8(w2, e.BorderRev, e.LiveBorders);
         }
 
         var perEntry = new List<(string, string, NavTileEntry, char[])>();

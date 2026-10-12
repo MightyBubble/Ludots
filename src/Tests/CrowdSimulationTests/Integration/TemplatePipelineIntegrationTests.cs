@@ -62,20 +62,43 @@ public class TemplatePipelineIntegrationTests
             Assert.That(session.World.Has<PreviousWorldPositionCm>(entity), Is.True,
                 $"单位 {handle:x} 缺 PreviousWorldPositionCm(呈现同步查询要求)");
 
-            // 值同源:单位组件值与模板写真一致(证明模板值在生效,不是配置回落值)
+            // 值同源:定点数来自模板写真;字符串 id 留在模板,实体上是生成时解析的下标。
             var agent = session.World.Get<CrowdSimulationAgent>(entity);
             var templateNode = wiring.TemplateRegistry.Get(templateId)!.Components["CrowdSimulationAgent"]!;
-            Assert.That(agent.ProfileId, Is.EqualTo(templateNode["profileId"]!.GetValue<string>()),
-                $"单位 {handle:x} profileId 应来自模板写真");
-            Assert.That(agent.AgentTypeId, Is.EqualTo(templateNode["agentTypeId"]!.GetValue<string>()),
-                $"单位 {handle:x} agentTypeId 应来自模板写真");
+            string profileId = templateNode["profileId"]!.GetValue<string>();
+            string agentTypeId = templateNode["agentTypeId"]!.GetValue<string>();
+            int expectedProfile = -1;
+            for (int p = 0; p < runtime.Profiles.Count; p++)
+            {
+                if (runtime.Profiles[p].Id == profileId)
+                {
+                    expectedProfile = p;
+                    break;
+                }
+            }
+
+            int expectedAgent = -1;
+            for (int a = 0; a < runtime.AgentTypes.Count; a++)
+            {
+                if (runtime.AgentTypes[a].Id == agentTypeId)
+                {
+                    expectedAgent = runtime.AgentTypes[a].AgentTypeIndex;
+                    break;
+                }
+            }
+
+            Assert.That(expectedProfile, Is.GreaterThanOrEqualTo(0), $"模板档案 \"{profileId}\" 不在运行时表");
+            Assert.That(agent.ProfileIndex, Is.EqualTo(expectedProfile),
+                $"单位 {handle:x} 档案下标应在生成时从模板 profileId 解析");
+            Assert.That(agent.AgentTypeIndex, Is.EqualTo(expectedAgent),
+                $"单位 {handle:x} 移动类型下标应在生成时从模板 agentTypeId 解析");
             Assert.That(agent.PersonalRadiusCm, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["personalRadiusCm"]!.GetValue<int>())),
                 $"单位 {handle:x} 个人半径应来自模板写真");
             Assert.That(agent.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["pushPriority"]!.GetValue<int>())),
                 $"单位 {handle:x} 推挤优先级应来自模板写真");
             Assert.That(agent.SpeedCmPerSecond, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSecond"]!.GetValue<int>())),
                 $"单位 {handle:x} 速度应来自模板写真");
-            seenProfiles.Add(agent.ProfileId);
+            seenProfiles.Add(profileId);
         }
 
         Assert.That(seenProfiles.Count, Is.GreaterThan(1), "64 单位应覆盖多种体型档案(部署按类型×体型散布)");

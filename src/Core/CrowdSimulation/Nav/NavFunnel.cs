@@ -13,8 +13,16 @@ public static class NavFunnel
 {
     public static List<Fix64> Funnel(List<Fix64> portals)
     {
-        int n = portals.Count / 4;
         var pts = new List<Fix64>();
+        FunnelInto(portals, pts);
+        return pts;
+    }
+
+    /// <summary>写入调用方的折线表。查询侧复用同一张表。</summary>
+    public static void FunnelInto(List<Fix64> portals, List<Fix64> pts)
+    {
+        pts.Clear();
+        int n = portals.Count / 4;
         Fix64 ax = portals[0], ay = portals[1], lx = ax, ly = ay, rx = portals[2], ry = portals[3];
         int apex = 0, li = 0, ri = 0, guard = 0;
         pts.Add(ax); pts.Add(ay);
@@ -44,7 +52,6 @@ public static class NavFunnel
 
         Fix64 ex = portals[(n - 1) * 4], ey = portals[(n - 1) * 4 + 1];
         if (pts[pts.Count - 2] != ex || pts[pts.Count - 1] != ey) { pts.Add(ex); pts.Add(ey); }
-        return pts;
     }
 
     private static Fix64 Tri(Fix64 ax, Fix64 ay, Fix64 bx, Fix64 by, Fix64 cx, Fix64 cy)

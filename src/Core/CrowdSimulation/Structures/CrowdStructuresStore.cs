@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.World;
@@ -65,7 +66,9 @@ public sealed class CrowdStructuresStore
     private int _nextId = 1;
 
     /// <summary>阻挡盒 + 逐格 CSR(cellStart/cellItems);blocker 集变化即整体重建(参考 rebuildColliders)。</summary>
-    public CrowdBlockerColliders Colliders { get; private set; } = CrowdBlockerColliders.Empty;
+    public CrowdBlockerColliders Colliders { get; private set; }
+
+    private readonly int[] _rasterPrio;
 
     private CrowdStructuresStore(CrowdSimulationRuntimeConfig config, SurfaceGrid grid)
     {
@@ -83,6 +86,14 @@ public sealed class CrowdStructuresStore
         Fix64 maxRadius = Fix64.Zero;
         foreach (var p in config.Profiles) maxRadius = Fix64.Max(maxRadius, p.PersonalRadiusCm);
         ReachCm = maxRadius;
+        Colliders = CrowdBlockerColliders.CreateReusable(NavCellsPerSide);
+        _rasterPrio = new int[n2];
+        _ids.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _tpl.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _footprint.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _navArea.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _blocker.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
+        _lifetime.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 
     /// <summary>建仓:静态地图阻挡物按模板 id <c>building</c>(rect 阻挡)入仓获得实体 id。
@@ -126,6 +137,7 @@ public sealed class CrowdStructuresStore
         }
 
         store.RebuildColliders();
+        store.ReserveEntitySlots();
         return store;
     }
 
@@ -195,6 +207,7 @@ public sealed class CrowdStructuresStore
         }
 
         store.RebuildColliders();
+        store.ReserveEntitySlots();
         return store;
     }
 
@@ -329,8 +342,9 @@ public sealed class CrowdStructuresStore
         int w = rect.X1 - rect.X0;
         if (w <= 0 || rect.Y1 <= rect.Y0) return rect;
 
-        var prio = new int[w * (rect.Y1 - rect.Y0)];
-        Array.Fill(prio, -1);
+        int used = w * (rect.Y1 - rect.Y0);
+        var prio = _rasterPrio;
+        Array.Fill(prio, -1, 0, used);
         for (int y = rect.Y0; y < rect.Y1; y++)
         {
             int row = y * navCellsPerSide;
@@ -395,17 +409,31 @@ public sealed class CrowdStructuresStore
     }
 
     /// <summary>阻挡盒 CSR 整体重建(参考 rebuildColliders):注册格矩形按包围盒外扩 reach
-    /// (电机接触查询半径),与参考 cellRectOf(rect, cs, N, reach) 同形。</summary>
+    /// (电机接触查询半径),与参考 cellRectOf(rect, cs, N, reach) 同形。写入仓内已有索引,不换对象。</summary>
     public void RebuildColliders()
     {
-        var boxes = new List<(Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)>();
+        var colliders = Colliders;
+        colliders.BeginRebuild();
         foreach (int id in _ids) // 顺序无关:盒序进 CSR 后查询与序无关;_ids 放置序(有序容器)
         {
             if (!_blocker.Contains(id)) continue;
             var f = _footprint[id];
-            boxes.Add((f.CenterXCm, f.CenterYCm, f.Hx, f.Hy));
+            colliders.AddBox(f.CenterXCm, f.CenterYCm, f.Hx, f.Hy, NavCellsPerSide, NavCellSizeCm, ReachCm);
         }
 
-        Colliders = CrowdBlockerColliders.BuildFromBoxes(boxes, NavCellsPerSide, NavCellSizeCm, ReachCm);
+        colliders.CommitRebuild(NavCellsPerSide, NavCellSizeCm, ReachCm);
+    }
+
+    /// <summary>实体表在装载后留出空位。tick 内新增的少数实体命中已有槽,不再扩容。</summary>
+    private void ReserveEntitySlots()
+    {
+        int cap = _ids.Count + CrowdSimulationLimits.HotPathSlotReserve;
+        _ids.EnsureCapacity(cap);
+        _tpl.EnsureCapacity(cap);
+        _footprint.EnsureCapacity(cap);
+        _navArea.EnsureCapacity(cap);
+        _blocker.EnsureCapacity(cap);
+        _lifetime.EnsureCapacity(cap);
+        _dueExpiryIds.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 }

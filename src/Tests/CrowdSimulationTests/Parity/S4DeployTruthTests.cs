@@ -68,9 +68,12 @@ public class S4DeployTruthTests
             Assert.That(session.World.Get<PlayerOwner>(entity).PlayerId, Is.EqualTo(player), $"{seed} 单位 {i} 玩家");
             var state = session.World.Get<CrowdSimulationUnitState>(entity);
             Assert.That(state.GroupId, Is.EqualTo(group), $"{seed} 单位 {i} 组");
-            string profileId = session.World.Get<CrowdSimulationAgent>(entity).ProfileId;
+            var agent = session.World.Get<CrowdSimulationAgent>(entity);
             var profile = CrowdDeployment.ProfileOf(runtime, runtime.UnitTypes[unitType].AgentTypeIndex, rIdx);
-            Assert.That(profileId, Is.EqualTo(profile.Id), $"{seed} 单位 {i} 体型");
+            int profileIndex = CrowdDeployment.ProfileIndexOf(runtime, runtime.UnitTypes[unitType].AgentTypeIndex, rIdx);
+            Assert.That(agent.ProfileIndex, Is.EqualTo(profileIndex), $"{seed} 单位 {i} 档案下标");
+            Assert.That(agent.AgentTypeIndex, Is.EqualTo(profile.AgentTypeIndex), $"{seed} 单位 {i} 移动类型下标");
+            Assert.That(runtime.Profiles[agent.ProfileIndex].Id, Is.EqualTo(profile.Id), $"{seed} 单位 {i} 体型");
             var pos = session.World.Get<WorldPositionCm>(entity).Value;
             Assert.That(pos.X.RawValue, Is.EqualTo(CanonRaw(xm)), $"{seed} 单位 {i} X 原始值");
             Assert.That(pos.Y.RawValue, Is.EqualTo(CanonRaw(ym)), $"{seed} 单位 {i} Y 原始值");

@@ -3,13 +3,14 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation;
 
 /// <summary>
-/// CrowdSimulation 单位身份组件（LU-06）。速度、个人半径和推挤优先级写在单位模板上；
-/// 半径厘米只在 Navigation/agent_profiles.json。与 MassNavigationAgent 互斥。
+/// 群体单位的运行时体型。速度、个人半径、推挤优先级和 special 在模板装载时写成定点数；
+/// 档案下标和移动类型下标在生成时写入。profileId / agentTypeId 只留在模板和配置里。
+/// 与 MassNavigationAgent 互斥。
 /// </summary>
 public struct CrowdSimulationAgent
 {
-    public string ProfileId;
-    public string AgentTypeId;
+    public int ProfileIndex;
+    public int AgentTypeIndex;
     public Fix64 SpeedCmPerSecond;
     public Fix64 PersonalRadiusCm;
     public Fix64 PushPriority;

@@ -14,10 +14,20 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// </summary>
 public sealed class CrowdLeader
 {
-    private readonly Fix64Vec2[] _path;
-    private readonly Fix64 _lookAheadCm;
+    private Fix64Vec2[] _path;
+    private int _count;
+    private Fix64 _lookAheadCm;
 
-    public CrowdLeader(
+    /// <summary>路径缓冲在构造时一次留够。活前缀是 <see cref="PathCount"/>，尾部不参与步进。</summary>
+    internal CrowdLeader(int pathCapacity)
+    {
+        _path = new Fix64Vec2[pathCapacity];
+        PaceCmPerSecond = Fix64.OneValue;
+        Nav = null!;
+    }
+
+    /// <summary>复用同一只领队。路径点数超过缓冲时把缓冲加长，调用方应在预热里走过最长路径。</summary>
+    internal void Reset(
         IReadOnlyList<Fix64Vec2> pathCm, int layerIdx, NavContext nav,
         bool fixedHeading, Fix64Vec2? face, Fix64 lookAheadCm, Fix64 paceCmPerSecond)
     {
@@ -26,10 +36,15 @@ public sealed class CrowdLeader
             throw new ArgumentOutOfRangeException(nameof(paceCmPerSecond), "领队步伐必须 > 0。");
         }
 
-        PaceCmPerSecond = paceCmPerSecond;
         if (pathCm.Count < 2) throw new ArgumentException("领队路径至少两个点。", nameof(pathCm));
-        _path = new Fix64Vec2[pathCm.Count];
-        for (int i = 0; i < pathCm.Count; i++) _path[i] = pathCm[i];
+        if (pathCm.Count > _path.Length)
+        {
+            _path = new Fix64Vec2[Math.Max(pathCm.Count, _path.Length * 2)];
+        }
+
+        _count = pathCm.Count;
+        for (int i = 0; i < _count; i++) _path[i] = pathCm[i];
+        PaceCmPerSecond = paceCmPerSecond;
         LayerIdx = layerIdx;
         Nav = nav;
         Fixed = fixedHeading;
@@ -38,9 +53,13 @@ public sealed class CrowdLeader
         XCm = _path[0].X;
         YCm = _path[0].Y;
         Seg = 1;
+        Done = false;
+        Mirror = false;
+        Vx = Fix64.Zero;
+        Vy = Fix64.Zero;
         Hx = Fix64.OneValue;
         Hy = Fix64.Zero;
-        if (_path.Length >= 2 && !fixedHeading)
+        if (_count >= 2 && !fixedHeading)
         {
             var heading = InitialHeading();
             Hx = heading.X;
@@ -48,12 +67,12 @@ public sealed class CrowdLeader
         }
     }
 
-    public int LayerIdx { get; }
+    public int LayerIdx { get; private set; }
     /// <summary>同组已生成单位的模板速度最小值（厘米/秒）。</summary>
-    public Fix64 PaceCmPerSecond { get; }
+    public Fix64 PaceCmPerSecond { get; private set; }
     public NavContext Nav { get; internal set; }
-    public bool Fixed { get; }
-    public Fix64Vec2? Face { get; }
+    public bool Fixed { get; private set; }
+    public Fix64Vec2? Face { get; private set; }
     public Fix64 XCm { get; private set; }
     public Fix64 YCm { get; private set; }
     /// <summary>领队速度(前馈给槽位跟踪;厘米/秒)。</summary>
@@ -66,7 +85,8 @@ public sealed class CrowdLeader
     public bool Done { get; private set; }
     /// <summary>反转后原地掉头:行序镜像,旧前排不必穿过队伍再到前面。</summary>
     public bool Mirror { get; private set; }
-    public IReadOnlyList<Fix64Vec2> Path => _path;
+    internal int PathCount => _count;
+    internal Fix64Vec2 PathAt(int index) => _path[index];
 
     /// <summary>起点覆写到当前质心(请求时刻的起点格只作 8 邻域参照)。</summary>
     public void SetStart(Fix64 xCm, Fix64 yCm)
@@ -95,7 +115,7 @@ public sealed class CrowdLeader
 
     private Fix64Vec2 InitialHeading()
     {
-        if (_path.Length >= 3)
+        if (_count >= 3)
         {
             var a = AimPoint(1, _path[0].X, _path[0].Y, _lookAheadCm);
             if (a.Full)
@@ -106,7 +126,7 @@ public sealed class CrowdLeader
             }
         }
 
-        if (_path.Length >= 2)
+        if (_count >= 2)
         {
             Fix64 dx = _path[1].X - _path[0].X, dy = _path[1].Y - _path[0].Y;
             Fix64 l = CrowdFix.Hypot(dx, dy);
@@ -127,10 +147,10 @@ public sealed class CrowdLeader
             return (x + dx * t, y + dy * t, true);
         }
 
-        if (seg + 1 >= _path.Length) return (_path[seg].X, _path[seg].Y, false);
+        if (seg + 1 >= _count) return (_path[seg].X, _path[seg].Y, false);
         Fix64 rem = look - d;
         Fix64 ax = _path[seg].X, ay = _path[seg].Y;
-        for (int k = seg + 1; k < _path.Length; k++)
+        for (int k = seg + 1; k < _count; k++)
         {
             Fix64 nx = _path[k].X, ny = _path[k].Y;
             Fix64 sx = nx - ax, sy = ny - ay;
@@ -155,7 +175,7 @@ public sealed class CrowdLeader
             return;
         }
 
-        int n = _path.Length;
+        int n = _count;
         Fix64 ox = XCm, oy = YCm;
         // 桥面层:地面不可走但桥面可走时,步速吃桥面代价而不是水下代价
         int cell = CrowdSimulationSpace.CellAt(XCm, YCm, navCellSizeCm, navCellsPerSide);

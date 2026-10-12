@@ -202,17 +202,18 @@ public static class CrowdFormations
         var world = session.World;
         var units = session.Units;
         Fix64 cx = Fix64.Zero, cy = Fix64.Zero, ext = Fix64.Zero;
-        foreach (int k in members)
+        for (int i = 0; i < n; i++)
         {
-            var p = world.Get<Components.WorldPositionCm>(units.EntityAt(k)).Value;
+            var p = world.Get<Components.WorldPositionCm>(units.EntityAt(members[i])).Value;
             cx += p.X;
             cy += p.Y;
         }
 
         cx /= n;
         cy /= n;
-        foreach (int k in members)
+        for (int i = 0; i < n; i++)
         {
+            int k = members[i];
             var p = world.Get<Components.WorldPositionCm>(units.EntityAt(k)).Value;
             Fix64 dx = p.X - cx, dy = p.Y - cy;
             var e = units.EntityAt(k);
@@ -230,16 +231,17 @@ public static class CrowdFormations
     public static void LayoutSideBySide(CrowdSimSession session, IReadOnlyList<(Fix64 Width, IReadOnlyList<int> Members)> blocks)
     {
         Fix64 total = Fix64.Zero;
-        foreach (var b in blocks) total += b.Width;
+        for (int i = 0; i < blocks.Count; i++) total += blocks[i].Width;
         Fix64 acc = -total / 2;
         var world = session.World;
         var units = session.Units;
-        foreach (var (width, members) in blocks)
+        for (int i = 0; i < blocks.Count; i++)
         {
+            var (width, members) = blocks[i];
             Fix64 off = acc + width / 2;
-            foreach (int k in members)
+            for (int k = 0; k < members.Count; k++)
             {
-                var e = units.EntityAt(k);
+                var e = units.EntityAt(members[k]);
                 var kin = world.Get<CrowdSimulationKinematics>(e);
                 kin.SlotOffsetCm = new Fix64Vec2(kin.SlotOffsetCm.X + off, kin.SlotOffsetCm.Y);
                 world.Set(e, kin);

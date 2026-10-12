@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Structures;
+using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -13,16 +15,38 @@ public sealed record CrowdRebakeSources(
     CrowdSimulationRuntimeConfig Config,
     NavHeightField HeightS,
     DeckSurface Deck,
-    NavSurfaceJumpCandidate[] JumpCandidates);
+    NavSurfaceJumpCandidate[] JumpCandidates)
+{
+    internal readonly CrowdRebakeResultScratch Results = new();
+}
 
 /// <summary>单上下文增量重烘的脏 tile 集与摘要(真值逐字段对拍的数据面)。</summary>
 public sealed class CrowdNavRebakeContextResult
 {
-    public required int NavId { get; init; }
+    public int NavId { get; set; }
     /// <summary>脏 tile(tile id 升序);空表 = 该上下文什么都看不到,什么都不失效。</summary>
-    public required List<int> DirtyTiles { get; init; }
+    public List<int> DirtyTiles { get; set; } = new();
     /// <summary>0 = 无变化,1 = 仅代价,2 = 可走位翻转。</summary>
-    public required int Kind { get; init; }
+    public int Kind { get; set; }
+}
+
+/// <summary>重烘结果的双缓冲。构造时两面都留好行,测量窗里换面复用,不逐次 new。</summary>
+internal sealed class CrowdRebakeResultScratch
+{
+    internal readonly List<CrowdNavRebakeContextResult>[] Buffers = new List<CrowdNavRebakeContextResult>[2];
+    internal readonly Stack<CrowdNavRebakeContextResult> Spare = new(32);
+    internal int Cursor;
+
+    internal CrowdRebakeResultScratch()
+    {
+        for (int b = 0; b < 2; b++)
+        {
+            Buffers[b] = new List<CrowdNavRebakeContextResult>(16);
+            for (int i = 0; i < 16; i++) Buffers[b].Add(NewRow());
+        }
+    }
+
+    internal static CrowdNavRebakeContextResult NewRow() => new() { DirtyTiles = new List<int>(8) };
 }
 
 /// <summary>
@@ -40,17 +64,39 @@ public static class CrowdNavRebake
 
     /// <summary>全部上下文对同一变更矩形跑一遍增量重烘(rebakeContexts 移植)。</summary>
     public static List<CrowdNavRebakeContextResult> RebakeContexts(
-        IEnumerable<NavContext> navs,
+        Dictionary<int, NavContext> navs,
         CrowdRebakeSources sources,
         CrowdStructuresStore store,
         (int X0, int Y0, int X1, int Y1) rect,
         NavTileCache cache)
     {
-        var results = new List<CrowdNavRebakeContextResult>();
-        foreach (var nav in navs)
+        var scratch = sources.Results;
+        var results = scratch.Buffers[scratch.Cursor & 1];
+        scratch.Cursor++;
+        int n = 0;
+        foreach (var kv in navs)
         {
+            var nav = kv.Value;
             var tiles = RebakeNav(nav, sources, store, rect, cache);
-            results.Add(new CrowdNavRebakeContextResult { NavId = nav.Id, DirtyTiles = tiles, Kind = nav.LastRebake });
+            CrowdNavRebakeContextResult row;
+            if (n < results.Count) row = results[n];
+            else
+            {
+                row = scratch.Spare.TryPop(out var spare) ? spare : CrowdRebakeResultScratch.NewRow();
+                results.Add(row);
+            }
+
+            row.NavId = nav.Id;
+            row.Kind = nav.LastRebake;
+            row.DirtyTiles.Clear();
+            for (int i = 0; i < tiles.Count; i++) row.DirtyTiles.Add(tiles[i]);
+            n++;
+        }
+
+        while (results.Count > n)
+        {
+            scratch.Spare.Push(results[^1]);
+            results.RemoveAt(results.Count - 1);
         }
 
         return results;
@@ -72,13 +118,14 @@ public static class CrowdNavRebake
         List<int> tiles;
         if (kind == KindPassable)
         {
-            ErodeRect(nav.Walk, navCellsPerSide, nav.ClearanceNavCells, grown, nav.Passable);
-            var dirty = TilesOf(grown, navCellsPerTile, navTilesPerSide);
+            ErodeRect(nav, nav.Walk, navCellsPerSide, nav.ClearanceNavCells, grown, nav.Passable);
+            var dirty = TilesOf(nav, grown, navCellsPerTile, navTilesPerSide);
             // 重烘后拿到同一内容条目(缓存命中)的 tile:HPA 簇内距离逐位复用
-            var prev = new NavTileEntry?[dirty.Count];
+            var prev = PrevOf(nav, dirty.Count);
             for (int i = 0; i < dirty.Count; i++) prev[i] = nav.Tiles![dirty[i]];
             BakeTiles(nav, dirty, cache, store.Area);
-            var same = new HashSet<int>();
+            var same = nav.SameTiles;
+            same.Clear();
             for (int i = 0; i < dirty.Count; i++)
             {
                 if (ReferenceEquals(nav.Tiles![dirty[i]], prev[i])) same.Add(dirty[i]);
@@ -86,7 +133,8 @@ public static class CrowdNavRebake
 
             FinishPassable(nav, sources, store, dirty, grown, same);
             tiles = dirty;
-            var changed = new List<int>();
+            var changed = nav.ChangedTileList;
+            changed.Clear();
             for (int i = 0; i < dirty.Count; i++)
             {
                 if (!same.Contains(dirty[i])) changed.Add(dirty[i]);
@@ -97,13 +145,13 @@ public static class CrowdNavRebake
         }
         else
         {
-            var dirty = TilesOf(rect, navCellsPerTile, navTilesPerSide);
+            var dirty = TilesOf(nav, rect, navCellsPerTile, navTilesPerSide);
             bool meshChanged = BakeTiles(nav, dirty, cache, store.Area);
             if (kind == KindNone && !meshChanged)
             {
                 nav.LastRebake = KindNone;
-                nav.ChangedTiles = new List<int>();
-                return new List<int>();
+                nav.ChangedTiles = NoTiles;
+                return NoTiles;
             }
 
             nav.Hpa!.Update(nav, nav.Links, dirty, same: null);
@@ -115,6 +163,15 @@ public static class CrowdNavRebake
         nav.Version++;
         nav.InvalidateReach();
         return tiles;
+    }
+
+    private static readonly List<int> NoTiles = new();
+
+    private static NavTileEntry?[] PrevOf(NavContext nav, int count)
+    {
+        var prev = nav.PrevTiles;
+        if (prev == null || prev.Length < count) nav.PrevTiles = prev = new NavTileEntry?[Math.Max(count, 8)];
+        return prev;
     }
 
     /// <summary>变更矩形内重分类(参考 classify):0 = 本上下文看不到任何变化,
@@ -185,11 +242,13 @@ public static class CrowdNavRebake
         Math.Min(navCellsPerSide, rect.X1 + k),
         Math.Min(navCellsPerSide, rect.Y1 + k));
 
-    /// <summary>格矩形触到的 tile id(升序去重)。</summary>
-    internal static List<int> TilesOf((int X0, int Y0, int X1, int Y1) rect, int navCellsPerTile, int navTilesPerSide)
+    /// <summary>格矩形触到的 tile id(升序去重)。结果写进 nav 的复用表,下次重烘会清空。</summary>
+    internal static List<int> TilesOf(NavContext nav, (int X0, int Y0, int X1, int Y1) rect, int navCellsPerTile, int navTilesPerSide)
     {
-        var tiles = new List<int>();
-        var seen = new HashSet<int>();
+        var tiles = nav.TileScratch;
+        var seen = nav.TileSeenScratch;
+        tiles.Clear();
+        seen.Clear();
         for (int ty = rect.Y0 / navCellsPerTile; ty <= (rect.Y1 - 1) / navCellsPerTile; ty++)
         {
             for (int tx = rect.X0 / navCellsPerTile; tx <= (rect.X1 - 1) / navCellsPerTile; tx++)
@@ -203,7 +262,7 @@ public static class CrowdNavRebake
 
     /// <summary>可走位翻转后的净空腐蚀矩形重算(erodeRect 移植):只写矩形内;
     /// 切比雪夫可分离两遍,行/列连续段计数,读入需外扩腐蚀半径。</summary>
-    internal static void ErodeRect(byte[] walk, int navCellsPerSide, int clearance, (int X0, int Y0, int X1, int Y1) rect, byte[] output)
+    internal static void ErodeRect(NavContext nav, byte[] walk, int navCellsPerSide, int clearance, (int X0, int Y0, int X1, int Y1) rect, byte[] output)
     {
         int r = clearance - 1;
         if (r <= 0)
@@ -221,7 +280,10 @@ public static class CrowdNavRebake
 
         int need = 2 * r + 1, w = rect.X1 - rect.X0;
         int ya = Math.Max(0, rect.Y0 - r), yb = Math.Min(navCellsPerSide, rect.Y1 + r);
-        var row = new byte[w * (yb - ya)];
+        int rowBytes = w * (yb - ya);
+        var row = nav.ErodeRow;
+        if (row == null || row.Length < rowBytes) nav.ErodeRow = row = new byte[Math.Max(rowBytes, navCellsPerSide * navCellsPerSide)];
+        Array.Clear(row, 0, rowBytes);
         int xs = Math.Max(0, rect.X0 - r), xe = Math.Min(navCellsPerSide, rect.X1 + r);
         for (int y = ya; y < yb; y++)
         {
@@ -281,24 +343,28 @@ public static class CrowdNavRebake
     {
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
-        var comp = new int[n2];
+        var comp = nav.Comp;
         Array.Fill(comp, -1);
-        int compCount = NavContextBaker.Components(nav.Passable, navCellsPerSide, comp);
+        var queue = Ensure(ref nav.FloodQueue, n2);
+        int compCount = NavContextBaker.Components(nav.Passable, navCellsPerSide, comp, queue);
 
         if (sources.Deck.TileOrder.Length > 0)
         {
-            var merged = new int[n2];
-            compCount = UpperLayerBake.MergeDeckComponents(comp, compCount, nav.Passable, nav.UpPass, nav.Portal, navCellsPerSide, merged);
-            comp = merged;
+            var merged = Ensure(ref nav.MergeBuffer, n2);
+            compCount = UpperLayerBake.MergeDeckComponents(
+                comp, compCount, nav.Passable, nav.UpPass, nav.Portal, navCellsPerSide, merged,
+                Ensure(ref nav.DeckCompBuffer, n2), queue, Ensure(ref nav.UnionParent, n2 * 2), Ensure(ref nav.UnionDense, n2 * 2));
+            (nav.Comp, nav.MergeBuffer) = (merged, comp);
+            comp = nav.Comp;
         }
 
-        nav.Comp = comp;
         nav.CompCount = compCount;
-        nav.Cells = ScanCells(nav.Passable, n2);
+        ScanCells(nav);
 
         // 链接:只有跳跃候选端点落在重算矩形里,可走位变化才可能改链表;否则链表保留、仅重导出域图
         var profile = config.NavProfiles[config.AgentTypes[nav.LayerIndex].NavProfileIndex];
-        if (profile.Jump != null && LinksTouch(sources.JumpCandidates, rect, navCellsPerSide))
+        bool relink = profile.Jump != null && LinksTouch(sources.JumpCandidates, rect, navCellsPerSide);
+        if (relink)
         {
             nav.Links = NavContextBaker.BuildLinks(config, store.SnapshotSurface(), profile, nav.Passable, comp);
         }
@@ -307,22 +373,82 @@ public static class CrowdNavRebake
             RelinkComponents(nav.Links, comp);
         }
 
-        var (upComp, compCountTotal, reachOut) = NavContextBaker.BuildDeckReachability(navCellsPerSide, comp, compCount, nav.Links, nav.UpPass, nav.Portal, nav.UpArea);
-        nav.UpComp = upComp;
-        nav.CompCountTotal = compCountTotal;
-        nav.ReachOut = reachOut;
+        RefillDeckReach(nav, compCount, nav.Links);
         nav.Hpa!.Update(nav, nav.Links, dirtyTiles, sameTiles);
     }
 
-    private static int[] ScanCells(byte[] passable, int n2)
+    private static int[] Ensure(ref int[]? buffer, int length)
     {
-        var cells = new List<int>(n2 / 2);
+        if (buffer == null || buffer.Length < length) buffer = new int[length];
+        return buffer;
+    }
+
+    private static void ScanCells(NavContext nav)
+    {
+        int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
+        if (nav.Cells.Length < n2) nav.Cells = new int[n2];
+        var passable = nav.Passable;
+        var cells = nav.Cells;
+        int w = 0;
         for (int i = 0; i < n2; i++)
         {
-            if (passable[i] != 0) cells.Add(i);
+            if (passable[i] != 0) cells[w++] = i;
         }
 
-        return cells.ToArray();
+        nav.CellCount = w;
+    }
+
+    private static void RefillDeckReach(NavContext nav, int compCount, NavLinkSet? links)
+    {
+        int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
+        var upComp = nav.UpComp ??= new int[n2];
+        Array.Fill(upComp, -1);
+        var reach = nav.ReachOut ??= new Dictionary<int, HashSet<int>>(CrowdSimulationLimits.HotPathSlotReserve);
+        nav.ReleaseReachGraph(reach);
+        if (links != null)
+        {
+            foreach (var kv in links.CompOut)
+            {
+                if (!reach.TryGetValue(kv.Key, out var set))
+                {
+                    reach[kv.Key] = set = nav.RentReachSet();
+                }
+
+                foreach (int v in kv.Value) set.Add(v);
+            }
+        }
+
+        var areaComp = nav.AreaCompScratch;
+        areaComp.Clear();
+        int next = compCount;
+        for (int c = 0; c < n2; c++)
+        {
+            if (nav.UpPass[c] == 0) continue;
+            int area = nav.UpArea[c];
+            if (!areaComp.TryGetValue(area, out int id))
+            {
+                id = next++;
+                areaComp[area] = id;
+            }
+
+            upComp[c] = id;
+        }
+
+        for (int c = 0; c < n2; c++)
+        {
+            if (nav.Portal[c] == 0 || nav.Comp[c] < 0 || nav.UpPass[c] == 0) continue;
+            AddReachEdge(nav, nav.Comp[c], upComp[c]);
+            AddReachEdge(nav, upComp[c], nav.Comp[c]);
+        }
+
+        nav.CompCountTotal = next;
+    }
+
+    private static void AddReachEdge(NavContext nav, int from, int to)
+    {
+        var graph = nav.ReachOut!;
+        if (!graph.TryGetValue(from, out var set)) graph[from] = set = nav.RentReachSet();
+        set.Add(to);
     }
 
     /// <summary>跳跃候选端点是否触到格矩形(linksTouch 移植)。</summary>
@@ -330,29 +456,41 @@ public static class CrowdNavRebake
     {
         foreach (var cand in candidates)
         {
-            if (Inside(cand.FromX, cand.FromY) || Inside(cand.ToX, cand.ToY)) return true;
+            if (Inside(cand.FromX, cand.FromY, rect) || Inside(cand.ToX, cand.ToY, rect)) return true;
         }
 
         return false;
-
-        bool Inside(int x, int y) => x >= rect.X0 && x < rect.X1 && y >= rect.Y0 && y < rect.Y1;
     }
+
+    private static bool Inside(int x, int y, (int X0, int Y0, int X1, int Y1) rect)
+        => x >= rect.X0 && x < rect.X1 && y >= rect.Y0 && y < rect.Y1;
 
     /// <summary>连通域重标后重导出链接的域图(relinkComponents 移植):链表与 CSR 不动,只按
     /// 新标号重建 compOut。</summary>
     private static void RelinkComponents(NavLinkSet? links, int[] comp)
     {
         if (links == null) return;
-        var compOut = new Dictionary<int, HashSet<int>>();
+        var compOut = links.CompOut;
+        foreach (var set in compOut.Values)
+        {
+            int slots = set.EnsureCapacity(0);
+            set.Clear();
+            if (slots >= 128) links.CompSetPool.Push(set);
+        }
+
+        compOut.Clear();
         for (int e = 0; e < links.Count; e++)
         {
             int ca = comp[links.From[e]], cb = comp[links.To[e]];
             if (ca == cb) continue;
-            if (!compOut.TryGetValue(ca, out var set)) compOut[ca] = set = new HashSet<int>();
+            if (!compOut.TryGetValue(ca, out var set))
+            {
+                set = links.CompSetPool.TryPop(out var pooled) ? pooled : new HashSet<int>(128);
+                compOut[ca] = set;
+            }
+
             set.Add(cb);
         }
-
-        links.CompOut = compOut;
     }
 
     // ── DB-03:增量 vs 全量一致性检查(调试开关;对拍免谈,验收必跑) ─────────────────────────────
@@ -389,8 +527,8 @@ public static class CrowdNavRebake
         }
 
         VerifyPartition(inc.Comp, full.Comp, what, "地面连通域");
-        if (inc.Cells.Length != full.Cells.Length) throw new InvalidOperationException($"{what}: 增量格表长度 {inc.Cells.Length} ≠ 全量 {full.Cells.Length}");
-        for (int i = 0; i < inc.Cells.Length; i++)
+        if (inc.CellCount != full.CellCount) throw new InvalidOperationException($"{what}: 增量格表长度 {inc.CellCount} ≠ 全量 {full.CellCount}");
+        for (int i = 0; i < inc.CellCount; i++)
         {
             if (inc.Cells[i] != full.Cells[i]) throw new InvalidOperationException($"{what}: 增量格表与全量不一致 @序 {i}");
         }

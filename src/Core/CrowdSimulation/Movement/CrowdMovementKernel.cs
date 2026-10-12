@@ -15,9 +15,15 @@ public sealed class CrowdMovementKernel
     public required CrowdSpatialHash Hash { get; init; }
     /// <summary>意图输出(厘米/秒,按稠密序);马达层读它做一阶响应。</summary>
     public Fix64Vec2[] Intent = Array.Empty<Fix64Vec2>();
-    /// <summary>避让分离推力(厘米;每子步由分离求解写入,马达读)。</summary>
+    /// <summary>
+    /// 避让分离推力(厘米;每子步由分离求解写入,马达读)。
+    /// 按下标对齐稠密行,GatherUnits 不重读。将来若有退场,必须和稠密行同一次交换搬走,并且退场只能有这一个入口。
+    /// </summary>
     public Fix64Vec2[] Separation = Array.Empty<Fix64Vec2>();
-    /// <summary>静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。</summary>
+    /// <summary>
+    /// 静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。
+    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时随同一次交换搬走。
+    /// </summary>
     public byte[] Calm = Array.Empty<byte>();
     /// <summary>哈希序聚集缓冲(分离求解的逐格读取面,与参考 sepCtx 同构)。</summary>
     public Fix64[] GatherX = Array.Empty<Fix64>();
@@ -33,15 +39,20 @@ public sealed class CrowdMovementKernel
     /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
+    /// <summary>本 tick 接触合计。ScatterUnits 顺带把 ushort 加总,不再另扫一遍。</summary>
+    public int ContactSum;
 
-    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(单位稠密表是 append-only 的创建序),而 chunk
-    // 遍历按原型分桶不保稠密序——热路径不直接进 chunk,改为每 tick 一次 gather(组件→SoA)、
-    // 子步全走 SoA、一次 scatter(SoA→组件)。World 解析从每单位每子步 ~16 次降到每 tick 9 次。
+    // 子步地址是稠密下标:空间哈希、分离、接触和并行区间都按下标随机读写。
+    // chunk 查询按原型分块,没有跨 chunk 的连续 Span,查询序也不是稠密序
+    // (模板组件集可以不同;无头第二条生成道已经不在,不能再拿“两个原型”当理由)。
+    // 每个 tick 用下面的查询把列扫进 SoA,子步只碰 SoA,tick 末按槽位映回的下标写回 chunk。
+    private readonly QueryDescription _unitColumns = new QueryDescription()
+        .WithAll<CrowdSimulation.Units.CrowdSimulationUnitState, CrowdSimulation.Units.CrowdSimulationKinematics, Ludots.Core.Components.WorldPositionCm, CrowdSimulationAgent, Ludots.Core.Gameplay.Components.PlayerOwner>();
     public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
     public CrowdSimulation.Units.CrowdSimulationKinematics[] Kins = Array.Empty<CrowdSimulation.Units.CrowdSimulationKinematics>();
     /// <summary>位置(厘米);gather 后由马达子步持续更新,scatter 落回组件。</summary>
     public Fix64Vec2[] Positions = Array.Empty<Fix64Vec2>();
-    /// <summary>个人半径(厘米,Agent 解析值一次收拢——managed 组件不进子步热环)。</summary>
+    /// <summary>个人半径(厘米)。生成时已落在无字符串的体型组件上,收拢时按列拷进这张表。</summary>
     public Fix64[] Radii = Array.Empty<Fix64>();
     /// <summary>巡航速度(厘米/秒,Agent 解析值)。</summary>
     public Fix64[] Speeds = Array.Empty<Fix64>();
@@ -126,7 +137,7 @@ public sealed class CrowdMovementKernel
         EnsureAvoidanceCapacity(unitCapacity);
     }
 
-    /// <summary>tick 首:组件 → SoA 一次收拢(稠密序;含 Agent 解析值与玩家表序)。组级备忘失效。</summary>
+    /// <summary>tick 首:按 chunk 列收拢到稠密下标。组级备忘失效。</summary>
     public void GatherUnits()
     {
         var session = Session;
@@ -134,29 +145,55 @@ public sealed class CrowdMovementKernel
         var world = session.World;
         int n = units.Count;
         EnsureCapacity(units.Capacity);
+        session.EnsureFormationScratch(units.Capacity);
         var playerIndex = session.Config.PairRules.IndexByPlayerId;
         var states = States; var kins = Kins; var positions = Positions; var radii = Radii;
         var speeds = Speeds; var push = PushPriorities; var playerIdx = PlayerIdx;
-        for (int i = 0; i < n; i++)
+        int seen = 0;
+        foreach (ref var chunk in world.Query(in _unitColumns))
         {
-            var e = units.EntityAt(i);
-            states[i] = world.Get<CrowdSimulation.Units.CrowdSimulationUnitState>(e);
-            kins[i] = world.Get<CrowdSimulation.Units.CrowdSimulationKinematics>(e);
-            positions[i] = world.Get<Ludots.Core.Components.WorldPositionCm>(e).Value;
-            var agent = world.Get<CrowdSimulationAgent>(e);
-            speeds[i] = agent.SpeedCmPerSecond;
-            radii[i] = agent.PersonalRadiusCm;
-            push[i] = agent.PushPriority;
-            playerIdx[i] = playerIndex[world.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(e).PlayerId];
+            var stateSpan = chunk.GetSpan<CrowdSimulation.Units.CrowdSimulationUnitState>();
+            var kinSpan = chunk.GetSpan<CrowdSimulation.Units.CrowdSimulationKinematics>();
+            var posSpan = chunk.GetSpan<Ludots.Core.Components.WorldPositionCm>();
+            var agentSpan = chunk.GetSpan<CrowdSimulationAgent>();
+            var ownerSpan = chunk.GetSpan<Ludots.Core.Gameplay.Components.PlayerOwner>();
+            foreach (int index in chunk)
+            {
+                int slot = stateSpan[index].Slot;
+                int dense = units.DenseOfSlot(slot);
+                if ((uint)dense >= (uint)n)
+                {
+                    throw new InvalidOperationException($"单位槽位 {slot} 映到稠密下标 {dense}，超出本 tick 单位数 {n}。");
+                }
+
+                states[dense] = stateSpan[index];
+                kins[dense] = kinSpan[index];
+                positions[dense] = posSpan[index].Value;
+                var agent = agentSpan[index];
+                speeds[dense] = agent.SpeedCmPerSecond;
+                radii[dense] = agent.PersonalRadiusCm;
+                push[dense] = agent.PushPriority;
+                playerIdx[dense] = playerIndex[ownerSpan[index].PlayerId];
+                seen++;
+            }
+        }
+
+        if (seen != n)
+        {
+            throw new InvalidOperationException($"chunk 收拢到 {seen} 个单位，稠密表有 {n} 个。");
         }
 
         int gm = session.Groups.Groups.Count;
+        bool stampsReplaced = false;
         if (OrderMemo.Length < gm)
         {
             OrderMemo = new Movement.CrowdOrder?[gm];
             NavMemo = new Nav.NavContext?[gm];
             OrderStamp = new byte[gm];
             NavStamp = new byte[gm];
+            // 新戳全是 0。世代号若停在 255，下面的 ++ 会回绕成 0，全部被误判为命中。
+            GroupMemoEpoch = 0;
+            stampsReplaced = true;
         }
 
         if (OrderGate.Length < gm)
@@ -164,7 +201,8 @@ public sealed class CrowdMovementKernel
             OrderGate = new int[gm];
             NavGate = new int[gm];
         }
-        else if (GroupMemoEpoch == byte.MaxValue)
+
+        if (!stampsReplaced && GroupMemoEpoch == byte.MaxValue)
         {
             Array.Clear(OrderStamp, 0, gm);
             Array.Clear(NavStamp, 0, gm);
@@ -174,19 +212,58 @@ public sealed class CrowdMovementKernel
         GroupMemoEpoch++;
     }
 
-    /// <summary>tick 末:SoA → 组件落回(值语义等价——scatter 写回的即子步终值)。</summary>
+    /// <summary>tick 末:SoA 按稠密下标写回 chunk 列。写回的是子步终值。</summary>
     public void ScatterUnits()
     {
         var units = Session.Units;
         var world = Session.World;
         int n = units.Count;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int contacts = 0;
+        ushort[] contactCounts = Contacts;
+        int contactN = contactCounts.Length;
         for (int i = 0; i < n; i++)
         {
-            var e = units.EntityAt(i);
-            world.Set(e, new Ludots.Core.Components.WorldPositionCm { Value = Positions[i] });
-            world.Set(e, States[i]);
-            world.Set(e, Kins[i]);
+            if (i < contactN) contacts += contactCounts[i];
+            switch (States[i].State)
+            {
+                case (byte)CrowdUnitState.Idle: idle++; break;
+                case (byte)CrowdUnitState.Moving: moving++; break;
+                case (byte)CrowdUnitState.Arrived: arrived++; break;
+                case (byte)CrowdUnitState.Unreachable: unreachable++; break;
+                case (byte)CrowdUnitState.Jump: jumping++; break;
+            }
         }
+
+        int seen = 0;
+        foreach (ref var chunk in world.Query(in _unitColumns))
+        {
+            var stateSpan = chunk.GetSpan<CrowdSimulation.Units.CrowdSimulationUnitState>();
+            var kinSpan = chunk.GetSpan<CrowdSimulation.Units.CrowdSimulationKinematics>();
+            var posSpan = chunk.GetSpan<Ludots.Core.Components.WorldPositionCm>();
+            foreach (int index in chunk)
+            {
+                int slot = stateSpan[index].Slot;
+                int dense = units.DenseOfSlot(slot);
+                if ((uint)dense >= (uint)n)
+                {
+                    throw new InvalidOperationException($"单位槽位 {slot} 映到稠密下标 {dense}，超出本 tick 单位数 {n}。");
+                }
+
+                posSpan[index].Value = Positions[dense];
+                stateSpan[index] = States[dense];
+                kinSpan[index] = Kins[dense];
+                seen++;
+            }
+        }
+
+        if (seen != n)
+        {
+            throw new InvalidOperationException($"chunk 写回到 {seen} 个单位，稠密表有 {n} 个。");
+        }
+
+        ContactSum = contacts;
+        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
     }
 
     /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>

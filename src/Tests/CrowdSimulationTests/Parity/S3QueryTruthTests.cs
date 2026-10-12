@@ -103,7 +103,7 @@ public class S3QueryTruthTests
                     double plen = 0;
                     if (corridor.Points != null)
                     {
-                        for (int i = 2; i < corridor.Points.Length; i += 2)
+                        for (int i = 2; i < corridor.PointCount; i += 2)
                         {
                             double dx = (corridor.Points[i] - corridor.Points[i - 2]).ToDouble();
                             double dy = (corridor.Points[i + 1] - corridor.Points[i - 1]).ToDouble();

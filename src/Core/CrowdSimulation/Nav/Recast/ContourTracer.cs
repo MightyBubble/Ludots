@@ -14,9 +14,12 @@ public static class ContourTracer
     private static readonly int[] OX = { -1, 0, 1, 0 };
     private static readonly int[] OY = { 0, 1, 0, -1 };
 
-    public static List<List<int>>[] BuildContours(int[] reg, int regionCount, int navCellsPerSide, double maxError, double maxEdgeLen)
+    internal static void BuildContours(TileBakeScratch scratch, int regionCount, int navCellsPerSide, double maxError, double maxEdgeLen)
     {
-        var flags = new byte[navCellsPerSide * navCellsPerSide];
+        var reg = scratch.Reg;
+        var flags = scratch.Flags;
+        Array.Clear(flags, 0, navCellsPerSide * navCellsPerSide);
+        scratch.NoteLoops(regionCount);
         for (int y = 0; y < navCellsPerSide; y++)
         {
             for (int x = 0; x < navCellsPerSide; x++)
@@ -35,20 +38,17 @@ public static class ContourTracer
             }
         }
 
-        var loops = new List<List<int>>[regionCount + 1];
-        for (int i = 0; i <= regionCount; i++) loops[i] = new List<List<int>>();
         for (int i = 0; i < navCellsPerSide * navCellsPerSide; i++)
         {
             while (flags[i] != 0)
             {
-                var raw = new List<int>();
-                Walk(i % navCellsPerSide, i / navCellsPerSide, flags, reg, navCellsPerSide, raw);
-                var pts = Simplify(raw, maxError, maxEdgeLen);
-                if (pts.Count >= 6) loops[reg[i]].Add(pts);
+                scratch.Raw.Clear();
+                Walk(i % navCellsPerSide, i / navCellsPerSide, flags, reg, navCellsPerSide, scratch.Raw);
+                var pts = scratch.Simplify(scratch.Raw, maxError, maxEdgeLen);
+                if (pts.Count >= 6) scratch.Loops[reg[i]].Add(pts);
+                else scratch.ReturnLoop(pts);
             }
         }
-
-        return loops;
     }
 
     private static void Walk(int sx, int sy, byte[] flags, int[] reg, int navCellsPerSide, List<int> output)
@@ -82,71 +82,4 @@ public static class ContourTracer
         }
     }
 
-    // 标签变化处先保留,其余段 Douglas-Peucker
-    private static List<int> Simplify(List<int> raw, double maxError, double maxEdgeLen)
-    {
-        int n = raw.Count / 3;
-        int X(int i) => raw[i * 3];
-        int Y(int i) => raw[i * 3 + 1];
-        int L(int i) => raw[i * 3 + 2];
-
-        var keep = new List<int>();
-        for (int i = 0; i < n; i++) if (L(i) != L((i + 1) % n)) keep.Add(i);
-        if (keep.Count < 2)
-        {
-            int ll = 0, ur = 0;
-            for (int i = 1; i < n; i++)
-            {
-                if (X(i) < X(ll) || (X(i) == X(ll) && Y(i) < Y(ll))) ll = i;
-                if (X(i) > X(ur) || (X(i) == X(ur) && Y(i) > Y(ur))) ur = i;
-            }
-
-            keep = new List<int> { Math.Min(ll, ur), Math.Max(ll, ur) };
-        }
-
-        var outIdx = new List<int>();
-        double e2 = maxError * maxError, m2 = maxEdgeLen * maxEdgeLen;
-
-        void Dp(int a, int b, bool wall)
-        {
-            int ax = X(a), ay = Y(a), dx = X(b) - ax, dy = Y(b) - ay;
-            int len2 = dx * dx + dy * dy;
-            int best = -1, bestC = -1, cnt = 0;
-            for (int i = (a + 1) % n; i != b; i = (i + 1) % n)
-            {
-                cnt++;
-                int c = len2 != 0
-                    ? Math.Abs(dx * (Y(i) - ay) - dy * (X(i) - ax))
-                    : (X(i) - ax) * (X(i) - ax) + (Y(i) - ay) * (Y(i) - ay);
-                if (c > bestC || (c == bestC && best >= 0 && (X(i) < X(best) || (X(i) == X(best) && Y(i) < Y(best))))) { bestC = c; best = i; }
-            }
-
-            if (best < 0) return;
-            bool split = len2 == 0 || bestC * (double)bestC > e2 * len2;
-            if (!split && wall && len2 > m2) { split = true; best = (a + 1 + (cnt >> 1)) % n; }
-            if (!split) return;
-            Dp(a, best, wall);
-            outIdx.Add(best);
-            Dp(best, b, wall);
-        }
-
-        for (int k = 0; k < keep.Count; k++)
-        {
-            int a = keep[k], b = keep[(k + 1) % keep.Count];
-            outIdx.Add(a);
-            Dp(a, b, L((a + 1) % n) == 0);
-        }
-
-        var pts = new List<int>();
-        foreach (int i in outIdx)
-        {
-            int x = X(i), y = Y(i), m = pts.Count;
-            if (m > 0 && pts[m - 2] == x && pts[m - 1] == y) continue;
-            pts.Add(x);
-            pts.Add(y);
-        }
-
-        if (pts.Count >= 4 && pts[0] == pts[pts.Count - 2] && pts[1] == pts[pts.Count - 1]) pts.RemoveRange(pts.Count - 2, 2);
-        return pts;
-    }
 }
