@@ -9,8 +9,9 @@ namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Loader for <c>Input/command_intent_profiles.json</c> (RFC-0065 INT-1). Follows the
-    /// <c>FilterProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge through
-    /// the shared <see cref="ConfigPipeline"/>, structural validation fails fast. Duplicate rule
+    /// <c>FilterProfileConfigLoader</c> mounting pattern: catalog policy stays DeepObject, and
+    /// <c>profiles</c> merge ArrayById on <c>id</c> (a profile's <c>rules</c> array replaces).
+    /// Structural validation fails fast. Duplicate rule
     /// priorities within a profile are rejected here (DEC-14 explicit total order); tag/relation/order
     /// key resolution happens at registry install.
     /// </summary>
@@ -44,11 +45,13 @@ namespace Ludots.Core.Input.Interaction
             string relativePath = "Input/command_intent_profiles.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
+            if (fragments.Count == 0)
             {
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
+
+            var mergedObject = ConfigMerger.MergeDeepObjectArrayById(fragments, in entry, "profiles", report);
 
             RejectRenamedAuthoringFields(mergedObject, relativePath);
 

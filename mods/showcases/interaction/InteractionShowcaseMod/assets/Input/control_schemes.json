@@ -1,10 +1,6 @@
 {
   "schemes": [
     {
-      "id": "scheme.default",
-      "inputContexts": []
-    },
-    {
       "id": "scheme.wasd_move",
       "inputContexts": [],
       "axisMove": {
@@ -14,18 +10,6 @@
         "stepDistanceCm": 400,
         "directionMode": "cameraRelative"
       }
-    },
-    {
-      "id": "scheme.aim.kbm",
-      "inputContexts": [
-        "Aim.Kbm"
-      ]
-    },
-    {
-      "id": "scheme.aim.gamepad",
-      "inputContexts": [
-        "Aim.Gamepad"
-      ]
     }
   ],
   "allowedSchemes": [

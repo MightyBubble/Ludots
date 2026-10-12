@@ -1,10 +1,6 @@
 {
   "schemes": [
     {
-      "id": "scheme.default",
-      "inputContexts": []
-    },
-    {
       "id": "scheme.case_e",
       "inputContexts": []
     }

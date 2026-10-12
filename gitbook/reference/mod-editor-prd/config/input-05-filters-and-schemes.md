@@ -49,7 +49,7 @@
 
 ## 3. 文件结构
 
-`assets/Input/` 下五文件：`default_input.json`、`filter_profiles.json`、`control_schemes.json`、`interaction_prefs.json`、`action_attribute_bindings.json`（引擎根资产持默认，mod 深合并补充）。
+`assets/Input/` 下五文件：`default_input.json`、`filter_profiles.json`、`control_schemes.json`、`interaction_prefs.json`、`action_attribute_bindings.json`（引擎根资产持默认，mod 深合并补充）。`control_schemes.json` 的 `schemes` 按 `id` 合并，`allowedSchemes` 追加，重复 id 失败。
 
 ## 4. 运行时加载效果
 

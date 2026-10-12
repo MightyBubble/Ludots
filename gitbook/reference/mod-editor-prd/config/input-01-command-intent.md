@@ -47,7 +47,7 @@
 
 ## 3. 文件结构
 
-`assets/Input/command_intent_profiles.json`（引擎根资产持有默认档案；mod 可同 id 深合并扩充规则）。
+`assets/Input/command_intent_profiles.json`（引擎根资产持有默认档案；mod 按 `id` 合并档案，同 id 的 `rules` 整段以后加载的为准，`groupPolicy` 按字段合并）。
 
 ## 4. 运行时加载效果
 

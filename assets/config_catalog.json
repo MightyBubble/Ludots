@@ -465,7 +465,10 @@
   },
   {
     "Path": "Input/control_schemes.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "allowedSchemes"
+    ]
   },
   {
     "Path": "Input/cast_modes.json",

@@ -188,5 +188,131 @@ namespace Ludots.Tests.GAS
             That(ex!.Message, Does.Contain("test.json"));
             That(ex.Message, Does.Contain("JSON array"));
         }
+
+        [Test]
+        public void MergeDeepObjectArrayById_MergesNamedArrayByIdAndAppendsSibling()
+        {
+            var frags = new List<ConfigFragment>
+            {
+                MakeFrag("""
+                    {
+                      "schemes": [
+                        { "id": "scheme.default", "inputContexts": [] },
+                        { "id": "scheme.aim", "inputContexts": ["Aim.Kbm"], "axisMove": { "throttleTicks": 6 } }
+                      ],
+                      "allowedSchemes": []
+                    }
+                    """, "core"),
+                MakeFrag("""
+                    {
+                      "schemes": [
+                        { "id": "scheme.aim", "inputContexts": ["Aim.Override"], "axisMove": { "stepDistanceCm": 400 } },
+                        { "id": "scheme.wasd", "inputContexts": [] }
+                      ],
+                      "allowedSchemes": ["scheme.default", "scheme.wasd"]
+                    }
+                    """, "mod"),
+            };
+            var entry = new ConfigCatalogEntry(
+                "Input/control_schemes.json",
+                ConfigMergePolicy.DeepObject,
+                arrayAppendFields: new[] { "allowedSchemes" });
+
+            JsonObject merged = ConfigMerger.MergeDeepObjectArrayById(frags, in entry, "schemes");
+
+            JsonArray schemes = merged["schemes"]!.AsArray();
+            That(schemes.Count, Is.EqualTo(3));
+            That(schemes[0]!["id"]!.GetValue<string>(), Is.EqualTo("scheme.default"));
+            That(schemes[1]!["inputContexts"]![0]!.GetValue<string>(), Is.EqualTo("Aim.Override"));
+            That(schemes[1]!["axisMove"]!["throttleTicks"]!.GetValue<int>(), Is.EqualTo(6));
+            That(schemes[1]!["axisMove"]!["stepDistanceCm"]!.GetValue<int>(), Is.EqualTo(400));
+            That(schemes[2]!["id"]!.GetValue<string>(), Is.EqualTo("scheme.wasd"));
+            JsonArray allowed = merged["allowedSchemes"]!.AsArray();
+            That(allowed.Count, Is.EqualTo(2));
+            That(allowed[0]!.GetValue<string>(), Is.EqualTo("scheme.default"));
+            That(allowed[1]!.GetValue<string>(), Is.EqualTo("scheme.wasd"));
+        }
+
+        [Test]
+        public void MergeDeepObjectArrayById_ProfileRulesReplaceWhileGroupPolicyMerges()
+        {
+            var frags = new List<ConfigFragment>
+            {
+                MakeFrag("""
+                    {
+                      "profiles": [
+                        { "id": "intent.command.default", "groupPolicy": { "kind": "independent", "kept": 1 }, "rules": [ { "priority": 10 } ] }
+                      ]
+                    }
+                    """),
+                MakeFrag("""
+                    {
+                      "profiles": [
+                        { "id": "intent.command.default", "groupPolicy": { "kind": "ordered" }, "rules": [ { "priority": 90 }, { "priority": 20 } ] }
+                      ]
+                    }
+                    """, "mod"),
+            };
+            var entry = new ConfigCatalogEntry("Input/command_intent_profiles.json", ConfigMergePolicy.DeepObject);
+
+            JsonObject merged = ConfigMerger.MergeDeepObjectArrayById(frags, in entry, "profiles");
+
+            JsonObject profile = merged["profiles"]![0]!.AsObject();
+            That(profile["groupPolicy"]!["kind"]!.GetValue<string>(), Is.EqualTo("ordered"));
+            That(profile["groupPolicy"]!["kept"]!.GetValue<int>(), Is.EqualTo(1));
+            That(profile["rules"]!.AsArray().Count, Is.EqualTo(2));
+            That(profile["rules"]![0]!["priority"]!.GetValue<int>(), Is.EqualTo(90));
+        }
+
+        [Test]
+        public void MergeDeepObjectArrayById_MissingId_FailsClosed()
+        {
+            var frags = new List<ConfigFragment>
+            {
+                MakeFrag("""{ "schemes": [ { "inputContexts": [] } ] }""", "mod://schemes"),
+            };
+            var entry = new ConfigCatalogEntry("Input/control_schemes.json", ConfigMergePolicy.DeepObject);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(
+                () => ConfigMerger.MergeDeepObjectArrayById(frags, in entry, "schemes"))!;
+
+            That(ex.Message, Does.Contain("Input/control_schemes.json"));
+            That(ex.Message, Does.Contain("mod://schemes"));
+            That(ex.Message, Does.Contain("'id'"));
+        }
+
+        [Test]
+        public void MergeDeepObjectArrayById_NullArray_FailsClosed()
+        {
+            var frags = new List<ConfigFragment>
+            {
+                MakeFrag("""{ "schemes": null }""", "mod://schemes"),
+            };
+            var entry = new ConfigCatalogEntry("Input/control_schemes.json", ConfigMergePolicy.DeepObject);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(
+                () => ConfigMerger.MergeDeepObjectArrayById(frags, in entry, "schemes"))!;
+
+            That(ex.Message, Does.Contain("schemes"));
+            That(ex.Message, Does.Contain("JSON array"));
+        }
+
+        [Test]
+        public void MergeDeepObjectArrayById_OmittedArray_LeavesTheKeyAbsent()
+        {
+            var frags = new List<ConfigFragment>
+            {
+                MakeFrag("""{ "allowedSchemes": ["scheme.default"] }"""),
+            };
+            var entry = new ConfigCatalogEntry(
+                "Input/control_schemes.json",
+                ConfigMergePolicy.DeepObject,
+                arrayAppendFields: new[] { "allowedSchemes" });
+
+            JsonObject merged = ConfigMerger.MergeDeepObjectArrayById(frags, in entry, "schemes");
+
+            That(merged.ContainsKey("schemes"), Is.False);
+            That(merged["allowedSchemes"]!.AsArray()[0]!.GetValue<string>(), Is.EqualTo("scheme.default"));
+        }
     }
 }
