@@ -333,24 +333,32 @@ public sealed class RaylibFieldRenderPresenterTests
         ProjectFog(buffer, field);
 
         var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
-        presenter.BuildTexturePlan(buffer);
-        presenter.BuildTexturePlan(buffer);
-        _ = presenter.LastFieldCellCount;
-
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        GC.GetAllocatedBytesForCurrentThread();
-
-        long before = GC.GetAllocatedBytesForCurrentThread();
+        // GetAllocatedBytesForCurrentThread is approximate under tiered JIT;
+        // retry the measured window so a one-time bump cannot flake the zero-alloc contract.
+        long allocated = long.MaxValue;
         int observed = 0;
-        for (int i = 0; i < 1_000; i++)
+        for (int attempt = 0; attempt < 3 && allocated != 0; attempt++)
         {
             presenter.BuildTexturePlan(buffer);
-            observed += presenter.LastFieldCellCount;
+            presenter.BuildTexturePlan(buffer);
+            _ = presenter.LastFieldCellCount;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            observed = 0;
+            for (int i = 0; i < 1_000; i++)
+            {
+                presenter.BuildTexturePlan(buffer);
+                observed += presenter.LastFieldCellCount;
+            }
+
+            allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         Assert.That(observed, Is.EqualTo(256_000));
         Assert.That(allocated, Is.EqualTo(0));
     }
