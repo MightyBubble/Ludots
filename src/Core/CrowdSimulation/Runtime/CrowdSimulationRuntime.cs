@@ -91,16 +91,19 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
     public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
-    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧。</summary>
+    /// <summary>回放结论:0 未跑 / 1 合计逐位一致 / 2 合计分歧。诊断断面不改这个结论。</summary>
     public int ReplayStatus { get; private set; }
 
-    /// <summary>首个分歧 tick。-1 表示一致，-2 表示两边条数不同。</summary>
+    /// <summary>合计的首个分歧 tick。-1 表示合计一致，-2 表示两边条数不同。</summary>
     public int ReplayDivergenceTick { get; private set; } = -1;
 
-    /// <summary>首个分歧分区名。无分歧或条数不同时为空。</summary>
+    /// <summary>合计的首个分歧分区名。合计一致或条数不同时为空。</summary>
     public string ReplayDivergenceSection { get; private set; } = "";
 
-    /// <summary>首个分歧 tick 上同时有差的诊断断面。无分歧时为 0。</summary>
+    /// <summary>最早一个诊断断面有差的 tick。没有时为 -1。</summary>
+    public int ReplayDiagnosticTick { get; private set; } = -1;
+
+    /// <summary>最早诊断分歧 tick 上有差的诊断断面。没有时为 0。</summary>
     public CrowdSimDiagnosticSection ReplayDivergenceDiagnostic { get; private set; }
 
     /// <summary>停用本次激活的自动回放:现场指令(玩家交互)进入会话后,自动回放的对拍自证
@@ -409,6 +412,7 @@ public sealed partial class CrowdSimulationRuntime
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
         ReplayDivergenceSection = "";
+        ReplayDiagnosticTick = -1;
         ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
         _hashCount = 0;
         _hashHead = 0;
@@ -443,6 +447,7 @@ public sealed partial class CrowdSimulationRuntime
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
         ReplayDivergenceSection = "";
+        ReplayDiagnosticTick = -1;
         ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
         engine.RemoveService(CoreServiceKeys.CrowdSimulationSession);
         engine.RemoveService(CoreServiceKeys.CrowdSimulationRuntime);
@@ -495,7 +500,7 @@ public sealed partial class CrowdSimulationRuntime
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
                 diag.Length == 0
                     ? $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection}."
-                    : $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection} diag={diag}.");
+                    : $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection} diag differs: {diag} @tick {ReplayDiagnosticTick}.");
         }
 
         if (session.TickCount % session.Config.FixedHz == 0)
@@ -510,10 +515,21 @@ public sealed partial class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
-        // 日志载荷是边界一次成形的 struct,回放直接复用(无需克隆,解析后只读)。
-        var entries = session.Commands.Log
-            .Select(e => new CrowdCommand(e.Tick, e.Cmd))
-            .ToArray();
+        // Flush 只在执行时写日志。尚未到点的脚本行还在队列里，回放输入是日志再接上这段队列。
+        var log = session.Commands.Log;
+        int pending = session.Commands.PendingCount;
+        var entries = new CrowdCommand[log.Count + pending];
+        for (int i = 0; i < log.Count; i++)
+        {
+            var e = log[i];
+            entries[i] = new CrowdCommand(e.Tick, e.Cmd);
+        }
+
+        for (int i = 0; i < pending; i++)
+        {
+            var e = session.Commands.PendingAt(i);
+            entries[log.Count + i] = new CrowdCommand(e.Tick, e.Cmd);
+        }
         int ticks = session.TickCount;
         // 回放派生接线:共享模板数据,稳定 id 全新分配(回放世界用后即弃),选中属主置空——
         // 选中镜像与集合仓写入都按空属主跳过,活呈现状态零触碰。
@@ -589,6 +605,7 @@ public sealed partial class CrowdSimulationRuntime
         CrowdSimDigestDiff diff = CrowdSimChecksum.DiffDigest(live, replayDigests);
         ReplayDivergenceTick = diff.Tick;
         ReplayDivergenceSection = diff.Section;
+        ReplayDiagnosticTick = diff.DiagnosticTick;
         ReplayDivergenceDiagnostic = diff.Diagnostic;
         ReplayStatus = diff.Diverged ? 2 : 1;
     }
