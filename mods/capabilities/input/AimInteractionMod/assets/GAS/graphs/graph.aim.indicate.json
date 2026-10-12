@@ -99,6 +99,20 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "load_range",
+        "op": "LoadAbilityCastRange"
+      },
+      {
+        "id": "write_range",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.range_cm"
       }
     ],
     "controlEdges": [
@@ -120,7 +134,7 @@
       {
         "from": "member",
         "fromPort": "next",
-        "to": "write"
+        "to": "read_slot"
       },
       {
         "from": "write",
@@ -206,6 +220,21 @@
         "from": "c1",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_range"
+      },
+      {
+        "from": "load_range",
+        "fromPort": "next",
+        "to": "write_range"
+      },
+      {
+        "from": "write_range",
+        "fromPort": "next",
+        "to": "write"
       }
     ],
     "valueEdges": [
@@ -309,6 +338,36 @@
         "from": "c2",
         "fromPort": "value",
         "to": "clear_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_range",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_range",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_range",
+        "toPort": "source"
+      },
+      {
+        "from": "load_range",
+        "fromPort": "value",
+        "to": "write_range",
         "toPort": "value"
       }
     ]
