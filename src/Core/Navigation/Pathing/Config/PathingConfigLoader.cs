@@ -50,29 +50,32 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 }
 
                 string agentPath = $"PathingConfig.agentTypes[{i}]";
-                RequireOnlyProperties(agent, agentPath, "id", "profileId", "selection", "navMesh", "nodeGraph");
+                RequireOnlyProperties(agent, agentPath, new[] { "id", "profileId", "navMesh" }, new[] { "selection", "nodeGraph" });
                 RequireString(agent, "id", agentPath);
                 RequireString(agent, "profileId", agentPath);
 
-                if (agent["selection"] is not JsonObject selection)
+                if (agent.ContainsKey("selection"))
                 {
-                    throw new InvalidOperationException($"{agentPath}.selection must be an explicit object.");
-                }
+                    if (agent["selection"] is not JsonObject selection)
+                    {
+                        throw new InvalidOperationException($"{agentPath}.selection must be an explicit object.");
+                    }
 
-                RequireOnlyProperties(selection, $"{agentPath}.selection", "mode", "graphBias", "meshBias", "graphCostWeight", "meshCostWeight");
-                string mode = RequireString(selection, "mode", $"{agentPath}.selection");
-                if (!string.Equals(mode, nameof(PathSelectionMode.AutoCheapest), StringComparison.Ordinal) &&
-                    !string.Equals(mode, nameof(PathSelectionMode.PreferGraph), StringComparison.Ordinal) &&
-                    !string.Equals(mode, nameof(PathSelectionMode.PreferMesh), StringComparison.Ordinal) &&
-                    !string.Equals(mode, nameof(PathSelectionMode.Direct), StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException($"{agentPath}.selection.mode '{mode}' is not a canonical path selection mode.");
-                }
+                    RequireOnlyProperties(selection, $"{agentPath}.selection", "mode", "graphBias", "meshBias", "graphCostWeight", "meshCostWeight");
+                    string mode = RequireString(selection, "mode", $"{agentPath}.selection");
+                    if (!string.Equals(mode, nameof(PathSelectionMode.AutoCheapest), StringComparison.Ordinal) &&
+                        !string.Equals(mode, nameof(PathSelectionMode.PreferGraph), StringComparison.Ordinal) &&
+                        !string.Equals(mode, nameof(PathSelectionMode.PreferMesh), StringComparison.Ordinal) &&
+                        !string.Equals(mode, nameof(PathSelectionMode.Direct), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException($"{agentPath}.selection.mode '{mode}' is not a canonical path selection mode.");
+                    }
 
-                RequireNumber(selection, "graphBias", $"{agentPath}.selection");
-                RequireNumber(selection, "meshBias", $"{agentPath}.selection");
-                RequireNumber(selection, "graphCostWeight", $"{agentPath}.selection");
-                RequireNumber(selection, "meshCostWeight", $"{agentPath}.selection");
+                    RequireNumber(selection, "graphBias", $"{agentPath}.selection");
+                    RequireNumber(selection, "meshBias", $"{agentPath}.selection");
+                    RequireNumber(selection, "graphCostWeight", $"{agentPath}.selection");
+                    RequireNumber(selection, "meshCostWeight", $"{agentPath}.selection");
+                }
 
                 if (agent["navMesh"] is not JsonObject navMesh)
                 {
@@ -82,20 +85,61 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 RequireOnlyProperties(navMesh, $"{agentPath}.navMesh", "areaCosts");
                 RequireAreaCosts(navMesh, $"{agentPath}.navMesh");
 
-                if (agent["nodeGraph"] is not JsonObject nodeGraph)
+                if (agent.ContainsKey("nodeGraph"))
                 {
-                    throw new InvalidOperationException($"{agentPath}.nodeGraph must be an explicit object.");
+                    if (agent["nodeGraph"] is not JsonObject nodeGraph)
+                    {
+                        throw new InvalidOperationException($"{agentPath}.nodeGraph must be an explicit object.");
+                    }
+
+                    RequireOnlyProperties(nodeGraph, $"{agentPath}.nodeGraph", "projectionMaxRadiusCm", "useDynamicOverlay", "requiredTagsAll", "forbiddenTagsAny", "tagCostRules");
+                    RequireNumber(nodeGraph, "projectionMaxRadiusCm", $"{agentPath}.nodeGraph");
+                    if (nodeGraph["useDynamicOverlay"] is not JsonValue overlayValue || !overlayValue.TryGetValue<bool>(out _))
+                    {
+                        throw new InvalidOperationException($"{agentPath}.nodeGraph.useDynamicOverlay must be a boolean.");
+                    }
+                    RequireStringArray(nodeGraph, "requiredTagsAll", $"{agentPath}.nodeGraph");
+                    RequireStringArray(nodeGraph, "forbiddenTagsAny", $"{agentPath}.nodeGraph");
+                    RequireTagCostRules(nodeGraph, $"{agentPath}.nodeGraph");
+                }
+            }
+        }
+
+        private static void RequireOnlyProperties(JsonObject obj, string path, string[] required, string[] optional)
+        {
+            foreach (var property in obj)
+            {
+                bool known = false;
+                for (int i = 0; i < required.Length; i++)
+                {
+                    if (string.Equals(property.Key, required[i], StringComparison.Ordinal))
+                    {
+                        known = true;
+                        break;
+                    }
                 }
 
-                RequireOnlyProperties(nodeGraph, $"{agentPath}.nodeGraph", "projectionMaxRadiusCm", "useDynamicOverlay", "requiredTagsAll", "forbiddenTagsAny", "tagCostRules");
-                RequireNumber(nodeGraph, "projectionMaxRadiusCm", $"{agentPath}.nodeGraph");
-                if (nodeGraph["useDynamicOverlay"] is not JsonValue overlayValue || !overlayValue.TryGetValue<bool>(out _))
+                for (int i = 0; !known && i < optional.Length; i++)
                 {
-                    throw new InvalidOperationException($"{agentPath}.nodeGraph.useDynamicOverlay must be a boolean.");
+                    if (string.Equals(property.Key, optional[i], StringComparison.Ordinal))
+                    {
+                        known = true;
+                        break;
+                    }
                 }
-                RequireStringArray(nodeGraph, "requiredTagsAll", $"{agentPath}.nodeGraph");
-                RequireStringArray(nodeGraph, "forbiddenTagsAny", $"{agentPath}.nodeGraph");
-                RequireTagCostRules(nodeGraph, $"{agentPath}.nodeGraph");
+
+                if (!known)
+                {
+                    throw new InvalidOperationException($"{path} contains unknown property '{property.Key}'.");
+                }
+            }
+
+            for (int i = 0; i < required.Length; i++)
+            {
+                if (!obj.ContainsKey(required[i]))
+                {
+                    throw new InvalidOperationException($"{path} must explicitly define '{required[i]}'.");
+                }
             }
         }
 
@@ -188,9 +232,19 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 }
 
                 string areaPath = $"{path}.areaCosts[{i}]";
-                RequireOnlyProperties(area, areaPath, "areaId", "cost");
+                RequireOnlyProperties(area, areaPath, new[] { "areaId", "cost" }, new[] { "speedDivisor", "passable" });
                 RequireNumber(area, "areaId", areaPath);
                 RequireNumber(area, "cost", areaPath);
+                if (area.ContainsKey("speedDivisor"))
+                {
+                    RequireNumber(area, "speedDivisor", areaPath);
+                }
+
+                if (area.ContainsKey("passable") &&
+                    (area["passable"] is not JsonValue passable || !passable.TryGetValue<bool>(out _)))
+                {
+                    throw new InvalidOperationException($"{areaPath}.passable must be a boolean.");
+                }
             }
         }
 
@@ -229,13 +283,15 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 if (a == null) throw new InvalidOperationException("PathingConfig.agentTypes contains null.");
                 if (string.IsNullOrWhiteSpace(a.Id)) throw new InvalidOperationException("PathingConfig.agentTypes.id is required.");
                 if (string.IsNullOrWhiteSpace(a.ProfileId)) throw new InvalidOperationException($"PathingConfig.agentTypes[{a.Id}].profileId is required.");
-                if (a.NavMesh == null) a.NavMesh = new PathingNavMeshConfig();
-                if (a.NodeGraph == null) a.NodeGraph = new PathingNodeGraphConfig();
-                if (a.Selection == null) a.Selection = new PathingSelectionConfig();
-                if (a.NavMesh.AreaCosts == null) a.NavMesh.AreaCosts = new();
-                if (a.NodeGraph.RequiredTagsAll == null) a.NodeGraph.RequiredTagsAll = new();
-                if (a.NodeGraph.ForbiddenTagsAny == null) a.NodeGraph.ForbiddenTagsAny = new();
-                if (a.NodeGraph.TagCostRules == null) a.NodeGraph.TagCostRules = new();
+                if (a.NavMesh == null) throw new InvalidOperationException($"PathingConfig.agentTypes[{a.Id}].navMesh is required.");
+                if (a.NavMesh.AreaCosts == null) throw new InvalidOperationException($"PathingConfig.agentTypes[{a.Id}].navMesh.areaCosts is required.");
+                if (a.NodeGraph != null)
+                {
+                    if (a.NodeGraph.RequiredTagsAll == null || a.NodeGraph.ForbiddenTagsAny == null || a.NodeGraph.TagCostRules == null)
+                    {
+                        throw new InvalidOperationException($"PathingConfig.agentTypes[{a.Id}].nodeGraph is incomplete.");
+                    }
+                }
             }
         }
     }

@@ -464,13 +464,20 @@ namespace Ludots.Core.Navigation.Pathing
         private CompiledAgentType CompileAgent(PathingAgentTypeConfig cfg)
         {
             AgentProfileConfig agentProfile = _agentProfiles.Require(cfg.ProfileId, $"PathingConfig.agentTypes[{cfg.Id}]");
-            int profileIndex = -1;
-            if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(cfg.ProfileId, out profileIndex)))
+            if (cfg.Selection == null)
             {
-                throw new InvalidOperationException($"Unknown navmesh profileId: {cfg.ProfileId}");
+                throw new InvalidOperationException(
+                    $"PathingConfig.agentTypes[{cfg.Id}] has no selection. AutoPath cannot compile an agent type without selection.");
             }
 
-            var areaCosts = BuildAreaCosts(cfg.NavMesh);
+            int profileIndex = -1;
+            if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(agentProfile.NavProfileId, out profileIndex)))
+            {
+                throw new InvalidOperationException(
+                    $"PathingConfig.agentTypes[{cfg.Id}] agent profile '{agentProfile.Id}' references unknown nav profile '{agentProfile.NavProfileId}'.");
+            }
+
+            var areaCosts = PathingAreaCostCompiler.Compile(cfg.NavMesh);
             var edgeFilter = PathingNodeGraphPolicyCompiler.CompileEdgeFilter(cfg.NodeGraph);
             var edgeRules = PathingNodeGraphPolicyCompiler.CompileEdgeRules(cfg.NodeGraph);
             bool useEdgeFilter = cfg.NodeGraph != null && (cfg.NodeGraph.RequiredTagsAll.Count > 0 || cfg.NodeGraph.ForbiddenTagsAny.Count > 0);
@@ -490,25 +497,7 @@ namespace Ludots.Core.Navigation.Pathing
                 useDynamicOverlay: cfg.NodeGraph?.UseDynamicOverlay ?? false,
                 agentDraftCm: agentProfile.DraftCm,
                 agentBeamCm: agentProfile.BeamCm,
-                selection: cfg.Selection ?? new PathingSelectionConfig());
-        }
-
-        private static NavAreaCostTable BuildAreaCosts(PathingNavMeshConfig cfg)
-        {
-            var arr = new Fix64[256];
-            for (int i = 0; i < arr.Length; i++) arr[i] = Fix64.OneValue;
-            if (cfg?.AreaCosts != null)
-            {
-                for (int i = 0; i < cfg.AreaCosts.Count; i++)
-                {
-                    var a = cfg.AreaCosts[i];
-                    if (a == null) continue;
-                    if (a.AreaId < 0 || a.AreaId > 255) throw new InvalidOperationException($"Invalid areaId: {a.AreaId}");
-                    if (a.Cost <= 0f || float.IsNaN(a.Cost)) throw new InvalidOperationException($"Invalid cost for areaId={a.AreaId}");
-                    arr[a.AreaId] = Fix64.FromFloat(a.Cost);
-                }
-            }
-            return new NavAreaCostTable(arr);
+                selection: cfg.Selection);
         }
 
         private static void EnsureCapacity<T>(ref T[] array, int required)

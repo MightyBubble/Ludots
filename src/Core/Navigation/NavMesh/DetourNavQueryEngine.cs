@@ -611,15 +611,25 @@ namespace Ludots.Core.Navigation.NavMesh
             return Math.Abs(value - expected) <= BorderToleranceCm;
         }
 
-        private static DtQueryDefaultFilter BuildFilter(NavAreaCostTable areaCosts)
+        private static IDtQueryFilter BuildFilter(NavAreaCostTable areaCosts)
         {
+            NavAreaCostTable table = areaCosts ?? NavAreaCostTable.CreateDefault();
             float[] costs = new float[DtDetour.DT_MAX_AREAS];
+            bool[] passable = new bool[DtDetour.DT_MAX_AREAS];
+            bool anyBlocked = false;
             for (int i = 0; i < costs.Length; i++)
             {
-                costs[i] = MathF.Max(0.0001f, (float)(areaCosts ?? NavAreaCostTable.CreateDefault()).Get((byte)i).ToDouble());
+                costs[i] = MathF.Max(0.0001f, (float)table.Get((byte)i).ToDouble());
+                passable[i] = table.IsPassable((byte)i);
+                anyBlocked |= !passable[i];
             }
 
-            return new DtQueryDefaultFilter(WalkFlag, 0, costs);
+            if (!anyBlocked)
+            {
+                return new DtQueryDefaultFilter(WalkFlag, 0, costs);
+            }
+
+            return new NavAreaQueryFilter(WalkFlag, costs, passable);
         }
 
         /// <summary>
@@ -639,7 +649,7 @@ namespace Ludots.Core.Navigation.NavMesh
         /// Builds the default query filter for the given area costs. Exposed for callers that need to
         /// issue their own Detour queries against a nav mesh built by this engine.
         /// </summary>
-        internal static DtQueryDefaultFilter BuildDefaultFilter(NavAreaCostTable areaCosts)
+        internal static IDtQueryFilter BuildDefaultFilter(NavAreaCostTable areaCosts)
         {
             return BuildFilter(areaCosts);
         }

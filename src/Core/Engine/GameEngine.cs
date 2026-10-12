@@ -4702,62 +4702,7 @@ namespace Ludots.Core.Engine
             AgentProfileRegistry agentProfiles,
             PathStore pathStore)
         {
-            if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
-            {
-                throw new InvalidOperationException("PathingConfig.agentTypes must define at least one agent type for navmesh path service bootstrap.");
-            }
-
-            var agent = pathingConfig.AgentTypes[0];
-            if (agent == null || !navProfiles.TryGetIndex(agent.ProfileId, out int profileIndex))
-            {
-                throw new InvalidOperationException(
-                    $"PathingConfig default agent profileId '{agent?.ProfileId ?? "<null>"}' is not registered in navmesh profiles.");
-            }
-
-            AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
-            var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
-            {
-                throw new InvalidOperationException(
-                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");
-            }
-
-            return new NavMeshPathServiceAdapter(query, pathStore);
-        }
-
-        private static NavAreaCostTable BuildPathNavAreaCosts(PathingNavMeshConfig cfg)
-        {
-            var arr = new Fix64[256];
-            for (int i = 0; i < arr.Length; i++)
-            {
-                arr[i] = Fix64.OneValue;
-            }
-
-            if (cfg?.AreaCosts != null)
-            {
-                for (int i = 0; i < cfg.AreaCosts.Count; i++)
-                {
-                    var area = cfg.AreaCosts[i];
-                    if (area == null)
-                    {
-                        continue;
-                    }
-
-                    if (area.AreaId < 0 || area.AreaId > 255)
-                    {
-                        throw new InvalidOperationException($"Invalid pathing areaId: {area.AreaId}");
-                    }
-
-                    if (area.Cost <= 0f || float.IsNaN(area.Cost))
-                    {
-                        throw new InvalidOperationException($"Invalid pathing cost for areaId={area.AreaId}");
-                    }
-
-                    arr[area.AreaId] = Fix64.FromFloat(area.Cost);
-                }
-            }
-
-            return new NavAreaCostTable(arr);
+            return new NavMeshPathServiceAdapter(navRegistry, navProfiles, agentProfiles, pathingConfig, pathStore);
         }
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
