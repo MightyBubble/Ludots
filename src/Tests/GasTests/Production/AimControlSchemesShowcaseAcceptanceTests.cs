@@ -297,10 +297,10 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             SetMode(modeId, modeKey);
             if (indicating)
             {
-                RunIndicating(surface, confirm, slotEntity, expectEntity: Near, cancel: true);
-                RunIndicating(surface, confirm, slotGround, expectEntity: null, cancel: false);
-                RunIndicating(surface, confirm, slotEntity, expectEntity: Near, cancel: false);
-                RunIndicating(surface, confirm, slotGround, expectEntity: null, cancel: true);
+                RunIndicating(surface, confirm, slotEntity, target: Near, cancel: true);
+                RunIndicating(surface, confirm, slotGround, target: null, cancel: false);
+                RunIndicating(surface, confirm, slotEntity, target: Near, cancel: false);
+                RunIndicating(surface, confirm, slotGround, target: null, cancel: true);
             }
             else
             {
