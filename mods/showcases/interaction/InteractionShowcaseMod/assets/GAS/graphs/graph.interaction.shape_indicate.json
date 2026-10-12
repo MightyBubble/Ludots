@@ -9,7 +9,7 @@
         "start": "rep",
         "hookNodeBefore": {
           "graphId": "graph.aim.indicate",
-          "nodeId": "write"
+          "nodeId": "invoke_stick"
         }
       }
     ],
