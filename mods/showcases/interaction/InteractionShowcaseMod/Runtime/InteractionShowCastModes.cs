@@ -200,13 +200,16 @@ namespace InteractionShowcaseMod.Runtime
                         hasContext ? RequireToken(dto.ContextId, $"{CatalogUri} modes[{i}].contextId") : null);
                     for (int earlier = 0; earlier < i; earlier++)
                     {
+                        bool sameCastMode = modes[i].CastModeId != null &&
+                            string.Equals(modes[earlier].CastModeId, modes[i].CastModeId, StringComparison.Ordinal);
+                        bool sameAction = string.Equals(modes[earlier].ActionId, modes[i].ActionId, StringComparison.Ordinal);
                         if (string.Equals(modes[earlier].ButtonId, modes[i].ButtonId, StringComparison.Ordinal) ||
-                            string.Equals(modes[earlier].ActionId, modes[i].ActionId, StringComparison.Ordinal) ||
                             (modes[i].ContextId != null &&
-                             string.Equals(modes[earlier].ContextId, modes[i].ContextId, StringComparison.Ordinal)))
+                             string.Equals(modes[earlier].ContextId, modes[i].ContextId, StringComparison.Ordinal)) ||
+                            (sameAction && !sameCastMode))
                         {
                             throw new InvalidOperationException(
-                                $"{CatalogUri} modes[{i}] repeats a button, action, or context.");
+                                $"{CatalogUri} modes[{i}] repeats a button or context, or reuses an action for a different cast mode.");
                         }
                     }
                 }
