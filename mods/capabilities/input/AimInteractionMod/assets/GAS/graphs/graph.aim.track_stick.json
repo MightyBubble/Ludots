@@ -257,6 +257,68 @@
       {
         "id": "tgt_jump",
         "op": "JumpIfFalse"
+      },
+      {
+        "id": "sx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "sy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "sum",
+        "op": "AddFloat"
+      },
+      {
+        "id": "len",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "nx",
+        "op": "DivFloat"
+      },
+      {
+        "id": "ny",
+        "op": "DivFloat"
+      },
+      {
+        "id": "zf",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "write_sx",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.stick.x"
+      },
+      {
+        "id": "write_sy",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.stick.y"
+      },
+      {
+        "id": "write_sv",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "write_stick_off",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "range_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "range_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "write_point_off",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
       }
     ],
     "controlEdges": [
@@ -333,12 +395,12 @@
       {
         "from": "stick_jump",
         "fromPort": "false",
-        "to": "write_invalid"
+        "to": "write_stick_off"
       },
       {
         "from": "read_range",
         "fromPort": "next",
-        "to": "ox"
+        "to": "zf"
       },
       {
         "from": "ox",
@@ -398,12 +460,12 @@
       {
         "from": "write_valid",
         "fromPort": "next",
-        "to": "write_facing"
+        "to": "assist"
       },
       {
         "from": "write_facing",
         "fromPort": "next",
-        "to": "assist"
+        "to": "read_range"
       },
       {
         "from": "assist",
@@ -428,7 +490,7 @@
       {
         "from": "stick_jump",
         "fromPort": "true",
-        "to": "read_range"
+        "to": "sx2"
       },
       {
         "from": "write_target",
@@ -549,6 +611,81 @@
         "from": "tgt_jump",
         "fromPort": "false",
         "to": "q_hover"
+      },
+      {
+        "from": "sx2",
+        "fromPort": "next",
+        "to": "sy2"
+      },
+      {
+        "from": "sy2",
+        "fromPort": "next",
+        "to": "sum"
+      },
+      {
+        "from": "sum",
+        "fromPort": "next",
+        "to": "len"
+      },
+      {
+        "from": "len",
+        "fromPort": "next",
+        "to": "nx"
+      },
+      {
+        "from": "nx",
+        "fromPort": "next",
+        "to": "ny"
+      },
+      {
+        "from": "ny",
+        "fromPort": "next",
+        "to": "write_sx"
+      },
+      {
+        "from": "write_sx",
+        "fromPort": "next",
+        "to": "write_sy"
+      },
+      {
+        "from": "write_sy",
+        "fromPort": "next",
+        "to": "write_sv"
+      },
+      {
+        "from": "write_sv",
+        "fromPort": "next",
+        "to": "write_facing"
+      },
+      {
+        "from": "zf",
+        "fromPort": "next",
+        "to": "range_gt"
+      },
+      {
+        "from": "range_gt",
+        "fromPort": "next",
+        "to": "range_jump"
+      },
+      {
+        "from": "range_jump",
+        "fromPort": "true",
+        "to": "ox"
+      },
+      {
+        "from": "range_jump",
+        "fromPort": "false",
+        "to": "write_point_off"
+      },
+      {
+        "from": "write_point_off",
+        "fromPort": "next",
+        "to": "null_get"
+      },
+      {
+        "from": "write_stick_off",
+        "fromPort": "next",
+        "to": "write_invalid"
       }
     ],
     "valueEdges": [
@@ -649,7 +786,7 @@
         "toPort": "a"
       },
       {
-        "from": "sx",
+        "from": "nx",
         "fromPort": "value",
         "to": "mx",
         "toPort": "a"
@@ -661,7 +798,7 @@
         "toPort": "b"
       },
       {
-        "from": "sy",
+        "from": "ny",
         "fromPort": "value",
         "to": "my",
         "toPort": "a"
@@ -905,6 +1042,150 @@
         "fromPort": "value",
         "to": "tgt_jump",
         "toPort": "condition"
+      },
+      {
+        "from": "sx",
+        "fromPort": "value",
+        "to": "sx2",
+        "toPort": "a"
+      },
+      {
+        "from": "sx",
+        "fromPort": "value",
+        "to": "sx2",
+        "toPort": "b"
+      },
+      {
+        "from": "sy",
+        "fromPort": "value",
+        "to": "sy2",
+        "toPort": "a"
+      },
+      {
+        "from": "sy",
+        "fromPort": "value",
+        "to": "sy2",
+        "toPort": "b"
+      },
+      {
+        "from": "sx2",
+        "fromPort": "value",
+        "to": "sum",
+        "toPort": "a"
+      },
+      {
+        "from": "sy2",
+        "fromPort": "value",
+        "to": "sum",
+        "toPort": "b"
+      },
+      {
+        "from": "sum",
+        "fromPort": "value",
+        "to": "len",
+        "toPort": "a"
+      },
+      {
+        "from": "sx",
+        "fromPort": "value",
+        "to": "nx",
+        "toPort": "a"
+      },
+      {
+        "from": "len",
+        "fromPort": "value",
+        "to": "nx",
+        "toPort": "b"
+      },
+      {
+        "from": "sy",
+        "fromPort": "value",
+        "to": "ny",
+        "toPort": "a"
+      },
+      {
+        "from": "len",
+        "fromPort": "value",
+        "to": "ny",
+        "toPort": "b"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_sx",
+        "toPort": "source"
+      },
+      {
+        "from": "nx",
+        "fromPort": "value",
+        "to": "write_sx",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_sy",
+        "toPort": "source"
+      },
+      {
+        "from": "ny",
+        "fromPort": "value",
+        "to": "write_sy",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_sv",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "write_sv",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_stick_off",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_stick_off",
+        "toPort": "value"
+      },
+      {
+        "from": "read_range",
+        "fromPort": "value",
+        "to": "range_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "zf",
+        "fromPort": "value",
+        "to": "range_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "range_gt",
+        "fromPort": "value",
+        "to": "range_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_point_off",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_point_off",
+        "toPort": "value"
       }
     ]
   }

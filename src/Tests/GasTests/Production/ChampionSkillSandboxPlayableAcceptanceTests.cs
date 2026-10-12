@@ -1104,8 +1104,13 @@ namespace Ludots.Tests.GAS.Production
 
         private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
         {
+            // Aim.Pointer 只在数值变化时触发。重复落到同一屏幕点不会取样；取样的第二拍在下一个固定步续上。
+            // 先挪开再落下，并等那一拍续完，按下前 aim.target 已经在新人身上。
+            backend.SetMousePosition(new Vector2(960f, 540f));
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetMousePosition(GetGroundScreenFromWorld(engine, worldCm));
             engine.GlobalContext[PendingGroundWorldCmKey] = worldCm;
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 

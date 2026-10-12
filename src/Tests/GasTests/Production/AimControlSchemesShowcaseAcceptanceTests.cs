@@ -48,6 +48,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         session.RunCastMatrix(AimSurface.GamepadRight, slotEntity: 0, slotGround: 3);
     }
 
+
     [Test]
     public void DiabloKeyboard_SmartCursor_AndPrimaryClickMovesOrAttacks()
     {
@@ -61,6 +62,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     {
         using Session session = Session.Boot("scheme.aim.gamepad_left");
         session.RunCastMatrix(AimSurface.GamepadLeft, slotEntity: 0, slotGround: 3);
+    }
+
+    [Test]
+    public void DiabloGamepad_LeftStick_SmartCastBeforeIndicate_OrdersAtSlotRange()
+    {
+        using Session session = Session.Boot("scheme.aim.gamepad_left");
+        session.AssertSmartStickBeforeIndicate(new Vector2(-0.4f, 0f), slot: 0);
     }
 
     [Test]
@@ -84,9 +92,9 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         Assert.That(Vector2.Distance(afterMouse, moved), Is.LessThanOrEqualTo(5f), session.Diag("mouse after gamepad switch"));
 
         session.AimStick("rightStick", new Vector2(0.5f, 0f));
-        Vector2 afterStick = session.ReadPoint();
-        Vector2 expected = session.Position(session.Hero) + new Vector2(RangeCm * 0.5f, 0f);
-        Assert.That(Vector2.Distance(afterStick, expected), Is.LessThanOrEqualTo(40f), session.Diag("stick after gamepad switch"));
+        session.AssertStickHeldWithoutRange(new Vector2(1f, 0f), "stick after gamepad switch");
+        Vector2 afterStick = session.ReadStoredPoint();
+        Assert.That(Vector2.Distance(afterStick, moved), Is.LessThanOrEqualTo(5f), session.Diag("stick does not collapse the stored point"));
     }
 
     private enum AimSurface
@@ -257,6 +265,38 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             TickUntilFixedTickAdvances();
         }
 
+        public void AssertStickHeldWithoutRange(Vector2 unit, string step)
+        {
+            Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(1), Diag(step));
+            Assert.That(ReadFloat("aim.stick.x"), Is.EqualTo(unit.X).Within(0.02f), Diag(step));
+            Assert.That(ReadFloat("aim.stick.y"), Is.EqualTo(unit.Y).Within(0.02f), Diag(step));
+            Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(0), Diag(step));
+        }
+
+        public void AssertSmartStickBeforeIndicate(Vector2 axis, int slot)
+        {
+            Assert.That(ReadCastMode(), Is.EqualTo("castMode.smart"), Diag("default smart"));
+            Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(0f).Within(0.1f), Diag("range before stick"));
+            string stick = _surface == AimSurface.GamepadLeft ? "leftStick" : "rightStick";
+            AimStick(stick, axis);
+            AssertStickHeldWithoutRange(Vector2.Normalize(axis), "stick before press");
+            Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(0f).Within(0.1f), Diag("range still unset"));
+            Vector2 hero = Position(Hero);
+            PressSlot(_surface, slot);
+            WaitForExec();
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.True, Diag("immediate stick cast"));
+            AbilityExecInstance exec = _engine.World.Get<AbilityExecInstance>(Hero);
+            Assert.That(exec.AbilitySlot, Is.EqualTo(slot), Diag("immediate stick slot"));
+            Assert.That(_engine.World.IsAlive(exec.Target), Is.False, Diag("immediate stick is a ground order"));
+            Assert.That(exec.HasTargetPos, Is.EqualTo((byte)1), Diag("immediate stick point"));
+            Vector2 actual = exec.TargetPosCm.ToVector2();
+            Vector2 expected = hero + Vector2.Normalize(axis) * RangeCm;
+            Assert.That(Vector2.Distance(actual, expected), Is.LessThanOrEqualTo(40f), Diag($"immediate stick actual={actual} expected={expected}"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("immediate stick"));
+            ReleaseSlot(_surface, slot);
+            Settle();
+        }
+
         public string Diag(string step)
         {
             string point = "<missing>";
@@ -275,7 +315,8 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             return $"{step} || scheme={SchemeId} mode={ReadCastMode()} tick={_engine.GameSession.CurrentTick} " +
                    $"contexts=[{Contexts()}] input={_inputContextId} " +
                    $"device={_device.PointerPosition} aimPointer={pointer} f2={modeDown} " +
-                   $"range={TryReadFloat("aim.range_cm")} slot={TryReadInt("aim.slot")} point={point} " +
+                   $"range={TryReadFloat("aim.range_cm")} stick=({TryReadFloat("aim.stick.x")},{TryReadFloat("aim.stick.y")}) valid={TryReadInt("aim.stick.valid")} " +
+                   $"slot={TryReadInt("aim.slot")} point={point} " +
                    $"hero={Format(Position(Hero))} near={Format(Position(Near))} stickDummy={Format(Position(StickDummy))} " +
                    $"indicating={CollectionCount("aim.indicating")} hover={CollectionCount("aim.hover")} " +
                    $"actors={CollectionCount("aim.actors")} command={CollectionCount("collection.command.source")} " +
@@ -290,7 +331,8 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(input.HasContext(_inputContextId), Is.True, Diag("scheme context"));
             Assert.That(Contexts(), Does.Contain("interaction.context.aim.cast"), Diag("aim cast context"));
             Assert.That(ReadCastMode(), Is.EqualTo("castMode.smart"), Diag("seeded cast mode"));
-            Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(RangeCm).Within(0.1f), Diag("seeded range"));
+            Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(0f).Within(0.1f), Diag("range stays unset until a cast"));
+            Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("stick seed"));
             Assert.That(CollectionCount("aim.actors"), Is.EqualTo(1), Diag("aim actor"));
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("boot"));
             float near = Vector2.Distance(Position(Hero), Position(Near));
@@ -309,16 +351,17 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             bool indicating)
         {
             SetMode(modeId, modeKey);
+            Entity stickOrCursor = surface == AimSurface.KeyboardCursor ? Near : StickDummy;
             if (indicating)
             {
-                RunIndicating(surface, confirm, slotEntity, target: Near, cancel: true);
+                RunIndicating(surface, confirm, slotEntity, target: stickOrCursor, cancel: true);
                 RunIndicating(surface, confirm, slotGround, target: null, cancel: false);
-                RunIndicating(surface, confirm, slotEntity, target: Near, cancel: false);
+                RunIndicating(surface, confirm, slotEntity, target: stickOrCursor, cancel: false);
                 RunIndicating(surface, confirm, slotGround, target: null, cancel: true);
             }
             else
             {
-                RunSmart(surface, slotEntity, Near);
+                RunSmart(surface, slotEntity, stickOrCursor);
                 RunSmart(surface, slotGround, null);
             }
         }
@@ -326,7 +369,24 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         private void RunSmart(AimSurface surface, int slot, Entity? target)
         {
             AimFor(surface, target);
-            if (target == null)
+            if (surface == AimSurface.KeyboardCursor)
+            {
+                if (target == null)
+                {
+                    Assert.That(TargetAlive(), Is.False, Diag($"smart slot {slot} ground target"));
+                }
+                else
+                {
+                    Assert.That(ReadTarget(), Is.EqualTo(target.Value), Diag($"smart slot {slot} entity target"));
+                }
+            }
+            else if (ReadFloat("aim.range_cm") <= 0.1f)
+            {
+                Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(1), Diag($"smart slot {slot} stick"));
+                Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(0), Diag($"smart slot {slot} point waits for range"));
+                Assert.That(TargetAlive(), Is.False, Diag($"smart slot {slot} target waits for range"));
+            }
+            else if (target == null)
             {
                 Assert.That(TargetAlive(), Is.False, Diag($"smart slot {slot} ground target"));
             }

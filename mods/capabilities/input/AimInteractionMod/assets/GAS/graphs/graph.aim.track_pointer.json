@@ -240,6 +240,16 @@
       {
         "id": "tgt_jump",
         "op": "JumpIfFalse"
+      },
+      {
+        "id": "write_stick_off",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "write_stick_fail",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
       }
     ],
     "controlEdges": [
@@ -260,16 +270,6 @@
       },
       {
         "from": "c1",
-        "fromPort": "next",
-        "to": "c2"
-      },
-      {
-        "from": "c2",
-        "fromPort": "next",
-        "to": "c99"
-      },
-      {
-        "from": "c99",
         "fromPort": "next",
         "to": "member"
       },
@@ -346,7 +346,7 @@
       {
         "from": "write_valid",
         "fromPort": "next",
-        "to": "direction"
+        "to": "write_stick_off"
       },
       {
         "from": "direction",
@@ -371,12 +371,12 @@
       {
         "from": "write_invalid",
         "fromPort": "next",
-        "to": "null_get"
+        "to": "c99"
       },
       {
         "from": "ground_jump",
         "fromPort": "false",
-        "to": "write_invalid"
+        "to": "write_stick_fail"
       },
       {
         "from": "pick_all",
@@ -461,7 +461,7 @@
       {
         "from": "q_hover",
         "fromPort": "next",
-        "to": "clear_hover"
+        "to": "c2"
       },
       {
         "from": "clear_hover",
@@ -471,7 +471,7 @@
       {
         "from": "pick_jump",
         "fromPort": "false",
-        "to": "null_get"
+        "to": "c99"
       },
       {
         "from": "q_ind",
@@ -517,6 +517,26 @@
         "from": "tgt_jump",
         "fromPort": "false",
         "to": "q_hover"
+      },
+      {
+        "from": "write_stick_off",
+        "fromPort": "next",
+        "to": "direction"
+      },
+      {
+        "from": "write_stick_fail",
+        "fromPort": "next",
+        "to": "write_invalid"
+      },
+      {
+        "from": "c99",
+        "fromPort": "next",
+        "to": "null_get"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "clear_hover"
       }
     ],
     "valueEdges": [
@@ -807,6 +827,30 @@
         "fromPort": "value",
         "to": "tgt_jump",
         "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_stick_off",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_stick_off",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_stick_fail",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_stick_fail",
+        "toPort": "value"
       }
     ]
   }

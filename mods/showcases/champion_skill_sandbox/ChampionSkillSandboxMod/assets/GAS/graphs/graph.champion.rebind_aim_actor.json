@@ -93,6 +93,21 @@
       {
         "id": "r_halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "r_sx",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.stick.x"
+      },
+      {
+        "id": "r_sy",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.stick.y"
+      },
+      {
+        "id": "r_sv",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
       }
     ],
     "controlEdges": [
@@ -169,7 +184,7 @@
       {
         "from": "r_range",
         "fromPort": "next",
-        "to": "r_c99"
+        "to": "r_sx"
       },
       {
         "from": "r_c99",
@@ -185,6 +200,21 @@
         "from": "r_target",
         "fromPort": "next",
         "to": "r_halt"
+      },
+      {
+        "from": "r_sx",
+        "fromPort": "next",
+        "to": "r_sy"
+      },
+      {
+        "from": "r_sy",
+        "fromPort": "next",
+        "to": "r_sv"
+      },
+      {
+        "from": "r_sv",
+        "fromPort": "next",
+        "to": "r_c99"
       }
     ],
     "valueEdges": [
@@ -300,6 +330,42 @@
         "from": "r_null",
         "fromPort": "value",
         "to": "r_target",
+        "toPort": "value"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "value",
+        "to": "r_sx",
+        "toPort": "source"
+      },
+      {
+        "from": "r_z",
+        "fromPort": "value",
+        "to": "r_sx",
+        "toPort": "value"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "value",
+        "to": "r_sy",
+        "toPort": "source"
+      },
+      {
+        "from": "r_z",
+        "fromPort": "value",
+        "to": "r_sy",
+        "toPort": "value"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "value",
+        "to": "r_sv",
+        "toPort": "source"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "value",
+        "to": "r_sv",
         "toPort": "value"
       }
     ]

@@ -12,6 +12,9 @@
         {
           "trigger": "graph.aim.track_stick"
         }
+      ],
+      "onActivated": [
+        "graph.aim.seed_stick"
       ]
     },
     {
