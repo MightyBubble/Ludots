@@ -48,6 +48,14 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         session.RunCastMatrix(AimSurface.GamepadRight, slotEntity: 0, slotGround: 3);
     }
 
+    [Test]
+    public void LoLGamepad_HoldSkillWithoutStick_KeepsReleaseAimOpen()
+    {
+        using Session session = Session.Boot("scheme.aim.gamepad");
+        session.HoldSkillWithoutAimSample(slot: 0);
+    }
+
+
 
     [Test]
     public void DiabloKeyboard_SmartCursor_AndPrimaryClickMovesOrAttacks()
@@ -271,6 +279,17 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(ReadFloat("aim.stick.x"), Is.EqualTo(unit.X).Within(0.02f), Diag(step));
             Assert.That(ReadFloat("aim.stick.y"), Is.EqualTo(unit.Y).Within(0.02f), Diag(step));
             Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(0), Diag(step));
+        }
+
+        public void HoldSkillWithoutAimSample(int slot)
+        {
+            SetMode("castMode.aim_release", "f2");
+            Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("stick untouched"));
+            PressSlot(AimSurface.GamepadRight, slot);
+            TickUntilFixedTickAdvances();
+            Assert.That(Contexts(), Does.Contain("interaction.context.aim.release"), Diag("hold without stick"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("hold without stick"));
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("hold does not submit"));
         }
 
         public void AssertSmartStickBeforeIndicate(Vector2 axis, int slot)

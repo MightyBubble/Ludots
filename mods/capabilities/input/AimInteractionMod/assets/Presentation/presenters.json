@@ -175,7 +175,8 @@
       {
         "paramKey": "groundOverlay.rotation",
         "source": "ownerBlackboardFloat",
-        "sourceId": "Cast.Facing"
+        "sourceId": "Cast.Facing",
+        "optional": true
       },
       {
         "paramKey": "groundOverlay.width",
