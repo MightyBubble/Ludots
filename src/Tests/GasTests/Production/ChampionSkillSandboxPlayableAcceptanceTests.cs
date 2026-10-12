@@ -234,7 +234,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add($"[T+008] Ezreal Alpha.Cast(Mystic Shot) -> Target Dummy A | Hit | HP {dummyHealthBeforeQ:0} -> {dummyHealthAfterQ:0}");
 
             toolbar.Activate(IndicatorModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
             FindHoverScreenPoint(engine, backend, "Target Dummy A", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Target Dummy A")), frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
@@ -266,7 +266,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Jayce Cannon", frameTimesMs);
             toolbar.Activate(PressReleaseModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(PressReleaseModeId));
 
             float jayceDistanceToDummy = ReadDistance(engine.World, "Jayce Cannon", "Target Dummy A");
@@ -312,7 +312,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             toolbar.Activate(SmartCastModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             var geomancerSlots = CopySelectedSlots(engine);
             Assert.That(geomancerSlots[0].Label, Is.EqualTo("Runic Beacon"));
             Assert.That(geomancerSlots[1].Label, Is.EqualTo("Rune Field"));
@@ -420,7 +420,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             toolbar.Activate(SmartCastModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             var spellEngineerSlots = CopySelectedSlots(engine);
             Assert.That(spellEngineerSlots[0].Label, Is.EqualTo("Spell Beacon"));
             Assert.That(spellEngineerSlots[1].Label, Is.EqualTo("Gravity Well"));
@@ -602,6 +602,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             toolbar.Activate(IndicatorModeId);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
             Tick(engine, 2, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "002_dota2_geomancer", EntityCommandPanelShowcaseTheme.Dota2Id);
@@ -609,6 +610,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             toolbar.Activate(PressReleaseModeId);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
             Tick(engine, 2, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "003_sc2_spell_engineer", EntityCommandPanelShowcaseTheme.Sc2Id);

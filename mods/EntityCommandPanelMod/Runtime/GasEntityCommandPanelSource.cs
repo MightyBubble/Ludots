@@ -167,10 +167,7 @@ namespace EntityCommandPanelMod.Runtime
                 revision = HashTagContainer(revision, in actorTags);
             }
 
-            string modeHintKey = ResolveActiveModeHintKey();
-            revision = HashCombine(
-                revision,
-                string.IsNullOrEmpty(modeHintKey) ? 1u : (uint)modeHintKey.GetHashCode(StringComparison.Ordinal));
+            revision = HashCombine(revision, (uint)(ResolveMatchedHintIndex() + 2));
             return true;
         }
 
@@ -621,6 +618,22 @@ namespace EntityCommandPanelMod.Runtime
             return _progressionRequirements;
         }
 
+        private int ResolveMatchedHintIndex()
+        {
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity rep))
+            {
+                return -1;
+            }
+
+            if (TryResolveCastModeHintIndex(rep, out int castModeIndex))
+            {
+                return castModeIndex;
+            }
+
+            int contextIndex = ResolveActiveModeHintIndex(rep);
+            return contextIndex < 0 ? -1 : _modeHintCastModeIds.Length + contextIndex;
+        }
+
         private string ResolveActiveModeHintKey()
         {
             if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity rep))
@@ -639,7 +652,19 @@ namespace EntityCommandPanelMod.Runtime
 
         private bool TryResolveCastModeHintKey(Entity rep, out string key)
         {
-            key = string.Empty;
+            if (!TryResolveCastModeHintIndex(rep, out int index))
+            {
+                key = string.Empty;
+                return false;
+            }
+
+            key = _modeHintCastModeKeys[index];
+            return true;
+        }
+
+        private bool TryResolveCastModeHintIndex(Entity rep, out int index)
+        {
+            index = -1;
             if (_modeHintCastModeIds.Length == 0)
             {
                 return false;
@@ -678,7 +703,7 @@ namespace EntityCommandPanelMod.Runtime
             {
                 if (_modeHintCastModeRegistryIds[i] == pref.DefaultCastModeId)
                 {
-                    key = _modeHintCastModeKeys[i];
+                    index = i;
                     return true;
                 }
             }

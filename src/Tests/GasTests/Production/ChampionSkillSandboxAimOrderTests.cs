@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ReadHealth(engine.World, "Target Dummy A"), Is.LessThan(healthBeforeSmart));
 
             toolbar.Activate(IndicatorModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
             SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             float healthBeforeRelease = ReadHealth(engine.World, "Target Dummy A");
@@ -79,7 +79,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Jayce Cannon", frameTimesMs);
             toolbar.Activate(PressReleaseModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(PressReleaseModeId));
             Entity jayce = FindEntityByName(engine.World, "Jayce Cannon");
             SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             toolbar.Activate(SmartCastModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Entity geomancer = FindEntityByName(engine.World, "Geomancer Alpha");
             Vector2 beaconPoint = ReadPosition(engine.World, "Geomancer Alpha") + new Vector2(-200f, 0f);
             SetMouseWorld(engine, backend, beaconPoint, frameTimesMs);

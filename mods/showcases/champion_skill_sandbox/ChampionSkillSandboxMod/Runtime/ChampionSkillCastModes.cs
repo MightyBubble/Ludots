@@ -1,4 +1,5 @@
-using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Arch.Core;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
@@ -8,53 +9,93 @@ using Ludots.Core.Scripting;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
-    /// <summary>
-    /// Toolbar side of cast-mode switching. Each sandbox mode is a cast-mode id on the
-    /// possessed rep's InteractionPref. Keyboard switching writes the same field from
-    /// the battle context's trigger graphs.
-    /// </summary>
-    internal static class ChampionSkillCastModes
+    internal sealed class ChampionSkillCastModeCatalog
     {
-        private static readonly (string ModeId, string CastModeId)[] Modes =
+        public const string Uri = "ChampionSkillSandboxMod:assets/UI/cast_mode_toolbar.json";
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
-            (ChampionSkillSandboxIds.SmartCastModeId, "castMode.smart"),
-            (ChampionSkillSandboxIds.IndicatorModeId, "castMode.aim_release"),
-            (ChampionSkillSandboxIds.PressReleaseModeId, "castMode.aim_click"),
+            PropertyNameCaseInsensitive = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
         };
 
-        public static bool TrySetActive(GameEngine engine, string? modeId)
+        private ChampionSkillCastModeCatalog(Mode[] modes)
         {
-            string? castModeName = ResolveCastModeName(modeId);
-            if (castModeName == null)
-            {
-                return false;
-            }
-
-            StringIntRegistry registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("ChampionSkillSandbox cast modes require CastModeIdRegistry.");
-            if (!registry.TryGetId(castModeName, out int castModeId))
-            {
-                throw new InvalidOperationException(
-                    $"ChampionSkillSandbox cast mode '{castModeName}' is not installed.");
-            }
-
-            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (!engine.World.TryGet(rep, out InteractionPref pref))
-            {
-                throw new InvalidOperationException(
-                    "ChampionSkillSandbox cast modes require InteractionPref on the possessed rep.");
-            }
-
-            pref.SetDefaultCastMode(castModeId);
-            engine.World.Set(rep, pref);
-            return true;
+            Modes = modes;
         }
 
-        /// <summary>
-        /// Active sandbox mode id. Null when no rep is possessed yet. A possessed rep
-        /// with an unseeded or unknown cast mode fails fast.
-        /// </summary>
-        public static string? GetActive(GameEngine engine)
+        public Mode[] Modes { get; }
+
+        public readonly record struct Mode(string ButtonId, string Label, string ActionId, string CastModeId, string Accent);
+
+        public static ChampionSkillCastModeCatalog Load(GameEngine engine)
+        {
+            using Stream stream = engine.VFS.GetStream(Uri);
+            FileDto? file = JsonSerializer.Deserialize<FileDto>(stream, JsonOptions);
+            if (file?.Modes == null || file.Modes.Length == 0)
+            {
+                throw new InvalidOperationException($"{Uri} must list at least one cast mode.");
+            }
+
+            var modes = new Mode[file.Modes.Length];
+            for (int i = 0; i < file.Modes.Length; i++)
+            {
+                ModeDto dto = file.Modes[i] ?? throw new InvalidOperationException($"{Uri} modes[{i}] is missing.");
+                modes[i] = new Mode(
+                    RequireToken(dto.ButtonId, $"{Uri} modes[{i}].buttonId"),
+                    RequireToken(dto.Label, $"{Uri} modes[{i}].label"),
+                    RequireToken(dto.ActionId, $"{Uri} modes[{i}].actionId"),
+                    RequireToken(dto.CastModeId, $"{Uri} modes[{i}].castModeId"),
+                    RequireToken(dto.Accent, $"{Uri} modes[{i}].accent"));
+                for (int earlier = 0; earlier < i; earlier++)
+                {
+                    if (string.Equals(modes[earlier].ButtonId, modes[i].ButtonId, StringComparison.Ordinal) ||
+                        string.Equals(modes[earlier].CastModeId, modes[i].CastModeId, StringComparison.Ordinal) ||
+                        string.Equals(modes[earlier].ActionId, modes[i].ActionId, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException($"{Uri} modes[{i}] repeats a button, action, or cast mode.");
+                    }
+                }
+            }
+
+            return new ChampionSkillCastModeCatalog(modes);
+        }
+
+        public bool TryGetByButtonId(string buttonId, out Mode mode)
+        {
+            for (int i = 0; i < Modes.Length; i++)
+            {
+                if (string.Equals(Modes[i].ButtonId, buttonId, StringComparison.Ordinal))
+                {
+                    mode = Modes[i];
+                    return true;
+                }
+            }
+
+            mode = default;
+            return false;
+        }
+
+        public int IndexOfButton(string? buttonId)
+        {
+            if (string.IsNullOrEmpty(buttonId))
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < Modes.Length; i++)
+            {
+                if (string.Equals(Modes[i].ButtonId, buttonId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        public string? ResolveActiveButtonId(GameEngine engine)
         {
             if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
             {
@@ -80,25 +121,36 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 if (string.Equals(Modes[i].CastModeId, name, StringComparison.Ordinal))
                 {
-                    return Modes[i].ModeId;
+                    return Modes[i].ButtonId;
                 }
             }
 
             throw new InvalidOperationException(
-                $"ChampionSkillSandbox possessed rep cast mode '{name}' is not a sandbox mode.");
+                $"ChampionSkillSandbox possessed rep cast mode '{name}' is not listed in {Uri}.");
         }
 
-        private static string? ResolveCastModeName(string? modeId)
+        private static string RequireToken(string? value, string field)
         {
-            for (int i = 0; i < Modes.Length; i++)
+            if (string.IsNullOrWhiteSpace(value) || !string.Equals(value, value.Trim(), StringComparison.Ordinal))
             {
-                if (string.Equals(Modes[i].ModeId, modeId, StringComparison.Ordinal))
-                {
-                    return Modes[i].CastModeId;
-                }
+                throw new InvalidOperationException($"{field} must be a non-empty token without surrounding whitespace.");
             }
 
-            return null;
+            return value;
+        }
+
+        private sealed class FileDto
+        {
+            public ModeDto[]? Modes { get; set; }
+        }
+
+        private sealed class ModeDto
+        {
+            public string? ButtonId { get; set; }
+            public string? Label { get; set; }
+            public string? ActionId { get; set; }
+            public string? CastModeId { get; set; }
+            public string? Accent { get; set; }
         }
     }
 }

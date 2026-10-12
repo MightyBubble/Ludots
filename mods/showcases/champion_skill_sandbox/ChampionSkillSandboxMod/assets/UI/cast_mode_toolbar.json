@@ -1,0 +1,25 @@
+{
+  "modes": [
+    {
+      "buttonId": "ChampionSkillSandbox.Mode.SmartCast",
+      "label": "Quick",
+      "actionId": "CastModeSmart",
+      "castModeId": "castMode.smart",
+      "accent": "#F6C35B"
+    },
+    {
+      "buttonId": "ChampionSkillSandbox.Mode.Indicator",
+      "label": "Indicator",
+      "actionId": "CastModeIndicator",
+      "castModeId": "castMode.aim_release",
+      "accent": "#61C3FF"
+    },
+    {
+      "buttonId": "ChampionSkillSandbox.Mode.PressReleaseAim",
+      "label": "RTS",
+      "actionId": "CastModePressRelease",
+      "castModeId": "castMode.aim_click",
+      "accent": "#93E07A"
+    }
+  ]
+}

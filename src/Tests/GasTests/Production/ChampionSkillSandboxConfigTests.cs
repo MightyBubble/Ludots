@@ -345,7 +345,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
             Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.aim_release"));
             toolbar.CopyButtons(buttons);
@@ -357,7 +357,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
 
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
             Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.aim_click"));
             toolbar.CopyButtons(buttons);
@@ -1098,6 +1098,12 @@ namespace Ludots.Tests.GAS.Production
                 UpdateHeadlessCamera(engine);
                 engine.Tick(DeltaTime);
             }
+        }
+
+        private static void TickUntilNextFixedTick(GameEngine engine)
+        {
+            int tick = engine.GameSession.CurrentTick;
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tick, maxFrames: 8);
         }
 
         private static void CenterMouse(IInputBackend backend)
