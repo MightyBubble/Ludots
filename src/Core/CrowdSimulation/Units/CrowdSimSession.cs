@@ -44,7 +44,10 @@ public sealed class CrowdSimSession
         SimDt = simDt;
         int needed = (int)Fix64.Ceiling(maxSpeed * config.Movement.SpeedCapRatio * simDt /
             (Fix64.FromInt(config.NavCellSizeCm) * config.Movement.MaxStepNavCells)).ToLong();
-        SubSteps = Math.Clamp(Math.Max(1, needed), 1, config.Movement.MaxSubSteps);
+        int unclamped = Math.Max(1, needed);
+        int cap = config.Movement.MaxSubSteps;
+        SubSteps = Math.Clamp(unclamped, 1, cap);
+        if (unclamped > cap) Telemetry.MarkSubStepClamped();
         SubStepDt = simDt / SubSteps;
     }
 

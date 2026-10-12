@@ -249,7 +249,28 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _overlay.AddText(32, 78, _hudText.Rebake, 18, new Vector4(1f, 1f, 1f, 1f));
         _overlay.AddText(32, 102, _hudText.Replay, 18, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
         _overlay.AddText(32, 126, _hudText.Keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));
-        if (session != null) _telemetryPanel.Draw(_overlay, hud, session.Telemetry);
+        if (session != null)
+        {
+            bool expanded = _demo.TelemetryExpanded;
+            ReadPlayerFogCounts(expanded ? session : null, out int visible, out int explored, out int ghosts);
+            _telemetryPanel.Draw(_overlay, hud, session.Telemetry, expanded, visible, explored, ghosts);
+        }
+    }
+
+    /// <summary>玩家 1 的迷雾格计数已在刷新时维护,这里只按下标读取。</summary>
+    private static void ReadPlayerFogCounts(CrowdSimSession? session, out int visible, out int explored, out int ghosts)
+    {
+        visible = explored = ghosts = 0;
+        var fog = session?.Fog;
+        if (fog == null) return;
+        var index = session!.Config.PairRules.IndexByPlayerId;
+        if ((uint)1 >= (uint)index.Length) return;
+        int player = index[1];
+        if ((uint)player >= (uint)fog.GroupOf.Length) return;
+        int group = fog.GroupOf[player];
+        visible = fog.VisibleCount[group];
+        explored = fog.ExploredCount[group];
+        ghosts = fog.GhostCount[group];
     }
 
     /// <summary>数值未变时沿用上一份字符串。比较只读字段,不分配。</summary>

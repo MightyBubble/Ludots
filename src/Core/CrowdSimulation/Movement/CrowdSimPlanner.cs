@@ -367,6 +367,7 @@ public sealed class CrowdSimPlanner
             if (orders.Count > 0) Plan(orders, tick);
         }
 
+        if (k > 0) _session.Telemetry.MarkPlans(k);
         if (k > 0 && !_loggedFirstApply)
         {
             _loggedFirstApply = true;

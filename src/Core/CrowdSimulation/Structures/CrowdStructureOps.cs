@@ -344,6 +344,7 @@ public static class CrowdStructureOps
         }
 
         sim.EvictStuck = stuck;
+        if (stuck > 0) sim.Telemetry.MarkEvictStuck(stuck);
         return moved;
     }
 

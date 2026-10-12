@@ -50,6 +50,25 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(fog, Does.Contain("GhostCount[g]"));
     }
 
+    [Test]
+    public void TelemetryPanel_CollapsesUntilChunkDebugVisible()
+    {
+        string root = FindRepoRoot();
+        string runtime = File.ReadAllText(Path.Combine(
+            root, "src", "Core", "CrowdSimulation", "Presentation", "S4DeployDemoRuntime.cs"));
+        Assert.That(runtime, Does.Contain("CoreServiceKeys.ChunkDebugPanelRuntime"));
+        Assert.That(runtime, Does.Contain("panel.Visible"));
+        string panel = File.ReadAllText(Path.Combine(
+            root, "src", "Core", "CrowdSimulation", "Presentation", "CrowdSimTelemetryPanel.cs"));
+        Assert.That(panel, Does.Contain("subStepClamped"));
+        Assert.That(panel, Does.Contain("evictStuck"));
+        Assert.That(panel, Does.Contain("plans"));
+        string presentation = File.ReadAllText(Path.Combine(
+            root, "src", "Core", "CrowdSimulation", "Presentation", "S4DeployDemoPresentationSystem.cs"));
+        Assert.That(presentation, Does.Not.Contain("FogCellsPerSide"));
+        Assert.That(presentation, Does.Contain("VisibleCount"));
+    }
+
     private static string SliceMethod(string source, string signature)
     {
         int start = source.IndexOf(signature, StringComparison.Ordinal);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.CrowdSimulation.Presentation;
@@ -63,6 +64,10 @@ public sealed class S4DeployDemoRuntime
     }
 
     public S4DeployDemoRuntime(GameEngine? engine) => _engine = engine;
+
+    /// <summary>遥测区块展开与区块调试面板同一可见开关;无引擎(无头)时保持折叠。</summary>
+    public bool TelemetryExpanded =>
+        _engine?.GetService(CoreServiceKeys.ChunkDebugPanelRuntime) is ChunkDebugPanelRuntime panel && panel.Visible;
 
     // ── 固定步入口(只入队) ─────────────────────────────
     public void EnqueueCycleView() => Enqueue(() => ViewMode = (ViewMode + 1) % _viewModeCount);
