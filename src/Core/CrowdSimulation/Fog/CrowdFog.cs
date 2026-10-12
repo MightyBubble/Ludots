@@ -54,7 +54,9 @@ public sealed class CrowdFog
     /// <summary>在途遮蔽:{组, 格集, until tick},按指令序。</summary>
     private List<(int GroupIndex, int[] Cells, int Until)> _obscured = new();
     public readonly ushort[] ObsN;  // 每组每格的活跃遮蔽条目数
+    private readonly FogFieldStore _fieldStore;
     private readonly FogField[] _vision;
+    private readonly bool[] _retired;
     private readonly int[] _disc;
     private readonly int[] _stampCells;
     private readonly byte[] _stampSeen;
@@ -107,7 +109,9 @@ public sealed class CrowdFog
         int f2 = FogCellsPerSide * FogCellsPerSide;
         int updateHz = Math.Max(1, (int)Math.Round(fc.RateHz.ToDouble(), MidpointRounding.AwayFromZero));
         FogLayerDefinition layer = layers.Get(CrowdFogLayerBinding.Require(layers, FogCellSizeCm, updateHz));
+        _fieldStore = fields;
         _vision = new FogField[VisionGroupCount];
+        _retired = new bool[VisionGroupCount];
         for (int g = 0; g < VisionGroupCount; g++)
         {
             FogField field = fields.GetOrCreate(g + 1, layer);
@@ -325,6 +329,10 @@ public sealed class CrowdFog
 
     public FogField VisionField(int group) => _vision[group];
 
+    internal FogFieldStore Fields => _fieldStore;
+
+    public bool ScopeRetired(int group) => (uint)group < (uint)_retired.Length && _retired[group];
+
     public CellVisibility CellVisibilityOf(int group, int cell)
     {
         return _vision[group].GetVisibility(new FogCell(cell % FogCellsPerSide, cell / FogCellsPerSide));
@@ -340,6 +348,7 @@ public sealed class CrowdFog
         bool any = false;
         for (int g = slot; g < VisionGroupCount; g += Period)
         {
+            if (_retired[g]) continue;
             Array.Clear(_stampSeen, g * f2, f2);
             _stampCount[g] = 0;
             any = true;
@@ -359,7 +368,7 @@ public sealed class CrowdFog
         for (int i = 0; i < unitCount; i++)
         {
             int g = GroupOf[players[i]];
-            if (g % Period != slot) continue;
+            if (_retired[g] || g % Period != slot) continue;
             var p = positions[i];
             int fx = Math.Max(0, Math.Min(side - 1, (int)(p.X / Fix64.FromInt(FogCellSizeCm)).ToLong()));
             int fy = Math.Max(0, Math.Min(side - 1, (int)(p.Y / Fix64.FromInt(FogCellSizeCm)).ToLong()));
@@ -371,7 +380,11 @@ public sealed class CrowdFog
         }
 
         int refreshesBefore = Refreshes;
-        for (int g = slot; g < VisionGroupCount; g += Period) Refresh(g);
+        for (int g = slot; g < VisionGroupCount; g += Period)
+        {
+            if (_retired[g]) continue;
+            Refresh(g);
+        }
         int groups = Refreshes - refreshesBefore;
         if (groups > 0) sim.Telemetry.MarkFogRefresh(groups);
     }
@@ -699,10 +712,8 @@ public sealed class CrowdFog
         DropUnbelieved(dropped);
     }
 
-    /// <summary>共享视野:组 b 并入 a(低组号存活,与构造的 root[max]=min 同款)。visible OR、
-    /// explored OR 并触发 tile 入集、认知实体并(只有一侧见过的已拆实体留残影直到地面再见)。
-    /// 被并掉的组无玩家,认知同步会把它停在真相槽。返回存活组;同组返回 -1。
-    /// 拆组不支持(union-find 不能删;参考端 TODO 同款)。</summary>
+    /// <summary>共享视野:组 b 并入 a(低组号存活)。可见和已探索按格 OR，信念并进存活组。
+    /// 源 scope 从雾场摘掉，之后不再盖章；玩家改挂存活组。同组返回 -1。拆组不支持。</summary>
     public int MergeGroups(int a, int b)
     {
         if (a == b) return -1;
@@ -763,6 +774,13 @@ public sealed class CrowdFog
             }
 
             _obscured[i] = (to, e.Item2, e.Item3);
+        }
+
+        _retired[from] = true;
+        if (!_fieldStore.Remove(fromField.ScopeKeyId, fromField.LayerId))
+        {
+            throw new InvalidOperationException(
+                $"视野组 {from} 的雾场 scope {fromField.ScopeKeyId} 不在存储里，无法退役。");
         }
 
         return to;
