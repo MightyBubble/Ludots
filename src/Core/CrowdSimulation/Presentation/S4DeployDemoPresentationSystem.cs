@@ -42,6 +42,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
     private readonly S4DeployNavWireframe _wire = new();
     private readonly CrowdSimTelemetryPanel _telemetryPanel = new();
+    private readonly HudTextCache _hudText = new();
     private int _flashReportTick = -1;
     private long _flashStartMs;
 
@@ -229,29 +230,143 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         return !session.TryGetMaterializedNav(group.NavId, out _);
     }
 
-    private void DrawHud(CrowdSimSession? session, CrowdSimulationRuntime? runtime, (bool Shown, bool Valid)? preview)
+    internal void DrawHud(CrowdSimSession? session, CrowdSimulationRuntime? runtime, (bool Shown, bool Valid)? preview)
     {
-        string status, rebake, replay;
-        if (session == null)
+        var telemetry = session?.Telemetry;
+        var report = session?.LastRebakeReport;
+        bool pending = session != null && NavVariantPending(session, _demo.ViewMode);
+        string templateLabel = _demo.Template.Label;
+        string viewLabel = _demo.ViewLabel;
+        if (!_hudText.Matches(session, telemetry, report, runtime, _demo, preview, pending, templateLabel, viewLabel))
         {
-            status = "会话未激活";
-            rebake = "-";
-            replay = "-";
+            _hudText.Rebuild(_presentation, session, telemetry, report, runtime, _demo, preview, pending, templateLabel, viewLabel);
         }
-        else
+
+        CrowdHudPanel hud = _presentation.Hud;
+        _overlay.AddRect(hud.OriginXPx, hud.OriginYPx, hud.WidthPx, hud.HeightPx, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        _overlay.AddText(32, 24, _presentation.Title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
+        _overlay.AddText(32, 54, _hudText.Status, 18, new Vector4(1f, 1f, 1f, 1f));
+        _overlay.AddText(32, 78, _hudText.Rebake, 18, new Vector4(1f, 1f, 1f, 1f));
+        _overlay.AddText(32, 102, _hudText.Replay, 18, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
+        _overlay.AddText(32, 126, _hudText.Keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));
+        if (session != null) _telemetryPanel.Draw(_overlay, hud, session.Telemetry);
+    }
+
+    /// <summary>数值未变时沿用上一份字符串。比较只读字段,不分配。</summary>
+    private sealed class HudTextCache
+    {
+        public bool Ready;
+        public bool SessionActive;
+        public int Tick, Units, Idle, Moving, Arrived, Unreachable, Jumping, Selected;
+        public bool HasRebake;
+        public int RebakeExec, RebakeReport, RebakeKind, Tiles, Hits, Misses, Orders, Evicted, Stuck;
+        public bool RuntimePresent, Interactive;
+        public int ReplayStatus, Divergence;
+        public bool BuildMode, PreviewKnown, PreviewShown, PreviewValid, Pending;
+        public int TemplateIndex, ViewMode;
+        public string TemplateLabel = string.Empty;
+        public string ViewLabel = string.Empty;
+        public string Status = string.Empty;
+        public string Rebake = string.Empty;
+        public string Replay = string.Empty;
+        public string Keys = string.Empty;
+
+        public bool Matches(
+            CrowdSimSession? session,
+            CrowdSimulationTelemetry? telemetry,
+            CrowdRebakeReport? report,
+            CrowdSimulationRuntime? runtime,
+            S4DeployDemoRuntime demo,
+            (bool Shown, bool Valid)? preview,
+            bool pending,
+            string templateLabel,
+            string viewLabel)
         {
-            var telemetry = session.Telemetry;
-            int idle = telemetry.Idle, moving = telemetry.Moving, arrived = telemetry.Arrived;
-            int unreachable = telemetry.Unreachable, jumping = telemetry.Jumping;
-            status = $"tick {session.TickCount};单位 {session.Units.Count}(闲 {idle}/行 {moving}/达 {arrived}" +
-                     (unreachable + jumping > 0 ? $"/不可达 {unreachable}/跳跃 {jumping}" : "") + $");选中 {session.SelectedCount}";
-            var report = session.LastRebakeReport;
-            rebake = report == null
-                ? "无结构变更"
-                : $"tick {report.ExecTick}→{report.ReportTick} {(report.Kind == CrowdRebakeReport.KindPlace ? "建造" : "拆除")}" +
-                  $" · 脏 tile {report.Tiles} · 缓存命中 {report.Hits}/{report.Hits + report.Misses}" +
-                  $" · 重规划 {report.Orders} · 挤离 {report.Evicted} · 无处安放 {report.Stuck}";
-            replay = _demo.InteractiveMode
+            if (!Ready) return false;
+            if ((session != null) != SessionActive) return false;
+            if (session != null)
+            {
+                if (Tick != session.TickCount || Units != session.Units.Count || Selected != session.SelectedCount) return false;
+                if (Idle != telemetry!.Idle || Moving != telemetry.Moving || Arrived != telemetry.Arrived
+                    || Unreachable != telemetry.Unreachable || Jumping != telemetry.Jumping) return false;
+                if ((report != null) != HasRebake) return false;
+                if (report != null && (
+                    RebakeExec != report.ExecTick || RebakeReport != report.ReportTick || RebakeKind != report.Kind
+                    || Tiles != report.Tiles || Hits != report.Hits || Misses != report.Misses
+                    || Orders != report.Orders || Evicted != report.Evicted || Stuck != report.Stuck)) return false;
+            }
+
+            if ((runtime != null) != RuntimePresent) return false;
+            if (runtime != null && (ReplayStatus != runtime.ReplayStatus || Divergence != runtime.ReplayDivergenceTick)) return false;
+            if (Interactive != demo.InteractiveMode || BuildMode != demo.BuildMode) return false;
+            if (TemplateIndex != demo.TemplateIndex || ViewMode != demo.ViewMode || Pending != pending) return false;
+            if (!string.Equals(TemplateLabel, templateLabel, StringComparison.Ordinal)
+                || !string.Equals(ViewLabel, viewLabel, StringComparison.Ordinal)) return false;
+            bool previewKnown = preview.HasValue;
+            if (PreviewKnown != previewKnown) return false;
+            if (previewKnown && (PreviewShown != preview!.Value.Shown || PreviewValid != preview.Value.Valid)) return false;
+            return true;
+        }
+
+        public void Rebuild(
+            CrowdPresentationConfig presentation,
+            CrowdSimSession? session,
+            CrowdSimulationTelemetry? telemetry,
+            CrowdRebakeReport? report,
+            CrowdSimulationRuntime? runtime,
+            S4DeployDemoRuntime demo,
+            (bool Shown, bool Valid)? preview,
+            bool pending,
+            string templateLabel,
+            string viewLabel)
+        {
+            Ready = true;
+            SessionActive = session != null;
+            CrowdDeployPresentation deploy = presentation.Deploy
+                ?? throw new InvalidOperationException("部署演示 HUD 缺少 deploy 文案。");
+            if (session == null)
+            {
+                Status = "会话未激活";
+                Rebake = "最近重烘:-";
+                Replay = "-";
+            }
+            else
+            {
+                Tick = session.TickCount;
+                Units = session.Units.Count;
+                Selected = session.SelectedCount;
+                Idle = telemetry!.Idle;
+                Moving = telemetry.Moving;
+                Arrived = telemetry.Arrived;
+                Unreachable = telemetry.Unreachable;
+                Jumping = telemetry.Jumping;
+                Status = $"tick {Tick};单位 {Units}(闲 {Idle}/行 {Moving}/达 {Arrived}" +
+                         (Unreachable + Jumping > 0 ? $"/不可达 {Unreachable}/跳跃 {Jumping}" : "") + $");选中 {Selected}";
+                HasRebake = report != null;
+                if (report == null)
+                {
+                    Rebake = "最近重烘:无结构变更";
+                }
+                else
+                {
+                    RebakeExec = report.ExecTick;
+                    RebakeReport = report.ReportTick;
+                    RebakeKind = report.Kind;
+                    Tiles = report.Tiles;
+                    Hits = report.Hits;
+                    Misses = report.Misses;
+                    Orders = report.Orders;
+                    Evicted = report.Evicted;
+                    Stuck = report.Stuck;
+                    Rebake = $"最近重烘:tick {RebakeExec}→{RebakeReport} {(RebakeKind == CrowdRebakeReport.KindPlace ? "建造" : "拆除")}" +
+                             $" · 脏 tile {Tiles} · 缓存命中 {Hits}/{Hits + Misses}" +
+                             $" · 重规划 {Orders} · 挤离 {Evicted} · 无处安放 {Stuck}";
+                }
+            }
+
+            RuntimePresent = runtime != null;
+            Interactive = demo.InteractiveMode;
+            Replay = Interactive
                 ? "回放已停用(交互模式)"
                 : runtime == null
                     ? "回放:-"
@@ -261,33 +376,41 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                         2 => $"回放:分歧 @tick {runtime.ReplayDivergenceTick}",
                         _ => "回放:待触发",
                     };
-        }
+            if (runtime != null)
+            {
+                ReplayStatus = runtime.ReplayStatus;
+                Divergence = runtime.ReplayDivergenceTick;
+            }
 
-        CrowdDeployPresentation deploy = _presentation.Deploy
-            ?? throw new InvalidOperationException("部署演示 HUD 缺少 deploy 文案。");
-        string placeHint = preview == null
-            ? ""
-            : preview.Value.Shown
-                ? (preview.Value.Valid ? deploy.PlaceOk : deploy.PlaceBlocked)
-                : deploy.PlaceOffMap;
-        string activity = _demo.BuildMode
-            ? deploy.BuildActivity
-                .Replace("{label}", _demo.Template.Label, StringComparison.Ordinal)
-                .Replace("{placeHint}", placeHint, StringComparison.Ordinal)
-            : deploy.ObserveActivity;
-        string pending = session != null && NavVariantPending(session, _demo.ViewMode) ? deploy.PendingNav : "";
-        string keys = _presentation.Hud.Keys
-            .Replace("{view}", _demo.ViewLabel, StringComparison.Ordinal)
-            .Replace("{templateIndex}", (_demo.TemplateIndex + 1).ToString(), StringComparison.Ordinal)
-            .Replace("{activity}", activity, StringComparison.Ordinal)
-            .Replace("{pending}", pending, StringComparison.Ordinal);
-        CrowdHudPanel hud = _presentation.Hud;
-        _overlay.AddRect(hud.OriginXPx, hud.OriginYPx, hud.WidthPx, hud.HeightPx, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
-        _overlay.AddText(32, 24, _presentation.Title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
-        _overlay.AddText(32, 54, status, 18, new Vector4(1f, 1f, 1f, 1f));
-        _overlay.AddText(32, 78, $"最近重烘:{rebake}", 18, new Vector4(1f, 1f, 1f, 1f));
-        _overlay.AddText(32, 102, replay, 18, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
-        _overlay.AddText(32, 126, keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));
-        if (session != null) _telemetryPanel.Draw(_overlay, hud, session.Telemetry);
+            BuildMode = demo.BuildMode;
+            TemplateIndex = demo.TemplateIndex;
+            ViewMode = demo.ViewMode;
+            Pending = pending;
+            TemplateLabel = templateLabel;
+            ViewLabel = viewLabel;
+            PreviewKnown = preview.HasValue;
+            if (preview.HasValue)
+            {
+                PreviewShown = preview.Value.Shown;
+                PreviewValid = preview.Value.Valid;
+            }
+
+            string placeHint = preview == null
+                ? ""
+                : preview.Value.Shown
+                    ? (preview.Value.Valid ? deploy.PlaceOk : deploy.PlaceBlocked)
+                    : deploy.PlaceOffMap;
+            string activity = BuildMode
+                ? deploy.BuildActivity
+                    .Replace("{label}", templateLabel, StringComparison.Ordinal)
+                    .Replace("{placeHint}", placeHint, StringComparison.Ordinal)
+                : deploy.ObserveActivity;
+            string pendingText = pending ? deploy.PendingNav : "";
+            Keys = presentation.Hud.Keys
+                .Replace("{view}", viewLabel, StringComparison.Ordinal)
+                .Replace("{templateIndex}", (TemplateIndex + 1).ToString(), StringComparison.Ordinal)
+                .Replace("{activity}", activity, StringComparison.Ordinal)
+                .Replace("{pending}", pendingText, StringComparison.Ordinal);
+        }
     }
 }

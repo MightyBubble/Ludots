@@ -29,6 +29,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private readonly CrowdPresentationConfig _presentation;
 
     private int _wireNavId = -1;
+    private readonly CaptionCache _caption = new();
     private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
     private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
 
@@ -101,24 +102,78 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         }
 
         // ── HUD ─────────────────────────────
-        string branch = current == null ? "-" : current.Branch switch
+        if (!_caption.Matches(_runtime)) _caption.Rebuild(_presentation, _runtime);
+        DrawCaption(_overlay, _presentation.Hud, _presentation.Title, _caption.Detail, _caption.Keys);
+    }
+
+    private sealed class CaptionCache
+    {
+        public bool Ready;
+        public int RequestTick, DueTick, Tick, Waits, Threads, ViewMode, Branch, FlowReached;
+        public bool HasCurrent, Reachable, Slow;
+        public string ContextLabel = string.Empty;
+        public string ViewLabel = string.Empty;
+        public string? Fault;
+        public string Detail = string.Empty;
+        public string Keys = string.Empty;
+
+        public bool Matches(S3PathDemoRuntime runtime)
         {
-            CorridorQuery.Branch.Tile => "NavMesh A*+漏斗",
-            CorridorQuery.Branch.Hpa => "HPA* 走廊",
-            _ => "不可达",
-        };
-        string detail =
-            $"请求帧 {_runtime.RequestTick}；生效帧 {_runtime.DueTick}；当前帧 {_runtime.TickCounter}；等待次数 {_runtime.TotalWaits}" +
-            $"；体型 {_runtime.ContextLabel}；后台线程 {_runtime.ThreadCount}；分支 {branch}" +
-            (current == null ? "" : $"；可达 {(current.Reachable ? "是" : "否")}；流场到达 {(current.Flow?.Reached ?? 0)} 格") +
-            (_runtime.SlowInjected ? "；后台慢注入中——仿真暂停等待,绝不使用半成品" : "") +
-            (_runtime.Fault != null ? $"；服务故障 {_runtime.Fault}" : "");
-        DrawCaption(
-            _overlay,
-            _presentation.Hud,
-            _presentation.Title,
-            detail,
-            _presentation.Hud.Keys.Replace("{view}", _runtime.ViewLabel, StringComparison.Ordinal));
+            if (!Ready) return false;
+            if (RequestTick != runtime.RequestTick || DueTick != runtime.DueTick || Tick != runtime.TickCounter) return false;
+            if (Waits != runtime.TotalWaits || Threads != runtime.ThreadCount) return false;
+            if (ViewMode != runtime.ViewMode || Slow != runtime.SlowInjected) return false;
+            if (!string.Equals(ContextLabel, runtime.ContextLabel, StringComparison.Ordinal)
+                || !string.Equals(ViewLabel, runtime.ViewLabel, StringComparison.Ordinal)
+                || !string.Equals(Fault, runtime.Fault, StringComparison.Ordinal)) return false;
+            var current = runtime.Current;
+            if ((current != null) != HasCurrent) return false;
+            if (current == null) return true;
+            int reached = current.Flow?.Reached ?? 0;
+            return Reachable == current.Reachable && Branch == (int)current.Branch && FlowReached == reached;
+        }
+
+        public void Rebuild(CrowdPresentationConfig presentation, S3PathDemoRuntime runtime)
+        {
+            Ready = true;
+            RequestTick = runtime.RequestTick;
+            DueTick = runtime.DueTick;
+            Tick = runtime.TickCounter;
+            Waits = runtime.TotalWaits;
+            Threads = runtime.ThreadCount;
+            ViewMode = runtime.ViewMode;
+            Slow = runtime.SlowInjected;
+            ContextLabel = runtime.ContextLabel;
+            ViewLabel = runtime.ViewLabel;
+            Fault = runtime.Fault;
+            var current = runtime.Current;
+            HasCurrent = current != null;
+            string branch;
+            if (current == null)
+            {
+                branch = "-";
+            }
+            else
+            {
+                Reachable = current.Reachable;
+                Branch = (int)current.Branch;
+                FlowReached = current.Flow?.Reached ?? 0;
+                branch = current.Branch switch
+                {
+                    CorridorQuery.Branch.Tile => "NavMesh A*+漏斗",
+                    CorridorQuery.Branch.Hpa => "HPA* 走廊",
+                    _ => "不可达",
+                };
+            }
+
+            Detail =
+                $"请求帧 {RequestTick}；生效帧 {DueTick}；当前帧 {Tick}；等待次数 {Waits}" +
+                $"；体型 {ContextLabel}；后台线程 {Threads}；分支 {branch}" +
+                (current == null ? "" : $"；可达 {(Reachable ? "是" : "否")}；流场到达 {FlowReached} 格") +
+                (Slow ? "；后台慢注入中——仿真暂停等待,绝不使用半成品" : "") +
+                (Fault != null ? $"；服务故障 {Fault}" : "");
+            Keys = presentation.Hud.Keys.Replace("{view}", ViewLabel, StringComparison.Ordinal);
+        }
     }
 
     private static Vector2 CellCenter(int cell, int navCellsPerSide, float navCellVisual)
