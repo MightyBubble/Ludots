@@ -267,8 +267,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         int player = index[1];
         if ((uint)player >= (uint)fog.GroupOf.Length) return;
         int group = fog.GroupOf[player];
-        visible = fog.VisibleCount[group];
-        explored = fog.ExploredCount[group];
+        visible = fog.VisibleCountOf(group);
+        explored = fog.ExploredCountOf(group);
         ghosts = fog.GhostCount[group];
     }
 

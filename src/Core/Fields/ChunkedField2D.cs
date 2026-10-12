@@ -96,6 +96,11 @@ namespace Ludots.Core.Fields
             return true;
         }
 
+        public void EnsureChunk(FieldCell2D cell)
+        {
+            GetOrCreateChunk(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y));
+        }
+
         public bool Set(FieldCell2D cell, T value)
         {
             FieldChunk2D<T> chunk = GetOrCreateChunk(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y));

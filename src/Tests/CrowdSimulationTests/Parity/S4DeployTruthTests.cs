@@ -19,6 +19,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Systems;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Parity;
@@ -165,6 +166,7 @@ public class S4DeployTruthTests
 
         session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
         session.NavTileCache = cache;
+        session.BindVision(new FogLayerRegistry(), new FogFieldStore());
         return (runtime, session);
     }
 

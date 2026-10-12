@@ -203,9 +203,10 @@ public sealed class FogShowcaseRuntime
         FogCellMap cellMap = engine.GetService(CoreServiceKeys.VisionFogCellMap)
             ?? throw new InvalidOperationException($"{_scenario.ModName} requires VisionFogCellMap.");
 
-        _groundLayer = EnsureLayer(layers, "war-fog-ground", cellSizeCm: 500, updateHz: 10);
-        _airLayer = EnsureLayer(layers, "war-fog-air", cellSizeCm: 750, updateHz: 5);
-        _detectionLayer = EnsureLayer(layers, "war-fog-detection", cellSizeCm: 500, updateHz: 10);
+        // 固定步 20 Hz。updateHz 低于它时周期大于 1，层会从每 tick 盖章改成隔 tick。
+        _groundLayer = EnsureLayer(layers, "war-fog-ground", cellSizeCm: 500, updateHz: 20);
+        _airLayer = EnsureLayer(layers, "war-fog-air", cellSizeCm: 750, updateHz: 20);
+        _detectionLayer = EnsureLayer(layers, "war-fog-detection", cellSizeCm: 500, updateHz: 20);
         _groundMask = layers.ToMask(_groundLayer);
         _airMask = layers.ToMask(_airLayer);
         _detectionMask = layers.ToMask(_detectionLayer);

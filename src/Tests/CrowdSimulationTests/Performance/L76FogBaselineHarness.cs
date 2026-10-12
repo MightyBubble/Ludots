@@ -9,6 +9,7 @@ using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Performance;
@@ -45,6 +46,11 @@ public sealed class L76FogBaselineHarness
         };
 
         string path = Path.Combine(root, "src", "Tests", "CrowdSimulationTests", "Baselines", "l76-fog.json");
+        if (File.Exists(path) && Environment.GetEnvironmentVariable("L76_OVERWRITE_BASELINE") != "1")
+        {
+            throw new InvalidOperationException("基线已在。设置 L76_OVERWRITE_BASELINE=1 才会覆盖。");
+        }
+
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         TestContext.Out.WriteLine(path);
@@ -265,20 +271,20 @@ public sealed class L76FogBaselineHarness
     private static JsonArray ExploredOrVisible(CrowdFog fog, bool visible)
     {
         var row = new JsonArray();
-        var counts = visible ? fog.VisibleCount : fog.ExploredCount;
-        for (int g = 0; g < fog.VisionGroupCount; g++) row.Add(counts[g]);
+        for (int g = 0; g < fog.VisionGroupCount; g++)
+        {
+            row.Add(visible ? fog.VisibleCountOf(g) : fog.ExploredCountOf(g));
+        }
         return row;
     }
 
     private static List<int> VisibleCells(CrowdFog fog, int group)
     {
-        int side = fog.FogCellsPerSide;
-        int f2 = side * side;
-        int origin = group * f2;
+        int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
         var cells = new List<int>();
         for (int c = 0; c < f2; c++)
         {
-            if (fog.Visible[origin + c] != 0) cells.Add(c);
+            if (fog.CellVisibilityOf(group, c) == CellVisibility.Visible) cells.Add(c);
         }
 
         return cells;

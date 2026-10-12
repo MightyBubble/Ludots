@@ -10,6 +10,8 @@ namespace Ludots.Core.Vision
         private readonly int _scopeKeyId;
         private readonly FogLayerDefinition _layer;
         private readonly ChunkedField2D<CellVisibility> _cells;
+        private int _visibleCount;
+        private int _exploredInclusiveCount;
 
         public FogField(int scopeKeyId, in FogLayerDefinition layer, int chunkSizeCells = 16, int initialChunkCapacity = 8)
         {
@@ -37,6 +39,8 @@ namespace Ludots.Core.Vision
         public int ChunkCount => _cells.ChunkCount;
         public int DirtyCount => _cells.DirtyCount;
         public int NonDefaultCount => _cells.NonDefaultCount;
+        public int VisibleCount => _visibleCount;
+        public int ExploredInclusiveCount => _exploredInclusiveCount;
 
         public FogCell WorldToCell(WorldCmInt2 world)
         {
@@ -68,7 +72,48 @@ namespace Ludots.Core.Vision
 
         public void SetVisibility(FogCell cell, CellVisibility visibility)
         {
+            CellVisibility previous = GetVisibility(cell);
+            if (previous == visibility)
+            {
+                return;
+            }
+
+            AdjustCounts(previous, -1);
+            AdjustCounts(visibility, 1);
             _cells.Set(ToFieldCell(cell), visibility);
+        }
+
+        public bool PromoteToVisible(FogCell cell, out bool firstExplore)
+        {
+            CellVisibility previous = GetVisibility(cell);
+            if (previous == CellVisibility.Visible)
+            {
+                firstExplore = false;
+                return false;
+            }
+
+            firstExplore = previous == CellVisibility.Unseen;
+            AdjustCounts(previous, -1);
+            AdjustCounts(CellVisibility.Visible, 1);
+            _cells.Set(ToFieldCell(cell), CellVisibility.Visible);
+            return true;
+        }
+
+        public void EnsureCellBlock(int sideCells)
+        {
+            if (sideCells <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sideCells));
+            }
+
+            int chunk = _cells.Grid.ChunkSizeCells;
+            for (int y = 0; y < sideCells; y += chunk)
+            {
+                for (int x = 0; x < sideCells; x += chunk)
+                {
+                    _cells.EnsureChunk(new FieldCell2D(x, y));
+                }
+            }
         }
 
         public void Age(FogCell cell)
@@ -81,7 +126,8 @@ namespace Ludots.Core.Vision
 
         public void AgeVisibleToExplored()
         {
-            _cells.ReplaceValue(CellVisibility.Visible, CellVisibility.Explored);
+            int replaced = _cells.ReplaceValue(CellVisibility.Visible, CellVisibility.Explored);
+            _visibleCount -= replaced;
         }
 
         public void MarkDirtyRegion(IntRect rect)
@@ -148,6 +194,8 @@ namespace Ludots.Core.Vision
         public void Clear()
         {
             _cells.Clear();
+            _visibleCount = 0;
+            _exploredInclusiveCount = 0;
         }
 
         public void ApplySnapshot(ReadOnlySpan<FogCellState> states)
@@ -159,6 +207,26 @@ namespace Ludots.Core.Vision
             }
 
             ClearDirty();
+        }
+
+        private static void AdjustCounts(ref int visibleCount, ref int exploredInclusiveCount, CellVisibility visibility, int delta)
+        {
+            if (visibility == CellVisibility.Visible)
+            {
+                visibleCount += delta;
+                exploredInclusiveCount += delta;
+                return;
+            }
+
+            if (visibility == CellVisibility.Explored)
+            {
+                exploredInclusiveCount += delta;
+            }
+        }
+
+        private void AdjustCounts(CellVisibility visibility, int delta)
+        {
+            AdjustCounts(ref _visibleCount, ref _exploredInclusiveCount, visibility, delta);
         }
 
         private static CellVisibility MergeVisibility(CellVisibility current, CellVisibility incoming, FogDenyMode denyMode)

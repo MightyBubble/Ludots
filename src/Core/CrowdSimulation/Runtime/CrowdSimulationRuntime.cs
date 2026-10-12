@@ -27,6 +27,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.CrowdSimulation.Runtime;
 
@@ -368,6 +369,9 @@ public sealed partial class CrowdSimulationRuntime
         _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, RequirePlanTimeout(), _session.ResolveNavContext);
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
+        _session.BindVision(
+            engine.GetService(CoreServiceKeys.VisionFogLayerRegistry),
+            engine.GetService(CoreServiceKeys.VisionFogFieldStore));
         _session.EnableMovement(kernel, planner);
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
@@ -549,6 +553,7 @@ public sealed partial class CrowdSimulationRuntime
         {
             using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
                 replay.Navs, session.Config, workerThreads: 1, RequirePlanTimeout(), replay.ResolveNavContext);
+            replay.BindVision(new FogLayerRegistry(), new FogFieldStore());
             replay.EnableMovement(
                 CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));
