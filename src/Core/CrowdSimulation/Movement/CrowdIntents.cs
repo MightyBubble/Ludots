@@ -172,7 +172,7 @@ public static class CrowdIntents
 
         Fix64 spd = k.Speeds[i];
         Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cell];
-        spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
+        if (divHere != Fix64.OneValue) spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
 
         // 槽位世界坐标 = 领队位置 + 槽位偏移旋进领队系
         Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
