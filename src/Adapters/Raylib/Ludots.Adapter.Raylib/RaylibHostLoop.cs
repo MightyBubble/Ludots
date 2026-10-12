@@ -1154,7 +1154,7 @@ namespace Ludots.Adapter.Raylib
                             if (drawFieldOverlays && globalFieldVisualBuffer != null)
                             {
                                 // Flow / Walkable 优先占用唯一贴花槽。迷雾只贴本视口座位的视野组；
-                                // 没有座位或该座位没有 scope 时不贴，不取缓冲里的第一份雾。
+                                // 没有座位或该座位没有 scope 时不贴，也不把缓冲里的雾画成平面四边形。
                                 bool seatScopeResolved = false;
                                 int seatScopeKeyId = 0;
                                 string? seatId = viewport.Frame.SeatId;
@@ -1178,7 +1178,7 @@ namespace Ludots.Adapter.Raylib
                                     : null;
 
                                 fieldRenderPresenter.DrawFlowKind = !hasDecal;
-                                fieldRenderPresenter.DrawFogKind = !fogOwnsDecal;
+                                fieldRenderPresenter.DrawFogKind = seatScopeResolved && !fogOwnsDecal;
                                 long fieldRenderStart = Stopwatch.GetTimestamp();
                                 fieldRenderPresenter.Draw(globalFieldVisualBuffer);
                                 if (hasDecal &&
