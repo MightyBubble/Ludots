@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Arch.Core;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -9,6 +10,7 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.EntityCollections;
@@ -115,6 +117,31 @@ public class S4DeployTruthTests
         Assert.That(session.Units.Count, Is.EqualTo(0));
         Assert.That(session.World.IsAlive(entity), Is.True);
         Assert.That(session.World.Has<PresentationDestroyPending>(entity), Is.True);
+        CrowdMovementKernel.Create(session).GatherUnits();
+    }
+
+    [Test]
+    public void Deploy_ChunkOrderMatchesDenseIndex()
+    {
+        var (_, session) = BuildSession("s1337");
+        int made = CrowdDeployment.Spawn(session, 200);
+        Assert.That(made, Is.EqualTo(200));
+        var query = new QueryDescription()
+            .WithAll<CrowdSimulationUnitState, CrowdSimulationKinematics, WorldPositionCm, CrowdSimulationAgent, PlayerOwner>()
+            .WithNone<PresentationDestroyPending>();
+        int expect = 0;
+        foreach (ref var chunk in session.World.Query(in query))
+        {
+            var states = chunk.GetSpan<CrowdSimulationUnitState>();
+            foreach (int index in chunk)
+            {
+                int dense = session.Units.DenseOfSlot(states[index].Slot);
+                Assert.That(dense, Is.EqualTo(expect));
+                expect++;
+            }
+        }
+
+        Assert.That(expect, Is.EqualTo(made));
     }
 
     [Test]

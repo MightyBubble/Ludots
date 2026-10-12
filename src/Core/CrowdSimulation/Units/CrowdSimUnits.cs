@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Arch.Core;
 using Arch.Core.Extensions.Dangerous;
 using ArchWorld = Arch.Core.World;
@@ -285,6 +286,148 @@ public sealed class CrowdSimUnits
         }
 
         _pendingCount = 0;
+        OrderChunkRowsByDenseIndex();
+    }
+
+    /// <summary>
+    /// 批车道按模板把同一签名的实体追加进同一个原型，chunk 序就不再是稠密下标。
+    /// Gather/Scatter 仍按稠密下标写 SoA；序一乱，每行都打到不同缓存行，50k 的 tick 会多出数毫秒。
+    /// 只交换这些实体已经占着的行，不新建实体，稠密表和实体 id 都不变。
+    /// 原型里还有别的实体时不动：那会把别人的行卷进来。查询按下标回读，结果仍然对，只是少了这次顺序。
+    /// </summary>
+    private void OrderChunkRowsByDenseIndex()
+    {
+        int n = _dense.Count;
+        if (n <= 1)
+        {
+            return;
+        }
+
+        Entity first = _dense[0];
+        Archetype archetype = _world.GetArchetype(first);
+        if (archetype.EntityCount != n)
+        {
+            return;
+        }
+
+        var packed = new Entity[n];
+        int cursor = 0;
+        int chunkCount = archetype.ChunkCount;
+        for (int chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++)
+        {
+            ref Chunk chunk = ref archetype.GetChunk(chunkIndex);
+            Entity[] entities = chunk.Entities;
+            int count = chunk.Count;
+            for (int row = 0; row < count; row++)
+            {
+                packed[cursor++] = entities[row];
+            }
+        }
+
+        if (cursor != n)
+        {
+            throw new InvalidOperationException(
+                $"SPAWN.RUNTIME.ERR.CrowdChunkOrder: archetype has {cursor} rows, dense count is {n}.");
+        }
+
+        int maxId = 0;
+        for (int i = 0; i < n; i++)
+        {
+            int id = packed[i].Id;
+            if (id > maxId)
+            {
+                maxId = id;
+            }
+        }
+
+        var at = new int[maxId + 1];
+        Array.Fill(at, -1);
+        for (int i = 0; i < n; i++)
+        {
+            at[packed[i].Id] = i;
+        }
+
+        ComponentType[] types = archetype.Signature.Components.ToArray();
+        if (types.Length != archetype.GetChunk(0).Components.Length)
+        {
+            throw new InvalidOperationException("SPAWN.RUNTIME.ERR.CrowdChunkOrder: signature does not match chunk columns.");
+        }
+
+        var swaps = new ComponentRowSwap[types.Length];
+        for (int c = 0; c < types.Length; c++)
+        {
+            swaps[c] = SwapFor(types[c].Type);
+        }
+
+        // 查询从最后一块的最后一行往回走，所以正向槽位 i 上要放稠密下标 n-1-i。
+        for (int i = 0; i < n; i++)
+        {
+            int desired = n - 1 - i;
+            int from = at[_dense[desired].Id];
+            if ((uint)from >= (uint)n)
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.CrowdChunkOrder: dense {desired} is not in the unit archetype.");
+            }
+
+            if (from == i)
+            {
+                continue;
+            }
+
+            SwapChunkRows(archetype, swaps, packed[i], packed[from]);
+            int displacedId = packed[i].Id;
+            at[displacedId] = from;
+            at[_dense[desired].Id] = i;
+            (packed[i], packed[from]) = (packed[from], packed[i]);
+        }
+    }
+
+    private delegate void ComponentRowSwap(Array left, int leftIndex, Array right, int rightIndex);
+
+    private static readonly Dictionary<Type, ComponentRowSwap> RowSwaps = new();
+
+    private static ComponentRowSwap SwapFor(Type elementType)
+    {
+        lock (RowSwaps)
+        {
+            if (RowSwaps.TryGetValue(elementType, out ComponentRowSwap? swap))
+            {
+                return swap;
+            }
+
+            MethodInfo method = typeof(CrowdSimUnits).GetMethod(nameof(SwapComponentRow), BindingFlags.NonPublic | BindingFlags.Static)!
+                .MakeGenericMethod(elementType);
+            swap = (ComponentRowSwap)Delegate.CreateDelegate(typeof(ComponentRowSwap), method);
+            RowSwaps.Add(elementType, swap);
+            return swap;
+        }
+    }
+
+    private static void SwapComponentRow<T>(Array left, int leftIndex, Array right, int rightIndex)
+    {
+        T[] a = (T[])left;
+        T[] b = (T[])right;
+        (a[leftIndex], b[rightIndex]) = (b[rightIndex], a[leftIndex]);
+    }
+
+    private void SwapChunkRows(Archetype archetype, ComponentRowSwap[] swaps, Entity a, Entity b)
+    {
+        Slot slotA = _world.GetSlot(a);
+        Slot slotB = _world.GetSlot(b);
+        ref Chunk chunkA = ref archetype.GetChunk(slotA.ChunkIndex);
+        ref Chunk chunkB = ref archetype.GetChunk(slotB.ChunkIndex);
+        (chunkA.Entities[slotA.Index], chunkB.Entities[slotB.Index]) =
+            (chunkB.Entities[slotB.Index], chunkA.Entities[slotA.Index]);
+        Array[] columnsA = chunkA.Components;
+        Array[] columnsB = chunkB.Components;
+        for (int c = 0; c < swaps.Length; c++)
+        {
+            swaps[c](columnsA[c], slotA.Index, columnsB[c], slotB.Index);
+        }
+
+        _world.SetSlot(a, slotB);
+        _world.SetSlot(b, slotA);
     }
 
     /// <summary>从引擎的生成系统上摘掉本会话的初始化器。无头自建的系统随会话一起丢。</summary>
