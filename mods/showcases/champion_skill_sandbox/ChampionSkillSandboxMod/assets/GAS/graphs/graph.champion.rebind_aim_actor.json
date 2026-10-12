@@ -95,9 +95,9 @@
         "op": "HaltReturnInt"
       },
       {
-        "id": "r_seed",
+        "id": "r_pick",
         "op": "InvokeGraph",
-        "functionName": "graph.aim.seed_stick"
+        "functionName": "graph.aim.pick.hostile"
       }
     ],
     "controlEdges": [
@@ -184,17 +184,17 @@
       {
         "from": "r_target",
         "fromPort": "next",
-        "to": "r_halt"
-      },
-      {
-        "from": "r_seed",
-        "fromPort": "next",
-        "to": "r_c99"
+        "to": "r_pick"
       },
       {
         "from": "r_range",
         "fromPort": "next",
-        "to": "r_seed"
+        "to": "r_c99"
+      },
+      {
+        "from": "r_pick",
+        "fromPort": "next",
+        "to": "r_halt"
       }
     ],
     "valueEdges": [

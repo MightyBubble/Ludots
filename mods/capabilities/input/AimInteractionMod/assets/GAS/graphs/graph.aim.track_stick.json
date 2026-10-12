@@ -93,8 +93,32 @@
         "op": "IntToFloat"
       },
       {
+        "id": "sx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "sy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "sum",
+        "op": "AddFloat"
+      },
+      {
+        "id": "len",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "nx",
+        "op": "DivFloat"
+      },
+      {
         "id": "mx",
         "op": "MulFloat"
+      },
+      {
+        "id": "ny",
+        "op": "DivFloat"
       },
       {
         "id": "my",
@@ -138,15 +162,23 @@
         "blackboardKey": "aim.point.valid"
       },
       {
+        "id": "pick_radius",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.pick.stick_radius_cm"
+      },
+      {
         "id": "assist",
         "op": "QueryRadius",
-        "queryCapacityPolicy": "RequireComplete",
-        "radiusCm": 400
+        "queryCapacityPolicy": "RequireComplete"
+      },
+      {
+        "id": "pick_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
       },
       {
         "id": "hostile",
-        "op": "QueryFilterRelationship",
-        "relationshipType": "Hostile"
+        "op": "QueryFilterRelationship"
       },
       {
         "id": "nearest",
@@ -192,9 +224,13 @@
         "radiusCm": 1
       },
       {
+        "id": "pick_rel_1",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
         "id": "hover_hostile",
-        "op": "QueryFilterRelationship",
-        "relationshipType": "Hostile"
+        "op": "QueryFilterRelationship"
       },
       {
         "id": "write_hover",
@@ -258,30 +294,6 @@
       {
         "id": "tgt_jump",
         "op": "JumpIfFalse"
-      },
-      {
-        "id": "sx2",
-        "op": "MulFloat"
-      },
-      {
-        "id": "sy2",
-        "op": "MulFloat"
-      },
-      {
-        "id": "sum",
-        "op": "AddFloat"
-      },
-      {
-        "id": "len",
-        "op": "SqrtFloat"
-      },
-      {
-        "id": "nx",
-        "op": "DivFloat"
-      },
-      {
-        "id": "ny",
-        "op": "DivFloat"
       },
       {
         "id": "zf",
@@ -461,7 +473,7 @@
       {
         "from": "write_valid",
         "fromPort": "next",
-        "to": "assist"
+        "to": "pick_radius"
       },
       {
         "from": "write_facing",
@@ -471,7 +483,7 @@
       {
         "from": "assist",
         "fromPort": "next",
-        "to": "hostile"
+        "to": "pick_rel"
       },
       {
         "from": "hostile",
@@ -526,7 +538,7 @@
       {
         "from": "hover_radius",
         "fromPort": "next",
-        "to": "hover_hostile"
+        "to": "pick_rel_1"
       },
       {
         "from": "hover_hostile",
@@ -692,6 +704,21 @@
         "from": "release_jump",
         "fromPort": "false",
         "to": "halt_ok"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "next",
+        "to": "assist"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "next",
+        "to": "hostile"
+      },
+      {
+        "from": "pick_rel_1",
+        "fromPort": "next",
+        "to": "hover_hostile"
       }
     ],
     "valueEdges": [
@@ -1192,6 +1219,42 @@
         "fromPort": "value",
         "to": "release_jump",
         "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_radius",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "value",
+        "to": "assist",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel_1",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel_1",
+        "fromPort": "value",
+        "to": "hover_hostile",
+        "toPort": "value"
       }
     ]
   }

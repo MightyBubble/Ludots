@@ -73,9 +73,13 @@
         "queryCapacityPolicy": "RequireComplete"
       },
       {
+        "id": "pick_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
         "id": "hover_hostile",
-        "op": "QueryFilterRelationship",
-        "relationshipType": "Hostile"
+        "op": "QueryFilterRelationship"
       },
       {
         "id": "write_hover",
@@ -225,7 +229,7 @@
       {
         "from": "hover_radius",
         "fromPort": "next",
-        "to": "hover_hostile"
+        "to": "pick_rel"
       },
       {
         "from": "hover_hostile",
@@ -336,6 +340,11 @@
         "from": "invoke_stick",
         "fromPort": "next",
         "to": "read_tgt"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "next",
+        "to": "hover_hostile"
       }
     ],
     "valueEdges": [
@@ -530,6 +539,18 @@
         "fromPort": "value",
         "to": "fc_pv",
         "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "value",
+        "to": "hover_hostile",
+        "toPort": "value"
       }
     ]
   }

@@ -1,16 +1,12 @@
 [
   {
-    "id": "graph.champion.nearest_hostile_assist",
+    "id": "graph.aim.assist",
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "assist_resolve",
+        "label": "assist",
         "event": "AimBind",
-        "start": "a_rep",
-        "hookNodeBefore": {
-          "graphId": "graph.aim.resolve_submit",
-          "nodeId": "read_target"
-        }
+        "start": "a_rep"
       }
     ],
     "nodes": [
@@ -52,8 +48,12 @@
       },
       {
         "id": "a_tag",
-        "op": "HasTag",
-        "tag": "Champion.Input.NearestHostileAssist"
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.assist"
+      },
+      {
+        "id": "a_assist_eq",
+        "op": "CompareEqInt"
       },
       {
         "id": "a_tag_jump",
@@ -111,9 +111,13 @@
         "op": "QueryAllMapEntities"
       },
       {
+        "id": "a_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
         "id": "a_hostile",
-        "op": "QueryFilterRelationship",
-        "relationshipType": "Hostile"
+        "op": "QueryFilterRelationship"
       },
       {
         "id": "a_nearest",
@@ -181,7 +185,7 @@
       {
         "from": "a_tag",
         "fromPort": "next",
-        "to": "a_tag_jump"
+        "to": "a_assist_eq"
       },
       {
         "from": "a_cur_jump",
@@ -261,7 +265,7 @@
       {
         "from": "a_all",
         "fromPort": "next",
-        "to": "a_hostile"
+        "to": "a_rel"
       },
       {
         "from": "a_hostile",
@@ -292,6 +296,16 @@
         "from": "a_near_jump",
         "fromPort": "true",
         "to": "a_write"
+      },
+      {
+        "from": "a_assist_eq",
+        "fromPort": "next",
+        "to": "a_tag_jump"
+      },
+      {
+        "from": "a_rel",
+        "fromPort": "next",
+        "to": "a_hostile"
       }
     ],
     "valueEdges": [
@@ -336,12 +350,6 @@
         "fromPort": "value",
         "to": "a_tag",
         "toPort": "source"
-      },
-      {
-        "from": "a_tag",
-        "fromPort": "value",
-        "to": "a_tag_jump",
-        "toPort": "condition"
       },
       {
         "from": "a_actor",
@@ -455,6 +463,36 @@
         "from": "a_nearest",
         "fromPort": "value",
         "to": "a_write",
+        "toPort": "value"
+      },
+      {
+        "from": "a_tag",
+        "fromPort": "value",
+        "to": "a_assist_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "a_c1",
+        "fromPort": "value",
+        "to": "a_assist_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "a_assist_eq",
+        "fromPort": "value",
+        "to": "a_tag_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "a_rel",
+        "fromPort": "value",
+        "to": "a_hostile",
         "toPort": "value"
       }
     ]

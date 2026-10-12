@@ -9,10 +9,13 @@
       "triggers": [
         {
           "trigger": "graph.aim_schemes.command"
+        },
+        {
+          "trigger": "graph.aim_schemes.bind_aim_actor"
         }
       ],
       "onActivated": [
-        "graph.aim_schemes.enter"
+        "graph.aim_schemes.bind_aim_actor"
       ]
     }
   ]

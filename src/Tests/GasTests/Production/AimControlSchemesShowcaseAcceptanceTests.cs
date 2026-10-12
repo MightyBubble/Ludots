@@ -7,12 +7,18 @@ using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
@@ -104,6 +110,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         session.AssertStickHeldWithoutRange(new Vector2(1f, 0f), "stick after gamepad switch");
         Vector2 afterStick = session.ReadStoredPoint();
         Assert.That(Vector2.Distance(afterStick, moved), Is.LessThanOrEqualTo(5f), session.Diag("stick does not collapse the stored point"));
+    }
+
+    [Test]
+    public void FriendlyTargetAbility_IsDataOnly()
+    {
+        using Session session = Session.Boot("scheme.aim.kbm");
+        session.AssertFriendlyTargetAbilityIsData();
     }
 
     private enum AimSurface
@@ -348,6 +361,44 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                    $"hover={CollectionCount("aim.hover")} " +
                    $"actors={CollectionCount("aim.actors")} command={CollectionCount("collection.command.source")} " +
                    $"triggers={TriggerErrors()} exec={DescribeExec()} order={DescribeActiveOrder()} drain={DrainReason()}";
+        }
+
+        public void AssertFriendlyTargetAbilityIsData()
+        {
+            AbilityDefinitionRegistry abilities = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
+            int abilityId = AbilityIdRegistry.GetId("Ability.AimSchemes.Friendly");
+            Assert.That(abilities.TryGet(abilityId, out AbilityDefinition definition), Is.True, Diag("friendly ability"));
+            Assert.That(definition.TriggerGraphs, Is.EqualTo(new List<string>
+            {
+                "graph.aim.pick.friendly",
+                "graph.aim.rule.unit_only",
+            }));
+
+            RelationshipTypeRegistry types = _engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
+            int hostile = types.GetId("Hostile");
+            int friendly = types.GetId("Friendly");
+            Assert.That(friendly, Is.Not.EqualTo(hostile));
+            Assert.That(ReadInt("aim.pick.relationship"), Is.EqualTo(hostile), Diag("idle pick relationship"));
+            Assert.That(ReadFloat("aim.pick.pointer_radius_cm"), Is.EqualTo(160f), Diag("idle pointer radius"));
+            Assert.That(ReadFloat("aim.pick.stick_radius_cm"), Is.EqualTo(400f), Diag("idle stick radius"));
+
+            GraphReturnWriter writer = _engine.GetService(CoreServiceKeys.GraphReturnWriter)
+                ?? throw new InvalidOperationException("GraphReturnWriter missing.");
+            GasGraphRuntimeApi api = _engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
+                ?? throw new InvalidOperationException("GasGraphRuntimeApi missing.");
+            writer.Execute(
+                GraphIdRegistry.GetId("graph.aim.pick.friendly"),
+                Hero,
+                Entity.Null,
+                Entity.Null,
+                default(IntVector2),
+                0u,
+                api);
+            Assert.That(ReadInt("aim.pick.relationship"), Is.EqualTo(friendly), Diag("friendly pick relationship"));
+            Assert.That(ReadFloat("aim.pick.pointer_radius_cm"), Is.EqualTo(160f), Diag("friendly pointer radius"));
+            Assert.That(ReadFloat("aim.pick.stick_radius_cm"), Is.EqualTo(400f), Diag("friendly stick radius"));
         }
 
         private void AssertBootstrapped()

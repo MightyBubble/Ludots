@@ -33,7 +33,10 @@
         "Cooldown.Skill.Q"
       ]
     },
-    "triggerGraphs": ["graph.aim.rule.unit_only"],
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Damage.Q"
@@ -83,7 +86,10 @@
         "Cooldown.Skill.W"
       ]
     },
-    "triggerGraphs": ["graph.aim.rule.none"],
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.none"
+    ],
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Heal.W"
@@ -133,7 +139,10 @@
         "Cooldown.Skill.E"
       ]
     },
-    "triggerGraphs": ["graph.aim.rule.unit_only"],
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Damage.E"
@@ -188,7 +197,10 @@
         "Cooldown.Skill.R"
       ]
     },
-    "triggerGraphs": ["graph.aim.rule.unit_only"],
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Search.BlizzardZone"

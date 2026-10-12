@@ -138,6 +138,11 @@
         "op": "SubmitCast",
         "orderTypeKey": "castAbility",
         "queue": "onQueueModifier"
+      },
+      {
+        "id": "invoke_assist",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.assist"
       }
     ],
     "controlEdges": [
@@ -199,7 +204,7 @@
       {
         "from": "invoke_stick",
         "fromPort": "next",
-        "to": "read_target"
+        "to": "invoke_assist"
       },
       {
         "from": "read_target",
@@ -285,6 +290,11 @@
         "from": "submit_ground",
         "fromPort": "next",
         "to": "halt1"
+      },
+      {
+        "from": "invoke_assist",
+        "fromPort": "next",
+        "to": "read_target"
       }
     ],
     "valueEdges": [

@@ -184,6 +184,11 @@
       {
         "id": "r_halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "r_pick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.pick.hostile"
       }
     ],
     "controlEdges": [
@@ -389,6 +394,11 @@
       },
       {
         "from": "r_target",
+        "fromPort": "next",
+        "to": "r_pick"
+      },
+      {
+        "from": "r_pick",
         "fromPort": "next",
         "to": "r_halt"
       }

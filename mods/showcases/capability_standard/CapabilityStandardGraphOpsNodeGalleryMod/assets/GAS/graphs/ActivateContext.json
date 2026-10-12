@@ -12,7 +12,8 @@
       {
         "id": "activate",
         "op": "ActivateContext",
-        "context": "interaction.context.gallery.aim"
+        "context": "interaction.context.gallery.aim",
+        "parentContext": "core.graph.parent.unconstrained"
       },
       {
         "id": "explicit",

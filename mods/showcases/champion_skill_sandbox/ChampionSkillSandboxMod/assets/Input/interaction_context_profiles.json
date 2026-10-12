@@ -26,10 +26,18 @@
         },
         {
           "trigger": "graph.champion.held_channel_end"
+        },
+        {
+          "trigger": "graph.champion.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.champion.arm_hostile_assist"
         }
       ],
       "onActivated": [
-        "graph.champion.enter_aim_cast"
+        "graph.champion.bind_aim_actor",
+        "graph.aim.pick.hostile",
+        "graph.aim.enter"
       ]
     }
   ]

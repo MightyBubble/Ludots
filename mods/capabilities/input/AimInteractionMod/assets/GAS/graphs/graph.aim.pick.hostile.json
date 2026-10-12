@@ -1,8 +1,23 @@
 [
   {
-    "id": "graph.champion.enter_aim_cast",
-    "kind": "Script",
-    "entry": "rep",
+    "id": "graph.aim.pick.hostile",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "press",
+        "event": "Aim.Rule.Press",
+        "priority": -10,
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "resolve",
+        "event": "Aim.Rule.Resolve",
+        "priority": -10,
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
     "nodes": [
       {
         "id": "rep",
@@ -11,22 +26,12 @@
       {
         "id": "q",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
-      },
-      {
-        "id": "lim",
-        "op": "QueryLimit",
-        "intValue": 1
+        "collectionKey": "aim.actors"
       },
       {
         "id": "c0",
         "op": "ConstInt",
         "intValue": 0
-      },
-      {
-        "id": "write",
-        "op": "WriteCollection",
-        "collectionKey": "aim.actors"
       },
       {
         "id": "member",
@@ -41,54 +46,44 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "z",
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "ptr",
         "op": "ConstFloat",
-        "floatValue": 0
+        "floatValue": 160
       },
       {
-        "id": "slot",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.slot"
+        "id": "stk",
+        "op": "ConstFloat",
+        "floatValue": 400
       },
       {
-        "id": "valid",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.point.valid"
-      },
-      {
-        "id": "x",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.x_cm"
-      },
-      {
-        "id": "y",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.y_cm"
-      },
-      {
-        "id": "rng",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.range_cm"
-      },
-      {
-        "id": "c99",
+        "id": "rel",
         "op": "ConstInt",
-        "intValue": 99
+        "intValue": 0,
+        "relationshipType": "Hostile"
       },
       {
-        "id": "null_get",
-        "op": "TargetListGet"
+        "id": "wptr",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.pick.pointer_radius_cm"
       },
       {
-        "id": "target",
-        "op": "WriteBlackboardEntity",
-        "blackboardKey": "aim.target"
+        "id": "wstk",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.pick.stick_radius_cm"
       },
       {
-        "id": "act",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.cast",
-        "parentContext": "interaction.context.champion.battle"
+        "id": "wrel",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
+        "id": "wassist",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.assist"
       },
       {
         "id": "c1",
@@ -109,20 +104,10 @@
       {
         "from": "q",
         "fromPort": "next",
-        "to": "lim"
-      },
-      {
-        "from": "lim",
-        "fromPort": "next",
         "to": "c0"
       },
       {
         "from": "c0",
-        "fromPort": "next",
-        "to": "write"
-      },
-      {
-        "from": "write",
         "fromPort": "next",
         "to": "member"
       },
@@ -139,55 +124,45 @@
       {
         "from": "alive_jump",
         "fromPort": "false",
-        "to": "act"
-      },
-      {
-        "from": "z",
-        "fromPort": "next",
-        "to": "slot"
-      },
-      {
-        "from": "slot",
-        "fromPort": "next",
-        "to": "valid"
-      },
-      {
-        "from": "valid",
-        "fromPort": "next",
-        "to": "x"
-      },
-      {
-        "from": "x",
-        "fromPort": "next",
-        "to": "y"
-      },
-      {
-        "from": "y",
-        "fromPort": "next",
-        "to": "rng"
-      },
-      {
-        "from": "c99",
-        "fromPort": "next",
-        "to": "null_get"
-      },
-      {
-        "from": "null_get",
-        "fromPort": "next",
-        "to": "target"
-      },
-      {
-        "from": "target",
-        "fromPort": "next",
-        "to": "act"
+        "to": "halt0"
       },
       {
         "from": "alive_jump",
         "fromPort": "true",
-        "to": "z"
+        "to": "ptr"
       },
       {
-        "from": "act",
+        "from": "ptr",
+        "fromPort": "next",
+        "to": "stk"
+      },
+      {
+        "from": "stk",
+        "fromPort": "next",
+        "to": "rel"
+      },
+      {
+        "from": "rel",
+        "fromPort": "next",
+        "to": "wptr"
+      },
+      {
+        "from": "wptr",
+        "fromPort": "next",
+        "to": "wstk"
+      },
+      {
+        "from": "wstk",
+        "fromPort": "next",
+        "to": "wrel"
+      },
+      {
+        "from": "wrel",
+        "fromPort": "next",
+        "to": "wassist"
+      },
+      {
+        "from": "wassist",
         "fromPort": "next",
         "to": "c1"
       },
@@ -195,31 +170,14 @@
         "from": "c1",
         "fromPort": "next",
         "to": "halt"
-      },
-      {
-        "from": "rng",
-        "fromPort": "next",
-        "to": "c99"
       }
     ],
     "valueEdges": [
-      {
-        "from": "c1",
-        "fromPort": "value",
-        "to": "halt",
-        "toPort": "value"
-      },
       {
         "from": "rep",
         "fromPort": "value",
         "to": "q",
         "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "write",
-        "toPort": "value"
       },
       {
         "from": "c0",
@@ -240,88 +198,64 @@
         "toPort": "condition"
       },
       {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      },
+      {
         "from": "member",
         "fromPort": "value",
-        "to": "slot",
+        "to": "wptr",
+        "toPort": "source"
+      },
+      {
+        "from": "ptr",
+        "fromPort": "value",
+        "to": "wptr",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "wstk",
+        "toPort": "source"
+      },
+      {
+        "from": "stk",
+        "fromPort": "value",
+        "to": "wstk",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "wrel",
+        "toPort": "source"
+      },
+      {
+        "from": "rel",
+        "fromPort": "value",
+        "to": "wrel",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "wassist",
         "toPort": "source"
       },
       {
         "from": "c0",
         "fromPort": "value",
-        "to": "slot",
+        "to": "wassist",
         "toPort": "value"
       },
       {
-        "from": "member",
+        "from": "c1",
         "fromPort": "value",
-        "to": "valid",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "valid",
+        "to": "halt",
         "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "x",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "x",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "y",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "y",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "rng",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "rng",
-        "toPort": "value"
-      },
-      {
-        "from": "c99",
-        "fromPort": "value",
-        "to": "null_get",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "target",
-        "toPort": "source"
-      },
-      {
-        "from": "null_get",
-        "fromPort": "value",
-        "to": "target",
-        "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act",
-        "toPort": "source"
       }
     ]
   }

@@ -1,0 +1,240 @@
+[
+  {
+    "id": "graph.aim_schemes.bind_aim_actor",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "rebind",
+        "event": "EntityCollectionMembershipChanged",
+        "start": "rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.CollectionKeyId": "collection.command.source"
+          }
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "filt",
+        "op": "QueryFilterTemplate",
+        "template": "aim_control_schemes_hero"
+      },
+      {
+        "id": "lim",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_aim",
+        "op": "WriteCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "write_cmd",
+        "op": "WriteCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "pick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.pick.hostile"
+      },
+      {
+        "id": "is_cast",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.cast"
+      },
+      {
+        "id": "cast_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "enter",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.enter"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "filt"
+      },
+      {
+        "from": "filt",
+        "fromPort": "next",
+        "to": "lim"
+      },
+      {
+        "from": "lim",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "write_aim"
+      },
+      {
+        "from": "write_aim",
+        "fromPort": "next",
+        "to": "write_cmd"
+      },
+      {
+        "from": "write_cmd",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "is_cast"
+      },
+      {
+        "from": "is_cast",
+        "fromPort": "next",
+        "to": "cast_jump"
+      },
+      {
+        "from": "cast_jump",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "cast_jump",
+        "fromPort": "false",
+        "to": "enter"
+      },
+      {
+        "from": "enter",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_aim",
+        "toPort": "value"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_cmd",
+        "toPort": "value"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_cast",
+        "toPort": "source"
+      },
+      {
+        "from": "is_cast",
+        "fromPort": "value",
+        "to": "cast_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      }
+    ]
+  }
+]

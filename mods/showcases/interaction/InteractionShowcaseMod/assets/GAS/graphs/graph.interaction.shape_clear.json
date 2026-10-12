@@ -4,12 +4,23 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "clear_shapes",
-        "event": "AimBind",
+        "label": "click",
+        "event": "ContextDeactivated",
         "start": "rep",
-        "hookNodeBefore": {
-          "graphId": "graph.aim.clear",
-          "nodeId": "q_hov"
+        "filters": {
+          "payload": {
+            "MapTrigger.ContextKeyId": "interaction.context.aim.click"
+          }
+        }
+      },
+      {
+        "label": "release",
+        "event": "ContextDeactivated",
+        "start": "rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.ContextKeyId": "interaction.context.aim.release"
+          }
         }
       }
     ],

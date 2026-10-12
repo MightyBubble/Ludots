@@ -44,10 +44,22 @@
         },
         {
           "trigger": "graph.interaction.leave_context_scored"
+        },
+        {
+          "trigger": "graph.interaction.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.interaction.shape_indicate"
+        },
+        {
+          "trigger": "graph.interaction.shape_clear"
         }
       ],
       "onActivated": [
-        "graph.interaction.enter_aim_cast"
+        "graph.interaction.write_action_mode",
+        "graph.interaction.bind_aim_actor",
+        "graph.aim.pick.hostile",
+        "graph.aim.enter"
       ]
     },
     {

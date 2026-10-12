@@ -392,24 +392,20 @@ namespace Ludots.Tests.GasTests.Graph
             string pressPath = Path.Combine(aimDir, "graph.aim.press.json");
             string confirmPath = Path.Combine(aimDir, "graph.aim.confirm.json");
             string releasePath = Path.Combine(aimDir, "graph.aim.release_confirm.json");
-            string championHook = Path.Combine(
-                repo,
-                "mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/graphs/graph.champion.bind_aim_actor.json");
-            string interactionHook = Path.Combine(
-                repo,
-                "mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/graphs/graph.interaction.bind_aim_actor.json");
-            int champion = MeasureWovenPress(pressPath, championHook, "graph.champion.rebind_aim_actor", json, schemas);
-            int interaction = MeasureWovenPress(pressPath, interactionHook, "graph.interaction.rebind_aim_actor", json, schemas);
-            int moba = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
-            int aimSchemes = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
-            int championConfirm = MeasureWovenPress(confirmPath, championHook, "graph.champion.rebind_aim_actor", json, schemas);
-            int interactionConfirm = MeasureWovenPress(confirmPath, interactionHook, "graph.interaction.rebind_aim_actor", json, schemas);
-            int championRelease = MeasureWovenPress(releasePath, championHook, "graph.champion.rebind_aim_actor", json, schemas);
-            int interactionRelease = MeasureWovenPress(releasePath, interactionHook, "graph.interaction.rebind_aim_actor", json, schemas);
+            int champion = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
+            int interaction = champion;
+            int moba = champion;
+            int aimSchemes = champion;
+            int championConfirm = MeasureWovenPress(confirmPath, hookPath: null, invokeTarget: null, json, schemas);
+            int interactionConfirm = championConfirm;
+            int championRelease = MeasureWovenPress(releasePath, hookPath: null, invokeTarget: null, json, schemas);
+            int interactionRelease = championRelease;
             int ruleNone = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.none.json"), null, null, json, schemas);
             int ruleUnit = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.unit_only.json"), null, null, json, schemas);
             int ruleGround = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.ground_only.json"), null, null, json, schemas);
             int ruleBoth = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.unit_or_ground.json"), null, null, json, schemas);
+            int trackPointer = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.track_pointer.json"), null, null, json, schemas);
+            int trackStick = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.track_stick.json"), null, null, json, schemas);
 
             foreach (string path in Directory.GetFiles(aimDir, "graph.aim.*.json"))
             {
@@ -431,7 +427,8 @@ namespace Ludots.Tests.GasTests.Graph
                 $"press champion={champion} interaction={interaction} moba={moba} aim_schemes={aimSchemes}; " +
                 $"confirm champion={championConfirm} interaction={interactionConfirm}; " +
                 $"release champion={championRelease} interaction={interactionRelease}; " +
-                $"rule none={ruleNone} unit={ruleUnit} ground={ruleGround} both={ruleBoth}");
+                $"rule none={ruleNone} unit={ruleUnit} ground={ruleGround} both={ruleBoth}; " +
+                $"track pointer={trackPointer} stick={trackStick}");
             Assert.Multiple(() =>
             {
                 Assert.That(champion, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "press champion");

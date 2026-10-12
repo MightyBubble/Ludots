@@ -125,15 +125,23 @@
         "blackboardKey": "aim.point.valid"
       },
       {
+        "id": "pick_radius",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.pick.stick_radius_cm"
+      },
+      {
         "id": "sk_assist",
         "op": "QueryRadius",
-        "queryCapacityPolicy": "RequireComplete",
-        "radiusCm": 400
+        "queryCapacityPolicy": "RequireComplete"
+      },
+      {
+        "id": "pick_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
       },
       {
         "id": "sk_hostile",
-        "op": "QueryFilterRelationship",
-        "relationshipType": "Hostile"
+        "op": "QueryFilterRelationship"
       },
       {
         "id": "sk_nearest",
@@ -305,12 +313,12 @@
       {
         "from": "sk_wv",
         "fromPort": "next",
-        "to": "sk_assist"
+        "to": "pick_radius"
       },
       {
         "from": "sk_assist",
         "fromPort": "next",
-        "to": "sk_hostile"
+        "to": "pick_rel"
       },
       {
         "from": "sk_hostile",
@@ -356,6 +364,16 @@
         "from": "sk_wnull",
         "fromPort": "next",
         "to": "halt_ok"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "next",
+        "to": "sk_assist"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "next",
+        "to": "sk_hostile"
       }
     ],
     "valueEdges": [
@@ -603,6 +621,30 @@
         "from": "sk_null",
         "fromPort": "value",
         "to": "sk_wnull",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_radius",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "value",
+        "to": "sk_assist",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "value",
+        "to": "sk_hostile",
         "toPort": "value"
       }
     ]
