@@ -110,21 +110,6 @@
       {
         "id": "halt0",
         "op": "HaltReturnInt"
-      },
-      {
-        "id": "sx",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.stick.x"
-      },
-      {
-        "id": "sy",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.stick.y"
-      },
-      {
-        "id": "sv",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.stick.valid"
       }
     ],
     "controlEdges": [
@@ -204,11 +189,6 @@
         "to": "rng"
       },
       {
-        "from": "rng",
-        "fromPort": "next",
-        "to": "sx"
-      },
-      {
         "from": "c99",
         "fromPort": "next",
         "to": "null_get"
@@ -239,17 +219,7 @@
         "to": "halt0"
       },
       {
-        "from": "sx",
-        "fromPort": "next",
-        "to": "sy"
-      },
-      {
-        "from": "sy",
-        "fromPort": "next",
-        "to": "sv"
-      },
-      {
-        "from": "sv",
+        "from": "rng",
         "fromPort": "next",
         "to": "c99"
       }
@@ -379,42 +349,6 @@
         "from": "z",
         "fromPort": "value",
         "to": "rng",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sx",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "sx",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sy",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "sy",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sv",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "sv",
         "toPort": "value"
       }
     ],

@@ -1,8 +1,14 @@
 [
   {
     "id": "graph.aim.seed_stick",
-    "kind": "Script",
-    "entry": "rep",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "seed",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
     "nodes": [
       {
         "id": "rep",
