@@ -7,8 +7,12 @@ using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Engine;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -51,10 +55,15 @@ public sealed class CrowdTelemetryG03Tests
 
         Assert.That(session.Telemetry.Plans, Is.GreaterThan(0));
 
+        session.Commands.Submit(
+            session,
+            JsonNode.Parse("""{"type":"placeStructure","template":"s7barrier","xCm":480000,"yCm":560000,"sizeCm":200000}""")!,
+            CrowdSimCommands.Exec);
         foreach (var nav in session.Navs.Values) Array.Clear(nav.Passable);
-        int navCells = session.Config.NavCellsPerSide;
-        CrowdStructureOps.EvictBlocked(session, (0, 0, navCells, navCells));
-        Assert.That(session.Telemetry.EvictStuck, Is.GreaterThan(0), "全图不可走时挤离应计入无处安放");
+        CrowdStructureOps.FinishRebake(session);
+        Assert.That(session.LastRebakeReport, Is.Not.Null);
+        Assert.That(session.LastRebakeReport!.Stuck, Is.GreaterThan(0), "阶段 1 应把本次挤离无处安放写入重烘报告");
+        Assert.That(session.Telemetry.EvictStuck, Is.GreaterThan(0));
 
         typeof(RuntimeMovementSection)
             .GetProperty(nameof(RuntimeMovementSection.MaxStepNavCells))!
@@ -67,38 +76,75 @@ public sealed class CrowdTelemetryG03Tests
     }
 
     [Test]
-    public void Panel_ShowsG03Counters_CollapsedUntilExpanded()
+    public void Hud_HidesDetailUntilChunkDebugVisible()
     {
-        var telemetry = new CrowdSimulationTelemetry();
-        telemetry.MarkSubStepClamped();
-        telemetry.MarkEvictStuck(3);
-        telemetry.MarkPlans(2);
-        telemetry.BeginFrame(10, 7, stalled: false, tickMs: 1);
-        telemetry.MarkPathWait();
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        session.Telemetry.MarkSubStepClamped();
+        session.Telemetry.MarkEvictStuck(3);
+        session.Telemetry.MarkPlans(2);
+        session.Telemetry.BeginFrame(10, 7, stalled: false, tickMs: 1);
+        session.Telemetry.MarkPathWait();
 
-        var hud = new CrowdHudPanel
-        {
-            OriginXPx = 16,
-            OriginYPx = 16,
-            WidthPx = 640,
-            HeightPx = 148,
-            Keys = "k",
-        };
-        var panel = new CrowdSimTelemetryPanel();
-        var overlay = new ScreenOverlayBuffer();
-        panel.Draw(overlay, hud, telemetry, expanded: false, visibleCells: 4, exploredCells: 5, ghostCells: 6);
+        using var engine = new GameEngine();
+        var chunkDebug = new ChunkDebugPanelRuntime();
+        engine.SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebug);
+        var (_, system, overlay) = HudFixture(engine);
+
+        system.DrawHud(session, null, null);
         string collapsed = JoinText(overlay);
         Assert.That(collapsed, Does.Contain("subStepClamped 1"));
         Assert.That(collapsed, Does.Contain("evictStuck 3"));
         Assert.That(collapsed, Does.Contain("plans 2"));
-        Assert.That(collapsed, Does.Contain("contacts 7"));
+        Assert.That(collapsed, Does.Not.Contain("contacts"));
         Assert.That(collapsed, Does.Not.Contain("pathWait"));
 
+        chunkDebug.Visible = true;
         overlay.Clear();
-        panel.Draw(overlay, hud, telemetry, expanded: true, visibleCells: 4, exploredCells: 5, ghostCells: 6);
+        system.DrawHud(session, null, null);
         string expanded = JoinText(overlay);
+        Assert.That(expanded, Does.Contain("contacts 7"));
         Assert.That(expanded, Does.Contain("pathWait 1"));
-        Assert.That(expanded, Does.Contain("fogCells vis 4 explored 5 ghost 6"));
+        Assert.That(expanded, Does.Contain("fogCells"));
+    }
+
+    private static (S4DeployDemoRuntime Demo, S4DeployDemoPresentationSystem System, ScreenOverlayBuffer Overlay) HudFixture(GameEngine engine)
+    {
+        var presentation = new CrowdPresentationConfig
+        {
+            Kind = CrowdPresentationConfig.KindDeploy,
+            Title = "S4",
+            ViewLabels = new[] { "路线", "可走", "线框" },
+            Hud = new CrowdHudPanel { OriginXPx = 16, OriginYPx = 16, WidthPx = 640, HeightPx = 148, Keys = "k {view}" },
+            Deploy = new CrowdDeployPresentation
+            {
+                Actions = new CrowdDeployActions
+                {
+                    CycleView = "a", ToggleBuild = "b", Remove = "c", Place = "d",
+                },
+                BuildActivity = "建造",
+                ObserveActivity = "观察",
+                PlaceOk = "可放",
+                PlaceBlocked = "不可放",
+                PlaceOffMap = "界外",
+                PendingNav = "待导航",
+                Structures = new[]
+                {
+                    new CrowdStructureTemplateDto
+                    {
+                        Id = "building", Label = "建筑", Shape = S4DeployDemoRuntime.ShapePoint, SizeCm = 14000, SelectAction = "t",
+                    },
+                },
+            },
+        };
+        var demo = new S4DeployDemoRuntime(engine);
+        demo.UseViewLabels(presentation.ViewLabels);
+        demo.UseStructures(new[]
+        {
+            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, 14000, 0, "t"),
+        });
+        var overlay = new ScreenOverlayBuffer();
+        var system = new S4DeployDemoPresentationSystem(demo, new RouteVisualBuffer(), overlay, () => null, () => null, presentation);
+        return (demo, system, overlay);
     }
 
     private static string JoinText(ScreenOverlayBuffer overlay)

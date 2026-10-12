@@ -39,7 +39,7 @@ public sealed class CrowdMovementKernel
     /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
-    /// <summary>本 tick 接触合计(分离写完后由会话汇总;停摆帧不带进遥测)。</summary>
+    /// <summary>本 tick 接触合计。ScatterUnits 顺带把 ushort 加总,不再另扫一遍。</summary>
     public int ContactSum;
 
     // ── tick 级 SoA 舞台:对拍行序 = 稠密序(对拍会话只追加,创建序即行序)。chunk
@@ -194,12 +194,16 @@ public sealed class CrowdMovementKernel
         var world = Session.World;
         int n = units.Count;
         int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int contacts = 0;
+        ushort[] contactCounts = Contacts;
+        int contactN = contactCounts.Length;
         for (int i = 0; i < n; i++)
         {
             var e = units.EntityAt(i);
             world.Set(e, new Ludots.Core.Components.WorldPositionCm { Value = Positions[i] });
             world.Set(e, States[i]);
             world.Set(e, Kins[i]);
+            if (i < contactN) contacts += contactCounts[i];
             switch (States[i].State)
             {
                 case (byte)CrowdUnitState.Idle: idle++; break;
@@ -210,6 +214,7 @@ public sealed class CrowdMovementKernel
             }
         }
 
+        ContactSum = contacts;
         Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
     }
 

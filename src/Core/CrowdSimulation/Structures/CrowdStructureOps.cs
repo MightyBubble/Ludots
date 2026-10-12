@@ -200,6 +200,7 @@ public static class CrowdStructureOps
         job.Refreshes = planner.RefreshQueueCount;
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
+        job.Stuck = sim.EvictStuck;
     }
 
     /// <summary>阶段 2:受影响指令重规划(固定生效帧)+ 发布报告。</summary>

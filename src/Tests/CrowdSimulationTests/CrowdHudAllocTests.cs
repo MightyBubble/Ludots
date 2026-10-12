@@ -1,6 +1,11 @@
+using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
+using Ludots.Core.Engine;
+using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -89,4 +94,110 @@ public sealed class CrowdHudAllocTests
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         Assert.That(allocated, Is.EqualTo(0L), $"数值不变时 HUD 更新分配了 {allocated} 字节");
     }
+
+    [Test]
+    public void DrawHud_PublishDifferentContacts_MissesThenRepeatHitsZeroBytes()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        using var engine = new GameEngine();
+        var chunkDebug = new ChunkDebugPanelRuntime { Visible = true };
+        engine.SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebug);
+        var demo = new S4DeployDemoRuntime(engine);
+        var presentation = DeployPresentation();
+        demo.UseViewLabels(presentation.ViewLabels);
+        demo.UseStructures(new[]
+        {
+            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, 14000, 0, "CrowdSimulation.S4.Template1"),
+        });
+        var overlay = new ScreenOverlayBuffer();
+        var system = new S4DeployDemoPresentationSystem(
+            demo, new RouteVisualBuffer(), overlay, () => null, () => session, presentation);
+
+        session.Movement!.ContactSum = 4;
+        session.PublishTelemetryFrame(stalled: false, tickMs: 1);
+        overlay.Clear();
+        system.DrawHud(session, null, null);
+
+        session.Movement.ContactSum = 11;
+        session.PublishTelemetryFrame(stalled: false, tickMs: 1);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        _ = GC.GetAllocatedBytesForCurrentThread();
+        long beforeMiss = GC.GetAllocatedBytesForCurrentThread();
+        overlay.Clear();
+        system.DrawHud(session, null, null);
+        long miss = GC.GetAllocatedBytesForCurrentThread() - beforeMiss;
+        Assert.That(miss, Is.GreaterThan(0L), "接触读数变化应错过缓存");
+        Assert.That(JoinText(overlay), Does.Contain("contacts 11"));
+        Assert.That(JoinText(overlay), Does.Not.Contain("contacts 15"));
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        _ = GC.GetAllocatedBytesForCurrentThread();
+        long beforeHit = GC.GetAllocatedBytesForCurrentThread();
+        overlay.Clear();
+        system.DrawHud(session, null, null);
+        long hit = GC.GetAllocatedBytesForCurrentThread() - beforeHit;
+        Assert.That(hit, Is.EqualTo(0L), $"同一读数再画分配了 {hit} 字节");
+        Assert.That(JoinText(overlay), Does.Contain("contacts 11"));
+    }
+
+    private static string JoinText(ScreenOverlayBuffer overlay)
+    {
+        var parts = new List<string>();
+        foreach (var item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Text) continue;
+            string? text = overlay.GetString(item.StringId);
+            if (text != null) parts.Add(text);
+        }
+
+        return string.Join('\n', parts);
+    }
+
+    private static CrowdPresentationConfig DeployPresentation() => new()
+    {
+        Kind = CrowdPresentationConfig.KindDeploy,
+        Title = "S4",
+        ViewLabels = new[] { "路线", "可走", "线框" },
+        Hud = new CrowdHudPanel
+        {
+            OriginXPx = 16,
+            OriginYPx = 16,
+            WidthPx = 640,
+            HeightPx = 148,
+            Keys = "V 视图 {view} · 模板[{templateIndex}] · {activity}{pending}",
+        },
+        Deploy = new CrowdDeployPresentation
+        {
+            Actions = new CrowdDeployActions
+            {
+                CycleView = "CrowdSimulation.S4.CycleView",
+                ToggleBuild = "CrowdSimulation.S4.ToggleBuild",
+                Remove = "CrowdSimulation.S4.RemoveStructure",
+                Place = "CrowdSimulation.S4.Place",
+            },
+            BuildActivity = "建造模式 · {label}{placeHint}",
+            ObserveActivity = "观察模式",
+            PlaceOk = "(此处可放)",
+            PlaceBlocked = "(此处不可放)",
+            PlaceOffMap = "(光标不在地图上)",
+            PendingNav = " · 导航变体未就绪",
+            Structures = new[]
+            {
+                new CrowdStructureTemplateDto
+                {
+                    Id = "building",
+                    Label = "建筑",
+                    Shape = S4DeployDemoRuntime.ShapePoint,
+                    SizeCm = 14000,
+                    SelectAction = "CrowdSimulation.S4.Template1",
+                },
+            },
+        },
+    };
 }

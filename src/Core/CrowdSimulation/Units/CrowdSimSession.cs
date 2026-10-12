@@ -228,6 +228,8 @@ public sealed class CrowdSimSession
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
         if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
         {
+            // Flush 可能改了成员,scatter 还没跑;成员数没变就留着上一份直方。
+            if (Units.Count != _stateHistogramMembers) RecountUnitStates();
             Telemetry.MarkPathWait();
             checksum = 0;
             return false;
@@ -245,7 +247,7 @@ public sealed class CrowdSimSession
             }
 
             Movement.ScatterUnits();
-            Movement.ContactSum = SumContacts(Movement.Contacts, Units.Count);
+            _stateHistogramMembers = Units.Count;
         }
 
         // F02:运动后、tick 计数前——迷雾更新 + 认知同步(与参考端 advance 的挂点逐位同;
@@ -289,6 +291,8 @@ public sealed class CrowdSimSession
         SpawnSeq = 0;
         SelectedCount = 0;
         SpawnSkippedTotal = 0;
+        _stateHistogramMembers = 0;
+        Telemetry.SetUnitStates(0, 0, 0, 0, 0);
     }
 
     public void NotifySpawnSkip(int skipped, int requested)
@@ -299,19 +303,32 @@ public sealed class CrowdSimSession
 
     public void SetSelectedCount(int count) => SelectedCount = count;
 
-    /// <summary>停摆帧接触记 0,避免把上一成功帧的接触再累进遥测。</summary>
+    /// <summary>把本 tick 的接触读数交给遥测。停摆帧传 0,不把上一成功帧再写一遍。</summary>
     internal void PublishTelemetryFrame(bool stalled, double tickMs)
     {
         int contacts = stalled || Movement == null ? 0 : Movement.ContactSum;
         Telemetry.BeginFrame(Units.Count, contacts, stalled, tickMs);
     }
 
-    private static int SumContacts(ushort[] contacts, int units)
+    private int _stateHistogramMembers;
+
+    private void RecountUnitStates()
     {
-        int n = units;
-        if (n > contacts.Length) n = contacts.Length;
-        int sum = 0;
-        for (int i = 0; i < n; i++) sum += contacts[i];
-        return sum;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int n = Units.Count;
+        for (int i = 0; i < n; i++)
+        {
+            switch (World.Get<CrowdSimulationUnitState>(Units.EntityAt(i)).State)
+            {
+                case (byte)CrowdUnitState.Idle: idle++; break;
+                case (byte)CrowdUnitState.Moving: moving++; break;
+                case (byte)CrowdUnitState.Arrived: arrived++; break;
+                case (byte)CrowdUnitState.Unreachable: unreachable++; break;
+                case (byte)CrowdUnitState.Jump: jumping++; break;
+            }
+        }
+
+        Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
+        _stateHistogramMembers = n;
     }
 }

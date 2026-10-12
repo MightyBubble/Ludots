@@ -3,7 +3,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Architecture;
 
 /// <summary>
-/// 群体统计走类型化遥测,不在 tick 上写会话黑板,也不在 tick 上做呈现摘要。
+/// 群体统计不在 tick 上写会话黑板,也不在 tick 上做呈现摘要或迷雾格扫描。
 /// </summary>
 [TestFixture]
 public sealed class CrowdSimulationTelemetryChannelContractTests
@@ -18,19 +18,17 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(tick, Does.Not.Contain("ConfigKeyRegistry"));
         Assert.That(tick, Does.Not.Contain("BuildActiveDefinitionSummary"));
         Assert.That(tick, Does.Not.Contain("CrowdSimChecksum.Format"));
-        Assert.That(tick, Does.Contain("PublishTelemetryFrame"));
-        Assert.That(tick, Does.Not.Contain("BeginFrame"));
         Assert.That(source, Does.Not.Contain("crowd_simulation.session."));
     }
 
     [Test]
-    public void S4Hud_DoesNotScanUnits()
+    public void S4Hud_DoesNotScanUnitsOrFogGrid()
     {
         string path = Path.Combine(
             FindRepoRoot(), "src", "Core", "CrowdSimulation", "Presentation", "S4DeployDemoPresentationSystem.cs");
         string source = File.ReadAllText(path);
         Assert.That(source, Does.Not.Contain("World.Get"));
-        Assert.That(source, Does.Contain("session.Telemetry"));
+        Assert.That(source, Does.Not.Contain("FogCellsPerSide"));
     }
 
     [Test]
@@ -44,29 +42,6 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(tick, Does.Not.Contain("Explored["));
         Assert.That(tick, Does.Not.Contain(".Belief"));
         Assert.That(runtime, Does.Not.Contain("FogCellsPerSide"));
-        string fog = File.ReadAllText(Path.Combine(root, "src", "Core", "CrowdSimulation", "Fog", "CrowdFog.cs"));
-        Assert.That(fog, Does.Contain("VisibleCount[g] = visible"));
-        Assert.That(fog, Does.Contain("ExploredCount[g]++"));
-        Assert.That(fog, Does.Contain("GhostCount[g]"));
-    }
-
-    [Test]
-    public void TelemetryPanel_CollapsesUntilChunkDebugVisible()
-    {
-        string root = FindRepoRoot();
-        string runtime = File.ReadAllText(Path.Combine(
-            root, "src", "Core", "CrowdSimulation", "Presentation", "S4DeployDemoRuntime.cs"));
-        Assert.That(runtime, Does.Contain("CoreServiceKeys.ChunkDebugPanelRuntime"));
-        Assert.That(runtime, Does.Contain("panel.Visible"));
-        string panel = File.ReadAllText(Path.Combine(
-            root, "src", "Core", "CrowdSimulation", "Presentation", "CrowdSimTelemetryPanel.cs"));
-        Assert.That(panel, Does.Contain("subStepClamped"));
-        Assert.That(panel, Does.Contain("evictStuck"));
-        Assert.That(panel, Does.Contain("plans"));
-        string presentation = File.ReadAllText(Path.Combine(
-            root, "src", "Core", "CrowdSimulation", "Presentation", "S4DeployDemoPresentationSystem.cs"));
-        Assert.That(presentation, Does.Not.Contain("FogCellsPerSide"));
-        Assert.That(presentation, Does.Contain("VisibleCount"));
     }
 
     private static string SliceMethod(string source, string signature)

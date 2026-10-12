@@ -28,8 +28,12 @@ public sealed class CrowdTelemetryEventTests
         Assert.That(spawned, Is.EqualTo(40));
         session.Advance(12);
         Assert.That(session.Movement!.ContactSum, Is.GreaterThan(0), "挤在一起的单位应产生接触");
+        int firstContacts = session.Movement.ContactSum;
         session.PublishTelemetryFrame(stalled: false, tickMs: 1);
-        Assert.That(session.Telemetry.ContactsSum, Is.EqualTo(session.Movement.ContactSum));
+        Assert.That(session.Telemetry.Contacts, Is.EqualTo(firstContacts));
+        session.Movement.ContactSum = firstContacts + 5;
+        session.PublishTelemetryFrame(stalled: false, tickMs: 1);
+        Assert.That(session.Telemetry.Contacts, Is.EqualTo(firstContacts + 5), "Contacts 是本 tick 读数,第二次发布应覆盖而不是累加");
 
         long rebakes = session.Telemetry.Rebakes;
         session.Commands.Submit(
@@ -39,8 +43,6 @@ public sealed class CrowdTelemetryEventTests
         session.Advance(8);
         Assert.That(session.Telemetry.Rebakes, Is.GreaterThan(rebakes), "重烘报告发布时应 MarkRebake");
 
-        service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
-        session.BlockOnDueReplies = false;
         long waits = session.Telemetry.PathWaits;
         session.Commands.Submit(
             session,
@@ -53,14 +55,26 @@ public sealed class CrowdTelemetryEventTests
                 ["shape"] = "box",
             },
             CrowdSimCommands.Exec);
-        int guard = 0;
-        while (session.Telemetry.PathWaits == waits)
+        session.Advance(session.Config.Planning.LatencyTicks);
+        int membersBefore = session.Units.Count;
+        int hist = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
+            + session.Telemetry.Unreachable + session.Telemetry.Jumping;
+        Assert.That(hist, Is.EqualTo(membersBefore));
+        session.Commands.Schedule(session, new[]
         {
-            if (guard++ > 40) Assert.Fail("路径延迟下应出现等路停摆");
-            session.Step(out _);
-        }
+            new CrowdCommand(session.TickCount, CrowdSimCommand.Parse(
+                JsonNode.Parse("""{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":4,"unitType":0,"rIdx":0}""")!)),
+        });
+        service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
+        session.BlockOnDueReplies = false;
+        Assert.That(session.Step(out _), Is.False, "到期规划在路径延迟下应停摆");
 
         service.TestDelayPerJob = TimeSpan.Zero;
         Assert.That(session.Telemetry.PathWaits, Is.GreaterThan(waits));
+        Assert.That(session.Telemetry.StallTicks, Is.EqualTo(session.Telemetry.PathWaits), "无头 Step 的停摆与等路同一次计数");
+        Assert.That(session.Units.Count, Is.EqualTo(membersBefore + 4));
+        int histAfter = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
+            + session.Telemetry.Unreachable + session.Telemetry.Jumping;
+        Assert.That(histAfter, Is.EqualTo(session.Units.Count), "等路停摆前 Flush 增加的成员要重数进直方");
     }
 }

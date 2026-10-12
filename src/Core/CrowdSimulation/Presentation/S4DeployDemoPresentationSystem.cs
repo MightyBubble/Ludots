@@ -41,7 +41,6 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private readonly CrowdPresentationConfig _presentation;
 
     private readonly S4DeployNavWireframe _wire = new();
-    private readonly CrowdSimTelemetryPanel _telemetryPanel = new();
     private readonly HudTextCache _hudText = new();
     private int _flashReportTick = -1;
     private long _flashStartMs;
@@ -235,26 +234,26 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         var telemetry = session?.Telemetry;
         var report = session?.LastRebakeReport;
         bool pending = session != null && NavVariantPending(session, _demo.ViewMode);
+        bool expanded = session != null && _demo.TelemetryExpanded;
+        ReadPlayerFogCounts(expanded ? session : null, out int visible, out int explored, out int ghosts);
         string templateLabel = _demo.Template.Label;
         string viewLabel = _demo.ViewLabel;
-        if (!_hudText.Matches(session, telemetry, report, runtime, _demo, preview, pending, templateLabel, viewLabel))
+        if (!_hudText.Matches(session, telemetry, report, runtime, _demo, preview, pending, templateLabel, viewLabel, expanded, visible, explored, ghosts))
         {
-            _hudText.Rebuild(_presentation, session, telemetry, report, runtime, _demo, preview, pending, templateLabel, viewLabel);
+            _hudText.Rebuild(_presentation, session, telemetry, report, runtime, _demo, preview, pending, templateLabel, viewLabel, expanded, visible, explored, ghosts);
         }
 
         CrowdHudPanel hud = _presentation.Hud;
+        int left = hud.OriginXPx + 16;
+        int top = hud.OriginYPx + 8;
         _overlay.AddRect(hud.OriginXPx, hud.OriginYPx, hud.WidthPx, hud.HeightPx, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
-        _overlay.AddText(32, 24, _presentation.Title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
-        _overlay.AddText(32, 54, _hudText.Status, 18, new Vector4(1f, 1f, 1f, 1f));
-        _overlay.AddText(32, 78, _hudText.Rebake, 18, new Vector4(1f, 1f, 1f, 1f));
-        _overlay.AddText(32, 102, _hudText.Replay, 18, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
-        _overlay.AddText(32, 126, _hudText.Keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));
-        if (session != null)
-        {
-            bool expanded = _demo.TelemetryExpanded;
-            ReadPlayerFogCounts(expanded ? session : null, out int visible, out int explored, out int ghosts);
-            _telemetryPanel.Draw(_overlay, hud, session.Telemetry, expanded, visible, explored, ghosts);
-        }
+        _overlay.AddText(left, top, _presentation.Title, 20, new Vector4(1f, 0.92f, 0.35f, 1f));
+        _overlay.AddText(left, top + 24, _hudText.Status, 16, new Vector4(1f, 1f, 1f, 1f));
+        _overlay.AddText(left, top + 42, _hudText.Rebake, 16, new Vector4(1f, 1f, 1f, 1f));
+        _overlay.AddText(left, top + 60, _hudText.Replay, 16, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
+        _overlay.AddText(left, top + 78, _hudText.Keys, 16, new Vector4(0.75f, 0.9f, 1f, 1f));
+        _overlay.AddText(left, top + 96, _hudText.Telemetry, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
+        if (expanded) _overlay.AddText(left, top + 114, _hudText.TelemetryDetail, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
     }
 
     /// <summary>玩家 1 的迷雾格计数已在刷新时维护,这里只按下标读取。</summary>
@@ -273,12 +272,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         ghosts = fog.GhostCount[group];
     }
 
-    /// <summary>数值未变时沿用上一份字符串。比较只读字段,不分配。</summary>
+    /// <summary>同一 tick 重复绘制复用字符串;数值变化新建一条,因为 ScreenOverlayBuffer.AddText 接收 string——呈现帧分配,不是仿真 tick 分配。</summary>
     private sealed class HudTextCache
     {
         public bool Ready;
         public bool SessionActive;
+        public bool Expanded;
         public int Tick, Units, Idle, Moving, Arrived, Unreachable, Jumping, Selected;
+        public long SubStepClamped, EvictStuck, Plans, Rebakes, FogRefreshes, Contacts, PathWaits;
+        public int FogVisible, FogExplored, FogGhosts;
         public bool HasRebake;
         public int RebakeExec, RebakeReport, RebakeKind, Tiles, Hits, Misses, Orders, Evicted, Stuck;
         public bool RuntimePresent, Interactive;
@@ -291,6 +293,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public string Rebake = string.Empty;
         public string Replay = string.Empty;
         public string Keys = string.Empty;
+        public string Telemetry = string.Empty;
+        public string TelemetryDetail = string.Empty;
 
         public bool Matches(
             CrowdSimSession? session,
@@ -301,15 +305,24 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             (bool Shown, bool Valid)? preview,
             bool pending,
             string templateLabel,
-            string viewLabel)
+            string viewLabel,
+            bool expanded,
+            int fogVisible,
+            int fogExplored,
+            int fogGhosts)
         {
             if (!Ready) return false;
             if ((session != null) != SessionActive) return false;
+            if (Expanded != expanded) return false;
             if (session != null)
             {
                 if (Tick != session.TickCount || Units != session.Units.Count || Selected != session.SelectedCount) return false;
                 if (Idle != telemetry!.Idle || Moving != telemetry.Moving || Arrived != telemetry.Arrived
                     || Unreachable != telemetry.Unreachable || Jumping != telemetry.Jumping) return false;
+                if (SubStepClamped != telemetry.SubStepClamped || EvictStuck != telemetry.EvictStuck || Plans != telemetry.Plans
+                    || Rebakes != telemetry.Rebakes || FogRefreshes != telemetry.FogRefreshes) return false;
+                if (expanded && (Contacts != telemetry.Contacts || PathWaits != telemetry.PathWaits
+                    || FogVisible != fogVisible || FogExplored != fogExplored || FogGhosts != fogGhosts)) return false;
                 if ((report != null) != HasRebake) return false;
                 if (report != null && (
                     RebakeExec != report.ExecTick || RebakeReport != report.ReportTick || RebakeKind != report.Kind
@@ -339,10 +352,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             (bool Shown, bool Valid)? preview,
             bool pending,
             string templateLabel,
-            string viewLabel)
+            string viewLabel,
+            bool expanded,
+            int fogVisible,
+            int fogExplored,
+            int fogGhosts)
         {
             Ready = true;
             SessionActive = session != null;
+            Expanded = expanded;
             CrowdDeployPresentation deploy = presentation.Deploy
                 ?? throw new InvalidOperationException("部署演示 HUD 缺少 deploy 文案。");
             if (session == null)
@@ -350,6 +368,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 Status = "会话未激活";
                 Rebake = "最近重烘:-";
                 Replay = "-";
+                Telemetry = "";
+                TelemetryDetail = "";
             }
             else
             {
@@ -382,6 +402,22 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     Rebake = $"最近重烘:tick {RebakeExec}→{RebakeReport} {(RebakeKind == CrowdRebakeReport.KindPlace ? "建造" : "拆除")}" +
                              $" · 脏 tile {Tiles} · 缓存命中 {Hits}/{Hits + Misses}" +
                              $" · 重规划 {Orders} · 挤离 {Evicted} · 无处安放 {Stuck}";
+                }
+
+                SubStepClamped = telemetry.SubStepClamped;
+                EvictStuck = telemetry.EvictStuck;
+                Plans = telemetry.Plans;
+                Rebakes = telemetry.Rebakes;
+                FogRefreshes = telemetry.FogRefreshes;
+                Telemetry = $"subStepClamped {SubStepClamped} evictStuck {EvictStuck} plans {Plans} rebake {Rebakes} fog {FogRefreshes}";
+                if (expanded)
+                {
+                    Contacts = telemetry.Contacts;
+                    PathWaits = telemetry.PathWaits;
+                    FogVisible = fogVisible;
+                    FogExplored = fogExplored;
+                    FogGhosts = fogGhosts;
+                    TelemetryDetail = $"contacts {Contacts} pathWait {PathWaits} fogCells vis {FogVisible} explored {FogExplored} ghost {FogGhosts}";
                 }
             }
 

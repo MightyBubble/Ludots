@@ -437,8 +437,7 @@ public sealed partial class CrowdSimulationRuntime
 
         if (session.TickCount % session.Config.FixedHz == 0)
         {
-            // 只插值整数。呈现摘要与校验码格式化不在 tick 路径上;级别关闭时处理器不落字符串。
-            Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
+            Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
                 $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}");
         }
     }
