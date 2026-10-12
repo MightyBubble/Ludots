@@ -229,7 +229,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S4-a 交付：部署单位与指令回放内核（本次）
 
 - **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（速度、个人半径、推挤优先级、special，以及生成时写入的档案下标和移动类型下标；profileId / agentTypeId 留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
-- **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有单独的组件集：测试装配把 CrowdSimulationMod 的模板挂进 VFS，再经同一条 EntityBuilder.UseTemplate 实例化。出生算法（盐流/环形搜索/编组/散布）留在内核;S4/S5 真值测试原样全绿。
+- **单位创建走运行时生成队列**：`CrowdDeployment` 的 spawn / spawnAt 在指令里占槽，把模板、位置、朝向、`PlayerOwnerIdOverride` 和回执号（等于稠密下标）收成 `RuntimeEntitySpawnRequest`，按模板键分组后 `EnqueueAllOrThrow`。返回前调用本世界的 `RuntimeEntitySpawnSystem.Update`。无头会话和回放各自持有绑在本世界上的系统实例；引擎会话用引擎注册的那一个。排空在运动、迷雾和校验码之前，也在同一条 Flush 里更后面的指令之前，单位仍在指令 tick 内就位。EffectProcessing 里的原排空还在，给这一拍稍后才入队的请求。同模板超过一条时走 `World.Create(span)`，单批上限是生成器暂存 32768。队列放不下整批就抛 `SPAWN.RUNTIME.ERR.QueueCapacity`，一条都不写。仿真参数仍在模板的 `CrowdSimulationAgent` 上。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。出生算法（盐流/环形搜索/编组/散布）留在内核。
 - **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
 - **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
 - **指令队列与回放**（core/commands.js CommandQueue 移植）：指令是数据,tick 边界执行;日志 = 完整输入,回放 = 新会话 + 同一日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
@@ -240,7 +240,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S4-b 交付：部署演示纯数据化——单位进 presenter 管线（本次）
 
 - **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`,MassNavigationRuntime 同款形态）在地图聚焦时按配置目录合并出的 CrowdSimulationConfig + CrowdSimulationDebug 建会话——会话跑在**引擎世界**上（此前演示 mod 在侧世界 `ArchWorld.Create()` 起会话,呈现管线根本看不见单位,这是 S4 演示最初看不到单位的根因）,tick 由系统组的 FixedHz 驱动,会话与运行时注册成服务。S1/S3 演示 mod 的同款 Load 样板后续都往这里收。
-- **单位接入呈现投影（不造第二条路）**：`CrowdSimUnits.Add` 在接线存在时给单位挂齐呈现预置件——`PresentationStableId` + `EntityTemplateKeyRef`（模板键来自单位模板 id，按移动类型和半径级映射）+ `PreviousWorldPositionCm` + `VisualTransform` + `CullState` + `ContinuousHeightmapSampleState` + 半径黑板。之后 `PresentationEntityLifecycleSystem` 按 presenters.json 规则数据驱动地建/毁 presenter,与生成队列出生的实体同一条路。无头对拍与回放使用同一套生成接线，呈现预置件照挂；校验码不读这些呈现字段。
+- **单位接入呈现投影**：稳定 id、模板键、`PreviousWorldPositionCm`、`VisualTransform`、`CullState`、`ContinuousHeightmapSampleState` 和半径黑板由生成系统在物化时写上。批车道带 `PresentationLifecycleState`，生命周期的出生查询不会再给这些单位建 presenter；单条车道由 `TryBootstrapPresenter` 标 `PresenterRootBootstrapHandled`。人群代码不调用 `CreateHierarchy`。无头接线没有 presenter 运行时，不建 presenter。校验码不读这些呈现字段。
 - **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + 新增的 `TeamColorPalette` 服务（`deploy.bases[].color` 是配置数据;`PresenterBehaviorSystem` 优先读调色板,未注册回退原双色解析,旧场景零影响）;选中环 = select 指令执行时镜像进实体集合仓的 `selected` 集合,presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中,镜像不进对拍口径。
 - **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——会话只物化单位模板点名的档案，不把注册表里其余体型当成半径级;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
@@ -278,18 +278,12 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## 结构变更约定（L35 对齐 ecs_soa §5）
 
 引擎合同（`docs/architecture/ecs_soa.md` §5）：结构变更（Create/Destroy/Add/Remove）禁入查询热环，
-要么记入 Arch `CommandBuffer` 在阶段尾 Playback，要么走 `RuntimeEntitySpawnQueue`/
-`RuntimeEntityLifecycleQueue` 由 EffectProcessing 组的系统物化。人群侧的落点：
+要么记入 Arch `CommandBuffer` 在阶段尾 Playback，要么走 `RuntimeEntitySpawnQueue` /
+`RuntimeEntityLifecycleQueue`，由 `RuntimeEntitySpawnSystem` 和生命周期系统物化。人群侧的落点：
 
-- **spawn**：单位生成在 tick 边界的指令冲刷点（`CrowdSimulationSessionTickSystem` → `Step()`
-  首行 Flush）同步执行——这是已记档的对拍豁免（单位必须在指令 tick 内就位，真值行序 = 稠密
-  创建序）。生成不发生在任何查询环内,与 §5 的「禁入热环」一致;模板道 `EntityBuilder.UseTemplate
-  → Build` 一次成形,仿真参数在模板组件与生成后钩子里落齐,不在 Create 之后逐组件 Add。
-- **kill**：当前内核没有 kill 指令（参考端 killAt 未移植,缺口清单在案）。未来引入时的合同:
-  tick 边界指令点入队 + 呈现生命周期两帧销毁（有 `PresentationStableId` 的走
-  `PresentationEntityLifecycle.RequestDestroy`）,稠密销毁记 CommandBuffer 一次 Playback。
-- **Clear/重部署**：当前 `CrowdSimUnits.Clear()` 对模板道单位直接 `World.Destroy`,不经过
-  呈现生命周期——已记为已知缺口,与呈现接线改造同轨补齐（呈现实体两帧销毁后再重建稠密表）。
+- **spawn**：`CrowdSimSession.Step` 先 Flush 指令。spawn / spawnAt 在返回前调用 `RuntimeEntitySpawnSystem.Update`，单位在本 tick 的运动和校验码之前就位。这次 Update 就是生成队列的排空点，创建发生在系统里，不在运动查询环里。EffectProcessing 仍会排空同一条队列里后来入队的请求。批车道按模板白名单，再加上 `TemplateBatchComponentAdmission` 登记过的组件：JSON 经 ComponentRegistry 在探针实体上落一次，struct 抄进 chunk。逐实例的槽位、运动学、玩家、高度采样标记和半径黑板由挂在该系统实例上的 `IRuntimeSpawnInstanceInitializer` 写入刚创建的 chunk。
+- **Clear**：`CrowdSimUnits.Clear` 对已绑定且仍存活的单位调用 `EntityLifecycleAtomicOps.ConsumeEntity`（`PresentationEntityLifecycle.RequestDestroy`）。稠密表当帧清空，运动和校验码不再看见这些单位。实体要等呈现销毁事件发布之后才 Destroy。`Entity.Null` 占位不进销毁。
+- **kill**：当前内核没有 kill 指令（参考端 killAt 未移植）。
 
 ## 热路径数据面：chunk 收拢 → SoA → 写回
 

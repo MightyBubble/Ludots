@@ -1,42 +1,57 @@
-# GAS Composition Gate — Self Review
+## GAS Composition Gate — Self Review
 
-- **Task / Issue**: ScreenRegionToEntities 增加可选 `tolerance` 显式传参端口；`graph.core.select_hit` 明文接线 ConstFloat(20)。owner 裁定：点击宽容应完全图化或明文传参组装，几何过滤器不得内部读配置（#1634 剥离判断语义的后续收口）。
-- **Date**: 2026-09-22
-- **Agent / Author**: ZCode（test-red-clearing session）
+- **Task / Issue**: L79 crowd unit spawn through RuntimeEntitySpawnRequest
+- **Date**: 2026-10-12
+- **Agent / Author**: L79 implementer
 
-## 1. Core judgment
+### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（既有 op 增加一个显式可选值输入端口 + 一条图数据接线）
+新变体主要交付物是（A/B/C/D）: A
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 拾取宽容从几何过滤器内部配置读取改为调用方显式传参（op 可选引脚 + 图内明文 ConstFloat），零新 enum/开关/管线。
+一句话理由: 人群单位改走现有 RuntimeEntitySpawnQueue / RuntimeEntitySpawnSystem / EntityBuilder 与批车道；缺的批组件准入、逐实例初始化器、整批入队失败和空解析器归属都补在这条管线上。
 
-## 2. Layer assignment
+### 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 几何过滤签名 | 0 | FilterScreenRegionEntities(…, float tolerancePixels) 纯函数参数 |
-| op 可选端口 | 0 | ScreenRegionToEntities tolerance 引脚（缺省 0xFF→0），描述表/校验/发射 |
-| 图接线 | 2 | graph.core.select_hit + ConstFloat(20)→tolerance（数据） |
-| 文档 | 3 | wiki 端口表 |
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 模板物化 | 0 | RuntimeEntitySpawnSystem.SpawnTemplate / TemplateEntityBatchSpawner.TryCreateBatch |
+| 批组件准入 | 0 | TemplateBatchComponentAdmission + ComponentRegistry.Apply 探针 |
+| 逐实例写入 | 0 | IRuntimeSpawnInstanceInitializer，挂在生成系统实例上，WriteChunk 不 Add |
+| 销毁 | 0 | EntityLifecycleAtomicOps.ConsumeEntity |
+| 人群占槽与回执绑定 | 2 | CrowdSimUnits 只组请求、读回执、维护稠密表 |
 
-## 3. Reuse list
+### 3. Reuse list
 
-- 既有 byte.MaxValue 可选哨兵模式（SubmitCast B/C 同款）
-- 既有 ValueInputKey 可选边校验模式（ReadMapVar source 同款）
-- 既有接口默认重载模式（旧 4 参签名全兼容，测试直调不受影响）
+- Handlers: 无新 BuiltinHandler
+- Queues / Systems: RuntimeEntitySpawnQueue、RuntimeEntitySpawnReceiptQueue、RuntimeEntitySpawnSystem、TemplateEntityBatchSpawner
+- Resolvers / Registries: ComponentRegistry、EntityTemplateKeyRegistry、PresentationStableIdAllocator、CompiledPresenterBootstrapRegistry、OwnershipResolver（有解析器才建边）
+- Existing presets / graphs: 无
 
-## 4. New Layer 0 ops (if any)
+### 4. New Layer 0 ops (if any)
 
-N/A（无新 op，仅既有 op 加可选参数）
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| N/A | 未新增 spawn/lifecycle op 名 | 准入登记、初始化器 kind、EnqueueAllOrThrow 是现有生成 op 的参数和失败合同 |
 
-## 5. Transaction boundary
+### 5. Transaction boundary
 
-无（纯查询过滤参数化，无副作用）
+必须原子 rollback 的步骤: EnqueueAllOrThrow 在空间不足时一条都不写。物化中途失败沿用生成系统现有的预检/抛错，不另做一套回滚壳。
 
-## 6. Config SSOT
+### 6. Config SSOT
 
-行为配置落在: graph JSON（graph.core.select_hit 的 ConstFloat(20) 明文值）
+行为配置落在: effect template / graph / catalog（路径）: 单位组件形状仍是 Entities/templates.json，经 ComponentRegistry。队列容量仍是 presentation.runtimeEntitySpawnQueueCapacity。无头队列长度取 sim.maxUnits。
 
-是否新增 JSON schema: **NO**
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: 登记自己的批组件，或在自己的系统实例上登记 IRuntimeSpawnInstanceInitializer。不改 Core enum。
