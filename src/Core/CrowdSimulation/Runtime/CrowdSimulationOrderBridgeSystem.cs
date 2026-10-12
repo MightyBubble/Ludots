@@ -10,42 +10,48 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.CrowdSimulation.Runtime;
 
 /// <summary>
-/// 把 <c>crowdSimulationMove</c> 收成一条带成员句柄的群体指令。
-/// 成员是提交时钉在订单上的演员。普通右键只有一个地面点，成员共用这一点，形状固定为 <see cref="PlainClickShapeId"/>。
+/// 安装时向 <see cref="OrderBufferSystem"/> 登记 <c>crowdSimulationMove</c> 的外部消费者。
+/// 排空留在订单接入自己的阶段。消费者把批次排进下一拍会话步进：成员在那时钉死，
+/// 普通右键只有一个地面点，形状固定为 <see cref="PlainClickShapeId"/>。
 /// <see cref="OrderArgs.Spatial"/> 的 WorldCm 写成 (X, 0, Y)，平面坐标取 X 与 Z，按整数截断。
-/// 排在会话步进之前：本 tick 的现场下令在运动前落地，并由 <see cref="OrderBufferSystem"/> 配上 EntityIntake。
 /// </summary>
 public sealed class CrowdSimulationOrderBridgeSystem : ISystem<float>
 {
     public const string OrderTypeKey = "crowdSimulationMove";
     public const string PlainClickShapeId = "box";
 
-    private readonly GameEngine _engine;
     private readonly CrowdSimulationRuntime _runtime;
-    private bool _consumerRegistered;
 
     public CrowdSimulationOrderBridgeSystem(GameEngine engine, CrowdSimulationRuntime runtime)
     {
-        _engine = engine;
         _runtime = runtime;
+        var buffer = engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("群体下令桥已安装，但缺少 OrderBufferSystem。");
+        var registry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("crowdSimulationMove: 缺少 OrderTypeRegistry。");
+        if (!registry.TryGetId(OrderTypeKey, out int id) || id <= 0)
+        {
+            throw new InvalidOperationException("crowdSimulationMove 未登记。");
+        }
+
+        buffer.RegisterExternalOrderConsumer(id, batch =>
+        {
+            var session = _runtime.Session
+                ?? throw new InvalidOperationException("crowdSimulationMove: 会话未激活。");
+            Accept(session, batch);
+            _runtime.NoteLiveCommand();
+        });
     }
 
     public void Initialize() { }
     public void BeforeUpdate(in float t) { }
+    public void Update(in float dt) { }
     public void AfterUpdate(in float t) { }
     public void Dispose() { }
 
-    public void Update(in float dt)
-    {
-        if (_runtime.Session == null) return;
-        var buffer = _engine.GetService(CoreServiceKeys.OrderBufferSystem);
-        if (buffer == null) return;
-        EnsureConsumer(buffer);
-        buffer.DispatchExternalOrderConsumers();
-    }
-
     /// <summary>
     /// 成员数组在这里一次成形。地面点取 WorldCm.X 与 WorldCm.Z。
+    /// 指令排到当前 <see cref="Units.CrowdSimSession.TickCount"/>，由下一拍会话步进执行并记日志。
     /// </summary>
     public static void Accept(Units.CrowdSimSession session, ReadOnlySpan<Order> batch)
     {
@@ -76,34 +82,17 @@ public sealed class CrowdSimulationOrderBridgeSystem : ISystem<float>
         }
 
         var ground = first.Args.Spatial.WorldCm;
-        session.Commands.Submit<object?>(session, new Units.CrowdSimCommand
+        session.Commands.Schedule(session, new[]
         {
-            Kind = Units.CrowdSimCommandKind.Order,
-            Player = player,
-            XCm = (int)ground.X,
-            YCm = (int)ground.Z,
-            ShapeId = PlainClickShapeId,
-            Members = members,
-        }, Units.CrowdSimCommands.Exec);
-    }
-
-    private void EnsureConsumer(OrderBufferSystem buffer)
-    {
-        if (_consumerRegistered) return;
-        var registry = _engine.GetService(CoreServiceKeys.OrderTypeRegistry)
-            ?? throw new InvalidOperationException("crowdSimulationMove: 缺少 OrderTypeRegistry。");
-        if (!registry.TryGetId(OrderTypeKey, out int id) || id <= 0)
-        {
-            throw new InvalidOperationException("crowdSimulationMove 未登记。");
-        }
-
-        buffer.RegisterExternalOrderConsumer(id, batch =>
-        {
-            var session = _runtime.Session
-                ?? throw new InvalidOperationException("crowdSimulationMove: 会话未激活。");
-            Accept(session, batch);
-            _runtime.NoteLiveCommand();
+            new Units.CrowdCommand(session.TickCount, new Units.CrowdSimCommand
+            {
+                Kind = Units.CrowdSimCommandKind.Order,
+                Player = player,
+                XCm = (int)ground.X,
+                YCm = (int)ground.Z,
+                ShapeId = PlainClickShapeId,
+                Members = members,
+            }),
         });
-        _consumerRegistered = true;
     }
 }

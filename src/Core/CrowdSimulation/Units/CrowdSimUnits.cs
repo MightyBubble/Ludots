@@ -238,7 +238,7 @@ public sealed class CrowdSimUnits
     /// <summary>清空(代 bump:旧句柄全部失效;槽池回到初始 LIFO 序,回放可复现)。</summary>
     public void Clear()
     {
-        // 活接线才清集合:回放派生接线没有 CollectionApplier,不能动正在显示的选中与花名册。
+        // 活接线才清集合:回放派生接线没有 CollectionApplier,不能动正在显示的选中。
         ClearOwnedCollections();
         for (int i = 0; i < _dense.Count; i++)
         {

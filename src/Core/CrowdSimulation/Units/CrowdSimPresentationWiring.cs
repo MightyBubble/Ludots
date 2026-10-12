@@ -37,7 +37,7 @@ public sealed class CrowdSimPresentationWiring
     public required EntityCollectionStore Collections { get; init; }
     /// <summary>集合的唯一写者。null = 回放/无头,不触碰活集合仓。</summary>
     public CollectionApplier? CollectionApplier { get; set; }
-    /// <summary>下标 = 玩家号的代表实体。null = 不维护花名册与选中计数。</summary>
+    /// <summary>下标 = 玩家号的代表实体。null = 不挂代表。</summary>
     public Entity[]? PlayerReps { get; set; }
     /// <summary>活会话的 owns 边。null = 回放/无头,不写关系图。下令授权走这条边。</summary>
     public OwnershipResolver? Ownership { get; set; }
