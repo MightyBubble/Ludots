@@ -4,7 +4,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -20,6 +25,10 @@
       "blockedAny": [
         "Cooldown.Arcweaver.Q"
       ]
+    },
+    "targeting": {
+      "castRangeCm": 900,
+      "impactEffect": "Effect.Interaction.DuelBolt"
     }
   },
   {
@@ -27,7 +36,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -54,7 +68,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -81,7 +100,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -109,7 +133,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Z", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.Z",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -136,7 +165,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.F", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.F",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -186,7 +220,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Rune", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.Rune",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -213,7 +252,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -229,6 +273,10 @@
       "blockedAny": [
         "Cooldown.Vanguard.Q"
       ]
+    },
+    "targeting": {
+      "castRangeCm": 480,
+      "impactEffect": "Effect.Interaction.Challenge"
     }
   },
   {
@@ -236,7 +284,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -263,7 +316,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -290,7 +348,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -318,7 +381,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Z", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.Z",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -345,7 +413,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.F", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.F",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -390,7 +463,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Rune", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.Rune",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -417,7 +495,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -433,6 +516,10 @@
       "blockedAny": [
         "Cooldown.Commander.Q"
       ]
+    },
+    "targeting": {
+      "castRangeCm": 800,
+      "impactEffect": "Effect.Interaction.SupportBeam"
     }
   },
   {
@@ -440,7 +527,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -467,7 +559,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -494,7 +591,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -510,6 +612,10 @@
       "blockedAny": [
         "Cooldown.Commander.R"
       ]
+    },
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Interaction.Overclock"
     }
   },
   {
@@ -517,7 +623,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Z", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.Z",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -544,7 +655,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.F", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.F",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -589,7 +705,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Rune", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.Rune",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -616,7 +737,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Stress.Fireball", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Stress.Fireball",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,

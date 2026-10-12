@@ -52,6 +52,7 @@ namespace Ludots.Tests.GAS.Production
             "CoreInputMod",
             "CameraProfilesMod",
             "EntityInfoPanelsMod",
+            "AimInteractionMod",
             "InteractionShowcaseMod"
         };
 

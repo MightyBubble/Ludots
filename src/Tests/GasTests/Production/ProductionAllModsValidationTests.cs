@@ -111,7 +111,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "InteractionShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_InteractionShowcaseMod");
 
@@ -129,7 +129,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "NarrativeShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "NarrativeFrontendMod", "EntityInfoPanelsMod", "InteractionShowcaseMod", "NarrativeShowcaseMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "NarrativeFrontendMod", "EntityInfoPanelsMod", "InteractionShowcaseMod", "NarrativeShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_NarrativeShowcaseMod");
 

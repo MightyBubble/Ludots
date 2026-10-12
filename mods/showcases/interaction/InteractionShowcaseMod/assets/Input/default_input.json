@@ -1,13 +1,5 @@
 {
   "actions": [
-    { "id": "SkillQ", "name": "Interaction_SkillQ", "type": "Button" },
-    { "id": "SkillW", "name": "Interaction_SkillW", "type": "Button" },
-    { "id": "SkillE", "name": "Interaction_SkillE", "type": "Button" },
-    { "id": "SkillR", "name": "Interaction_SkillR", "type": "Button" },
-    { "id": "SkillQ.Release", "name": "Interaction_SkillQRelease", "type": "Button", "firesOn": "release" },
-    { "id": "SkillW.Release", "name": "Interaction_SkillWRelease", "type": "Button", "firesOn": "release" },
-    { "id": "SkillE.Release", "name": "Interaction_SkillERelease", "type": "Button", "firesOn": "release" },
-    { "id": "SkillR.Release", "name": "Interaction_SkillRRelease", "type": "Button", "firesOn": "release" },
     { "id": "SkillZ", "name": "Interaction_SkillZ", "type": "Button" },
     { "id": "SkillF", "name": "Interaction_SkillF", "type": "Button" },
     { "id": "ActionAttack", "name": "Interaction_ActionAttack", "type": "Button" },
@@ -37,14 +29,6 @@
       "name": "Interaction Showcase Controls",
       "priority": 80,
       "bindings": [
-        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
-        { "actionId": "SkillW", "path": "<Keyboard>/w" },
-        { "actionId": "SkillE", "path": "<Keyboard>/e" },
-        { "actionId": "SkillR", "path": "<Keyboard>/r" },
-        { "actionId": "SkillQ.Release", "path": "<Keyboard>/q" },
-        { "actionId": "SkillW.Release", "path": "<Keyboard>/w" },
-        { "actionId": "SkillE.Release", "path": "<Keyboard>/e" },
-        { "actionId": "SkillR.Release", "path": "<Keyboard>/r" },
         {
           "actionId": "SkillZ",
           "path": "<Keyboard>/z",

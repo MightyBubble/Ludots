@@ -1,8 +1,14 @@
 [
   {
     "id": "graph.aim.clear",
-    "kind": "Script",
-    "entry": "rep",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "lifecycle",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
     "nodes": [
       {
         "id": "rep",

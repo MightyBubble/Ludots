@@ -26,7 +26,7 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
                 assetsRoot);
 
             EntityTemplate? arcweaverTemplate = null;
@@ -87,7 +87,7 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
                 assetsRoot);
             engine.Start();
             engine.LoadMap("interaction_showcase_hub");
@@ -106,7 +106,7 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
                 assetsRoot);
             engine.Start();
             engine.LoadMap("interaction_showcase_hub");

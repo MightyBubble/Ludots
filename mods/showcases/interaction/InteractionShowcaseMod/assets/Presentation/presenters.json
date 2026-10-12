@@ -603,7 +603,7 @@
       {
         "paramKey": "groundOverlay.rotation",
         "source": "ownerBlackboardFloat",
-        "sourceId": "interaction_showcase.aim_rotation_deg"
+        "sourceId": "Cast.Facing"
       },
       {
         "paramKey": "groundOverlay.border.r",
@@ -821,7 +821,7 @@
       {
         "paramKey": "groundOverlay.rotation",
         "source": "ownerBlackboardFloat",
-        "sourceId": "interaction_showcase.aim_rotation_deg"
+        "sourceId": "Cast.Facing"
       },
       {
         "paramKey": "groundOverlay.border.r",
@@ -1044,7 +1044,7 @@
       {
         "paramKey": "groundOverlay.rotation",
         "source": "ownerBlackboardFloat",
-        "sourceId": "interaction_showcase.aim_rotation_deg"
+        "sourceId": "Cast.Facing"
       },
       {
         "paramKey": "groundOverlay.border.r",

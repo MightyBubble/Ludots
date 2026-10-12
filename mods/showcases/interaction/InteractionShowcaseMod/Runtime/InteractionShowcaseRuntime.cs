@@ -657,10 +657,6 @@ namespace InteractionShowcaseMod.Runtime
 
             string[] requiredActions =
             {
-                "SkillQ",
-                "SkillW",
-                "SkillE",
-                "SkillR",
                 "SkillZ",
                 "SkillF",
                 "ActionAttack",

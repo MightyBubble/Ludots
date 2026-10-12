@@ -14,10 +14,24 @@
         "stepDistanceCm": 400,
         "directionMode": "cameraRelative"
       }
+    },
+    {
+      "id": "scheme.aim.kbm",
+      "inputContexts": [
+        "Aim.Kbm"
+      ]
+    },
+    {
+      "id": "scheme.aim.gamepad",
+      "inputContexts": [
+        "Aim.Gamepad"
+      ]
     }
   ],
   "allowedSchemes": [
     "scheme.default",
-    "scheme.wasd_move"
+    "scheme.wasd_move",
+    "scheme.aim.kbm",
+    "scheme.aim.gamepad"
   ]
 }

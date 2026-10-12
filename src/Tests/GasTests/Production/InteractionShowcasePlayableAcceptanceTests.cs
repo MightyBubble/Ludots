@@ -28,6 +28,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -48,7 +49,6 @@ namespace Ludots.Tests.GAS.Production
         private const float DeltaTime = 1f / 60f;
         private const string HubMapId = "interaction_showcase_hub";
         private const string StressMapId = "interaction_showcase_stress";
-        private const string WowModeId = "Interaction.Mode.WoW";
         private const string LolModeId = "Interaction.Mode.LoL";
         private const string Sc2ModeId = "Interaction.Mode.SC2";
         private const string IndicatorModeId = "Interaction.Mode.Indicator";
@@ -63,6 +63,7 @@ namespace Ludots.Tests.GAS.Production
             "CoreInputMod",
             "CameraProfilesMod",
             "EntityInfoPanelsMod",
+            "AimInteractionMod",
             "InteractionShowcaseMod"
         };
 
@@ -120,7 +121,9 @@ namespace Ludots.Tests.GAS.Production
             SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
             AssertSelectedEntity(engine, "Arcweaver");
             PressButton(engine, backend, "<Keyboard>/f1", frameTimesMs);
-            Assert.That(GetActiveModeId(engine), Is.EqualTo(WowModeId));
+            // WoW and LoL both SetCastMode(castMode.smart). The deleted target_first and smart_cast
+            // contexts mounted the same slot graphs, so the HUD representative for that mode is LoL.
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             PressButton(engine, backend, "<Keyboard>/f2", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "arcweaver_selected_lol");
@@ -167,9 +170,9 @@ namespace Ludots.Tests.GAS.Production
             SetMouseWorld(engine, backend, arcweaverBeforeBlink + new Vector2(400f, 0f), frameTimesMs);
             backend.SetButton("<Keyboard>/w", true);
             Tick(engine, 1, frameTimesMs);
-            string blinkInputDiagnosticsFrame1 = BuildInputActionDiagnostics(engine, "SkillW");
+            string blinkInputDiagnosticsFrame1 = BuildInputActionDiagnostics(engine, "Aim.Slot2");
             Tick(engine, 1, frameTimesMs);
-            string blinkInputDiagnosticsFrame2 = BuildInputActionDiagnostics(engine, "SkillW");
+            string blinkInputDiagnosticsFrame2 = BuildInputActionDiagnostics(engine, "Aim.Slot2");
             backend.SetButton("<Keyboard>/w", false);
             Tick(engine, 2, frameTimesMs);
             string blinkCastDiagnostics = BuildAbilityDiagnostics(engine, "Arcweaver");
@@ -224,7 +227,7 @@ namespace Ludots.Tests.GAS.Production
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
             int ringOverlays = CountOverlays(overlays, GroundOverlayShape.Ring);
             string vanguardIndicatorDiagnostics = string.Join(" || ",
-                BuildInputActionDiagnostics(engine, "SkillR"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot4"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
@@ -246,7 +249,7 @@ namespace Ludots.Tests.GAS.Production
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             Tick(engine, 1, frameTimesMs);
             string vanguardAimDiagnostics = string.Join(" || ",
-                BuildInputActionDiagnostics(engine, "SkillE"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot3"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
@@ -359,7 +362,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 Vector2.Distance(after, before),
                 Is.GreaterThan(180f),
-                $"{BuildInputActionDiagnostics(engine, "SkillW")} || {BuildAbilityDiagnostics(engine, "Arcweaver")}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot2")} || {BuildAbilityDiagnostics(engine, "Arcweaver")}");
         }
 
         [Test]
@@ -1234,29 +1237,44 @@ namespace Ludots.Tests.GAS.Production
                 string.Join(" | ", diagnostics));
         }
 
-        private static readonly (string ModeId, string ContextId)[] ModeContexts =
-        {
-            (WowModeId, "interaction.context.interaction.target_first"),
-            (LolModeId, "interaction.context.interaction.smart_cast"),
-            (Sc2ModeId, "interaction.context.interaction.aim_cast"),
-            (IndicatorModeId, "interaction.context.interaction.indicator_cast"),
-            (ActionModeId, "interaction.context.interaction.context_scored"),
-        };
-
         private static string GetActiveModeId(GameEngine engine)
         {
             Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)!;
-            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)!;
-            for (int i = 0; i < ModeContexts.Length; i++)
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("InteractionContextInstances is missing.");
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry is missing.");
+            if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId("interaction.context.interaction.context_scored")))
             {
-                if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(ModeContexts[i].ContextId)))
-                {
-                    return ModeContexts[i].ModeId;
-                }
+                return ActionModeId;
             }
 
-            return "<none>";
+            if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Interaction showcase mode read requires a seeded InteractionPref cast mode on the possessed rep.");
+            }
+
+            StringIntRegistry castModes = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+                ?? throw new InvalidOperationException("CastModeIdRegistry is missing.");
+            string castModeId = castModes.GetName(pref.DefaultCastModeId);
+            if (string.Equals(castModeId, "castMode.smart", StringComparison.Ordinal))
+            {
+                return LolModeId;
+            }
+
+            if (string.Equals(castModeId, "castMode.aim_click", StringComparison.Ordinal))
+            {
+                return Sc2ModeId;
+            }
+
+            if (string.Equals(castModeId, "castMode.aim_release", StringComparison.Ordinal))
+            {
+                return IndicatorModeId;
+            }
+
+            throw new InvalidOperationException(
+                $"Interaction showcase has no HUD mode for cast mode '{castModeId}'.");
         }
 
         private static string BuildAbilityDiagnostics(GameEngine engine, string actorName)
@@ -1389,7 +1407,7 @@ namespace Ludots.Tests.GAS.Production
                 $"vanguard=({vanguardPosition.X:0.##},{vanguardPosition.Y:0.##})",
                 $"target=({targetPosition.X:0.##},{targetPosition.Y:0.##})",
                 $"distance={Vector2.Distance(vanguardPosition, targetPosition):0.##}",
-                BuildInputActionDiagnostics(engine, "SkillR"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot4"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));

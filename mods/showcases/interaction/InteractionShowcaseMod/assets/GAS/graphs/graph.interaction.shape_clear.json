@@ -1,0 +1,222 @@
+[
+  {
+    "id": "graph.interaction.shape_clear",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "clear_shapes",
+        "event": "AimBind",
+        "start": "rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.clear",
+          "nodeId": "q_ind"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "op",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "q0",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_e"
+      },
+      {
+        "id": "w0",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_e"
+      },
+      {
+        "id": "q1",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_r"
+      },
+      {
+        "id": "w1",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_r"
+      },
+      {
+        "id": "q2",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_e"
+      },
+      {
+        "id": "w2",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_e"
+      },
+      {
+        "id": "q3",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_r"
+      },
+      {
+        "id": "w3",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_r"
+      },
+      {
+        "id": "q4",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.commander_e"
+      },
+      {
+        "id": "w4",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.commander_e"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "op"
+      },
+      {
+        "from": "op",
+        "fromPort": "next",
+        "to": "q0"
+      },
+      {
+        "from": "q0",
+        "fromPort": "next",
+        "to": "w0"
+      },
+      {
+        "from": "w0",
+        "fromPort": "next",
+        "to": "q1"
+      },
+      {
+        "from": "q1",
+        "fromPort": "next",
+        "to": "w1"
+      },
+      {
+        "from": "w1",
+        "fromPort": "next",
+        "to": "q2"
+      },
+      {
+        "from": "q2",
+        "fromPort": "next",
+        "to": "w2"
+      },
+      {
+        "from": "w2",
+        "fromPort": "next",
+        "to": "q3"
+      },
+      {
+        "from": "q3",
+        "fromPort": "next",
+        "to": "w3"
+      },
+      {
+        "from": "w3",
+        "fromPort": "next",
+        "to": "q4"
+      },
+      {
+        "from": "q4",
+        "fromPort": "next",
+        "to": "w4"
+      },
+      {
+        "from": "w4",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q0",
+        "toPort": "source"
+      },
+      {
+        "from": "op",
+        "fromPort": "value",
+        "to": "w0",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q1",
+        "toPort": "source"
+      },
+      {
+        "from": "op",
+        "fromPort": "value",
+        "to": "w1",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q2",
+        "toPort": "source"
+      },
+      {
+        "from": "op",
+        "fromPort": "value",
+        "to": "w2",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q3",
+        "toPort": "source"
+      },
+      {
+        "from": "op",
+        "fromPort": "value",
+        "to": "w3",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q4",
+        "toPort": "source"
+      },
+      {
+        "from": "op",
+        "fromPort": "value",
+        "to": "w4",
+        "toPort": "value"
+      }
+    ]
+  }
+]

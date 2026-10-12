@@ -1,0 +1,196 @@
+[
+  {
+    "id": "graph.interaction.set_cast_mode_smart",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "InteractionModeWoW",
+        "action": "InteractionModeWoW",
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "InteractionModeLoL",
+        "action": "InteractionModeLoL",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "read_flag",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "interaction.action_mode"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "deact",
+        "op": "DeactivateContext",
+        "context": "interaction.context.interaction.context_scored"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "clear_flag",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "interaction.action_mode"
+      },
+      {
+        "id": "set",
+        "op": "SetCastMode",
+        "mode": "castMode.smart"
+      },
+      {
+        "id": "cam",
+        "op": "ActivateVirtualCamera",
+        "camera": "Camera.Profile.Tactical"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "read_flag"
+      },
+      {
+        "from": "read_flag",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "eq"
+      },
+      {
+        "from": "eq",
+        "fromPort": "next",
+        "to": "jump"
+      },
+      {
+        "from": "jump",
+        "fromPort": "true",
+        "to": "deact"
+      },
+      {
+        "from": "deact",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "clear_flag"
+      },
+      {
+        "from": "clear_flag",
+        "fromPort": "next",
+        "to": "set"
+      },
+      {
+        "from": "jump",
+        "fromPort": "false",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "cam"
+      },
+      {
+        "from": "cam",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "read_flag",
+        "toPort": "source"
+      },
+      {
+        "from": "read_flag",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "b"
+      },
+      {
+        "from": "eq",
+        "fromPort": "value",
+        "to": "jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deact",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "clear_flag",
+        "toPort": "source"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "clear_flag",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -503,7 +503,7 @@ namespace InteractionShowcaseMod.UI
         {
             if (_engine != null)
             {
-                InteractionShowCastModes.TrySetActive(_engine, modeId);
+                InteractionShowCastModes.Activate(_engine, modeId);
             }
         }
 
@@ -517,8 +517,8 @@ namespace InteractionShowcaseMod.UI
             string selectionViewLabel = ResolveSelectionViewLabel(engine, selectionViewMode);
             int activeControlGroup = ResolveActiveControlGroup(engine);
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
-            string activeModeId = InteractionShowCastModes.GetActive(engine) ?? InteractionShowcaseIds.LolModeId;
-            string activeModeName = InteractionShowCastModes.GetDisplayName(activeModeId);
+            string activeModeId = InteractionShowCastModes.GetActive(engine);
+            string activeModeName = InteractionShowCastModes.GetDisplayName(engine, activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
             BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);

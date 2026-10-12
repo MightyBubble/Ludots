@@ -1,143 +1,341 @@
-using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 
 namespace InteractionShowcaseMod.Runtime
 {
     /// <summary>
-    /// Showcase cast-mode switching: each mode is an interaction context mounted under the battle
-    /// context on the hero player's possessed rep; the Action mode also swaps the local camera to the shared
-    /// follow profile.
+    /// Cast-style buttons inject the same actions as the F-keys. Graphs own
+    /// <c>SetCastMode</c>, the scored-action context, and the follow camera.
+    /// WoW and LoL share <c>castMode.smart</c>; the catalog marks LoL as the
+    /// button that represents that mode because the two styles resolve the same way.
     /// </summary>
     internal static class InteractionShowCastModes
     {
-        private const string BattleContextId = "interaction.context.interaction.battle";
+        public const string CatalogUri = "InteractionShowcaseMod:assets/UI/cast_mode_toolbar.json";
 
-        private static readonly (string ModeId, string ContextId)[] Modes =
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
-            (InteractionShowcaseIds.WowModeId, "interaction.context.interaction.target_first"),
-            (InteractionShowcaseIds.LolModeId, "interaction.context.interaction.smart_cast"),
-            (InteractionShowcaseIds.Sc2ModeId, "interaction.context.interaction.aim_cast"),
-            (InteractionShowcaseIds.IndicatorModeId, "interaction.context.interaction.indicator_cast"),
-            (InteractionShowcaseIds.ActionModeId, "interaction.context.interaction.context_scored"),
+            PropertyNameCaseInsensitive = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
         };
 
-        public static bool TrySetActive(GameEngine engine, string? modeId)
+        private static Catalog? _catalog;
+
+        public static void Activate(GameEngine engine, string buttonId)
         {
-            string? targetContextId = ResolveContextId(modeId);
-            if (targetContextId == null)
+            Mode mode = RequireCatalog(engine).RequireButton(buttonId);
+            ResolveHandler(engine, mode.ActionId).InjectButtonPress(mode.ActionId);
+        }
+
+        public static string GetActive(GameEngine engine)
+        {
+            Catalog catalog = RequireCatalog(engine);
+            Entity rep = RequireRep(engine);
+            Mode? contextMode = catalog.ActiveContextMode(engine, rep);
+            if (contextMode != null)
             {
-                return false;
+                return contextMode.Value.ButtonId;
             }
 
-            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
-                ?? throw new InvalidOperationException("Interaction showcase cast modes require InteractionContextInstances.");
-            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
-                ?? throw new InvalidOperationException("Interaction showcase cast modes require InteractionContextProfileRegistry.");
+            string castModeId = ReadCastModeId(engine, rep);
+            return catalog.RepresentativeForCastMode(castModeId).ButtonId;
+        }
+
+        public static string GetDisplayName(GameEngine engine, string buttonId)
+        {
+            return RequireCatalog(engine).RequireButton(buttonId).Label;
+        }
+
+        private static Catalog RequireCatalog(GameEngine engine)
+        {
+            return _catalog ??= Catalog.Load(engine);
+        }
+
+        private static Entity RequireRep(GameEngine engine)
+        {
             if (!InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity rep))
             {
-                throw new InvalidOperationException("Interaction showcase cast modes require a local seat possessing the hero player rep.");
+                throw new InvalidOperationException(
+                    "Interaction showcase cast modes require a local seat possessing the hero player rep.");
             }
 
-            bool alreadyActive = false;
-            for (int i = 0; i < Modes.Length; i++)
+            return rep;
+        }
+
+        private static string ReadCastModeId(GameEngine engine, Entity rep)
+        {
+            StringIntRegistry registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+                ?? throw new InvalidOperationException("Interaction showcase cast modes require CastModeIdRegistry.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
             {
-                string contextId = Modes[i].ContextId;
-                if (!runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(contextId)))
+                throw new InvalidOperationException(
+                    "Interaction showcase cast modes require InteractionPref on the possessed rep.");
+            }
+
+            if (pref.DefaultCastModeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Interaction showcase cast mode is not seeded on the possessed rep.");
+            }
+
+            return registry.GetName(pref.DefaultCastModeId);
+        }
+
+        private static PlayerInputHandler ResolveHandler(GameEngine engine, string actionId)
+        {
+            ClientLocalSeatRegistry seats = engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry)
+                ?? throw new InvalidOperationException(
+                    "Interaction showcase cast modes require ClientLocalSeatRegistry.");
+            PlayerInputHandler? handler = null;
+            if (seats.Count > 1)
+            {
+                ClientLocalSeatInputRuntime seatInput = engine.GetService(CoreServiceKeys.ClientLocalSeatInputRuntime)
+                    ?? throw new InvalidOperationException(
+                        "Interaction showcase cast modes require ClientLocalSeatInputRuntime.");
+                IReadOnlyList<string> seatIds = seats.SeatIds;
+                for (int i = 0; i < seatIds.Count; i++)
                 {
-                    continue;
+                    ClientLocalSeat seat = seats.Require(seatIds[i]);
+                    if (!seat.HasPossession)
+                    {
+                        continue;
+                    }
+
+                    if (!seatInput.TryGetChannel(seat.SeatId, out ClientLocalSeatInputChannel channel))
+                    {
+                        throw new InvalidOperationException(
+                            $"Interaction showcase cast mode action '{actionId}' cannot attribute to seat '{seat.SeatId}'.");
+                    }
+
+                    handler = channel.Handler;
+                    break;
                 }
-
-                if (string.Equals(contextId, targetContextId, StringComparison.Ordinal))
-                {
-                    alreadyActive = true;
-                    continue;
-                }
-
-                runtime.Deactivate(rep, ConfigKeyRegistry.Register(contextId));
-            }
-
-            if (!alreadyActive)
-            {
-                runtime.Activate(rep, ConfigKeyRegistry.Register(targetContextId), ConfigKeyRegistry.Register(BattleContextId));
-            }
-
-            // The mode owns the camera on switch: Tactical for the casting modes; the Action
-            // mode follows the command-source collection (the selected heroes), not the rep.
-            if (string.Equals(modeId, InteractionShowcaseIds.ActionModeId, StringComparison.Ordinal))
-            {
-                engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
-                {
-                    Id = "Camera.Profile.Follow",
-                    FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
-                    FollowCollectionOwnerOverride = rep,
-                    FollowCollectionKeyOverride = "collection.command.source",
-                    ResetRuntimeState = true,
-                    ReplaceActiveStack = true
-                });
             }
             else
             {
-                engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
-                {
-                    Id = "Camera.Profile.Tactical",
-                    ResetRuntimeState = true,
-                    ReplaceActiveStack = true
-                });
+                handler = engine.GetService(CoreServiceKeys.InputHandler);
             }
 
-            return true;
+            if (handler == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction showcase cast mode action '{actionId}' has no input handler.");
+            }
+
+            if (!handler.HasAction(actionId))
+            {
+                throw new InvalidOperationException(
+                    $"Interaction showcase cast mode action '{actionId}' is not a declared input action.");
+            }
+
+            return handler;
         }
 
-        /// <summary>Active showcase mode id, or null when the battle context carries no mode context.</summary>
-        public static string? GetActive(GameEngine engine)
+        private readonly record struct Mode(
+            string ButtonId,
+            string Label,
+            string ActionId,
+            string? CastModeId,
+            bool RepresentsCastMode,
+            string? ContextId);
+
+        private sealed class Catalog
         {
-            InteractionContextInstanceRuntime? runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances);
-            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
-            if (runtime == null || profiles == null || !InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity rep))
+            private Catalog(Mode[] modes)
             {
-                return null;
+                Modes = modes;
             }
 
-            for (int i = 0; i < Modes.Length; i++)
+            public Mode[] Modes { get; }
+
+            public static Catalog Load(GameEngine engine)
             {
-                if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(Modes[i].ContextId)))
+                using Stream stream = engine.VFS.GetStream(CatalogUri);
+                FileDto? file = JsonSerializer.Deserialize<FileDto>(stream, JsonOptions);
+                if (file?.Modes == null || file.Modes.Length == 0)
                 {
-                    return Modes[i].ModeId;
+                    throw new InvalidOperationException($"{CatalogUri} must list at least one cast mode.");
                 }
-            }
 
-            return null;
-        }
-
-        public static string GetDisplayName(string? modeId)
-        {
-            return modeId switch
-            {
-                InteractionShowcaseIds.WowModeId => "WoW / Target First",
-                InteractionShowcaseIds.LolModeId => "LoL / Smart Cast",
-                InteractionShowcaseIds.Sc2ModeId => "SC2 / Aim Cast",
-                InteractionShowcaseIds.IndicatorModeId => "LoL / Indicator Release",
-                InteractionShowcaseIds.ActionModeId => "Action / Context Scored",
-                _ => "Unassigned"
-            };
-        }
-
-        private static string? ResolveContextId(string? modeId)
-        {
-            for (int i = 0; i < Modes.Length; i++)
-            {
-                if (string.Equals(Modes[i].ModeId, modeId, StringComparison.Ordinal))
+                var modes = new Mode[file.Modes.Length];
+                for (int i = 0; i < file.Modes.Length; i++)
                 {
-                    return Modes[i].ContextId;
+                    ModeDto dto = file.Modes[i] ?? throw new InvalidOperationException($"{CatalogUri} modes[{i}] is missing.");
+                    bool hasCastMode = !string.IsNullOrWhiteSpace(dto.CastModeId);
+                    bool hasContext = !string.IsNullOrWhiteSpace(dto.ContextId);
+                    if (hasCastMode == hasContext)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CatalogUri} modes[{i}] must declare exactly one of castModeId or contextId.");
+                    }
+
+                    if (hasCastMode && dto.RepresentsCastMode == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CatalogUri} modes[{i}] must declare representsCastMode.");
+                    }
+
+                    if (hasContext && dto.RepresentsCastMode != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CatalogUri} modes[{i}] context row must not declare representsCastMode.");
+                    }
+
+                    modes[i] = new Mode(
+                        RequireToken(dto.ButtonId, $"{CatalogUri} modes[{i}].buttonId"),
+                        RequireToken(dto.Label, $"{CatalogUri} modes[{i}].label"),
+                        RequireToken(dto.ActionId, $"{CatalogUri} modes[{i}].actionId"),
+                        hasCastMode ? RequireToken(dto.CastModeId, $"{CatalogUri} modes[{i}].castModeId") : null,
+                        dto.RepresentsCastMode ?? false,
+                        hasContext ? RequireToken(dto.ContextId, $"{CatalogUri} modes[{i}].contextId") : null);
+                    for (int earlier = 0; earlier < i; earlier++)
+                    {
+                        if (string.Equals(modes[earlier].ButtonId, modes[i].ButtonId, StringComparison.Ordinal) ||
+                            string.Equals(modes[earlier].ActionId, modes[i].ActionId, StringComparison.Ordinal) ||
+                            (modes[i].ContextId != null &&
+                             string.Equals(modes[earlier].ContextId, modes[i].ContextId, StringComparison.Ordinal)))
+                        {
+                            throw new InvalidOperationException(
+                                $"{CatalogUri} modes[{i}] repeats a button, action, or context.");
+                        }
+                    }
                 }
+
+                for (int i = 0; i < modes.Length; i++)
+                {
+                    if (modes[i].CastModeId == null)
+                    {
+                        continue;
+                    }
+
+                    int representatives = 0;
+                    for (int other = 0; other < modes.Length; other++)
+                    {
+                        if (string.Equals(modes[other].CastModeId, modes[i].CastModeId, StringComparison.Ordinal) &&
+                            modes[other].RepresentsCastMode)
+                        {
+                            representatives++;
+                        }
+                    }
+
+                    if (representatives != 1)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CatalogUri} cast mode '{modes[i].CastModeId}' must have exactly one representsCastMode row.");
+                    }
+                }
+
+                return new Catalog(modes);
             }
 
-            return null;
+            public Mode RequireButton(string buttonId)
+            {
+                for (int i = 0; i < Modes.Length; i++)
+                {
+                    if (string.Equals(Modes[i].ButtonId, buttonId, StringComparison.Ordinal))
+                    {
+                        return Modes[i];
+                    }
+                }
+
+                throw new InvalidOperationException($"{CatalogUri} has no button '{buttonId}'.");
+            }
+
+            public Mode RepresentativeForCastMode(string castModeId)
+            {
+                Mode? found = null;
+                for (int i = 0; i < Modes.Length; i++)
+                {
+                    if (!string.Equals(Modes[i].CastModeId, castModeId, StringComparison.Ordinal) ||
+                        !Modes[i].RepresentsCastMode)
+                    {
+                        continue;
+                    }
+
+                    if (found != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CatalogUri} cast mode '{castModeId}' has more than one representative button.");
+                    }
+
+                    found = Modes[i];
+                }
+
+                if (found == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{CatalogUri} does not represent cast mode '{castModeId}'.");
+                }
+
+                return found.Value;
+            }
+
+            public Mode? ActiveContextMode(GameEngine engine, Entity rep)
+            {
+                InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                    ?? throw new InvalidOperationException(
+                        "Interaction showcase cast modes require InteractionContextInstances.");
+                InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                    ?? throw new InvalidOperationException(
+                        "Interaction showcase cast modes require InteractionContextProfileRegistry.");
+                Mode? active = null;
+                for (int i = 0; i < Modes.Length; i++)
+                {
+                    string? contextId = Modes[i].ContextId;
+                    if (contextId == null)
+                    {
+                        continue;
+                    }
+
+                    if (!runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(contextId)))
+                    {
+                        continue;
+                    }
+
+                    if (active != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Interaction showcase rep carries both '{active.Value.ContextId}' and '{Modes[i].ContextId}'.");
+                    }
+
+                    active = Modes[i];
+                }
+
+                return active;
+            }
+
+            private static string RequireToken(string? value, string field)
+            {
+                if (string.IsNullOrWhiteSpace(value) || !string.Equals(value, value.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{field} must be a non-empty token without surrounding whitespace.");
+                }
+
+                return value;
+            }
+
+            private sealed class FileDto
+            {
+                public ModeDto[]? Modes { get; set; }
+            }
+
+            private sealed class ModeDto
+            {
+                public string? ButtonId { get; set; }
+                public string? Label { get; set; }
+                public string? ActionId { get; set; }
+                public string? CastModeId { get; set; }
+                public bool? RepresentsCastMode { get; set; }
+                public string? ContextId { get; set; }
+            }
         }
     }
 }

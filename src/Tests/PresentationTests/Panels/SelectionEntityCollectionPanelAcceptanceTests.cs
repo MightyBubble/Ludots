@@ -33,6 +33,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
         "LudotsCoreMod",
         "CoreInputMod",
         "CameraProfilesMod",
+        "AimInteractionMod",
         "InteractionShowcaseMod",
     };
 

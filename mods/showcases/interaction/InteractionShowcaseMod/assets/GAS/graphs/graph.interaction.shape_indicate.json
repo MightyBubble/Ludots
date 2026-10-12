@@ -1,0 +1,487 @@
+[
+  {
+    "id": "graph.interaction.shape_indicate",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "shapes",
+        "event": "AimBind",
+        "start": "rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.indicate",
+          "nodeId": "write"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "qaim",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "actor",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "eq_e",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump_e",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "c3",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "eq_r",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump_r",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_restore",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "arc_e_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "arc_e_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_arcweaver"
+      },
+      {
+        "id": "arc_e_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "arc_e_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_e"
+      },
+      {
+        "id": "van_e_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "van_e_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_vanguard"
+      },
+      {
+        "id": "van_e_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "van_e_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_e"
+      },
+      {
+        "id": "com_e_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "com_e_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_commander"
+      },
+      {
+        "id": "com_e_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "com_e_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.commander_e"
+      },
+      {
+        "id": "arc_r_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "arc_r_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_arcweaver"
+      },
+      {
+        "id": "arc_r_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "arc_r_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_r"
+      },
+      {
+        "id": "van_r_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "van_r_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_vanguard"
+      },
+      {
+        "id": "van_r_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "van_r_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_r"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "qaim"
+      },
+      {
+        "from": "qaim",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "actor"
+      },
+      {
+        "from": "actor",
+        "fromPort": "next",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "c2"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "eq_e"
+      },
+      {
+        "from": "eq_e",
+        "fromPort": "next",
+        "to": "jump_e"
+      },
+      {
+        "from": "jump_e",
+        "fromPort": "false",
+        "to": "c3"
+      },
+      {
+        "from": "c3",
+        "fromPort": "next",
+        "to": "eq_r"
+      },
+      {
+        "from": "eq_r",
+        "fromPort": "next",
+        "to": "jump_r"
+      },
+      {
+        "from": "jump_r",
+        "fromPort": "false",
+        "to": "q_restore"
+      },
+      {
+        "from": "q_restore",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "jump_e",
+        "fromPort": "true",
+        "to": "arc_e_sel"
+      },
+      {
+        "from": "arc_e_sel",
+        "fromPort": "next",
+        "to": "arc_e_hero"
+      },
+      {
+        "from": "arc_e_hero",
+        "fromPort": "next",
+        "to": "arc_e_op"
+      },
+      {
+        "from": "arc_e_op",
+        "fromPort": "next",
+        "to": "arc_e_write"
+      },
+      {
+        "from": "arc_e_write",
+        "fromPort": "next",
+        "to": "van_e_sel"
+      },
+      {
+        "from": "van_e_sel",
+        "fromPort": "next",
+        "to": "van_e_hero"
+      },
+      {
+        "from": "van_e_hero",
+        "fromPort": "next",
+        "to": "van_e_op"
+      },
+      {
+        "from": "van_e_op",
+        "fromPort": "next",
+        "to": "van_e_write"
+      },
+      {
+        "from": "van_e_write",
+        "fromPort": "next",
+        "to": "com_e_sel"
+      },
+      {
+        "from": "com_e_sel",
+        "fromPort": "next",
+        "to": "com_e_hero"
+      },
+      {
+        "from": "com_e_hero",
+        "fromPort": "next",
+        "to": "com_e_op"
+      },
+      {
+        "from": "com_e_op",
+        "fromPort": "next",
+        "to": "com_e_write"
+      },
+      {
+        "from": "com_e_write",
+        "fromPort": "next",
+        "to": "q_restore"
+      },
+      {
+        "from": "jump_r",
+        "fromPort": "true",
+        "to": "arc_r_sel"
+      },
+      {
+        "from": "arc_r_sel",
+        "fromPort": "next",
+        "to": "arc_r_hero"
+      },
+      {
+        "from": "arc_r_hero",
+        "fromPort": "next",
+        "to": "arc_r_op"
+      },
+      {
+        "from": "arc_r_op",
+        "fromPort": "next",
+        "to": "arc_r_write"
+      },
+      {
+        "from": "arc_r_write",
+        "fromPort": "next",
+        "to": "van_r_sel"
+      },
+      {
+        "from": "van_r_sel",
+        "fromPort": "next",
+        "to": "van_r_hero"
+      },
+      {
+        "from": "van_r_hero",
+        "fromPort": "next",
+        "to": "van_r_op"
+      },
+      {
+        "from": "van_r_op",
+        "fromPort": "next",
+        "to": "van_r_write"
+      },
+      {
+        "from": "van_r_write",
+        "fromPort": "next",
+        "to": "q_restore"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "qaim",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "actor",
+        "toPort": "value"
+      },
+      {
+        "from": "actor",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "eq_e",
+        "toPort": "a"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "eq_e",
+        "toPort": "b"
+      },
+      {
+        "from": "eq_e",
+        "fromPort": "value",
+        "to": "jump_e",
+        "toPort": "condition"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "eq_r",
+        "toPort": "a"
+      },
+      {
+        "from": "c3",
+        "fromPort": "value",
+        "to": "eq_r",
+        "toPort": "b"
+      },
+      {
+        "from": "eq_r",
+        "fromPort": "value",
+        "to": "jump_r",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_restore",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "arc_e_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "arc_e_op",
+        "fromPort": "value",
+        "to": "arc_e_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "van_e_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "van_e_op",
+        "fromPort": "value",
+        "to": "van_e_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "com_e_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "com_e_op",
+        "fromPort": "value",
+        "to": "com_e_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "arc_r_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "arc_r_op",
+        "fromPort": "value",
+        "to": "arc_r_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "van_r_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "van_r_op",
+        "fromPort": "value",
+        "to": "van_r_write",
+        "toPort": "value"
+      }
+    ]
+  }
+]

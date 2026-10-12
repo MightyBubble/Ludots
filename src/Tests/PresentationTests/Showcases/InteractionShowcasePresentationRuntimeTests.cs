@@ -29,6 +29,7 @@ namespace Ludots.Tests.Presentation
             "LudotsCoreMod",
             "CoreInputMod",
             "CameraProfilesMod",
+            "AimInteractionMod",
             "InteractionShowcaseMod",
             "EntityCommandPanelMod",
             "EntityCommandPanelShowcaseMod"

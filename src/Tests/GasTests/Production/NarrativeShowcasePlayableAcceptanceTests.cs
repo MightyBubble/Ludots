@@ -27,6 +27,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -58,6 +59,7 @@ namespace Ludots.Tests.GAS.Production
             "CameraProfilesMod",
             "NarrativeFrontendMod",
             "EntityInfoPanelsMod",
+            "AimInteractionMod",
             "InteractionShowcaseMod",
             "NarrativeShowcaseMod"
         };
@@ -1199,7 +1201,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var details = new List<string>
             {
-                BuildInputActionDiagnostics(engine, "SkillQ"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot1"),
                 BuildAbilityDiagnostics(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName),
                 BuildSelectionStateDiagnostics(engine)
             };
@@ -1437,11 +1439,22 @@ namespace Ludots.Tests.GAS.Production
         private static string GetActiveModeId(GameEngine engine)
         {
             Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)!;
-            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)!;
-            return runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId("interaction.context.interaction.smart_cast"))
-                ? "Interaction.Mode.LoL"
-                : string.Empty;
+            if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Narrative showcase mode read requires a seeded InteractionPref cast mode on the possessed rep.");
+            }
+
+            StringIntRegistry castModes = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+                ?? throw new InvalidOperationException("CastModeIdRegistry is missing.");
+            string castModeId = castModes.GetName(pref.DefaultCastModeId);
+            if (string.Equals(castModeId, "castMode.smart", StringComparison.Ordinal))
+            {
+                return LolModeId;
+            }
+
+            throw new InvalidOperationException(
+                $"Narrative showcase start mode is castMode.smart; possessed rep is on '{castModeId}'.");
         }
 
         private static void CaptureSnapshot(

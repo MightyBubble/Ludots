@@ -353,7 +353,8 @@
           "Armor": 0
         }
       },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "BlackboardIntBuffer": {}
     }
   },
   {
