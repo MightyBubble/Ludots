@@ -25,6 +25,13 @@ namespace Ludots.Core.Navigation.Pathing.Config
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (mergedObject == null) throw new InvalidOperationException("PathingConfig not found in any source.");
 
+            return Parse(mergedObject);
+        }
+
+        /// <summary>校验并物化已经合并好的 pathing.json。目录合并与文件合并走同一条校验。</summary>
+        public static PathingConfig Parse(JsonObject mergedObject)
+        {
+            ArgumentNullException.ThrowIfNull(mergedObject);
             ValidateRaw(mergedObject);
             var opts = StrictJsonOptions.CreateCamelCase();
             opts.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));

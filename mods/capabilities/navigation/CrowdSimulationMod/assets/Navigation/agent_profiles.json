@@ -51,7 +51,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 1,
+    "layer": 0,
     "navProfileId": "hull"
   },
   {
@@ -62,7 +62,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 1,
+    "layer": 0,
     "navProfileId": "hull"
   },
   {
@@ -73,7 +73,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 1,
+    "layer": 0,
     "navProfileId": "hull"
   },
   {
@@ -84,7 +84,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 1,
+    "layer": 0,
     "navProfileId": "hull"
   },
   {
@@ -95,7 +95,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 2,
+    "layer": 0,
     "navProfileId": "climber"
   },
   {
@@ -106,7 +106,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 2,
+    "layer": 0,
     "navProfileId": "climber"
   },
   {
@@ -117,7 +117,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 2,
+    "layer": 0,
     "navProfileId": "climber"
   },
   {
@@ -128,7 +128,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 6,
-    "layer": 2,
+    "layer": 0,
     "navProfileId": "climber"
   },
   {
@@ -139,7 +139,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 1,
-    "layer": 3,
+    "layer": 0,
     "navProfileId": "amphib"
   },
   {
@@ -150,7 +150,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 3,
+    "layer": 0,
     "navProfileId": "amphib"
   },
   {
@@ -161,7 +161,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 3,
+    "layer": 0,
     "navProfileId": "amphib"
   },
   {
@@ -172,7 +172,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 3,
+    "layer": 0,
     "navProfileId": "amphib"
   },
   {
@@ -183,7 +183,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 4,
+    "layer": 0,
     "navProfileId": "leaper"
   },
   {
@@ -194,7 +194,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 4,
+    "layer": 0,
     "navProfileId": "leaper"
   },
   {
@@ -205,7 +205,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 4,
+    "layer": 0,
     "navProfileId": "leaper"
   },
   {
@@ -216,7 +216,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 4,
+    "layer": 0,
     "navProfileId": "leaper"
   }
 ]

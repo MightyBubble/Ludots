@@ -131,11 +131,13 @@ public static class CrowdNavRebake
         var profile = config.NavProfiles[agent.NavProfileIndex];
         Fix64 maxSlope = profile.MaxSlopeDeg is { } deg ? Fix64Math.Tan(deg * Fix64.Deg2Rad) : Fix64.MaxValue;
         var row = agent.CostByArea;
+        var speedRow = agent.SpeedDivisorByArea;
         var slopeFree = config.NavAreas;
         var area = store.Area;
         var blocked = store.Blocked;
         var slope = sources.HeightS.Slope;
         var cost = nav.Cost;
+        var speedDivisor = nav.SpeedDivisor;
         var walk = nav.Walk;
         int kind = KindNone;
         for (int y = rect.Y0; y < rect.Y1; y++)
@@ -145,14 +147,22 @@ public static class CrowdNavRebake
                 int i = y * navCellsPerSide + x;
                 int a = area[i];
                 Fix64 cell = row[a];
+                Fix64 div = speedRow[a];
                 if (cell > Fix64.Zero && !slopeFree[a].SlopeFree && slope[i] > maxSlope)
                 {
                     cell = Fix64.Zero;
+                    div = Fix64.Zero;
                 }
 
                 if (cost[i] != cell)
                 {
                     cost[i] = cell;
+                    if (kind == KindNone) kind = KindCost;
+                }
+
+                if (speedDivisor[i] != div)
+                {
+                    speedDivisor[i] = div;
                     if (kind == KindNone) kind = KindCost;
                 }
 

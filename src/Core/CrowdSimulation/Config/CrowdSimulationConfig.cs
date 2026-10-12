@@ -16,13 +16,7 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// </summary>
 public sealed class CrowdSimulationConfig
 {
-    public required string MapId { get; init; }
     public required WorldSection World { get; init; }
-    public required NavAreaEntry[] NavAreas { get; init; }
-    public required Dictionary<string, string> TerrainAreas { get; init; }
-    public required NavProfileEntry[] NavProfiles { get; init; }
-    public required AgentTypeEntry[] AgentTypes { get; init; }
-    public required UnitTypeEntry[] UnitTypes { get; init; }
     public required AgentsSection Agents { get; init; }
     public required NavmeshSection Navmesh { get; init; }
     public required HpaSection Hpa { get; init; }
@@ -92,6 +86,18 @@ public sealed class CrowdSimulationConfig
         ("movement.maxStepCells", "movement.maxStepNavCells"),
         ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
         ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
+        ("agentTypes", "Navigation/pathing.json 的 agentTypes"),
+        ("agents.radiusClasses", "单位模板 CrowdSimulationAgent.pushPriority"),
+        ("agents.profilesUri", "Navigation/agent_profiles.json"),
+        ("unitTypes", "单位模板 CrowdSimulationAgent"),
+        ("navAreas", "Navigation/navmesh.json 的 areas"),
+        ("terrainAreas", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas"),
+        ("navProfiles", "Navigation/navmesh.json 的 profiles"),
+        ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas 键序"),
+        ("world.surfaceAsset", "Navigation/navmesh.json 的 maps.<mapId>.surfaceAsset"),
+        ("world.navCellSizeCm", "Navigation/navmesh.json 的 profiles[].cellSizeCm"),
+        ("world.mapId", "当前聚焦的地图"),
+        ("mapId", "当前聚焦的地图"),
         ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
         ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
         ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
@@ -115,7 +121,6 @@ public sealed class CrowdSimulationConfig
     private static readonly string[] IdKeyedObjects =
     [
         "formations",
-        "agents.radiusClasses",
         "structures.templates",
     ];
 
@@ -242,77 +247,13 @@ public sealed class CrowdSimulationConfig
 
     public sealed class WorldSection
     {
-        public required int NavCellSizeCm { get; init; }
-        public required TerrainTypeEntry[] TerrainTypes { get; init; }
-        public required string SurfaceAsset { get; init; }
         /// <summary>世界种子(生成盐;每张地图一个,与参考实现的 world.seed 同值)。</summary>
         public int Seed { get; init; }
-    }
-
-    public sealed class TerrainTypeEntry
-    {
-        public required string Id { get; init; }
-    }
-
-    /// <summary>导航区域。slopeFree = 平面区域，几何 profile 的坡度上限不适用。</summary>
-    public sealed class NavAreaEntry
-    {
-        public required string Id { get; init; }
-        public required bool SlopeFree { get; init; }
-    }
-
-    public sealed class NavProfileEntry
-    {
-        public required string Id { get; init; }
-        public double? MaxSlopeDeg { get; init; }
-        public JumpSection? Jump { get; init; }
-    }
-
-    public sealed class JumpSection
-    {
-        public required int UpCm { get; init; }
-        public required int DownCm { get; init; }
-        public required int RangeNavCells { get; init; }
-        public required double Cost { get; init; }
-    }
-
-    /// <summary>移动类型：areaCost 的键必须是 navAreas 的 id；未写的区域 = 不可通行。</summary>
-    public sealed class AgentTypeEntry
-    {
-        public required string Id { get; init; }
-        public required int Layer { get; init; }
-        public required double SpeedCmPerSecond { get; init; }
-        public required int PushPriority { get; init; }
-        public required string Profile { get; init; }
-        public required Dictionary<string, double> AreaCost { get; init; }
-    }
-
-    public sealed class UnitTypeEntry
-    {
-        public required string Id { get; init; }
-        public required string AgentType { get; init; }
-        /// <summary>特殊单位(不参与批量部署,只能由生成工具点名;参考实现的 unitTypes[].special)。</summary>
-        public bool Special { get; init; }
-        /// <summary>半径级(厘米)→ 单位实体模板 id:该兵种出生时实例化的模板,模板自身声明 profile。
-        /// 键是 JSON 字符串,装载时按整数半径厘米解析。</summary>
-        public Dictionary<string, string>? Templates { get; init; }
     }
 
     public sealed class AgentsSection
     {
         public required double AvoidanceRadiusScale { get; init; }
-        /// <summary>本会话的体型档案来源(mod URI,如 "CrowdSimulationMod:assets/Navigation/agent_profiles.json")。
-        /// 缺失 = 用引擎全局档案注册表(与别的特性共享,半径级会并集——只对明确接受这一点的场景)。</summary>
-        public string? ProfilesUri { get; init; }
-        /// <summary>半径级表(参考实现 templates.radiusClasses):键是半径厘米，值是该级的推挤优先级份额,
-        /// 与 agentTypes[].pushPriority 合成原型优先级(参考 core/archetypes.js)。键按数值升序消费，不看对象键顺序。</summary>
-        public required Dictionary<string, RadiusClassEntry> RadiusClasses { get; init; }
-    }
-
-    /// <summary>半径级(参考实现 templates.radiusClasses 条目):推挤份额。半径厘米是对象键。</summary>
-    public sealed class RadiusClassEntry
-    {
-        public required double PushPriority { get; init; }
     }
 
     public sealed class NavmeshSection

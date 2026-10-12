@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Config;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -37,7 +37,7 @@ public class CrowdSimulationConfigTests
 
         var foot = runtime.AgentTypes[0];
         Assert.That(foot.SpeedCmPerSecond, Is.EqualTo(Fix64.FromInt(1400)));
-        // road 在 navAreas 下标 5；foot 对 road 代价 0.7。
+        // road 在 areas 下标 5；foot 对 road 代价 0.7。
         Assert.That(foot.CostByArea[5], Is.EqualTo(Fix64.FromDouble(0.7)));
         // deep 下标 4 未写 = 不可通行（0）。
         Assert.That(foot.CostByArea[4], Is.EqualTo(Fix64.Zero));
@@ -136,38 +136,33 @@ public class CrowdSimulationConfigTests
     [Test]
     public void AreaCost_ReferencingUnknownArea_IsRejected()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        ((JsonObject)json["agentTypes"]![0]!)["areaCost"]!["lava"] = 1.0;
-        var config = CrowdSimulationConfig.Load(json);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("agentTypes.foot.areaCost.lava"));
+        var pathingJson = TestDefaults.DefaultPathingJson();
+        pathingJson["agentTypes"]![0]!["navMesh"]!["areaCosts"]!.AsArray().Add(
+            JsonNode.Parse("""{"areaId":99,"cost":1}""")!);
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => TestDefaults.Assemble(pathing: TestDefaults.ParsePathing(pathingJson)));
+        Assert.That(ex!.Message, Does.Contain("agentTypes.foot.areaCosts areaId 99"));
         Assert.That(ex.Message, Does.Contain("未知导航区域"));
     }
 
     [Test]
-    public void ProfileLayer_WithoutAgentType_IsRejected()
+    public void TemplateAgentType_NotInPathing_IsRejected()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        var profiles = TestDefaults.DemoProfiles();
-        var withBadLayer = new AgentProfileRegistry(
-            Enumerable.Range(0, profiles.Count).Select(i =>
-            {
-                var p = profiles[i];
-                return new AgentProfileConfig
-                {
-                    Id = p.Id,
-                    NavProfileId = p.NavProfileId,
-                    RadiusCm = p.RadiusCm,
-                    HeightCm = p.HeightCm,
-                    ClearanceCm = p.ClearanceCm,
-                    DraftCm = p.DraftCm,
-                    BeamCm = p.BeamCm,
-                    Mass = p.Mass,
-                    Layer = i == 0 ? 99 : p.Layer,
-                };
-            }).ToList());
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(profiles: withBadLayer));
-        Assert.That(ex!.Message, Does.Contain("layer = 99"));
+        var templates = TestDefaults.DemoTemplates();
+        var first = templates[0];
+        templates[0] = new CrowdUnitTemplateFacts
+        {
+            TemplateId = first.TemplateId,
+            ProfileId = first.ProfileId,
+            AgentTypeId = "ghost",
+            SpeedCmPerSecond = first.SpeedCmPerSecond,
+            PersonalRadiusCm = first.PersonalRadiusCm,
+            PushPriority = first.PushPriority,
+            Special = first.Special,
+        };
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
+        Assert.That(ex!.Message, Does.Contain("ghost"));
+        Assert.That(ex.Message, Does.Contain("不在 Navigation/pathing.json"));
     }
 
     [Test]
@@ -200,23 +195,31 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void TerrainAreas_MissingType_IsRejected()
+    public void TerrainAreas_UnknownArea_IsRejected()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        ((JsonObject)json["terrainAreas"]!).Remove("cliff");
-        var config = CrowdSimulationConfig.Load(json);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("缺少地形类型 \"cliff\" 的映射"));
+        var navmesh = TestDefaults.DefaultNavmeshJson();
+        navmesh["maps"]!["crowd_simulation_demo"]!["terrainAreas"]!["cliff"] = "lava";
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));
+        Assert.That(ex!.Message, Does.Contain("terrainAreas.cliff"));
+        Assert.That(ex.Message, Does.Contain("lava"));
     }
 
     [Test]
     public void JumpCost_BelowMinAreaCost_IsRejected()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        ((JsonObject)json["navProfiles"]![4]!)["jump"]!["cost"] = 0.5;
-        var config = CrowdSimulationConfig.Load(json);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("jump.cost 不能低于该类型最低区域代价"));
+        var navmesh = TestDefaults.DefaultNavmeshJson();
+        foreach (var node in navmesh["profiles"]!.AsArray())
+        {
+            if (node!["id"]!.GetValue<string>() == "leaper")
+            {
+                node["jump"]!["cost"] = 0.5;
+            }
+        }
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));
+        Assert.That(ex!.Message, Does.Contain("profiles.leaper.jump.cost 不能低于该类型最低区域代价"));
     }
 
     [Test]
@@ -325,7 +328,7 @@ public class CrowdSimulationConfigTests
             ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"nowhere","priority":1}""")!,
         };
         ex = Assert.Throws<InvalidOperationException>(
-            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+            () => TestDefaults.Assemble(CrowdSimulationConfig.Load(json)));
         Assert.That(ex!.Message, Does.Contain("未知导航区域"));
 
         // 非阻挡且无 area = 无效实体
@@ -420,17 +423,11 @@ public class CrowdSimulationConfigTests
 
         if (oldPath == "navProfiles[].jump.rangeCells")
         {
-            var profiles = root["navProfiles"]!.AsArray();
-            for (int i = 0; i < profiles.Count; i++)
+            root["navProfiles"] = new JsonArray
             {
-                if (profiles[i]!["jump"] is JsonObject jump)
-                {
-                    jump["rangeCells"] = 7;
-                    return $"navProfiles[{i}].jump.rangeCells";
-                }
-            }
-
-            throw new InvalidOperationException("标准配置没有 jump profile。");
+                new JsonObject { ["jump"] = new JsonObject { ["rangeCells"] = 7 } },
+            };
+            return "navProfiles[0].jump.rangeCells";
         }
 
         var parts = oldPath.Split('.');
@@ -460,7 +457,7 @@ public class CrowdSimulationConfigTests
         const int navCellSizeCm = 6250;
         var config = TestDefaults.DefaultConfig();
         var runtime = TestDefaults.Assemble();
-        Assert.That(config.World.NavCellSizeCm, Is.EqualTo(navCellSizeCm));
+        Assert.That(runtime.NavCellSizeCm, Is.EqualTo(navCellSizeCm));
         Assert.That(runtime.Hpa.NavCellsPerTile, Is.EqualTo(16));
         Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(25000));
         Assert.That(runtime.Fog.NavCellsPerFogCell, Is.EqualTo(4));
@@ -498,14 +495,14 @@ public class CrowdSimulationConfigTests
     {
         // 99 cm 低于下限 100;导航边长取 16,tile 边长与板宽对齐。
         var below = FogCellWorld(navCellSizeCm: 99, fogCellSizeCm: 99, visionCm: 99);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map, pairRules: TestDefaults.DemoPairRules()));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map, pairRules: TestDefaults.DemoPairRules(), navmesh: below.Navmesh));
         Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
         Assert.That(ex.Message, Does.Contain("fog.cellSizeCm"));
         Assert.That(ex.Message, Does.Contain("= 99"));
         Assert.That(ex.Message, Does.Contain("≥ 100"));
 
         var atBound = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 100);
-        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map, pairRules: TestDefaults.DemoPairRules());
+        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map, pairRules: TestDefaults.DemoPairRules(), navmesh: atBound.Navmesh);
         Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(100));
         Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
     }
@@ -522,7 +519,6 @@ public class CrowdSimulationConfigTests
 
         const int navCellSizeCm = 6250;
         var json = TestDefaults.DefaultConfigJson();
-        json["world"]!["navCellSizeCm"] = navCellSizeCm;
         json["fog"]!["cellSizeCm"] = navCellSizeCm * 33;
         var map = TestDefaults.DemoMap();
         int widthCm = navCellSizeCm * 16;
@@ -547,7 +543,7 @@ public class CrowdSimulationConfigTests
         // 导航 16、迷雾格 = 导航格 → 每边迷雾格 16。对角 (F-1)*√2:21²=441 < 2×15²=450 ≤ 22²=484,上限 22。
         // 格长 100 cm;vision 2200 → ceil=22,2300 → ceil=23。
         var over = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 2300);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(over.Config, over.Map, pairRules: TestDefaults.DemoPairRules()));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(over.Config, over.Map, pairRules: TestDefaults.DemoPairRules(), navmesh: over.Navmesh));
         Assert.That(ex!.Message, Does.Contain("fog.visionCm"));
         Assert.That(ex.Message, Does.Contain("2300"));
         Assert.That(ex.Message, Does.Contain("fog.cellSizeCm"));
@@ -555,25 +551,26 @@ public class CrowdSimulationConfigTests
         Assert.That(ex.Message, Does.Contain("22"));
 
         var atDiagonal = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 2200);
-        var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map, pairRules: TestDefaults.DemoPairRules());
+        var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map, pairRules: TestDefaults.DemoPairRules(), navmesh: atDiagonal.Navmesh);
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(2200)));
         Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(100));
         Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
     }
 
-    private static (CrowdSimulationConfig Config, MapConfig Map) FogCellWorld(int navCellSizeCm, int fogCellSizeCm, int visionCm)
+    private static (CrowdSimulationConfig Config, MapConfig Map, NavMeshBakeConfig Navmesh) FogCellWorld(int navCellSizeCm, int fogCellSizeCm, int visionCm)
     {
         var json = TestDefaults.DefaultConfigJson();
-        json["world"]!["navCellSizeCm"] = navCellSizeCm;
         json["fog"]!["cellSizeCm"] = fogCellSizeCm;
         json["fog"]!["visionCm"] = visionCm;
         // 16 个导航格恰好一块 tile,派生格数落在 4..128。
         json["navtile"]!["sizeCm"] = navCellSizeCm * 16;
+        var navmesh = TestDefaults.DefaultNavmeshJson();
+        TestDefaults.SetCapabilityCellSizeCm(navmesh, navCellSizeCm);
         var map = TestDefaults.DemoMap();
         int widthCm = navCellSizeCm * 16;
         map.Boards[0].WidthCm = widthCm;
         map.Boards[0].HeightCm = widthCm;
-        return (CrowdSimulationConfig.Load(json), map);
+        return (CrowdSimulationConfig.Load(json), map, TestDefaults.ParseNavmesh(navmesh));
     }
 
     [Test]

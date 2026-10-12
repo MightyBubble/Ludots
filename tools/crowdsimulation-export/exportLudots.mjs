@@ -1,6 +1,7 @@
 // 导出为 Ludots Mod（LU-21 / AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
 // 产物：.height（CHTM v2，uint16 缩放）、.navsurface（v1）、Maps/<id>.json（队伍 / 关系 / 阻挡物 / 桥）、
-//       CrowdSimulationConfig.json 覆盖片段、parity/s1-truth.json（FNV-1a 摘要，供 C# 端逐格对拍）。
+//       CrowdSimulationConfig.json 覆盖片段、Navigation/navmesh.json 的地图地形事实、
+//       parity/s1-truth.json（FNV-1a 摘要，供 C# 端逐格对拍）。
 // 正本在 Ludots 仓库（本文件即正本）；运行时位于 CrowdSimulation Web 沙盒的 scripts/ 下，
 // 依赖沙盒内 src/engine/ 的生成器（相对导入按该布局解析）。
 // 用法：node scripts/exportLudots.mjs --seed 1337 --map-id crowd_simulation_s1 --out exports/crowd_simulation_s1
@@ -21,7 +22,7 @@ const stamp = (obj) => ({ fixedHz: FIXED_HZ, ...obj });
 const seed = +arg('seed', 1337);
 const mapId = arg('map-id', `crowd_simulation_s${seed}`);
 const outRoot = arg('out', join('exports', mapId));
-for (const sub of ['terrain', 'Maps', 'parity']) mkdirSync(join(outRoot, sub), { recursive: true });
+for (const sub of ['terrain', 'Maps', 'parity', 'Navigation']) mkdirSync(join(outRoot, sub), { recursive: true });
 
 const { DEFAULT_SOURCES, validateConfig } = await import('../src/engine/config.js');
 const { generateWorld } = await import('../src/engine/terrain.js');
@@ -191,10 +192,20 @@ writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, nu
 
 // ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
 // 不写 pairRules，也不写已删除的 relations。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
+// 地形类型到区域、.navsurface 路径写在 navmesh.json 的 maps.<mapId>，不写进群体配置。
 const cmPart = (num, den) => Math.round(worldCm * num / den);
+const terrainAreaById = { water: 'deep', shore: 'shallow', land: 'open', mountain: 'rough', cliff: 'sheer' };
+const terrainAreas = {};
+for (const terrain of config.terrainTypes) {
+  const area = terrainAreaById[terrain.id];
+  if (!area) throw new Error(`地形类型 ${terrain.id} 没有导航区域。maps.${mapId}.terrainAreas 只认 water/shore/land/mountain/cliff。`);
+  terrainAreas[terrain.id] = area;
+}
+writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
+  maps: { [mapId]: { terrainAreas, surfaceAsset: `terrain/${mapId}.navsurface` } },
+}, null, 2));
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
-  mapId,
-  world: { seed, surfaceAsset: `terrain/${mapId}.navsurface` },
+  world: { seed },
   deploy: {
     bases: [
       { playerId: 1, xCm: cmPart(3, 10), yCm: cmPart(7, 20), color: '#4DB2FF' },

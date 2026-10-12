@@ -114,13 +114,30 @@ public class S2NavTruthTests
         var merged = TestDefaults.DefaultConfigJson();
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir("s1337"), "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
-        ((JsonObject)merged["navProfiles"]![4]!)["jump"]!["downCm"] = 5000;
         var config = CrowdSimulationConfig.Load(merged);
+        var navmeshJson = TestDefaults.StandardNavmeshJson();
+        var seedNav = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir("s1337"), "Navigation", "navmesh.json")))!;
+        ConfigPipeline.DeepMerge(navmeshJson, seedNav);
+        foreach (var node in navmeshJson["profiles"]!.AsArray())
+        {
+            if (node!["id"]!.GetValue<string>() == "leaper")
+            {
+                node["jump"]!["downCm"] = 5000;
+            }
+        }
+
         var map = System.Text.Json.JsonSerializer.Deserialize<Ludots.Core.Config.MapConfig>(
             File.ReadAllText(Path.Combine(S1Dir("s1337"), "Maps", "crowd_simulation_s1337.json")),
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var restricted = CrowdSimulationConfigLoader.Load(
-            config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz, TestDefaults.DemoPairRules());
+            config,
+            map,
+            TestDefaults.DemoProfiles(),
+            TestDefaults.ParseNavmesh(navmeshJson),
+            TestDefaults.DemoPathing(),
+            TestDefaults.DemoTemplates(),
+            TestDefaults.FixedHz,
+            TestDefaults.DemoPairRules());
         var narrowed = NavContextBaker.Bake(restricted, grid, heights, deck, agentTypeIndex: 4, clearanceCells: 1);
 
         Assert.That(narrowed.Links?.Count ?? 0, Is.LessThan(baselineCount), "downCm 收紧后链接必须减少");

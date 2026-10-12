@@ -62,7 +62,7 @@ public static class CrowdSimulationAuthoringContract
 
             if (!byId.TryGetValue(entity.Template, out var template))
             {
-                throw new InvalidOperationException($"Maps/{config.MapId}.json: 实体 \"{entity.InstanceId}\" 引用未知模板 \"{entity.Template}\"。");
+                throw new InvalidOperationException($"Maps/{map.Id}.json: 实体 \"{entity.InstanceId}\" 引用未知模板 \"{entity.Template}\"。");
             }
 
             var obstacle = CrowdSimulationMapSurfaceSource.EffectiveObstacle(template, entity);
@@ -80,13 +80,13 @@ public static class CrowdSimulationAuthoringContract
             if (!string.Equals(view.Shape, "Box", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）的 shape = \"{view.Shape}\"，阻挡物只能是 Box（不禁止圆形非阻挡区域实体）。");
+                    $"Maps/{map.Id}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）的 shape = \"{view.Shape}\"，阻挡物只能是 Box（不禁止圆形非阻挡区域实体）。");
             }
 
             if (view.HalfWidthCm != view.HalfHeightCm)
             {
                 throw new InvalidOperationException(
-                    $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）必须是正方形（halfWidthCm {view.HalfWidthCm} ≠ halfHeightCm {view.HalfHeightCm}）。");
+                    $"Maps/{map.Id}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）必须是正方形（halfWidthCm {view.HalfWidthCm} ≠ halfHeightCm {view.HalfHeightCm}）。");
             }
         }
     }

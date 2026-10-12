@@ -19,6 +19,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
@@ -41,7 +43,8 @@ public sealed partial class CrowdSimulationRuntime
     private CrowdSimulationConfig? _configDto;
     private CrowdSimulationDebugConfig? _debug;
     internal bool HasFormalConfig => _configDto != null;
-    internal string? FormalConfigMapId => _configDto?.MapId;
+    private string? _focusedCrowdMapId;
+    internal string? FormalConfigMapId => _focusedCrowdMapId;
     internal bool HasDebugConfig => _debug != null;
     private bool _configResolved;
     private TimeSpan? _planTimeout;
@@ -140,7 +143,14 @@ public sealed partial class CrowdSimulationRuntime
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!TryEnsureConfig(engine) || _configDto == null) return false;
-        if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
+        if (!IsCrowdMap(engine, mapId.Value)) return false;
+        _focusedCrowdMapId = mapId.Value;
+        if (engine.ConfigCatalog != null && engine.ConfigCatalog.TryGet("MassNavigationConfig.json", out var massEntry))
+        {
+            var massMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in massEntry);
+            CrowdSimulationConfigLoader.EnsureSolverExclusive(massMerged?["mapId"]?.GetValue<string>(), mapId.Value);
+        }
+
         if (_debug == null) return true;
         CrowdSimulationDebugConfig debug = _debug;
 
@@ -165,6 +175,21 @@ public sealed partial class CrowdSimulationRuntime
     }
 
     public bool HandleMapSuspended(GameEngine engine, MapId mapId) => HandleMapUnloaded(engine, mapId);
+
+    private static bool IsCrowdMap(GameEngine engine, string mapId)
+    {
+        var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
+        var navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
+            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        if (navmesh.Maps == null || !navmesh.Maps.TryGetValue(mapId, out var entry) || entry == null)
+        {
+            return false;
+        }
+
+        return (entry.TerrainAreas != null && entry.TerrainAreas.Count > 0)
+            || !string.IsNullOrWhiteSpace(entry.SurfaceAsset);
+    }
 
     private bool TryEnsureConfig(GameEngine engine)
     {
@@ -220,21 +245,14 @@ public sealed partial class CrowdSimulationRuntime
                 new CrowdSimulationSessionTickSystem(this), SystemGroup.PostMovement);
         }
 
-        // 体型档案:配置显式声明来源(crowd 会话的半径级只属于它自己的档案集);
-        // 引擎全局注册表是多特性合并产物,直接拿会把无关小体型并进半径级(真实事故)。
-        AgentProfileRegistry agentProfiles;
-        if (!string.IsNullOrWhiteSpace(_configDto!.Agents.ProfilesUri))
-        {
-            var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
-                OpenUri(engine, _configDto.Agents.ProfilesUri), StrictJsonOptions.CreateCamelCase())
-                ?? throw new InvalidOperationException($"CrowdSimulation 体型档案反序列化为空: {_configDto.Agents.ProfilesUri}");
-            agentProfiles = new AgentProfileRegistry(profileList);
-        }
-        else
-        {
-            agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
-                ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
-        }
+        // 装载只取单位模板点名的档案。全局注册表里的其它体型不进半径级。
+        var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
+        var navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
+            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var pathing = new PathingConfigLoader(engine.ConfigPipeline)
+            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var templateFacts = CrowdUnitTemplateFacts.FromTemplates(engine.MapLoader.TemplateRegistry.GetAll());
 
         var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
             ?? throw new InvalidOperationException("CrowdSimulation 会话需要 TeamRelationQuery。");
@@ -243,7 +261,8 @@ public sealed partial class CrowdSimulationRuntime
         var projected = CrowdPairRulesProjection.Project(_configDto!, mapConfig, teamRelations, players, engine.World);
         _pairRulesGuard = projected.Guard;
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
-            _configDto!, mapConfig, agentProfiles, (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
+            _configDto!, mapConfig, agentProfiles, navmesh, pathing, templateFacts,
+            (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
 
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
         // 与配置门禁构成同一条装载检查链;失败即报错,不进入烘焙与生成。

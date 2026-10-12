@@ -15,8 +15,13 @@ public sealed class NavContext
     public required int LayerIndex { get; init; }
     public required int ClearanceNavCells { get; init; }
     public required int NavCellsPerSide { get; init; }
-    /// <summary>逐格代价（0 = 不可通行）。</summary>
+    /// <summary>逐格路径代价（0 = 不可通行）。A* 与流场读这张表。</summary>
     public required Fix64[] Cost { get; init; }
+    /// <summary>
+    /// 逐格速度除数。马达、意图和领队用速度除以这张表。
+    /// schema 未写 speedDivisor 时除数等于路径代价，两张栅格逐格相同。
+    /// </summary>
+    public required Fix64[] SpeedDivisor { get; init; }
     /// <summary>逐格可走（代价 &amp; 坡度 &amp; 非阻挡,腐蚀前）。</summary>
     public required byte[] Walk { get; init; }
     /// <summary>逐格可通行（walk 经净空腐蚀,地图边缘视为阻挡）。</summary>
@@ -36,6 +41,8 @@ public sealed class NavContext
     public required byte[] UpArea { get; init; }
     /// <summary>桥面逐格代价（UpPass 处 = 区域代价;上行 HPA* / 流场用）。</summary>
     public required Fix64[] UpCost { get; init; }
+    /// <summary>桥面逐格速度除数。未写 speedDivisor 时与 UpCost 逐格相同。</summary>
+    public required Fix64[] UpSpeedDivisor { get; init; }
     /// <summary>逐 tile 的缓存条目(拼装 / 查询的输入;仅在烘焙拿到缓存时填充)。</summary>
     public NavTileEntry?[]? Tiles { get; set; }
     /// <summary>桥面 tile 条目(tile → 条目 + 桥头格 + 逐多边形代价;无桥为 null)。</summary>

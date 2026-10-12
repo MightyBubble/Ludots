@@ -88,13 +88,18 @@ public sealed class RuntimeJumpCapability
 public sealed class RuntimeAgentType
 {
     public required string Id { get; init; }
+    /// <summary>
+    /// 导航上下文层号，等于 pathing agentTypes 的下标。
+    /// 体型档案的 layer 是 NavTile 层，不参与这个编号。
+    /// </summary>
     public required int Layer { get; init; }
-    /// <summary>代价 1 地面上的速度（厘米 / 仿真秒）。</summary>
+    /// <summary>该移动类型全体成员模板的速度（厘米 / 仿真秒）。模板之间不一致则装载失败。</summary>
     public required Fix64 SpeedCmPerSecond { get; init; }
-    public required int PushPriority { get; init; }
     public required int NavProfileIndex { get; init; }
-    /// <summary>按导航区域下标的通行代价；0 = 不可通行（配置中未写的区域）。</summary>
+    /// <summary>按导航区域下标的通行代价；0 = 不可通行（未列出，或 passable 为 false）。</summary>
     public required Fix64[] CostByArea { get; init; }
+    /// <summary>按导航区域下标的速度除数。未写 speedDivisor 时与代价相同；不可通行为 0。</summary>
+    public required Fix64[] SpeedDivisorByArea { get; init; }
 }
 
 public sealed class RuntimeUnitType
@@ -113,7 +118,7 @@ public sealed class RuntimeAgentProfile
     public required Fix64 RadiusCm { get; init; }
     /// <summary>个人避让半径（厘米）= 半径 × avoidanceRadiusScale。</summary>
     public required Fix64 PersonalRadiusCm { get; init; }
-    /// <summary>推挤优先级（移动类型份额 + 半径级份额）。</summary>
+    /// <summary>推挤优先级，来自单位模板，不再由半径级份额合成。</summary>
     public required Fix64 PushPriority { get; init; }
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>

@@ -35,6 +35,19 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException($"NavMeshBakeConfig not found in any source for '{relativePath}'.");
             }
 
+            return Parse(mergedObject, _agentProfiles, relativePath);
+        }
+
+        /// <summary>
+        /// 校验并物化已经合并好的 navmesh.json。目录合并与文件合并走同一条校验。
+        /// </summary>
+        public static NavMeshBakeConfig Parse(
+            JsonObject mergedObject,
+            AgentProfileRegistry agentProfiles,
+            string relativePath = NavMeshConfigPaths.BakeConfigPath)
+        {
+            ArgumentNullException.ThrowIfNull(mergedObject);
+            ArgumentNullException.ThrowIfNull(agentProfiles);
             ValidateRaw(mergedObject, relativePath);
             var options = StrictJsonOptions.CreateCamelCase();
 
@@ -71,7 +84,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException("NavMeshBakeConfig.areas is required.");
             }
 
-            ValidateAgentNavProfileReferences(config);
+            ValidateAgentNavProfileReferences(config, agentProfiles);
             return config;
         }
 
@@ -226,7 +239,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
 
-        private void ValidateRaw(JsonObject root, string relativePath)
+        private static void ValidateRaw(JsonObject root, string relativePath)
         {
             RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps" });
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
@@ -464,7 +477,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
 
-        private void ValidateAgentNavProfileReferences(NavMeshBakeConfig config)
+        private static void ValidateAgentNavProfileReferences(NavMeshBakeConfig config, AgentProfileRegistry agentProfiles)
         {
             var navIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < config.Profiles.Count; i++)
@@ -477,9 +490,9 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 }
             }
 
-            for (int i = 0; i < _agentProfiles.Count; i++)
+            for (int i = 0; i < agentProfiles.Count; i++)
             {
-                AgentProfileConfig agent = _agentProfiles[i];
+                AgentProfileConfig agent = agentProfiles[i];
                 if (!navIds.Contains(agent.NavProfileId))
                 {
                     throw new InvalidOperationException(

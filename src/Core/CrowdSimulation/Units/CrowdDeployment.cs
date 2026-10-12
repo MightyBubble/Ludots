@@ -160,11 +160,7 @@ public static class CrowdDeployment
             t, g.RIdx,
             g.Id,
             cfg.Deploy.Bases[g.Player].PlayerId,
-            profile.Id,
-            profile.RadiusCm,
-            profile.PersonalRadiusCm,
-            cfg.AgentTypes[g.LayerIdx].SpeedCmPerSecond,
-            profile.PushPriority);
+            profile.RadiusCm);
         int dense = sim.Units.Add(in unit);
         if (dense < 0) return dense;
         // 槽位复用不带陈旧推挤;新单位 calm=0,首次求解前必醒

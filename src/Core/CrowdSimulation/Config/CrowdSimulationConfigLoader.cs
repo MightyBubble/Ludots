@@ -5,6 +5,8 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Pathing.Config;
 
 namespace Ludots.Core.CrowdSimulation.Config;
 
@@ -25,8 +27,6 @@ public sealed class CrowdSimulationConfigLoader
     /// 格长 ≥ 1 米时被平方的量 ≤ 46340.5,平方仍小于 2^31。</summary>
     public const int MinFogCellSizeCm = CrowdReferenceMeters.CentimetersPerMeter;
 
-    private const string MassNavigationRelativePath = "MassNavigationConfig.json";
-
     private readonly ConfigPipeline _pipeline;
 
     public CrowdSimulationConfigLoader(ConfigPipeline pipeline)
@@ -44,16 +44,7 @@ public sealed class CrowdSimulationConfigLoader
             throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 没有任何来源提供该文件（标准参数在 CrowdSimulationStandardMod，地图事实在地图 Mod）。");
         }
 
-        var config = CrowdSimulationConfig.Load(merged);
-
-        // 一张地图只能启用一种求解器：两份配置指向同一 mapId 才算冲突，磁盘上并存默认值不算。
-        if (catalog != null && catalog.TryGet(MassNavigationRelativePath, out var massEntry))
-        {
-            JsonObject? massMerged = _pipeline.MergeDeepObjectFromCatalog(in massEntry);
-            EnsureSolverExclusive(massMerged?["mapId"]?.GetValue<string>(), config.MapId);
-        }
-
-        return config;
+        return CrowdSimulationConfig.Load(merged);
     }
 
     /// <summary>求解器互斥（LU-19）：两份配置 mapId 相同才冲突。</summary>
@@ -70,20 +61,29 @@ public sealed class CrowdSimulationConfigLoader
     /// LU-20：校验并组装只读运行时配置。输入全部来自 Ludots 已加载的数据。
     /// </summary>
     /// <param name="config">catalog 合并后的 CrowdSimulationConfig.json。</param>
-    /// <param name="map">地图（Boards / Teams / Players / Entities）。</param>
-    /// <param name="profiles">Navigation/agent_profiles.json 注册表。</param>
+    /// <param name="map">地图（Boards / Teams / Players / Entities）。聚焦的地图 id 就是会话地图。</param>
+    /// <param name="profiles">Navigation/agent_profiles.json 注册表。只消费单位模板点名的档案。</param>
+    /// <param name="navmesh">Navigation/navmesh.json。区域、能力档、maps.&lt;mapId&gt; 的地形事实。</param>
+    /// <param name="pathing">Navigation/pathing.json。移动类型与区域代价。</param>
+    /// <param name="templates">带 CrowdSimulationAgent 的单位模板。</param>
     /// <param name="fixedHz">Engine/clock.json 的 FixedHz——仿真频率的唯一来源。</param>
     /// <param name="pairRules">已经投影好的玩家对矩阵。装载只按下标挂到地图玩家上，不解释关系类型。</param>
     public static CrowdSimulationRuntimeConfig Load(
         CrowdSimulationConfig config,
         MapConfig map,
         AgentProfileRegistry profiles,
+        NavMeshBakeConfig navmesh,
+        PathingConfig pathing,
+        IReadOnlyList<CrowdUnitTemplateFacts> templates,
         int fixedHz,
         CrowdPairRules pairRules)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(profiles);
+        ArgumentNullException.ThrowIfNull(navmesh);
+        ArgumentNullException.ThrowIfNull(pathing);
+        ArgumentNullException.ThrowIfNull(templates);
         ArgumentNullException.ThrowIfNull(pairRules);
         if (fixedHz < 1)
         {
@@ -92,13 +92,9 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         CrowdSimulationConfigValidator.Validate(config);
+        var bound = BindNavigation(config, map, profiles, navmesh, pathing, templates);
 
-        string mapFile = $"Maps/{config.MapId}.json";
-        if (!string.Equals(map.Id, config.MapId, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: mapId = \"{config.MapId}\"，与当前地图 \"{map.Id}\" 不一致（CrowdSimulationConfig 按 mapId 绑定地图）。");
-        }
+        string mapFile = $"Maps/{map.Id}.json";
 
         if (map.Boards.Count == 0)
         {
@@ -106,25 +102,21 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         var board = map.Boards[0];
-        int navCellSizeCm = config.World.NavCellSizeCm;
-        if (navCellSizeCm <= 0)
-        {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm = {navCellSizeCm}，需为 > 0 的整数");
-        }
+        int navCellSizeCm = bound.NavCellSizeCm;
 
         // 迷雾格长由作者写成厘米,必须整除导航格;派生倍数是栅格算法量,范围仍是 1..32。
         int fogCellSizeCm = config.Fog.CellSizeCm;
         if (fogCellSizeCm % navCellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: fog.cellSizeCm（{fogCellSizeCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
+                $"{CrowdSimulationConfigValidator.FileName}: fog.cellSizeCm（{fogCellSizeCm}）必须能被 profiles.cellSizeCm（{navCellSizeCm}）整除。");
         }
 
         int navCellsPerFogCell = fogCellSizeCm / navCellSizeCm;
         if (navCellsPerFogCell < 1 || navCellsPerFogCell > 32)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: fog.cellSizeCm（{fogCellSizeCm}）/ world.navCellSizeCm（{navCellSizeCm}）= {navCellsPerFogCell}，需为 ≥ 1、≤ 32 的整数");
+                $"{CrowdSimulationConfigValidator.FileName}: fog.cellSizeCm（{fogCellSizeCm}）/ profiles.cellSizeCm（{navCellSizeCm}）= {navCellsPerFogCell}，需为 ≥ 1、≤ 32 的整数");
         }
 
         if (board.WidthCm != board.HeightCm)
@@ -147,27 +139,27 @@ public sealed class CrowdSimulationConfigLoader
 
         if (board.WidthCm % navCellSizeCm != 0)
         {
-            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
+            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 profiles.cellSizeCm（{navCellSizeCm}）整除。");
         }
 
         int navCellCount = board.WidthCm / navCellSizeCm;
         if (navCellCount < 16 || navCellCount > 1024)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 每边导航格数 = {navCellCount}（Boards[0].WidthCm / world.navCellSizeCm），需为 ≥ 16、≤ 1024 的整数");
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 每边导航格数 = {navCellCount}（Boards[0].WidthCm / profiles.cellSizeCm），需为 ≥ 16、≤ 1024 的整数");
         }
 
         int navTileSizeCm = config.Navtile.SizeCm;
         if (navTileSizeCm % navCellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: navtile.sizeCm（{navTileSizeCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
+                $"{CrowdSimulationConfigValidator.FileName}: navtile.sizeCm（{navTileSizeCm}）必须能被 profiles.cellSizeCm（{navCellSizeCm}）整除。");
         }
 
         int navCellsPerTile = navTileSizeCm / navCellSizeCm;
         if (navCellsPerTile < 4 || navCellsPerTile > 128)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: navtile.sizeCm（{navTileSizeCm}）/ world.navCellSizeCm（{navCellSizeCm}）= {navCellsPerTile}，需为 ≥ 4、≤ 128 的整数");
+                $"{CrowdSimulationConfigValidator.FileName}: navtile.sizeCm（{navTileSizeCm}）/ profiles.cellSizeCm（{navCellSizeCm}）= {navCellsPerTile}，需为 ≥ 4、≤ 128 的整数");
         }
 
         if (navCellCount % navCellsPerTile != 0)
@@ -213,172 +205,23 @@ public sealed class CrowdSimulationConfigLoader
             }
         }
 
-        var agentTypeByLayer = new Dictionary<int, int>();
-        for (int i = 0; i < config.AgentTypes.Length; i++)
-        {
-            agentTypeByLayer.Add(config.AgentTypes[i].Layer, i);
-        }
-
-        var avoidanceRadiusScale = Fix64.FromDouble(config.Agents.AvoidanceRadiusScale);
-        // 原型推挤优先级(参考 core/archetypes.js)= agentTypes[].pushPriority + 半径级份额(authored 数据,
-        // 参考端 radiusClasses[].pushPriority);份额按半径厘米查表,每个派生半径级必须有条目。
-        var radiusShareByRadiusCm = new Dictionary<int, double>();
-        foreach (var (key, rc) in config.Agents.RadiusClasses)
-        {
-            if (!TryParseCanonicalRadiusCm(key, out int radiusCm))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 的键 \"{key}\" 必须是半径厘米的十进制整数。");
-            }
-
-            if (!radiusShareByRadiusCm.TryAdd(radiusCm, rc.PushPriority))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 半径 {radiusCm} 重复");
-            }
-        }
-
-        var runtimeProfiles = new List<RuntimeAgentProfile>(profiles.Count);
-        for (int i = 0; i < profiles.Count; i++)
-        {
-            var p = profiles[i];
-            if (!agentTypeByLayer.TryGetValue(p.Layer, out int agentTypeIndex))
-            {
-                throw new InvalidOperationException(
-                    $"Navigation/agent_profiles.json: AgentProfile \"{p.Id}\" 的 layer = {p.Layer} 找不到对应 agentTypes[].layer");
-            }
-
-            var radiusCm = Fix64.FromDouble(p.RadiusCm);
-            int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidanceRadiusScale, navCellSizeCm);
-            if (clearance > 255)
-            {
-                throw new InvalidOperationException(
-                    $"Navigation/agent_profiles.json: AgentProfile \"{p.Id}\" 换算的净空 {clearance} 超过 255 格");
-            }
-
-            int radiusKey = (int)radiusCm.ToInt();
-            if (!radiusShareByRadiusCm.TryGetValue(radiusKey, out double radiusShare))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 缺半径 {radiusKey} 的条目(profile \"{p.Id}\")");
-            }
-
-            runtimeProfiles.Add(new RuntimeAgentProfile
-            {
-                Id = p.Id,
-                RadiusCm = radiusCm,
-                PersonalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidanceRadiusScale),
-                PushPriority = Fix64.FromDouble(config.AgentTypes[agentTypeIndex].PushPriority + radiusShare),
-                AgentTypeIndex = agentTypeIndex,
-                ClearanceNavCells = clearance,
-                NavContextId = CrowdSimulationSpace.NavContextId(p.Layer, clearance),
-            });
-        }
-
-        if (runtimeProfiles.Count > 255)
-        {
-            throw new InvalidOperationException(
-                $"Navigation/agent_profiles.json: 移动类型 × 半径级组合 {runtimeProfiles.Count} 超过 255 上限");
-        }
-
-        // 单位模板 × 半径级组合数：每个单位模板 × 其移动类型下已有的体型数。
-        int archetypes = 0;
-        foreach (var u in config.UnitTypes)
-        {
-            int layer = config.AgentTypes[Array.FindIndex(config.AgentTypes, a => a.Id == u.AgentType)].Layer;
-            int radiusClasses = 0;
-            foreach (var rp in runtimeProfiles)
-            {
-                if (config.AgentTypes[rp.AgentTypeIndex].Layer == layer) radiusClasses++;
-            }
-
-            archetypes += radiusClasses;
-        }
-
-        if (archetypes > 255)
-        {
-            throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: unitTypes × 半径级组合 {archetypes} 超过 255 上限");
-        }
-
-        int AreaIndex(string id)
-        {
-            for (int i = 0; i < config.NavAreas.Length; i++)
-            {
-                if (config.NavAreas[i].Id == id) return i;
-            }
-
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 内部错误，导航区域 \"{id}\" 未登记");
-        }
-
-        var terrainToArea = new int[config.World.TerrainTypes.Length];
-        for (int i = 0; i < terrainToArea.Length; i++)
-        {
-            terrainToArea[i] = AreaIndex(config.TerrainAreas[config.World.TerrainTypes[i].Id]);
-        }
-
-        var runtimeAgentTypes = new List<RuntimeAgentType>(config.AgentTypes.Length);
-        foreach (var a in config.AgentTypes)
-        {
-            var costByArea = new Fix64[config.NavAreas.Length];
-            foreach (var cost in a.AreaCost)
-            {
-                costByArea[AreaIndex(cost.Key)] = Fix64.FromDouble(cost.Value);
-            }
-
-            int profileIndex = Array.FindIndex(config.NavProfiles, p => p.Id == a.Profile);
-            runtimeAgentTypes.Add(new RuntimeAgentType
-            {
-                Id = a.Id,
-                Layer = a.Layer,
-                SpeedCmPerSecond = Fix64.FromDouble(a.SpeedCmPerSecond),
-                PushPriority = a.PushPriority,
-                NavProfileIndex = profileIndex,
-                CostByArea = costByArea,
-            });
-        }
-
-        var distinctRadiusSet = new SortedSet<int>();
-        foreach (var profile in runtimeProfiles) distinctRadiusSet.Add((int)profile.RadiusCm.ToInt());
-        var distinctRadiusCm = new int[distinctRadiusSet.Count];
-        distinctRadiusSet.CopyTo(distinctRadiusCm);
-
         return new CrowdSimulationRuntimeConfig
         {
-            MapId = config.MapId,
+            MapId = map.Id,
             FixedHz = fixedHz,
             NavCellsPerSide = navCellCount,
             NavCellSizeCm = navCellSizeCm,
             WorldSeed = config.World.Seed,
-            SurfaceAsset = config.World.SurfaceAsset,
-            TerrainTypeIds = Array.ConvertAll(config.World.TerrainTypes, t => t.Id),
-            NavAreas = Array.ConvertAll(config.NavAreas, a => new RuntimeNavArea { Id = a.Id, SlopeFree = a.SlopeFree }),
-            TerrainToArea = terrainToArea,
-            NavProfiles = Array.ConvertAll(config.NavProfiles, p => new RuntimeNavProfile
-            {
-                Id = p.Id,
-                MaxSlopeDeg = p.MaxSlopeDeg is double slope ? Fix64.FromDouble(slope) : null,
-                Jump = p.Jump == null
-                    ? null
-                    : new RuntimeJumpCapability
-                    {
-                        UpCm = p.Jump.UpCm,
-                        DownCm = p.Jump.DownCm,
-                        RangeNavCells = p.Jump.RangeNavCells,
-                        Cost = Fix64.FromDouble(p.Jump.Cost),
-                    },
-            }),
-            AgentTypes = runtimeAgentTypes,
-            UnitTypes = Array.ConvertAll(config.UnitTypes, u => new RuntimeUnitType
-            {
-                Id = u.Id,
-                AgentTypeIndex = Array.FindIndex(config.AgentTypes, a => a.Id == u.AgentType),
-                Special = u.Special,
-                TemplatesByRadiusCm = ParseTemplatesByRadiusCm(u),
-            }),
-            Profiles = runtimeProfiles,
-            RadiusClasses = Array.AsReadOnly(distinctRadiusCm),
-            AvoidanceRadiusScale = avoidanceRadiusScale,
+            SurfaceAsset = bound.SurfaceAsset,
+            TerrainTypeIds = bound.TerrainTypeIds,
+            NavAreas = bound.NavAreas,
+            TerrainToArea = bound.TerrainToArea,
+            NavProfiles = bound.NavProfiles,
+            AgentTypes = bound.AgentTypes,
+            UnitTypes = bound.UnitTypes,
+            Profiles = bound.Profiles,
+            RadiusClasses = bound.RadiusClasses,
+            AvoidanceRadiusScale = bound.AvoidanceRadiusScale,
             Navmesh = new RuntimeNavmeshSection
             {
                 MinRegionNavCellArea = Fix64.FromDouble(config.Navmesh.MinRegionNavCellArea),
@@ -499,7 +342,7 @@ public sealed class CrowdSimulationConfigLoader
             {
                 BlockCoverage = Fix64.FromDouble(config.Structures.BlockCoverage),
                 PortalReachNavCells = config.Structures.PortalReachNavCells,
-                Templates = BuildStructureTemplates(config),
+                Templates = BuildStructureTemplates(config, bound.AreaIndexById),
             },
             Deploy = new RuntimeDeploySection
             {
@@ -537,61 +380,459 @@ public sealed class CrowdSimulationConfigLoader
         return result;
     }
 
-    private static bool TryParseCanonicalRadiusCm(string key, out int radiusCm)
-    {
-        if (!int.TryParse(key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out radiusCm))
-        {
-            return false;
-        }
-
-        return radiusCm > 0 && string.Equals(key, radiusCm.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
-    }
-
-    /// <summary>结构模板表装载(参考 templates.structures):模板 area id 解析为导航区域下标,
-    /// 未知区域在装载即报错。表按 id 排序,place 指令按 id 查本表,不看 JSON 键顺序。</summary>
-    private static RuntimeStructureTemplate[] BuildStructureTemplates(CrowdSimulationConfig config)
+    /// <summary>结构模板表装载:模板 area id 解析为 navmesh areas 下标。未知区域在装载即报错。表按 id 排序。</summary>
+    private static RuntimeStructureTemplate[] BuildStructureTemplates(
+        CrowdSimulationConfig config,
+        IReadOnlyDictionary<string, int> areaIndex)
     {
         var entries = config.Structures.Templates;
         if (entries == null || entries.Count == 0) return Array.Empty<RuntimeStructureTemplate>();
-        var areaIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (int i = 0; i < config.NavAreas.Length; i++) areaIndex.Add(config.NavAreas[i].Id, i);
-        return OrderedById(entries, (id, t) => new RuntimeStructureTemplate
+        return OrderedById(entries, (id, t) =>
         {
-            Id = id,
-            Name = t.Name ?? id,
-            Footprint = t.Footprint,
-            Blocker = t.Blocker,
-            AreaIndex = t.Area != null ? areaIndex[t.Area] : null,
-            Priority = t.Priority ?? 0,
-            LifetimeSec = t.LifetimeSec is { } sec ? Fix64.FromDouble(sec) : null,
-            LifetimeSecRaw = t.LifetimeSec,
-            Layered = t.Layered,
+            int? area = null;
+            if (t.Area != null)
+            {
+                if (!areaIndex.TryGetValue(t.Area, out int index))
+                {
+                    throw new InvalidOperationException(
+                        $"{CrowdSimulationConfigValidator.FileName}: structures.templates.{id}.area 未知导航区域 \"{t.Area}\"");
+                }
+
+                area = index;
+            }
+
+            return new RuntimeStructureTemplate
+            {
+                Id = id,
+                Name = t.Name ?? id,
+                Footprint = t.Footprint,
+                Blocker = t.Blocker,
+                AreaIndex = area,
+                Priority = t.Priority ?? 0,
+                LifetimeSec = t.LifetimeSec is { } sec ? Fix64.FromDouble(sec) : null,
+                LifetimeSecRaw = t.LifetimeSec,
+                Layered = t.Layered,
+            };
         });
     }
 
-    /// <summary>unitTypes[].templates 的半径级键按整数厘米解析(声明式映射,不是 id 字符串约定)。</summary>
-    private static Dictionary<int, string>? ParseTemplatesByRadiusCm(CrowdSimulationConfig.UnitTypeEntry unitType)
+    private static NavigationBinding BindNavigation(
+        CrowdSimulationConfig config,
+        MapConfig map,
+        AgentProfileRegistry profiles,
+        NavMeshBakeConfig navmesh,
+        PathingConfig pathing,
+        IReadOnlyList<CrowdUnitTemplateFacts> templates)
     {
-        if (unitType.Templates == null) return null;
-        var parsed = new Dictionary<int, string>(unitType.Templates.Count);
-        foreach (var kvp in unitType.Templates)
+        if (navmesh.Maps == null || !navmesh.Maps.TryGetValue(map.Id, out var mapNav) || mapNav == null)
         {
-            if (!int.TryParse(kvp.Key, System.Globalization.CultureInfo.InvariantCulture, out int radiusCm) || radiusCm <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: unitTypes.{unitType.Id}.templates 的键 \"{kvp.Key}\" 需为 > 0 的整数半径(厘米)");
-            }
-
-            if (string.IsNullOrWhiteSpace(kvp.Value))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: unitTypes.{unitType.Id}.templates[{kvp.Key}] 需为非空模板 id");
-            }
-
-            parsed[radiusCm] = kvp.Value;
+            throw new InvalidOperationException(
+                $"Navigation/navmesh.json: maps.{map.Id} 缺失。群体模拟从这里读地形区域和 .navsurface。");
         }
 
-        return parsed;
+        if (mapNav.TerrainAreas == null || mapNav.TerrainAreas.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Navigation/navmesh.json: maps.{map.Id}.terrainAreas 不能为空。对象键顺序就是地形类型下标。");
+        }
+
+        if (string.IsNullOrWhiteSpace(mapNav.SurfaceAsset))
+        {
+            throw new InvalidOperationException(
+                $"Navigation/navmesh.json: maps.{map.Id}.surfaceAsset 需为非空的 .navsurface 路径。");
+        }
+
+        if (navmesh.Areas == null || navmesh.Areas.Count == 0)
+        {
+            throw new InvalidOperationException("Navigation/navmesh.json: areas 不能为空。");
+        }
+
+        if (pathing.AgentTypes == null || pathing.AgentTypes.Count == 0)
+        {
+            throw new InvalidOperationException("Navigation/pathing.json: agentTypes 不能为空。");
+        }
+
+        if (templates.Count == 0)
+        {
+            throw new InvalidOperationException("Entities/templates.json: 没有带 CrowdSimulationAgent 的单位模板。");
+        }
+
+        var areaIndexById = new Dictionary<string, int>(StringComparer.Ordinal);
+        var areaIndexByNumber = new Dictionary<int, int>();
+        var navAreas = new RuntimeNavArea[navmesh.Areas.Count];
+        for (int i = 0; i < navmesh.Areas.Count; i++)
+        {
+            var area = navmesh.Areas[i] ?? throw new InvalidOperationException($"Navigation/navmesh.json: areas[{i}] 为空。");
+            if (string.IsNullOrWhiteSpace(area.Id) || !areaIndexById.TryAdd(area.Id, i))
+            {
+                throw new InvalidOperationException($"Navigation/navmesh.json: areas id \"{area.Id}\" 为空或重复。");
+            }
+
+            if (!areaIndexByNumber.TryAdd(area.AreaId, i))
+            {
+                throw new InvalidOperationException($"Navigation/navmesh.json: areas areaId {area.AreaId} 重复。");
+            }
+
+            navAreas[i] = new RuntimeNavArea { Id = area.Id, SlopeFree = area.SlopeFree };
+        }
+
+        var terrainIds = new string[mapNav.TerrainAreas.Count];
+        var terrainToArea = new int[mapNav.TerrainAreas.Count];
+        int terrainIndex = 0;
+        foreach (var (terrainId, areaId) in mapNav.TerrainAreas)
+        {
+            if (string.IsNullOrWhiteSpace(terrainId) || string.IsNullOrWhiteSpace(areaId) || !areaIndexById.TryGetValue(areaId, out int areaIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/navmesh.json: maps.{map.Id}.terrainAreas.{terrainId} 需映射到已定义的导航区域（当前 \"{areaId}\"）。");
+            }
+
+            terrainIds[terrainIndex] = terrainId;
+            terrainToArea[terrainIndex] = areaIndex;
+            terrainIndex++;
+        }
+
+        var profileById = new Dictionary<string, AgentProfileConfig>(StringComparer.Ordinal);
+        for (int i = 0; i < profiles.Count; i++)
+        {
+            profileById[profiles[i].Id] = profiles[i];
+        }
+
+        var navProfileIndexById = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < navmesh.Profiles.Count; i++)
+        {
+            var cap = navmesh.Profiles[i] ?? throw new InvalidOperationException($"Navigation/navmesh.json: profiles[{i}] 为空。");
+            if (!navProfileIndexById.TryAdd(cap.Id, i))
+            {
+                throw new InvalidOperationException($"Navigation/navmesh.json: profiles id \"{cap.Id}\" 重复。");
+            }
+        }
+
+        var agentIndexById = new Dictionary<string, int>(StringComparer.Ordinal);
+        var membersByAgent = new List<CrowdUnitTemplateFacts>[pathing.AgentTypes.Count];
+        for (int i = 0; i < pathing.AgentTypes.Count; i++)
+        {
+            var agent = pathing.AgentTypes[i] ?? throw new InvalidOperationException($"Navigation/pathing.json: agentTypes[{i}] 为空。");
+            if (string.IsNullOrWhiteSpace(agent.Id) || !agentIndexById.TryAdd(agent.Id, i))
+            {
+                throw new InvalidOperationException($"Navigation/pathing.json: agentTypes id \"{agent.Id}\" 为空或重复。");
+            }
+
+            membersByAgent[i] = new List<CrowdUnitTemplateFacts>();
+        }
+
+        var seenTemplates = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var template in templates)
+        {
+            if (!seenTemplates.Add(template.TemplateId))
+            {
+                throw new InvalidOperationException($"Entities/templates.json: 模板 \"{template.TemplateId}\" 重复。");
+            }
+
+            if (!agentIndexById.TryGetValue(template.AgentTypeId, out int agentIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的 agentTypeId \"{template.AgentTypeId}\" 不在 Navigation/pathing.json 的 agentTypes 里。");
+            }
+
+            if (!profileById.ContainsKey(template.ProfileId))
+            {
+                throw new InvalidOperationException(
+                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的 profileId \"{template.ProfileId}\" 不在 Navigation/agent_profiles.json。");
+            }
+
+            membersByAgent[agentIndex].Add(template);
+        }
+
+        var avoidance = Fix64.FromDouble(config.Agents.AvoidanceRadiusScale);
+        var runtimeProfiles = new List<RuntimeAgentProfile>(templates.Count);
+        var runtimeAgentTypes = new List<RuntimeAgentType>(pathing.AgentTypes.Count);
+        var unitTypes = new List<RuntimeUnitType>(pathing.AgentTypes.Count);
+        var runtimeNavProfiles = new List<RuntimeNavProfile>();
+        var runtimeNavIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        int navCellSizeCm = 0;
+
+        for (int agentIndex = 0; agentIndex < pathing.AgentTypes.Count; agentIndex++)
+        {
+            var agent = pathing.AgentTypes[agentIndex];
+            var members = membersByAgent[agentIndex];
+            if (members.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/pathing.json: agentTypes \"{agent.Id}\" 没有单位模板。每个移动类型都要有模板声明速度和半径。");
+            }
+
+            if (!profileById.TryGetValue(agent.ProfileId, out var representative))
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/pathing.json: agentTypes[{agent.Id}].profileId \"{agent.ProfileId}\" 不在 Navigation/agent_profiles.json。");
+            }
+
+            if (!navProfileIndexById.TryGetValue(representative.NavProfileId, out int capFileIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/agent_profiles.json: \"{representative.Id}\" 的 navProfileId \"{representative.NavProfileId}\" 不在 Navigation/navmesh.json 的 profiles 里。");
+            }
+
+            var capability = navmesh.Profiles[capFileIndex];
+            if (capability.CellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/navmesh.json: profiles.{capability.Id}.cellSizeCm 需为 > 0。群体模拟用它做导航格边长，本会话的能力档必须相同。");
+            }
+
+            if (navCellSizeCm == 0)
+            {
+                navCellSizeCm = capability.CellSizeCm;
+            }
+            else if (navCellSizeCm != capability.CellSizeCm)
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/navmesh.json: profiles.{capability.Id}.cellSizeCm = {capability.CellSizeCm}，与本会话已采用的 {navCellSizeCm} 不一致。");
+            }
+
+            if (!runtimeNavIndex.TryGetValue(capability.Id, out int navProfileIndex))
+            {
+                navProfileIndex = runtimeNavProfiles.Count;
+                runtimeNavIndex.Add(capability.Id, navProfileIndex);
+                runtimeNavProfiles.Add(ToRuntimeProfile(capability));
+            }
+
+            Fix64 speed = members[0].SpeedCmPerSecond;
+            bool special = members[0].Special;
+            var templatesByRadius = new Dictionary<int, string>();
+            foreach (var member in members)
+            {
+                if (member.SpeedCmPerSecond != speed)
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 移动类型 \"{agent.Id}\" 的模板速度不一致（\"{members[0].TemplateId}\" {speed}，\"{member.TemplateId}\" {member.SpeedCmPerSecond}）。");
+                }
+
+                if (member.Special != special)
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 移动类型 \"{agent.Id}\" 的模板 special 不一致。");
+                }
+
+                var body = profileById[member.ProfileId];
+                if (!string.Equals(body.NavProfileId, capability.Id, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 模板 \"{member.TemplateId}\" 的档案 \"{body.Id}\" 指向能力档 \"{body.NavProfileId}\"，与移动类型 \"{agent.Id}\" 的 \"{capability.Id}\" 不一致。");
+                }
+
+                var radiusCm = Fix64.FromDouble(body.RadiusCm);
+                int radiusKey = radiusCm.ToInt();
+                if (!templatesByRadius.TryAdd(radiusKey, member.TemplateId))
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 移动类型 \"{agent.Id}\" 的半径 {radiusKey} 有多份模板。");
+                }
+
+                var expectedPersonal = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidance);
+                if (member.PersonalRadiusCm != expectedPersonal)
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 模板 \"{member.TemplateId}\" 的 personalRadiusCm 与半径 × agents.avoidanceRadiusScale 不一致。");
+                }
+
+                int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidance, navCellSizeCm);
+                if (clearance > 255)
+                {
+                    throw new InvalidOperationException(
+                        $"Navigation/agent_profiles.json: AgentProfile \"{body.Id}\" 换算的净空 {clearance} 超过 255 格");
+                }
+
+                runtimeProfiles.Add(new RuntimeAgentProfile
+                {
+                    Id = body.Id,
+                    RadiusCm = radiusCm,
+                    PersonalRadiusCm = member.PersonalRadiusCm,
+                    PushPriority = member.PushPriority,
+                    AgentTypeIndex = agentIndex,
+                    ClearanceNavCells = clearance,
+                    NavContextId = CrowdSimulationSpace.NavContextId(agentIndex, clearance),
+                });
+            }
+
+            var costByArea = new Fix64[navAreas.Length];
+            var speedByArea = new Fix64[navAreas.Length];
+            var seenAreaCosts = new HashSet<int>();
+            var areaCosts = agent.NavMesh?.AreaCosts;
+            if (areaCosts != null)
+            {
+                for (int i = 0; i < areaCosts.Count; i++)
+                {
+                    var entry = areaCosts[i] ?? throw new InvalidOperationException(
+                        $"Navigation/pathing.json: agentTypes[{agent.Id}].navMesh.areaCosts[{i}] 为空。");
+                    if (!seenAreaCosts.Add(entry.AreaId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Navigation/pathing.json: agentTypes[{agent.Id}].navMesh.areaCosts areaId {entry.AreaId} 重复。");
+                    }
+
+                    if (!areaIndexByNumber.TryGetValue(entry.AreaId, out int idx))
+                    {
+                        throw new InvalidOperationException(
+                            $"Navigation/pathing.json: agentTypes.{agent.Id}.areaCosts areaId {entry.AreaId} 未知导航区域");
+                    }
+
+                    if (entry.Cost <= 0d || double.IsNaN(entry.Cost))
+                    {
+                        throw new InvalidOperationException(
+                            $"Navigation/pathing.json: agentTypes.{agent.Id}.areaCosts areaId {entry.AreaId} 的 cost 需为 > 0。");
+                    }
+
+                    if (entry.Passable == false)
+                    {
+                        continue;
+                    }
+
+                    costByArea[idx] = Fix64.FromDouble(entry.Cost);
+                    speedByArea[idx] = PathingAreaCostCompiler.SpeedDivisor(entry);
+                }
+            }
+
+            if (capability.Jump != null)
+            {
+                double minCost = double.PositiveInfinity;
+                for (int i = 0; i < costByArea.Length; i++)
+                {
+                    if (costByArea[i] > Fix64.Zero)
+                    {
+                        minCost = Math.Min(minCost, costByArea[i].ToDouble());
+                    }
+                }
+
+                if (minCost < double.PositiveInfinity && capability.Jump.Cost < minCost)
+                {
+                    throw new InvalidOperationException(
+                        $"Navigation/navmesh.json: profiles.{capability.Id}.jump.cost 不能低于该类型最低区域代价（寻路启发式需可采纳）");
+                }
+            }
+
+            runtimeAgentTypes.Add(new RuntimeAgentType
+            {
+                Id = agent.Id,
+                Layer = agentIndex,
+                SpeedCmPerSecond = speed,
+                NavProfileIndex = navProfileIndex,
+                CostByArea = costByArea,
+                SpeedDivisorByArea = speedByArea,
+            });
+            unitTypes.Add(new RuntimeUnitType
+            {
+                Id = agent.Id,
+                AgentTypeIndex = agentIndex,
+                Special = special,
+                TemplatesByRadiusCm = templatesByRadius,
+            });
+        }
+
+        if (runtimeProfiles.Count > 255)
+        {
+            throw new InvalidOperationException(
+                $"Navigation/agent_profiles.json: 移动类型 × 半径级组合 {runtimeProfiles.Count} 超过 255 上限");
+        }
+
+        var distinctRadiusSet = new SortedSet<int>();
+        foreach (var profile in runtimeProfiles)
+        {
+            distinctRadiusSet.Add(profile.RadiusCm.ToInt());
+        }
+
+        var distinctRadiusCm = new int[distinctRadiusSet.Count];
+        distinctRadiusSet.CopyTo(distinctRadiusCm);
+
+        return new NavigationBinding(
+            navCellSizeCm,
+            mapNav.SurfaceAsset,
+            terrainIds,
+            terrainToArea,
+            navAreas,
+            runtimeNavProfiles,
+            runtimeAgentTypes,
+            unitTypes,
+            runtimeProfiles,
+            Array.AsReadOnly(distinctRadiusCm),
+            avoidance,
+            areaIndexById);
+    }
+
+    private static RuntimeNavProfile ToRuntimeProfile(NavMeshAgentProfileConfig capability)
+    {
+        // maxSlopeDeg 为 0 表示这个能力档不限坡度。主线字段必填，0 不是缺省补值。
+        Fix64? slope = capability.MaxSlopeDeg > 0f ? Fix64.FromDouble(capability.MaxSlopeDeg) : null;
+        RuntimeJumpCapability? jump = null;
+        if (capability.Jump != null)
+        {
+            var authored = capability.Jump;
+            if (authored.DownCm < authored.UpCm || authored.RangeNavCells <= 0 || authored.Cost <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Navigation/navmesh.json: profiles.{capability.Id}.jump 参数无效（downCm ≥ upCm，rangeNavCells / cost > 0）。");
+            }
+
+            jump = new RuntimeJumpCapability
+            {
+                UpCm = authored.UpCm,
+                DownCm = authored.DownCm,
+                RangeNavCells = authored.RangeNavCells,
+                Cost = Fix64.FromDouble(authored.Cost),
+            };
+        }
+
+        return new RuntimeNavProfile
+        {
+            Id = capability.Id,
+            MaxSlopeDeg = slope,
+            Jump = jump,
+        };
+    }
+
+    private sealed class NavigationBinding
+    {
+        public NavigationBinding(
+            int navCellSizeCm,
+            string surfaceAsset,
+            IReadOnlyList<string> terrainTypeIds,
+            IReadOnlyList<int> terrainToArea,
+            IReadOnlyList<RuntimeNavArea> navAreas,
+            IReadOnlyList<RuntimeNavProfile> navProfiles,
+            IReadOnlyList<RuntimeAgentType> agentTypes,
+            IReadOnlyList<RuntimeUnitType> unitTypes,
+            IReadOnlyList<RuntimeAgentProfile> agentProfiles,
+            IReadOnlyList<int> radiusClasses,
+            Fix64 avoidanceRadiusScale,
+            IReadOnlyDictionary<string, int> areaIndexById)
+        {
+            NavCellSizeCm = navCellSizeCm;
+            SurfaceAsset = surfaceAsset;
+            TerrainTypeIds = terrainTypeIds;
+            TerrainToArea = terrainToArea;
+            NavAreas = navAreas;
+            NavProfiles = navProfiles;
+            AgentTypes = agentTypes;
+            UnitTypes = unitTypes;
+            Profiles = agentProfiles;
+            RadiusClasses = radiusClasses;
+            AvoidanceRadiusScale = avoidanceRadiusScale;
+            AreaIndexById = areaIndexById;
+        }
+
+        public int NavCellSizeCm { get; }
+        public string SurfaceAsset { get; }
+        public IReadOnlyList<string> TerrainTypeIds { get; }
+        public IReadOnlyList<int> TerrainToArea { get; }
+        public IReadOnlyList<RuntimeNavArea> NavAreas { get; }
+        public IReadOnlyList<RuntimeNavProfile> NavProfiles { get; }
+        public IReadOnlyList<RuntimeAgentType> AgentTypes { get; }
+        public IReadOnlyList<RuntimeUnitType> UnitTypes { get; }
+        public IReadOnlyList<RuntimeAgentProfile> Profiles { get; }
+        public IReadOnlyList<int> RadiusClasses { get; }
+        public Fix64 AvoidanceRadiusScale { get; }
+        public IReadOnlyDictionary<string, int> AreaIndexById { get; }
     }
 
     /// <summary>

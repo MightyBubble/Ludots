@@ -1988,56 +1988,21 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 obj,
                 "CrowdSimulationAgent",
                 "profileId",
-                "agentType",
-                "radiusClassCm",
+                "agentTypeId",
                 "speedCmPerSecond",
-                "radiusCm",
                 "personalRadiusCm",
-                "pushPriority");
-            string profileId = RequireStringProperty(obj, "profileId", "CrowdSimulationAgent");
-            var agent = new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId };
-            if (obj.TryGetPropertyValue("agentType", out JsonNode? agentType))
+                "pushPriority",
+                "special");
+            var facts = Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.Parse("template", obj);
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent
             {
-                agent.AgentType = agentType!.GetValue<string>();
-            }
-
-            if (obj.TryGetPropertyValue("radiusClassCm", out JsonNode? radiusClassCm))
-            {
-                agent.RadiusClassCm = radiusClassCm!.GetValue<int>();
-            }
-
-            if (obj.TryGetPropertyValue("speedCmPerSecond", out JsonNode? speed))
-            {
-                agent.SpeedCmPerSecond = RequirePositiveCm(speed!, "speedCmPerSecond");
-            }
-
-            if (obj.TryGetPropertyValue("radiusCm", out JsonNode? radius))
-            {
-                agent.RadiusCm = RequirePositiveCm(radius!, "radiusCm");
-            }
-
-            if (obj.TryGetPropertyValue("personalRadiusCm", out JsonNode? personalRadius))
-            {
-                agent.PersonalRadiusCm = RequirePositiveCm(personalRadius!, "personalRadiusCm");
-            }
-
-            if (obj.TryGetPropertyValue("pushPriority", out JsonNode? pushPriority))
-            {
-                agent.PushPriority = RequirePositiveCm(pushPriority!, "pushPriority");
-            }
-
-            entity.Add(agent);
-        }
-
-        private static Ludots.Core.Mathematics.FixedPoint.Fix64 RequirePositiveCm(JsonNode node, string field)
-        {
-            double value = node.GetValue<double>();
-            if (!double.IsFinite(value) || value <= 0)
-            {
-                throw new InvalidOperationException($"CrowdSimulationAgent.{field} = {value}，需为 > 0 的数值。");
-            }
-
-            return Ludots.Core.Mathematics.FixedPoint.Fix64.FromDouble(value);
+                ProfileId = facts.ProfileId,
+                AgentTypeId = facts.AgentTypeId,
+                SpeedCmPerSecond = facts.SpeedCmPerSecond,
+                PersonalRadiusCm = facts.PersonalRadiusCm,
+                PushPriority = facts.PushPriority,
+                Special = facts.Special,
+            });
         }
 
         private static void SetCrowdSimulationNavArea(Entity entity, JsonNode data)

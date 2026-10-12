@@ -1,0 +1,14 @@
+{
+  "maps": {
+    "crowd_simulation_s2024": {
+      "terrainAreas": {
+        "water": "deep",
+        "shore": "shallow",
+        "land": "open",
+        "mountain": "rough",
+        "cliff": "sheer"
+      },
+      "surfaceAsset": "terrain/crowd_simulation_s2024.navsurface"
+    }
+  }
+}

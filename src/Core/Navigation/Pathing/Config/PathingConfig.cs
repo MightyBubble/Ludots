@@ -42,12 +42,12 @@ namespace Ludots.Core.Navigation.Pathing.Config
     public sealed class PathingAreaCostConfig
     {
         public int AreaId { get; set; }
-        public float Cost { get; set; }
+        public double Cost { get; set; }
 
         /// <summary>
         /// 缺省等于 cost。这是 schema 默认，装载器不另写一个数；读取处用 cost 补这个空值。
         /// </summary>
-        public float? SpeedDivisor { get; set; }
+        public double? SpeedDivisor { get; set; }
 
         /// <summary>
         /// 缺省为可通行。false 表示该 agent 进不了这个区域。
