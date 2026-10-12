@@ -38,6 +38,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 440,
       "impactEffect": "Effect.Champion.Ezreal.ArcaneShift"
     }
@@ -75,6 +76,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
     }
@@ -112,6 +114,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 840,
       "impactEffect": "Effect.Champion.Ezreal.MysticShot"
     }
@@ -149,6 +152,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 2200,
       "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
     }
@@ -229,6 +233,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 320,
       "impactEffect": "Effect.Champion.Garen.DecisiveStrike"
     }
@@ -266,6 +271,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Champion.Garen.DemacianJustice"
     }
@@ -303,6 +309,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Champion.Garen.Judgment"
     }
@@ -340,6 +347,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Champion.Geomancer.RunicBeacon"
     }
@@ -377,6 +385,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Champion.Geomancer.RuneField"
     }
@@ -414,6 +423,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Champion.Geomancer.StonePillar"
     }
@@ -451,6 +461,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 920,
       "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
     }
@@ -488,6 +499,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 640,
       "impactEffect": "Effect.Champion.Jayce.Cannon.AccelerationGate"
     }
@@ -525,6 +537,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Champion.Jayce.Cannon.HyperCharge"
     }
@@ -562,6 +575,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 880,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
     }
@@ -599,6 +613,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Champion.Jayce.Hammer.LightningField"
     }
@@ -636,6 +651,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 300,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
     }
@@ -673,6 +689,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
     }
@@ -790,6 +807,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 180,
       "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
     }
@@ -827,6 +845,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
     }
@@ -864,6 +883,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1400,
       "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
     }
@@ -901,6 +921,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 900,
       "impactEffect": "Effect.ChampionStress.Priest.Heal"
     }
@@ -938,6 +959,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.SpellEngineer.SpellBeacon"
     }
@@ -975,6 +997,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.SpellEngineer.GravityWell"
     }
@@ -1017,6 +1040,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 700,
       "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
     }
@@ -1058,6 +1082,7 @@
       }
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 1050,
       "impactEffect": "Effect.Champion.SpellEngineer.GuidedLaser"
     }

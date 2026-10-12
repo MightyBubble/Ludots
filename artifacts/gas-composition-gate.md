@@ -1,42 +1,57 @@
 # GAS Composition Gate — Self Review
 
-- **Task / Issue**: ScreenRegionToEntities 增加可选 `tolerance` 显式传参端口；`graph.core.select_hit` 明文接线 ConstFloat(20)。owner 裁定：点击宽容应完全图化或明文传参组装，几何过滤器不得内部读配置（#1634 剥离判断语义的后续收口）。
-- **Date**: 2026-09-22
-- **Agent / Author**: ZCode（test-red-clearing session）
+- **Task / Issue**: Slice F review — ability aim target kinds
+- **Date**: 2026-10-12
+- **Agent / Author**: Cursor cloud agent
 
-## 1. Core judgment
+### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（既有 op 增加一个显式可选值输入端口 + 一条图数据接线）
+新变体主要交付物是（A/B/C/D）: A
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 拾取宽容从几何过滤器内部配置读取改为调用方显式传参（op 可选引脚 + 图内明文 ConstFloat），零新 enum/开关/管线。
+一句话理由: 交付物是一颗只读技能声明的 Layer 0 节点，加上既有 `targeting` 块上的数据字段；图自己决定“没单位就停”或“忽略单位改走地面”。没有新的 profile enum，Core 不按游戏分支。
 
-## 2. Layer assignment
+### 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 几何过滤签名 | 0 | FilterScreenRegionEntities(…, float tolerancePixels) 纯函数参数 |
-| op 可选端口 | 0 | ScreenRegionToEntities tolerance 引脚（缺省 0xFF→0），描述表/校验/发射 |
-| 图接线 | 2 | graph.core.select_hit + ConstFloat(20)→tolerance（数据） |
-| 文档 | 3 | wiki 端口表 |
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 读某一槽技能是否接受 unit 或 ground | 0 | `AbilityAcceptsTargetKind` |
+| 技能声明可接受的种类 | 2 的数据 | `abilities.json` `targeting.targetKinds` |
+| 有单位才提交、只收地面就忽略 `aim.target` | 2 | `graph.aim.resolve_submit` |
 
-## 3. Reuse list
+### 3. Reuse list
 
-- 既有 byte.MaxValue 可选哨兵模式（SubmitCast B/C 同款）
-- 既有 ValueInputKey 可选边校验模式（ReadMapVar source 同款）
-- 既有接口默认重载模式（旧 4 参签名全兼容，测试直调不受影响）
+- Handlers: 无新 BuiltinHandler
+- Queues / Systems: 无
+- Resolvers / Registries: `AbilityDefinitionRegistry`、`AbilitySlotResolver`、`ConfigKeyRegistry`
+- Existing presets / graphs: `graph.aim.resolve_submit`；删除 `graph.interaction.ground_slot` 与 `graph.moba.no_ground_cast`
 
-## 4. New Layer 0 ops (if any)
+### 4. New Layer 0 ops (if any)
 
-N/A（无新 op，仅既有 op 加可选参数）
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| AbilityAcceptsTargetKind | 回答“这一槽的技能是否声明了这一种目标” | 技能定义不在图寄存器里。`LoadAbilityCastRange` 只读距离。没有现成节点能读目标种类。 |
 
-## 5. Transaction boundary
+### 5. Transaction boundary
 
-无（纯查询过滤参数化，无副作用）
+必须原子 rollback 的步骤: 无。节点只读。
 
-## 6. Config SSOT
+### 6. Config SSOT
 
-行为配置落在: graph JSON（graph.core.select_hit 的 ConstFloat(20) 明文值）
+行为配置落在: `targeting.targetKinds`（ability JSON）+ `graph.aim.resolve_submit`
 
-是否新增 JSON schema: **NO**
+是否新增 JSON schema: YES — 在已有 `targeting` 对象上增加 `targetKinds`。不新开 profile 文件。`targeting` 已经是施法距离和命中效果的事实源；目标种类是同一份声明，不是另一套瞄准配置。带 `targeting` 却不写 `targetKinds` 的技能在加载时失败，不默认成“单位和地面都收”。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / ability JSON 的 `targetKinds`
+
+未改 Core enum。`unit` / `ground` 是数据符号，节点做字符串比较。

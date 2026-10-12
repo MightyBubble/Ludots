@@ -124,6 +124,24 @@
       {
         "id": "clamp",
         "op": "ClampTargetToRange"
+      },
+      {
+        "id": "accept_unit",
+        "op": "AbilityAcceptsTargetKind",
+        "symbol": "unit"
+      },
+      {
+        "id": "accept_ground",
+        "op": "AbilityAcceptsTargetKind",
+        "symbol": "ground"
+      },
+      {
+        "id": "unit_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "ground_gate",
+        "op": "JumpIfFalse"
       }
     ],
     "controlEdges": [
@@ -163,24 +181,9 @@
         "to": "halt0"
       },
       {
-        "from": "read_target",
-        "fromPort": "next",
-        "to": "read_slot"
-      },
-      {
-        "from": "read_slot",
-        "fromPort": "next",
-        "to": "target_alive"
-      },
-      {
         "from": "target_alive",
         "fromPort": "next",
         "to": "target_jump"
-      },
-      {
-        "from": "alive_jump",
-        "fromPort": "true",
-        "to": "read_target"
       },
       {
         "from": "q_target",
@@ -193,11 +196,6 @@
         "to": "halt1"
       },
       {
-        "from": "target_jump",
-        "fromPort": "true",
-        "to": "q_target"
-      },
-      {
         "from": "read_valid",
         "fromPort": "next",
         "to": "valid_eq"
@@ -206,11 +204,6 @@
         "from": "valid_eq",
         "fromPort": "next",
         "to": "valid_jump"
-      },
-      {
-        "from": "target_jump",
-        "fromPort": "false",
-        "to": "read_valid"
       },
       {
         "from": "read_x",
@@ -256,6 +249,61 @@
         "from": "clamp",
         "fromPort": "next",
         "to": "q_ground"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "accept_unit"
+      },
+      {
+        "from": "accept_unit",
+        "fromPort": "next",
+        "to": "accept_ground"
+      },
+      {
+        "from": "accept_ground",
+        "fromPort": "next",
+        "to": "read_target"
+      },
+      {
+        "from": "read_target",
+        "fromPort": "next",
+        "to": "target_alive"
+      },
+      {
+        "from": "target_jump",
+        "fromPort": "true",
+        "to": "unit_jump"
+      },
+      {
+        "from": "unit_jump",
+        "fromPort": "true",
+        "to": "q_target"
+      },
+      {
+        "from": "unit_jump",
+        "fromPort": "false",
+        "to": "ground_gate"
+      },
+      {
+        "from": "target_jump",
+        "fromPort": "false",
+        "to": "ground_gate"
+      },
+      {
+        "from": "ground_gate",
+        "fromPort": "true",
+        "to": "read_valid"
+      },
+      {
+        "from": "ground_gate",
+        "fromPort": "false",
+        "to": "halt0"
       }
     ],
     "valueEdges": [
@@ -420,6 +468,42 @@
         "fromPort": "value",
         "to": "clamp",
         "toPort": "b"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "accept_unit",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "accept_unit",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "accept_ground",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "accept_ground",
+        "toPort": "value"
+      },
+      {
+        "from": "accept_unit",
+        "fromPort": "value",
+        "to": "unit_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "accept_ground",
+        "fromPort": "value",
+        "to": "ground_gate",
+        "toPort": "condition"
       }
     ]
   }

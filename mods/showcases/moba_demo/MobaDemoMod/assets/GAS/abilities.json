@@ -34,6 +34,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Damage.Q"
     }
@@ -83,6 +84,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Heal.W"
     }
@@ -132,6 +134,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Damage.E"
     }
@@ -186,6 +189,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit"],
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Search.BlizzardZone"
     }

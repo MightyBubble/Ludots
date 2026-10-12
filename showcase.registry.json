@@ -11228,6 +11228,33 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
+      "id": "capability_standard_graph_op_AbilityAcceptsTargetKind",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAbilityAcceptsTargetKindEntryMod",
+      "projectPath": "CapabilityStandardGraphOpAbilityAcceptsTargetKindEntryMod.csproj",
+      "title": "问这一槽接不接受这种目标",
+      "summary": "图按槽位读技能声明的目标种类。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "AbilityAcceptsTargetKind"
+      ],
+      "binding": "capability_standard_graph_op_AbilityAcceptsTargetKind",
+      "preset": "capability_standard_graph_op_AbilityAcceptsTargetKind_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AbilityAcceptsTargetKind.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_AbilityAcceptsTargetKind",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AbilityAcceptsTargetKind/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AbilityAcceptsTargetKind/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
       "id": "capability_standard_graph_op_LoadAbilityCastRange",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod",
       "projectPath": "CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod.csproj",

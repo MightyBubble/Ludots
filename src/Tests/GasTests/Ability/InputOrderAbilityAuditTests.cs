@@ -1774,7 +1774,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                   },
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "impactEffect": "Effect.Guard.Impact",
+                    "targetKinds": ["unit", "ground"]
                   }
                 }
                 """)!.AsObject();
@@ -1792,6 +1793,66 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(def.HasTargeting, Is.True);
             That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
             That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
+            That(def.Targeting.TargetKinds, Is.EqualTo((byte)(AbilityTargetKinds.UnitBit | AbilityTargetKinds.GroundBit)));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsTargetingWithoutTargetKinds()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.NoKinds", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting.targetKinds"));
+            That(ex.Message, Does.Contain("required"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsUnknownAndRepeatedTargetKinds()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var unknown = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact",
+                    "targetKinds": ["self"]
+                  }
+                }
+                """)!.AsObject();
+            var unknownError = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(unknown, "Ability.Test.BadKind", "GAS/abilities.json"));
+            That(unknownError!.Message, Does.Contain("unknown kind 'self'"));
+
+            var repeated = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact",
+                    "targetKinds": ["unit", "unit"]
+                  }
+                }
+                """)!.AsObject();
+            var repeatedError = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(repeated, "Ability.Test.RepeatedKind", "GAS/abilities.json"));
+            That(repeatedError!.Message, Does.Contain("repeats 'unit'"));
         }
 
         [Test]

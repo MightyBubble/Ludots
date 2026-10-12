@@ -155,6 +155,60 @@ namespace Ludots.Tests.GasTests.Graph
             Assert.That(error.Message, Does.Contain(AbilityName));
         }
 
+        [Test]
+        public void AbilityAcceptsTargetKind_FollowsTheAuthoredSet([Values("Effect", "Query")] string kind)
+        {
+            using var world = World.Create();
+            Fixture fixture = Fixture.Create(world, targetKinds: AbilityTargetKinds.UnitBit);
+            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
+
+            Run unit = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Unit), world, fixture.Api, "check", actor, actor);
+            Assert.That(unit.Bools[unit.FeaturedDst], Is.EqualTo(1));
+
+            Run ground = CompileAndRun(AcceptsKindDoc(kind, AbilityTargetKinds.Ground), world, fixture.Api, "check", actor, actor);
+            Assert.That(ground.Bools[ground.FeaturedDst], Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AbilityAcceptsTargetKind_UnknownKind_FailsNamingTheSymbol()
+        {
+            using var world = World.Create();
+            Fixture fixture = Fixture.Create(world, targetKinds: AbilityTargetKinds.GroundBit);
+            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                CompileAndRun(AcceptsKindDoc("Effect", "self"), world, fixture.Api, "check", actor, actor));
+            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknown"));
+            Assert.That(error.Message, Does.Contain("self"));
+        }
+
+        [Test]
+        public void AbilityAcceptsTargetKind_MissingTargeting_FailsNamingTheAbility()
+        {
+            using var world = World.Create();
+            Fixture fixture = Fixture.Create(world, withTargeting: false);
+            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                CompileAndRun(AcceptsKindDoc("Effect", AbilityTargetKinds.Unit), world, fixture.Api, "check", actor, actor));
+            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindNoTargeting"));
+            Assert.That(error.Message, Does.Contain(AbilityName));
+        }
+
+        [Test]
+        public void AbilityAcceptsTargetKind_EmptySlot_FailsNamingActorAndSlot()
+        {
+            using var world = World.Create();
+            Fixture fixture = Fixture.Create(world);
+            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: false);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                CompileAndRun(AcceptsKindDoc("Effect", AbilityTargetKinds.Unit), world, fixture.Api, "check", actor, actor));
+            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.AbilityAcceptsTargetKindSlotEmpty"));
+            Assert.That(error.Message, Does.Contain(actor.ToString()));
+            Assert.That(error.Message, Does.Contain("slot 0"));
+        }
+
         private static GraphControlFlowDocument IsCastModeDoc(string kind, string mode)
         {
             var doc = new GraphControlFlowDocument
@@ -242,6 +296,38 @@ namespace Ludots.Tests.GasTests.Graph
                     new GraphControlFlowValueEdge("y", "value", "point", "b"),
                 },
             };
+        }
+
+        private static GraphControlFlowDocument AcceptsKindDoc(string kind, string symbol)
+        {
+            var doc = new GraphControlFlowDocument
+            {
+                Id = "tests.graph.accepts-kind." + kind,
+                Kind = kind,
+                Entry = "slot",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "slot", Op = "ConstInt", IntValue = 0 },
+                    new GraphControlFlowNode { Id = "actor", Op = "LoadCaster" },
+                    new GraphControlFlowNode { Id = "check", Op = "AbilityAcceptsTargetKind", Symbol = symbol },
+                },
+                ControlEdges =
+                {
+                    new GraphControlFlowEdge("slot", "next", "actor"),
+                    new GraphControlFlowEdge("actor", "next", "check"),
+                },
+                ValueEdges =
+                {
+                    new GraphControlFlowValueEdge("actor", "value", "check", "source"),
+                    new GraphControlFlowValueEdge("slot", "value", "check", "value"),
+                },
+            };
+            if (kind == "TriggerGraph")
+            {
+                doc.Entries.Add(new TriggerGraphEntryConfig { Label = "probe", Event = "EntityAliveCountChanged", Start = "slot" });
+            }
+
+            return doc;
         }
 
         private static GraphControlFlowDocument LoadRangeDoc(string kind)
@@ -334,7 +420,10 @@ namespace Ludots.Tests.GasTests.Graph
             public int AbilityId;
             private World _world = null!;
 
-            public static Fixture Create(World world, bool withTargeting = true)
+            public static Fixture Create(
+                World world,
+                bool withTargeting = true,
+                byte targetKinds = AbilityTargetKinds.UnitBit | AbilityTargetKinds.GroundBit)
             {
                 var modes = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 modes.Register(Smart);
@@ -345,7 +434,12 @@ namespace Ludots.Tests.GasTests.Graph
                 if (withTargeting)
                 {
                     definition.HasTargeting = true;
-                    definition.Targeting = new AbilityTargetingConfig { CastRangeCm = 640f, ImpactEffectTemplateId = 1 };
+                    definition.Targeting = new AbilityTargetingConfig
+                    {
+                        CastRangeCm = 640f,
+                        ImpactEffectTemplateId = 1,
+                        TargetKinds = targetKinds,
+                    };
                 }
 
                 definitions.Register(abilityId, definition);

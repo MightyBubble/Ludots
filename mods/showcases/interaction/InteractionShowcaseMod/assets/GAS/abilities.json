@@ -27,6 +27,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 900,
       "impactEffect": "Effect.Interaction.DuelBolt"
     }
@@ -54,6 +55,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Interaction.BlinkStep"
     },
@@ -86,6 +88,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 760,
       "impactEffect": "Effect.Interaction.FireLance"
     },
@@ -119,6 +122,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.NovaPulse"
     },
@@ -151,6 +155,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["ground"],
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.ArcDash"
     },
@@ -238,6 +243,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 780,
       "impactEffect": "Effect.Interaction.RuneBurst"
     },
@@ -275,6 +281,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 480,
       "impactEffect": "Effect.Interaction.Challenge"
     }
@@ -302,6 +309,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["ground"],
       "castRangeCm": 440,
       "impactEffect": "Effect.Interaction.BannerLeap"
     },
@@ -334,6 +342,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.CleaveCone"
     },
@@ -367,6 +376,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Shockwave"
     },
@@ -399,6 +409,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["ground"],
       "castRangeCm": 300,
       "impactEffect": "Effect.Interaction.ChargeDash"
     },
@@ -481,6 +492,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 520,
       "impactEffect": "Effect.Interaction.GroundSlam"
     },
@@ -518,6 +530,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.Interaction.SupportBeam"
     }
@@ -545,6 +558,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["ground"],
       "castRangeCm": 560,
       "impactEffect": "Effect.Interaction.TacticalJump"
     },
@@ -577,6 +591,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 720,
       "impactEffect": "Effect.Interaction.VolleyLine"
     },
@@ -614,6 +629,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Overclock"
     }
@@ -641,6 +657,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["ground"],
       "castRangeCm": 320,
       "impactEffect": "Effect.Interaction.ThrustJump"
     },
@@ -723,6 +740,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 820,
       "impactEffect": "Effect.Interaction.OrbitalStrike"
     },

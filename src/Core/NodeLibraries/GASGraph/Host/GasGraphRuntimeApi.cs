@@ -1192,6 +1192,47 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return definition.Targeting.CastRangeCm;
         }
 
+        /// <inheritdoc />
+        public bool AbilityAcceptsTargetKind(Entity actor, int slot, int kindKeyId)
+        {
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindActorDead: actor {actor} is not alive.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            AbilityDefinitionRegistry definitions = _abilityDefinitions
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.AbilityDefinitionsUnavailable: no ability definition registry is bound to the graph runtime.");
+            if (!definitions.TryGet(slotState.AbilityId, out AbilityDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknownAbility: actor {actor} slot {slot} ability {slotState.AbilityId} is not installed.");
+            }
+
+            if (!definition.HasTargeting)
+            {
+                string abilityName = AbilityIdRegistry.GetName(slotState.AbilityId);
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindNoTargeting: ability '{abilityName}' has no targeting.targetKinds.");
+            }
+
+            string kind = ConfigKeyRegistry.GetName(kindKeyId);
+            if (!AbilityTargetKinds.TryParse(kind, out byte bit))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.AbilityAcceptsTargetKindUnknown: kind '{kind}' is not '{AbilityTargetKinds.Unit}' or '{AbilityTargetKinds.Ground}'.");
+            }
+
+            return (definition.Targeting.TargetKinds & bit) != 0;
+        }
+
         private int ResolveInstalledCastMode(int modeKeyId, string opName)
         {
             StringIntRegistry modes = _castModes

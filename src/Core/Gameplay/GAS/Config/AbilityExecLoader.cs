@@ -820,7 +820,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var targeting = new AbilityTargetingConfig
             {
                 CastRangeCm = targetingObj["castRangeCm"]!.GetValue<float>(),
-                ImpactEffectTemplateId = impactEffectTemplateId
+                ImpactEffectTemplateId = impactEffectTemplateId,
+                TargetKinds = CompileTargetKinds(targetingObj, id, path)
             };
 
             if (targeting.CastRangeCm < 0f)
@@ -830,6 +831,55 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return targeting;
+        }
+
+        private static byte CompileTargetKinds(JsonObject targetingObj, string id, string path)
+        {
+            if (!targetingObj.TryGetPropertyValue("targetKinds", out JsonNode? kindsNode) || kindsNode == null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' is required when 'targeting' is present.");
+            }
+
+            if (kindsNode is not JsonArray kindArray)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must be an array of 'unit' and/or 'ground'.");
+            }
+
+            if (kindArray.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.targetKinds' must list at least one of 'unit' or 'ground'.");
+            }
+
+            byte mask = 0;
+            for (int i = 0; i < kindArray.Count; i++)
+            {
+                if (kindArray[i] is not JsonValue kindValue ||
+                    !kindValue.TryGetValue(out string? token) ||
+                    string.IsNullOrWhiteSpace(token))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds[{i}]' must be a target kind symbol.");
+                }
+
+                if (!AbilityTargetKinds.TryParse(token, out byte bit))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds' has unknown kind '{token}'. Expected '{AbilityTargetKinds.Unit}' or '{AbilityTargetKinds.Ground}'.");
+                }
+
+                if ((mask & bit) != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'targeting.targetKinds' repeats '{token}'.");
+                }
+
+                mask |= bit;
+            }
+
+            return mask;
         }
 
         private static void RejectRemovedAimVisualFields(JsonNode? node, string id, string path, string currentPath)

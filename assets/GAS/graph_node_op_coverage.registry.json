@@ -4503,6 +4503,28 @@
         "GraphOpsNodeGalleryFailAcceptanceTests.Fail_ThrowsGasGraphErrWithGraphId"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "AbilityAcceptsTargetKind",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_AbilityAcceptsTargetKind",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCastModeAcceptanceTests.AbilityAcceptsTargetKindVignette_QuotesAnAcceptedKind"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }
