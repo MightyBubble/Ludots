@@ -199,7 +199,10 @@ namespace Ludots.Core.UI.EntityCommandPanels
             short chargesMax,
             string displayLabel = "",
             string detailLabel = "",
-            string actionId = "")
+            string actionId = "",
+            bool bindsInput = false,
+            bool hasBindingInt = false,
+            int bindingInt = 0)
         {
             SlotIndex = slotIndex;
             AbilityId = abilityId;
@@ -211,6 +214,9 @@ namespace Ludots.Core.UI.EntityCommandPanels
             DisplayLabel = displayLabel ?? string.Empty;
             DetailLabel = detailLabel ?? string.Empty;
             ActionId = actionId ?? string.Empty;
+            BindsInput = bindsInput;
+            HasBindingInt = hasBindingInt;
+            BindingInt = bindingInt;
         }
 
         public int SlotIndex { get; }
@@ -223,6 +229,14 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public string DisplayLabel { get; }
         public string DetailLabel { get; }
         public string ActionId { get; }
+
+        /// <summary>True when this slot's hotkey is an input binding declared in the slot config.</summary>
+        public bool BindsInput { get; }
+
+        /// <summary>True when <see cref="ActionId"/>'s bindings carry <c>intValue</c> and this slot selects one.</summary>
+        public bool HasBindingInt { get; }
+
+        public int BindingInt { get; }
     }
 
     public enum EntityCommandPanelStatusKind : byte

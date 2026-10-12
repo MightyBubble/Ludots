@@ -513,7 +513,10 @@ namespace EntityCommandPanelMod.Runtime
                 representative.ChargesMax,
                 representative.DisplayLabel,
                 next.DetailLabel,
-                representative.ActionId);
+                representative.ActionId,
+                representative.BindsInput,
+                representative.HasBindingInt,
+                representative.BindingInt);
         }
 
         private static bool MatchesFilter(
@@ -734,7 +737,10 @@ namespace EntityCommandPanelMod.Runtime
                 slot.ChargesMax,
                 displayLabel,
                 detailLabel,
-                slot.ActionId);
+                slot.ActionId,
+                slot.BindsInput,
+                slot.HasBindingInt,
+                slot.BindingInt);
         }
 
         private static uint HashCombine(uint hash, uint value)

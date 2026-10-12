@@ -227,7 +227,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterQ,
                 Is.LessThan(dummyHealthBeforeQ),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Smart cast hit should emit visible pulse markers.");
             TickUntilWorldHudText(engine, frameTimesMs, primitives, worldHud, maxFrames: 8, "Smart cast hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "smartcast_hit");
@@ -247,7 +247,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineIndicatorLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} | aimHover={DescribeCollectionByKey(engine, aimCollections, "aim.hover")}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} | aimHover={DescribeCollectionByKey(engine, aimCollections, "aim.hover")}");
             Assert.That(
                 DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
                 Does.Match("count=[1-9]"),
@@ -261,7 +261,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterR,
                 Is.LessThan(dummyHealthBeforeR),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Indicator release hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Indicator release hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_release_hit");
@@ -282,13 +282,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)}");
             RightClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             Tick(engine, 2, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.EqualTo(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             float dummyHealthAfterCancel = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(dummyHealthAfterCancel, Is.EqualTo(dummyHealthBeforeCancel).Within(0.001f));
 
@@ -297,14 +297,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthAfterCancel, maxFrames: 24);
             float dummyHealthAfterConfirm = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterConfirm,
                 Is.LessThan(dummyHealthAfterCancel),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Press-release confirm hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Press-release confirm hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "press_release_confirm_hit");
@@ -329,7 +329,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterBeam,
                 Is.LessThan(dummyHealthBeforeBeam),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Beam hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Beam hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "prismatic_beam_hit");
@@ -820,7 +820,7 @@ namespace Ludots.Tests.GAS.Production
             float healthBeforeQ = ReadHealth(engine.World, "Target Dummy A");
             backend.SetButton("<Keyboard>/q", true);
             Tick(engine, 1, frameTimesMs);
-            string qPressFrameDiagnostics = $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")}";
+            string qPressFrameDiagnostics = $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")}";
             backend.SetButton("<Keyboard>/q", false);
             Tick(engine, 3, frameTimesMs);
             bool qDamagedTarget = WaitUntil(
@@ -831,7 +831,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 qDamagedTarget,
                 Is.True,
-                $"{qPressFrameDiagnostics} || {BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
+                $"{qPressFrameDiagnostics} || {BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
             Tick(engine, 2, frameTimesMs);
             float healthAfterQ = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(

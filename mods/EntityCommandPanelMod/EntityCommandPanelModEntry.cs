@@ -4,6 +4,7 @@ using EntityCommandPanelMod.Systems;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Modding;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
@@ -88,6 +89,17 @@ namespace EntityCommandPanelMod
             EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
             EntityCommandPanelToolbarComposer.Require(engine).Bind(catalog);
             var slotConfig = EntityCommandPanelSlotActionConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+            ControlSchemeRuntime schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
+                ?? throw new System.InvalidOperationException("ControlSchemeRuntime must be registered before EntityCommandPanelMod installs.");
+            for (int i = 0; i < slotConfig.Slots.Count; i++)
+            {
+                EntityCommandPanelSlotBinding slot = slotConfig.Slots[i];
+                schemes.RequireSlotBinding(
+                    slot.ActionId,
+                    slot.BindingIntOrNull,
+                    $"{EntityCommandPanelSlotActionConfig.RelativePath} slots[{i}]");
+            }
+
             var gasSource = new GasEntityCommandPanelSource(engine, activations, slotConfig);
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new System.InvalidOperationException("EntityCollectionStore must be registered before EntityCommandPanelMod installs.");

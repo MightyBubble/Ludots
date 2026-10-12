@@ -69,10 +69,11 @@ namespace Ludots.Tests.GAS
 
     internal static class EntityCommandPanelSlotActionsTestMod
     {
-        public static string Create(params string[] slotActionIds)
+        public static string Create(params string[] actionIds)
         {
             string root = Path.Combine(Path.GetTempPath(), "ludots-ecp-slot-actions-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(root, "assets", "UI"));
+            Directory.CreateDirectory(Path.Combine(root, "assets", "Input"));
             File.WriteAllText(
                 Path.Combine(root, "mod.json"),
                 """
@@ -85,8 +86,64 @@ namespace Ludots.Tests.GAS
                 """);
             File.WriteAllText(
                 Path.Combine(root, "assets", "UI", "entity_command_panel_slot_actions.json"),
-                System.Text.Json.JsonSerializer.Serialize(new { slotActionIds }));
+                WriteSlotConfig(actionIds));
+            File.WriteAllText(
+                Path.Combine(root, "assets", "Input", "default_input.json"),
+                WriteInputConfig(actionIds));
             return root;
+        }
+
+        private static string WriteSlotConfig(string[] actionIds)
+        {
+            var slots = new System.Text.StringBuilder();
+            slots.Append("{\"slots\":[");
+            for (int i = 0; i < actionIds.Length; i++)
+            {
+                if (i > 0)
+                {
+                    slots.Append(',');
+                }
+
+                slots.Append("{\"action\":\"").Append(actionIds[i]).Append("\"}");
+            }
+
+            slots.Append("]}");
+            return slots.ToString();
+        }
+
+        private static string WriteInputConfig(string[] actionIds)
+        {
+            const string keys = "qwertyuiop";
+            var json = new System.Text.StringBuilder();
+            json.Append("{\"actions\":[");
+            for (int i = 0; i < actionIds.Length; i++)
+            {
+                if (i > 0)
+                {
+                    json.Append(',');
+                }
+
+                json.Append("{\"id\":\"").Append(actionIds[i]).Append("\",\"name\":\"").Append(actionIds[i]).Append("\",\"type\":\"Button\"}");
+            }
+
+            json.Append("],\"contexts\":[{\"id\":\"EntityCommandPanelSlotActionsTest.Controls\",\"name\":\"Slot actions test\",\"priority\":10,\"bindings\":[");
+            for (int i = 0; i < actionIds.Length; i++)
+            {
+                if (i >= keys.Length)
+                {
+                    throw new InvalidOperationException($"Slot action test mod supports at most {keys.Length} actions.");
+                }
+
+                if (i > 0)
+                {
+                    json.Append(',');
+                }
+
+                json.Append("{\"actionId\":\"").Append(actionIds[i]).Append("\",\"path\":\"<Keyboard>/").Append(keys[i]).Append("\"}");
+            }
+
+            json.Append("]}]}");
+            return json.ToString();
         }
     }
 }

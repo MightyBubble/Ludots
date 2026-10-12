@@ -1,5 +1,10 @@
 {
-  "slotActionIds": ["Aim.Slot1", "Aim.Slot2", "Aim.Slot3", "Aim.Slot4"],
+  "slots": [
+    { "action": "Aim.Slot", "int": 0 },
+    { "action": "Aim.Slot", "int": 1 },
+    { "action": "Aim.Slot", "int": 2 },
+    { "action": "Aim.Slot", "int": 3 }
+  ],
   "modeHintContexts": {},
   "modeHintPrefs": {
     "key": "pref.aim.cast_mode",

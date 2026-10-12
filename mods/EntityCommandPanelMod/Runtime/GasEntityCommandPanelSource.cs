@@ -22,7 +22,7 @@ namespace EntityCommandPanelMod.Runtime
     {
         private readonly GameEngine _engine;
         private readonly Dictionary<int, string[]> _routeLabelCache = new();
-        private readonly string[] _skillActionIds = new string[AbilityStateBuffer.CAPACITY];
+        private readonly EntityCommandPanelSlotBinding[] _declaredSlots;
         private readonly EntityCommandPanelSlotActivations _activations;
         private readonly string[] _modeHintContextIds;
         private readonly string[] _modeHintKeys;
@@ -45,17 +45,17 @@ namespace EntityCommandPanelMod.Runtime
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _activations = activations ?? throw new ArgumentNullException(nameof(activations));
             ArgumentNullException.ThrowIfNull(slotConfig);
-            IReadOnlyList<string> slotActionIds = slotConfig.SlotActionIds;
-            if (slotActionIds.Count > _skillActionIds.Length)
+            if (slotConfig.Slots.Count > AbilityStateBuffer.CAPACITY)
             {
                 throw new ArgumentException(
-                    $"Entity command panel declares {slotActionIds.Count} slot actions, more than the {_skillActionIds.Length} ability slots.",
+                    $"Entity command panel declares {slotConfig.Slots.Count} slot actions, more than the {AbilityStateBuffer.CAPACITY} ability slots.",
                     nameof(slotConfig));
             }
 
-            for (int i = 0; i < _skillActionIds.Length; i++)
+            _declaredSlots = new EntityCommandPanelSlotBinding[slotConfig.Slots.Count];
+            for (int i = 0; i < _declaredSlots.Length; i++)
             {
-                _skillActionIds[i] = i < slotActionIds.Count ? slotActionIds[i] : string.Empty;
+                _declaredSlots[i] = slotConfig.Slots[i];
             }
 
             int modeHintCount = slotConfig.ModeHintContextIds.Count;
@@ -318,7 +318,6 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             int count = Math.Min(destination.Length, ResolveDisplayedSlotCount(target, in baseSlots));
-            ReadOnlySpan<string> actionIds = _skillActionIds.AsSpan(0, count);
 
             for (int slotIndex = 0; slotIndex < count; slotIndex++)
             {
@@ -406,7 +405,7 @@ namespace EntityCommandPanelMod.Runtime
                     flags |= EntityCommandSlotStateFlags.TemplateBacked;
                 }
 
-                string actionId = actionIds[slotIndex] ?? string.Empty;
+                ReadSlotBinding(slotIndex, out string actionId, out bool bindsInput, out bool hasBindingInt, out int bindingInt);
                 string displayLabel = string.Empty;
                 string detailLabel = string.Empty;
                 short lockoutPermille = 0;
@@ -418,7 +417,7 @@ namespace EntityCommandPanelMod.Runtime
                 var progressionPreview = EvaluateProgressionPreview(target, target, default, hasAbilityDefinition, in abilityDefinition, templateEntity);
                 if (progressionPreview.Show == ProgressionRequirementPreviewResult.Failed)
                 {
-                    destination[slotIndex] = BuildEmptySlot(slotIndex, actionId);
+                    destination[slotIndex] = BuildEmptySlot(slotIndex, actionId, bindsInput, hasBindingInt, bindingInt);
                     continue;
                 }
 
@@ -500,13 +499,39 @@ namespace EntityCommandPanelMod.Runtime
                     0,
                     displayLabel,
                     detailLabel,
-                    actionId);
+                    actionId,
+                    bindsInput,
+                    hasBindingInt,
+                    bindingInt);
             }
 
             return count;
         }
 
-        private static EntityCommandPanelSlotView BuildEmptySlot(int slotIndex, string actionId)
+        private void ReadSlotBinding(int slotIndex, out string actionId, out bool bindsInput, out bool hasBindingInt, out int bindingInt)
+        {
+            if ((uint)slotIndex >= (uint)_declaredSlots.Length)
+            {
+                actionId = string.Empty;
+                bindsInput = false;
+                hasBindingInt = false;
+                bindingInt = 0;
+                return;
+            }
+
+            EntityCommandPanelSlotBinding binding = _declaredSlots[slotIndex];
+            actionId = binding.ActionId;
+            bindsInput = true;
+            hasBindingInt = binding.HasBindingInt;
+            bindingInt = binding.BindingInt;
+        }
+
+        private static EntityCommandPanelSlotView BuildEmptySlot(
+            int slotIndex,
+            string actionId,
+            bool bindsInput,
+            bool hasBindingInt,
+            int bindingInt)
         {
             return new EntityCommandPanelSlotView(
                 slotIndex,
@@ -518,7 +543,10 @@ namespace EntityCommandPanelMod.Runtime
                 0,
                 string.Empty,
                 BuildEmptyDetailLabel(actionId),
-                actionId);
+                actionId,
+                bindsInput,
+                hasBindingInt,
+                bindingInt);
         }
 
         private ProgressionRequirementPreview EvaluateProgressionPreview(

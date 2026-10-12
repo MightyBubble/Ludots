@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
@@ -90,6 +91,53 @@ namespace Ludots.Core.Input.Interaction
                 scheme.HasAxisMove,
                 scheme.AxisMove);
             return true;
+        }
+
+        /// <summary>
+        /// The declared slot binding must name a real action, and an integer exactly when
+        /// that action's bindings carry <c>intValue</c>. Every installed context counts,
+        /// not only the active scheme; the scheme is checked when the key is resolved.
+        /// </summary>
+        public void RequireSlotBinding(string actionId, int? bindingInt, string where)
+        {
+            InputBindingKeyLookup.RequireSlotBinding(RequireInputConfig(), actionId, bindingInt, where);
+        }
+
+        /// <summary>
+        /// Key label of the binding inside the active scheme's contexts. Highest priority
+        /// context wins; equal priority keeps the earlier context in the scheme's list.
+        /// </summary>
+        public string ResolveActiveBindingKey(string actionId, int? bindingInt)
+        {
+            if (_activeSchemeId == 0)
+            {
+                throw new InvalidOperationException(
+                    "LUDOTS_INPUT_BINDING_KEY_SCHEME_INACTIVE: no control scheme is active.");
+            }
+
+            CompiledScheme scheme = _schemes[_activeSchemeId]
+                ?? throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_BINDING_KEY_SCHEME_INACTIVE: active control scheme id {_activeSchemeId} is not installed.");
+            string schemeName = _schemeIds.GetName(_activeSchemeId);
+            string scope = string.IsNullOrEmpty(schemeName)
+                ? $"control scheme #{_activeSchemeId}"
+                : $"control scheme '{schemeName}'";
+            return InputBindingKeyLookup.Resolve(RequireInputConfig(), scheme.InputContexts, scope, actionId, bindingInt);
+        }
+
+        /// <summary>
+        /// Key label inside the named contexts. Used when no scheme is active and the caller
+        /// supplies startup contexts.
+        /// </summary>
+        public string ResolveBindingKey(IReadOnlyList<string> contextIds, string scopeName, string actionId, int? bindingInt)
+        {
+            return InputBindingKeyLookup.Resolve(RequireInputConfig(), contextIds, scopeName, actionId, bindingInt);
+        }
+
+        private InputConfigRoot RequireInputConfig()
+        {
+            return _inputConfig ?? throw new InvalidOperationException(
+                "LUDOTS_INPUT_BINDING_KEY_INPUT_CONFIG_ABSENT: binding key lookup requires the installed input config.");
         }
 
         /// <summary>

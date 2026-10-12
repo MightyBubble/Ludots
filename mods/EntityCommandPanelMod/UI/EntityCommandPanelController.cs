@@ -569,7 +569,7 @@ namespace EntityCommandPanelMod.UI
         {
             string accent = ResolveAbilityAccent(in slot);
             string glyph = ResolveAbilityGlyph(in slot);
-            string hotkey = ResolveActionKeyLabel(slot.ActionId);
+            string hotkey = ResolveActionKeyLabel(in slot);
             string art = _showcaseArtFactory.BuildSlotArt(
                 themeId,
                 glyph,
@@ -970,7 +970,7 @@ namespace EntityCommandPanelMod.UI
             bool active = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active);
             bool interactive = !blocked && EntityCommandPanelSourceDispatch.CanActivate(source);
             string detailLabel = ResolveDetailLabel(in slot);
-            string actionKey = ResolveActionKeyLabel(slot.ActionId);
+            string actionKey = ResolveActionKeyLabel(in slot);
 
             UiElementBuilder card = Ui.Card(
                     Ui.Row(
@@ -1300,7 +1300,7 @@ namespace EntityCommandPanelMod.UI
                 detailLabel = $"Preview only · {detailLabel}";
             }
 
-            string actionKey = isInteractiveGroup ? ResolveActionKeyLabel(slot.ActionId) : "VIEW";
+            string actionKey = isInteractiveGroup ? ResolveActionKeyLabel(in slot) : "VIEW";
 
             var flags = new List<UiElementBuilder>(4);
             AppendFlag(flags, !isInteractiveGroup, "PREVIEW", "#1D3142", "#D5E8F8");
@@ -1654,7 +1654,7 @@ namespace EntityCommandPanelMod.UI
 
         private string ResolveFallbackGlyph(in EntityCommandPanelSlotView slot)
         {
-            string actionKey = ResolveActionKeyLabel(slot.ActionId);
+            string actionKey = ResolveActionKeyLabel(in slot);
             if (!string.IsNullOrWhiteSpace(actionKey))
             {
                 return ShortenGlyph(actionKey);
@@ -1680,20 +1680,18 @@ namespace EntityCommandPanelMod.UI
             return trimmed[..1].ToUpperInvariant();
         }
 
-        private static string ResolveActionKeyLabel(string actionId)
+        private string ResolveActionKeyLabel(in EntityCommandPanelSlotView slot)
         {
-            if (string.IsNullOrWhiteSpace(actionId))
+            if (!slot.BindsInput)
             {
                 return string.Empty;
             }
 
-            if (actionId.StartsWith("Skill", StringComparison.OrdinalIgnoreCase) &&
-                actionId.Length > "Skill".Length)
-            {
-                return actionId["Skill".Length..].ToUpperInvariant();
-            }
-
-            return actionId;
+            return EntityCommandPanelBindingKeys.Resolve(
+                _engine,
+                slot.ActionId,
+                slot.HasBindingInt,
+                slot.BindingInt);
         }
 
         private static string ShortenName(string value)
@@ -1809,7 +1807,7 @@ namespace EntityCommandPanelMod.UI
                     continue;
                 }
 
-                string actionKey = ResolveActionKeyLabel(slot.ActionId);
+                string actionKey = ResolveActionKeyLabel(in slot);
                 string label = ResolveAbilityLabel(in slot);
                 return string.IsNullOrWhiteSpace(actionKey)
                     ? $"Queue {label} to start production."

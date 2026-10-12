@@ -171,9 +171,9 @@ namespace Ludots.Tests.GAS.Production
             SetMouseWorld(engine, backend, arcweaverBeforeBlink + new Vector2(400f, 0f), frameTimesMs);
             backend.SetButton("<Keyboard>/w", true);
             Tick(engine, 1, frameTimesMs);
-            string blinkInputDiagnosticsFrame1 = BuildInputActionDiagnostics(engine, "Aim.Slot2");
+            string blinkInputDiagnosticsFrame1 = BuildInputActionDiagnostics(engine, "Aim.Slot");
             Tick(engine, 1, frameTimesMs);
-            string blinkInputDiagnosticsFrame2 = BuildInputActionDiagnostics(engine, "Aim.Slot2");
+            string blinkInputDiagnosticsFrame2 = BuildInputActionDiagnostics(engine, "Aim.Slot");
             backend.SetButton("<Keyboard>/w", false);
             Tick(engine, 2, frameTimesMs);
             string blinkCastDiagnostics = BuildAbilityDiagnostics(engine, "Arcweaver");
@@ -230,7 +230,7 @@ namespace Ludots.Tests.GAS.Production
             int ringOverlays = CountOverlays(overlays, GroundOverlayShape.Ring);
             float vanguardTargetHealthDuringHold = ReadHealth(engine.World, vanguardTarget);
             string vanguardIndicatorDiagnostics = string.Join(" || ",
-                BuildInputActionDiagnostics(engine, "Aim.Slot4"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
@@ -250,7 +250,7 @@ namespace Ludots.Tests.GAS.Production
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             Tick(engine, 1, frameTimesMs);
             string vanguardAimDiagnostics = string.Join(" || ",
-                BuildInputActionDiagnostics(engine, "Aim.Slot3"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
@@ -363,7 +363,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 Vector2.Distance(after, before),
                 Is.GreaterThan(180f),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot2")} || {BuildAbilityDiagnostics(engine, "Arcweaver")}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Arcweaver")}");
         }
 
         [Test]
@@ -1582,7 +1582,7 @@ namespace Ludots.Tests.GAS.Production
                 $"vanguard=({vanguardPosition.X:0.##},{vanguardPosition.Y:0.##})",
                 $"target=({targetPosition.X:0.##},{targetPosition.Y:0.##})",
                 $"distance={Vector2.Distance(vanguardPosition, targetPosition):0.##}",
-                BuildInputActionDiagnostics(engine, "Aim.Slot4"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));

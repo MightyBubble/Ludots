@@ -1,3 +1,8 @@
 {
-  "slotActionIds": ["SkillQ", "SkillW", "SkillE", "SkillR"]
+  "slots": [
+    { "action": "SkillQ" },
+    { "action": "SkillW" },
+    { "action": "SkillE" },
+    { "action": "SkillR" }
+  ]
 }

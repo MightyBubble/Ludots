@@ -5,6 +5,7 @@ using System.IO;
 using System.Numerics;
 using System.Threading;
 using Arch.Core;
+using EntityCommandPanelMod.Runtime;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
@@ -269,12 +270,20 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Initial sandbox selection should render a visible ring.");
 
             var source = ResolveGasPanelSource(engine);
+            ControlSchemeRuntime schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
+                ?? throw new InvalidOperationException("ControlSchemeRuntime missing.");
+            Assert.That(schemes.SchemeIdRegistry.GetName(schemes.ActiveSchemeId), Is.EqualTo("scheme.aim.kbm"));
 
             var ezrealSlots = new EntityCommandPanelSlotView[8];
             int ezrealCount = source.CopySlots(FindEntityByName(engine.World, "Ezreal Cooldown"), 0, ezrealSlots);
-            Assert.That(ezrealCount, Is.EqualTo(4));
+            Assert.That(ezrealCount, Is.EqualTo(4), "Champion panel shows four ability slots; t/y are not on this loadout.");
+            string[] championKeys = { "Q", "W", "E", "R" };
+            for (int i = 0; i < ezrealCount; i++)
+            {
+                AssertChampionSlotKey(engine, ezrealSlots[i], i, championKeys[i]);
+            }
+
             Assert.That(ezrealSlots[3].DisplayLabel, Is.EqualTo("Trueshot Barrage"));
-            Assert.That(ezrealSlots[3].ActionId, Is.EqualTo("Aim.Slot4"));
             Assert.That(ezrealSlots[3].DetailLabel, Is.EqualTo("Global projectile fired by direction"));
             Assert.That(ezrealSlots[3].StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), Is.True);
 
@@ -282,14 +291,14 @@ namespace Ludots.Tests.GAS.Production
             int garenCount = source.CopySlots(FindEntityByName(engine.World, "Garen Courage"), 0, garenSlots);
             Assert.That(garenCount, Is.EqualTo(4));
             Assert.That(garenSlots[1].DisplayLabel, Is.EqualTo("Courage"));
-            Assert.That(garenSlots[1].ActionId, Is.EqualTo("Aim.Slot2"));
+            AssertChampionSlotKey(engine, garenSlots[1], 1, "W");
             Assert.That(garenSlots[1].StateFlags.HasFlag(EntityCommandSlotStateFlags.Active), Is.True);
 
             var jayceSlots = new EntityCommandPanelSlotView[8];
             int jayceCount = source.CopySlots(FindEntityByName(engine.World, "Jayce Hammer"), 0, jayceSlots);
             Assert.That(jayceCount, Is.EqualTo(4));
             Assert.That(jayceSlots[0].DisplayLabel, Is.EqualTo("To The Skies!"));
-            Assert.That(jayceSlots[0].ActionId, Is.EqualTo("Aim.Slot1"));
+            AssertChampionSlotKey(engine, jayceSlots[0], 0, "Q");
             Assert.That(jayceSlots[0].StateFlags.HasFlag(EntityCommandSlotStateFlags.FormOverride), Is.True);
             Assert.That(jayceSlots[3].DisplayLabel, Is.EqualTo("Mercury Cannon"));
 
@@ -981,6 +990,17 @@ namespace Ludots.Tests.GAS.Production
             {
                 TryDelete(tempRoot);
             }
+        }
+
+        private static void AssertChampionSlotKey(GameEngine engine, EntityCommandPanelSlotView slot, int bindingInt, string key)
+        {
+            Assert.That(slot.BindsInput, Is.True);
+            Assert.That(slot.ActionId, Is.EqualTo("Aim.Slot"));
+            Assert.That(slot.HasBindingInt, Is.True);
+            Assert.That(slot.BindingInt, Is.EqualTo(bindingInt));
+            Assert.That(
+                EntityCommandPanelBindingKeys.Resolve(engine, slot.ActionId, slot.HasBindingInt, slot.BindingInt),
+                Is.EqualTo(key));
         }
 
         private static GameEngine CreateEngine()

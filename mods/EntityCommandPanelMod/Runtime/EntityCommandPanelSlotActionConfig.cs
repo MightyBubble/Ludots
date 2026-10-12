@@ -6,23 +6,58 @@ using Ludots.Core.Config;
 namespace EntityCommandPanelMod.Runtime
 {
     /// <summary>
+    /// One panel slot's hotkey address: an input action, and the binding integer when that
+    /// action's bindings carry <c>intValue</c>.
+    /// </summary>
+    public readonly struct EntityCommandPanelSlotBinding
+    {
+        public EntityCommandPanelSlotBinding(string actionId, bool hasBindingInt, int bindingInt)
+        {
+            ActionId = actionId;
+            HasBindingInt = hasBindingInt;
+            BindingInt = bindingInt;
+        }
+
+        public string ActionId { get; }
+
+        public bool HasBindingInt { get; }
+
+        public int BindingInt { get; }
+
+        public int? BindingIntOrNull => HasBindingInt ? BindingInt : null;
+    }
+
+    /// <summary>
     /// Slot hint inputs a game declares next to the interaction contexts that actually bind its keys:
-    /// which input action sits on each ability slot, and which active interaction context selects
+    /// which input binding sits on each ability slot, and which active interaction context selects
     /// which ability <c>modeHints</c> entry.
     /// </summary>
     public sealed class EntityCommandPanelSlotActionConfig
     {
         public const string RelativePath = "UI/entity_command_panel_slot_actions.json";
 
+        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
+        {
+            "slots",
+            "modeHintContexts",
+            "modeHintPrefs"
+        };
+
+        private static readonly HashSet<string> SlotFields = new(StringComparer.Ordinal)
+        {
+            "action",
+            "int"
+        };
+
         private EntityCommandPanelSlotActionConfig(
-            string[] slotActionIds,
+            EntityCommandPanelSlotBinding[] slots,
             string[] modeHintContextIds,
             string[] modeHintKeys,
             string modeHintPrefKey,
             string[] modeHintPrefValueIds,
             string[] modeHintPrefHintKeys)
         {
-            SlotActionIds = slotActionIds;
+            Slots = slots;
             ModeHintContextIds = modeHintContextIds;
             ModeHintKeys = modeHintKeys;
             ModeHintPrefKey = modeHintPrefKey;
@@ -30,7 +65,7 @@ namespace EntityCommandPanelMod.Runtime
             ModeHintPrefHintKeys = modeHintPrefHintKeys;
         }
 
-        public IReadOnlyList<string> SlotActionIds { get; }
+        public IReadOnlyList<EntityCommandPanelSlotBinding> Slots { get; }
 
         /// <summary>Interaction context ids, checked in declaration order; the first active one wins.</summary>
         public IReadOnlyList<string> ModeHintContextIds { get; }
@@ -53,21 +88,30 @@ namespace EntityCommandPanelMod.Runtime
             var entry = ConfigPipeline.RequireEntry(catalog, RelativePath, ConfigMergePolicy.DeepObject);
             JsonObject merged = pipeline.MergeDeepObjectFromCatalog(in entry, report)
                 ?? throw new InvalidOperationException($"Missing required config '{RelativePath}'.");
-            if (merged["slotActionIds"] is not JsonArray array)
+            return Parse(merged);
+        }
+
+        public static EntityCommandPanelSlotActionConfig Parse(JsonObject merged)
+        {
+            ArgumentNullException.ThrowIfNull(merged);
+            foreach (KeyValuePair<string, JsonNode?> pair in merged)
             {
-                throw new InvalidOperationException($"'{RelativePath}' must declare a slotActionIds array.");
+                if (!RootFields.Contains(pair.Key))
+                {
+                    throw new InvalidOperationException(
+                        $"'{RelativePath}' field '{pair.Key}' is not allowed. Each slot is an object in 'slots'.");
+                }
             }
 
-            var actionIds = new string[array.Count];
+            if (merged["slots"] is not JsonArray array)
+            {
+                throw new InvalidOperationException($"'{RelativePath}' must declare a slots array.");
+            }
+
+            var slots = new EntityCommandPanelSlotBinding[array.Count];
             for (int i = 0; i < array.Count; i++)
             {
-                string? actionId = array[i]?.GetValue<string>();
-                if (string.IsNullOrWhiteSpace(actionId))
-                {
-                    throw new InvalidOperationException($"'{RelativePath}' slotActionIds[{i}] must be a non-empty action id.");
-                }
-
-                actionIds[i] = actionId;
+                slots[i] = ReadSlot(array[i], i);
             }
 
             if (merged["modeHintContexts"] is not JsonObject modeHintContexts)
@@ -133,7 +177,62 @@ namespace EntityCommandPanelMod.Runtime
                 }
             }
 
-            return new EntityCommandPanelSlotActionConfig(actionIds, contextIds, modeKeys, prefKey, prefValueIds, prefHintKeys);
+            return new EntityCommandPanelSlotActionConfig(slots, contextIds, modeKeys, prefKey, prefValueIds, prefHintKeys);
+        }
+
+        private static EntityCommandPanelSlotBinding ReadSlot(JsonNode? node, int index)
+        {
+            string where = $"'{RelativePath}' slots[{index}]";
+            if (node is not JsonObject slot)
+            {
+                throw new InvalidOperationException(
+                    $"{where} must be an object with \"action\" and, when that action's bindings carry intValue, \"int\".");
+            }
+
+            string? actionId = null;
+            bool hasInt = false;
+            int bindingInt = 0;
+            foreach (KeyValuePair<string, JsonNode?> pair in slot)
+            {
+                if (!SlotFields.Contains(pair.Key))
+                {
+                    throw new InvalidOperationException($"{where} field '{pair.Key}' is not allowed.");
+                }
+
+                if (pair.Key == "action")
+                {
+                    actionId = pair.Value is JsonValue actionValue && actionValue.TryGetValue<string>(out string? text)
+                        ? text
+                        : null;
+                    continue;
+                }
+
+                bindingInt = ReadBindingInt(pair.Value, where);
+                hasInt = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                throw new InvalidOperationException($"{where} action must be a non-empty action id.");
+            }
+
+            return new EntityCommandPanelSlotBinding(actionId, hasInt, bindingInt);
+        }
+
+        private static int ReadBindingInt(JsonNode? node, string where)
+        {
+            if (node is not JsonValue value)
+            {
+                throw new InvalidOperationException($"{where} int must be an integer.");
+            }
+
+            string raw = value.ToJsonString();
+            if (raw.Contains('.') || raw.Contains('e') || raw.Contains('E') || !value.TryGetValue<int>(out int parsed))
+            {
+                throw new InvalidOperationException($"{where} int must be an integer, not '{raw}'.");
+            }
+
+            return parsed;
         }
     }
 }

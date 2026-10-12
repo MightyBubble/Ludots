@@ -1201,7 +1201,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var details = new List<string>
             {
-                BuildInputActionDiagnostics(engine, "Aim.Slot1"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName),
                 BuildSelectionStateDiagnostics(engine)
             };
