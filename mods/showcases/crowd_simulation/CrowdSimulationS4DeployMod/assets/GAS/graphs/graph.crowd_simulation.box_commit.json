@@ -1,0 +1,33 @@
+[
+  {
+    "id": "graph.crowd_simulation.box_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_box_select_release",
+        "start": "run_hit",
+        "refire": "restart",
+        "action": "CrowdSimulation.BoxSelectEnd"
+      }
+    ],
+    "nodes": [
+      { "id": "run_hit", "op": "InvokeGraph", "functionName": "graph.crowd_simulation.box_hit" },
+      { "id": "op_replace", "op": "ConstInt", "intValue": 0 },
+      { "id": "write_selected", "op": "WriteCollection", "collectionKey": "selected" },
+      { "id": "deactivate_boxing", "op": "DeactivateContext", "context": "interaction.context.crowd_simulation.boxing" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "run_hit", "fromPort": "next", "to": "op_replace" },
+      { "from": "op_replace", "fromPort": "next", "to": "write_selected" },
+      { "from": "write_selected", "fromPort": "next", "to": "deactivate_boxing" },
+      { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "op_replace", "fromPort": "value", "to": "write_selected", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

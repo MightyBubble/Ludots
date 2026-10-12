@@ -253,7 +253,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             }
 
             status = $"tick {session.TickCount};单位 {session.Units.Count}(闲 {idle}/行 {moving}/达 {arrived}" +
-                     (unreachable + jumping > 0 ? $"/不可达 {unreachable}/跳跃 {jumping}" : "") + $");选中 {session.SelectedCount}";
+                     (unreachable + jumping > 0 ? $"/不可达 {unreachable}/跳跃 {jumping}" : "") + $");选中 {session.SelectedCollectionCount(1)}";
             var report = session.LastRebakeReport;
             rebake = report == null
                 ? "无结构变更"

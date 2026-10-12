@@ -1,0 +1,28 @@
+{
+  "profiles": [
+    {
+      "id": "intent.command.default",
+      "groupPolicy": { "kind": "independent" },
+      "rules": [
+        { "priority": 20, "target": { "hasEntity": true }, "route": { "orderTypeKey": "moveTo", "targetShape": "WorldPositionCm" } },
+        { "priority": 10, "target": { "hasEntity": false }, "route": { "orderTypeKey": "moveTo", "targetShape": "WorldPositionCm" } }
+      ]
+    },
+    {
+      "id": "intent.command.crowd_simulation",
+      "groupPolicy": { "kind": "independent" },
+      "rules": [
+        {
+          "priority": 20,
+          "target": { "hasEntity": true },
+          "route": { "orderTypeKey": "crowdSimulationMove", "targetShape": "WorldPositionCm", "exactGroundPoint": true }
+        },
+        {
+          "priority": 10,
+          "target": { "hasEntity": false },
+          "route": { "orderTypeKey": "crowdSimulationMove", "targetShape": "WorldPositionCm", "exactGroundPoint": true }
+        }
+      ]
+    }
+  ]
+}
