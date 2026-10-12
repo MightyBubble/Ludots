@@ -288,18 +288,4 @@ public sealed class CrowdSimSession
     }
 
     public void SetSelectedCount(int count) => SelectedCount = count;
-
-    /// <summary>按稠密下标移除单位。末行填入空洞;推挤状态由运动内核随行搬走。</summary>
-    public void RemoveDense(int dense)
-    {
-        int last = Units.Count - 1;
-        if ((uint)dense > (uint)last) throw new ArgumentOutOfRangeException(nameof(dense));
-        var entity = Units.EntityAt(dense);
-        var state = World.Get<CrowdSimulationUnitState>(entity);
-        if (Groups.TryGet(state.GroupId, out var group) && group.Count > 0) group.Count--;
-        if (state.Selected != 0 && SelectedCount > 0) SetSelectedCount(SelectedCount - 1);
-        Units.SwapRemove(dense);
-        Movement?.CarryPushOnSwapRemove(dense, last);
-        SelectionMirror.Sync(this);
-    }
 }

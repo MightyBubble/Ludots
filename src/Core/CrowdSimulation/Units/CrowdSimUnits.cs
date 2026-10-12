@@ -172,31 +172,6 @@ public sealed class CrowdSimUnits
         _templateCache[templateId] = template;
     }
 
-    /// <summary>
-    /// 稠密行 swap-remove:末行搬进空洞,槽位代 +1 后回空闲栈。
-    /// 推挤数组按稠密下标存,不在这里搬——会话移除入口负责。
-    /// </summary>
-    public void SwapRemove(int dense)
-    {
-        int last = _dense.Count - 1;
-        if ((uint)dense > (uint)last) throw new ArgumentOutOfRangeException(nameof(dense));
-        int slot = _slotOfDense[dense];
-        _world.Destroy(_dense[dense]);
-        _gen[slot] = (ushort)((_gen[slot] + 1) & GenMask);
-        _sparse[slot] = -1;
-        _freeSlots[_freeTop++] = slot;
-        if (dense != last)
-        {
-            int movedSlot = _slotOfDense[last];
-            _dense[dense] = _dense[last];
-            _slotOfDense[dense] = movedSlot;
-            _sparse[movedSlot] = dense;
-        }
-
-        _dense.RemoveAt(last);
-        _slotOfDense.RemoveAt(last);
-    }
-
     /// <summary>清空(代 bump:旧句柄全部失效;槽池回到初始 LIFO 序,回放可复现)。</summary>
     public void Clear()
     {

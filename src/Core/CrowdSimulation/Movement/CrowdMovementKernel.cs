@@ -15,9 +15,15 @@ public sealed class CrowdMovementKernel
     public required CrowdSpatialHash Hash { get; init; }
     /// <summary>意图输出(厘米/秒,按稠密序);马达层读它做一阶响应。</summary>
     public Fix64Vec2[] Intent = Array.Empty<Fix64Vec2>();
-    /// <summary>避让分离推力(厘米;每子步由分离求解写入,马达读)。</summary>
+    /// <summary>
+    /// 避让分离推力(厘米;每子步由分离求解写入,马达读)。
+    /// 按下标对齐稠密行,GatherUnits 不重读。将来若有退场,必须和稠密行同一次交换搬走,并且退场只能有这一个入口。
+    /// </summary>
     public Fix64Vec2[] Separation = Array.Empty<Fix64Vec2>();
-    /// <summary>静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。</summary>
+    /// <summary>
+    /// 静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。
+    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时随同一次交换搬走。
+    /// </summary>
     public byte[] Calm = Array.Empty<byte>();
     /// <summary>哈希序聚集缓冲(分离求解的逐格读取面,与参考 sepCtx 同构)。</summary>
     public Fix64[] GatherX = Array.Empty<Fix64>();
@@ -34,8 +40,7 @@ public sealed class CrowdMovementKernel
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
 
-    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(对拍会话只追加,创建序即行序)。swap-remove
-    // 把末行搬进空洞,Separation/Calm 不经 gather 重读,必须由 CarryPushOnSwapRemove 同搬。chunk
+    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(对拍会话只追加,创建序即行序)。chunk
     // 遍历按原型分桶不保稠密序——热路径不直接进 chunk,改为每 tick 一次 gather(组件→SoA)、
     // 子步全走 SoA、一次 scatter(SoA→组件)。World 解析从每单位每子步 ~16 次降到每 tick 9 次。
     public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
@@ -386,19 +391,6 @@ public sealed class CrowdMovementKernel
     {
         if (dense < Separation.Length) Separation[dense] = Fix64Vec2.Zero;
         if (dense < Calm.Length) Calm[dense] = 0;
-    }
-
-    /// <summary>
-    /// Separation 与 Calm 按稠密下标活过 gather(gather 不重读它们)。
-    /// swap-remove 把末行实体搬进空洞时,这两列必须跟着走,否则幸存者继承被删单位的推力。
-    /// </summary>
-    public void CarryPushOnSwapRemove(int removedDense, int lastDense)
-    {
-        if (removedDense == lastDense) return;
-        if ((uint)removedDense < (uint)Separation.Length && (uint)lastDense < (uint)Separation.Length)
-            Separation[removedDense] = Separation[lastDense];
-        if ((uint)removedDense < (uint)Calm.Length && (uint)lastDense < (uint)Calm.Length)
-            Calm[removedDense] = Calm[lastDense];
     }
 
     /// <summary>分离求解 + 相位前移(参考 tick():哈希重建后、领队之前)。</summary>
