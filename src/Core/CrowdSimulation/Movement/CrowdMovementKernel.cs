@@ -34,7 +34,8 @@ public sealed class CrowdMovementKernel
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
 
-    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(单位稠密表是 append-only 的创建序),而 chunk
+    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(对拍会话只追加,创建序即行序)。swap-remove
+    // 把末行搬进空洞,Separation/Calm 不经 gather 重读,必须由 CarryPushOnSwapRemove 同搬。chunk
     // 遍历按原型分桶不保稠密序——热路径不直接进 chunk,改为每 tick 一次 gather(组件→SoA)、
     // 子步全走 SoA、一次 scatter(SoA→组件)。World 解析从每单位每子步 ~16 次降到每 tick 9 次。
     public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
@@ -385,6 +386,19 @@ public sealed class CrowdMovementKernel
     {
         if (dense < Separation.Length) Separation[dense] = Fix64Vec2.Zero;
         if (dense < Calm.Length) Calm[dense] = 0;
+    }
+
+    /// <summary>
+    /// Separation 与 Calm 按稠密下标活过 gather(gather 不重读它们)。
+    /// swap-remove 把末行实体搬进空洞时,这两列必须跟着走,否则幸存者继承被删单位的推力。
+    /// </summary>
+    public void CarryPushOnSwapRemove(int removedDense, int lastDense)
+    {
+        if (removedDense == lastDense) return;
+        if ((uint)removedDense < (uint)Separation.Length && (uint)lastDense < (uint)Separation.Length)
+            Separation[removedDense] = Separation[lastDense];
+        if ((uint)removedDense < (uint)Calm.Length && (uint)lastDense < (uint)Calm.Length)
+            Calm[removedDense] = Calm[lastDense];
     }
 
     /// <summary>分离求解 + 相位前移(参考 tick():哈希重建后、领队之前)。</summary>
