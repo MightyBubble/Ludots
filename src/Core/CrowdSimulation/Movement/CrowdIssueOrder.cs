@@ -76,7 +76,7 @@ public static class CrowdIssueOrder
             if (!fresh.TryGetValue(gk, out var g))
             {
                 // 新组以 BodyNavId 落底,AttachGroupNav 再挂规划句柄。
-                // Group.Player 用 PairRules.IndexByPlayerId。SpawnAt 用 player - 1。二者只在玩家号按 1..P 且与表序一致时相等。
+                // Group.Player 用 PairRules.IndexByPlayerId。
                 g = sim.Groups.Alloc(sim.Config.PairRules.IndexByPlayerId[player], old.LayerIdx, old.RIdx, old.BodyNavId);
                 sim.AttachGroupNav(g);
                 fresh[gk] = g;

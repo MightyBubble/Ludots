@@ -110,8 +110,8 @@ public static class CrowdDeployment
         int c0 = NearestPassable(nav, CrowdSimulationSpace.CellAtStrict(wx, wy, cfg.NavCellSizeCm, navCellsPerSide));
         if (c0 < 0 || sim.Units.Count >= sim.Units.Capacity) return 0;
         var rng = CrowdSimRng.Create((long)cfg.WorldSeed + (long)++sim.SpawnSeq * SaltSpawnAt);
-        // player 为 Ludots 玩家号(1..P);组内索引 0 基(与批量部署同一编号序)
-        var g = sim.Groups.Alloc(player - 1, l, rIdx, nav.Id);
+        // player 为 Ludots 玩家号(1..P)。组下标用 PairRules.IndexByPlayerId。
+        var g = sim.Groups.Alloc(cfg.PairRules.IndexByPlayerId[player], l, rIdx, nav.Id);
         sim.AttachGroupNav(g); // 规划句柄挂玩家视野组当前槽(马达句柄恒真相)
         int comp = nav.Comp[c0];
         var profile = ProfileOf(cfg, l, rIdx);
