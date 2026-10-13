@@ -180,7 +180,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
         public void CameraShowcaseMod_BootstrapMap_CentersBoundsWithSharedBootstrap()
         {
             using var engine = CreateEngine(ShowcaseMods);
-            LoadMap(engine, CameraShowcaseIds.BootstrapMapId);
+            // The centering pose is applied by the fixed-step camera writer. A cold process
+            // spends the first slices before that writer, so a short tick cannot observe it.
+            LoadMap(engine, CameraShowcaseIds.BootstrapMapId, frames: 40);
 
             Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TacticalProfileId));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4000f, 2500f)));
