@@ -54,6 +54,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private CrowdDebugViewFrame? _debugView;
     private int _flashReportTick = -1;
     private long _flashStartMs;
+    private Vector2[][] _flashLines = Array.Empty<Vector2[]>();
+    private int _flashLineCount;
+    private int _flashLineReport = int.MinValue;
 
     internal S4DeployDemoPresentationSystem(
         S4DeployDemoRuntime demo,
@@ -316,29 +319,47 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         int navCellsPerSide = session.Config.NavCellsPerSide, tiles = session.Config.Hpa.NavCellsPerTile;
         int perRow = Math.Max(1, navCellsPerSide / tiles);
         float tileVisual = tiles * navCellVisual;
+        if (report.ReportTick != _flashLineReport)
+            CacheFlashLines(report, perRow, tileVisual, navCellVisual);
         var color = FlashYellow with { W = alpha };
-        int shown = 0;
-        foreach (int tile in report.UnionTiles)
-        {
-            var id = new RouteVisualId(200 + shown);
-            float ox = tile % perRow * tileVisual, oy = tile / perRow * tileVisual;
-            // 黄线宽 = 0.6 格长(37.5m):细线随地形起伏时实测可视性不足,加粗一档
-            AddTileOutline(id, ox, oy, tileVisual, navCellVisual, navCellVisual * 0.6f, color);
-            shown++;
-        }
+        // 黄线宽 = 0.6 格长(37.5m):细线随地形起伏时实测可视性不足,加粗一档
+        float thick = navCellVisual * 0.6f;
+        for (int i = 0; i < _flashLineCount; i++)
+            _routeVisuals.AddPolylineShared(new RouteVisualId(FlashBase.Value + i), _flashLines[i], thick, color);
     }
 
-    private void AddTileOutline(RouteVisualId id, float ox, float oy, float tileVisual, float stepVisual, float thick, Vector4 color)
+    /// <summary>折点只随报告变。闪烁窗内每帧只改透明度,数组留给 AddPolylineShared,避免逐帧拷贝。</summary>
+    private void CacheFlashLines(CrowdRebakeReport report, int perRow, float tileVisual, float stepVisual)
     {
+        int n = report.UnionTiles.Count;
+        if (_flashLines.Length < n)
+        {
+            var grown = new Vector2[n][];
+            Array.Copy(_flashLines, grown, _flashLines.Length);
+            _flashLines = grown;
+        }
+
         int seg = Math.Max(1, (int)Math.Ceiling(tileVisual / stepVisual));
-        var pts = new Vector2[seg * 4 + 1];
-        int p = 0;
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual * k / seg, oy);
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual, oy + tileVisual * k / seg);
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual - tileVisual * k / seg, oy + tileVisual);
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox, oy + tileVisual - tileVisual * k / seg);
-        pts[p] = pts[0];
-        _routeVisuals.AddPolyline(id, pts, thick, color);
+        int len = seg * 4 + 1;
+        for (int i = 0; i < n; i++)
+        {
+            int tile = report.UnionTiles[i];
+            float ox = tile % perRow * tileVisual;
+            float oy = tile / perRow * tileVisual;
+            var pts = _flashLines[i];
+            if (pts == null || pts.Length != len)
+                pts = new Vector2[len];
+            int p = 0;
+            for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual * k / seg, oy);
+            for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual, oy + tileVisual * k / seg);
+            for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual - tileVisual * k / seg, oy + tileVisual);
+            for (int k = 0; k < seg; k++) pts[p++] = new(ox, oy + tileVisual - tileVisual * k / seg);
+            pts[p] = pts[0];
+            _flashLines[i] = pts;
+        }
+
+        _flashLineCount = n;
+        _flashLineReport = report.ReportTick;
     }
 
     internal static bool NavVariantPending(CrowdSimSession session, int viewMode)

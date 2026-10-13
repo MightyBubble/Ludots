@@ -133,7 +133,7 @@
     ],
     "autoReplayAtTick": 260,
     "cameraId": "CrowdSimulation.Camera.S4Deploy",
-    "incrementalNavVerify": true
+    "incrementalNavVerify": false
   },
   "tools": {
     "boomRadiusCm": 12500,
