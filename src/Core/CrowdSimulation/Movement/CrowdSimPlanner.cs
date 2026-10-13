@@ -513,6 +513,7 @@ public sealed class CrowdSimPlanner
                 // 陈旧答复(请求后导航重烘过):场先挂上(刷新落地前组用它),组进裁决清单
                 var nav = _session.ResolveNavContext(g.NavId);
                 if (nav.Version != pg.Version || g.NavId != pg.NavId) stale.Add(g);
+                result.Flow.BuildRevision = pg.RequestId;
                 g.Flow = result.Flow;
                 result.Flow = null;
                 _service.ReleaseReply(result);
@@ -816,6 +817,7 @@ public sealed class CrowdSimPlanner
             return;
         }
 
+        result.Flow.BuildRevision = pr.RequestId;
         if (g.Flow is { } old) RecycleFlow(old);
         g.Flow = result.Flow;
         result.Flow = null;
