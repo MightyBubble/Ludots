@@ -26,6 +26,9 @@ public sealed class CrowdCommandQueue
     public IReadOnlyList<(int Tick, CrowdSimCommand Cmd)> Log => _log;
     public int PendingCount => _queue.Count - _head;
 
+    /// <summary>未执行队列的第 <paramref name="index"/> 条（0 是下一条）。诊断摘要读队列里的那条。</summary>
+    internal (int Tick, CrowdSimCommand Cmd) PendingAt(int index) => _queue[_head + index];
+
     /// <summary>现场指令(JSON 边界):解析、校验、记日志、当 tick 执行一气呵成。</summary>
     public T Submit<T>(CrowdSimSession sim, JsonNode cmd, Func<CrowdSimSession, CrowdSimCommand, T> exec)
         => Submit(sim, CrowdSimCommand.Parse(cmd), exec);
