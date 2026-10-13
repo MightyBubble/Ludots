@@ -200,9 +200,14 @@ public sealed class CrowdRebakeHitchProbeTests
         CrowdStructureOps.PlaceStructure(
             session, "building", Fix64.FromInt(XCm), Fix64.FromInt(YCm), Fix64.FromInt(SizeCm), Fix64.Zero, Fix64.Zero);
 
-    private static CrowdRebakeReport? Remove(CrowdSimSession session) =>
-        CrowdStructureOps.RemoveStructureAt(session, Fix64.FromInt(XCm), Fix64.FromInt(YCm))
-        ?? throw new InvalidOperationException("拆除没有命中建筑。");
+    private static CrowdRebakeReport? Remove(CrowdSimSession session)
+    {
+        int before = session.Structures!.EntityIds.Count;
+        var report = CrowdStructureOps.RemoveStructureAt(session, Fix64.FromInt(XCm), Fix64.FromInt(YCm));
+        if (report == null && session.RebakeJob == null && session.Structures.EntityIds.Count == before)
+            throw new InvalidOperationException("拆除没有命中建筑。");
+        return report;
+    }
 
     private static JsonObject Row(int tick, JsonObject cmd) => new() { ["tick"] = tick, ["cmd"] = cmd };
 
