@@ -1,6 +1,6 @@
-# GAS Composition Gate — L43 选中与下令
+# GAS Composition Gate — 选中与下令
 
-- **Task / Issue**: L43 群体选中退出指令日志，下令成员在提交时钉死
+- **Task / Issue**: 群体选中退出指令日志，下令成员在提交时钉死
 - **Date**: 2026-10-12
 - **Agent / Author**: cloud agent
 
@@ -14,7 +14,7 @@
 
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: L43
+- **Task / Issue**: 群体选中退出指令日志，下令成员在提交时钉死
 - **Date**: 2026-10-12
 - **Agent / Author**: cloud agent
 

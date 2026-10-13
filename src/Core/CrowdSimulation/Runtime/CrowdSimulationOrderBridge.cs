@@ -10,7 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Runtime;
 
 /// <summary>
 /// 会话首次激活时向 <see cref="OrderBufferSystem"/> 登记 <c>crowdSimulationMove</c> 的外部消费者。
-/// 排空留在订单接入自己的阶段。消费者把批次排进下一拍会话步进：成员在那时钉死，
+/// 排空留在订单接入自己的阶段。成员在这次排空里钉死；指令记在当前 TickCount，下一拍会话步进才执行并写日志。
 /// 普通右键只有一个地面点，形状固定为 <see cref="PlainClickShapeId"/>。
 /// <see cref="OrderArgs.Spatial"/> 的 WorldCm 写成 (X, 0, Y)，平面坐标取 X 与 Z，按整数截断。
 /// </summary>

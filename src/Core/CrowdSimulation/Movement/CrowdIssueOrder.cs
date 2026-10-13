@@ -7,7 +7,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 移动下令(issueOrder.js 移植,Fix64 厘米域):调用方给出的成员句柄按
+/// 移动下令(Fix64 厘米域):调用方给出的成员句柄按
 /// (移动类型 × 半径级) 重组进新组、挂同一条新指令;magic box 定落点模式;
 /// PRESERVE 时各层块按(层质心 − 指令质心)平移目标。
 /// 同玩家同成员同目标同参数的重复指令 = 空操作(仍进日志,回放逐位一致)。

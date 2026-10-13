@@ -173,7 +173,7 @@ public sealed class CrowdSimSession
     public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
 
     // 下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
-    // MemberStamp 用世代标记本条指令的成员槽,热路径不分配。
+    // MemberStamp 用世代标记本条指令的成员槽。
     internal readonly int[] MemberStamp;
     internal readonly uint[] MemberCapture;
     internal int MemberEpoch;
