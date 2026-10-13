@@ -12,7 +12,7 @@ public sealed class DeckSurface
 {
     public required byte[] AreaIndex { get; init; }
     public required byte[] PortalFlag { get; init; }
-    /// <summary>含桥面格的 tile 编号,按首次写入序(与参考实现的栅格化扫描序一致)。</summary>
+    /// <summary>含桥面格的 tile 编号,按首次写入序。</summary>
     public required int[] TileOrder { get; init; }
 
     public static DeckSurface Empty(int cellCount) => new()
@@ -24,7 +24,7 @@ public sealed class DeckSurface
 }
 
 /// <summary>
-/// 桥面层烘焙（网格级移植）：桥实体（路径足迹）栅格化为
+/// 桥面层烘焙：桥实体（路径足迹）栅格化为
 /// 桥面格 + 桥头 portal 标记;桥面层逐上下文烘焙 = 区域定价 ∩ 净空腐蚀,
 /// 桥面侧边封闭,只有桥头 portal 格与地面层相连。
 /// 连通域合并:桥面 4 连通洪泛 + portal 格与地面格双通时合并两域。
@@ -49,7 +49,7 @@ public static class UpperLayerBake
         {
             int areaIndex = AreaIndexOf(config, bridge.AreaId);
             var span = bridge.Span;
-            // 路径包围盒(含宽度)扫格——厘米整数域,与 cellRectOf 同语义
+            // 路径包围盒(含宽度)扫格,厘米整数域
             int halfWCm = span.WidthCm / 2;
             int minX = Math.Max(0, FloorDiv(Math.Min(span.X0Cm, span.X1Cm) - halfWCm, navCellSizeCm));
             int minY = Math.Max(0, FloorDiv(Math.Min(span.Y0Cm, span.Y1Cm) - halfWCm, navCellSizeCm));
@@ -58,9 +58,7 @@ public static class UpperLayerBake
 
             var x0 = CrowdReferenceMeters.CmToMRaw(span.X0Cm); var y0 = CrowdReferenceMeters.CmToMRaw(span.Y0Cm);
             var ax = CrowdReferenceMeters.CmToMRaw(span.X1Cm) - x0; var ay = CrowdReferenceMeters.CmToMRaw(span.Y1Cm) - y0;
-            // 桥 / 路径跨度按生成器约定是轴对齐的:轴对齐时单位向量与长度都取精确值,
-            // 不走 VectorLength(定点 Sqrt 在端点格上的误差会吃掉 EPS 容差)。
-            // 斜线路径(运行时道路 / 泛洪,S7)届时再按参考实现复核精度口径。
+            // 本方法只栅格化桥。非轴对齐跨度走 VectorLength。轴对齐时故意不用 sqrt，避免端点格吃掉 1e-6 容差。
             Fix64 len, ux, uy;
             if (ay == Fix64.Zero && ax != Fix64.Zero) { len = Fix64.Abs(ax); ux = ax > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue; uy = Fix64.Zero; }
             else if (ax == Fix64.Zero && ay != Fix64.Zero) { len = Fix64.Abs(ay); ux = Fix64.Zero; uy = ay > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue; }
@@ -82,13 +80,13 @@ public static class UpperLayerBake
                     var py = (Fix64.FromInt(y) + Fix64.HalfValue) * navCellSizeM;
                     var dx = px - x0; var dy = py - y0;
                     var t = dx * ux + dy * uy;
-                    // covers():点在带内 = 投影在段上且横距 < 半宽
+                    // 沿段参数 t 允许超出端点 1e-6 米；横距严格小于半宽。
                     if (t < -eps || t > len + eps) continue;
                     var cross = dx * uy - dy * ux;
                     if (Fix64.Abs(cross) >= halfW) continue;
 
                     int cell = y * navCellsPerSide + x;
-                    // portal:距任一端点的沿段距离 < portalCells 格
+                    // 桥头:沿段到较近端点的距离小于 PortalReachNavCells 格换算的米长
                     var endDist = t < len - t ? t : len - t;
                     deckAreaIndex[cell] = (byte)(areaIndex + 1); // 同格后放者胜( bridges 顺序即实体顺序)
                     if (endDist < portalReachM) portalFlag[cell] = 1;
@@ -117,8 +115,8 @@ public static class UpperLayerBake
     }
 
     /// <summary>
-    /// 逐上下文桥面烘焙(bakeUpper 移植):桥面格 = 定价区域 ∩ 净空腐蚀;
-    /// 桥头 portal 的腐蚀半径内,地面可走的岸边格并入桥面可行走面(桥头落在腐蚀后仍可走的地面)。
+    /// 逐上下文桥面烘焙:桥面格 = 定价区域 ∩ 净空腐蚀。
+    /// 岸边格只临时并入腐蚀输入，让桥头在腐蚀后仍能留下；upPass 仍要求该格自己有定价桥面区域。
     /// </summary>
     public static void BakeDeck(
         CrowdSimulationRuntimeConfig config,
@@ -184,7 +182,7 @@ public static class UpperLayerBake
 
     /// <summary>
     /// 连通域合并:地面洪泛结果 + 桥面洪泛 + portal 合并。
-    /// 返回合并后的地面格连通域栅格与总数(与 mergeTiles 同语义:桥面域附加在地面域之后)。
+    /// 返回合并后的地面格连通域栅格与总数(桥面域附加在地面域之后)。
     /// </summary>
     public static int MergeDeckComponents(
         int[] groundComp,
@@ -254,7 +252,7 @@ public static class UpperLayerBake
             }
         }
 
-        // 稠密化:按地面域号序、再桥面域号序(与 mergeTiles 的槽序同规则)
+        // 稠密化:按地面域号序、再桥面域号序
         if (dense == null || dense.Length < unionCount) dense = new int[unionCount];
         Array.Fill(dense, -1, 0, unionCount);
         int count = 0;

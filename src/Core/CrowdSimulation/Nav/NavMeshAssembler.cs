@@ -6,7 +6,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
-/// <summary>全局 NavMesh 视图(assembleNavmesh 移植):跨 tile 拼接后的多边形与邻接/portal 边。</summary>
+/// <summary>全局 NavMesh 视图:跨 tile 拼接后的多边形与邻接/portal 边。</summary>
 public sealed class NavMeshView
 {
     public required int Count { get; init; }
@@ -29,14 +29,14 @@ public sealed class NavMeshView
 }
 
 /// <summary>
-/// 全局 NavMesh 拼装(assemble.js):拼接各 tile 的多边形(局部→全局格坐标)、
+/// 全局 NavMesh 拼装:拼接各 tile 的多边形(局部→全局格坐标)、
 /// 保留 tile 内部邻接、跨 tile 边界的重叠边缝合成 portal(端点 = 精确重叠段)。
 /// 纯拼装,无烘焙。条目不可变且被缓存共享,边界重叠对的搜索结果按条目对记忆化。
 /// </summary>
 public static class NavMeshAssembler
 {
     // 边界重叠对(stitchPairs):(条目A, sideA, 条目B) → [i, j, lo, hi]×k
-    // 键是条目引用(条目不可变且被缓存共享;uid 跨缓存实例会撞号,已踩过——静态 memo 不能只靠 uid)
+    // 键是条目引用(条目不可变且被缓存共享;uid 跨缓存实例会撞号,静态 memo 不能只靠 uid)
     // 记忆化结果是条目的纯函数,多 worker 查询共享;加锁只保线程安全,不影响结果
     private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>
     {
@@ -92,7 +92,7 @@ public static class NavMeshAssembler
         }
     }
 
-    /// <summary>清空记忆化(新烘焙会话的条目 uid 会复用,防陈旧引用)。</summary>
+    /// <summary>清空记忆化。键是条目引用,清空是为了放开仍被静态字典留着的旧条目。</summary>
     public static void ClearStitchMemo()
     {
         lock (_stitchMemoLock)
@@ -188,7 +188,6 @@ public static class NavMeshAssembler
             }
         }
 
-        // CSR 化邻接
         var neiStart = new int[pCount + 1];
         for (int k = 0; k < edgeP.Count; k++) neiStart[edgeP[k] + 1]++;
         for (int p = 0; p < pCount; p++) neiStart[p + 1] += neiStart[p];
@@ -205,7 +204,6 @@ public static class NavMeshAssembler
             pbx[s] = edgeBx[k]; pby[s] = edgeBy[k];
         }
 
-        // cell → 全局 poly;逐 poly 平均代价
         var polyOf = new int[navCellsPerSide * navCellsPerSide];
         Array.Fill(polyOf, -1);
         var polyCostAcc = new Fix64[pCount];

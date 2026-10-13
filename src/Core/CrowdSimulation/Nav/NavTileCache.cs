@@ -5,11 +5,11 @@ using Ludots.Core.CrowdSimulation.Nav.GridBake;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// Tile 缓存(TileCache 移植):以 tile 的精确输入为键(逐格 0 = 不可走,
+/// Tile 缓存:以 tile 的精确输入为键(逐格 0 = 不可走,
 /// 否则区域编号 + 1;不做哈希,无碰撞)。内容相同的 tile 跨位置 / 跨上下文共享一份烘焙;
 /// 拆建筑恢复原键即命中。LRU 容量来自 navtile.cacheCapacity。
-/// 线程契约与参考实现一致:归仿真侧单线程所有(路径服务镜像持自己的另一份),
-/// 不设计为并发安全——查询缓冲不可重入。
+/// 这份缓存归烘焙/重烘。路径服务不持第二份导航态,worker 只持搜索暂存,计算时拿 PathQueryService 的导航锁。
+/// 缓存自己的烘焙暂存不可重入。
 /// 槽位在构造时备好。未命中领取空槽并写入,不分配;已发布的条目对象不被原地覆盖,
 /// 因为导航上下文会长期持有它。只有缓存满后的淘汰才换一块新缓冲。
 /// </summary>
@@ -86,7 +86,6 @@ public sealed class NavTileCache
         _freeCount = capacity;
     }
 
-    /// <summary>取 tile (tx, ty) 的缓存条目,未命中即烘焙。</summary>
     public NavTileEntry Acquire(byte[] passable, byte[] area, int navCellsPerSide, int tx, int ty)
     {
         int navCellsPerTile = _navCellsPerTile, ox = tx * navCellsPerTile, oy = ty * navCellsPerTile;

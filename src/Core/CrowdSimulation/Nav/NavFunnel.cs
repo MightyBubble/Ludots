@@ -5,9 +5,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// 简单愚蠢漏斗(navquery.js funnel 移植):输入逐 portal 的左右端点(每 4 个值一组:
+/// 简单愚蠢漏斗:输入逐 portal 的左右端点(每 4 个值一组:
 /// lx, ly, rx, ry;首末 portal 是起终点退化点),输出拉直后的折线顶点(x, y 平铺)。
-/// 与参考实现共用同一收紧语义:右链越界收右点、左链越界收左点,越界即换 apex。
+/// 右链越界收右点、左链越界收左点,越界即换 apex。
 /// </summary>
 public static class NavFunnel
 {

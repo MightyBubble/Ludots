@@ -7,11 +7,11 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// HPA* 抽象图(hpa.js + hpaLocal.js 移植,烘焙路径):
+/// HPA* 抽象图(烘焙路径):
 /// 入口 = 共享边界上的开放格对(宽 run 取两端、窄 run 取中点,不超过 maxEntranceWidth),
 /// tile 内边 = tile 内 Dijkstra 距离;跳跃链接成为端点间的有向抽象边;
 /// 桥面层节点键 = 导航格总数 + 格号,只在桥头 portal 与地面 0 代价相连。
-/// 抽象图按 tile 分块(不可变),为增量重烘焙与认知变体共享做准备。
+/// 簇块在增量重烘时原地改写；认知变体必须 CloneForVariant，不能和真相共享内层数组。
 /// </summary>
 public sealed class HpaGraph
 {
@@ -36,7 +36,7 @@ public sealed class HpaGraph
     public required Fix64[][] IntraDist { get; set; }
     /// <summary>跨层 0 代价边(ground cell, deck key)对。</summary>
     public required int[][] CrossLayer { get; set; }
-    /// <summary>不可变簇块:节点格 + 格→局部号 + CSR 出边(目标为格号,桥面目标带层位)。</summary>
+    /// <summary>簇块:节点格 + 格→局部号 + CSR 出边。增量重烘原地改写。</summary>
     public required HpaTileBlock[] Blocks { get; set; }
     /// <summary>跳跃链接的有向出边:起点格 → (目标格, 代价) 平铺。</summary>
     public required Dictionary<int, List<(int To, Fix64 Cost)>> LinkOut { get; set; }
@@ -48,7 +48,7 @@ public sealed class HpaGraph
     /// <summary>簇内边数组的活前缀长度。数组本身可能更长，尾部是重烘空位。</summary>
     public int IntraPrefix(int cluster) => _nIntra[cluster];
 
-    // 查询暂存(不可重入:每次查询独占;并行作业须各自持有)
+    // Heap/Dist 是烘焙期簇内 Dijkstra 的暂存，重烘在导航锁内。查询用 HpaQuery.Scratch，不碰这里。
     public NavMinHeap Heap = new(4096);
     public Fix64[] Dist => _dist;
     public Fix64[] StartDist => _startDist;
@@ -261,7 +261,6 @@ public sealed class HpaGraph
             Blocks[cl].Index.EnsureCapacity(512);
     }
 
-    // ── 增量维护(updateHpa 移植) ─────────────────────────────────────
     /// <summary>脏 tile 的 HPA 增量维护:触到的共享边界各重扫一次,入口表变化的簇(及边界对面
     /// 的邻居)重烘簇内边——入口未变的邻居块仍重建(边代价从本侧格现读)。结果与同一栅格的
     /// 全量构建逐位一致。</summary>
@@ -446,7 +445,6 @@ public sealed class HpaGraph
         return true;
     }
 
-    // ── 边界入口扫描 ─────────────────────────────────────────────
     /// <summary>cellA(k) = origin + k * stride, cellB(k) = cellA(k) + side。不用委托,扫描不分配。</summary>
     private static void ScanBorder(HpaGraph g, byte[] passable, int maxW, int origin, int stride, int side, int len)
     {
@@ -612,7 +610,6 @@ public sealed class HpaGraph
         return false;
     }
 
-    // ── tile 烘焙 ───────────────────────────────────────────
     private static Dictionary<int, List<int>> LinksByTile(NavLinkSet? links, int navCellsPerSide, int navCellsPerTile, int navTilesPerSide)
     {
         var m = new Dictionary<int, List<int>>();
@@ -684,8 +681,7 @@ public sealed class HpaGraph
         }
 
         // 簇内边:逐节点对(i<j)的簇内 Dijkstra(只读到 j 的距离即停)。
-        // keep(节点集未变的干净簇/同内容 tile):旧 Dijkstra 距离逐位复用——旧表与新的节点集
-        // 前缀一致时,同源同内积的距离不变(参考实现 bakeCluster 的 oldIdx/oldD 复用)。
+        // 复用条件:新节点都能在旧下标里找到,且下标严格递增。不满足就整段重跑簇内 Dijkstra。
         var intra = g._bakeIntra;
         var intraDist = g._bakeIntraDist;
         intra.Clear();
@@ -897,7 +893,6 @@ public sealed class HpaGraph
         }
     }
 
-    // ── 簇块与图收尾 ─────────────────────────────────────────────
     private static HpaTileBlock BuildBlock(HpaGraph g, NavContext nav, int cl)
     {
         int navTilesPerSide = g.NavTilesPerSide;
@@ -1084,8 +1079,7 @@ public sealed class HpaGraph
         g.EdgeCount = edges;
     }
 
-    // ── 扁平视图(校验 / 叠加层 / 摘要用,不在查询路径上) ─────────────────────────────
-    /// <summary>flattenHpa 移植:每节点先块内边后链接边;nodeCell 不带层位(adjTo 带)。</summary>
+    /// <summary>每节点先块内边后链接边。nodeCell 与 adjTo 都对 NavCellTotal 取模,层位只在 nodeLayer。</summary>
     public (int[] NodeCell, byte[] NodeLayer, int[] NodeTile, int[] AdjStart, int[] AdjTo, Fix64[] AdjCost) Flatten()
     {
         var nodeCell = new List<int>();

@@ -57,7 +57,7 @@ public static class PolygonOps
         return false;
     }
 
-    /// <summary>洞合并:每个洞的最左顶点桥接到最近可见的外环顶点。最左 x 相同时保洞的输入序;距离相同时保顶点序。</summary>
+    /// <summary>洞合并:每个洞的最左顶点只在最近的至多 16 个外环顶点里找不相交的桥；16 个都被挡则仍桥到最近顶点。最左 x 相同时保洞的输入序;距离相同时保顶点序。</summary>
     internal static List<int> MergeHoles(List<int> outer, List<List<int>> holes, TileBakeScratch scratch)
     {
         var ranks = scratch.Polys;
@@ -178,7 +178,7 @@ public static class PolygonOps
 
         for (; ; )
         {
-            // 插入序边表(JS Map 语义:同键覆盖不挪位)
+            // 插入序边表:同键覆盖不挪位
             var edges = scratch.Edges;
             var edgeIndex = scratch.EdgeIndex;
             edges.Clear();

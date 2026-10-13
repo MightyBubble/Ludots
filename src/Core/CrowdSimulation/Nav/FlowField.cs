@@ -5,7 +5,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// 流场(flowfield.js 移植,双层):积分场(自终点的 Dijkstra,限于 HPA 走廊掩码)
+/// 流场(双层):积分场(自终点的 Dijkstra,限于 HPA 走廊掩码)
 /// + 每格 8 向下降指针 + 拉直路点(按 Dijkstra 弹出序处理,父先子后 → 任意角绷紧路径)。
 /// 每个数组都是 2 × N²:下标 = 层 × N² + 格(层 0 地面,1 桥面);两层仅在双层可走的
 /// 桥头格相交(0 代价 0 长度边;经该边到达的格 wp = 另一层同格)。
@@ -32,7 +32,7 @@ public sealed class FlowField
 }
 
 /// <summary>
-/// 流场缓冲池(flowPool.js 移植,路径服务计算侧):建成场离开服务(交给仿真侧),
+/// 流场缓冲池(路径服务计算侧):建成场离开服务(交给仿真侧),
 /// 仿真侧弃用时还回缓冲,稳态规划零分配。构建暂存(堆 / 弹出序)由池主独占。
 /// Give/Take 带锁:仿真侧还回与 worker 取用可能并发;结果与时序无关。
 /// </summary>
@@ -96,7 +96,7 @@ public sealed class FlowPool
     }
 }
 
-/// <summary>流场构建与读取(buildFlowField / tracePath / padMask / maskSubset / orMask 移植)。</summary>
+/// <summary>流场构建与读取。</summary>
 public static class FlowFieldBuilder
 {
     private const int Cross = -2;
@@ -188,8 +188,7 @@ public static class FlowFieldBuilder
                 for (int j = links.OutStart[i], e1 = links.OutStart[i + 1]; j < e1; j++)
                 {
                     int e = links.OutList[j];
-                    // 参考实现里 Infinity + cost 仍是 Infinity,不会误选未到达的链接端;
-                    // 定点不加守卫会溢出回绕成负数,判等即真(已踩过)
+                    // 未到达的链接端积分是 MaxValue。不加守卫时 MaxValue + cost 会溢出回绕成负数,判等即真。
                     if (integ[links.To[e]] < Fix64.MaxValue / 4 && integ[links.To[e]] + links.Cost[e] <= integ[i])
                     {
                         lk![i] = e; wp[i] = i; len[i] = len[links.To[e]] + Fix64.FromFloat(links.LengthCells[e]);
