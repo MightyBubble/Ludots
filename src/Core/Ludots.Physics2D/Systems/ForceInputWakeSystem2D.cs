@@ -64,7 +64,7 @@ namespace Ludots.Core.Physics2D.Systems
 
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     throw new InvalidOperationException(
-                        $"ForceInput2D on kinematic entity {entity.Id} is a contract error: kinematic bodies are pose-driven via SetKinematicTargetPose and never receive forces or impulses (issue #732).");
+                        $"ForceInput2D on kinematic entity {entity.Id} is a contract error: kinematic bodies are pose-driven via SetKinematicTargetPose and never receive forces or impulses.");
                 }
             }
         }
