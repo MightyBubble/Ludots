@@ -181,6 +181,21 @@ public sealed class CrowdSimPlanner
             ? Fix64.FromInt((int)faceWidthCm.ToLong()) * memberCount / total
             : Fix64.Zero;
 
+    /// <summary>
+    /// 回收组号会留下指向空槽或已改派组的链接。组的 OrderId 才表示链接仍属于这条指令。
+    /// </summary>
+    private bool TryOrderedGroup(CrowdOrder order, CrowdOrderGroupLink link, out CrowdNavGroupSet.Group group)
+    {
+        if (_session.Groups.TryGet(link.GroupId, out var found) && found.OrderId == order.Id)
+        {
+            group = found;
+            return true;
+        }
+
+        group = null!;
+        return false;
+    }
+
     /// <summary>为一批指令起规划:组目标/可达替代/成员标记/出发代表格,再发请求。</summary>
     public void Plan(IReadOnlyList<CrowdOrder> orders, int tick)
     {
@@ -194,7 +209,7 @@ public sealed class CrowdSimPlanner
             o.Leaders.Clear();
             foreach (var link in o.Groups)
             {
-                var g = session.Groups.Groups[link.GroupId]!;
+                if (!TryOrderedGroup(o, link, out var g)) continue;
                 g.Goal = CrowdDeployment.NearestPassable(session.ResolveNavContext(g.NavId), link.GoalCell);
                 g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
                 if (g.Flow != null) RecycleFlow(g);
@@ -210,7 +225,7 @@ public sealed class CrowdSimPlanner
             var o = orders[orderIndex];
             foreach (var link in o.Groups)
             {
-                var g = session.Groups.Groups[link.GroupId]!;
+                if (!TryOrderedGroup(o, link, out var g)) continue;
                 var compsInOrder = _compsInOrder;
                 compsInOrder.Clear();
                 var units = session.Units;
@@ -249,7 +264,7 @@ public sealed class CrowdSimPlanner
             var o = orders[orderIndex];
             foreach (var link in o.Groups)
             {
-                var g = session.Groups.Groups[link.GroupId]!;
+                if (!TryOrderedGroup(o, link, out var g)) continue;
                 membersByGroup[g.Id] = RentMembers();
             }
         }
@@ -307,7 +322,7 @@ public sealed class CrowdSimPlanner
             ReturnLayers();
             foreach (var link in o.Groups)
             {
-                var g = session.Groups.Groups[link.GroupId]!;
+                if (!TryOrderedGroup(o, link, out var g)) continue;
                 var mem = membersByGroup[g.Id];
                 if (mem.Count == 0)
                 {
@@ -600,13 +615,35 @@ public sealed class CrowdSimPlanner
 
             if (bucket.Count == 0) continue;
             var leaderResult = _service.AwaitDue(pl.RequestId);
-            var strictest = session.Groups.Groups[pl.StrictestGroupId]!;
+            // 请求发出后该组可能已被抽空。领队改挂桶里仍活着、净空最严的组。
+            if (!session.Groups.TryGet(pl.StrictestGroupId, out var strictest) || !live.ContainsKey(pl.StrictestGroupId))
+            {
+                strictest = null!;
+                int bestClearance = -1;
+                for (int bi = 0; bi < bucket.Count; bi++)
+                {
+                    if (!session.Groups.TryGet(bucket[bi], out var candidate) || !live.ContainsKey(candidate.Id)) continue;
+                    int clearance = session.ResolveNavContext(candidate.NavId).ClearanceNavCells;
+                    if (clearance > bestClearance)
+                    {
+                        bestClearance = clearance;
+                        strictest = candidate;
+                    }
+                }
+
+                if (bestClearance < 0)
+                {
+                    Recycle(leaderResult);
+                    continue;
+                }
+            }
+
             if (!leaderResult.Reachable || leaderResult.Points == null)
             {
                 // 非跳跃成员标不可达并清掉指令号;跳跃中的单位保持跳跃。组目标清成 -1。
                 foreach (int gid in bucket)
                 {
-                    var g = session.Groups.Groups[gid]!;
+                    if (!session.Groups.TryGet(gid, out var g)) continue;
                     foreach (int i in membersByGroup[gid])
                     {
                         var e = units.EntityAt(i);
@@ -692,7 +729,7 @@ public sealed class CrowdSimPlanner
             var mem = RentMembers();
             foreach (int gid in bucket)
             {
-                var g = session.Groups.Groups[gid]!;
+                if (!session.Groups.TryGet(gid, out var g)) continue;
                 g.Leader = leader;
                 g.LosAll = true; // 首个意图趟全员重查槽位视线
                 foreach (int i in membersByGroup[gid])

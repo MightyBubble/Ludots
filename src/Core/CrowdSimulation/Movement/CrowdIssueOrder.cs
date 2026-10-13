@@ -127,6 +127,8 @@ public static class CrowdIssueOrder
             g.OrderId = order.Id;
         }
 
+        // 空组已释放。旧指令上指向空槽或已改派组的链接留着，重烘阶段 2 会按空槽写目标。
+        sim.Orders.Prune(sim.Groups);
         sim.IssueBatch[0] = order;
         sim.Planner?.Plan(sim.IssueBatch, sim.TickCount);
         return mode;
