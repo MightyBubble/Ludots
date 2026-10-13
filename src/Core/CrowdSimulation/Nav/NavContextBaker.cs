@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Nav.GridBake;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -68,7 +69,7 @@ public static class NavContextBaker
 
         // 净空腐蚀（切比雪夫,可分离两次扫描;地图边缘视为阻挡）
         var passable = new byte[n2];
-        Erode(walk, navCellsPerSide, clearanceCells, passable);
+        ClearanceErosion.Erode(walk, navCellsPerSide, clearanceCells, passable);
 
         // 升序可走格表
         var cellList = new List<int>(n2 / 2);
@@ -379,42 +380,4 @@ public static class NavContextBaker
         return compCount;
     }
 
-    /// <summary>切比雪夫净空腐蚀（erodeRect 移植）:先行扫描再列扫描,两遍各计连续可走段。</summary>
-    private static void Erode(byte[] walk, int navCellsPerSide, int clearance, byte[] output)
-    {
-        int r = clearance - 1;
-        if (r <= 0)
-        {
-            Array.Copy(walk, output, walk.Length);
-            return;
-        }
-
-        int need = 2 * r + 1;
-        // 行缓冲:w = 整行;边缘外永不写入,视为 0
-        var row = new byte[navCellsPerSide * navCellsPerSide];
-        for (int y = 0; y < navCellsPerSide; y++)
-        {
-            int baseIdx = y * navCellsPerSide;
-            int run = 0;
-            for (int c = 0; c < navCellsPerSide; c++)
-            {
-                run = walk[baseIdx + c] != 0 ? run + 1 : 0;
-                int x = c - r;
-                if (x >= 0) row[baseIdx + x] = run >= need ? (byte)1 : (byte)0;
-            }
-        }
-
-        for (int x = 0; x < navCellsPerSide; x++)
-        {
-            int run = 0;
-            for (int yy = 0; yy < navCellsPerSide; yy++)
-            {
-                run = row[yy * navCellsPerSide + x] != 0 ? run + 1 : 0;
-                int y = yy - r;
-                if (y >= 0) output[y * navCellsPerSide + x] = run >= need ? (byte)1 : (byte)0;
-            }
-
-            for (int y = Math.Max(0, navCellsPerSide - r); y < navCellsPerSide; y++) output[y * navCellsPerSide + x] = 0;
-        }
-    }
 }
