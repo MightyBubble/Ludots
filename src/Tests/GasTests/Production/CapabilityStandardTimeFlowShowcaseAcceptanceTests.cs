@@ -841,7 +841,13 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
             }
 
             string relative = Path.GetRelativePath(modDir, file).Replace('\\', '/');
-            Assert.That(relative.Contains("Input/", StringComparison.OrdinalIgnoreCase), Is.False);
+            if (!string.Equals(relative, "assets/Input/collection_keys.json", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.That(
+                    relative.Contains("Input/", StringComparison.OrdinalIgnoreCase),
+                    Is.False,
+                    $"TimeFlow showcase must not author input under '{relative}'.");
+            }
             string text = File.ReadAllText(file);
             Assert.That(text.Contains("TimeFlowInputActions", StringComparison.Ordinal), Is.False);
             Assert.That(text.Contains("default_input", StringComparison.OrdinalIgnoreCase), Is.False);

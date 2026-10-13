@@ -785,7 +785,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void CoreInputMod_MergesMinimapCommandBinding()
         {
-            using GameEngine engine = CreateProfileEngine("LudotsCoreMod", "CoreInputMod");
+            using GameEngine engine = CreateProfileEngine("LudotsCoreMod", "CoreInputMod", "CommandSourceCoreFixtureMod");
             InteractionContextProfileDefinition minimap = RequireProfile(engine, "interaction.context.minimap");
             Assert.That(minimap.Bindings, Does.Contain("Select.Begin"));
             Assert.That(minimap.Bindings, Does.Contain("Command"));
@@ -799,7 +799,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void LudotsCoreMod_MinimapContext_BindsZoomAndOmitsCommand()
         {
-            using GameEngine engine = CreateProfileEngine("LudotsCoreMod");
+            using GameEngine engine = CreateProfileEngine("LudotsCoreMod", "CommandSourceCoreFixtureMod");
             InteractionContextProfileDefinition minimap = RequireProfile(engine, "interaction.context.minimap");
             Assert.That(minimap.Bindings, Does.Contain("Select.Begin"));
             Assert.That(minimap.Bindings, Does.Contain("Minimap.Zoom"));

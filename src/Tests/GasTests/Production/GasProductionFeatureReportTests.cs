@@ -39,10 +39,10 @@ namespace Ludots.Tests.GAS.Production
             try
             {
                 scenarios.Add(RunScenario("MOBA", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }, "entry", RunMobaScenario));
-                scenarios.Add(RunScenario("TCG/Modify", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_modify", RunTcgModifyScenario));
-                scenarios.Add(RunScenario("TCG/Hook", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_hook", RunTcgHookScenario));
-                scenarios.Add(RunScenario("ARPG", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", RunArpgScenario));
-                scenarios.Add(RunScenario("4X", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "FourXDemoMod" }, "fourx_entry", RunFourXScenario));
+                scenarios.Add(RunScenario("TCG/Modify", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_modify", RunTcgModifyScenario));
+                scenarios.Add(RunScenario("TCG/Hook", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_hook", RunTcgHookScenario));
+                scenarios.Add(RunScenario("ARPG", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod", "CommandSourceCoreFixtureMod" }, "arpg_entry", RunArpgScenario));
+                scenarios.Add(RunScenario("4X", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "FourXDemoMod", "CommandSourceCoreFixtureMod" }, "fourx_entry", RunFourXScenario));
             }
             finally
             {

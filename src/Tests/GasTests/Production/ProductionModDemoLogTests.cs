@@ -215,7 +215,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[TCG][Chain] 进入卡牌决斗 (连锁场景)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_chain", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_chain", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
@@ -245,7 +245,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[TCG][Stack] 进入卡牌决斗 (叠加场景)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_stack", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_stack", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[TCG][Grant] 进入卡牌决斗 (GrantedTags 场景)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_grant", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_grant", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
@@ -331,7 +331,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[ARPG] 进入暗黑风地下城。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod", "CommandSourceCoreFixtureMod" }, "arpg_entry", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
@@ -422,7 +422,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[4X] 进入策略大地图 (4 阵营)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" }, "fourx_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod", "CommandSourceCoreFixtureMod" }, "fourx_entry", engine =>
             {
                 var world = engine.World;
                 var governor = FindEntity(world, "Governor");
@@ -653,7 +653,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void Arpg_FirstAbilityBleed_InstallsStatusAndExpiresWithoutPriorDamage()
         {
-            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod", "CommandSourceCoreFixtureMod" }, "arpg_entry", engine =>
             {
                 World world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
