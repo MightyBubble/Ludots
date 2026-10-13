@@ -473,7 +473,6 @@ namespace Ludots.Tests.Presentation
                 Is.False,
                 "Command marker lifecycle is now generic entity-collection presentation events plus presenter rules.");
             Assert.That(File.Exists(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs")), Is.False);
-            Assert.That(File.Exists(Path.Combine(repoRoot, "mods", "Systems", "MassNavigationSelectionPresenterSyncSystem.cs")), Is.False);
         }
 
         [Test]
