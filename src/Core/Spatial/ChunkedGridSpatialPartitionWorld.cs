@@ -146,9 +146,9 @@ namespace Ludots.Core.Spatial
 
         private static long GetChunkKey(int chunkX, int chunkY) => ((long)chunkX << 32) | (uint)chunkY;
 
-        // A moving crowd used to keep one index dictionary in every cell it had ever
-        // touched. Queries only read cells that still hold entities, so an emptied
-        // cell and a chunk with no occupied cells go back to the pool.
+        // Queries only read cells that still hold entities, so an emptied cell and a
+        // chunk with no occupied cell go back to the pool; otherwise a marching crowd
+        // grows the heap with every cell it has passed through.
         private sealed class RecyclePool
         {
             private CellList?[] _cells = new CellList[64];
