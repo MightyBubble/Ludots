@@ -574,7 +574,11 @@ public sealed class CrowdSimPlanner
                 // 过渡场不进缓存,避免旧代价被后来的命中复用。
                 var nav = _session.ResolveNavContext(g.NavId);
                 bool fresh = nav.Version == pg.Version && g.NavId == pg.NavId;
-                if (!fresh) stale.Add(g);
+                if (!fresh)
+                {
+                    stale.Add(g);
+                    StalePlanApplies++;
+                }
                 SetFlow(g, result.Flow, fresh, pg.RequestId);
                 result.Flow = null;
                 _service.ReleaseReply(result);
@@ -1098,14 +1102,17 @@ public sealed class CrowdSimPlanner
     internal int StraySkipInFlight { get; private set; }
     /// <summary>垫一圈也不会变大，掩码已经包住这次走廊。</summary>
     internal int StraySkipNoGrowth { get; private set; }
-    /// <summary>走失格所在 tile 已经在当前掩码里，仍因外圈垫厚而提交的次数。</summary>
-    internal int ExtendTileCovered { get; private set; }
+    /// <summary>走失格所在 tile 已经在当前掩码里。不再为它垫外圈。</summary>
+    internal int StraySkipCovered { get; private set; }
     /// <summary>走失 tile 落在一圈垫层内。</summary>
     internal int ExtendWithinPad { get; private set; }
     /// <summary>走失 tile 比一圈垫层更远，这一次重建盖不住它。</summary>
     internal int ExtendBeyondPad { get; private set; }
     internal int[] ExtendByGroup => _extendByGroup;
     internal int[] ExtendDistance => _extendDist;
+    internal int StalePlanApplies { get; private set; }
+    internal int RefreshCacheHits { get; private set; }
+    internal int RefreshCacheMisses { get; private set; }
     public int FlowCacheHits => _cache.Hits;
     public int FlowCacheMisses => _cache.Misses;
     public int FlowCacheEvicts => _cache.Evicts;
@@ -1603,7 +1610,13 @@ public sealed class CrowdSimPlanner
     {
         var mask = g.Flow!.Mask;
         if (mask == null || !FillServiceMask(mask)) return false;
-        if (!_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit)) return false;
+        if (!_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit))
+        {
+            RefreshCacheMisses++;
+            return false;
+        }
+
+        RefreshCacheHits++;
         SetFlow(g, hit, false, 0);
         g.StateSeq++;
         return true;
@@ -1660,6 +1673,14 @@ public sealed class CrowdSimPlanner
 
         var nav = _session.ResolveNavContext(g.NavId);
         int tile = NavGridSteps.TileOf(cell, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, _tilesPerSide);
+        var mask = g.Flow.Mask;
+        // 走失格所在 tile 已经在掩码里。再垫外圈不会把这块 tile 新标进来。
+        if ((uint)tile < (uint)mask.Length && mask[tile] != 0)
+        {
+            StraySkipCovered++;
+            return false;
+        }
+
         if ((uint)tile < (uint)_maskUnion.Length) _maskUnion[tile] = 1;
         if (_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit))
         {
@@ -1667,16 +1688,11 @@ public sealed class CrowdSimPlanner
             return false;
         }
 
-        var mask = g.Flow.Mask;
-        if ((uint)tile < (uint)mask.Length && mask[tile] != 0) ExtendTileCovered++;
-        else
-        {
-            int dist = TileDistance(mask, tile);
-            int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
-            if (dist <= pad) ExtendWithinPad++;
-            else ExtendBeyondPad++;
-            if ((uint)dist < (uint)_extendDist.Length) _extendDist[dist]++;
-        }
+        int dist = TileDistance(mask, tile);
+        int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
+        if (dist <= pad) ExtendWithinPad++;
+        else ExtendBeyondPad++;
+        if ((uint)dist < (uint)_extendDist.Length) _extendDist[dist]++;
 
         SubmitFlow(g, tick, true);
         if ((uint)g.Id < (uint)_extendByGroup.Length) _extendByGroup[g.Id]++;

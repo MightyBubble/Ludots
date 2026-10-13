@@ -159,16 +159,25 @@ public sealed class CrowdFlowCacheAndStrayTests
         int tile = NavGridSteps.TileOf(goal, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, nav.Hpa.NavTilesPerSide);
         var mask = new byte[tiles];
         mask[tile] = 1;
-        var a = Dummy(session, nav, goal, mask);
+        int outside = CellInNeighborTile(nav, tile);
+
+        var covered = Dummy(session, nav, goal, (byte[])mask.Clone());
+        harness.Planner.NoteStray(covered.Id, goal);
+        harness.Planner.ProcessRefreshes(2);
+        Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(0));
+        Assert.That(harness.Planner.StraySkipCovered, Is.GreaterThan(0));
+        Assert.That(covered.Extending, Is.False);
+
+        var a = Dummy(session, nav, goal, (byte[])mask.Clone());
         var b = Dummy(session, nav, goal, (byte[])mask.Clone());
-        harness.Planner.NoteStray(a.Id, goal);
-        harness.Planner.NoteStray(b.Id, goal);
+        harness.Planner.NoteStray(a.Id, outside);
+        harness.Planner.NoteStray(b.Id, outside);
         harness.Planner.ProcessRefreshes(3);
         Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(1));
         Assert.That((a.Extending ? 1 : 0) + (b.Extending ? 1 : 0), Is.EqualTo(1));
 
-        harness.Planner.NoteStray(a.Id, goal);
-        harness.Planner.NoteStray(b.Id, goal);
+        harness.Planner.NoteStray(a.Id, outside);
+        harness.Planner.NoteStray(b.Id, outside);
         harness.Planner.ProcessRefreshes(4);
         Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(2));
         Assert.That(a.Extending, Is.True);
@@ -176,10 +185,11 @@ public sealed class CrowdFlowCacheAndStrayTests
 
         var closed = Dummy(session, nav, goal, Full(tiles));
         int before = harness.Planner.ExtendSubmits;
-        harness.Planner.NoteStray(closed.Id, goal);
+        harness.Planner.NoteStray(closed.Id, outside);
         harness.Planner.ProcessRefreshes(5);
         Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(before));
         Assert.That(closed.Extending, Is.False);
+        Assert.That(harness.Planner.StraySkipNoGrowth, Is.GreaterThan(0));
     }
 
     [Test]
@@ -193,8 +203,9 @@ public sealed class CrowdFlowCacheAndStrayTests
         int tile = NavGridSteps.TileOf(goal, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, nav.Hpa.NavTilesPerSide);
         var mask = new byte[tiles];
         mask[tile] = 1;
+        int outside = CellInNeighborTile(nav, tile);
         var staleSeq = Dummy(session, nav, goal, mask);
-        harness.Planner.NoteStray(staleSeq.Id, goal);
+        harness.Planner.NoteStray(staleSeq.Id, outside);
         harness.Planner.ProcessRefreshes(1);
         var original = staleSeq.Flow;
         staleSeq.StateSeq++;
@@ -203,7 +214,7 @@ public sealed class CrowdFlowCacheAndStrayTests
         Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
 
         var staleVersion = Dummy(session, nav, goal, (byte[])mask.Clone());
-        harness.Planner.NoteStray(staleVersion.Id, goal);
+        harness.Planner.NoteStray(staleVersion.Id, outside);
         harness.Planner.ProcessRefreshes(2);
         Assert.That(staleVersion.Extending, Is.True);
         var keptVersion = staleVersion.Flow;
@@ -225,7 +236,7 @@ public sealed class CrowdFlowCacheAndStrayTests
         otherMask[otherTile] = 1;
         var rebaked = Dummy(session, nav, other, otherMask);
         var keptRebake = rebaked.Flow;
-        harness.Planner.NoteStray(rebaked.Id, other);
+        harness.Planner.NoteStray(rebaked.Id, CellInNeighborTile(nav, otherTile));
         harness.Planner.ProcessRefreshes(3);
         Assert.That(rebaked.Extending, Is.True);
         var dirty = new List<CrowdNavRebakeContextResult>
@@ -313,8 +324,9 @@ public sealed class CrowdFlowCacheAndStrayTests
         var session = harness.Session;
         var group = OrderOne(session, 480000, 560000, 700000, 700000);
         int seq = ServiceSeq(harness.Service);
-        Assert.That(group.Flow!.BuildRevision, Is.EqualTo(seq));
-        Assert.That(seq, Is.GreaterThan(0));
+        // 组的流场请求先于领队请求。修订号是流场那一次，不是序号计数器的终值。
+        Assert.That(group.Flow!.BuildRevision, Is.EqualTo(1));
+        Assert.That(seq, Is.EqualTo(2));
 
         var poisoned = group.Flow;
         poisoned.BuildRevision = 99991;
@@ -374,6 +386,23 @@ public sealed class CrowdFlowCacheAndStrayTests
         }
 
         return -1;
+    }
+
+    private static int CellInNeighborTile(NavContext nav, int tile)
+    {
+        int per = nav.Hpa!.NavCellsPerTile;
+        int tiles = nav.Hpa.NavTilesPerSide;
+        int side = nav.NavCellsPerSide;
+        int tx = tile % tiles;
+        int nx = tx + 1 < tiles ? tx + 1 : tx - 1;
+        int x = nx * per;
+        int y = tile / tiles * per;
+        if (x >= side) x = side - 1;
+        if (y >= side) y = side - 1;
+        int cell = y * side + x;
+        int got = NavGridSteps.TileOf(cell, side, per, tiles);
+        Assert.That(got, Is.Not.EqualTo(tile));
+        return cell;
     }
 
     private static int CellCenter(int cell, int cm) => cell * cm + cm / 2;
