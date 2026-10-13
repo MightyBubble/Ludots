@@ -3,8 +3,10 @@ using System.Reflection;
 using Arch.Core;
 using Arch.Core.Extensions.Dangerous;
 using ArchWorld = Arch.Core.World;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Lifecycle;
@@ -121,7 +123,67 @@ public sealed class CrowdSimUnits
     public int FreeTop => _freeTop;
     public int LargestSpawnBatch => _spawns.LargestTemplateBatch;
 
-    /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径。</summary>
+    public bool TryHandleOf(Entity entity, out uint handle)
+    {
+        if (!_world.IsAlive(entity) || !_world.Has<CrowdSimulationUnitState>(entity))
+        {
+            handle = 0;
+            return false;
+        }
+
+        int slot = _world.Get<CrowdSimulationUnitState>(entity).Slot;
+        if ((uint)slot >= (uint)Capacity || _sparse[slot] < 0 || _dense[_sparse[slot]] != entity)
+        {
+            handle = 0;
+            return false;
+        }
+
+        handle = (uint)(((_gen[slot] & GenMask) << SlotBits) | slot);
+        return true;
+    }
+
+    public bool TryResolveHandle(uint handle, out int dense)
+    {
+        int slot = (int)(handle & SlotMask);
+        int gen = (int)(handle >> SlotBits);
+        if ((uint)slot >= (uint)Capacity || _gen[slot] != gen)
+        {
+            dense = -1;
+            return false;
+        }
+
+        dense = _sparse[slot];
+        return dense >= 0;
+    }
+
+    /// <summary>本方单位句柄。接线给了隐藏模板标签时，带这个标签的单位不收。</summary>
+    public int CopyOwnHandles(int playerId, Span<uint> destination)
+    {
+        int hiddenTag = _presentation.HiddenTemplateTagId;
+        int n = 0;
+        for (int i = 0; i < _dense.Count; i++)
+        {
+            var entity = _dense[i];
+            if (_world.Get<PlayerOwner>(entity).PlayerId != playerId) continue;
+            if (hiddenTag > 0 &&
+                _world.Has<GameplayTagContainer>(entity) &&
+                _world.Get<GameplayTagContainer>(entity).HasTag(hiddenTag))
+            {
+                continue;
+            }
+
+            if (n >= destination.Length)
+            {
+                throw new InvalidOperationException("order: 成员缓冲装不下本方单位。");
+            }
+
+            destination[n++] = HandleAt(i);
+        }
+
+        return n;
+    }
+
+    /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径。热路径读组件。</summary>
     public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).PersonalRadiusCm;
 
     public int DenseOfSlot(int slot) => _sparse[slot];
@@ -259,6 +321,7 @@ public sealed class CrowdSimUnits
             }
 
             _dense[dense] = receipt.Entity;
+            NoteOwnership(receipt.Entity, _pending[dense].PlayerId);
         }
 
         for (int dense = first; dense < first + pending; dense++)
@@ -435,20 +498,14 @@ public sealed class CrowdSimUnits
     /// </summary>
     public void Clear()
     {
-        if (_presentation.SelectionOwner != Entity.Null)
-        {
-            _presentation.Collections.Replace(
-                _presentation.SelectionOwner,
-                _presentation.SelectedCollectionKeyId,
-                SelectionMirror.Descriptor,
-                ReadOnlySpan<Entity>.Empty);
-        }
-
+        // 活接线才清集合:回放派生接线没有 CollectionApplier,不能动正在显示的选中。
+        ClearOwnedCollections();
         for (int i = 0; i < _dense.Count; i++)
         {
             Entity entity = _dense[i];
             if (entity != Entity.Null && _world.IsAlive(entity))
             {
+                ReleaseOwnership(entity);
                 EntityLifecycleAtomicOps.ConsumeEntity(_world, entity, "CrowdSimulation.Clear");
             }
 
@@ -461,6 +518,40 @@ public sealed class CrowdSimUnits
         Array.Fill(_sparse, -1);
         for (int k = 0; k < Capacity; k++) _freeSlots[k] = Capacity - 1 - k;
         _freeTop = Capacity;
+    }
+
+    private void NoteOwnership(Entity entity, int playerId)
+    {
+        OwnershipResolver? ownership = _presentation.Ownership;
+        Entity[]? reps = _presentation.PlayerReps;
+        if (ownership == null || reps == null || (uint)playerId >= (uint)reps.Length) return;
+        Entity rep = reps[playerId];
+        if (rep == Entity.Null || !_world.IsAlive(rep) || !_world.Has<PlayerIdentity>(rep))
+        {
+            throw new InvalidOperationException(
+                $"crowd 单位的玩家 {playerId} 代表没有 PlayerIdentity,无法建立 owns 边。");
+        }
+
+        ownership.EnsureOwnership(rep, entity);
+    }
+
+    private void ReleaseOwnership(Entity entity)
+    {
+        if (_presentation.Ownership == null || entity == Entity.Null || !_world.IsAlive(entity)) return;
+        _presentation.Ownership.ClearOwnership(entity);
+    }
+
+    private void ClearOwnedCollections()
+    {
+        var applier = _presentation.CollectionApplier;
+        var reps = _presentation.PlayerReps;
+        if (applier == null || reps == null) return;
+        for (int player = 1; player < reps.Length; player++)
+        {
+            var rep = reps[player];
+            if (rep == Entity.Null || !_world.IsAlive(rep)) continue;
+            applier.Apply(rep, _presentation.SelectedCollectionKeyId, CollectionWriteOp.Replace, ReadOnlySpan<Entity>.Empty);
+        }
     }
 
     /// <summary>实体、稠密下标、句柄。不含位置。</summary>

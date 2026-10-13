@@ -76,11 +76,17 @@ public sealed class CrowdZeroAllocTests
         {
             Cmd(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":200,"unitType":0,"rIdx":0}"""),
             Cmd(0, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":200,"unitType":0,"rIdx":0}"""),
-            Cmd(2, """{"type":"order","player":1,"xCm":900000,"yCm":800000,"shape":"box"}"""),
-            Cmd(2, """{"type":"order","player":2,"xCm":700000,"yCm":700000,"shape":"box"}"""),
             Cmd(8, """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}"""),
         });
-        for (int i = 0; i < WarmupTicks; i++)
+        host.Tick();
+        if (session.TickCount != 1)
+            throw new InvalidOperationException($"预热第 0 步停摆，tick={session.TickCount}。");
+        session.Commands.Schedule(session, new List<CrowdCommand>
+        {
+            Order(2, 1, 900000, 800000, session),
+            Order(2, 2, 700000, 700000, session),
+        });
+        for (int i = 1; i < WarmupTicks; i++)
         {
             host.Tick();
             if (session.TickCount != i + 1)
@@ -97,8 +103,8 @@ public sealed class CrowdZeroAllocTests
         int at = session.TickCount;
         session.Commands.Schedule(session, new List<CrowdCommand>
         {
-            Cmd(at, """{"type":"order","player":1,"xCm":1000000,"yCm":900000,"shape":"box"}"""),
-            Cmd(at, """{"type":"order","player":2,"xCm":600000,"yCm":800000,"shape":"box"}"""),
+            Order(at, 1, 1000000, 900000, session),
+            Order(at, 2, 600000, 800000, session),
         });
         long orders = Measure(host, session, EventWindow);
         at = session.TickCount;
@@ -177,6 +183,18 @@ public sealed class CrowdZeroAllocTests
 
     private static CrowdCommand Cmd(int tick, string json)
         => new(tick, CrowdSimCommand.Parse(JsonNode.Parse(json)!));
+
+    private static CrowdCommand Order(int tick, int player, int xCm, int yCm, CrowdSimSession session)
+    {
+        var parsed = CrowdSimCommand.Parse(
+            JsonNode.Parse($"{{\"type\":\"order\",\"player\":{player},\"xCm\":{xCm},\"yCm\":{yCm},\"shape\":\"box\"}}")!,
+            requireOrderMembers: false);
+        var all = new uint[session.Units.Count];
+        int n = session.Units.CopyOwnHandles(player, all);
+        var members = new uint[n];
+        Array.Copy(all, members, n);
+        return new CrowdCommand(tick, parsed with { Members = members });
+    }
 
     private static void Bind(CrowdSimulationRuntime host, CrowdSimSession session)
     {

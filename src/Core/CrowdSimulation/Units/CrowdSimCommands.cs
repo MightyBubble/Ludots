@@ -4,9 +4,8 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// S4+S5 指令集:spawn(批量部署)、spawnAt(点名生成)、select(框选)、selectAll(全选)、
-/// clearSelection(清空选择)、order(移动下令:S5,右键点=移动,拖线=摆阵)、迷雾面
-/// (fogSight/reveal/obscure/forget/fogShare)与结构面(placeStructure/removeStructureAt)。
+/// S4+S5 指令集:spawn(批量部署)、spawnAt(点名生成)、order(移动下令:成员句柄在入队时钉死)、
+/// 迷雾面(fogSight/reveal/obscure/forget/fogShare)与结构面(placeStructure/removeStructureAt)。
 /// 指令是 struct 数据,只在 tick 边界执行——仿真频率就是 FixedHz,不存在第二个时钟。
 /// </summary>
 public static class CrowdSimCommands
@@ -35,7 +34,7 @@ public static class CrowdSimCommands
             RequireFog(sim, CrowdSimCommand.KindName(cmd.Kind));
         }
 
-        if (cmd.Kind is not (CrowdSimCommandKind.SpawnAt or CrowdSimCommandKind.Select or CrowdSimCommandKind.SelectAll
+        if (cmd.Kind is not (CrowdSimCommandKind.SpawnAt
             or CrowdSimCommandKind.Order or CrowdSimCommandKind.Reveal or CrowdSimCommandKind.Obscure
             or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare))
         {
@@ -48,6 +47,10 @@ public static class CrowdSimCommands
         {
             if (cmd.HasFogTerrain) RequireFog(sim, "order");
             _ = Movement.CrowdFormations.ShapeOf(sim.Config.Formations, cmd.ShapeId!);
+            if (cmd.Members == null || cmd.Members.Length == 0)
+            {
+                throw new System.InvalidOperationException("order: 成员集为空。");
+            }
         }
     }
 
@@ -76,24 +79,6 @@ public static class CrowdSimCommands
                     cmd.Player,
                     cmd.UnitType,
                     cmd.RIdx);
-            case CrowdSimCommandKind.Select:
-                RequirePlayer(sim, cmd.Player);
-                SelectRect(
-                    sim,
-                    cmd.Player,
-                    Fix64.FromInt(cmd.X0Cm),
-                    Fix64.FromInt(cmd.Y0Cm),
-                    Fix64.FromInt(cmd.X1Cm),
-                    Fix64.FromInt(cmd.Y1Cm),
-                    cmd.Additive);
-                return null;
-            case CrowdSimCommandKind.SelectAll:
-                RequirePlayer(sim, cmd.Player);
-                SelectAll(sim, cmd.Player);
-                return null;
-            case CrowdSimCommandKind.ClearSelection:
-                ClearSelection(sim);
-                return null;
             case CrowdSimCommandKind.Order:
                 RequirePlayer(sim, cmd.Player);
                 // 乐观迷雾开关随下令提交，写进指令日志，回放可复现。切换后立刻同步认知。
@@ -116,7 +101,8 @@ public static class CrowdSimCommands
                     cmd.ShapeId!,
                     cmd.HasAuto ? cmd.Auto : null,
                     cmd.HasFace ? new Fix64Vec2(cmd.FaceX, cmd.FaceY) : null,
-                    Fix64.FromInt(cmd.WidthCm));
+                    Fix64.FromInt(cmd.WidthCm),
+                    cmd.Members);
                 return null;
             case CrowdSimCommandKind.FogSight:
                 (sim.Fog ?? throw new System.InvalidOperationException("fogSight: 迷雾未启用(会话没有运动内核)。")).Los =
@@ -193,64 +179,5 @@ public static class CrowdSimCommands
         }
 
         return g;
-    }
-
-    /// <summary>框选，位置单位厘米。其余玩家的选择每次都清掉。additive 只决定框外的本方单位是否保留。</summary>
-    public static void SelectRect(CrowdSimSession sim, int player, Fix64 x0, Fix64 y0, Fix64 x1, Fix64 y1, bool additive)
-    {
-        var (ax, bx) = x0 < x1 ? (x0, x1) : (x1, x0);
-        var (ay, by) = y0 < y1 ? (y0, y1) : (y1, y0);
-        int count = 0;
-        for (int i = 0; i < sim.Units.Count; i++)
-        {
-            var entity = sim.Units.EntityAt(i);
-            var owner = sim.World.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId;
-            var state = sim.World.Get<CrowdSimulationUnitState>(entity);
-            if (owner != player)
-            {
-                if (state.Selected != 0) { state.Selected = 0; sim.World.Set(entity, state); }
-                continue;
-            }
-
-            var pos = sim.World.Get<Components.WorldPositionCm>(entity).Value;
-            bool inside = pos.X >= ax && pos.X <= bx && pos.Y >= ay && pos.Y <= by;
-            byte next = inside ? (byte)1 : additive ? state.Selected : (byte)0;
-            if (next != state.Selected) { state.Selected = next; sim.World.Set(entity, state); }
-            if (next != 0) count++;
-        }
-
-        sim.SetSelectedCount(count);
-        SelectionMirror.Sync(sim);
-    }
-
-    /// <summary>全选(selectAll):本方全部单位入选。</summary>
-    public static void SelectAll(CrowdSimSession sim, int player)
-    {
-        int count = 0;
-        for (int i = 0; i < sim.Units.Count; i++)
-        {
-            var entity = sim.Units.EntityAt(i);
-            var owner = sim.World.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId;
-            var state = sim.World.Get<CrowdSimulationUnitState>(entity);
-            byte next = owner == player ? (byte)1 : (byte)0;
-            if (next != state.Selected) { state.Selected = next; sim.World.Set(entity, state); }
-            if (next != 0) count++;
-        }
-
-        sim.SetSelectedCount(count);
-        SelectionMirror.Sync(sim);
-    }
-
-    public static void ClearSelection(CrowdSimSession sim)
-    {
-        for (int i = 0; i < sim.Units.Count; i++)
-        {
-            var entity = sim.Units.EntityAt(i);
-            var state = sim.World.Get<CrowdSimulationUnitState>(entity);
-            if (state.Selected != 0) { state.Selected = 0; sim.World.Set(entity, state); }
-        }
-
-        sim.SetSelectedCount(0);
-        SelectionMirror.Sync(sim);
     }
 }

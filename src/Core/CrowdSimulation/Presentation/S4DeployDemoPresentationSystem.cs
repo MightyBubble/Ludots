@@ -274,6 +274,12 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         ghosts = fog.GhostCount[group];
     }
 
+    /// <summary>选中数读本机座位玩家代表的 selected 集合。没有座位时为 -1，HUD 显示为横线。</summary>
+    private static int LocalSelected(CrowdSimSession session, CrowdSimulationRuntime? runtime)
+        => runtime != null && runtime.TryLocalSeatPlayerId(out int seatPlayer)
+            ? session.SelectedCollectionCount(seatPlayer)
+            : -1;
+
     /// <summary>同一 tick 重复绘制复用字符串;数值变化新建一条,因为 ScreenOverlayBuffer.AddText 接收 string——呈现帧分配,不是仿真 tick 分配。</summary>
     private sealed class HudTextCache
     {
@@ -321,7 +327,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             if (Expanded != expanded) return false;
             if (session != null)
             {
-                if (Tick != session.TickCount || Units != session.Units.Count || Selected != session.SelectedCount) return false;
+                if (Tick != session.TickCount || Units != session.Units.Count || Selected != LocalSelected(session, runtime)) return false;
                 if (Idle != telemetry!.Idle || Moving != telemetry.Moving || Arrived != telemetry.Arrived
                     || Unreachable != telemetry.Unreachable || Jumping != telemetry.Jumping) return false;
                 if (SubStepClamped != telemetry.SubStepClamped || EvictStuck != telemetry.EvictStuck || Plans != telemetry.Plans
@@ -383,14 +389,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             {
                 Tick = session.TickCount;
                 Units = session.Units.Count;
-                Selected = session.SelectedCount;
+                Selected = LocalSelected(session, runtime);
                 Idle = telemetry!.Idle;
                 Moving = telemetry.Moving;
                 Arrived = telemetry.Arrived;
                 Unreachable = telemetry.Unreachable;
                 Jumping = telemetry.Jumping;
+                string selectedText = Selected < 0 ? "-" : Selected.ToString();
                 Status = $"tick {Tick};单位 {Units}(闲 {Idle}/行 {Moving}/达 {Arrived}" +
-                         (Unreachable + Jumping > 0 ? $"/不可达 {Unreachable}/跳跃 {Jumping}" : "") + $");选中 {Selected}";
+                         (Unreachable + Jumping > 0 ? $"/不可达 {Unreachable}/跳跃 {Jumping}" : "") + $");选中 {selectedText}";
                 HasRebake = report != null;
                 if (report == null)
                 {

@@ -44,12 +44,10 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
-
-        session.Commands.Schedule(session, script);
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
         for (int t = 0; t < frames.Length; t++)
         {
-            Assert.That(session.Step(out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
+            Assert.That(script.Step(session, out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
             Assert.That(CrowdSimChecksum.Format(hash), Is.EqualTo(frames[t]), $"{seed} 第 {t + 1} 帧校验码不一致");
         }
 
@@ -90,15 +88,15 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
-
-        session.Commands.Schedule(session, script);
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
         var first = new List<ulong>();
-        session.Advance(frames.Length, first);
+        script.Advance(session, frames.Length, first);
+        var log = session.Commands.Log.Select(e => new CrowdCommand(e.Tick, e.Cmd)).ToArray();
+        Assert.That(log.Any(e => e.Cmd.Kind is CrowdSimCommandKind.Order && (e.Cmd.Members == null || e.Cmd.Members.Length == 0)), Is.False);
 
-        // 同一份记录回放:全新会话(参考实现的回放也是新仿真,句柄代从 0 起)
+        // 同一份译后日志回放:全新会话,不再带选中记录
         var (_, session2) = BuildSession(seed);
-        session2.Commands.Schedule(session2, script);
+        session2.Commands.Schedule(session2, log);
         var second = new List<ulong>();
         session2.Advance(frames.Length, second);
 
@@ -274,8 +272,7 @@ public class S4DeployTruthTests
                 runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, TestDefaults.DemoProfiles(), "测试装配(CrowdSimulationTests)"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
                 Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusKey),
-            SelectionOwner = Arch.Core.Entity.Null,
-            SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectionMirror.CollectionKey),
+            SelectedCollectionKeyId = collections.KeyRegistry.Register(CrowdSimPresentationWiring.SelectedCollectionKey),
             Collections = collections,
         };
     }

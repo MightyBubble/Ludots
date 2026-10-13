@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.EntityCollections;
@@ -12,11 +13,14 @@ namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
 /// 会话到呈现/交互基建的接线(宿主在引擎世界跑会话时注入;回放/无头装配注入派生接线——
-/// 共享模板数据、全新稳定 id 分配器、空选中属主,不触碰活集合仓)。数据都按 id 预解析,
+/// 共享模板数据、全新稳定 id 分配器、不持有集合写者,不触碰活集合仓)。数据都按 id 预解析,
 /// 生成热路径不做字符串解析。
 /// </summary>
 public sealed class CrowdSimPresentationWiring
 {
+    public const string SelectedCollectionKey = "selected";
+    /// <summary>模板上的这个标签表示该模板生成的单位不参与“全体本方”下令。</summary>
+    public const string HiddenTemplateTag = "crowd_simulation.hidden_template";
     /// <summary>呈现稳定 id 分配器(PresentationEntityLifecycleSystem 的投影入口)。</summary>
     public required PresentationStableIdAllocator StableIds { get; init; }
     /// <summary>实体模板注册表(单位模板实例化的数据源;会话激活时已装载 mod 资产)。</summary>
@@ -35,12 +39,18 @@ public sealed class CrowdSimPresentationWiring
     public required IReadOnlyList<IReadOnlyList<(string TemplateId, int TemplateKeyId)>> TemplatesByUnitTypeRadius { get; init; }
     /// <summary>单位半径(米)写进单位黑板的键 id(presenter 的 ownerBlackboardFloat 车道读它,如选中环随体型缩放)。</summary>
     public required int RadiusMetersBlackboardKeyId { get; init; }
-    /// <summary>选中集合("selected")的属主实体(通常是会话实体);Entity.Null = 不镜像选中(回放/无头)。</summary>
-    public required Entity SelectionOwner { get; init; }
-    /// <summary>选中集合键 id。</summary>
+    /// <summary>选中集合键 id(presenter 监听的公开键 selected)。</summary>
     public required int SelectedCollectionKeyId { get; init; }
     /// <summary>实体集合仓(presenter 监听集合成员增减来显隐选中环)。</summary>
     public required EntityCollectionStore Collections { get; init; }
+    /// <summary>集合的唯一写者。null = 回放/无头,不触碰活集合仓。</summary>
+    public CollectionApplier? CollectionApplier { get; set; }
+    /// <summary>下标 = 玩家号的代表实体。null = 不挂代表。</summary>
+    public Entity[]? PlayerReps { get; set; }
+    /// <summary>活会话的 owns 边。null = 回放/无头,不写关系图。下令授权走这条边。</summary>
+    public OwnershipResolver? Ownership { get; set; }
+    /// <summary><see cref="HiddenTemplateTag"/> 的标签 id。0 = 无头接线,不剔除任何本方单位。</summary>
+    public int HiddenTemplateTagId { get; set; }
 
     /// <summary>移动类型 × 半径级 → 模板表。模板的 agentTypeId 与档案半径必须和这一格一致。
     /// 引擎装配与无头装配共用同一份口径。</summary>

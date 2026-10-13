@@ -56,19 +56,14 @@ public sealed class CrowdKernel50KBenchmarkTests
                 },
             });
         }
-        var commands = new List<CrowdCommand>();
-        foreach (var e in script)
-        {
-            commands.Add(new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)));
-        }
 
-        session.Commands.Schedule(session, commands);
+        var reference = CrowdReferenceScript.Load(script, session.Units.Capacity);
 
         var elapsed = new double[MeasuredTicks];
         var phases = new CrowdSimulationPhaseTicks[MeasuredTicks];
         var notes = new TickNote[MeasuredTicks];
         var watch = new Stopwatch();
-        Advance(session, watch, WarmupTicks, null, null, null);
+        Advance(session, reference, watch, WarmupTicks, null, null, null);
         // 1 分钟负载高于核数时，预热里的工人还压在平均上。等到它降下来再开窗，不把整段重跑一遍。
         string loadAtWindow = File.ReadAllText("/proc/loadavg").Trim();
         double load1 = Load1Minute(loadAtWindow);
@@ -82,7 +77,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         }
 
         loadWait.Stop();
-        Advance(session, watch, MeasuredTicks, elapsed, phases, notes);
+        Advance(session, reference, watch, MeasuredTicks, elapsed, phases, notes);
         string loadAfter = File.ReadAllText("/proc/loadavg").Trim();
         Assert.That(session.Units.Count, Is.EqualTo(Units), "基准单位数");
         Assert.That(session.TruthNavFrozen, Is.False);
@@ -138,6 +133,7 @@ public sealed class CrowdKernel50KBenchmarkTests
 
     private static void Advance(
         CrowdSimSession session,
+        CrowdReferenceScript reference,
         Stopwatch watch,
         int count,
         double[]? elapsed,
@@ -156,6 +152,7 @@ public sealed class CrowdKernel50KBenchmarkTests
             int gc1 = GC.CollectionCount(1);
             int gc2 = GC.CollectionCount(2);
             long alloc0 = GC.GetTotalAllocatedBytes(precise: false);
+            reference.ApplyDue(session);
             watch.Restart();
             bool advanced = session.Step(out _);
             watch.Stop();

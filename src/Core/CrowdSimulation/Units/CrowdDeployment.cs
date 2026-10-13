@@ -29,7 +29,6 @@ public static class CrowdDeployment
         // 生成请求在本方法返回前排空，同一条 Flush 里更后的指令看得到实体。
         sim.Units.Clear();
         sim.Groups.Reset();
-        sim.SetSelectedCount(0);
         try
         {
 

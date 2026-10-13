@@ -11,9 +11,6 @@ public enum CrowdSimCommandKind : byte
 {
     Spawn,
     SpawnAt,
-    Select,
-    SelectAll,
-    ClearSelection,
     Order,
     FogSight,
     Reveal,
@@ -34,7 +31,7 @@ public enum CrowdSimCommandKind : byte
 public readonly record struct CrowdSimCommand
 {
     public CrowdSimCommandKind Kind { get; init; }
-    /// <summary>spawnAt/select/selectAll/order/reveal/obscure/forget/fogShare。</summary>
+    /// <summary>spawnAt/order/reveal/obscure/forget/fogShare。</summary>
     public int Player { get; init; }
     /// <summary>fogShare 的并组对象。</summary>
     public int With { get; init; }
@@ -46,11 +43,6 @@ public readonly record struct CrowdSimCommand
     /// <summary>spawnAt/order/placeStructure/removeStructureAt 的目标点。</summary>
     public int XCm { get; init; }
     public int YCm { get; init; }
-    /// <summary>select 的框。</summary>
-    public int X0Cm { get; init; }
-    public int Y0Cm { get; init; }
-    public int X1Cm { get; init; }
-    public int Y1Cm { get; init; }
     /// <summary>order 的阵型宽(缺省 0)。</summary>
     public int WidthCm { get; init; }
     /// <summary>obscure 的持续 tick(Parse 保证 ≥1)。</summary>
@@ -60,8 +52,6 @@ public readonly record struct CrowdSimCommand
     /// <summary>placeStructure 的终点(0 = 无终点,道路条带用)。</summary>
     public int ToXCm { get; init; }
     public int ToYCm { get; init; }
-    /// <summary>select 的加选。</summary>
-    public bool Additive { get; init; }
     /// <summary>fogSight 的 LOS 开关/fogShare 的并组方向(Parse:未给 on 视为 true;
     /// fogShare 的 on=false 拆组在边界拒收,Exec 只见 true)。</summary>
     public bool On { get; init; }
@@ -77,6 +67,8 @@ public readonly record struct CrowdSimCommand
     public bool FogTerrain { get; init; }
     /// <summary>order 的阵型 id(开放词表,聚合键原样透传;缺省 "box")。</summary>
     public string? ShapeId { get; init; }
+    /// <summary>order 的成员句柄(稳定单位 id)。入队后数组只读,拷贝 struct 共享同一份;非 order 为 null。</summary>
+    public uint[]? Members { get; init; }
     /// <summary>placeStructure 的模板 id。</summary>
     public string? TemplateId { get; init; }
     /// <summary>reveal/obscure/forget 的区域形状(Parse 经 CrowdFogShape 恰一校验)。</summary>
@@ -87,9 +79,6 @@ public readonly record struct CrowdSimCommand
     {
         CrowdSimCommandKind.Spawn => "spawn",
         CrowdSimCommandKind.SpawnAt => "spawnAt",
-        CrowdSimCommandKind.Select => "select",
-        CrowdSimCommandKind.SelectAll => "selectAll",
-        CrowdSimCommandKind.ClearSelection => "clearSelection",
         CrowdSimCommandKind.Order => "order",
         CrowdSimCommandKind.FogSight => "fogSight",
         CrowdSimCommandKind.Reveal => "reveal",
@@ -106,7 +95,10 @@ public readonly record struct CrowdSimCommand
     /// 类型错/area 恰一/obscure ticks 值/fogShare 拆组,坏指令进不了日志与队列)。
     /// 会话域校验(玩家号表外/迷雾启用)留在入队 Validate。
     /// </summary>
-    public static CrowdSimCommand Parse(JsonNode cmd)
+    public static CrowdSimCommand Parse(JsonNode cmd) => Parse(cmd, requireOrderMembers: true);
+
+    /// <summary>参考脚本的 order 可以不带 members(由翻译器在入日志前补上)。显式空数组仍拒收。</summary>
+    internal static CrowdSimCommand Parse(JsonNode cmd, bool requireOrderMembers)
     {
         string type = cmd["type"]?.GetValue<string>() ?? throw new InvalidOperationException("指令缺少 type 字段。");
         switch (type)
@@ -124,21 +116,6 @@ public readonly record struct CrowdSimCommand
                     UnitType = RequireInt(cmd, type, "unitType"),
                     RIdx = RequireInt(cmd, type, "rIdx"),
                 };
-            case "select":
-                return new CrowdSimCommand
-                {
-                    Kind = CrowdSimCommandKind.Select,
-                    Player = RequireInt(cmd, type, "player"),
-                    X0Cm = RequireInt(cmd, type, "x0Cm"),
-                    Y0Cm = RequireInt(cmd, type, "y0Cm"),
-                    X1Cm = RequireInt(cmd, type, "x1Cm"),
-                    Y1Cm = RequireInt(cmd, type, "y1Cm"),
-                    Additive = OptionalBool(cmd, type, "additive", false),
-                };
-            case "selectAll":
-                return new CrowdSimCommand { Kind = CrowdSimCommandKind.SelectAll, Player = RequireInt(cmd, type, "player") };
-            case "clearSelection":
-                return new CrowdSimCommand { Kind = CrowdSimCommandKind.ClearSelection };
             case "order":
             {
                 var face = OptionalFace(cmd, type);
@@ -158,6 +135,7 @@ public readonly record struct CrowdSimCommand
                     WidthCm = OptionalInt(cmd, type, "widthCm", 0),
                     HasFogTerrain = cmd["fogTerrain"] is { },
                     FogTerrain = OptionalBool(cmd, type, "fogTerrain", false),
+                    Members = ParseMembers(cmd, requireOrderMembers),
                 };
             }
 
@@ -222,6 +200,47 @@ public readonly record struct CrowdSimCommand
             default:
                 throw new InvalidOperationException($"未知指令 {type}。");
         }
+    }
+
+    /// <summary>句柄可以超过 int 上限(代 &lt;&lt; 18),按 long 读再收进 uint。</summary>
+    private static uint[] ParseMembers(JsonNode cmd, bool required)
+    {
+        if (cmd["members"] is null)
+        {
+            return required
+                ? throw new InvalidOperationException("order: 成员集为空。")
+                : Array.Empty<uint>();
+        }
+
+        if (cmd["members"] is not JsonArray arr || arr.Count == 0)
+        {
+            throw new InvalidOperationException("order: 成员集为空。");
+        }
+
+        var members = new uint[arr.Count];
+        for (int i = 0; i < arr.Count; i++)
+        {
+            if (arr[i] is not JsonValue value || value.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException("order: 成员字段需为整数。");
+            }
+
+            if (value.TryGetValue<int>(out int narrow))
+            {
+                if (narrow < 0) throw new InvalidOperationException("order: 成员句柄无效。");
+                members[i] = (uint)narrow;
+                continue;
+            }
+
+            if (!value.TryGetValue<long>(out long wide) || wide < 0 || wide > uint.MaxValue)
+            {
+                throw new InvalidOperationException("order: 成员字段需为整数。");
+            }
+
+            members[i] = (uint)wide;
+        }
+
+        return members;
     }
 
     /// <summary>必给整数字段:缺失或 JSON 值不是整数 token 即拒(GetValue 的转换异常不是合同)。</summary>

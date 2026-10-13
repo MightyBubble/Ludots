@@ -6,7 +6,10 @@
     { "id": "CrowdSimulation.S4.RemoveStructure", "name": "CrowdSimulation_S4_RemoveStructure", "type": "Button" },
     { "id": "CrowdSimulation.S4.Template1", "name": "CrowdSimulation_S4_Template1", "type": "Button" },
     { "id": "CrowdSimulation.S4.Template2", "name": "CrowdSimulation_S4_Template2", "type": "Button" },
-    { "id": "CrowdSimulation.S4.Template3", "name": "CrowdSimulation_S4_Template3", "type": "Button" }
+    { "id": "CrowdSimulation.S4.Template3", "name": "CrowdSimulation_S4_Template3", "type": "Button" },
+    { "id": "CrowdSimulation.BoxSelectBegin", "name": "CrowdSimulation_BoxSelectBegin", "type": "Button" },
+    { "id": "CrowdSimulation.BoxSelectEnd", "name": "CrowdSimulation_BoxSelectEnd", "type": "Button", "firesOn": "release" },
+    { "id": "CrowdSimulation.Command", "name": "CrowdSimulation_Command", "type": "Button" }
   ],
   "contexts": [
     {
@@ -19,6 +22,16 @@
         { "actionId": "CrowdSimulation.S4.Template1", "path": "<Keyboard>/1" },
         { "actionId": "CrowdSimulation.S4.Template2", "path": "<Keyboard>/2" },
         { "actionId": "CrowdSimulation.S4.Template3", "path": "<Keyboard>/3" }
+      ]
+    },
+    {
+      "id": "CrowdSimulation.Controls",
+      "name": "Crowd Simulation Controls",
+      "priority": 60,
+      "bindings": [
+        { "actionId": "CrowdSimulation.BoxSelectBegin", "path": "<Mouse>/LeftButton" },
+        { "actionId": "CrowdSimulation.BoxSelectEnd", "path": "<Mouse>/LeftButton" },
+        { "actionId": "CrowdSimulation.Command", "path": "<Mouse>/RightButton" }
       ]
     }
   ]

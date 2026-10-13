@@ -40,6 +40,18 @@ public sealed class S4DeployDemoRuntime
     public int TemplateIndex { get; private set; }
     /// <summary>现场指令已进入本次会话(自动回放停用;会话重激活时随运行时一起复位)。</summary>
     public bool InteractiveMode { get; private set; }
+
+    public void MarkInteractive(CrowdSimSession? session)
+    {
+        if (session == null) return;
+        if (!ReferenceEquals(_boundSession, session))
+        {
+            _boundSession = session;
+            InteractiveMode = false;
+        }
+
+        InteractiveMode = true;
+    }
     private StructureChoice[] _choices = Array.Empty<StructureChoice>();
     private string[]? _viewLabels;
     private int _viewModeCount = 3;

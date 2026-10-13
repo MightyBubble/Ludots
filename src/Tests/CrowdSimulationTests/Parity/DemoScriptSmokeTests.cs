@@ -13,8 +13,8 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// 演示 Mod 调试脚本装载冒烟:逐一加载 crowd_simulation 全部 showcase mod 的
-/// CrowdSimulationDebug.json——tick 读取、指令边界解析(CrowdSimCommand.Parse)、升序合同、
-/// 入队校验(tick 升序 / 玩家号表外 / 迷雾面在无 Fog 会话 / area 恰一形状 / 字段类型)
+/// CrowdSimulationDebug.json——tick 读取、演示脚本结构校验(无成员 order 留到执行 tick 再补成员，
+/// select 记录会被拒绝)、升序合同、玩家号表外 / 迷雾面 / area 恰一形状 / 字段类型
 /// 全过即绿。玩家号与迷雾面是否合法取决于演示自己的地图,会话按同目录 game.json 的
 /// startupMapId 建立。脚本与 game.json 经 csproj 内容链接进 assets/debug(通配,新增演示自动纳入)。
 /// </summary>
@@ -45,13 +45,10 @@ public sealed class DemoScriptSmokeTests
             using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
 
-            var commands = script
-                .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-                .ToArray();
-            Assert.DoesNotThrow(() => session.Commands.Schedule(session, commands),
-                $"{modDir}: 脚本装载/入队校验失败(升序/玩家号/迷雾面/恰一形状/字段类型)");
-            Assert.That(session.Commands.PendingCount, Is.EqualTo(commands.Length), $"{modDir}: 入队数不一致");
-            TestContext.Out.WriteLine($"{modDir}: 种子 {seed}, {commands.Length} 条指令装载入队通过");
+            var demo = CrowdDemoScript.Load(script);
+            Assert.DoesNotThrow(() => demo.ValidateStructure(session),
+                $"{modDir}: 脚本结构校验失败(升序/玩家号/迷雾面/恰一形状/字段类型)");
+            TestContext.Out.WriteLine($"{modDir}: 种子 {seed}, {demo.Count} 条演示指令结构校验通过");
         }
     }
 

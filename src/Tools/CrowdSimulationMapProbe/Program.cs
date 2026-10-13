@@ -499,8 +499,7 @@ public static class Program
                 "MapProbe 装配"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
                 Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusKey),
-            SelectionOwner = Arch.Core.Entity.Null,
-            SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectionMirror.CollectionKey),
+            SelectedCollectionKeyId = collections.KeyRegistry.Register(CrowdSimPresentationWiring.SelectedCollectionKey),
             Collections = collections,
         };
     }

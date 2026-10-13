@@ -435,16 +435,22 @@ public static class CrowdSimChecksum
         h = Mix(h, (uint)cmd.RIdx);
         h = Mix(h, (uint)cmd.XCm);
         h = Mix(h, (uint)cmd.YCm);
-        h = Mix(h, (uint)cmd.X0Cm);
-        h = Mix(h, (uint)cmd.Y0Cm);
-        h = Mix(h, (uint)cmd.X1Cm);
-        h = Mix(h, (uint)cmd.Y1Cm);
+        uint[]? members = cmd.Members;
+        if (members == null)
+        {
+            h = Mix(h, uint.MaxValue);
+        }
+        else
+        {
+            h = Mix(h, (uint)members.Length);
+            for (int i = 0; i < members.Length; i++) h = Mix(h, members[i]);
+        }
+
         h = Mix(h, (uint)cmd.WidthCm);
         h = Mix(h, (uint)cmd.Ticks);
         h = Mix(h, (uint)cmd.SizeCm);
         h = Mix(h, (uint)cmd.ToXCm);
         h = Mix(h, (uint)cmd.ToYCm);
-        h = Mix(h, cmd.Additive ? 1u : 0u);
         h = Mix(h, cmd.On ? 1u : 0u);
         h = Mix(h, cmd.HasAuto ? 1u : 0u);
         h = Mix(h, cmd.Auto ? 1u : 0u);

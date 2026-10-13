@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using ArchWorld = Arch.Core.World;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
@@ -86,6 +87,8 @@ public sealed partial class CrowdSimulationRuntime
     private readonly CrowdSimStateDigest[] _hashDigests = new CrowdSimStateDigest[4096];
     private int _hashCount, _hashHead;
     private readonly List<CrowdCommand> _pendingScript = new();
+    private CrowdDemoScript? _demoScript;
+    private GameEngine? _engine;
     private int _autoReplayAtTick = -1;
     private bool _autoReplayDone;
 
@@ -113,6 +116,13 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>停用本次激活的自动回放:现场指令(玩家交互)进入会话后,自动回放的对拍自证
     /// 不再是"同输入重放"。只拦自动触发;RunReplay 与对拍语义本身不动。</summary>
     public void SuppressAutoReplay() => _autoReplayDone = true;
+
+    /// <summary>现场下令已进入本次会话：停自动回放，演示 HUD 改记交互模式。</summary>
+    public void NoteLiveCommand()
+    {
+        SuppressAutoReplay();
+        _deployDemo?.MarkInteractive(Session);
+    }
 
     /// <summary>单位半径黑板键(呈现侧 ownerBlackboardFloat 绑定的数据契约,Activate 时注册一次)。</summary>
     public static class Keys
@@ -248,13 +258,14 @@ public sealed partial class CrowdSimulationRuntime
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
     private const string SessionTemplateId = "crowd_simulation.session";
-    private const string SelectedCollectionKey = SelectionMirror.CollectionKey;
+    private const string SelectedCollectionKey = CrowdSimPresentationWiring.SelectedCollectionKey;
 
     private static bool IsAutostartEnabled(CrowdSimulationDebugConfig debug) =>
         debug.Session?.Autostart == true;
 
     private void Activate(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
+        _engine = engine;
         if (!_systemsInstalled)
         {
             _systemsInstalled = true;
@@ -263,6 +274,7 @@ public sealed partial class CrowdSimulationRuntime
             // 同步会让该判定恒为 false,成员格冻结在出生位置。
             engine.InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(
                 new CrowdSimulationSessionTickSystem(this), SystemGroup.PostMovement);
+            CrowdSimulationOrderBridge.Register(engine, this);
         }
 
         // 装载只取单位模板点名的档案。全局注册表里的其它体型不进半径级。
@@ -367,6 +379,13 @@ public sealed partial class CrowdSimulationRuntime
             spawnChannelId = spawnChannels.Register(CrowdSimUnits.ReceiptChannelName);
         }
 
+        int playerCount = runtimeConfig.PairRules.PlayerCount;
+        var playerReps = new Entity[playerCount + 1];
+        for (int player = 1; player <= playerCount; player++)
+        {
+            playerReps[player] = players.Get(player);
+        }
+
         var wiring = new CrowdSimPresentationWiring
         {
             StableIds = stableIds,
@@ -374,12 +393,15 @@ public sealed partial class CrowdSimulationRuntime
             TemplateKeys = templateKeys,
             TemplatesByUnitTypeRadius = unitTypeTemplates,
             RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusKey),
-            SelectionOwner = _sessionEntity,
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),
+            HiddenTemplateTagId = RequireHiddenTemplateTagId(),
             Collections = collections,
             Spawns = spawnSystem,
             SpawnReceipts = spawnReceipts,
             SpawnReceiptChannelId = spawnChannelId,
+            CollectionApplier = engine.GetService(CoreServiceKeys.CollectionApplier),
+            PlayerReps = playerReps,
+            Ownership = engine.GetService(CoreServiceKeys.OwnershipResolver),
         };
 
         _session = new CrowdSimSession(runtimeConfig, engine.World, navs, navByLayerRadius, wiring);
@@ -434,15 +456,17 @@ public sealed partial class CrowdSimulationRuntime
 
         // 脚本与自动回放(指令流即数据;脚本与对拍资产同构,演示自己跑一遍规范场景)
         _pendingScript.Clear();
-        if (_debug!.Session?.Script is { } script)
+        if (_debug!.Session?.Script is { } script && script.Length > 0)
         {
+            var rows = new JsonArray();
             foreach (var entry in script)
             {
-                _pendingScript.Add(new CrowdCommand(entry.Tick, CrowdSimCommand.Parse(entry.Cmd)));
+                rows.Add(new JsonObject { ["tick"] = entry.Tick, ["cmd"] = entry.Cmd.DeepClone() });
             }
-        }
 
-        _session.Commands.Schedule(_session, _pendingScript);
+            _demoScript = CrowdDemoScript.Load(rows);
+            _demoScript.ValidateStructure(_session);
+        }
         _autoReplayAtTick = _debug.Session?.AutoReplayAtTick ?? -1;
         _autoReplayDone = false;
         if (_autoReplayAtTick >= 0) _session.DiagnosticDigest = true;
@@ -465,7 +489,7 @@ public sealed partial class CrowdSimulationRuntime
         }
 
         Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-            $"CrowdSimulation session activated for map '{_activeMapId}': navs={navs.Count}, script={_pendingScript.Count}, autoReplayAt={_autoReplayAtTick}.");
+            $"CrowdSimulation session activated for map '{_activeMapId}': navs={navs.Count}, script={_demoScript?.Count ?? 0}, autoReplayAt={_autoReplayAtTick}.");
     }
 
     private void Deactivate(GameEngine engine)
@@ -482,6 +506,8 @@ public sealed partial class CrowdSimulationRuntime
         _hashCount = 0;
         _hashHead = 0;
         _pendingScript.Clear();
+        _demoScript = null;
+        _engine = null;
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
         ReplayDivergenceSection = "";
@@ -502,6 +528,7 @@ public sealed partial class CrowdSimulationRuntime
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
+        _demoScript?.ApplyDue(session);
         if (!session.Step(out _))
         {
             if (!_stallLogged)
@@ -546,7 +573,7 @@ public sealed partial class CrowdSimulationRuntime
         if (session.TickCount % session.Config.FixedHz == 0)
         {
             Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={FormatLocalSeatSelected(session)}, hash={Units.CrowdSimChecksum.Format(session.LastDigest.Total)}");
         }
     }
 
@@ -571,8 +598,8 @@ public sealed partial class CrowdSimulationRuntime
             entries[log.Count + i] = new CrowdCommand(e.Tick, e.Cmd);
         }
         int ticks = session.TickCount;
-        // 回放派生接线:共享模板数据,稳定 id 全新分配(回放世界用后即弃),选中属主置空——
-        // 选中镜像与集合仓写入都按空属主跳过,活呈现状态零触碰。
+        // 回放派生接线:共享模板数据,稳定 id 全新分配。不挂集合写者与 owns,
+        // 清空单位时不改活集合和关系图。
         var replayWiring = new CrowdSimPresentationWiring
         {
             StableIds = new PresentationStableIdAllocator(),
@@ -580,13 +607,13 @@ public sealed partial class CrowdSimulationRuntime
             TemplateKeys = session.Presentation.TemplateKeys,
             TemplatesByUnitTypeRadius = session.Presentation.TemplatesByUnitTypeRadius,
             RadiusMetersBlackboardKeyId = session.Presentation.RadiusMetersBlackboardKeyId,
-            SelectionOwner = Entity.Null,
             SelectedCollectionKeyId = session.Presentation.SelectedCollectionKeyId,
+            HiddenTemplateTagId = session.Presentation.HiddenTemplateTagId,
             Collections = session.Presentation.Collections,
         };
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius, replayWiring);
         replay.DiagnosticDigest = session.DiagnosticDigest;
-        // 回放 = 全新仿真(参考 createHeadless / runReplay 同形):结构 op 会改写导航上下文,
+        // 回放是全新仿真:结构 op 会改写导航上下文,
         // 回放共享活会话的导航即带着已生效的结构变更从头跑(首个分歧恰在首个规划落地)。
         // 有结构仓的会话,回放用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存。
         if (session.Structures != null && _surfaceGrid != null && _heights != null && _deck != null && _mapSurfaceBlockers != null)
@@ -698,6 +725,34 @@ public sealed partial class CrowdSimulationRuntime
         ReplayDiagnosticTick = diagnostic ? diagnosticTick : -1;
         ReplayDivergenceDiagnostic = diagnostic ? mask : CrowdSimDiagnosticSection.None;
         ReplayStatus = chained || missing ? 2 : 1;
+    }
+
+    public bool TryLocalSeatPlayerId(out int playerId)
+    {
+        playerId = 0;
+        if (_engine == null) return false;
+        var seats = _engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry);
+        if (seats == null || !seats.TryGetSoleSeat(out Client.ClientLocalSeat seat)) return false;
+        if (seat.PossessedPlayerId <= 0) return false;
+        playerId = seat.PossessedPlayerId;
+        return true;
+    }
+
+    private string FormatLocalSeatSelected(CrowdSimSession session)
+        => TryLocalSeatPlayerId(out int playerId)
+            ? session.SelectedCollectionCount(playerId).ToString()
+            : "-";
+
+    private static int RequireHiddenTemplateTagId()
+    {
+        int id = TagRegistry.GetId(CrowdSimPresentationWiring.HiddenTemplateTag);
+        if (id <= 0)
+        {
+            throw new InvalidOperationException(
+                "crowd_simulation.hidden_template 未登记。不参与全体下令的模板在模板数据里带上这个标签。");
+        }
+
+        return id;
     }
 
     private static string RequireHeightAssetPath(MapConfig mapConfig, MapId mapId)
