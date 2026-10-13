@@ -107,6 +107,10 @@ internal sealed class CrowdDebugViewFrame
         Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || JumpLinks || Belief
         || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff;
 
+    /// <summary>宿主只有一个流场或可走贴花槽。调试场层打开时占住它，不再叠演示流场。</summary>
+    internal bool OwnsDecal =>
+        Corridor || Blocked || Density || Belief || Flow || NavPolygons || HpaGraph || JumpLinks;
+
     internal static bool ArrowsAllowed(float cellPx, int minPx) => cellPx >= minPx;
 
     internal void BindEngine(GameEngine engine) => _engine = engine;
@@ -820,7 +824,9 @@ internal sealed class S4DeployFrameProjector : IGlobalFieldVisualProjector
 
     public void Project(GlobalFieldVisualBuffer buffer)
     {
-        _demo.Project(buffer);
-        _frame.Project(buffer, _session());
+        if (_frame.OwnsDecal)
+            _frame.Project(buffer, _session());
+        else
+            _demo.Project(buffer);
     }
 }
