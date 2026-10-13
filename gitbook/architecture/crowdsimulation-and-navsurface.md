@@ -283,11 +283,11 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 - **spawn**：`CrowdSimSession.Step` 先 Flush 指令。spawn / spawnAt 在返回前调用 `RuntimeEntitySpawnSystem.Materialize`，单位在本 tick 的运动和校验码之前就位。创建发生在生成系统里，不在运动查询环里，也不调用阶段队列的 `Update`。`Materialize` 和阶段队列的 `Update` 本身做 Create / Add，不能从 Arch 查询回调里调用。vendored Arch 没有公开的查询深度，所以只写合同，不放调试断言。EffectProcessing 仍排空阶段队列里后来入队的请求。批车道按模板白名单，再加上挂在这个生成系统实例上的 `TemplateBatchComponentAdmission` 登记过的组件。准入不是进程静态，启动时按实例登记；同名同类型再登记是空操作。JSON 经 ComponentRegistry 在生成器自己的临时世界上落一次，不进活世界，struct 再抄进 chunk。SpatialBounds、SpatialBox3D、SpatialFootprint2D 不在默认准入里。逐实例的槽位、运动学、玩家、高度采样标记和半径黑板由挂在该系统实例上的 `IRuntimeSpawnInstanceInitializer` 写入刚创建的 chunk。`Materialize` 把调用方的 span 当成同一批：批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导规则。没有直接引导、但有只能靠生命周期系统发布 EntitySpawned 才能满足的规则时抛错。阶段队列的 `Update` 仍把单独一条留在单车道，不预挂 `PresentationLifecycleState`。分组创建之后，同一原型里的行按查询的逆序换到稠密下标上（查询从最后一块的最后一行往回走）。这只交换已有行，不另建实体。人群单位原型必须正好是这张稠密表，多出来的实体直接抛错，不静默跳过。行交换依赖 vendored Arch 把每列存成与 `Signature.Components` 对齐的 `T[]`。
 - **Clear**：`CrowdSimUnits.Clear` 对已绑定且仍存活的单位调用 `EntityLifecycleAtomicOps.ConsumeEntity`（`PresentationEntityLifecycle.RequestDestroy`）。稠密表当帧清空，运动和校验码不再看见这些单位。引擎世界有呈现消费者，实体要等销毁事件发布之后才 Destroy。无头世界和回放世界在构造时 `PresentationLifecycleConsumption.DeclareNoConsumer`，同一次 ConsumeEntity 走 `PresentationEntityFinalizeDestroySystem` 的收尾销毁，重复生成不会把实体留在世界上。声明和这两个生命周期系统互斥，不能撤销。`Entity.Null` 占位不进销毁。
-- **kill**：当前内核没有 kill 指令（参考端 killAt 未移植）。
+- **kill**：当前内核没有 kill 指令。
 
 ## 热路径数据面：chunk 收拢 → SoA → 写回
 
-子步的地址是稠密下标。空间哈希的桶、分离、接触计数和并行区间都按下标读写，还要随机读邻居。Arch 的查询按原型分块，一块 chunk 盖不住整张稠密表，查询顺序也不是稠密序。单位模板的组件集可以不同。以前把原因写成「无头和模板两条生成道、两个原型」。无头那条生成道已经不在，这个说法作废。剩下的原因是：稠密表是创建序，槽位经 `_sparse` 映回；chunk 序是原型序；中间没有一张跨 chunk 的连续 Span 可以拿来做下标划分。批量部署按模板分组后，创建序和稠密序会错开，收拢按槽位写 SoA 就变成随机写。物化结束时把行换到查询的逆序上，这次扫描按 0..n-1 顺序落表。收拢查询还排除 `PresentationDestroyPending`，Clear 当帧留下的实体不再进运动。
+子步的地址是稠密下标。空间哈希的桶、分离、接触计数和并行区间都按下标读写，还要随机读邻居。Arch 的查询按原型分块，一块 chunk 盖不住整张稠密表，查询顺序也不是稠密序。单位模板的组件集可以不同。原因是：稠密表是创建序，槽位经 `_sparse` 映回；chunk 序是原型序；中间没有一张跨 chunk 的连续 Span 可以拿来做下标划分。批量部署按模板分组后，创建序和稠密序会错开，收拢按槽位写 SoA 就变成随机写。物化结束时把行换到查询的逆序上，这次扫描按 0..n-1 顺序落表。收拢查询还排除 `PresentationDestroyPending`，Clear 当帧留下的实体不再进运动。
 
 每个 tick 用缓存的 `QueryDescription` 把单位列扫一遍，按槽位映回稠密下标，收成 SoA。子步只读写这张表。tick 末按同一下标写回 chunk 列，不对单个单位做 `World.Get` / `World.Set`。迷雾盖章读的是刚写完的位置和玩家下标，不再按实体回查。指令和结构变更都在这次收拢之前。子步中间没有别的读者要看组件。校验码在 tick 末读 SoA。没有运动内核的部署会话仍直接读组件。意图层的指令簿线性扫和认知槽解析仍是组级备忘，只在 tick 边界失效。规划发生在收拢之前，它改的是组件，下一次收拢能看见。
 

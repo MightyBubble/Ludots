@@ -1,8 +1,8 @@
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: L79 crowd unit spawn through RuntimeEntitySpawnRequest
+- **Task / Issue**: crowd unit spawn through RuntimeEntitySpawnRequest
 - **Date**: 2026-10-12
-- **Agent / Author**: L79 implementer
+- **Agent / Author**: cloud agent
 
 ### 1. Core judgment
 
