@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Nav;
-using Ludots.Core.CrowdSimulation.Nav.Recast;
+using Ludots.Core.CrowdSimulation.Nav.GridBake;
 using Ludots.Core.CrowdSimulation.World;
 using NUnit.Framework;
 

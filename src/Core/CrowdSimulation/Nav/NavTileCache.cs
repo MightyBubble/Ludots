@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Ludots.Core.CrowdSimulation.Nav.Recast;
+using Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
