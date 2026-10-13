@@ -18,6 +18,8 @@ public sealed class S4DeployDemoRuntime
 {
     public const string ShapePoint = "point";
     public const string ShapeRoad = "road";
+    public const string ShapeDisc = "disc";
+    public const string ShapeSpan = "span";
 
     /// <summary>建造模板。shape=road 时道路自光标向 +X 铺 RoadLengthCm;point 的 RoadLengthCm 恒为 0,形状以 Shape 为准。</summary>
     public sealed record StructureChoice(string Id, string Label, string Shape, int SizeCm, int RoadLengthCm, string SelectAction)

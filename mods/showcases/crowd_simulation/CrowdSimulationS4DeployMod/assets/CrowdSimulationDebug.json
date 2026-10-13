@@ -135,6 +135,26 @@
     "cameraId": "CrowdSimulation.Camera.S4Deploy",
     "incrementalNavVerify": true
   },
+  "tools": {
+    "boomRadiusCm": 12500,
+    "ringScale": 2,
+    "impulse": 4,
+    "spawnCount": 24,
+    "spawnUnitType": 0,
+    "spawnRadiusClass": 0,
+    "placeTemplate": "building",
+    "rectSizeCm": 14000,
+    "discRadiusCm": 8000,
+    "pathWidthCm": 3000,
+    "speedStepsPermille": [500, 1000, 2000, 4000]
+  },
+  "rates": {
+    "tickHzMin": 10,
+    "tickHzMax": 60,
+    "avoidHzMin": 1,
+    "avoidHzMax": 30,
+    "avoidStep": 1
+  },
   "presentation": {
     "kind": "deploy",
     "title": "CrowdSimulation S4 · 部署演示(种子 1337,脚本行军 + 交互建造)",

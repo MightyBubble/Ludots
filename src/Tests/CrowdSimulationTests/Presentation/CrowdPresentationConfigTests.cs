@@ -31,10 +31,52 @@ public sealed class CrowdPresentationConfigTests
     public void DeadKey_IsRejected()
     {
         var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS3PathMod")))!.AsObject();
-        debug["tools"] = new JsonObject { ["spawnCount"] = 20 };
+        debug["clockOverride"] = 1;
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
-        Assert.That(ex!.Message, Does.Contain("tools"));
+        Assert.That(ex!.Message, Does.Contain("clockOverride"));
     }
+
+    [Test]
+    public void Tools_MissingFieldUnknownKeyAndRange_AreRejected()
+    {
+        var missing = MinimalTools();
+        missing.Remove("boomRadiusCm");
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = missing }));
+
+        var unknown = MinimalTools();
+        unknown["blast"] = 1;
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = unknown }));
+
+        var range = MinimalTools();
+        range["ringScale"] = 1;
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = range }));
+        Assert.That(ex!.Message, Does.Contain("ringScale"));
+
+        var rates = new JsonObject
+        {
+            ["tickHzMin"] = 10,
+            ["tickHzMax"] = 60,
+            ["avoidHzMin"] = 0,
+            ["avoidHzMax"] = 30,
+            ["avoidStep"] = 1,
+        };
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["rates"] = rates }));
+    }
+
+    private static JsonObject MinimalTools() => new()
+    {
+        ["boomRadiusCm"] = 12500,
+        ["ringScale"] = 2,
+        ["impulse"] = 4,
+        ["spawnCount"] = 24,
+        ["spawnUnitType"] = 0,
+        ["spawnRadiusClass"] = 0,
+        ["placeTemplate"] = "building",
+        ["rectSizeCm"] = 14000,
+        ["discRadiusCm"] = 8000,
+        ["pathWidthCm"] = 3000,
+        ["speedStepsPermille"] = new JsonArray(500, 1000, 2000, 4000),
+    };
 
     [Test]
     public void EveryDebugFile_LoadsStrictly()
