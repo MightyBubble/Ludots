@@ -196,7 +196,7 @@ public static class CrowdSimCommands
         return g;
     }
 
-    /// <summary>框选(selectRect 移植,位置单位为厘米):框内本方单位入选;
+    /// <summary>框选，位置单位为厘米：框内本方单位入选；
     /// additive = false 时清空框外与其余玩家的选择。</summary>
     public static void SelectRect(CrowdSimSession sim, int player, Fix64 x0, Fix64 y0, Fix64 x1, Fix64 y1, bool additive)
     {

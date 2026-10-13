@@ -99,7 +99,7 @@ public static class CrowdDeployment
         return made;
     }
 
-    /// <summary>点名生成(spawnAt 移植):在某点周围为某玩家生成 count 个 (t, r) 单位。</summary>
+    /// <summary>点名生成：在某点周围为某玩家生成 count 个 (t, r) 单位。</summary>
     public static int SpawnAt(CrowdSimSession sim, Fix64 wx, Fix64 wy, int count, int player, int unitType, int rIdx)
     {
         var cfg = sim.Config;
@@ -210,7 +210,7 @@ public static class CrowdDeployment
         throw new InvalidOperationException($"半径级表缺半径 {radiusCm}。");
     }
 
-    /// <summary>最近可走格(nearestPassable 移植:逐环外扩,严格小于才换,首优即平局的先见者)。</summary>
+    /// <summary>最近可走格：逐环外扩，严格小于才换，平局留先见者。</summary>
     public static int NearestPassable(NavContext nav, int cell)
     {
         int navCellsPerSide = nav.NavCellsPerSide;
@@ -240,7 +240,7 @@ public static class CrowdDeployment
         return -1;
     }
 
-    /// <summary>detRound 移植(round-half-up:floor(v + 0.5))。</summary>
+    /// <summary>round-half-up：floor(v + 0.5)。</summary>
     public static int DetRound(Fix64 v) => (int)Fix64.Floor(v + Fix64.HalfValue).ToLong();
 
     private static int ClampN(int v, int navCellsPerSide) => Math.Min(navCellsPerSide - 1, Math.Max(0, v));
