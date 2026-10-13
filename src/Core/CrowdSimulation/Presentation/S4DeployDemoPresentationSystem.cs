@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
@@ -34,6 +35,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId BoomInner = new(5);
     private static readonly RouteVisualId BoomOuter = new(6);
     private static readonly RouteVisualId SpawnMarker = new(7);
+    private static readonly RouteVisualId DiscPreview = new(8);
     private static readonly RouteVisualId WireframeId = new(CrowdSimulationLimits.WireframeRouteVisualId);
     private static readonly RouteVisualId FlashBase = new(200);
 
@@ -143,7 +145,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 case CrowdClickTool.Structure when store != null:
                     previewShown = true;
                     previewValid = CanPlace(store, _demo.Template, px, py);
-                    AddRectOutline(PreviewOutline, FootprintVisual(_demo.Template, px, py), navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
+                    DrawPlacementPreview(_demo.Template, px, py, navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
                     DrawEntityOutline(store, px, py, navCellVisual);
                     break;
                 case CrowdClickTool.Demolish when store != null:
@@ -221,6 +223,63 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         float y = WorldUnits.CmToM(yCm);
         return (x - extent, y - extent, x + extent, y + extent);
     }
+
+    /// <summary>圆是半径环，条带是两端点之间、宽为 size 的扫掠带。方形仍是轴对齐盒。</summary>
+    private void DrawPlacementPreview(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm, float thick, Vector4 color)
+    {
+        if (tpl.IsDisc)
+        {
+            _routeVisuals.AddMarker(
+                DiscPreview,
+                new Vector2(WorldUnits.CmToM(xCm), WorldUnits.CmToM(yCm)),
+                RouteVisualMarkerShape.Ring,
+                WorldUnits.CmToM(tpl.SizeCm),
+                thick,
+                color);
+            return;
+        }
+
+        if (tpl.IsSpan)
+        {
+            int x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
+            int y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
+            AddBandOutline(PreviewOutline, x0, y0, xCm, yCm, tpl.SizeCm, thick, color);
+            return;
+        }
+
+        if (tpl.IsRoad)
+        {
+            AddBandOutline(PreviewOutline, xCm, yCm, xCm + tpl.RoadLengthCm, yCm, tpl.SizeCm, thick, color);
+            return;
+        }
+
+        AddRectOutline(PreviewOutline, FootprintVisual(tpl, xCm, yCm), thick, color);
+    }
+
+    private void AddBandOutline(RouteVisualId id, int x0Cm, int y0Cm, int x1Cm, int y1Cm, int widthCm, float thick, Vector4 color)
+    {
+        Fix64 x0 = Fix64.FromInt(x0Cm);
+        Fix64 y0 = Fix64.FromInt(y0Cm);
+        Fix64 ax = Fix64.FromInt(x1Cm) - x0;
+        Fix64 ay = Fix64.FromInt(y1Cm) - y0;
+        Fix64 length = CrowdFix.Hypot(ax, ay);
+        Fix64 degenerate = Fix64.FromRaw(430);
+        Fix64 ux = length > degenerate ? ax / length : Fix64.OneValue;
+        Fix64 uy = length > degenerate ? ay / length : Fix64.Zero;
+        Fix64 half = Fix64.FromInt(widthCm) / 2;
+        Fix64 ox = -uy * half;
+        Fix64 oy = ux * half;
+        Span<Vector2> pts = stackalloc Vector2[5];
+        pts[0] = BandCorner(x0 + ox, y0 + oy);
+        pts[1] = BandCorner(x0 + ax + ox, y0 + ay + oy);
+        pts[2] = BandCorner(x0 + ax - ox, y0 + ay - oy);
+        pts[3] = BandCorner(x0 - ox, y0 - oy);
+        pts[4] = pts[0];
+        _routeVisuals.AddPolyline(id, pts, thick, color);
+    }
+
+    private static Vector2 BandCorner(Fix64 xCm, Fix64 yCm) =>
+        new(WorldUnits.CmToM((float)xCm.ToDouble()), WorldUnits.CmToM((float)yCm.ToDouble()));
 
     private void AddRectOutline(RouteVisualId id, (float MinX, float MinY, float MaxX, float MaxY) rect, float thick, Vector4 color)
     {
