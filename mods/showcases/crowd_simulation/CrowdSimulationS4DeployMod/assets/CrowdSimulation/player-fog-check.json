@@ -10,7 +10,8 @@
   "enemyXCm": 387500,
   "enemyYCm": 562500,
   "wallTemplate": "building",
-  "wallSizeCm": 16000,
+  "wallSizeCm": 8000,
+  "behindFromCellWestCm": 4000,
   "wallCellsEast": 1,
   "behindCellsEast": 2,
   "unseenTemplate": "building",
@@ -32,9 +33,9 @@
   "outsideDistanceCm": 28000,
   "outsideYaw": 270,
   "outsidePitch": 65,
-  "behindLookXCm": 534000,
-  "behindLookYCm": 546000,
-  "behindDistanceCm": 70000,
+  "behindLookXCm": 529000,
+  "behindLookYCm": 550000,
+  "behindDistanceCm": 31000,
   "behindYaw": 270,
-  "behindPitch": 36
+  "behindPitch": 65
 }

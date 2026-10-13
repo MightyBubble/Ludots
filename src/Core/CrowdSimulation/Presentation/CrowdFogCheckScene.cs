@@ -25,6 +25,7 @@ internal sealed class CrowdFogCheckScene
     [JsonRequired] public int WallSizeCm { get; init; }
     [JsonRequired] public int WallCellsEast { get; init; }
     [JsonRequired] public int BehindCellsEast { get; init; }
+    [JsonRequired] public int BehindFromCellWestCm { get; init; }
     [JsonRequired] public string UnseenTemplate { get; init; } = "";
     [JsonRequired] public int UnseenXCm { get; init; }
     [JsonRequired] public int UnseenYCm { get; init; }
@@ -67,8 +68,10 @@ internal sealed class CrowdFogCheckScene
             throw new InvalidOperationException($"{path}: 玩家号必须 > 0。");
         if (scene.SpawnCount < 1 || scene.WallSizeCm < 1 || scene.UnseenSizeCm < 1)
             throw new InvalidOperationException($"{path}: spawnCount 与结构尺寸必须 > 0。");
-        if (scene.WallCellsEast < 1 || scene.BehindCellsEast < 1)
-            throw new InvalidOperationException($"{path}: wallCellsEast 与 behindCellsEast 必须 > 0。");
+        if (scene.WallCellsEast < 1 || scene.BehindCellsEast != scene.WallCellsEast + 1)
+            throw new InvalidOperationException($"{path}: 敌方格必须紧贴墙格东侧。");
+        if (scene.BehindFromCellWestCm < 1)
+            throw new InvalidOperationException($"{path}: behindFromCellWestCm 必须 > 0。");
         if (scene.ClusterSpacingCm < 1)
             throw new InvalidOperationException($"{path}: clusterSpacingCm 必须 > 0。");
         RequireCamera(path, "outside", scene.OutsideDistanceCm, scene.OutsideYaw, scene.OutsidePitch);

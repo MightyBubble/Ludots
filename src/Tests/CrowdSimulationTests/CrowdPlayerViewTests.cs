@@ -40,8 +40,10 @@ public sealed class CrowdPlayerViewTests
         Assert.That(scene["outsideLookXCm"]!.GetValue<int>() - scene["enemyXCm"]!.GetValue<int>(), Is.EqualTo(4000));
         Assert.That(scene["enemyYCm"]!.GetValue<int>() - scene["outsideLookYCm"]!.GetValue<int>(), Is.EqualTo(10000));
         Assert.That(scene["outsideDistanceCm"]!.GetValue<int>(), Is.EqualTo(28000));
-        Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.EqualTo(534000));
-        Assert.That(scene["behindDistanceCm"]!.GetValue<int>(), Is.EqualTo(70000));
+        Assert.That(scene["wallSizeCm"]!.GetValue<int>(), Is.EqualTo(8000));
+        Assert.That(scene["behindFromCellWestCm"]!.GetValue<int>(), Is.EqualTo(4000));
+        Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.EqualTo(529000));
+        Assert.That(scene["behindDistanceCm"]!.GetValue<int>(), Is.EqualTo(31000));
     }
 
     [Test]

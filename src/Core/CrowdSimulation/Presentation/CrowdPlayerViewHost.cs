@@ -797,9 +797,16 @@ internal sealed class CrowdPlayerViewHost
         var cell = Fix64.FromInt(cellCm);
         int fx = (int)(Fix64.FromInt(scene.ViewerXCm) / cell).ToLong();
         int fy = (int)(Fix64.FromInt(scene.ViewerYCm) / cell).ToLong();
-        int wallX = ((fx + scene.WallCellsEast) * cellCm) + (cellCm / 2);
+        int wallCellWest = (fx + scene.WallCellsEast) * cellCm;
+        int wallCellEast = wallCellWest + cellCm;
+        // 墙贴遮挡格东缘、敌方贴下一格西缘。格心相距一整格，同一机位要么看不见墙，要么看不见人。
+        int wallX = wallCellEast - (scene.WallSizeCm / 2);
         int wallY = (fy * cellCm) + (cellCm / 2);
-        int behindX = ((fx + scene.BehindCellsEast) * cellCm) + (cellCm / 2);
+        int behindX = wallCellEast + scene.BehindFromCellWestCm;
+        if (scene.BehindFromCellWestCm >= cellCm || wallX - (scene.WallSizeCm / 2) < wallCellWest)
+        {
+            throw new InvalidOperationException("墙和墙后敌方必须分别落在相邻两格迷雾里。");
+        }
         int span = (scene.SpawnCount - 1) * scene.ClusterSpacingCm;
         if (span >= cellCm)
         {
