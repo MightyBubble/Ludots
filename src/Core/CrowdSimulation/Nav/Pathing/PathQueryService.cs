@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
@@ -34,6 +36,24 @@ public sealed class PathResult
 public sealed class PathServiceFaultException : InvalidOperationException
 {
     public PathServiceFaultException(string message) : base(message) { }
+}
+
+/// <summary>路径服务累计读数。没有答复或没有工人样本的耗时是 NaN。</summary>
+internal readonly struct PathServiceStats
+{
+    public long Requests { get; init; }
+    public long Replies { get; init; }
+    public int Pending { get; init; }
+    public double RoundTripLastMs { get; init; }
+    public double RoundTripMeanMs { get; init; }
+    public double WorkerLastMs { get; init; }
+    public double WorkerMeanMs { get; init; }
+    public double NavMeshMs { get; init; }
+    public double HpaMs { get; init; }
+    public double FlowMs { get; init; }
+    public bool Faulted { get; init; }
+    public string? FaultMessage { get; init; }
+    public double PlanTimeoutMs { get; init; }
 }
 
 /// <summary>
@@ -92,7 +112,19 @@ public sealed class PathQueryService : IDisposable
     }
     public bool Faulted { get; private set; }
     public string? FaultMessage { get; private set; }
+    public TimeSpan PlanTimeout => _planTimeout;
     public int WorkerCount { get { lock (_gate) return _workerTarget; } }
+
+    private long _requests;
+    private long _storedReplies;
+    private long _rtSumMs;
+    private long _rtLastMs;
+    private long _workerSumTicks;
+    private long _workerLastTicks;
+    private long _workerSamples;
+    private long _navTicks;
+    private long _hpaTicks;
+    private long _flowTicks;
 
     public PathQueryService(
         IReadOnlyDictionary<int, NavContext> navs,
@@ -153,6 +185,7 @@ public sealed class PathQueryService : IDisposable
         lock (_gate)
         {
             if (Faulted) throw new PathServiceFaultException(FaultMessage!);
+            _requests++;
             int id = ++_seq;
             _dueTick[id] = requestTick + _latencyTicks;
             _sentAtMs[id] = Environment.TickCount64;
@@ -300,6 +333,7 @@ public sealed class PathQueryService : IDisposable
 
             if (TestDelayPerJob > TimeSpan.Zero) Thread.Sleep(TestDelayPerJob);
             PathResult result;
+            long workMark = Stopwatch.GetTimestamp();
             try
             {
                 lock (_navGate)
@@ -309,7 +343,7 @@ public sealed class PathQueryService : IDisposable
             }
             catch (Exception ex)
             {
-                // worker 崩溃 = 服务故障:报错,绝不静默重试或换算法
+                // worker 崩溃 = 服务故障:报错,绝不静默重试或换算法,也不改到主线程重算
                 lock (_gate)
                 {
                     FailLocked($"路径 worker 内部错误(请求 #{job.Id}): {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
@@ -317,6 +351,11 @@ public sealed class PathQueryService : IDisposable
 
                 return;
             }
+
+            long workTicks = Stopwatch.GetTimestamp() - workMark;
+            Interlocked.Add(ref _workerSumTicks, workTicks);
+            Interlocked.Exchange(ref _workerLastTicks, workTicks);
+            Interlocked.Increment(ref _workerSamples);
 
             lock (_gate)
             {
@@ -328,6 +367,11 @@ public sealed class PathQueryService : IDisposable
                 }
                 else
                 {
+                    long sent = _sentAtMs[job.Id];
+                    long rt = Environment.TickCount64 - sent;
+                    _rtSumMs += rt;
+                    _rtLastMs = rt;
+                    _storedReplies++;
                     _replies[job.Id] = result;
                 }
 
@@ -372,16 +416,23 @@ public sealed class PathQueryService : IDisposable
             // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
             FlowFieldBuilder.PadMaskInto(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
             FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CorridorMask, buffers.Union);
+            long refreshMark = Stopwatch.GetTimestamp();
             var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
+            Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - refreshMark);
             Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, refreshed, q.CorridorMask);
             return slot.Result;
         }
 
         Array.Clear(buffers.Corridor, 0, tiles);
         buffers.Corridor[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
-        var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch);
+        var stages = default(CorridorQuery.CorridorStageTicks);
+        var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch, ref stages);
+        if (stages.NavMesh != 0) Interlocked.Add(ref _navTicks, stages.NavMesh);
+        if (stages.Hpa != 0) Interlocked.Add(ref _hpaTicks, stages.Hpa);
         FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+        long flowMark = Stopwatch.GetTimestamp();
         var flow = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Pad, pool);
+        Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - flowMark);
 
         Fix64[]? points = null;
         int pointCount = 0;
@@ -513,6 +564,37 @@ public sealed class PathQueryService : IDisposable
         public Fix64[] Points = new Fix64[4096];
         public int[] Layers = new int[2048];
         public byte[] Mask = Array.Empty<byte>();
+    }
+
+    internal PathServiceStats CopyStats()
+    {
+        long nav = Interlocked.Read(ref _navTicks);
+        long hpa = Interlocked.Read(ref _hpaTicks);
+        long flow = Interlocked.Read(ref _flowTicks);
+        long workerSum = Interlocked.Read(ref _workerSumTicks);
+        long workerLast = Interlocked.Read(ref _workerLastTicks);
+        long workerN = Interlocked.Read(ref _workerSamples);
+        lock (_gate)
+        {
+            bool any = _storedReplies > 0;
+            bool worked = workerN > 0;
+            return new PathServiceStats
+            {
+                Requests = _requests,
+                Replies = _storedReplies,
+                Pending = _sentAtMs.Count,
+                RoundTripLastMs = any ? _rtLastMs : double.NaN,
+                RoundTripMeanMs = any ? (double)_rtSumMs / _storedReplies : double.NaN,
+                WorkerLastMs = worked ? CrowdSimulationTelemetry.TicksToMs(workerLast) : double.NaN,
+                WorkerMeanMs = worked ? CrowdSimulationTelemetry.TicksToMs(workerSum) / workerN : double.NaN,
+                NavMeshMs = CrowdSimulationTelemetry.TicksToMs(nav),
+                HpaMs = CrowdSimulationTelemetry.TicksToMs(hpa),
+                FlowMs = CrowdSimulationTelemetry.TicksToMs(flow),
+                Faulted = Faulted,
+                FaultMessage = FaultMessage,
+                PlanTimeoutMs = _planTimeout.TotalMilliseconds,
+            };
+        }
     }
 
     private void FailLocked(string message)

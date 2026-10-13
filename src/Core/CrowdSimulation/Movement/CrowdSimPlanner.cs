@@ -409,13 +409,14 @@ public sealed class CrowdSimPlanner
     }
 
     /// <summary>答复落帧:到点的按请求序应用;有一个没回来,仿真停摆(返回 false)。
-    /// block=true:同步等答复(AwaitDue,超时即故障)。
-    /// 进入时已经故障则抛。非阻塞路径上,Ready 超时只把服务标成故障并返回 false,这次调用停摆,下一次调用才抛。</summary>
+    /// block=true:同步等答复(AwaitDue,超时即故障),进入时已经故障也抛。
+    /// block=false:故障后一直返回 false,仿真停在这一帧,不改到主线程重算。</summary>
     public bool ApplyDue(int tick, bool block)
     {
         if ((_pending.Count > 0 || _pendingRefreshes.Count > 0) && _service.Faulted)
         {
-            throw new PathServiceFaultException(_service.FaultMessage ?? "路径服务故障(原因未记录)");
+            if (block) throw new PathServiceFaultException(_service.FaultMessage ?? "路径服务故障(原因未记录)");
+            return false;
         }
 
         int k = 0, rk = 0;

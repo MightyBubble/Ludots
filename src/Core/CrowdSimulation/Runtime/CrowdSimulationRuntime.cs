@@ -100,6 +100,30 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
     public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
+    /// <summary>进图时世界生成与导航烘焙的墙钟。未烘焙时 <see cref="WorldBakeRecorded"/> 为 false。</summary>
+    public bool WorldBakeRecorded { get; private set; }
+    public double WorldBakeMs { get; private set; }
+    public int WorldBakeCacheHits { get; private set; }
+    public int WorldBakeCacheMisses { get; private set; }
+
+    /// <summary>
+    /// 把下一次路径任务的工人延迟设成两倍规划超时,并提交清缓存,用来把路径故障浮层打出来。
+    /// 工人仍在后台睡,仿真停摆,不改到主线程重算。
+    /// </summary>
+    public void ProbePathFault()
+    {
+        var service = _pathService;
+        var session = _session;
+        if (service == null || session == null) return;
+        var timeout = service.PlanTimeout;
+        service.TestDelayPerJob = timeout + timeout;
+        NoteLiveCommand();
+        session.Commands.Submit(
+            session,
+            new CrowdSimCommand { Kind = CrowdSimCommandKind.ClearCaches },
+            CrowdSimCommands.Exec);
+    }
+
     /// <summary>回放结论:0 未跑 / 1 合计相同 / 2 合计分歧。诊断断面不改这个结论。</summary>
     public int ReplayStatus { get; private set; }
 
@@ -314,6 +338,7 @@ public sealed partial class CrowdSimulationRuntime
             mapConfig,
             engine.MapLoader.TemplateRegistry.GetAll().Where(t => !string.IsNullOrWhiteSpace(t.Id))
                 .ToDictionary(t => t.Id, StringComparer.Ordinal));
+        var worldBake = System.Diagnostics.Stopwatch.StartNew();
         var ingested = CrowdSimulationWorldIngest.Build(
             runtimeConfig,
             solverBoard.WidthCm,
@@ -356,6 +381,12 @@ public sealed partial class CrowdSimulationRuntime
             int rIdx = CrowdDeployment.IndexOfRadiusClass(radiusClasses, (int)profile.RadiusCm.ToInt());
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
+
+        worldBake.Stop();
+        WorldBakeRecorded = true;
+        WorldBakeMs = worldBake.Elapsed.TotalMilliseconds;
+        WorldBakeCacheHits = cache.Hits;
+        WorldBakeCacheMisses = cache.Misses;
 
         // 呈现接线：模板键、黑板键、集合键全部预解析成 id。
         var templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
