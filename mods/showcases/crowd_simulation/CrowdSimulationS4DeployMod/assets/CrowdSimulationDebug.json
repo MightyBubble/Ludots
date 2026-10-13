@@ -2,13 +2,6 @@
   "session": {
     "script": [
       {
-        "tick": 0,
-        "cmd": {
-          "type": "spawn",
-          "count": 12000
-        }
-      },
-      {
         "tick": 40,
         "cmd": {
           "type": "order",

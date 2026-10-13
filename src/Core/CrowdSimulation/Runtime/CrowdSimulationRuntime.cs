@@ -388,6 +388,28 @@ public sealed partial class CrowdSimulationRuntime
         => _planTimeout ?? throw new InvalidOperationException(
             "CrowdSimulationConfig.json: 路径服务需要 worker.planTimeoutMs。");
 
+    internal static JsonArray ComposeDemoScript(int initialUnits, CrowdDebugScriptEntry[]? script)
+    {
+        int scriptCount = script?.Length ?? 0;
+        var rows = new JsonArray();
+        if (initialUnits > 0)
+        {
+            rows.Add(new JsonObject
+            {
+                ["tick"] = 0,
+                ["cmd"] = new JsonObject { ["type"] = "spawn", ["count"] = initialUnits },
+            });
+        }
+
+        for (int i = 0; i < scriptCount; i++)
+        {
+            CrowdDebugScriptEntry entry = script![i];
+            rows.Add(new JsonObject { ["tick"] = entry.Tick, ["cmd"] = entry.Cmd.DeepClone() });
+        }
+
+        return rows;
+    }
+
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
     private const string CrowdSimulationDebugViewPath = "CrowdSimulationDebugView.json";
@@ -606,19 +628,19 @@ public sealed partial class CrowdSimulationRuntime
 
         if (anyColor) engine.SetService(CoreServiceKeys.TeamColorPalette, new TeamColorPalette(palette));
 
-        // 脚本与自动回放(指令流即数据;脚本与对拍资产同构,演示自己跑一遍规范场景)
+        // 脚本与自动回放都是指令流。开局人数取 deploy.initialUnits，排在调试脚本之前，成为 tick 0 的 spawn。
+        // 对拍和回归自己带指令表，直接建 CrowdSimSession，不经过会话宿主。
         _pendingScript.Clear();
-        if (_debug?.Session?.Script is { Length: > 0 } script)
+        JsonArray rows = ComposeDemoScript(runtimeConfig.Deploy.InitialUnits, _debug?.Session?.Script);
+        if (rows.Count > 0)
         {
-            var rows = new JsonArray();
-            foreach (var entry in script)
-            {
-                rows.Add(new JsonObject { ["tick"] = entry.Tick, ["cmd"] = entry.Cmd.DeepClone() });
-            }
-
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
             _session.StageDeferredCommands = _demoScript.StageFormable;
+        }
+        else
+        {
+            _demoScript = null;
         }
 
         _autoReplayAtTick = _debug?.Session?.AutoReplayAtTick ?? -1;

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
@@ -67,7 +68,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         var planner = new CrowdSimPlanner(session, service);
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
-        var script = LoadS4Script();
+        var script = LoadS4Script(config);
         script.ValidateStructure(session);
         session.StageDeferredCommands = script.StageFormable;
 
@@ -109,7 +110,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         var planner = new CrowdSimPlanner(session, service);
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
-        var script = LoadS4Script();
+        var script = LoadS4Script(config);
         script.ValidateStructure(session);
         session.StageDeferredCommands = script.StageFormable;
         var host = new CrowdSimulationRuntime();
@@ -157,12 +158,14 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         TestContext.Out.WriteLine("tile distance histogram: " + string.Join(",", planner.ExtendDistance));
     }
 
-    private static CrowdDemoScript LoadS4Script()
+    private static CrowdDemoScript LoadS4Script(CrowdSimulationRuntimeConfig config)
     {
+        // 调试脚本不再写开局 spawn。与会话宿主同一条合成，开局人数仍是 deploy.initialUnits。
         var doc = JsonNode.Parse(File.ReadAllText(Path.Combine(
             RepoRoot(),
-            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))!;
-        return CrowdDemoScript.Load(doc["session"]!["script"]!.AsArray());
+            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))!.AsObject();
+        CrowdDebugScriptEntry[]? script = CrowdSimulationDebugConfig.Load(doc).Session?.Script;
+        return CrowdDemoScript.Load(CrowdSimulationRuntime.ComposeDemoScript(config.Deploy.InitialUnits, script));
     }
 
     private static string RepoRoot()

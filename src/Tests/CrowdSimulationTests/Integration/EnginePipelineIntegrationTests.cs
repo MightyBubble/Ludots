@@ -29,8 +29,8 @@ public class EnginePipelineIntegrationTests
     public void SessionStepRunsBeforeSpatialPartitionSync_ThroughRealSystemGroups()
     {
         string repoRoot = FindRepoRoot();
-        // 临时资产 mod 只带 CrowdSimulationDebug.json(spawn/order 脚本):
-        // 会话脚本即测试输入,不依赖任何演示 mod 的入口代码。
+        // 临时资产 mod 带 spawn/order 脚本，并把 initialUnits 写成 0。
+        // 会话脚本即测试输入。开局部署关掉，脚本里的 spawn 仍是唯一一次生成。
         string probeModRoot = Path.Combine(Path.GetTempPath(), "Ludots_SessionStepOrderingProbeMod_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(probeModRoot, "assets"));
         try
@@ -44,6 +44,11 @@ public class EnginePipelineIntegrationTests
 [
   { "Path": "CrowdSimulationDebug.json", "Policy": "DeepObject" }
 ]
+""");
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationConfig.json"), """
+{
+  "deploy": { "initialUnits": 0 }
+}
 """);
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationDebug.json"), """
 {
