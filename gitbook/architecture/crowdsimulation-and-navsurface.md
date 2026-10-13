@@ -398,7 +398,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 - `GameEngine` 持有 `MassNavigationRuntime`。`GameEngine.MapLoadLifecycle.InstallMassNavigationMovePlanOrderAdapter` 要求 `GAS/order_types.json` 定义 `MassNavigationOrderKeys.Move`（`massNavigationMove`）。群体指令是 `CrowdSimCommand`，没有这个 order type。
 - `ComponentRegistry` 登记 `MassNavigationAgent`、`MassNavigationBlocker`、`MassNavigationHotspotMarker`，并注册层名 `MassNavigationLayerNames.Agent`。
 - `MapLoader` 在装载时调用 `NavSessionBinding.RequireMassNavigationTemplate`。
-- `SolverAgentExclusivity` 与 `CrowdSimulationAuthoringContract` 拒绝同一模板同时带 `CrowdSimulationAgent` 和 `MassNavigationAgent`。`NavSolverDeclaration` 认 `mass-navigation` 与 `crowd-simulation` 两个求解器值。
+- `SolverAgentExclusivity` 与 `CrowdSimulationAuthoringContract` 拒绝同一模板同时带 `CrowdSimulationAgent` 和 `MassNavigationAgent`。`NavSolverDeclaration` 认 `navmesh`、`mass-navigation`、`crowd-simulation`。
 - `RaylibHostLoop` 在计时诊断里读 `MassNavigationSimulationRuntime` 的硬解析计数。`PresentationTimingDiagnostics` 有 MassNavigation 分阶段毫秒字段。
 - `MassNavKinematicPoseFeedSystem2D`、`MovementPhysics2DBridgeInstaller`：kinematic 体喂位姿。群体侧无。
 - `ManifestationObstacleBridge2DSystem` 写入 `MassNavigationFlowObstacleProjection`。群体侧无这个投影组件。
