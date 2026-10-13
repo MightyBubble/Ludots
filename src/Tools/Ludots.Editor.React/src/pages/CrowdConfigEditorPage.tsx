@@ -375,7 +375,11 @@ export function CrowdConfigEditorPage() {
                 type="button"
                 data-crowd-tab={item.id}
                 className={tab === item.id ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff}
-                onClick={() => setTab(item.id)}
+                onClick={() => {
+                  setTab(item.id);
+                  setIssues([]);
+                  setStatus('');
+                }}
               >
                 {item.label}
               </button>

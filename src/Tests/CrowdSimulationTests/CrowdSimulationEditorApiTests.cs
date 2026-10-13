@@ -42,6 +42,7 @@ public class CrowdSimulationEditorApiTests
             JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), S4, "globals", globals, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
             JsonObject issue = (JsonObject)((JsonArray)result["issues"]!)[0]!;
+            Assert.That(Text(issue, "path"), Is.EqualTo("sim.maxUnits"));
             Assert.That(Text(issue, "sourceMod"), Is.EqualTo(S4));
             Assert.That(Text(issue, "sourceFile"), Does.Contain("CrowdSimulationConfig.json"));
             Assert.That(File.Exists(configPath), Is.False);

@@ -85,6 +85,10 @@ public sealed class CrowdSimulationEditorResult
 
 public static class CrowdSimulationAuthoringIssues
 {
+    private static readonly Regex JsonPointer = new(
+        @"Path:\s*\$\.((?:[A-Za-z_][\w]*|\[\d+\])(?:\.[A-Za-z_][\w]*|\[\d+\])*)",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex FieldPath = new(
         @"[A-Za-z_][\w]*(?:(?:\.[A-Za-z_][\w]*)|\[\d+\])+",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -108,7 +112,7 @@ public static class CrowdSimulationAuthoringIssues
         {
             new CrowdSimulationAuthoringIssue
             {
-                Path = FieldPath.Match(body).Success ? FieldPath.Match(body).Value : "",
+                Path = ReadFieldPath(body),
                 Message = body.Trim(),
                 SourceMod = sourceMod,
                 SourceFile = sourceFile,
@@ -137,6 +141,27 @@ public static class CrowdSimulationAuthoringIssues
 
         int colon = sourceUri.IndexOf(':');
         return colon <= 0 ? sourceUri : sourceUri[..colon];
+    }
+
+    private static string ReadFieldPath(string body)
+    {
+        Match pointer = JsonPointer.Match(body);
+        if (pointer.Success)
+        {
+            return pointer.Groups[1].Value;
+        }
+
+        foreach (Match match in FieldPath.Matches(body))
+        {
+            if (match.Value.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return match.Value;
+        }
+
+        return "";
     }
 
     private static string? WinnerUri(string tail)
