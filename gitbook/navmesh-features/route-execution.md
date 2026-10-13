@@ -31,6 +31,7 @@ Order -> PathServiceRouter/AutoPathService -> waypoint cursor
 
 - waypoint 推进、settle、arrival 和临时 avoidance 归 MassNavigationFlow。
 - 路径过期时执行层暂停或请求重算，不能继续穿过已关闭的结构。
+- 网格求解成功时记下 layer、profile 和当时的 `NavTileStore.Revision`。执行已有 waypoint 之前，若这份 store 的 `Revision` 变了，`MassNavigationRouteExecutionSink` 调用 `InvalidateRoute`，同一次准备里重新求解。这条检查只在 route sink，不进 crowd。
 - route result 不直接写 `WorldPositionCm`，也不直接移动实体。
 
 ## 4. 场景与 Showcase 设计
@@ -97,7 +98,7 @@ Feature: 路线结果进入统一移动执行
 
 ## 7. 现状与 TODO
 
-主线已有 route-to-MassNavigationFlow sink、waypoint cursor 和 road execution 边界；profile 双路真实 showcase、全队到达和路径过期时的执行行为仍需验收。原始材料见 `reference/routing-to-mass-execution.md` 和 `reference/move-planning-mass-navigation-flow-road-execution.md`。
+主线已有 route-to-MassNavigationFlow sink、waypoint cursor、road execution 边界，以及瓦片 `Revision` 变化后让旧路线失效并重新求解。profile 双路真实 showcase 和全队到达仍需验收。原始材料见 `reference/routing-to-mass-execution.md` 和 `reference/move-planning-mass-navigation-flow-road-execution.md`。
 
 | 责任层 | TODO | 完成判据 |
 |---|---|---|

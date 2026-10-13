@@ -145,5 +145,20 @@ namespace Ludots.Core.Navigation.Pathing
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
         }
 
+        public bool TryReadNavPublication(string agentTypeId, out int layer, out int profile, out uint revision)
+        {
+            layer = 0;
+            profile = 0;
+            revision = 0;
+            if (string.IsNullOrWhiteSpace(agentTypeId) || !_queries.TryGetValue(agentTypeId, out NavQueryService query))
+            {
+                return false;
+            }
+
+            layer = query.Layer;
+            profile = query.Profile;
+            revision = query.Store.Revision;
+            return true;
+        }
     }
 }
