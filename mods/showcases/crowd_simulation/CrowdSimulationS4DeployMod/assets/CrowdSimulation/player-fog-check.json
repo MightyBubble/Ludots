@@ -27,14 +27,14 @@
   "visionTicks": 24,
   "travelTicks": 400,
   "clusterSpacingCm": 4000,
-  "outsideLookXCm": 387500,
-  "outsideLookYCm": 562500,
-  "outsideDistanceCm": 22000,
+  "outsideLookXCm": 391500,
+  "outsideLookYCm": 552500,
+  "outsideDistanceCm": 28000,
   "outsideYaw": 270,
-  "outsidePitch": 68,
-  "behindLookXCm": 525000,
-  "behindLookYCm": 562500,
-  "behindDistanceCm": 48000,
+  "outsidePitch": 65,
+  "behindLookXCm": 534000,
+  "behindLookYCm": 546000,
+  "behindDistanceCm": 70000,
   "behindYaw": 270,
-  "behindPitch": 64
+  "behindPitch": 36
 }

@@ -36,8 +36,12 @@ public sealed class CrowdPlayerViewTests
         Assert.That(scene["viewerXCm"]!.GetValue<int>(), Is.EqualTo(fixture["viewerXCm"]!.GetValue<int>()));
         int span = (scene["spawnCount"]!.GetValue<int>() - 1) * scene["clusterSpacingCm"]!.GetValue<int>();
         Assert.That(span, Is.LessThan(25000), "一排敌方必须落在同一格迷雾里，遮挡才是整排一起消失。");
-        Assert.That(scene["outsideLookXCm"]!.GetValue<int>(), Is.EqualTo(scene["enemyXCm"]!.GetValue<int>()));
-        Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.Not.EqualTo(scene["outsideLookXCm"]!.GetValue<int>()));
+        // 顶栏大约盖住画面上方 230 行，状态卡盖住左侧。机位东移、南移，色环才落在这两块以外。
+        Assert.That(scene["outsideLookXCm"]!.GetValue<int>() - scene["enemyXCm"]!.GetValue<int>(), Is.EqualTo(4000));
+        Assert.That(scene["enemyYCm"]!.GetValue<int>() - scene["outsideLookYCm"]!.GetValue<int>(), Is.EqualTo(10000));
+        Assert.That(scene["outsideDistanceCm"]!.GetValue<int>(), Is.EqualTo(28000));
+        Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.EqualTo(534000));
+        Assert.That(scene["behindDistanceCm"]!.GetValue<int>(), Is.EqualTo(70000));
     }
 
     [Test]
