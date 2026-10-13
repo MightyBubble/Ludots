@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
+using Arch.Core;
 using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Units;
+using Schedulers;
 
 namespace CrowdSimulationRegress;
 
@@ -111,7 +113,25 @@ public static class Program
                 : null,
         };
 
-        var report = CrowdSimRegress.Run(request);
+        JobScheduler? scheduler = null;
+        CrowdSimRegressReport report;
+        try
+        {
+            if (NeedsMovement(scenarios, ops > 0 && catalog.FuzzMovement))
+            {
+                scheduler = InstallScheduler();
+            }
+
+            report = CrowdSimRegress.Run(request);
+        }
+        finally
+        {
+            if (scheduler != null)
+            {
+                scheduler.Dispose();
+                World.SharedJobScheduler = null;
+            }
+        }
         var culture = CultureInfo.InvariantCulture;
         bool failed = !report.Passed;
         if (report.Error != null) Console.WriteLine(report.Error);
@@ -123,7 +143,9 @@ public static class Program
                 continue;
             }
 
-            string partitions = scenario.Differing.Count == 0 ? "match" : string.Join(",", scenario.Differing);
+            string partitions = scenario.Differing.Count > 0
+                ? string.Join(",", scenario.Differing)
+                : scenario.Passed ? "match" : "-";
             Console.WriteLine(
                 $"{scenario.Id} bakeMs={scenario.BakeMs.ToString("F1", culture)} avg={scenario.AvgTickMs.ToString("F3", culture)} p95={scenario.P95TickMs.ToString("F3", culture)} max={scenario.MaxTickMs.ToString("F3", culture)} checksum={CrowdSimChecksum.Format(scenario.Checksum)} partitions={partitions}");
             if (!scenario.Passed) Console.WriteLine($"{scenario.Id} FAIL {scenario.Error}");
@@ -157,6 +179,44 @@ public static class Program
 
         Console.WriteLine(failed ? "result fail" : "result pass");
         return failed ? 1 : 0;
+    }
+
+    /// <summary>
+    /// 无头进程没有引擎世界。运动并行用的调度器和 GameEngine.InitializeWorld 同一份配置。
+    /// 调用必须留在创建它的线程上，跑完再拆掉，否则工人线程把进程留住。
+    /// </summary>
+    private static JobScheduler? InstallScheduler()
+    {
+        if (World.SharedJobScheduler != null)
+        {
+            if (!World.SharedJobScheduler.IsMainThread)
+            {
+                throw new InvalidOperationException("World.SharedJobScheduler 属于别的线程，无法在本线程并行步进。");
+            }
+
+            return null;
+        }
+
+        var scheduler = new JobScheduler(new JobScheduler.Config
+        {
+            ThreadPrefixName = "LudotsWorker",
+            ThreadCount = 0,
+            MaxExpectedConcurrentJobs = 64,
+            StrictAllocationMode = false,
+        });
+        World.SharedJobScheduler = scheduler;
+        return scheduler;
+    }
+
+    private static bool NeedsMovement(IReadOnlyList<CrowdSimRegressScenario> scenarios, bool fuzzMoves)
+    {
+        if (fuzzMoves) return true;
+        for (int i = 0; i < scenarios.Count; i++)
+        {
+            if (scenarios[i].Movement) return true;
+        }
+
+        return false;
     }
 
     private static List<string> Select(CrowdSimRegressCatalog catalog, string? scenariosArg, bool full)
