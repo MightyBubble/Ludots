@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Map;
 using Ludots.Core.Modding;
@@ -227,13 +228,13 @@ public static partial class CrowdSimulationEditorApi
             IReadOnlyList<ResolvedModLoadEntry> lowerPlan = plan.Where(entry => !string.Equals(entry.Id, modId, StringComparison.Ordinal)).ToArray();
             Opened? lower = lowerPlan.Count == 0 ? null : Opened.Create(repoRoot, lowerPlan);
 
-            string? mapId = ReadStartupMapId(repoRoot, plan);
+            string? mapId = full.Pipeline.MergeGameConfig().StartupMapId;
             if (string.IsNullOrWhiteSpace(mapId))
             {
                 throw new InvalidOperationException($"Mod \"{modId}\" 的加载序里没有 game.json 的 startupMapId。");
             }
 
-            int fixedHz = ReadFixedHz(repoRoot, plan);
+            int fixedHz = new EngineClockConfigLoader(full.Pipeline).Load(full.Catalog).FixedHz;
             string? mapOwner = FindMapOwner(plan, mapId);
             bool selectedOwnsMap = File.Exists(MapPath(targetRoot, mapId));
             JsonObject? mapJson = selectedOwnsMap
@@ -435,11 +436,6 @@ public static partial class CrowdSimulationEditorApi
 
                 CrowdSimulationDebugViewConfig.Load(view, DebugViewFile);
                 return;
-            }
-
-            if (FixedHz < 1)
-            {
-                throw new InvalidOperationException("Engine/clock.json 的 FixedHz 缺失或小于 1。步进频率只由这份文件规定。");
             }
 
             var pipeline = opened.Pipeline;

@@ -92,6 +92,27 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
+    public void Apply_Globals_RefusesTargetFileWhoseRootIsNotObject()
+    {
+        string repo = FindRepoRoot();
+        string copy = CopyS4();
+        try
+        {
+            JsonObject snapshot = CrowdSimulationEditorApi.Load(repo, S4, copy);
+            JsonObject globals = (JsonObject)snapshot["globals"]!.DeepClone()!;
+            string configPath = Path.Combine(copy, "assets", "CrowdSimulationConfig.json");
+            File.WriteAllText(configPath, "[]");
+            JsonObject result = CrowdSimulationEditorApi.Apply(repo, S4, "globals", globals, copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            Assert.That(File.ReadAllText(configPath), Is.EqualTo("[]"));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
     public void Apply_MapOnNonOwner_Refuses()
     {
         string copy = CopyS4();

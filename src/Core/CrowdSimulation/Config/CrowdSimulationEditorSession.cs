@@ -251,69 +251,6 @@ public static partial class CrowdSimulationEditorApi
             return next;
         }
 
-        private static string? ReadStartupMapId(string repoRoot, IReadOnlyList<ResolvedModLoadEntry> plan)
-        {
-            string? mapId = null;
-            void Take(string path)
-            {
-                JsonObject? node = ReadObjectFile(path);
-                if (node == null)
-                {
-                    return;
-                }
-
-                if (node["startupMapId"] is JsonValue camel && camel.TryGetValue(out string? camelId) && !string.IsNullOrWhiteSpace(camelId))
-                {
-                    mapId = camelId;
-                }
-                else if (node["StartupMapId"] is JsonValue pascal && pascal.TryGetValue(out string? pascalId) && !string.IsNullOrWhiteSpace(pascalId))
-                {
-                    mapId = pascalId;
-                }
-            }
-
-            Take(Path.Combine(repoRoot, "assets", "game.json"));
-            for (int i = 0; i < plan.Count; i++)
-            {
-                Take(Path.Combine(plan[i].RootPath, "assets", "game.json"));
-            }
-
-            return mapId;
-        }
-
-        private static int ReadFixedHz(string repoRoot, IReadOnlyList<ResolvedModLoadEntry> plan)
-        {
-            int hz = 0;
-            bool seen = false;
-            void Take(string path)
-            {
-                JsonObject? node = ReadObjectFile(path);
-                if (node == null)
-                {
-                    return;
-                }
-
-                if (node["FixedHz"] is JsonValue pascal && pascal.TryGetValue(out int pascalHz))
-                {
-                    hz = pascalHz;
-                    seen = true;
-                }
-                else if (node["fixedHz"] is JsonValue camel && camel.TryGetValue(out int camelHz))
-                {
-                    hz = camelHz;
-                    seen = true;
-                }
-            }
-
-            Take(Path.Combine(repoRoot, "assets", "Engine", "clock.json"));
-            for (int i = 0; i < plan.Count; i++)
-            {
-                Take(Path.Combine(plan[i].RootPath, "assets", "Engine", "clock.json"));
-            }
-
-            return seen ? hz : 0;
-        }
-
         private static string? FindMapOwner(IReadOnlyList<ResolvedModLoadEntry> plan, string mapId)
         {
             string? owner = null;
@@ -343,7 +280,8 @@ public static partial class CrowdSimulationEditorApi
                 return null;
             }
 
-            return JsonNode.Parse(File.ReadAllText(path)) as JsonObject;
+            return JsonNode.Parse(File.ReadAllText(path)) as JsonObject
+                ?? throw new InvalidOperationException($"{path} 的根必须是对象。");
         }
 
         private static JsonArray ReadArrayFile(string path)
@@ -353,7 +291,8 @@ public static partial class CrowdSimulationEditorApi
                 return new JsonArray();
             }
 
-            return JsonNode.Parse(File.ReadAllText(path)) as JsonArray ?? new JsonArray();
+            return JsonNode.Parse(File.ReadAllText(path)) as JsonArray
+                ?? throw new InvalidOperationException($"{path} 的根必须是数组。");
         }
 
         private static JsonObject ScenarioDocument(JsonObject config, JsonObject navmesh, JsonObject? map, string mapId)
