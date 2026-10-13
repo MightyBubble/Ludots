@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>架构图库 — Ludots</title>
-<meta name="description" content="Ludots 架构图库：57 组架构图、流程图、依赖图与数据模型图，覆盖全部子系统，支持全屏查看。">
+<meta name="description" content="Ludots 架构图库：59 组架构图、流程图、依赖图与数据模型图，覆盖全部子系统，支持全屏查看。">
 <link rel="stylesheet" href="site-assets/site.css">
 <style>
   /* ===== 图库专属样式 ===== */
@@ -44,7 +44,7 @@
   <div class="section-head" style="margin-top: 8px;">
     <div class="kicker">DIAGRAM LIBRARY</div>
     <h2>架构图库</h2>
-    <p>57 组专业架构图、流程图、依赖图与数据模型图（SVG + PNG 双格式，共 114 个文件），覆盖全部子系统。点击任意卡片全屏查看。</p>
+    <p>59 组专业架构图、流程图、依赖图与数据模型图（SVG + PNG 双格式，共 118 个文件），覆盖全部子系统。点击任意卡片全屏查看。</p>
   </div>
 
   <div class="filterbar">
@@ -156,6 +156,8 @@
     {
       name: "Input & Interaction", icon: "🎮", color: "#6b7a8d",
       diagrams: [
+        { file: "input-order-pipeline.svg", title: "输入→下令全链（管线六段）", desc: "刺激收敛 → context 门控 → 图 → A/B 支 → 单写者落账 → 呈现订阅（宪法正本视图）" },
+        { file: "ui-interaction-target.svg", title: "UI 交互链目标态", desc: "打开 UI = 激活 context；面板是哑视图；UiCaptured 退役，宿主只读投影" },
         { file: "input-order-flow.svg", title: "Input → Order → Command", desc: "Raw Input → Adapter → Order → Command → GAS 的完整链路" },
         { file: "selection-state-machine.svg", title: "Selection 状态机", desc: "Empty/Single/Multi/Group/View/Formation 六状态与 13 条转换边" },
         { file: "interaction-modes.svg", title: "交互模式对比", desc: "SmartCast/AimCast/ContextScored/PressReleaseAimCast 四种模式" },

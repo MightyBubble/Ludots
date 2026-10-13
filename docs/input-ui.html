@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>输入与 UI — Ludots</title>
+<meta name="description" content="Ludots 输入与 UI：引擎管线宪法六不变量、输入→下令全链与 UI 交互链图纸、统一收口四阶段现状。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; margin: 22px 0; }
+  .inv-card { padding: 18px 20px; }
+  .inv-card .no { font-size: 12px; color: var(--faint); letter-spacing: .08em; margin-bottom: 6px; }
+  .inv-card h3 { margin: 0 0 8px; font-size: 15.5px; }
+  .inv-card p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.65; }
+  .figure-block { margin: 26px 0 40px; }
+  .figure-block .frame { border: 1px solid var(--bg-hairline); border-radius: var(--radius-sm); background: var(--bg-soft); padding: 10px; }
+  .figure-block img { width: 100%; height: auto; display: block; }
+  .figure-block figcaption { font-size: 12.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+  table.plain { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+  table.plain th, table.plain td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; line-height: 1.6; }
+  table.plain th { background: var(--bg-soft); font-weight: 600; }
+  .linklist { list-style: none; padding: 0; margin: 14px 0; }
+  .linklist li { padding: 9px 0; border-bottom: 1px dashed var(--bg-hairline); font-size: 14px; line-height: 1.6; }
+  .linklist li:last-child { border-bottom: none; }
+  .codepath { font-family: var(--mono); font-size: .9em; background: var(--bg-soft); border-radius: 4px; padding: 1px 6px; }
+  .stage-open { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body data-page="inputui">
+<header id="topbar"></header>
+
+<main class="page">
+  <div class="section-head" style="margin-top: 8px;">
+    <div class="kicker">INPUT × UI PIPELINE</div>
+    <h2>输入与 UI</h2>
+    <p>一套管线，一切皆内容。设备、面板按钮、手柄焦点、内容时刻表，全部收敛为语义动作；
+      「打开一个 UI」= 激活一个 interaction context（挂实体），面板只是订阅世界的哑视图。
+      输入状态与 UI 无关——手柄热插拔只换控制方案重解析绑定，交互状态一个字节不动。</p>
+  </div>
+
+  <!-- ================= 六不变量 ================= -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">CONSTITUTION</div>
+      <h3>引擎管线宪法：六不变量</h3>
+      <p>输入→下令、UI 面板、Activity 内容、呈现四条线的合同都是这六条的投影。
+        正本：<a href="gitbook/architecture/engine-pipeline-constitution.md">engine-pipeline-constitution.md</a>；
+        进度总账只认 <a href="gitbook/architecture/graph-capability-status.md">图能力唯一入口</a>（§3.6 四线总账）。</p>
+    </div>
+    <div class="inv-grid">
+      <div class="card inv-card"><div class="no">不变量 01</div><h3>世界状态只住实体</h3><p>context 实例、Activity 实例、集合、属性都在实体上——观战能读、回放能放。设备、键位、控制方案是本机投影，不进实体不进存档。</p></div>
+      <div class="card inv-card"><div class="no">不变量 02</div><h3>行为只在图里</h3><p>激活边、条件求值、结算、意图组装都是图。声明字段要获得语义：通用解释图读它，或机械状态机；禁止私有 C# 解释器。</p></div>
+      <div class="card inv-card"><div class="no">不变量 03</div><h3>单写者 + 生命周期主人</h3><p>集合只有 CollectionApplier 一个写点，面板显隐只有 PanelActivationApi 一个写者。context 退整组清、owner 死集合清——无第二写门、无孤儿。</p></div>
+      <div class="card inv-card"><div class="no">不变量 04</div><h3>呈现只订阅</h3><p>presenter 与面板读图写好的同一份账，不判命中、不算成员。指示器 = presenter 定义 + 规则订阅 + 参数绑定，表现域零计算。</p></div>
+      <div class="card inv-card"><div class="no">不变量 05</div><h3>输入收敛为语义动作</h3><p>设备按键、面板点击、bot 决策在语义动作层汇合，消费由活跃 context 决定。A 支（非下单）到图为止；B 支（意图→指令）只在下令时走。输入归属不读 UI 可见性。</p></div>
+      <div class="card inv-card"><div class="no">不变量 06</div><h3>定义与实例分离</h3><p>profile / 模板是静的，激活边只在图里。这条撑起热插拔（换 scheme 只重解析）、确定性回放、观战。视图工件声明交互拓扑 = 违宪。</p></div>
+    </div>
+    <p style="font-size: 13px; color: var(--muted);">元规则：fail-closed、具名拒绝、零隐式回退。新能力开工前过「进门费五问」：
+      状态住哪个实体？行为在哪张图？谁是单写者？呈现订阅什么？刺激在哪层收敛？</p>
+  </section>
+
+  <!-- ================= 链路图 ================= -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">PIPELINE DIAGRAMS</div>
+      <h3>两条链路图</h3>
+      <p>图纸源文件在 <span class="codepath">docs/diagrams/specs/</span>（diagram_forge 渲染），已收录进 <a href="diagrams.html">架构图库</a>。</p>
+    </div>
+
+    <figure class="figure-block">
+      <div class="frame"><img src="diagrams/input-order-pipeline.svg" alt="输入→下令全链：一条管线六段走完" loading="lazy"></div>
+      <figcaption><strong>输入 → 下令全链（Case E 现网形态）。</strong>
+        设备 / 时刻表 / 面板事件收敛为语义动作（归因 seat → rep 实体）→ 活跃 context 门控 → 图（唯一行为载体）→
+        A 支非下单消费 / B 支意图缓冲 drain 下令 → 单写者落账 → 呈现只订阅。热插拔只动 ControlScheme 投影，实体状态不动。</figcaption>
+    </figure>
+
+    <figure class="figure-block">
+      <div class="frame"><img src="diagrams/ui-interaction-target.svg" alt="UI 交互链目标态：打开 UI 即激活 context" loading="lazy"></div>
+      <figcaption><strong>UI 交互链目标态（统一收口阶段 1/2，#1585 / #1586）。</strong>
+        面板按钮 / 手柄焦点 / 键鼠点击 → 语义动作（eventId 即 action id）→ UI context 门控 → A 支消费图写世界状态 → 面板订阅重渲染。
+        宿主只读投影决定指针路由，<code>UiCaptured</code> 抑制旗子退役。焦点环是 View 状态，确认才产语义动作——焦点不进实体不进存档。</figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= 现状与阶段 ================= -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">ROADMAP</div>
+      <h3>现状与统一收口四阶段</h3>
+      <p>总单 <a href="https://github.com/MightyBubble/Ludots/issues/1583">#1583</a>。切片落地与票面关闭同一个 PR。</p>
+    </div>
+    <table class="plain">
+      <thead><tr><th style="width: 110px;">阶段</th><th style="width: 90px;">单</th><th>做什么</th><th style="width: 300px;">硬验收（节选）</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>0 止血</strong></td><td><a href="https://github.com/MightyBubble/Ludots/issues/1584">#1584</a></td>
+          <td>合 #1487、修 CI 离线源红、治理一勺烩（#1014 关票、#1010 重写、registry 13 条死链、僵尸分支）、Activity v5（#1394）拍板</td>
+          <td>verify 绿；main 上 Activity 域 0 failed；票面与实现一致</td>
+        </tr>
+        <tr>
+          <td><strong>1 脊柱</strong><br><span class="stage-open">当前主战场</span></td><td><a href="https://github.com/MightyBubble/Ludots/issues/1585">#1585</a></td>
+          <td>U1：UI context 接管输入门控，<code>UiCaptured/UiWheelCaptured</code> 退役（PanelTemplate 零新字段）；U2：面板事件 → 语义动作（Button 控件 + 事件桥 + A 支消费图）。<strong>验收不造玩具：Activity 选项面板当第一个真客户。</strong></td>
+          <td>全仓 grep UiCaptured = 0；菜单 context 激活时世界动作零指令；面板点击端到端落账；回放确定；热插拔 context 实例不动</td>
+        </tr>
+        <tr>
+          <td><strong>2 形态</strong></td><td><a href="https://github.com/MightyBubble/Ludots/issues/1586">#1586</a></td>
+          <td>U3：面板生命周期绑 context scope（模板只声明种类，scope 由实例传入）+ 实例级受众；U4：手柄焦点导航（两套动作、图内归一）；PanelKit 浏览器栈归位裁定</td>
+          <td>deactivate 后 lease 清零；双 seat 面板跟人；手柄 headless 全链；焦点不入实体</td>
+        </tr>
+        <tr>
+          <td><strong>3 收口门</strong></td><td><a href="https://github.com/MightyBubble/Ludots/issues/1587">#1587</a></td>
+          <td>宪法符合性架构测试（集合第二写者 / 呈现引用计算内核 / 视图持状态 / 事件链零调用 / 定义文件激活边 —— 全部测试红）+ 0 编码 ui_interaction 验收场</td>
+          <td>零编码主用例（面板自动可见且可点）；守卫进 CI；三种内容走同六段可对照参观</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 30px;">四条线快照（2026-09-20）</h3>
+    <table class="plain">
+      <thead><tr><th style="width: 130px;">线</th><th>现状</th><th style="width: 340px;">最大缺口</th></tr></thead>
+      <tbody>
+        <tr><td><strong>输入→下令</strong></td><td>切 0 合同 + 切 1 全链下单（SubmitCommandIntent 图桥 + 意图缓冲 + §12 drain）在分支 <span class="codepath">graph-input-order-chain</span>，待进主干。宪法两份在 <span class="codepath">mods/showcases/case_e_selection/CaseESelectionMod/docs/</span></td><td>瞄准/蓄力/指示器图化、SubmitCast、引擎特权键拆除</td></tr>
+        <tr><td><strong>UI 面板</strong></td><td>A 线合同完备（模板/pin/集合/四皮三主题/显隐单写者），G12 12 案可装载有测试</td><td class="stage-open">事件链零生产接线——面板能看不能点（阶段 1 主修）</td></tr>
+        <tr><td><strong>Activity 内容</strong></td><td>运行时 A1–A9 已关；#1487 交付线被 CI 离线源红卡住，main 验收必红</td><td>v5 设计定稿待拍板（#1394）；#1487 合入</td></tr>
+        <tr><td><strong>呈现</strong></td><td>presenter scope 模型、指示器 presenter 化、四皮 0 C# 换肤已落地</td><td>web 皮肤无直接自动化测试；registry 证据死链（阶段 0 清）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= 正本导航 ================= -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">SOURCE OF TRUTH</div>
+      <h3>正本导航</h3>
+    </div>
+    <ul class="linklist">
+      <li>📐 <a href="gitbook/architecture/engine-pipeline-constitution.md">引擎管线宪法：六不变量与一条管线</a>——跨线结构正本（gitbook）</li>
+      <li>📊 <a href="gitbook/architecture/graph-capability-status.md">图能力唯一入口 · §3.6 四线总账</a>——进度、还开着的活、不该合的 PR，只认这一页</li>
+      <li>🎮 <span class="codepath">mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html</span>——输入配置宪法（五层/三不变量/§12 下单合同；随输入线分支进主干）</li>
+      <li>🧭 <span class="codepath">mods/showcases/case_e_selection/CaseESelectionMod/docs/input-command-system.html</span>——输入概念宪法（scheme/context/audience、A/B 支、六类图）</li>
+      <li>🧩 <a href="panels.html">面板矩阵</a>——44 案一案一文，状态灯 🟢🔴⛔</li>
+      <li>🗺️ <a href="gitbook/architecture/four-layer-architecture/interaction-flow.md">一次输入的完整旅程</a>——Machine · App · Seat · Device 四层 Wiki</li>
+      <li>🖼️ <a href="diagrams.html">架构图库</a>——本页两张链路图已收录（Input &amp; Interaction 分类）</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Ludots 输入与 UI · 图纸源文件 docs/diagrams/ · 正本 gitbook/architecture/</span>
+    <span>一套管线，一切皆内容</span>
+  </div>
+</footer>
+
+<script src="site-assets/site.js"></script>
+</body>
+</html>

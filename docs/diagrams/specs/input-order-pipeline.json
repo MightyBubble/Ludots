@@ -1,0 +1,160 @@
+{
+  "name": "input-order-pipeline",
+  "title": "输入→下令全链：一条管线，六段走完",
+  "subtitle": "Ludots 引擎管线宪法 · Case E 现网形态 · 正本 gitbook/architecture/engine-pipeline-constitution.md",
+  "canvas": { "width": 1500, "height": 1290 },
+  "legend": {
+    "title": "管线六段",
+    "x": 40,
+    "y": 132,
+    "width": 240,
+    "items": [
+      { "label": "刺激收敛（L0）", "tint": "steel" },
+      { "label": "context 门控（L1）", "tint": "mauve" },
+      { "label": "图 · 唯一行为（L2）", "tint": "teal" },
+      { "label": "A 支 / B 支", "tint": "clay" },
+      { "label": "单写者落账（L3）", "tint": "stone" },
+      { "label": "呈现只订阅（L4）", "tint": "sand" }
+    ]
+  },
+  "groups": [
+    {
+      "id": "gating",
+      "title": "context 门控（挂 rep 实体 · 模拟侧可观战）",
+      "x": 60,
+      "y": 430,
+      "w": 1380,
+      "h": 150,
+      "tint": "mauve",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "device",
+      "title": "设备输入",
+      "tint": "steel",
+      "x": 330,
+      "y": 150,
+      "w": 380,
+      "h": 110,
+      "items": ["键鼠 / 手柄 / 触控（IInputDeviceWatcher 热插拔）", "SyntheticInputDevice 可 Mock"]
+    },
+    {
+      "id": "timetable",
+      "title": "时刻表 / 内容表",
+      "tint": "steel",
+      "x": 750,
+      "y": 150,
+      "w": 360,
+      "h": 110,
+      "items": ["发射时刻表 → 通用解释图 → OfferActivity", "声明层 = 配置表加行"]
+    },
+    {
+      "id": "panelevent",
+      "title": "面板事件（目标态 · U2）",
+      "tint": "steel",
+      "x": 1150,
+      "y": 150,
+      "w": 330,
+      "h": 110,
+      "items": ["点面板 Button / 手柄焦点确认", "eventId 即 action id，同表登记"]
+    },
+    {
+      "id": "action",
+      "title": "语义动作",
+      "tint": "steel",
+      "x": 460,
+      "y": 300,
+      "w": 580,
+      "h": 90,
+      "items": ["action id · 边沿（press/release）/ 连续值", "归因 seat → rep 实体；bot 从这层以上切入"]
+    },
+    {
+      "id": "ctxinstance",
+      "title": "InteractionContextInstance（活跃链）",
+      "tint": "mauve",
+      "x": 100,
+      "y": 470,
+      "w": 640,
+      "h": 90,
+      "items": ["LIFO 仲裁取最近声明 activeCollectionKey 的 context", "无声明 → 具名拒绝，零隐式回退"]
+    },
+    {
+      "id": "scheme",
+      "title": "ControlScheme（本机投影）",
+      "tint": "mauve",
+      "x": 780,
+      "y": 470,
+      "w": 620,
+      "h": 90,
+      "items": ["「键 → 语义」表 = 交互状态 ⊞ scheme", "热插拔只换这里重解析，实体状态不动"]
+    },
+    {
+      "id": "graph",
+      "title": "图 —— 唯一行为载体",
+      "tint": "teal",
+      "x": 380,
+      "y": 620,
+      "w": 740,
+      "h": 110,
+      "items": ["边沿包装图 / 纯函数图（带签名）", "编排 op：ActivateContext / DeactivateContext", "SubmitCommandIntent / SubmitCast 只写意图缓冲"]
+    },
+    {
+      "id": "abranch",
+      "title": "A 支 · 非下单消费",
+      "tint": "clay",
+      "x": 180,
+      "y": 770,
+      "w": 520,
+      "h": 120,
+      "items": ["对话 / 菜单 / UI 交互 / 框选写集合", "到图为止：不出意图、不下指令"]
+    },
+    {
+      "id": "bbranch",
+      "title": "B 支 · 下令",
+      "tint": "clay",
+      "x": 800,
+      "y": 770,
+      "w": 520,
+      "h": 120,
+      "items": ["意图缓冲 → drain 路由（LocalInput 相位）", "CastDispatch + 授权门 → ability order"]
+    },
+    {
+      "id": "store",
+      "title": "落账 —— 单写者",
+      "tint": "stone",
+      "x": 380,
+      "y": 930,
+      "w": 740,
+      "h": 100,
+      "items": ["EntityCollectionStore（CollectionApplier 唯一写点）", "属性 · Activity 实例（owner 死整组清）"]
+    },
+    {
+      "id": "present",
+      "title": "呈现 —— 只订阅",
+      "tint": "sand",
+      "x": 380,
+      "y": 1070,
+      "w": 740,
+      "h": 100,
+      "items": ["presenter / 面板读同一份账，零计算", "指示器 = 定义 + 规则订阅 + 参数绑定"]
+    }
+  ],
+  "edges": [
+    { "from": "device", "to": "action", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "timetable", "to": "action", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "panelevent", "to": "action", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "action", "to": "gating", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "门控" },
+    { "from": "gating", "to": "graph", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "graph", "to": "abranch", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "A 支" },
+    { "from": "graph", "to": "bbranch", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "B 支" },
+    { "from": "abranch", "to": "store", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "bbranch", "to": "store", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "令下给成员" },
+    { "from": "store", "to": "present", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "成员事件差分" }
+  ],
+  "notes": [
+    { "text": "Case E 走法：按下 → box_begin（ActivateContext boxing）→ whileActive 命中图 → 抬起 box_commit → 右键 SubmitCommandIntent → 令下给 selected 集合成员", "x": 70, "y": 1215, "ha": "left" },
+    { "text": "清理：context 退 → scope 整组清（含子）；owner 死 → 集合清并发成员移除事件，无孤儿", "x": 70, "y": 1245, "ha": "left" }
+  ]
+}
