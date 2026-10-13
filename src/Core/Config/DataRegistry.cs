@@ -29,6 +29,9 @@ namespace Ludots.Core.Config
         {
             Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
+            // 这一条相对路径就是整张表。再装一次必须换掉旧行，否则同 id 会当成合并重复拒掉。
+            _data.Clear();
+
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -88,11 +91,6 @@ namespace Ludots.Core.Config
         public bool Contains(string id)
         {
             return _data.ContainsKey(id);
-        }
-
-        public void Clear()
-        {
-            _data.Clear();
         }
     }
 }

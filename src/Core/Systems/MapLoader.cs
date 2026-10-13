@@ -424,12 +424,6 @@ namespace Ludots.Core.Systems
             }
         }
 
-        public void ReloadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
-        {
-            TemplateRegistry.Clear();
-            LoadTemplates(catalog, report);
-        }
-
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
         {
             // This loads "Entities/templates.json" from Core and all Mods

@@ -169,7 +169,7 @@ public sealed partial class CrowdSimulationRuntime
         AgentProfileRegistry profiles = new AgentProfileConfigLoader(engine.ConfigPipeline)
             .Load(catalog, engine.ConfigConflictReport);
         engine.SetService(CoreServiceKeys.AgentProfiles, profiles);
-        engine.MapLoader.ReloadTemplates(catalog, engine.ConfigConflictReport);
+        engine.MapLoader.LoadTemplates(catalog, engine.ConfigConflictReport);
         MapConfig map = engine.MapManager.LoadMap(mapId)
             ?? throw new InvalidOperationException($"Maps/{mapId}.json 没有装载出来。");
         if (!HandleMapFocused(engine, id, map))
