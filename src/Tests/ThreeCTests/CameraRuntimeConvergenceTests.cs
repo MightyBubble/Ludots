@@ -871,7 +871,8 @@ namespace Ludots.Tests.ThreeC
             manager.Update(0.016f);
 
             behaviorInput.Clear();
-            behaviorInput.Apply(CameraBehaviorInputChannels.LookY, -200f, AttributeBindingMode.Override);
+            // Look.Y+ 降低 pitch。负值会顶到最大俯仰，到不了这个用例要压住的视口角。
+            behaviorInput.Apply(CameraBehaviorInputChannels.LookY, 200f, AttributeBindingMode.Override);
             behaviorInput.Apply(CameraBehaviorInputChannels.RotateHold, 1f, AttributeBindingMode.Override);
 
             Assert.DoesNotThrow(() => manager.Update(0.016f));
