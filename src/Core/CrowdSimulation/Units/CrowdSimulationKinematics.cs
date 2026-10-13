@@ -12,7 +12,7 @@ public struct CrowdSimulationKinematics
     public Fix64Vec2 Velocity;
     /// <summary>阵型槽位在领队局部系中的偏移(厘米:横向,后向)。</summary>
     public Fix64Vec2 SlotOffsetCm;
-    /// <summary>槽位↔流场的连续混合度 0..1(防抖动:永不硬切换)。</summary>
+    /// <summary>槽位与流场的混合度，0..1。意图步按 BStep 加减。跳跃落地和重新规划会写成 0。</summary>
     public Fix64 Blend;
     /// <summary>停滞计时(秒):近目标且无进展时累计,超 settleTime 判到达。</summary>
     public Fix64 StallSeconds;

@@ -7,7 +7,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// <summary>
 /// S4 规范校验码(FNV-1a 32,Fix64 原始值口径——甲方体系):
 /// 字段顺序是 tick、单位数、x/y、vx/vy、slotX/slotY、
-/// blend、stall、state、group、id、order、mode、level，再指令与领队。
+/// blend、stall、state、group、id、order、mode、level，
+/// 然后是分离 X、分离 Y、calm（逐单位，低 32 再高 32），最后是相位一词。不含指令，不含领队。
 /// 每个定点字段按原始 int64 的低 32 位，再高 32 位，依次混合。
 /// 读面:有运动栈的会话在 tick 末从内核 SoA 读(scatter 后同值);纯部署会话(无运动栈)
 /// 保留组件直读。两条路径值等价——SoA 即 scatter 落回前的组件值。

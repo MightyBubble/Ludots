@@ -13,7 +13,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
-/// <summary>一次单位生成的实例输入。仿真参数在单位模板上，这里只带出生位置和体型半径（呈现环）。</summary>
+/// <summary>一次单位生成的实例输入。带单位类型、半径级、组、玩家、档案下标、代理类型下标和出生位置。速度等档案不在这条请求上。</summary>
 public readonly record struct CrowdUnitSpawnRequest(
     Fix64 XCm,
     Fix64 YCm,
@@ -193,7 +193,7 @@ public sealed class CrowdSimUnits
         _freeTop = Capacity;
     }
 
-    /// <summary>逐单位读位置与身份的视图(校验 / 遍历用,不复制)。</summary>
+    /// <summary>实体、稠密下标、句柄。不含位置。</summary>
     public readonly struct UnitView
     {
         public required Entity Entity { get; init; }

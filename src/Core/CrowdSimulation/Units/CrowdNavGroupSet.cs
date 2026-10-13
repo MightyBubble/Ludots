@@ -5,7 +5,7 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// <summary>
 /// 导航组注册表。组 = (玩家 × 移动类型 × 半径级),
 /// 单位按组计数;空组释放进 LIFO 空闲栈,编号在重放中可复现。
-/// 组是规划与校验的组织单元(S5 的领队 / 流场按组挂),本阶段只持身份与计数。
+/// 组持有领队、流场、目标格、规划中、视线全员、上一任领队、状态序，以及规划句柄和身体句柄。
 /// </summary>
 public sealed class CrowdNavGroupSet
 {
@@ -25,7 +25,7 @@ public sealed class CrowdNavGroupSet
         public int OrderId { get; set; }
         /// <summary>该组的虚拟领队(同指令同移动类型的组共享一个实例)。</summary>
         public Movement.CrowdLeader? Leader { get; set; }
-        /// <summary>该组的流场(S3-c FlowField;null = 路径答复未回/无指令)。</summary>
+        /// <summary>该组的流场。null = 路径答复未回，或没有指令。</summary>
         public Nav.FlowField? Flow { get; set; }
         /// <summary>目标格(-1 = 无)与目标连通域(-2 = 不可达)。</summary>
         public int Goal { get; set; } = -1;
