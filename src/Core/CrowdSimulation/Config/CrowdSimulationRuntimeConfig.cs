@@ -382,7 +382,7 @@ public sealed class RuntimeDeployBase
     public required int PlayerId { get; init; }
     public required int XCm { get; init; }
     public required int YCm { get; init; }
-    /// <summary>该玩家的单位配色(#rrggbb)。null 不写入调色板。只要任一基地有颜色，调色板会注册，缺色玩家的槽是零向量，TryGet 仍返回 true，呈现用这个零色。</summary>
+    /// <summary>该玩家的单位配色(#rrggbb)。装载要求基地要么全部写颜色，要么全部不写。全部不写则不注册调色板。</summary>
     public string? Color { get; init; }
 }
 

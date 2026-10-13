@@ -76,6 +76,34 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
+    public void MixedBaseColors_AreRejected()
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        ((JsonObject)json["deploy"]!["bases"]![1]!).Remove("color");
+        var config = CrowdSimulationConfig.Load(json);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
+        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
+        Assert.That(ex.Message, Does.Contain("deploy.bases[1].color"));
+    }
+
+    [Test]
+    public void BasesWithoutColors_StillAssemble()
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        foreach (var basis in json["deploy"]!["bases"]!.AsArray())
+        {
+            ((JsonObject)basis!).Remove("color");
+        }
+
+        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json));
+        Assert.That(runtime.Deploy.Bases.Count, Is.GreaterThan(1));
+        foreach (var basis in runtime.Deploy.Bases)
+        {
+            Assert.That(basis.Color, Is.Null);
+        }
+    }
+
+    [Test]
     public void MissingRequiredField_IsRejected()
     {
         var json = TestDefaults.DefaultConfigJson();

@@ -372,7 +372,7 @@ public sealed partial class CrowdSimulationRuntime
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
-        // 玩家调色板:deploy.bases[].color 是数据;缺色玩家落到调色板外,呈现层回退默认。
+        // 玩家调色板:deploy.bases[].color 要么全有要么全无。全有才注册；全无则不注册。
         int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
         var palette = new Vector4[maxPlayer + 1];
         bool anyColor = false;

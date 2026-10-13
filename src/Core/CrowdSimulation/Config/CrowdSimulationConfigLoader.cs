@@ -197,12 +197,30 @@ public sealed class CrowdSimulationConfigLoader
             playerIds.Add(p.PlayerId);
         }
 
-        foreach (var b in config.Deploy.Bases)
+        int coloredBases = 0;
+        int blankColorIndex = -1;
+        for (int i = 0; i < config.Deploy.Bases.Length; i++)
         {
-            if (!playerIds.Contains(b.PlayerId))
+            var basis = config.Deploy.Bases[i];
+            if (!playerIds.Contains(basis.PlayerId))
             {
-                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: deploy.bases[].playerId = {b.PlayerId}，必须存在于地图 Players[]");
+                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: deploy.bases[].playerId = {basis.PlayerId}，必须存在于地图 Players[]");
             }
+
+            if (string.IsNullOrWhiteSpace(basis.Color))
+            {
+                if (blankColorIndex < 0) blankColorIndex = i;
+            }
+            else
+            {
+                coloredBases++;
+            }
+        }
+
+        if (coloredBases > 0 && blankColorIndex >= 0)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: deploy.bases[{blankColorIndex}].color 未填。基地颜色必须全部填写，或全部不填。");
         }
 
         return new CrowdSimulationRuntimeConfig
