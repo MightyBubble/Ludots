@@ -23,9 +23,9 @@ namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 /// enters the solver. Counting unique agents keeps "N units cross → exactly N Begins" exact
 /// even if an agent grazes the plate edge across steps. Begin/End are both exposed so "everyone who stepped on also stepped off" stays a
 /// queryable invariant, and every authored door opens once the configured Begin threshold is
-/// reached. Opening a door means zeroing its ManifestationObstacleIntent2D sink flags and
-/// marking it dirty so <c>ManifestationObstacleBridge2DSystem</c> removes the physics collider
-/// and the navigation obstacle projection.
+/// reached. Opening a door zeroes its ManifestationObstacleIntent2D sink flags, marks it dirty
+/// so <c>ManifestationObstacleBridge2DSystem</c> removes the physics collider and the navigation
+/// obstacle projection, then <c>PresentationEntityLifecycle.RequestDestroy</c> removes the door entity.
 /// </summary>
 public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World, float>, IContactEventConsumer2D
 {
