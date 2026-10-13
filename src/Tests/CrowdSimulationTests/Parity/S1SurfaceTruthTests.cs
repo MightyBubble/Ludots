@@ -14,7 +14,7 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// S1 逐格对拍：从 Ludots 侧资产（.navsurface + Maps/<id>.json + 模板）重建与 Web 导出器
-/// 同一字节流，FNV-1a 摘要必须相等。字节流契约见导出器 scripts/exportLudots.mjs 头部注释。
+/// 同一字节流，FNV-1a 摘要必须相等。字节流契约见 `tools/crowdsimulation-export/exportLudots.mjs`（沙盒运行时放在 `scripts/` 下）。
 /// </summary>
 [TestFixture]
 public class S1SurfaceTruthTests

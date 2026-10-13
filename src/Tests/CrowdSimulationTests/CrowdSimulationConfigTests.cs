@@ -262,7 +262,7 @@ public class CrowdSimulationConfigTests
     [Test]
     public void PairRules_UnorderedPlayerIds_KeepTheFedMatrix()
     {
-        // 玩家对级 overrides 已删除。装载不再从队伍号生成矩阵，只把喂进来的矩阵按下标挂上。
+        // 装载不从队伍号生成矩阵，只把喂进来的矩阵按下标挂上。
         // 玩家号仍要能换成表序，乱序玩家号查的是同一张下标表。
         var map = TestDefaults.DemoMap();
         map.Players.Clear();

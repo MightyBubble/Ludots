@@ -99,9 +99,7 @@ public class CrowdSimulationAuthoringContractTests
     [Test]
     public void ActivationPath_InvokesTemplateContract()
     {
-        // 激活路径要完整 Mod 宿主（地图聚焦 → 会话激活），单元测试不可达；端到端由真机
-        // 冒烟（crowd_simulation_s4_deploy_1337）覆盖。这里钉住 Runtime 激活代码里的契约
-        // 调用，防止活接线被静默拆除（契约曾是只有测试调用的死代码）。
+        // 本测试只断言 CrowdSimulationRuntime.cs 源码含 CrowdSimulationAuthoringContract.Validate(。它不跑进图激活。
         string repoRoot = FindRepoRoot();
         string runtimeSource = File.ReadAllText(
             Path.Combine(repoRoot, "src", "Core", "CrowdSimulation", "Runtime", "CrowdSimulationRuntime.cs"));

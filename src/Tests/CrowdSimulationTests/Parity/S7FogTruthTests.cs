@@ -12,18 +12,18 @@ using Ludots.Core.CrowdSimulation.Units;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// S7-b 迷雾/认知对拍(脚本:部署 → 行军 → 未知建筑 → 发现改道 → 拆除残影 → 再见遗忘 →
+/// 迷雾/认知对拍(脚本:部署 → 行军 → 未知建筑 → 发现改道 → 拆除残影 → 再见遗忘 →
 /// reveal/obscure/forget → fogShare 并组 → fogTerrain 开关对照):迷雾开启口径,不置
 /// TruthNavFrozen(参考端 S7-b 块不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)。
-/// 迷雾 digest 主门(F02):每组每 tick visible/explored/belief/tiles 计数、beliefKey、
+/// 迷雾 digest 主门:每组每 tick visible/explored/belief/tiles 计数、beliefKey、
 /// 槽号、entRev/rev 计数器 + 全局槽账(seq/switches/entry/dormant/beliefCount)——整数/集合态,
 /// 逐位硬门,无带宽口径(哈希碰撞藏不住变更:计数器与 key 双轨)。
-/// 单位门沿用 S5/S7 家规:状态机逐位 + 位置分层带(带值按本场景实测校准)+ contacts 双容忍;
+/// 单位门:state/level/order 的非到达翻转必须为 0；Moving↔Arrived 到达对允许到接触样本的 1%；mode 走 0.15% 双容忍。digest 仍是逐位。位置分层带按本场景校准，contacts 走双容忍;
 /// 结构 op(place@5 挡路改道、remove@90 残影语义)报告逐字段硬门。
 /// 认知变体导航的内容一致性由本门背书:槽位分配/切换/揭示/淘汰全部逐位,变体烘焙的分歧
 /// 矩形由槽字段(实体集+tile 集)唯一决定。
 /// 实测校准(2026-10-09,360 tick × 120 单位):digest 全程逐位;ops(place@5/remove@90)全字段;
-/// 轨迹 p50=0.08/p99=0.45cm(行军段双数值系固有误差档);到达判定骑线(族)使末段停车
+/// 轨迹 p50=0.08/p99=0.45cm(行军段双数值系固有误差档);到达判定骑线使末段停车
 /// 晚 1–9 tick——状态翻转 99 处全部为 Moving↔Arrived 到达对(非到达翻转 0,零容忍),末态带
 /// 5000(实测 3491,该带防整组不收束);contacts 对齐门 0.5% + ±3(实测 0.147%,幅度直方
 /// [±1:57,±2:3,±3:3]——到达簇内多邻同时骑线;系统性求解分歧会同时击穿率与幅度线)。

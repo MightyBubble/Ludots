@@ -13,7 +13,7 @@ using CrowdSimulationTests.Parity;
 
 /// <summary>
 /// 真值会话单位走模板生成管线的集成门:S4DeployTruthTests.BuildSession 就是真值测试的
-/// 实际装配(经 L44 改造后经 VFS→ConfigPipeline→MapLoader.LoadTemplates 装载链取模板),
+/// 实际装配(经 VFS → ConfigPipeline → MapLoader.LoadTemplates 装载链取模板),
 /// 生成单位后逐单位断言模板键引用可解析、呈现预置件在位、组件值与模板写真逐位一致
 /// ——证明"值同源"落在实体事实上,不是装配口径的口头声明。
 /// </summary>

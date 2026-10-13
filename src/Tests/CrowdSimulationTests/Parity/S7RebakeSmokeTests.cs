@@ -12,8 +12,8 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// S7 结构动态化内核冒烟(无真值,纯 C# 不变量):放置 / 拆除 / 寿命到期驱动增量重烘,
-/// DB-03 增量 vs 全量一致性检查在每次 op 后必须通过;重烘 job 按 rebakeSlices 切片推进;
-/// 同一脚本回放两次校验码逐位一致(RT-04 tick 驱动的确定性)。
+/// 增量 vs 全量一致性检查在每次 op 后必须通过;重烘 job 按 rebakeSlices 切片推进;
+/// 同一脚本回放两次校验码逐位一致(tick 驱动的确定性)。
 /// </summary>
 [TestFixture]
 public class S7RebakeSmokeTests
@@ -25,7 +25,7 @@ public class S7RebakeSmokeTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // F02:S7 冒烟走 S7 真值同款冻结口径(结构 op 会岔认知)
+        session.TruthNavFrozen = true; // S7 冒烟走 S7 真值同款冻结口径(结构 op 会岔认知)
         session.VerifyIncrementalNav = true;
 
         // 脚本(与 S7 真值同构同尺寸:格距 62.5m,足迹中心落在格心):部署 → 行军 →
@@ -63,7 +63,7 @@ public class S7RebakeSmokeTests
         using var service2 = new PathQueryService(session2.Navs, runtime2, 1, TimeSpan.FromSeconds(30), session2.ResolveNavContext);
         session2.EnableMovement(CrowdMovementKernel.Create(session2), new CrowdSimPlanner(session2, service2));
         session2.BlockOnDueReplies = true;
-        session2.TruthNavFrozen = true; // F02:回放侧同款冻结
+        session2.TruthNavFrozen = true; // 回放侧同款冻结
         session2.Commands.Schedule(session2, script);
         var second = new List<ulong>();
         session2.Advance(240, second);

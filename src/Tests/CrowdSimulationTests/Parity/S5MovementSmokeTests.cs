@@ -9,7 +9,7 @@ using Ludots.Core.CrowdSimulation.Units;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// S5-a 冒烟:真图真导航,每玩家生成一簇,下移动令,推进 300 tick——
+/// 冒烟:真图真导航,每玩家生成一簇,下移动令,推进 300 tick——
 /// 单位必须朝目标方向位移、无服务故障、校验码持续推进(停摆会卡 Advance)。
 /// </summary>
 public sealed class S5MovementSmokeTests

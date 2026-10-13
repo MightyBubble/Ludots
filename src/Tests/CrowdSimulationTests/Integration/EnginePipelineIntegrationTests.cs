@@ -21,7 +21,7 @@ using CrowdSimulationTests.Parity;
 /// 脚本),会话由引擎自身的 CrowdSimulationRuntime 在图聚焦时激活、由系统组 FixedHz 驱动
 /// (不经无头直调),单位行军跨格;断言每个单位的 SpatialCellRef 恒等于当前位置所在格。
 /// 步进若注册在帧末组(晚于 SpatialPartitionUpdateSystem),跨格当帧成员格落后一拍、
-/// 新建实体错过当帧索引——把注册改回 Cleanup 的突变下本门即刻变红(已验)。
+/// 新建实体错过当帧索引——把注册改回 Cleanup 时本门变红。
 /// </summary>
 public class EnginePipelineIntegrationTests
 {

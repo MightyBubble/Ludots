@@ -4,7 +4,7 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests;
 
-/// <summary>拖线线宽以厘米存储，规划分额不再乘每米厘米数。</summary>
+/// <summary>拖线线宽以厘米存储。</summary>
 public sealed class FaceWidthShareTests
 {
     [Test]

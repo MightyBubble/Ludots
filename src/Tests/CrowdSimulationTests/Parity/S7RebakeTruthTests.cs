@@ -32,8 +32,8 @@ namespace CrowdSimulationTests.Parity;
 /// 与 S5 首个分歧(tick 11 马达停车线骑线)同源:双算术体系在离散判定点翻转离散事件。
 /// 每次结构 op 的重烘焙报告逐字段硬门(执行 tick / 类别 / 报告 tick / tiles / contexts /
 /// costOnly / hits / misses / orders / refreshes / evicted / stuck / 受影响 tile 并集升序)。
-/// 口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾(S7-a 内核无迷雾,F02 另单),
-/// 组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;DB-03 增量 vs 全量一致性
+/// 口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾,
+/// 组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;增量 vs 全量一致性
 /// 检查(VerifyIncrementalNav)在每次 op 后随路运行。
 /// </summary>
 public sealed class S7RebakeTruthTests
@@ -53,7 +53,7 @@ public sealed class S7RebakeTruthTests
     internal const double P50BandCm = 0.5;
     /// <summary>mode 双容忍:不一致率上限(实测 0.030%,留 5 倍余量)。</summary>
     internal const double MaxModeMismatchRate = 0.0015;
-    /// <summary>位置对齐判定(厘米):|Δ| ≤ 此值的样本视为"同输入",contacts 在其上走逐位硬门。</summary>
+    /// <summary>位置对齐判定(厘米):|Δ| ≤ 此值的样本才进入接触门。门是不一致 ≤ 0.05% 且幅度 ≤ 2，不是逐位。</summary>
     private const double AlignedDeltaCm = 1.0;
 
     private string _argMax = "?";
@@ -65,7 +65,7 @@ public sealed class S7RebakeTruthTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // F02:S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
+        session.TruthNavFrozen = true; // S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
@@ -305,7 +305,7 @@ public sealed class S7RebakeTruthTests
         Assert.That(unreachDiff, Is.Empty,
             $"L22 行为门④:不可达集合不一致(终态 Unreachable):{string.Join(", ", unreachDiff.Take(8).Select(h => $"{h:x}"))}");
         Assert.That(p50, Is.LessThanOrEqualTo(P50BandCm),
-            $"分层门(L24):p50={p50:F4}cm 超 {P50BandCm}cm");
+            $"分层门:p50={p50:F4}cm 超 {P50BandCm}cm");
         Assert.That(maxDeltaCm, Is.LessThanOrEqualTo(MaxTrajectoryBandCm),
             $"轨迹逐 tick 位置最大偏差 {maxDeltaCm:F2}cm 超带宽 {MaxTrajectoryBandCm}cm(结构性兜底门,p99.9={p999:F2})");
         Assert.That(finalMaxDeltaCm, Is.LessThanOrEqualTo(FinalBandCm),
