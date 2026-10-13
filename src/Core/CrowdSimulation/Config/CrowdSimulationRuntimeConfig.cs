@@ -14,7 +14,7 @@ public sealed class CrowdSimulationRuntimeConfig
     public required string MapId { get; init; }
     public required int FixedHz { get; init; }
 
-    /// <summary>导航网格边长（格）。世界正方形，Boards[0].WidthCm / NavCellSizeCm。</summary>
+    /// <summary>导航网格边长（格）。世界正方形，求解器板的 WidthCm / NavCellSizeCm。</summary>
     public required int NavCellsPerSide { get; init; }
     public required int NavCellSizeCm { get; init; }
     /// <summary>世界种子(生成盐,与参考实现的 world.seed 同值;部署 / 生成的 RNG 流以此为根)。</summary>

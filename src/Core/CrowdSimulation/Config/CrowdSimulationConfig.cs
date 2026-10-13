@@ -17,6 +17,7 @@ namespace Ludots.Core.CrowdSimulation.Config;
 public sealed class CrowdSimulationConfig
 {
     public required WorldSection World { get; init; }
+    public required WorkerSection Worker { get; init; }
     public required AgentsSection Agents { get; init; }
     public required NavmeshSection Navmesh { get; init; }
     public required HpaSection Hpa { get; init; }
@@ -41,15 +42,24 @@ public sealed class CrowdSimulationConfig
         ArgumentNullException.ThrowIfNull(configObject);
         RejectRetiredKeys(configObject);
         RejectIdKeyedNulls(configObject);
+        CrowdSimulationConfig cfg;
         try
         {
-            return configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
+            cfg = configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
                 ?? throw new InvalidOperationException("CrowdSimulationConfig.json: 反序列化结果为空。");
         }
         catch (JsonException ex)
         {
             throw new InvalidOperationException($"CrowdSimulationConfig.json: {ex.Message}", ex);
         }
+
+        if (cfg.Worker.PlanTimeoutMs <= 0)
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationConfig.json: worker.planTimeoutMs 需为 > 0 的整数毫秒。");
+        }
+
+        return cfg;
     }
 
     public static CrowdSimulationConfig Load(Stream stream)
@@ -249,6 +259,11 @@ public sealed class CrowdSimulationConfig
     {
         /// <summary>世界种子(生成盐;每张地图一个,与参考实现的 world.seed 同值)。</summary>
         public int Seed { get; init; }
+    }
+
+    public sealed class WorkerSection
+    {
+        public required int PlanTimeoutMs { get; init; }
     }
 
     public sealed class AgentsSection

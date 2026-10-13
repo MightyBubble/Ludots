@@ -53,7 +53,7 @@ v1 证据(RPC 临时机位 + crowd 演示整机)被打回;v2 改为**夹具制�
 
 - 夹具 `mods/fixtures/terrain/Terrain1743EvidenceMod`(纯资产,无代码):地图引用
   crowd s1337 的 `.height`(相对路径跨 mod 单命中),RenderProfile 与 crowd 地图同值;
-  最小 `CrowdSimulationDebug.json`(autostart=false)满足 CrowdSimulationMod 的目录
+  最小 `CrowdSimulationDebug.json`（`session.autostart` 已删除，现行夹具是空对象）满足当时 CrowdSimulationMod 的目录
   登记合并约束。
 - 脚本 `scripts/acceptance/run-terrain-1743-shots.sh before|after`:launcher 起
   `mod:Terrain1743EvidenceMod mod:AgentBridgeMod`,三档距离各拍两张,位姿逐字段

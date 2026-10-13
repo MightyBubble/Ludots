@@ -144,12 +144,10 @@ public static class CrowdStructureOps
         CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect, byte kind, CrowdStructureFootprint fp)
     {
         FinishRebake(sim);
-        var planner = sim.Planner!;
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
-        List<CrowdNavRebakeContextResult> dirty;
         var cache0 = cache;
-        dirty = planner.Service.RunExclusive(() =>
+        List<CrowdNavRebakeContextResult> Rebake()
         {
             var results = CrowdNavRebake.RebakeContexts(sim.Navs.Values, sim.RebakeSources!, sim.Structures!, rect, cache0);
             if (sim.VerifyIncrementalNav)
@@ -158,7 +156,12 @@ public static class CrowdStructureOps
             }
 
             return results;
-        });
+        }
+
+        // 无头 BuildSession 不挂规划器。有路径服务时重烘必须进它的互斥域。
+        List<CrowdNavRebakeContextResult> dirty = sim.Planner is { } planner
+            ? planner.Service.RunExclusive(Rebake)
+            : Rebake();
         // F02:真相重烘完 → 认知分歧重推导(参考端 truthChanged 同点)。参考端的
         // detach/settle(变体在真相重烘前私享 tile)不需要——C# 变体是全拷贝(裁定 ①),
         // 真相重烘写不到变体自有的数组。
@@ -194,10 +197,12 @@ public static class CrowdStructureOps
     /// <summary>阶段 1:队伍反应(重规划清单 + 流场刷新)、唤醒变更附近休眠单位、挤离新阻挡。</summary>
     private static void StageReaction(CrowdSimSession sim, CrowdRebakeJob job)
     {
-        var planner = sim.Planner!;
-        job.Orders = planner.ReactRebake(job.ContextResults);
-        // 刷新队列长在反应末快照(参考端 s0.refreshes 同点);每 tick 预算会在步末排空队列
-        job.Refreshes = planner.RefreshQueueCount;
+        if (sim.Planner is { } planner)
+        {
+            job.Orders = planner.ReactRebake(job.ContextResults);
+            // 刷新队列长在反应末快照;每 tick 预算会在步末排空队列
+            job.Refreshes = planner.RefreshQueueCount;
+        }
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
     }
@@ -205,8 +210,10 @@ public static class CrowdStructureOps
     /// <summary>阶段 2:受影响指令重规划(固定生效帧)+ 发布报告。</summary>
     private static void StagePublish(CrowdSimSession sim, CrowdRebakeJob job)
     {
-        var planner = sim.Planner!;
-        if (job.Orders is { Count: > 0 } orders) planner.Plan(orders, sim.TickCount);
+        if (sim.Planner is { } planner && job.Orders is { Count: > 0 } orders)
+        {
+            planner.Plan(orders, sim.TickCount);
+        }
         var bbox = job.Fp.Bbox();
         var report = new CrowdRebakeReport
         {

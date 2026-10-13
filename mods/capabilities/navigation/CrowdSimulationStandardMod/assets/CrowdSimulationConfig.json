@@ -1,5 +1,8 @@
 {
   "world": {},
+  "worker": {
+    "planTimeoutMs": 5000
+  },
   "agents": {
     "avoidanceRadiusScale": 6
   },

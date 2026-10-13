@@ -109,7 +109,7 @@ public class NavSchemaAuditTests
               },
               "layers": [ { "id": "Ground", "layer": 0 } ],
               "areas": { "Default": { "areaId": 0, "slopeFree": false } },
-              "maps": { "demo": { "navProfiles": ["Small"], "navAreas": ["Default"] } },
+              "maps": { "demo": { "solver": "navmesh", "navProfiles": ["Small"], "navAreas": ["Default"] } },
               "runtimeIncremental": {
                 "tileBudgetPerFixedTick": 1,
                 "includeNeighborTiles": true,
@@ -169,7 +169,7 @@ public class NavSchemaAuditTests
               },
               "layers": [ { "id": "Ground", "layer": 0 } ],
               "areas": { "Default": { "areaId": 0, "slopeFree": false } },
-              "maps": { "demo": { "navProfiles": ["Small"], "navAreas": ["Default"] } },
+              "maps": { "demo": { "solver": "navmesh", "navProfiles": ["Small"], "navAreas": ["Default"] } },
               "runtimeIncremental": {
                 "tileBudgetPerFixedTick": 1,
                 "includeNeighborTiles": true,

@@ -15,6 +15,27 @@ namespace CrowdSimulationTests;
 public class CrowdSimulationConfigTests
 {
     [Test]
+    public void PlanTimeoutMs_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["worker"]!.AsObject().Remove("planTimeoutMs");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("planTimeoutMs"));
+    }
+
+    [Test]
+    public void PlanTimeoutMs_MustBePositive()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["worker"]!["planTimeoutMs"] = 0;
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("worker.planTimeoutMs"));
+        Assert.That(ex.Message, Does.Contain("> 0"));
+    }
+
+    [Test]
     public void DefaultConfig_Assembles_AgainstDemoMap()
     {
         var runtime = TestDefaults.Assemble();
@@ -184,16 +205,6 @@ public class CrowdSimulationConfigTests
         map.Boards[0].HeightCm = TestDefaults.WorldCm / 2;
         var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map, pairRules: TestDefaults.DemoPairRules()));
         Assert.That(ex!.Message, Does.Contain("必须是正方形"));
-    }
-
-    [Test]
-    public void DualSolver_SameMap_IsRejected()
-    {
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => CrowdSimulationConfigLoader.EnsureSolverExclusive("crowd_simulation_demo", "crowd_simulation_demo"));
-        Assert.That(ex!.Message, Does.Contain("一张地图只能使用其中一个"));
-        Assert.DoesNotThrow(() => CrowdSimulationConfigLoader.EnsureSolverExclusive("other_map", "crowd_simulation_demo"));
-        Assert.DoesNotThrow(() => CrowdSimulationConfigLoader.EnsureSolverExclusive(null, "crowd_simulation_demo"));
     }
 
     [Test]

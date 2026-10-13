@@ -1,9 +1,5 @@
 {
-  "worker": {
-    "planTimeoutMs": 5000
-  },
   "session": {
-    "autostart": true,
     "script": [
       {
         "tick": 0,

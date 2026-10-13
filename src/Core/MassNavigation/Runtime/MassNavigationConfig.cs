@@ -12,7 +12,6 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationConfig
 {
-    public string MapId { get; set; } = string.Empty;
     public MassNavigationWorldConfig? World { get; set; }
     public MassNavigationFlowSolverConfig Solver { get; set; } = new();
     public MassNavigationPresentationConfig Presentation { get; set; } = new();
@@ -67,7 +66,12 @@ public sealed class MassNavigationConfig
 
     private static void ValidateRequiredTopLevelProperties(JsonElement root)
     {
-        RequireProperty(root, "mapId");
+        if (root.TryGetProperty("mapId", out _))
+        {
+            throw new InvalidOperationException(
+                "MassNavigationConfig.json: 已删除 mapId。哪张图跑大规模导航，在 Navigation/navmesh.json 的 maps.<mapId>.solver 写 mass-navigation。");
+        }
+
         RequireProperty(root, "world");
         RequireProperty(root, "solver");
         RequireProperty(root, "presentation");
@@ -375,11 +379,6 @@ public sealed class MassNavigationConfig
 
     private void Validate()
     {
-        if (string.IsNullOrWhiteSpace(MapId))
-        {
-            throw new InvalidOperationException("MassNavigation config requires a non-empty map id.");
-        }
-
         ScenarioRuntime.RuntimeCapacity.ApplyScenarioScaleDefaults(Scenario, World, Streaming);
         Solver.Validate();
         ScenarioRuntime.Validate();
@@ -647,21 +646,6 @@ public sealed class MassNavigationConfigLoader
         ConfigConflictReport report,
         string relativePath = DefaultRelativePath)
     {
-        if (TryLoad(catalog, report, out MassNavigationConfig? config, relativePath))
-        {
-            return config;
-        }
-
-        throw new InvalidOperationException($"MassNavigation runtime config '{relativePath}' must be registered in config_catalog.json.");
-    }
-
-    public bool TryLoad(
-        ConfigCatalog catalog,
-        ConfigConflictReport report,
-        [NotNullWhen(true)] out MassNavigationConfig? config,
-        string relativePath = DefaultRelativePath)
-    {
-        config = null;
         if (catalog == null)
         {
             throw new ArgumentNullException(nameof(catalog));
@@ -674,7 +658,8 @@ public sealed class MassNavigationConfigLoader
 
         if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
         {
-            return false;
+            throw new InvalidOperationException(
+                $"MassNavigation runtime config '{relativePath}' must be registered in config_catalog.json.");
         }
 
         if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
@@ -688,8 +673,7 @@ public sealed class MassNavigationConfigLoader
             throw new InvalidOperationException($"MassNavigation runtime requires config '{relativePath}' through ConfigPipeline.");
         }
 
-        config = MassNavigationConfig.Load(merged);
-        return true;
+        return MassNavigationConfig.Load(merged);
     }
 }
 
