@@ -1,0 +1,51 @@
+{
+  "defaults": ["deploy", "rebake", "areas"],
+  "full": ["stress"],
+  "repeat": 1,
+  "seed": 1,
+  "fuzzOps": 0,
+  "standardAssets": "mods/capabilities/navigation/CrowdSimulationStandardMod/assets",
+  "capabilityAssets": "mods/capabilities/navigation/CrowdSimulationMod/assets",
+  "scenarios": {
+    "deploy": {
+      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+      "scriptAsset": "CrowdSimulation/parity/s4-deploy-truth.json",
+      "ticksFrom": "frames",
+      "movement": false,
+      "truthNavFrozen": true
+    },
+    "rebake": {
+      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+      "scriptAsset": "CrowdSimulation/parity/s7-rebake-truth.json",
+      "ticksFrom": "ticks",
+      "movement": true,
+      "truthNavFrozen": true
+    },
+    "areas": {
+      "unavailable": "s7area-truth.json 是迷雾格用例，不是可推进的指令脚本。"
+    },
+    "stress": {
+      "unavailable": "仓库没有 5 万单位的压力场景脚本。50k 门禁写在测试里，回归入口不复制那份脚本。"
+    }
+  },
+  "fuzz": {
+    "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod/assets",
+    "movement": true,
+    "truthNavFrozen": true,
+    "stepsPerOp": 2,
+    "probeHandles": 32,
+    "spawnCount": 8,
+    "placeTemplate": "building",
+    "placeSizeCm": 14000,
+    "orderShape": "box",
+    "orderMemberCap": 8,
+    "stallGuard": 64,
+    "ops": [
+      { "id": "spawn", "structure": false, "probeHandles": false, "reserved": false },
+      { "id": "order", "structure": false, "probeHandles": false, "reserved": false },
+      { "id": "place", "structure": true, "probeHandles": false, "reserved": false },
+      { "id": "remove", "structure": true, "probeHandles": false, "reserved": false },
+      { "id": "kill", "structure": false, "probeHandles": true, "reserved": true }
+    ]
+  }
+}

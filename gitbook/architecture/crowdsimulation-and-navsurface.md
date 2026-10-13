@@ -495,6 +495,12 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 `ValidateStructures` 核对实体的模板、区域、阻挡和寿命是否互相覆盖，再把阻挡格和区域格与按当前实体全量重标的结果对一遍。`ValidateSpatialHash` 用一份稠密计数排序对照占格序列、槽位、查询环、按环排列的邻居区间和每环邻居数。`ValidateNav` 用新的 tile 缓存把每份真实导航和同一份地表的全量烘焙对字段，包括桥面格、地面和桥面 tile、连通域和 HPA。每个已经建好的认知变体再对它自己的认知场烤一遍。认知变体的跳跃链接只比数量。
 
+随机操作在 `CrowdFuzzRunner`。操作表、每种操作后的推进次数、句柄抽样条数、种子和操作数都由调用方的计划带进来。内建操作是生成、下令、放置和拆除。放置和拆除之后再对实体栅格和真实导航做全量比较。句柄抽样在执行前记下实体，执行后旧句柄要么仍指向该实体，要么解析为 -1。`kill` 写在操作表里但默认不抽中：指令集没有单体移除，调用方可以按这个 id 接上自己的执行器。失败结果带种子、第几步和错误。
+
+回放捕获在 `CrowdSimReplay`。它记下已执行的指令日志、tick、合计校验码，以及诊断分区和 `units.handles`。`units.handles` 不进 `CrowdSimChecksum.Compute` 的合计。调用方用一份同样装配的新会话重放到同一 tick，对不上时列出分区名。运行时按校验码环比较的 `RunReplay` 仍走自己的路径。迷雾、认知导航、规划器和结构仓的分区摘要还没有进捕获。
+
+无头回归是工具 `src/Tools/CrowdSimulationRegress`。场景表在 S4 演示 Mod 的 `assets/CrowdSimulation/regress/catalog.json`。默认场景是 deploy、rebake、areas。deploy 和 rebake 读 1337 种子目录里现成的真值脚本。areas 那份真值是迷雾格用例，stress 没有场景脚本；选中它们会失败并写出原因。`--repeat` 比较各轮终点校验码和分区摘要。`--fuzz 0` 不跑随机操作。`--budget` 看的是含路径计算的 tick p95。UAT-FOG 要核对渲染层是否隐藏单位，这个入口没有做。
+
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
