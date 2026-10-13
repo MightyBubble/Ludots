@@ -208,15 +208,11 @@ public static class CrowdStructureOps
     {
         var navs = call.Sim.Navs as Dictionary<int, NavContext>
             ?? throw new InvalidOperationException("导航表必须是 Dictionary，重烘按具体枚举器遍历。");
-        long tInc = CrowdRebakeProbe.T();
         var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Rect, call.Cache);
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Incremental, tInc);
         if (call.Sim.VerifyIncrementalNav)
         {
-            long tVerify = CrowdRebakeProbe.T();
             CrowdNavRebake.VerifyAgainstFullBake(
                 call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Sim.TickCount);
-            CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Verify, tVerify);
         }
 
         return results;
@@ -226,7 +222,6 @@ public static class CrowdStructureOps
     private static void StageReaction(CrowdSimSession sim, CrowdRebakeJob job)
     {
         long workStart = Stopwatch.GetTimestamp();
-        long tReact = CrowdRebakeProbe.T();
         if (sim.Planner is { } planner)
         {
             var built = planner.ReactRebake(job.ContextResults);
@@ -238,7 +233,6 @@ public static class CrowdStructureOps
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
         job.Stuck = sim.EvictStuck;
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Reaction, tReact);
         job.WorkTicks += Stopwatch.GetTimestamp() - workStart;
     }
 
@@ -246,7 +240,6 @@ public static class CrowdStructureOps
     private static void StagePublish(CrowdSimSession sim, CrowdRebakeJob job)
     {
         long workStart = Stopwatch.GetTimestamp();
-        long tPublish = CrowdRebakeProbe.T();
         if (sim.Planner is { } planner && job.Orders.Count > 0)
         {
             planner.Plan(job.Orders, sim.TickCount);
@@ -297,7 +290,6 @@ public static class CrowdStructureOps
             unionTiles[j + 1] = value;
         }
         report.Tiles = union;
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Publish, tPublish);
         job.WorkTicks += Stopwatch.GetTimestamp() - workStart;
         report.ElapsedTicks = job.WorkTicks;
         sim.LastRebakeReport = report;

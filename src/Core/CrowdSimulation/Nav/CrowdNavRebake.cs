@@ -111,27 +111,20 @@ public static class CrowdNavRebake
         (int X0, int Y0, int X1, int Y1) rect,
         NavTileCache cache)
     {
-        long navStart = CrowdRebakeProbe.T();
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         int erosion = nav.ClearanceNavCells - 1;
-        long tKind = CrowdRebakeProbe.T();
         int kind = Classify(nav, sources, store, rect);
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Classify, tKind);
         var grown = Grow(rect, erosion, navCellsPerSide);
         List<int> tiles;
         if (kind == KindPassable)
         {
-            long tErode = CrowdRebakeProbe.T();
             ErodeRect(nav, nav.Walk, navCellsPerSide, nav.ClearanceNavCells, grown, nav.Passable);
-            CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Erode, tErode);
             var dirty = TilesOf(nav, grown, navCellsPerTile, navTilesPerSide);
             // 重烘后拿到同一内容条目(缓存命中)的 tile:HPA 簇内距离逐位复用
             var prev = PrevOf(nav, dirty.Count);
             for (int i = 0; i < dirty.Count; i++) prev[i] = nav.Tiles![dirty[i]];
-            long tBake = CrowdRebakeProbe.T();
             BakeTiles(nav, dirty, cache, store.Area);
-            CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.BakeTiles, tBake);
             var same = nav.SameTiles;
             same.Clear();
             for (int i = 0; i < dirty.Count; i++)
@@ -154,20 +147,15 @@ public static class CrowdNavRebake
         else
         {
             var dirty = TilesOf(nav, rect, navCellsPerTile, navTilesPerSide);
-            long tBake = CrowdRebakeProbe.T();
             bool meshChanged = BakeTiles(nav, dirty, cache, store.Area);
-            CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.BakeTiles, tBake);
             if (kind == KindNone && !meshChanged)
             {
                 nav.LastRebake = KindNone;
                 nav.ChangedTiles = NoTiles;
-                CrowdRebakeProbe.Note(nav.Id, KindNone, 0, navStart);
                 return NoTiles;
             }
 
-            long tHpa = CrowdRebakeProbe.T();
             nav.Hpa!.Update(nav, nav.Links, dirty, same: null);
-            CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Hpa, tHpa);
             tiles = dirty;
             nav.ChangedTiles = dirty;
             nav.LastRebake = KindCost;
@@ -175,7 +163,6 @@ public static class CrowdNavRebake
 
         nav.Version++;
         nav.InvalidateReach();
-        CrowdRebakeProbe.Note(nav.Id, nav.LastRebake, tiles.Count, navStart);
         return tiles;
     }
 
@@ -357,7 +344,6 @@ public static class CrowdNavRebake
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var comp = nav.Comp;
-        long tComp = CrowdRebakeProbe.T();
         Array.Fill(comp, -1);
         var queue = Ensure(ref nav.FloodQueue, n2);
         int compCount = NavContextBaker.Components(nav.Passable, navCellsPerSide, comp, queue);
@@ -374,16 +360,12 @@ public static class CrowdNavRebake
             comp = nav.Comp;
         }
 
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Components, tComp);
         nav.CompCount = compCount;
-        long tCells = CrowdRebakeProbe.T();
         ScanCells(nav);
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Cells, tCells);
 
         // 链接:只有跳跃候选端点落在重算矩形里,可走位变化才可能改链表;否则链表保留、仅重导出域图
         var profile = config.NavProfiles[config.AgentTypes[nav.LayerIndex].NavProfileIndex];
         bool relink = profile.Jump != null && LinksTouch(sources.JumpCandidates, rect, navCellsPerSide);
-        long tLinks = CrowdRebakeProbe.T();
         if (relink)
         {
             nav.Links = NavContextBaker.BuildLinks(config, store.SnapshotSurface(), profile, nav.Passable, comp);
@@ -393,13 +375,8 @@ public static class CrowdNavRebake
             RelinkComponents(nav.Links, comp);
         }
 
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Links, tLinks);
-        long tReach = CrowdRebakeProbe.T();
         RefillDeckReach(nav, compCount, nav.Links, deckLocal);
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Reach, tReach);
-        long tHpa = CrowdRebakeProbe.T();
         nav.Hpa!.Update(nav, nav.Links, dirtyTiles, sameTiles);
-        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.Hpa, tHpa);
     }
 
     private static int[] Ensure(ref int[]? buffer, int length)
