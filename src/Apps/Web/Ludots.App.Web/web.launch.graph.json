@@ -3,7 +3,8 @@
   "generatedAtUtc": "2026-04-01T00:00:00.0000000Z",
   "orderedModIds": [
     "LudotsCoreMod",
-    "CommandSourceCoreFixtureMod"
+    "CommandSourceCoreFixtureMod",
+    "EntryClientSeatMod"
   ],
   "plannedMods": [
     {
@@ -13,6 +14,10 @@
     {
       "id": "CommandSourceCoreFixtureMod",
       "rootPath": "../../../../mods/fixtures/command_source/CommandSourceCoreFixtureMod"
+    },
+    {
+      "id": "EntryClientSeatMod",
+      "rootPath": "../../../../mods/fixtures/entry_seat/EntryClientSeatMod"
     }
   ]
 }

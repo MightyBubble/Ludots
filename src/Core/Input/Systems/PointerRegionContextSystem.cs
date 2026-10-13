@@ -26,7 +26,6 @@ namespace Ludots.Core.Input.Systems
         private readonly InteractionContextProfileRegistry _profiles;
         private readonly List<Entity> _subjects = new();
         private readonly List<string> _contextIds = new();
-        private readonly QueryDescription _contextQuery = new QueryDescription().WithAll<InteractionContextInstance>();
 
         public PointerRegionContextSystem(
             World world,
@@ -114,30 +113,26 @@ namespace Ludots.Core.Input.Systems
                     "POINTER_REGION.ERR.SeatsMissing: ClientLocalSeatRegistry is required while pointer regions are published.");
             }
 
-            if (seats.Count > 0)
+            // An empty seat table does not mean every context subject. Region contexts follow possession.
+            if (seats.Count == 0)
             {
-                IReadOnlyList<string> seatIds = seats.SeatIds;
-                for (int i = 0; i < seatIds.Count; i++)
-                {
-                    ClientLocalSeat seat = seats.Require(seatIds[i]);
-                    if (!seat.HasPossession || !_world.IsAlive(seat.PossessedRep))
-                    {
-                        continue;
-                    }
-
-                    if (_world.Has<InteractionContextInstance>(seat.PossessedRep))
-                    {
-                        _subjects.Add(seat.PossessedRep);
-                    }
-                }
-
                 return;
             }
 
-            _world.Query(in _contextQuery, (Entity entity, ref InteractionContextInstance _) =>
+            IReadOnlyList<string> seatIds = seats.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
             {
-                _subjects.Add(entity);
-            });
+                ClientLocalSeat seat = seats.Require(seatIds[i]);
+                if (!seat.HasPossession || !_world.IsAlive(seat.PossessedRep))
+                {
+                    continue;
+                }
+
+                if (_world.Has<InteractionContextInstance>(seat.PossessedRep))
+                {
+                    _subjects.Add(seat.PossessedRep);
+                }
+            }
         }
 
         private void Activate(string contextId)

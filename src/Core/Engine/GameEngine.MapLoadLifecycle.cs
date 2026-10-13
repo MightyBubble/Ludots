@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
@@ -8,7 +9,10 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
@@ -26,6 +30,9 @@ namespace Ludots.Core.Engine
     {
         private const string MassNavigationMovePlanOrderAdapterInstalledKey =
             "GameEngine.MassNavigationMovePlanOrderAdapterInstalled";
+
+        private static readonly QueryDescription LocalInputConsumingContextQuery =
+            new QueryDescription().WithAny<InteractionContextInstance, InteractionContextInstances>();
 
         public MapSession CurrentMapSession { get; private set; }
 
@@ -645,11 +652,83 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            RequireLocalSeatsWhenMapConsumesLocalInput(session);
+
             ScriptContext finalCtx = CreateMapEventContext(session);
             Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {session.MapId.Value}...");
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
             CaptureFocusedParticipantOverrides(session);
             TryActivateNetworkRuntime();
+        }
+
+        /// <summary>
+        /// Local input is the registered <see cref="PlayerInputHandler"/> (the same gate
+        /// <c>InputRuntimeSystem</c> uses). An authoritative server does not consume it.
+        /// A headless boot has no handler at map load and does not need seats.
+        /// </summary>
+        private void RequireLocalSeatsWhenMapConsumesLocalInput(MapSession session)
+        {
+            if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                return;
+            }
+
+            if (GetService(CoreServiceKeys.InputHandler) is not PlayerInputHandler)
+            {
+                return;
+            }
+
+            if (!MapConsumesLocalInput(session))
+            {
+                return;
+            }
+
+            string mapId = session.MapId.Value;
+            string gameId = MergedConfig?.DefaultCoreMod ?? string.Empty;
+            if (!GlobalContext.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
+                seatsObj is not ClientLocalSeatRegistry seats ||
+                seats.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"LOCAL_INPUT.ERR.SeatsRequired: Map '{mapId}' of game '{gameId}' consumes local input and requires a published local seat with controlSchemeId and a possessed representative.");
+            }
+
+            IReadOnlyList<string> seatIds = seats.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
+            {
+                ClientLocalSeat seat = seats.Require(seatIds[i]);
+                if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                {
+                    throw new InvalidOperationException(
+                        $"LOCAL_INPUT.ERR.SeatScheme: Map '{mapId}' of game '{gameId}' local seat '{seat.SeatId}' requires controlSchemeId.");
+                }
+
+                if (!seat.HasPossession || !World.IsAlive(seat.PossessedRep))
+                {
+                    throw new InvalidOperationException(
+                        $"LOCAL_INPUT.ERR.SeatPossession: Map '{mapId}' of game '{gameId}' local seat '{seat.SeatId}' requires a possessed representative.");
+                }
+            }
+        }
+
+        private bool MapConsumesLocalInput(MapSession session)
+        {
+            if (World.CountEntities(in LocalInputConsumingContextQuery) > 0)
+            {
+                return true;
+            }
+
+            IReadOnlyList<Trigger> triggers = session.Triggers;
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is TriggerGraphMountTrigger mount &&
+                    !string.IsNullOrWhiteSpace(mount.ActionId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void SetSessionParticipants(MapSession session, ParticipantBindingResult participants)
