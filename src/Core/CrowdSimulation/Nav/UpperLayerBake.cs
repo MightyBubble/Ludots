@@ -15,10 +15,10 @@ public sealed class DeckSurface
     /// <summary>含桥面格的 tile 编号,按首次写入序。</summary>
     public required int[] TileOrder { get; init; }
 
-    public static DeckSurface Empty(int cellCount) => new()
+    public static DeckSurface Empty(int cellsPerSide) => new()
     {
-        AreaIndex = new byte[cellCount * cellCount],
-        PortalFlag = new byte[cellCount * cellCount],
+        AreaIndex = new byte[cellsPerSide * cellsPerSide],
+        PortalFlag = new byte[cellsPerSide * cellsPerSide],
         TileOrder = Array.Empty<int>(),
     };
 }
