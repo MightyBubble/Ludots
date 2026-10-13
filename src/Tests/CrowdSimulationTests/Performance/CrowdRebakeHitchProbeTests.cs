@@ -102,7 +102,7 @@ public sealed class CrowdRebakeHitchProbeTests
         Line("done");
     }
 
-    private static void Measure(CrowdSimSession session, string tag, int iter, string op, Action<string> line)
+    private static CrowdRebakeReport Measure(CrowdSimSession session, string tag, int iter, string op, Action<string> line)
     {
         CrowdRebakeProbe.Reset();
         CrowdRebakeProbe.Armed = true;
@@ -136,6 +136,8 @@ public sealed class CrowdRebakeHitchProbeTests
             var note = CrowdRebakeProbe.Notes[i];
             line($"NAV id={note.Id} kind={note.Kind} tiles={note.Tiles} ms={Ms(note.Ticks)}");
         }
+
+        return report;
     }
 
     private static void CountRouteVsMask(CrowdSimSession session, CrowdRebakeReport report, Action<string> line)
@@ -171,7 +173,7 @@ public sealed class CrowdRebakeHitchProbeTests
     private static CrowdRebakeReport Drain(CrowdSimSession session, CrowdRebakeReport? direct)
     {
         if (direct != null) return direct;
-        int rebakes = session.Telemetry.Rebakes;
+        long rebakes = session.Telemetry.Rebakes;
         int guard = 0;
         while (session.Telemetry.Rebakes == rebakes)
         {
