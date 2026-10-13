@@ -38,7 +38,7 @@ public sealed class CrowdRebakeReport
     /// <summary>被挤离阻挡的单位数 / 无处安放计数。</summary>
     public int Evicted { get; set; }
     public int Stuck { get; set; }
-    /// <summary>从阶段 0 到报告发布的 Stopwatch 刻度。不进校验码。</summary>
+    /// <summary>各切片里实际工作的 Stopwatch 刻度之和。切片之间和暂停里的空等不计。不进校验码。</summary>
     public long ElapsedTicks { get; set; }
     /// <summary>受影响导航摘要:逐上下文脏 tile 与类别。</summary>
     public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
@@ -69,7 +69,8 @@ public sealed class CrowdRebakeJob
     public int Stuck { get; set; }
     /// <summary>反应末的流场刷新队列长快照(阶段 1;报告字段在阶段 2 发布,队列已被每 tick 预算排空)。</summary>
     public int Refreshes { get; set; }
-    public long StartedTimestamp { get; set; }
+    /// <summary>阶段 0 与后续切片已经花掉的工作刻度。报告发布时抄进 <see cref="CrowdRebakeReport.ElapsedTicks"/>。</summary>
+    public long WorkTicks { get; set; }
 }
 
 /// <summary>
@@ -148,6 +149,7 @@ public static class CrowdStructureOps
         CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect, byte kind, CrowdStructureFootprint fp)
     {
         FinishRebake(sim);
+        long workStart = Stopwatch.GetTimestamp();
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
         // 无头 BuildSession 不挂规划器。有路径服务时重烘必须进它的互斥域。
@@ -181,7 +183,7 @@ public static class CrowdStructureOps
         job.Evicted = 0;
         job.Stuck = 0;
         job.Refreshes = 0;
-        job.StartedTimestamp = Stopwatch.GetTimestamp();
+        job.WorkTicks = Stopwatch.GetTimestamp() - workStart;
         sim.RebakeJob = job;
         if (sim.RebakeSliceCount > 1) return null;
         FinishRebake(sim);
@@ -219,6 +221,7 @@ public static class CrowdStructureOps
     /// <summary>阶段 1:队伍反应(重规划清单 + 流场刷新)、唤醒变更附近休眠单位、挤离新阻挡。</summary>
     private static void StageReaction(CrowdSimSession sim, CrowdRebakeJob job)
     {
+        long workStart = Stopwatch.GetTimestamp();
         if (sim.Planner is { } planner)
         {
             var built = planner.ReactRebake(job.ContextResults);
@@ -230,11 +233,13 @@ public static class CrowdStructureOps
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
         job.Stuck = sim.EvictStuck;
+        job.WorkTicks += Stopwatch.GetTimestamp() - workStart;
     }
 
     /// <summary>阶段 2:受影响指令重规划(固定生效帧)+ 发布报告。</summary>
     private static void StagePublish(CrowdSimSession sim, CrowdRebakeJob job)
     {
+        long workStart = Stopwatch.GetTimestamp();
         if (sim.Planner is { } planner && job.Orders.Count > 0)
         {
             planner.Plan(job.Orders, sim.TickCount);
@@ -254,7 +259,6 @@ public static class CrowdStructureOps
         report.Refreshes = job.Refreshes;
         report.Evicted = job.Evicted;
         report.Stuck = job.Stuck;
-        report.ElapsedTicks = Stopwatch.GetTimestamp() - job.StartedTimestamp;
         report.Bbox = bbox;
         int union = 0;
         var seen = sim.RebakeUnionSeen;
@@ -286,6 +290,8 @@ public static class CrowdStructureOps
             unionTiles[j + 1] = value;
         }
         report.Tiles = union;
+        job.WorkTicks += Stopwatch.GetTimestamp() - workStart;
+        report.ElapsedTicks = job.WorkTicks;
         sim.LastRebakeReport = report;
         sim.NotifyRebake(report);
     }

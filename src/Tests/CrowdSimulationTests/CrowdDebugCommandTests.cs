@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -132,6 +134,31 @@ public sealed class CrowdDebugCommandTests
         Assert.That(session.LastRebakeReport!.ElapsedTicks, Is.GreaterThan(0));
         session.Reset();
         Assert.That(session.RebakeSliceCount, Is.EqualTo(session.Config.Planning.RebakeSlices));
+    }
+
+    [Test]
+    public void RebakeSlices_IdleBetweenSteps_IsNotWorkTime()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        Submit(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.RebakeSlices, Slices = 3 });
+        Submit(session, Place("building", 480000, 560000, 14000));
+        Assert.That(session.RebakeJob, Is.Not.Null);
+        var clock = Stopwatch.StartNew();
+        int sleeps = 0;
+        while (session.RebakeJob != null)
+        {
+            Thread.Sleep(300);
+            sleeps++;
+            Assert.That(session.Step(out _), Is.True);
+            Assert.That(sleeps, Is.LessThan(8));
+        }
+
+        clock.Stop();
+        double workMs = session.LastRebakeReport!.ElapsedTicks * 1000.0 / Stopwatch.Frequency;
+        TestContext.Out.WriteLine($"rebake workMs={workMs:0.###} wallMs={clock.Elapsed.TotalMilliseconds:0.###} sleeps={sleeps}");
+        Assert.That(sleeps, Is.GreaterThanOrEqualTo(2));
+        Assert.That(workMs, Is.GreaterThan(0));
+        Assert.That(workMs * 4, Is.LessThan(clock.Elapsed.TotalMilliseconds));
     }
 
     [Test]
