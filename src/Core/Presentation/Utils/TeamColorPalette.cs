@@ -6,8 +6,8 @@ namespace Ludots.Core.Presentation.Utils
 {
     /// <summary>
     /// 玩家调色板:按 PlayerId(1 基)取色的呈现层数据。由场景宿主按地图/配置注册成服务
-    /// (CoreServiceKeys.TeamColorPalette),PresenterBehaviorSystem 的 EntityColor/EntityColorVector
-    /// 车道优先读它;未注册时回退 TeamColorResolver 的双色行为,旧场景零影响。
+    /// (CoreServiceKeys.TeamColorPalette)。PresenterBehaviorSystem 的 EntityColor / EntityColorVector
+    /// 先读这份调色板；未注册时回退 TeamColorResolver 的双色。
     /// </summary>
     public sealed class TeamColorPalette
     {

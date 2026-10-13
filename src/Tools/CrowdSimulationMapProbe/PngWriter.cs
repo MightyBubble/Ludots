@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CrowdSimulationMapProbe;
 
-/// <summary>最小 PNG 编码（8-bit RGB，zlib stored blocks，无外部依赖）。</summary>
+/// <summary>8-bit RGB。IDAT 用 ZLibStream、CompressionLevel.Optimal（deflate），无外部包。</summary>
 public static class PngWriter
 {
     public static void Write(string path, int width, int height, byte[] rgb)
@@ -27,7 +27,7 @@ public static class PngWriter
         ihdr[8] = 8; // bit depth
         ihdr[9] = 2; // color type RGB
         WriteChunk(stream, "IHDR", ihdr);
-        // IDAT: zlib stream with stored blocks
+        // IDAT: ZLibStream deflate（CompressionLevel.Optimal）
         WriteChunk(stream, "IDAT", ZlibStore(raw));
         WriteChunk(stream, "IEND", Array.Empty<byte>());
     }
