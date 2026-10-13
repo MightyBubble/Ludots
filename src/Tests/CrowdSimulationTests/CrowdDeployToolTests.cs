@@ -1,5 +1,6 @@
 using System.Linq;
 using Ludots.Core.Client;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
@@ -228,7 +229,7 @@ public sealed class CrowdDeployToolTests
                     CycleView = "a", ToggleBuild = "b", Remove = "c", Place = "d",
                     ToolOff = "e", ToolBoom = "f", ToolSpawn = "g", ToolStructure = "h", ToolDemolish = "i",
                     Deploy = "j", Scatter = "k", Stress = "l", ClearCaches = "m",
-                    AvoidDown = "n", AvoidUp = "o", Pause = "p", SpeedDown = "q", SpeedUp = "r",
+                    AvoidDown = "n", AvoidUp = "o", SliceDown = "s", SliceUp = "u", Pause = "p", SpeedDown = "q", SpeedUp = "r",
                 },
                 BuildActivity = "建造 · {label}{placeHint}",
                 ObserveActivity = "观察",
@@ -273,6 +274,42 @@ public sealed class CrowdDeployToolTests
         Assert.That(after, Does.Contain("可通行"));
         Assert.That(after, Does.Contain("耗时"));
         Assert.That(after, Does.Contain("左键 建筑"));
+        Assert.That(after, Does.Contain("切片"));
+    }
+
+    [Test]
+    public void SliceKeys_SubmitRebakeSlicesWithinMax()
+    {
+        using var host = Open(seat: false, movement: false);
+        var session = host.Session;
+        int max = CrowdSimulationConfigValidator.MaxRebakeSlices;
+        int start = session.RebakeSliceCount;
+        Assert.That(start, Is.InRange(1, max));
+        host.Demo.EnqueueSlices(1);
+        host.Demo.Tick();
+        if (start == max)
+        {
+            Assert.That(session.Commands.Log, Is.Empty);
+            Assert.That(session.RebakeSliceCount, Is.EqualTo(max));
+        }
+
+        for (int i = 0; i < max + 2; i++)
+        {
+            host.Demo.EnqueueSlices(-1);
+            host.Demo.Tick();
+        }
+
+        Assert.That(session.RebakeSliceCount, Is.EqualTo(1));
+        int logged = session.Commands.Log.Count;
+        host.Demo.EnqueueSlices(-1);
+        host.Demo.Tick();
+        Assert.That(session.RebakeSliceCount, Is.EqualTo(1));
+        Assert.That(session.Commands.Log, Has.Count.EqualTo(logged));
+        host.Demo.EnqueueSlices(1);
+        host.Demo.Tick();
+        Assert.That(session.RebakeSliceCount, Is.EqualTo(2));
+        Assert.That(Last(session).Kind, Is.EqualTo(CrowdSimCommandKind.RebakeSlices));
+        Assert.That(Last(session).Slices, Is.EqualTo(2));
     }
 
     private static void AssertPlaced(CrowdSimSession session, string template, int x, int y, int toX, int toY, int size)

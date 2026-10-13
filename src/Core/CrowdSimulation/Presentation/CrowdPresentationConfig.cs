@@ -126,6 +126,8 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.Actions.ClearCaches, "deploy.actions.clearCaches");
         RequireText(deploy.Actions.AvoidDown, "deploy.actions.avoidDown");
         RequireText(deploy.Actions.AvoidUp, "deploy.actions.avoidUp");
+        RequireText(deploy.Actions.SliceDown, "deploy.actions.sliceDown");
+        RequireText(deploy.Actions.SliceUp, "deploy.actions.sliceUp");
         RequireText(deploy.Actions.Pause, "deploy.actions.pause");
         RequireText(deploy.Actions.SpeedDown, "deploy.actions.speedDown");
         RequireText(deploy.Actions.SpeedUp, "deploy.actions.speedUp");
@@ -256,6 +258,8 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string ClearCaches { get; set; } = string.Empty;
     [JsonRequired] public string AvoidDown { get; set; } = string.Empty;
     [JsonRequired] public string AvoidUp { get; set; } = string.Empty;
+    [JsonRequired] public string SliceDown { get; set; } = string.Empty;
+    [JsonRequired] public string SliceUp { get; set; } = string.Empty;
     [JsonRequired] public string Pause { get; set; } = string.Empty;
     [JsonRequired] public string SpeedDown { get; set; } = string.Empty;
     [JsonRequired] public string SpeedUp { get; set; } = string.Empty;

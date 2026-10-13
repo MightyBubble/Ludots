@@ -20,6 +20,8 @@
     { "id": "CrowdSimulation.S4.ClearCaches", "name": "CrowdSimulation_S4_ClearCaches", "type": "Button" },
     { "id": "CrowdSimulation.S4.AvoidDown", "name": "CrowdSimulation_S4_AvoidDown", "type": "Button" },
     { "id": "CrowdSimulation.S4.AvoidUp", "name": "CrowdSimulation_S4_AvoidUp", "type": "Button" },
+    { "id": "CrowdSimulation.S4.SliceDown", "name": "CrowdSimulation_S4_SliceDown", "type": "Button" },
+    { "id": "CrowdSimulation.S4.SliceUp", "name": "CrowdSimulation_S4_SliceUp", "type": "Button" },
     { "id": "CrowdSimulation.S4.Pause", "name": "CrowdSimulation_S4_Pause", "type": "Button" },
     { "id": "CrowdSimulation.S4.SpeedDown", "name": "CrowdSimulation_S4_SpeedDown", "type": "Button" },
     { "id": "CrowdSimulation.S4.SpeedUp", "name": "CrowdSimulation_S4_SpeedUp", "type": "Button" },
@@ -51,6 +53,8 @@
         { "actionId": "CrowdSimulation.S4.ClearCaches", "path": "<Keyboard>/t" },
         { "actionId": "CrowdSimulation.S4.AvoidDown", "path": "<Keyboard>/minus" },
         { "actionId": "CrowdSimulation.S4.AvoidUp", "path": "<Keyboard>/equal" },
+        { "actionId": "CrowdSimulation.S4.SliceDown", "path": "<Keyboard>/q" },
+        { "actionId": "CrowdSimulation.S4.SliceUp", "path": "<Keyboard>/e" },
         { "actionId": "CrowdSimulation.S4.Pause", "path": "<Keyboard>/p" },
         { "actionId": "CrowdSimulation.S4.SpeedDown", "path": "<Keyboard>/pageDown" },
         { "actionId": "CrowdSimulation.S4.SpeedUp", "path": "<Keyboard>/pageUp" }

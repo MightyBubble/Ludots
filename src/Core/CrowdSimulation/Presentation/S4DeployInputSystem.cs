@@ -56,6 +56,8 @@ internal sealed class S4DeployInputSystem : ISystem<float>
         if (actions.PressedThisTick(_bindings.ClearCaches)) _demo.EnqueueClearCaches();
         if (actions.PressedThisTick(_bindings.AvoidDown)) _demo.EnqueueAvoid(-1);
         if (actions.PressedThisTick(_bindings.AvoidUp)) _demo.EnqueueAvoid(1);
+        if (actions.PressedThisTick(_bindings.SliceDown)) _demo.EnqueueSlices(-1);
+        if (actions.PressedThisTick(_bindings.SliceUp)) _demo.EnqueueSlices(1);
         if (actions.PressedThisTick(_bindings.Pause)) _demo.EnqueuePause();
         if (actions.PressedThisTick(_bindings.SpeedDown)) _demo.EnqueueSpeed(-1);
         if (actions.PressedThisTick(_bindings.SpeedUp)) _demo.EnqueueSpeed(1);
@@ -95,6 +97,8 @@ internal sealed class CrowdDeployBindings
     public required string ClearCaches { get; init; }
     public required string AvoidDown { get; init; }
     public required string AvoidUp { get; init; }
+    public required string SliceDown { get; init; }
+    public required string SliceUp { get; init; }
     public required string Pause { get; init; }
     public required string SpeedDown { get; init; }
     public required string SpeedUp { get; init; }

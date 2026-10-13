@@ -168,6 +168,8 @@ public sealed partial class CrowdSimulationRuntime
             ClearCaches = deploy.Actions.ClearCaches,
             AvoidDown = deploy.Actions.AvoidDown,
             AvoidUp = deploy.Actions.AvoidUp,
+            SliceDown = deploy.Actions.SliceDown,
+            SliceUp = deploy.Actions.SliceUp,
             Pause = deploy.Actions.Pause,
             SpeedDown = deploy.Actions.SpeedDown,
             SpeedUp = deploy.Actions.SpeedUp,

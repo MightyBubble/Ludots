@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Client;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
@@ -22,7 +23,7 @@ public enum CrowdClickTool : byte
 
 /// <summary>
 /// S4 部署演示交互运行时。视图、点击工具和播放态在仿真 tick 边界消费。
-/// 爆炸、生成、放置、拆除、部署、散开、满容量、清缓存和避让频率只提交群体指令。
+    /// 爆炸、生成、放置、拆除、部署、散开、满容量、清缓存、避让频率和重烘切片数只提交群体指令。
 /// 暂停只挡住 tick 推进。倍速是 Simulation 域的时间缩放令牌。
 /// 首条现场指令进入会话后停用本次激活的自动回放。
 /// </summary>
@@ -197,6 +198,7 @@ public sealed class S4DeployDemoRuntime
         SubmitInteractive(new CrowdSimCommand { Kind = CrowdSimCommandKind.ClearCaches });
     });
     public void EnqueueAvoid(int direction) => Enqueue(() => StepAvoid(direction));
+    public void EnqueueSlices(int direction) => Enqueue(() => StepSlices(direction));
     public void EnqueuePause() => Enqueue(() =>
     {
         PlaybackHeld = !PlaybackHeld;
@@ -311,6 +313,19 @@ public sealed class S4DeployDemoRuntime
             Kind = CrowdSimCommandKind.Rates,
             TickHz = session.Config.FixedHz,
             AvoidHz = next,
+        });
+    }
+
+    private void StepSlices(int direction)
+    {
+        if (direction == 0) return;
+        if (!TrySession(out CrowdSimSession session)) return;
+        int next = session.RebakeSliceCount + direction;
+        if (next < 1 || next > CrowdSimulationConfigValidator.MaxRebakeSlices) return;
+        SubmitInteractive(new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.RebakeSlices,
+            Slices = next,
         });
     }
 
