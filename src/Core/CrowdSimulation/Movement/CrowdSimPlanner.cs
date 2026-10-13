@@ -762,6 +762,8 @@ public sealed class CrowdSimPlanner
         int n = result.PointCount;
         if (points == null) return path;
         for (int i = 0; i + 1 < n; i += 2) path.Add(new Fix64Vec2(points[i] * navCellCm, points[i + 1] * navCellCm));
+        // 起终点落在同一点时漏斗只留下起点。领队用一段零长度走到同一点，这一步报到达。
+        if (path.Count == 1) path.Add(path[0]);
         return path;
     }
 
