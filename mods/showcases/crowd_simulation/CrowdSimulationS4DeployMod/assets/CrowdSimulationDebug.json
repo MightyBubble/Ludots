@@ -164,7 +164,7 @@
       "originYPx": 16,
       "widthPx": 1880,
       "heightPx": 176,
-      "keys": "N 关闭 · K 爆炸 · G 生成 · H 建筑 · J 拆除 · F 部署 · R 散开 · Y 满员 · T 清缓存 · -/= 避让 · Q/E 切片 · P 暂停 · PgUp/PgDn 倍速 · V 视图 {view} · B 建造 · X 拆除 · 1-5 模板[{templateIndex}] · 左键 {tool} · {activity}{pending}"
+      "keys": "N 关闭 · K 爆炸 · G 生成 · H 建筑 · J 拆除 · F 部署 · R 散开 · Y 满员 · T 清缓存 · -/= 避让 · Q/E 切片 · P 暂停 · PgUp/PgDn 倍速 · V 视图 {view} · B 建造 · X 拆除 · 1-5 模板[{templateIndex}] · F9 导航 · F10 遥测 · F12 路径故障 · 左键 {tool} · {activity}{pending}"
   },
   "fogDecal": {
     "unseen": [0, 0, 0, 255],
