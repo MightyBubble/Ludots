@@ -332,6 +332,11 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **对拍(导出器 S7-b 块 + `S7FogTruthTests`,360 tick × 120 单位,种子 1337,迷雾开启口径——不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)**:脚本 = 部署 → 行军 → 未知建筑(t5 放置初始视盘外,t24 发现,发现前后认知槽 1→0)→ 拆除残影(t90 slot2,t96 再见遗忘)→ reveal/obscure/forget → fogShare 并组(t230)→ fogTerrain 开关对照(t260/t330)。**迷雾 digest 逐位硬门**(s7fog.bin 每组每 tick visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev + 全局槽账 seq/switches/entry/dormant/beliefCount——整数集合态无带宽;认知变体的内容一致性由槽字段唯一决定 + 结构 op 报告逐字段 + 轨迹背书)。实测:digest 全程逐位、ops 2 笔全字段、轨迹 p50=0.08/p99=0.45cm;到达判定骑线使末段停车晚 1–9 tick——状态翻转 99 处全为 Moving↔Arrived 到达对(非到达翻转零容忍),末态带 5000(实测 3491);contacts 对齐门 0.5% + ±3(实测 0.147%,直方 [±1:57,±2:3,±3:3],到达时多邻骑线)。**truth 冻结口径**:会话属性 TruthNavFrozen(同参考端 __S7_TRUTH_NAV__ 导出补丁语义)——S5/S7 既有测试置位,旧真值原样全等(逐字节);S4 纯部署会话不建迷雾。
 - **真机**:S4Deploy 演示脚本追加迷雾命令(reveal/obscure/forget/fogTerrain 对照,12000 单位按认知改道,autoReplay 回放对称);玩家 1 视野组的可见、探索、残影计数在迷雾刷新时维护,调试展开的 HUD 按下标读取;会话累计(重烘、迷雾刷新、等路、规划)在 `CrowdSimulationTelemetry`。乐观开关仍是迷雾状态本身。FogViewGroup 口径(-1 = 全知 debug 视图默认,键切玩家视角,S7 spec 两观察范围并存)与 View(g) 查询面交给迷雾渲染底座绘制——本单不做渲染。
 - **范围边界记档**:LOS 开启(fogSight)的 sight 采样为 C# 双精度域,不是对拍口径(真值场景 LOS 关);sharesFlow 的跨槽流场共享统计(beliefFlowShares)不进对拍(判定已在,统计无对拍面);认知槽的 sleep 在全拷贝变体下为显式免操作(容量由淘汰保证)。
+
+## 不变量抽查
+
+`ValidateSim` 查两件事：单位没有停在阻挡格上，以及每个已经带着流场的导航组都有领队。地面单位对的是结构仓里那份活阻挡栅格，还有该单位自己那层导航的可通行格；站在桥面上的单位对的是桥面层 `UpPass`。`ValidateNav` 把增量导航和同一份地表重新全量烘焙的结果对一遍，用的是 `CrowdNavRebake.VerifyAgainstFullBake`。两道检查默认关闭。在 `CrowdSimulationDebug.json` 里把 `session.validateEveryNTicks` 写成正整数，会话每走过这么多 tick 跑一次。不写这个字段，或者写 0，步进不扫描，也不分配。
+
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
