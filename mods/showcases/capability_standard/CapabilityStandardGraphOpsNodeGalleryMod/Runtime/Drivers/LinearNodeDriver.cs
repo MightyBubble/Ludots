@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
-using Ludots.Core.Input.AimSource;
+using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.PointerSample;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Persistence;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -42,7 +47,171 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             SeedPinnedLivePointer(ctx);
         }
 
+        SeedPrefStage(ctx);
+        SeedFacing(ctx);
         GraphOpsNodeActorBinding.BindHud(ctx);
+    }
+
+    private const string GalleryPrefKey = "pref.gallery.sample";
+    private const string GalleryPrefValue = "interaction.context.gallery.pref";
+    private const string GalleryParentContext = "interaction.context.gallery.aim";
+    private const string GalleryRangedAbilityId = "Ability.GraphOps.CastRange";
+
+    private static void SeedFacing(GraphOpsNodeDriverContext ctx)
+    {
+        if (!string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.LoadEntityFacing), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Entity actor = ctx.Target;
+        if (actor == Entity.Null || !ctx.SimWorld.IsAlive(actor))
+        {
+            throw new InvalidOperationException("Gallery LoadEntityFacing requires a live target actor.");
+        }
+
+        var facing = new FacingDirection { AngleRad = MathF.PI / 2f };
+        if (ctx.SimWorld.Has<FacingDirection>(actor))
+        {
+            ctx.SimWorld.Set(actor, facing);
+        }
+        else
+        {
+            ctx.SimWorld.Add(actor, facing);
+        }
+    }
+
+    private static void SeedPrefStage(GraphOpsNodeDriverContext ctx)
+    {
+        string op = ctx.Vignette.Op;
+        bool isPref = string.Equals(op, nameof(GraphNodeOp.IsPref), StringComparison.Ordinal);
+        bool setPref = string.Equals(op, nameof(GraphNodeOp.SetPref), StringComparison.Ordinal);
+        bool activate = string.Equals(op, nameof(GraphNodeOp.ActivateContextFromPref), StringComparison.Ordinal);
+        bool deactivate = string.Equals(op, nameof(GraphNodeOp.DeactivateOwnContext), StringComparison.Ordinal);
+        bool loadRange = string.Equals(op, nameof(GraphNodeOp.LoadAbilityCastRange), StringComparison.Ordinal);
+        bool loadSlot = string.Equals(op, nameof(GraphNodeOp.LoadSlotAbilityId), StringComparison.Ordinal);
+        if (!isPref && !setPref && !activate && !deactivate && !loadRange && !loadSlot)
+        {
+            return;
+        }
+
+        Entity actor = ctx.Target;
+        if (actor == Entity.Null || !ctx.SimWorld.IsAlive(actor))
+        {
+            throw new InvalidOperationException($"Gallery '{op}' requires a live target actor.");
+        }
+
+        if (isPref || setPref || activate)
+        {
+            var pref = default(InteractionPref);
+            pref.SetPlayerDefault(1, 1);
+            if (isPref || activate)
+            {
+                (int keyId, int valueId) = RequireGalleryPref(ctx, GalleryPrefValue);
+                pref.SetPlayerPref(keyId, valueId);
+            }
+
+            if (ctx.SimWorld.Has<InteractionPref>(actor))
+            {
+                ctx.SimWorld.Set(actor, pref);
+            }
+            else
+            {
+                ctx.SimWorld.Add(actor, pref);
+            }
+        }
+
+        if (activate)
+        {
+            InteractionContextInstanceRuntime contexts = RequireContexts(ctx);
+            int parentKey = ConfigKeyRegistry.Register(GalleryParentContext);
+            contexts.Activate(actor, parentKey, parentContextKeyId: 0);
+        }
+
+        if (deactivate)
+        {
+            InteractionContextInstanceRuntime contexts = RequireContexts(ctx);
+            if (!contexts.IsInstalledProfile(GalleryPrefValue))
+            {
+                throw new InvalidOperationException(
+                    $"Gallery DeactivateOwnContext requires installed context '{GalleryPrefValue}'.");
+            }
+
+            int profileId = RequireProfiles(ctx).ProfileIdRegistry.GetId(GalleryPrefValue);
+            int contextKey = ConfigKeyRegistry.Register(GalleryPrefValue);
+            contexts.Activate(actor, contextKey, parentContextKeyId: 0);
+            ctx.Api.PushContextMount(actor, profileId);
+        }
+
+        if (isPref || activate || loadRange || loadSlot)
+        {
+            SeedRangedAbilitySlot(ctx, actor);
+        }
+    }
+
+    private static (int KeyId, int ValueId) RequireGalleryPref(GraphOpsNodeDriverContext ctx, string valueName)
+    {
+        if (ctx.Globals == null
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.InteractionPrefCatalog.Name, out object? raw)
+            || raw is not InteractionPrefCatalog catalog)
+        {
+            throw new InvalidOperationException("Gallery preference stage requires InteractionPrefCatalog.");
+        }
+
+        int keyId = catalog.Keys.GetId(GalleryPrefKey);
+        int valueId = catalog.Values.GetId(valueName);
+        if (keyId == catalog.Keys.InvalidId || valueId == catalog.Values.InvalidId || !catalog.Allows(keyId, valueId))
+        {
+            throw new InvalidOperationException(
+                $"Gallery preference key '{GalleryPrefKey}' does not allow value '{valueName}'.");
+        }
+
+        return (keyId, valueId);
+    }
+
+    private static InteractionContextInstanceRuntime RequireContexts(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Globals == null
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.InteractionContextInstances.Name, out object? raw)
+            || raw is not InteractionContextInstanceRuntime contexts)
+        {
+            throw new InvalidOperationException("Gallery preference stage requires InteractionContextInstances.");
+        }
+
+        return contexts;
+    }
+
+    private static InteractionContextProfileRegistry RequireProfiles(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Globals == null
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out object? raw)
+            || raw is not InteractionContextProfileRegistry profiles)
+        {
+            throw new InvalidOperationException("Gallery preference stage requires InteractionContextProfileRegistry.");
+        }
+
+        return profiles;
+    }
+
+    private static void SeedRangedAbilitySlot(GraphOpsNodeDriverContext ctx, Entity actor)
+    {
+        int abilityId = AbilityIdRegistry.GetId(GalleryRangedAbilityId);
+        if (abilityId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Gallery ranged ability '{GalleryRangedAbilityId}' is not installed.");
+        }
+
+        if (!ctx.SimWorld.Has<AbilityStateBuffer>(actor))
+        {
+            ctx.SimWorld.Add(actor, new AbilityStateBuffer());
+        }
+
+        ref AbilityStateBuffer slots = ref ctx.SimWorld.Get<AbilityStateBuffer>(actor);
+        if (slots.Count == 0)
+        {
+            slots.AddAbility(abilityId);
+        }
     }
 
     private static bool IsLivePointerOp(string op) =>
@@ -55,14 +224,8 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = new FixedPointerActionReader(
                 new Vector2(PinnedPointerPx, PinnedPointerPx)),
-            [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-            {
-                ConfirmActionId = "GraphOpsGallery.Confirm",
-                CommandActionId = "GraphOpsGallery.Command",
-                CancelActionId = "GraphOpsGallery.Cancel",
-            },
         };
-        ctx.Api.BindAimSource(new GraphAimSourceRuntime(ctx.SimWorld, globals));
+        ctx.Api.BindPointerSample(new GraphPointerSampleRuntime(ctx.SimWorld, globals));
     }
 
     private sealed class FixedPointerActionReader : IInputActionReader
@@ -82,9 +245,23 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             return default;
         }
 
+        public bool TryReadPresentVector2(string actionId, out Vector2 value)
+        {
+            value = default;
+            if (!string.Equals(actionId, ReservedInputActionIds.PointerPos, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            value = _pointer;
+            return true;
+        }
+
         public bool IsDown(string actionId) => false;
         public bool PressedThisFrame(string actionId) => false;
         public bool ReleasedThisFrame(string actionId) => false;
+        public void CopyBindingIntFires(string actionId, List<InputBindingIntFire> destination) =>
+            destination?.Clear();
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)

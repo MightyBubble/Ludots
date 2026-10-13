@@ -34,8 +34,9 @@ namespace Ludots.Tests.GAS.Production
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "PerformanceVisualizationMod"),
+                Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
             };
-            engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             var uiRoot = new Ludots.UI.UIRoot(new Ludots.UI.Skia.SkiaUiRenderer());
             uiRoot.Resize(1920f, 1080f);
             engine.SetService(CoreServiceKeys.UIRoot, uiRoot);

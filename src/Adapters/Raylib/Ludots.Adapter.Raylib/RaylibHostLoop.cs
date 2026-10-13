@@ -52,6 +52,7 @@ using Rl = Raylib_cs.Raylib;
 using SkiaSharp;
 using Ludots.Raylib.Render;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -2718,7 +2719,7 @@ namespace Ludots.Adapter.Raylib
             string hoveredSummary = "hovered=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out Entity debugOwner, out EntityCollectionStore debugCollections) &&
                 engine.TryGetService(CoreServiceKeys.InputCollectionKeys, out Ludots.Core.Input.Config.InputCollectionKeyDeclarations inputKeys) &&
-                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, inputKeys.Hover, out Entity hovered) &&
+                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, inputKeys.RequireRole("hover"), out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";
@@ -2732,7 +2733,7 @@ namespace Ludots.Adapter.Raylib
                         engine.World,
                         debugCollections,
                         debugOwner,
-                        "collection.command.source",
+                        InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                         out Entity commandSource) &&
                     commandSource != Entity.Null)
                 {

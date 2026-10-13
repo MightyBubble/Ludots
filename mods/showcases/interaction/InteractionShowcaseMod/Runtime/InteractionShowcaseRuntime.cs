@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.Systems;
+using EntityCommandPanelMod.Runtime;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using InteractionShowcaseMod.Input;
@@ -21,6 +21,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
+using Ludots.Core.Input.Config;
 
 namespace InteractionShowcaseMod.Runtime
 {
@@ -33,7 +34,6 @@ namespace InteractionShowcaseMod.Runtime
 
         private readonly InteractionShowcasePanelController _panelController;
         private bool _inputContextActive;
-        private bool _showcaseHudSuppressed;
         private int _visibleUatFrame;
         private Entity[] _blinkActorsScratch = new Entity[8];
         private Entity[] _blinkSelectedScratch = new Entity[8];
@@ -60,9 +60,8 @@ namespace InteractionShowcaseMod.Runtime
             if (showcaseActive)
             {
                 _visibleUatFrame = 0;
+                EntityCommandPanelToolbarCatalog.Require(engine);
                 ActivateInputContext(input);
-                EnsureDefaultShowcaseMode(engine);
-                SuppressNonEssentialHud(engine);
                 List<PossessedShowcaseRep> possessedReps = RequireShowcasePossessedReps(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!, possessedReps);
                 EnsureShowcaseCommandSourceView(engine, possessedReps);
@@ -80,7 +79,6 @@ namespace InteractionShowcaseMod.Runtime
             else
             {
                 CloseEntityInfoPanels(context);
-                RestoreSuppressedHud(engine);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -103,7 +101,6 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             CloseEntityInfoPanels(context);
-            RestoreSuppressedHud(engine);
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
             return Task.CompletedTask;
@@ -160,10 +157,12 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
-            string targetScheme = _visibleUatFrame >= 90
-                ? "scheme.wasd_move"
-                : "scheme.default";
-            if (schemes.SchemeIdRegistry.TryGetId(targetScheme, out int schemeId) &&
+            if (_visibleUatFrame < 90)
+            {
+                return;
+            }
+
+            if (schemes.SchemeIdRegistry.TryGetId("scheme.wasd_move", out int schemeId) &&
                 schemes.ActiveSchemeId != schemeId)
             {
                 schemes.TrySwitch(schemeId);
@@ -177,7 +176,7 @@ namespace InteractionShowcaseMod.Runtime
                 throw new InvalidOperationException("Interaction blink evidence requires EntityCollectionStore and a live local player entity.");
             }
 
-            int actorCount = CopyCommandSourceActors(collections, viewer);
+            int actorCount = CopyCommandSourceActors(engine, collections, viewer);
             if (actorCount <= 0)
             {
                 throw new InvalidOperationException("Interaction blink evidence requires a non-empty command-source collection.");
@@ -222,15 +221,16 @@ namespace InteractionShowcaseMod.Runtime
                 viewer);
         }
 
-        private int CopyCommandSourceActors(EntityCollectionStore collections, Entity viewer)
+        private int CopyCommandSourceActors(GameEngine engine, EntityCollectionStore collections, Entity viewer)
         {
-            if (!collections.TryGetView(viewer, "collection.command.source", out EntityCollectionView view))
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
+            if (!collections.TryGetView(viewer, commandSourceKey, out EntityCollectionView view))
             {
                 return 0;
             }
 
             EnsureScratchCapacity(ref _blinkActorsScratch, view.Count);
-            int copied = collections.CopyEntities(viewer, "collection.command.source", _blinkActorsScratch.AsSpan(0, view.Count));
+            int copied = collections.CopyEntities(viewer, commandSourceKey, _blinkActorsScratch.AsSpan(0, view.Count));
             if (copied != view.Count)
             {
                 throw new InvalidOperationException(
@@ -291,7 +291,7 @@ namespace InteractionShowcaseMod.Runtime
             Entity[] current = EntityCollectionContextRuntime.Snapshot(
                 engine.GlobalContext,
                 viewer,
-                "collection.command.source");
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             if (current.Length <= 0)
             {
                 return false;
@@ -327,7 +327,7 @@ namespace InteractionShowcaseMod.Runtime
         {
             engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 0;
             return TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) &&
-                   collections.TryGetView(viewer, "collection.command.source", out EntityCollectionView view) &&
+                   collections.TryGetView(viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view) &&
                    view.Count > 0;
         }
 
@@ -485,7 +485,7 @@ namespace InteractionShowcaseMod.Runtime
                 new EntityInfoPanelRequest(
                     EntityInfoPanelKind.EntityCollectionInspector,
                     EntityInfoPanelSurface.Ui,
-                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, "collection.command.source"),
+                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource")),
                     new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 632f, 332f),
                     EntityInfoGasDetailFlags.None,
                     true));
@@ -550,7 +550,7 @@ namespace InteractionShowcaseMod.Runtime
                     engine.World,
                     collections,
                     commandSourceOwner,
-                    "collection.command.source",
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                     out Arch.Core.Entity selected))
             {
                 return null;
@@ -654,36 +654,6 @@ namespace InteractionShowcaseMod.Runtime
                    suppress;
         }
 
-        private static void EnsureDefaultShowcaseMode(GameEngine engine)
-        {
-            if (!InteractionShowcaseIds.IsShowcaseMode(InteractionShowCastModes.GetActive(engine)))
-            {
-                InteractionShowCastModes.TrySetActive(engine, InteractionShowcaseIds.LolModeId);
-            }
-        }
-
-        private void SuppressNonEssentialHud(GameEngine engine)
-        {
-            if (_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
-            _showcaseHudSuppressed = true;
-        }
-
-        private void RestoreSuppressedHud(GameEngine engine)
-        {
-            if (!_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
-            _showcaseHudSuppressed = false;
-        }
-
         private static void EnsureShowcaseInputSchema(PlayerInputHandler input)
         {
             if (!input.HasContext(InteractionShowcaseInputContexts.Showcase))
@@ -693,18 +663,10 @@ namespace InteractionShowcaseMod.Runtime
 
             string[] requiredActions =
             {
-                "SkillQ",
-                "SkillW",
-                "SkillE",
-                "SkillR",
                 "SkillZ",
                 "SkillF",
                 "ActionAttack",
                 "RuneBurst",
-                InteractionShowcaseIds.WowModeActionId,
-                InteractionShowcaseIds.LolModeActionId,
-                InteractionShowcaseIds.Sc2ModeActionId,
-                InteractionShowcaseIds.IndicatorModeActionId,
                 InteractionShowcaseIds.ActionModeActionId,
                 InteractionShowcaseIds.SelectionGroupRecall1ActionId,
                 InteractionShowcaseIds.SelectionGroupRecall2ActionId,
@@ -824,7 +786,7 @@ namespace InteractionShowcaseMod.Runtime
             AddInitialCommandActor(engine, InteractionShowcaseIds.CommanderName, initialCommandActors, ref count);
             if (count > 0)
             {
-                if (!collections.TryGetView(viewer, "collection.command.source", out EntityCollectionView commandView) ||
+                if (!collections.TryGetView(viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView commandView) ||
                     commandView.Count <= 0)
                 {
                     PublishShowcaseCommandSource(engine, viewer, initialCommandActors[..count]);
@@ -853,14 +815,14 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
                 primaryEntity: actors[0],
                 title: "Active hero command group",
                 summary: "The showcase starts with these heroes ready for pointer commands.");
-            applier.ApplyDescriptor(owner, collections.KeyRegistry.Register("collection.command.source"), in descriptor, actors, writerDomain: owner);
+            applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource")), in descriptor, actors, writerDomain: owner);
         }
 
         private static void TrySeedHoverTargetForVisibleUat(GameEngine engine, Entity owner, ReadOnlySpan<Entity> actors)
@@ -888,7 +850,7 @@ namespace InteractionShowcaseMod.Runtime
         {
             if (!string.Equals(Environment.GetEnvironmentVariable("LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET"), "1", StringComparison.Ordinal) ||
                 !TryResolveCollectionContext(engine, out EntityCollectionStore commandCollections, out Entity viewer) ||
-                !commandCollections.TryGet(viewer, "collection.command.source", out EntityCollectionHandle commandHandle) ||
+                !commandCollections.TryGet(viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionHandle commandHandle) ||
                 !commandCollections.TryGetEntityAt(commandHandle, 1, out Entity hovered) ||
                 hovered == Entity.Null ||
                 !engine.World.IsAlive(hovered) ||

@@ -100,32 +100,21 @@ namespace Ludots.Core.Input.Interaction
     }
 
     /// <summary>
-    /// Shared pointer interaction facts for confirm/command/cancel consumers.
-    /// Pointer is aligned to the confirm action when an authoritative pointer-button
-    /// snapshot is available so fixed-step consumers resolve the same screen point.
+    /// Shared pointer and ground facts from the authoritative input snapshot.
     /// </summary>
     public readonly struct PointerInteractionSnapshot
     {
         public PointerInteractionSnapshot(
             Vector2 pointer,
-            PointerActionSnapshot confirm,
-            PointerActionSnapshot command,
-            PointerActionSnapshot cancel,
             bool hasGroundPoint,
             WorldCmInt2 groundWorldCm)
         {
             Pointer = pointer;
-            Confirm = confirm;
-            Command = command;
-            Cancel = cancel;
             HasGroundPoint = hasGroundPoint;
             GroundWorldCm = groundWorldCm;
         }
 
         public Vector2 Pointer { get; }
-        public PointerActionSnapshot Confirm { get; }
-        public PointerActionSnapshot Command { get; }
-        public PointerActionSnapshot Cancel { get; }
         public bool HasGroundPoint { get; }
         public WorldCmInt2 GroundWorldCm { get; }
     }
@@ -143,31 +132,37 @@ namespace Ludots.Core.Input.Interaction
                 return false;
             }
 
-            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(PointerInteractionSnapshotReader));
             Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
-
-            PointerActionSnapshot confirm = TryReadActionSnapshot(globals, bindings.ConfirmActionId, pointer, out PointerActionSnapshot confirmSnapshot)
-                ? confirmSnapshot
-                : PointerActionSnapshot.CreateInactive(bindings.ConfirmActionId, pointer);
-
-            PointerActionSnapshot command = TryReadActionSnapshot(globals, bindings.CommandActionId, pointer, out PointerActionSnapshot commandSnapshot)
-                ? commandSnapshot
-                : PointerActionSnapshot.CreateInactive(bindings.CommandActionId, pointer);
-            PointerActionSnapshot cancel = TryReadActionSnapshot(globals, bindings.CancelActionId, pointer, out PointerActionSnapshot cancelSnapshot)
-                ? cancelSnapshot
-                : PointerActionSnapshot.CreateInactive(bindings.CancelActionId, pointer);
-
-            Vector2 interactionPointer = confirm.Pointer;
             bool hasGroundPoint = AuthoritativeGroundPointerHelper.TryRead(input, out WorldCmInt2 groundWorldCm);
-
-            snapshot = new PointerInteractionSnapshot(
-                interactionPointer,
-                confirm,
-                command,
-                cancel,
-                hasGroundPoint,
-                groundWorldCm);
+            snapshot = new PointerInteractionSnapshot(pointer, hasGroundPoint, groundWorldCm);
             return true;
+        }
+
+        public static bool TryReadAction(
+            IReadOnlyDictionary<string, object> globals,
+            string actionId,
+            out PointerActionSnapshot snapshot)
+        {
+            if (globals == null) throw new ArgumentNullException(nameof(globals));
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                throw new ArgumentException("Action id is required.", nameof(actionId));
+            }
+
+            Vector2 pointer = default;
+            if (globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out object? inputObj) &&
+                inputObj is IInputActionReader input)
+            {
+                pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
+            }
+
+            if (TryReadActionSnapshot(globals, actionId, pointer, out snapshot))
+            {
+                return true;
+            }
+
+            snapshot = PointerActionSnapshot.CreateInactive(actionId, pointer);
+            return false;
         }
 
         private static bool TryReadActionSnapshot(

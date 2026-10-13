@@ -1,0 +1,32 @@
+{
+  "profiles": [
+    {
+      "id": "intent.command.default",
+      "groupPolicy": {
+        "kind": "independent"
+      },
+      "rules": [
+        {
+          "priority": 10,
+          "target": {
+            "hasEntity": true
+          },
+          "route": {
+            "orderTypeKey": "roadMoveFollow",
+            "targetShape": "WorldPositionCm"
+          }
+        },
+        {
+          "priority": 0,
+          "target": {
+            "hasEntity": false
+          },
+          "route": {
+            "orderTypeKey": "roadMoveFollow",
+            "targetShape": "WorldPositionCm"
+          }
+        }
+      ]
+    }
+  ]
+}

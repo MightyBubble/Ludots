@@ -1,0 +1,500 @@
+[
+  {
+    "id": "graph.aim.assist",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "assist",
+        "event": "AimBind",
+        "start": "a_rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "a_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "a_q",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "a_c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "a_c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "a_actor",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "a_cur",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "a_cur_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "a_cur_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "a_tag",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.assist"
+      },
+      {
+        "id": "a_assist_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "a_tag_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "a_valid",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "a_valid_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "a_valid_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "a_px",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.point.x_cm"
+      },
+      {
+        "id": "a_py",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.point.y_cm"
+      },
+      {
+        "id": "a_set_point",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "a_ox",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "a_oy",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "a_oxf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a_oyf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "a_set_actor",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "a_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "a_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
+        "id": "a_hostile",
+        "op": "QueryFilterRelationship"
+      },
+      {
+        "id": "a_nearest",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "a_near_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "a_near_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "a_write",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "a_halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "a_rep",
+        "fromPort": "next",
+        "to": "a_q"
+      },
+      {
+        "from": "a_q",
+        "fromPort": "next",
+        "to": "a_c0"
+      },
+      {
+        "from": "a_c0",
+        "fromPort": "next",
+        "to": "a_c1"
+      },
+      {
+        "from": "a_c1",
+        "fromPort": "next",
+        "to": "a_actor"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "next",
+        "to": "a_cur"
+      },
+      {
+        "from": "a_cur",
+        "fromPort": "next",
+        "to": "a_cur_alive"
+      },
+      {
+        "from": "a_cur_alive",
+        "fromPort": "next",
+        "to": "a_cur_jump"
+      },
+      {
+        "from": "a_cur_jump",
+        "fromPort": "true",
+        "to": "a_halt"
+      },
+      {
+        "from": "a_tag",
+        "fromPort": "next",
+        "to": "a_assist_eq"
+      },
+      {
+        "from": "a_cur_jump",
+        "fromPort": "false",
+        "to": "a_tag"
+      },
+      {
+        "from": "a_tag_jump",
+        "fromPort": "false",
+        "to": "a_halt"
+      },
+      {
+        "from": "a_valid",
+        "fromPort": "next",
+        "to": "a_valid_eq"
+      },
+      {
+        "from": "a_valid_eq",
+        "fromPort": "next",
+        "to": "a_valid_jump"
+      },
+      {
+        "from": "a_tag_jump",
+        "fromPort": "true",
+        "to": "a_valid"
+      },
+      {
+        "from": "a_px",
+        "fromPort": "next",
+        "to": "a_py"
+      },
+      {
+        "from": "a_py",
+        "fromPort": "next",
+        "to": "a_set_point"
+      },
+      {
+        "from": "a_set_point",
+        "fromPort": "next",
+        "to": "a_all"
+      },
+      {
+        "from": "a_valid_jump",
+        "fromPort": "true",
+        "to": "a_px"
+      },
+      {
+        "from": "a_ox",
+        "fromPort": "next",
+        "to": "a_oy"
+      },
+      {
+        "from": "a_oy",
+        "fromPort": "next",
+        "to": "a_oxf"
+      },
+      {
+        "from": "a_oxf",
+        "fromPort": "next",
+        "to": "a_oyf"
+      },
+      {
+        "from": "a_oyf",
+        "fromPort": "next",
+        "to": "a_set_actor"
+      },
+      {
+        "from": "a_set_actor",
+        "fromPort": "next",
+        "to": "a_all"
+      },
+      {
+        "from": "a_valid_jump",
+        "fromPort": "false",
+        "to": "a_ox"
+      },
+      {
+        "from": "a_all",
+        "fromPort": "next",
+        "to": "a_rel"
+      },
+      {
+        "from": "a_hostile",
+        "fromPort": "next",
+        "to": "a_nearest"
+      },
+      {
+        "from": "a_nearest",
+        "fromPort": "next",
+        "to": "a_near_alive"
+      },
+      {
+        "from": "a_near_alive",
+        "fromPort": "next",
+        "to": "a_near_jump"
+      },
+      {
+        "from": "a_near_jump",
+        "fromPort": "false",
+        "to": "a_halt"
+      },
+      {
+        "from": "a_write",
+        "fromPort": "next",
+        "to": "a_halt"
+      },
+      {
+        "from": "a_near_jump",
+        "fromPort": "true",
+        "to": "a_write"
+      },
+      {
+        "from": "a_assist_eq",
+        "fromPort": "next",
+        "to": "a_tag_jump"
+      },
+      {
+        "from": "a_rel",
+        "fromPort": "next",
+        "to": "a_hostile"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "a_c1",
+        "fromPort": "value",
+        "to": "a_halt",
+        "toPort": "value"
+      },
+      {
+        "from": "a_rep",
+        "fromPort": "value",
+        "to": "a_q",
+        "toPort": "source"
+      },
+      {
+        "from": "a_c0",
+        "fromPort": "value",
+        "to": "a_actor",
+        "toPort": "value"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_cur",
+        "toPort": "source"
+      },
+      {
+        "from": "a_cur",
+        "fromPort": "value",
+        "to": "a_cur_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "a_cur_alive",
+        "fromPort": "value",
+        "to": "a_cur_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_tag",
+        "toPort": "source"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "a_valid",
+        "fromPort": "value",
+        "to": "a_valid_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "a_c1",
+        "fromPort": "value",
+        "to": "a_valid_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "a_valid_eq",
+        "fromPort": "value",
+        "to": "a_valid_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_px",
+        "toPort": "source"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_py",
+        "toPort": "source"
+      },
+      {
+        "from": "a_px",
+        "fromPort": "value",
+        "to": "a_set_point",
+        "toPort": "a"
+      },
+      {
+        "from": "a_py",
+        "fromPort": "value",
+        "to": "a_set_point",
+        "toPort": "b"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_ox",
+        "toPort": "source"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_oy",
+        "toPort": "source"
+      },
+      {
+        "from": "a_ox",
+        "fromPort": "value",
+        "to": "a_oxf",
+        "toPort": "a"
+      },
+      {
+        "from": "a_oy",
+        "fromPort": "value",
+        "to": "a_oyf",
+        "toPort": "a"
+      },
+      {
+        "from": "a_oxf",
+        "fromPort": "value",
+        "to": "a_set_actor",
+        "toPort": "a"
+      },
+      {
+        "from": "a_oyf",
+        "fromPort": "value",
+        "to": "a_set_actor",
+        "toPort": "b"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "a_nearest",
+        "fromPort": "value",
+        "to": "a_near_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "a_near_alive",
+        "fromPort": "value",
+        "to": "a_near_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_write",
+        "toPort": "source"
+      },
+      {
+        "from": "a_nearest",
+        "fromPort": "value",
+        "to": "a_write",
+        "toPort": "value"
+      },
+      {
+        "from": "a_tag",
+        "fromPort": "value",
+        "to": "a_assist_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "a_c1",
+        "fromPort": "value",
+        "to": "a_assist_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "a_assist_eq",
+        "fromPort": "value",
+        "to": "a_tag_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "a_actor",
+        "fromPort": "value",
+        "to": "a_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "a_rel",
+        "fromPort": "value",
+        "to": "a_hostile",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "Path": "UI/entity_command_panel_toolbars.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "UI/entity_command_panel_toolbar_panels.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

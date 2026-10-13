@@ -668,7 +668,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberAdded",
-          "key": "collection.command.source"
+          "key": "role:commandSource"
         },
         "command": {
           "kind": "CreatePresenter",
@@ -682,7 +682,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.command.source"
+          "key": "role:commandSource"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
@@ -709,33 +709,6 @@
         "event": {
           "kind": "EntityCollectionMemberRemoved",
           "key": "collection.ui.command.hover"
-        },
-        "command": {
-          "kind": "DestroyScopedPresenter",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityCollectionMemberAdded",
-          "key": "collection.ability.aim.hover"
-        },
-        "command": {
-          "kind": "CreatePresenter",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        },
-        "condition": {
-          "inline": "SourceHasVisualTransform"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.ability.aim.hover"
         },
         "command": {
           "kind": "DestroyScopedPresenter",

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "graph.interaction.rune_cancel",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_interaction_aimcancel",
+        "action": "Interaction.AimCancel",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "close_aim",
+        "op": "DeactivateContext",
+        "context": "interaction.context.interaction.aiming_rune"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "close_aim"
+      },
+      {
+        "from": "close_aim",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "close_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

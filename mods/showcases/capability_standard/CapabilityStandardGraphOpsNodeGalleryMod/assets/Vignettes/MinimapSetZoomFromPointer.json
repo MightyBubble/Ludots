@@ -1,0 +1,38 @@
+{
+  "op": "MinimapSetZoomFromPointer",
+  "driver": "linear",
+  "title": "按缩放条位置改小地图缩放",
+  "beat": "用屏幕点的横坐标在缩放条上取一个缩放。",
+  "detailTemplate": "缩放过了，木桩从{healthBefore}掉到{healthAfter}。",
+  "assertDetailContains": [
+    "缩放过了"
+  ],
+  "featuredNodeId": "zoom",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

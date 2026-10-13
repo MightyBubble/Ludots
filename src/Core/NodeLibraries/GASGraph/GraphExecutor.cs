@@ -197,9 +197,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ref state, program, GasGraphOpHandlerTable.Instance, ref frame.Cursor, budgetSteps);
                 frame.CopyBackExecutionState(ref state, copyCursor: false);
                 if (result.Yielded || result.BudgetSuspended)
+                {
                     frame.Cursor.SaveTargets(state.TargetList.Span);
+                    frame.Cursor.TargetPosCm = state.TargetPosCm;
+                }
                 else
+                {
                     frame.Cursor.TargetCount = 0;
+                    frame.Cursor.TargetPosCm = default;
+                }
                 return result;
             }
             finally { frame.Api?.EndEntityQueryExecution(); }

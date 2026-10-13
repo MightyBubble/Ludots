@@ -8,8 +8,7 @@
 
 ```json
 {
-  "targeting": { "castRangeCm": 440, "impactEffect": "Effect.Champion.Ezreal.ArcaneShift" },
-  "input": { "autoTargetPolicy": "NearestInRange", "autoTargetRelation": "Hostile", "autoTargetRangeCm": 760 }
+  "targeting": { "castRangeCm": 440, "impactEffect": "Effect.Champion.Ezreal.ArcaneShift" }
 }
 ```
 
@@ -21,15 +20,12 @@
 |---|---|
 | `targeting.castRangeCm` | 必填非负：施法距离上限（cm）；0 = 自施，不吃距离与走近 |
 | `targeting.impactEffect` | 必填已注册：目标点命中效果的模板 id（瞄准与命中表现的正本入口） |
-| `input.autoTargetPolicy` | 非 None 时组合计划不介入（目标由策略现选，绕过射程判定） |
-| `input.autoTargetRelation` | 策略非 None 时必填：`All` 或关系类型名；只从施法者队伍到候选队伍有这条关系的单位里挑 |
-| `input.autoTargetRangeCm` | 自动目标的选取半径 |
 
 超射程行为（非配置项，由组合命令计划器决定）：显式目标超出 castRangeCm 时自动生成"移动到射程边缘 + 施放"计划；排队模式按移动完成后的预计位置判定。旧字段名 `targeting.range` 启动报错指路 `castRangeCm`。
 
 ## 3. 文件结构
 
-targeting 与 input 是 `abilities.json` 单条技能的顶层块（ab-01）。组合命令不是配置——它是订单提交期的计划行为，作用于一切有射程声明的技能。
+targeting 是 `abilities.json` 单条技能的顶层块（ab-01）。自动选目标不在技能配置里，写在交互状态的施法图里（input-03）。组合命令不是配置——它是订单提交期的计划行为，作用于一切有射程声明的技能。
 
 ## 4. 运行时加载效果
 

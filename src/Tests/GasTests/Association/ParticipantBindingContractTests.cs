@@ -50,7 +50,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -59,12 +59,14 @@ namespace Ludots.Tests.GAS
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
             ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
                 [CoreServiceKeys.PlayerEntityLookup.Name] = new PlayerEntityLookup(),
                 [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
             };
             TeamEntityLookup focusedTeamLookup = (TeamEntityLookup)globals[CoreServiceKeys.TeamEntityLookup.Name];
             PlayerEntityLookup focusedPlayerLookup = (PlayerEntityLookup)globals[CoreServiceKeys.PlayerEntityLookup.Name];
@@ -120,7 +122,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -141,7 +143,7 @@ namespace Ludots.Tests.GAS
             {
                 StartupLocalSeats =
                 {
-                    new StartupLocalSeatConfig { SeatId = "seat.0", PlayerId = 7 },
+                    new StartupLocalSeatConfig { SeatId = "seat.0", PlayerId = 7, ControlSchemeId = "scheme.default" },
                     new StartupLocalSeatConfig { SeatId = "seat.1", PlayerId = 8, ControlSchemeId = "pad" },
                 },
             };
@@ -151,6 +153,7 @@ namespace Ludots.Tests.GAS
             Assert.That(launch!.LocalSeats.Count, Is.EqualTo(2));
             Assert.That(launch.LocalSeats[0].SeatId, Is.EqualTo("seat.0"));
             Assert.That(launch.LocalSeats[0].PlayerId, Is.EqualTo(7));
+            Assert.That(launch.LocalSeats[0].ControlSchemeId, Is.EqualTo("scheme.default"));
             Assert.That(launch.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
             Assert.That(launch.LocalSeats[1].PlayerId, Is.EqualTo(8));
             Assert.That(launch.LocalSeats[1].ControlSchemeId, Is.EqualTo("pad"));
@@ -303,20 +306,23 @@ namespace Ludots.Tests.GAS
             var players = new PlayerEntityLookup();
             players.Register(7, playerSeven);
             players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
                 [CoreServiceKeys.PlayerEntityLookup.Name] = players,
                 [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
             };
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = CreateSeatInputRuntime(globals, schemes);
             var result = new ParticipantBindingResult(
                 new TeamEntityLookup(),
                 players,
                 localSeats: new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
-                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, "scheme.seat.first"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, "scheme.seat.first"),
                 });
 
             ParticipantBindingResolver.PublishFocused(globals, result);
@@ -356,7 +362,7 @@ namespace Ludots.Tests.GAS
             Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
             var players = new PlayerEntityLookup();
             players.Register(7, player);
-            ClientCastPreferenceStore preferences = CreateSeatPreferenceStore();
+            ClientControlSchemePreferenceStore preferences = CreateSeatPreferenceStore();
             preferences.SetActiveScheme("scheme.seat.first");
             ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(
                 world, "scheme.seat.first", "scheme.seat.declared", preferences: preferences);
@@ -375,7 +381,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_PublishFocused_SoleSeatWithoutScheme_LeavesRuntimeActivationUnchanged()
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatWithoutScheme_FailsFast()
         {
             using var world = World.Create();
             Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
@@ -385,10 +391,10 @@ namespace Ludots.Tests.GAS
             var globals = CreateSeatPublishGlobals(players, schemes);
             var result = SoleSeatResult(players, 7, player, controlSchemeId: null);
 
-            ParticipantBindingResolver.PublishFocused(globals, result);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
 
-            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
-                "seats without a declaration keep the runtime's initial/preference activation.");
+            Assert.That(error!.Message, Does.Contain("requires controlSchemeId"));
         }
 
         [Test]
@@ -634,6 +640,7 @@ namespace Ludots.Tests.GAS
             var players = new PlayerEntityLookup();
             players.Register(7, playerSeven);
             players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
@@ -642,14 +649,16 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
                 [CoreServiceKeys.ViewController.Name] = new FixedPresentSurface(1920f, 1080f),
                 [CoreServiceKeys.GameConfig.Name] = new GameConfig { StartupPresentLayout = layoutId },
+                [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
             };
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = CreateSeatInputRuntime(globals, schemes);
             var result = new ParticipantBindingResult(
                 new TeamEntityLookup(),
                 players,
                 localSeats: new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
-                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, "scheme.seat.first"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, "scheme.seat.first"),
                 });
 
             ParticipantBindingResolver.PublishFocused(globals, result);
@@ -707,7 +716,7 @@ namespace Ludots.Tests.GAS
             string initialScheme,
             string alternateScheme,
             List<string> allowedSchemes = null,
-            ClientCastPreferenceStore preferences = null)
+            ClientControlSchemePreferenceStore preferences = null)
         {
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
@@ -715,7 +724,7 @@ namespace Ludots.Tests.GAS
             var runtime = new ControlSchemeRuntime(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 orderTypes,
-                preferences: preferences);
+                preferences ?? CreateSeatPreferenceStore());
             runtime.Install(new ControlSchemesConfig
             {
                 Schemes = new List<ControlSchemeDefinition>
@@ -736,22 +745,10 @@ namespace Ludots.Tests.GAS
             return runtime;
         }
 
-        private static ClientCastPreferenceStore CreateSeatPreferenceStore()
+        private static ClientControlSchemePreferenceStore CreateSeatPreferenceStore()
         {
-            var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            return new ClientCastPreferenceStore(
-                new CastCommitProfileRegistry(
-                    castCommitIds,
-                    castCommitActionIds,
-                    new InteractionContextProfileRegistry(contextProfileIds)),
-                templateKeys.Register,
-                templateKeys.GetName,
-                formSetKeys.Register,
-                formSetKeys.GetName);
+            return new ClientControlSchemePreferenceStore(
+                Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json"));
         }
 
         [Test]
@@ -763,6 +760,7 @@ namespace Ludots.Tests.GAS
             players.Register(7, player);
             var orphanCamera = new CameraManager();
             orphanCamera.State.Yaw = 12f;
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
@@ -771,13 +769,14 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
                 [CoreServiceKeys.ViewController.Name] = new StubHostViewController(new Vector2(1600f, 900f)),
                 [CoreServiceKeys.CameraBehaviorInputState.Name] = new CameraBehaviorInputState(),
+                [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
             };
             var result = new ParticipantBindingResult(
                 new TeamEntityLookup(),
                 players,
                 localSeats: new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, player, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, player, "scheme.seat.first"),
                 });
 
             ParticipantBindingResolver.PublishFocused(globals, result);
@@ -834,7 +833,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -943,7 +942,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 8) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 8, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -980,7 +979,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 99) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 99, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();

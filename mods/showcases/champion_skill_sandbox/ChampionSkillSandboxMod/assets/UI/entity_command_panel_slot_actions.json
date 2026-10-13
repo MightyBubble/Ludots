@@ -1,0 +1,16 @@
+{
+  "slots": [
+    { "action": "Aim.Slot", "int": 0 },
+    { "action": "Aim.Slot", "int": 1 },
+    { "action": "Aim.Slot", "int": 2 },
+    { "action": "Aim.Slot", "int": 3 }
+  ],
+  "modeHintContexts": {},
+  "modeHintPrefs": {
+    "key": "pref.aim.cast_mode",
+    "values": {
+      "interaction.context.aim.release": "SmartCastWithIndicator",
+      "interaction.context.aim.click": "PressReleaseAimCast"
+    }
+  }
+}

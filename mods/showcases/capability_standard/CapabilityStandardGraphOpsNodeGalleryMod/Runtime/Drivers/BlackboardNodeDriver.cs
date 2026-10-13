@@ -3,6 +3,7 @@ using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -55,9 +56,9 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
                 BindRole(ctx, actors[i].Role, ctx.SimActors[i]);
             }
 
-            _powerKey = ConfigKeyRegistry.Register(PowerKey);
-            _stacksKey = ConfigKeyRegistry.Register(StacksKey);
-            _namedKey = ConfigKeyRegistry.Register(NamedKey);
+            _powerKey = OrderBlackboardKeyRegistry.Resolve(PowerKey);
+            _stacksKey = OrderBlackboardKeyRegistry.Resolve(StacksKey);
+            _namedKey = OrderBlackboardKeyRegistry.Resolve(NamedKey);
             _configPowerKey = ConfigKeyRegistry.Register(ConfigPowerKey);
             _configTierKey = ConfigKeyRegistry.Register(ConfigTierKey);
             _configChainEffectKey = ConfigKeyRegistry.Register(ConfigChainEffectKey);

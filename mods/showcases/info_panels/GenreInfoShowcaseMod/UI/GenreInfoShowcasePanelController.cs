@@ -18,6 +18,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Surface;
+using Ludots.Core.Input.Config;
 
 namespace GenreInfoShowcaseMod.UI
 {
@@ -718,7 +719,7 @@ namespace GenreInfoShowcaseMod.UI
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key
-                : "collection.command.source";
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
         }
 
         private static string ControlGroupCollectionKey(int groupIndex) =>

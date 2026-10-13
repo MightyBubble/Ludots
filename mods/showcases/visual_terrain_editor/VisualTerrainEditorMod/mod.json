@@ -5,9 +5,14 @@
   "main": "bin/net9.0/VisualTerrainEditorMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["terrain", "erosion", "visual-heightmap", "showcase", "editor"]
+  "tags": [
+    "terrain",
+    "erosion",
+    "visual-heightmap",
+    "showcase",
+    "editor"
+  ]
 }

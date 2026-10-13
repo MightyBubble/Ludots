@@ -1,0 +1,90 @@
+[
+  {
+    "id": "showcase.graph_op.QueryMinimapRegion",
+    "kind": "Effect",
+    "entry": "x",
+    "nodes": [
+      {
+        "id": "x",
+        "op": "ConstFloat",
+        "floatValue": -100.0
+      },
+      {
+        "id": "y",
+        "op": "ConstFloat",
+        "floatValue": -100.0
+      },
+      {
+        "id": "region",
+        "op": "QueryMinimapRegion"
+      },
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "x",
+        "fromPort": "next",
+        "to": "y"
+      },
+      {
+        "from": "y",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "drain"
+      },
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "x",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "y",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

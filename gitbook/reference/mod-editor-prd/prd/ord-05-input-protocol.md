@@ -20,4 +20,4 @@
 
 未知步骤类型（包括已删除的 `InputGate`、`TargetCollectionGate`）一律启动失败，报错里写明能力 id 和步骤序号。
 
-**相关文档**：[配置说明](../config/ord-05-input-protocol.md) · [ord-06](ord-06-input-mappings.md) · [ord-04](ord-04-blackboard.md)
+**相关文档**：[配置说明](../config/ord-05-input-protocol.md) · [input-03](input-03-interaction-context.md) · [ord-04](ord-04-blackboard.md)

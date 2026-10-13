@@ -1,0 +1,199 @@
+[
+  {
+    "id": "graph.aim.rule.none",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "press",
+        "event": "Aim.Rule.Press",
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "resolve",
+        "event": "Aim.Rule.Resolve",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actor_query",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt_dead",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "write_handled",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
+      },
+      {
+        "id": "load_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Aim.Modifiers"
+      },
+      {
+        "id": "store_mod",
+        "op": "StoreArgInt",
+        "argKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "invoke",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.submit_none"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actor_query"
+      },
+      {
+        "from": "actor_query",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt_dead"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "write_handled"
+      },
+      {
+        "from": "write_handled",
+        "fromPort": "next",
+        "to": "load_mod"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "next",
+        "to": "store_mod"
+      },
+      {
+        "from": "store_mod",
+        "fromPort": "next",
+        "to": "invoke"
+      },
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "halt_ok"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_dead",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actor_query",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "value"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "value",
+        "to": "store_mod",
+        "toPort": "value"
+      }
+    ]
+  }
+]

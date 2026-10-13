@@ -1,0 +1,172 @@
+[
+  {
+    "id": "graph.minimap.release",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_select_end",
+        "action": "Select.End",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "minimap.gesture"
+      },
+      {
+        "id": "px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "region",
+        "op": "QueryMinimapRegion"
+      },
+      {
+        "id": "eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "outside",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "close",
+        "op": "DeactivateOwnContext"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "eq"
+      },
+      {
+        "from": "eq",
+        "fromPort": "next",
+        "to": "outside"
+      },
+      {
+        "from": "outside",
+        "fromPort": "true",
+        "to": "close"
+      },
+      {
+        "from": "close",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "outside",
+        "fromPort": "false",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "source"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "region",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "b"
+      },
+      {
+        "from": "eq",
+        "fromPort": "value",
+        "to": "outside",
+        "toPort": "condition"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -101,7 +101,7 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             Is.EqualTo(ParticleVfxKeys.Length));
 
         using var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         HeadlessPresentationTestHost.Install(engine);
 
         ParticleVfxRegistry particleVfxRegistry = engine.GetService(CoreServiceKeys.PresentationParticleVfxRegistry)

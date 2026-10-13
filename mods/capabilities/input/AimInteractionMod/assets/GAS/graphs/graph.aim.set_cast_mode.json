@@ -1,0 +1,133 @@
+[
+  {
+    "id": "graph.aim.set_cast_mode",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Aim.CastMode.Smart",
+        "action": "Aim.CastMode.Smart",
+        "start": "rep_smart",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Aim.CastMode.AimClick",
+        "action": "Aim.CastMode.AimClick",
+        "start": "rep_click",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Aim.CastMode.AimRelease",
+        "action": "Aim.CastMode.AimRelease",
+        "start": "rep_release",
+        "refire": "restart",
+        "budget": "single-slice"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep_smart",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_smart",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      },
+      {
+        "id": "rep_click",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_click",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.click"
+      },
+      {
+        "id": "rep_release",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_release",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.release"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep_smart",
+        "fromPort": "next",
+        "to": "set_smart"
+      },
+      {
+        "from": "set_smart",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_click",
+        "fromPort": "next",
+        "to": "set_click"
+      },
+      {
+        "from": "set_click",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_release",
+        "fromPort": "next",
+        "to": "set_release"
+      },
+      {
+        "from": "set_release",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep_smart",
+        "fromPort": "value",
+        "to": "set_smart",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_click",
+        "fromPort": "value",
+        "to": "set_click",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_release",
+        "fromPort": "value",
+        "to": "set_release",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

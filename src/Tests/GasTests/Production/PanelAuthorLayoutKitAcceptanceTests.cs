@@ -260,7 +260,8 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
             RepoModPaths.ResolveExplicit(
                 repoRoot,
                 new[] { "LudotsCoreMod", "PanelAuthorLayoutKitShowcaseMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         AcceptanceUiHostInstaller.Install(engine);
         return engine;
     }

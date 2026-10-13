@@ -1,0 +1,138 @@
+[
+  {
+    "id": "graph.moba.bind_aim_actor",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "rebind",
+        "event": "EntityCollectionMembershipChanged",
+        "start": "rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.CollectionKeyId": "role:commandSource"
+          }
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "heroes",
+        "op": "QueryFilterTemplate",
+        "template": "moba_hero"
+      },
+      {
+        "id": "lim",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write",
+        "op": "WriteCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "pick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.pick.hostile"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
+      },
+      {
+        "id": "refresh",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.refresh_gesture"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "heroes"
+      },
+      {
+        "from": "heroes",
+        "fromPort": "next",
+        "to": "lim"
+      },
+      {
+        "from": "lim",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "prep"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "refresh"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "refresh",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "prep",
+        "fromPort": "next",
+        "to": "pick"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

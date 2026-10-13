@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Aim.Rule.Press",
+    "scope": "map",
+    "params": [
+      {
+        "name": "modifiers",
+        "type": "int",
+        "key": "Aim.Modifiers"
+      }
+    ]
+  },
+  {
+    "id": "Aim.Rule.Resolve",
+    "scope": "map",
+    "params": [
+      {
+        "name": "modifiers",
+        "type": "int",
+        "key": "Aim.Modifiers"
+      }
+    ]
+  }
+]

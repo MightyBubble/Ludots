@@ -20,7 +20,7 @@ namespace Ludots.AgentBridge.Tools
 
         public string Description =>
             "Current input pipeline state: handler blocked flag, update revision, UI capture flags " +
-            "(uiCaptured, uiWheelCaptured, pointerInputCaptured), the window-level synthetic device " +
+            "(uiCaptured, uiWheelCaptured), the window-level synthetic device " +
             "state when present (pointer override, held buttons/keys), and the recent ludots.input.inject " +
             "event ledger (eventId/mode/pumpCount/tick). No parameters.";
 
@@ -36,7 +36,6 @@ namespace Ludots.AgentBridge.Tools
                 ["updateRevision"] = handler.UpdateRevision,
                 ["uiCaptured"] = ReadFlag(context, CoreServiceKeys.UiCaptured.Name),
                 ["uiWheelCaptured"] = ReadFlag(context, CoreServiceKeys.UiWheelCaptured.Name),
-                ["pointerInputCaptured"] = ReadFlag(context, CoreServiceKeys.PointerInputCaptured.Name),
             };
 
             if (context.TryGetService(CoreServiceKeys.SyntheticInput, out SyntheticInputDevice device))

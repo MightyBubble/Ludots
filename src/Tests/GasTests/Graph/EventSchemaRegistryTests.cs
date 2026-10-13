@@ -38,6 +38,38 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void MembershipAndContextEvents_AreMapScopedWithTheirPayloadKeys()
+        {
+            var registry = new EventSchemaRegistry();
+            Assert.That(GameEvents.IsMapScoped(GameEvents.EntityCollectionMembershipChanged.Value), Is.True);
+            Assert.That(GameEvents.IsMapScoped(GameEvents.ContextActivated.Value), Is.True);
+            Assert.That(GameEvents.IsMapScoped(GameEvents.ContextDeactivated.Value), Is.True);
+
+            Assert.That(registry.TryGet(GameEvents.EntityCollectionMembershipChanged.Value, out EventSchema membership), Is.True);
+            Assert.That(membership.Scope, Is.EqualTo(EventScope.Map));
+            Assert.That(membership.Params.Select(p => p.PayloadKey).ToArray(), Is.EqualTo(new[]
+            {
+                MapTriggerEventPayloadKeys.CollectionKeyId,
+                MapTriggerEventPayloadKeys.MemberEntity,
+                MapTriggerEventPayloadKeys.OwnerEntity,
+            }));
+
+            Assert.That(registry.TryGet(GameEvents.ContextActivated.Value, out EventSchema activated), Is.True);
+            Assert.That(activated.Params.Select(p => p.PayloadKey).ToArray(), Is.EqualTo(new[]
+            {
+                MapTriggerEventPayloadKeys.SourceEntity,
+                MapTriggerEventPayloadKeys.ContextKeyId,
+            }));
+
+            var ctx = new ScriptContext();
+            ctx.Set(MapTriggerEventPayloadKeys.CollectionKeyId, 1);
+            ctx.Set(MapTriggerEventPayloadKeys.MemberEntity, Entity.Null);
+            Assert.That(
+                () => registry.ValidateFirePayload(GameEvents.EntityCollectionMembershipChanged, ctx),
+                Throws.InvalidOperationException);
+        }
+
+        [Test]
         public void BuiltinSchemas_CoverPayloadBearingEvents()
         {
             var registry = new EventSchemaRegistry();
@@ -54,6 +86,9 @@ namespace Ludots.Tests.Gas.Graph
                 GameEvents.CalendarCyclePhaseExited.Value,
                 GameEvents.CalendarEraChanged.Value,
                 GameEvents.CalendarDayPhaseChanged.Value,
+                GameEvents.EntityCollectionMembershipChanged.Value,
+                GameEvents.ContextActivated.Value,
+                GameEvents.ContextDeactivated.Value,
             };
 
             foreach (string eventName in payloadBearing)
@@ -69,13 +104,29 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(registry.TryGet(GameEvents.InputAction.Value, out EventSchema input), Is.True);
             Assert.That(input.Params.Select(p => p.Name).ToArray(),
-                Is.EqualTo(new[] { "rep", "action", "pointerScreenX", "pointerScreenY", "modifiers" }));
+                Is.EqualTo(new[]
+                {
+                    "rep", "action", "pointerScreenX", "pointerScreenY", "modifiers",
+                    "actionValueX", "actionValueY", "bindingInt",
+                }));
             EventParamSchema pointerX = input.Params.Single(p => p.Name == "pointerScreenX");
             EventParamSchema pointerY = input.Params.Single(p => p.Name == "pointerScreenY");
             Assert.That(pointerX.Optional, Is.False, "pointerScreenX is a required fact of every InputAction payload.");
             Assert.That(pointerY.Optional, Is.False, "pointerScreenY is a required fact of every InputAction payload.");
             Assert.That(pointerX.Type, Is.EqualTo(EventParamType.Float));
             Assert.That(pointerY.Type, Is.EqualTo(EventParamType.Float));
+            EventParamSchema actionValueX = input.Params.Single(p => p.Name == "actionValueX");
+            EventParamSchema actionValueY = input.Params.Single(p => p.Name == "actionValueY");
+            Assert.That(actionValueX.Optional, Is.True);
+            Assert.That(actionValueY.Optional, Is.True);
+            Assert.That(actionValueX.Type, Is.EqualTo(EventParamType.Float));
+            Assert.That(actionValueY.Type, Is.EqualTo(EventParamType.Float));
+            Assert.That(actionValueX.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.ActionValueX));
+            Assert.That(actionValueY.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.ActionValueY));
+            EventParamSchema bindingInt = input.Params.Single(p => p.Name == "bindingInt");
+            Assert.That(bindingInt.Optional, Is.True);
+            Assert.That(bindingInt.Type, Is.EqualTo(EventParamType.Int));
+            Assert.That(bindingInt.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.BindingInt));
         }
 
         [Test]

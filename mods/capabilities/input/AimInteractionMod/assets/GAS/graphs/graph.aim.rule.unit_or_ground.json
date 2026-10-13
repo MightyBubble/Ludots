@@ -1,0 +1,339 @@
+[
+  {
+    "id": "graph.aim.rule.unit_or_ground",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "press",
+        "event": "Aim.Rule.Press",
+        "start": "p0",
+        "refire": "restart"
+      },
+      {
+        "label": "resolve",
+        "event": "Aim.Rule.Resolve",
+        "start": "p1",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "p0",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 4
+      },
+      {
+        "id": "p1",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 4
+      },
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actor_query",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt_dead",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "write_handled",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
+      },
+      {
+        "id": "mode_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "mode_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "load_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Aim.Modifiers"
+      },
+      {
+        "id": "store_mod",
+        "op": "StoreArgInt",
+        "argKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "invoke",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.resolve_submit"
+      },
+      {
+        "id": "load_press_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Aim.Modifiers"
+      },
+      {
+        "id": "store_press_mod",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.press_modifiers"
+      },
+      {
+        "id": "act_pref",
+        "op": "ActivateContextFromPref",
+        "key": "pref.aim.cast_mode",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "p0",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "p1",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actor_query"
+      },
+      {
+        "from": "actor_query",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt_dead"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "write_handled"
+      },
+      {
+        "from": "write_handled",
+        "fromPort": "next",
+        "to": "mode_eq"
+      },
+      {
+        "from": "mode_eq",
+        "fromPort": "next",
+        "to": "mode_jump"
+      },
+      {
+        "from": "mode_jump",
+        "fromPort": "true",
+        "to": "load_mod"
+      },
+      {
+        "from": "mode_jump",
+        "fromPort": "false",
+        "to": "read_slot"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "next",
+        "to": "store_mod"
+      },
+      {
+        "from": "store_mod",
+        "fromPort": "next",
+        "to": "invoke"
+      },
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_press_mod"
+      },
+      {
+        "from": "load_press_mod",
+        "fromPort": "next",
+        "to": "store_press_mod"
+      },
+      {
+        "from": "store_press_mod",
+        "fromPort": "next",
+        "to": "act_pref"
+      },
+      {
+        "from": "act_pref",
+        "fromPort": "next",
+        "to": "halt_ok"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_dead",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actor_query",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "value"
+      },
+      {
+        "from": "p0",
+        "fromPort": "value",
+        "to": "mode_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "mode_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "mode_eq",
+        "fromPort": "value",
+        "to": "mode_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "value",
+        "to": "store_mod",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "store_press_mod",
+        "toPort": "source"
+      },
+      {
+        "from": "load_press_mod",
+        "fromPort": "value",
+        "to": "store_press_mod",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_pref",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "act_pref",
+        "toPort": "target"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "act_pref",
+        "toPort": "value"
+      }
+    ]
+  }
+]

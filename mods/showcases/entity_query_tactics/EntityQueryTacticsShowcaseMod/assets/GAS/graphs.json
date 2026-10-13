@@ -21,7 +21,7 @@
       {
         "id": "fromUiBox",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "role:commandSource"
       },
       {
         "id": "teamBlue",
@@ -1241,7 +1241,8 @@
       {
         "id": "activate_selecting",
         "op": "ActivateContext",
-        "context": "interaction.context.entityquery.selecting"
+        "context": "interaction.context.entityquery.selecting",
+        "parentContext": "core.graph.parent.unconstrained"
       },
       {
         "id": "ok",

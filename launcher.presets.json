@@ -3736,6 +3736,168 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "aim_control_schemes_raylib",
+      "name": "Aim Control Schemes Raylib",
+      "selectors": [
+        "$aim_control_schemes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadAbilityCastRange_raylib",
+      "name": "Graph Op LoadAbilityCastRange Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadAbilityCastRange"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetTargetPos_raylib",
+      "name": "Graph Op SetTargetPos Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetTargetPos"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_Fail_raylib",
+      "name": "Graph Op Fail Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_Fail"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityFacing_raylib",
+      "name": "Graph Op LoadEntityFacing Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityFacing"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IsContextActive_raylib",
+      "name": "Graph Op IsContextActive Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IsContextActive"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadSlotAbilityId_raylib",
+      "name": "Graph Op LoadSlotAbilityId Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadSlotAbilityId"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ActivateContextFromPref_raylib",
+      "name": "Graph Op ActivateContextFromPref Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ActivateContextFromPref"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DeactivateOwnContext_raylib",
+      "name": "Graph Op DeactivateOwnContext Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DeactivateOwnContext"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IsPref_raylib",
+      "name": "Graph Op IsPref Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IsPref"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetPref_raylib",
+      "name": "Graph Op SetPref Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetPref"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapJumpCamera_raylib",
+      "name": "Graph Op MinimapJumpCamera Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapJumpCamera"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapScreenToWorld_raylib",
+      "name": "Graph Op MinimapScreenToWorld Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapScreenToWorld"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapSetZoomFromPointer_raylib",
+      "name": "Graph Op MinimapSetZoomFromPointer Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapSetZoomFromPointer"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapTogglePreset_raylib",
+      "name": "Graph Op MinimapTogglePreset Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapTogglePreset"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapToggleRotate_raylib",
+      "name": "Graph Op MinimapToggleRotate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapToggleRotate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryMinimapRegion_raylib",
+      "name": "Graph Op QueryMinimapRegion Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryMinimapRegion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapApplyWheelZoom_raylib",
+      "name": "Graph Op MinimapApplyWheelZoom Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapApplyWheelZoom"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

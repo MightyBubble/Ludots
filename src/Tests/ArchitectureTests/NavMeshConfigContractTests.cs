@@ -379,8 +379,9 @@ namespace Ludots.Tests.Architecture
 
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
-                tempAssetsRoot);
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")},
+                tempAssetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var vfs = (VirtualFileSystem)engine.VFS;
             vfs.Unmount("Core");

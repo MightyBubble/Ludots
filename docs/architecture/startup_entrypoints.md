@@ -262,8 +262,6 @@ Current evidence:
 
 - `src/Core/Scripting/CoreServiceKeys.cs`
 - `src/Core/Scripting/ServiceKey.cs`
-- `mods/CoreInputMod/CoreInputServiceKeys.cs`
-- `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
 - `src/Core/Modding/ModLoader.cs`
 - `src/Core/Modding/ModLoadContext.cs`
 

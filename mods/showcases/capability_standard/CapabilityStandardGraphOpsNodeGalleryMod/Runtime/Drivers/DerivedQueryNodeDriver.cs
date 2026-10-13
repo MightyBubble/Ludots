@@ -5,7 +5,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Registry;
-using Ludots.Core.Input.AimSource;
+using Ludots.Core.Input.PointerSample;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
@@ -37,7 +37,7 @@ public sealed class DerivedQueryNodeDriver : IGraphOpsNodeDriver
                 ?? throw new InvalidOperationException("Gallery shared spatial service is required.");
             spatial.BindBoundsWorld(ctx.SimWorld);
             var projection = new GalleryProjection();
-            ctx.Api.BindAimSource(new GraphAimSourceRuntime(ctx.SimWorld, new Dictionary<string, object>
+            ctx.Api.BindPointerSample(new GraphPointerSampleRuntime(ctx.SimWorld, new Dictionary<string, object>
             {
                 [CoreServiceKeys.SpatialQueryService.Name] = spatial,
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-10000, -10000, 20000, 20000), 100),

@@ -278,6 +278,7 @@ namespace Ludots.Core.Presentation
         private float? _minZoomExplicitHalfExtentCm;
         private float? _maxZoomExplicitHalfExtentCm;
         private MinimapActionsConfig? _actions;
+        private string? _interactionContextId;
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
         public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
@@ -295,9 +296,25 @@ namespace Ludots.Core.Presentation
             set => _actions = value;
         }
 
+        public string InteractionContextId
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(_interactionContextId))
+                {
+                    throw new InvalidOperationException(
+                        "presentation.minimap.interactionContextId must be explicitly configured.");
+                }
+
+                return _interactionContextId;
+            }
+            set => _interactionContextId = value;
+        }
+
         public void Validate()
         {
             Actions.Validate();
+            _ = InteractionContextId;
 
             float initialZoom = PresentationRuntimeConfig.RequireFinite(_initialZoomNormalized, "presentation.minimap.initialZoomNormalized");
             if (initialZoom < 0f || initialZoom > 1f)

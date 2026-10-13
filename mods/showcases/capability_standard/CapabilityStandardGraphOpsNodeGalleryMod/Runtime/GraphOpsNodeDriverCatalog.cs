@@ -25,7 +25,7 @@ public static class GraphOpsNodeDriverCatalog
             "blackboard" => new Drivers.BlackboardNodeDriver(),
             "rel" => new Drivers.RelNodeDriver(),
             "query" => new Drivers.QueryNodeDriver(),
-            "aimsource" => new Drivers.AimSourceNodeDriver(),
+            "pointerSample" => new Drivers.PointerSampleNodeDriver(),
             "collectionWrite" => new Drivers.CollectionWriteNodeDriver(),
             "commandIntent" => new Drivers.CommandIntentNodeDriver(),
             "derivedQuery" => new Drivers.DerivedQueryNodeDriver(),

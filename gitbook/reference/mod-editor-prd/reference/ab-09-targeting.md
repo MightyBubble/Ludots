@@ -5,7 +5,7 @@
 ## 1. 现状快照
 
 - 组合计划器 Submit：构建"先移动后施放"计划；NotApplicable 直通、Rejected 拒；保活 actor + 续单状态安装；followUpCast 挂续单缓冲（键=移动单 OrderId，满→RejectedQueueFull）；移动单提交失败回收续单。
-- 裁剪：Args.I0=槽位；无 targeting / castRange≤0 / autoTargetPolicy≠None → NotApplicable。
+- 裁剪：Args.I0=槽位；无 targeting / castRange≤0 → NotApplicable。
 - 排队投影原点：Queued 模式用移动完成后的预计位置；目标点 = 订单目标实体位置，否则空间载荷。
 - 移动锚点：距离 ≤ castRange+0.01 已在射程；否则锚点 = actor + 方向×(距离−castRange)。
 - followUpCast 强制 Queued；批量命令部分不可行整批拆分报错；取消传播：移动单终态非 Completed → 续单以 Cancelled/Failed 拒绝。

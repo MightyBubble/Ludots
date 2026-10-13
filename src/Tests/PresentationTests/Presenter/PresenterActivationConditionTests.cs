@@ -196,7 +196,7 @@ namespace Ludots.Tests.Presentation
             // 生产注册序（GameEngine.InitializeWithConfigPipelineInternal）为规则、运行时、行为。
             // RuntimeSystem 发布 PresenterCreated 后，规则在下一次规则更新中产出命令；loader 强制
             // ActiveByDefault=false，保证等待该下一帧规则求值时不会泄漏创建帧输出。
-            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine("LudotsCoreMod");
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine("LudotsCoreMod", "CommandSourceCoreFixtureMod");
 
             FieldInfo field = typeof(GameEngine).GetField("_presentationSystems", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new InvalidOperationException("GameEngine._presentationSystems field missing.");

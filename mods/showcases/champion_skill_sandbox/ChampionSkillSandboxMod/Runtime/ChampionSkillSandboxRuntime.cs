@@ -16,13 +16,13 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Input.Config;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
@@ -61,37 +61,8 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: false);
-        }
-
-        internal static void PollCastModeSwitch(GameEngine engine)
-        {
-            // The Controls context is startup-pushed and never popped; without a map guard its
-            // F1-F3 bindings would fire this poll on any co-loaded map and hijack the camera.
-            if (!ChampionSkillSandboxIds.IsSandboxMap(engine.CurrentMapSession?.MapId.Value))
-            {
-                return;
-            }
-
-            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not Ludots.Core.Input.Runtime.IInputActionReader input)
-            {
-                return;
-            }
-
-            if (input.PressedThisFrame(ChampionSkillSandboxIds.SmartCastActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
-            }
-            else if (input.PressedThisFrame(ChampionSkillSandboxIds.IndicatorActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.IndicatorModeId);
-            }
-            else if (input.PressedThisFrame(ChampionSkillSandboxIds.PressReleaseActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.PressReleaseModeId);
-            }
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -107,7 +78,6 @@ namespace ChampionSkillSandboxMod.Runtime
                 return Task.CompletedTask;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncFocusPanel(engine);
             return Task.CompletedTask;
@@ -136,7 +106,6 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: true);
             ConsumeResetCameraRequest(engine);
@@ -168,7 +137,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             Entity playerViewer = RequireSolePossessedRep(engine);
-            Entity[] snapshot = SnapshotCollection(collections, playerViewer, "collection.command.source");
+            Entity[] snapshot = SnapshotCollection(collections, playerViewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             ReplaceCollection(collections, _debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, snapshot, "Command preview");
         }
 
@@ -238,7 +207,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
             CollectStressSelectionState(engine);
             PublishSelectableKnowledge(engine, playerViewer, _teamBViewer, _debugViewer);
-            BindStressCollections(collections, playerViewer, _teamBViewer, _debugViewer);
+            BindStressCollections(engine, collections, playerViewer, _teamBViewer, _debugViewer);
             ApplySelectionViewChoice(engine, collections, playerViewer, _teamBViewer, _debugViewer);
             if (drawOverlay)
             {
@@ -349,6 +318,7 @@ namespace ChampionSkillSandboxMod.Runtime
         }
 
         private void BindStressCollections(
+            GameEngine engine,
             EntityCollectionStore collections,
             Entity playerViewer,
             Entity aiViewer,
@@ -358,7 +328,7 @@ namespace ChampionSkillSandboxMod.Runtime
             ReplaceCollection(collections, aiViewer, AiTargetsCollectionKey, EntityCollectionRoleKind.Display, _teamBTargets.ToArray(), "AI command targets");
             ReplaceCollection(collections, aiViewer, AiFormationCollectionKey, EntityCollectionRoleKind.Display, _teamBFormation.ToArray(), "AI formation");
 
-            Entity[] commandSource = SnapshotCollection(collections, playerViewer, "collection.command.source");
+            Entity[] commandSource = SnapshotCollection(collections, playerViewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             ReplaceCollection(collections, debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, commandSource, "Command preview");
         }
 
@@ -386,7 +356,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 owner == Entity.Null ||
                 string.IsNullOrWhiteSpace(key) ||
                 owner != playerViewer ||
-                (owner == playerViewer && string.Equals(key, "collection.command.source", StringComparison.Ordinal)))
+                (owner == playerViewer && string.Equals(key, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), StringComparison.Ordinal)))
             {
                 return;
             }
@@ -409,7 +379,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 playerViewer,
@@ -473,12 +443,12 @@ namespace ChampionSkillSandboxMod.Runtime
                 return false;
             }
 
-            if (collections.TryGetView(owner, "collection.command.source", out EntityCollectionView existing) &&
+            if (collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView existing) &&
                 existing.PrimaryEntity != Entity.Null &&
                 engine.World.IsAlive(existing.PrimaryEntity))
             {
                 engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-                engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = "collection.command.source";
+                engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
                 return true;
             }
 
@@ -492,12 +462,12 @@ namespace ChampionSkillSandboxMod.Runtime
             ReplaceCollection(
                 collections,
                 owner,
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionRoleKind.CommandSource,
                 commandSourceBuffer,
                 "Initial command source");
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-            engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = "collection.command.source";
+            engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             return true;
         }
 
@@ -526,14 +496,6 @@ namespace ChampionSkillSandboxMod.Runtime
             TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("ChampionSkillSandbox requires engine TagOps.");
             tagOps.AddTag(engine.World, entity, tagId);
-        }
-
-        private void EnsureMode(GameEngine engine)
-        {
-            if (!ChampionSkillSandboxIds.IsSandboxMode(ChampionSkillCastModes.GetActive(engine)))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
-            }
         }
 
         private static void ConsumeResetCameraRequest(GameEngine engine)
@@ -630,9 +592,9 @@ namespace ChampionSkillSandboxMod.Runtime
             ICameraFollowTarget? followTarget = followModeId switch
             {
                 var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal)
-                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionPrimary, commandSourceOwner, "collection.command.source"),
+                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionPrimary, commandSourceOwner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource")),
                 var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal)
-                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionGroup, commandSourceOwner, "collection.command.source"),
+                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionGroup, commandSourceOwner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource")),
                 _ => null
             };
 
@@ -722,7 +684,7 @@ namespace ChampionSkillSandboxMod.Runtime
                     engine.World,
                     engine.GlobalContext,
                     owner,
-                    "collection.command.source",
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                     out Entity primary)
                 ? primary
                 : Entity.Null;
@@ -830,7 +792,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             string choice = ResolveSelectionViewChoice(engine);
             owner = playerViewer;
-            key = "collection.command.source";
+            key = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
 
             if (string.Equals(choice, ChampionSkillSandboxIds.PlayerFormationToolbarButtonId, StringComparison.Ordinal))
             {
@@ -888,7 +850,7 @@ namespace ChampionSkillSandboxMod.Runtime
                          keyObj is string storedKey &&
                          !string.IsNullOrWhiteSpace(storedKey)
                 ? storedKey
-                : "collection.command.source";
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
 
             return owner != Entity.Null &&
                    collections.TryGet(owner, key, out handle) &&

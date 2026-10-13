@@ -102,8 +102,9 @@ public sealed class WorldDigestStabilityTests
 
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(dir!, new[] { "LudotsCoreMod" }),
-            Path.Combine(dir!, "assets"));
+            RepoModPaths.ResolveExplicit(dir!, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+            Path.Combine(dir!, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.LoadStartupMap();
         return engine;
     }

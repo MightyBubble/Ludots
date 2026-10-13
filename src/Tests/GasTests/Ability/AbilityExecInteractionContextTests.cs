@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -357,7 +358,7 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPlayerDefaultPref(harness);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(ContextIntentName)),
                 "DEC-14: the mounted context's explicit intent must win over the player default.");
         }
@@ -385,7 +386,7 @@ namespace Ludots.Tests.GAS
                 "the mounted context must be released with the exec when it ends.");
             InteractionPref pref = NewPlayerDefaultPref(harness);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(pref.DefaultCommandIntentId),
                 "DEC-14: steady state (no mounted context) routes through the player default.");
         }
@@ -675,7 +676,7 @@ namespace Ludots.Tests.GAS
                     Definitions = definitions,
                     ExecSystem = execSystem,
                     ContextSystem = new AbilityExecInteractionContextSystem(world, contextProfiles, definitions, domains),
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
                     AbilityTargetsKeyId = keyRegistry.Register(AbilityTargetsCollectionKey),
                 };
             }

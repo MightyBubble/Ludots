@@ -32,7 +32,6 @@ public sealed class FieldHierarchyQueryAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldHierarchyQueryMod",
     };
 
@@ -130,7 +129,8 @@ public sealed class FieldHierarchyQueryAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.UiCaptured, false);
         return engine;
     }

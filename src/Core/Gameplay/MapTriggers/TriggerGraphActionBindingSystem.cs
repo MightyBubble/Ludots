@@ -6,16 +6,19 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
+using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Dispatches TriggerGraph mounts that bind a semantic input action directly:
-    /// when the action's configured moment (press started / release completed) fires,
-    /// stamps the shared InputAction payload (rep from the mount subject, pointer
-    /// window pixels, held modifiers) and executes the mount. Replaces the retired
-    /// retired input-action bridge.
+    /// Dispatches TriggerGraph mounts that bind a semantic input action directly.
+    /// Button actions fire on their configured press or release. Axis1D and Axis2D
+    /// <c>firesOn: change</c> actions and the reserved PointerMoved action share one
+    /// value-change path: each mount samples the watched vector once when it is
+    /// present, then again only when that vector changes. Value changes run before
+    /// button edges in the same tick. Each dispatch stamps the shared InputAction
+    /// payload and executes the mount.
     /// </summary>
     public sealed class TriggerGraphActionBindingSystem : Arch.System.ISystem<float>
     {
@@ -31,15 +34,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Action<Entity> _reconcileContext;
         private readonly List<string> _actionSnapshot = new(32);
         private readonly List<TriggerGraphMountTrigger> _mountSnapshot = new(16);
-
-        /// <summary>"No pointer sample dispatched yet" sentinel (NaN X marks it).</summary>
-        private static readonly System.Numerics.Vector2 InvalidPointer =
-            new System.Numerics.Vector2(float.NaN, float.NaN);
-
-        // Last dispatched live-pointer position, per reader domain: one for the global
-        // (single-seat) reader, one per seat id when routing per-seat.
-        private System.Numerics.Vector2 _lastDispatchedPointer = InvalidPointer;
-        private readonly Dictionary<string, System.Numerics.Vector2> _lastDispatchedPointerBySeat = new();
+        private readonly List<InputBindingIntFire> _intFires = new(4);
 
         public TriggerGraphActionBindingSystem(
             Func<MapSession?> currentSession,
@@ -105,7 +100,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (!seats.TryGetSolePossessedRep(out Entity rep)) return;
                 possessedRep = rep;
             }
-            DispatchReader(session, input, possessedRep, ref _lastDispatchedPointer);
+            DispatchReader(session, input, possessedRep);
         }
 
         private void DispatchPerSeat(
@@ -123,36 +118,51 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                if (!_lastDispatchedPointerBySeat.TryGetValue(seat.SeatId, out var last))
-                    last = InvalidPointer;
-                DispatchReader(session, channel.Reader, seat.PossessedRep, ref last);
-                _lastDispatchedPointerBySeat[seat.SeatId] = last;
+                DispatchReader(session, channel.Reader, seat.PossessedRep);
             }
         }
 
         private void DispatchReader(
             MapSession session,
             IInputActionReader input,
-            Entity? possessedRep,
-            ref System.Numerics.Vector2 lastPointer)
+            Entity? possessedRep)
         {
-            // Both edges with a held final state close the old gesture before opening
-            // its successor. Motion observes the reconciled context after both edges.
-            for (int phase = 0; phase < 4; phase++)
+            // Value changes run before button edges so a region graph can close its
+            // context before a press in the same tick. Among buttons, release-while-down
+            // still precedes press, then release.
+            ReadOnlySpan<int> phases = stackalloc int[] { 3, 0, 1, 2 };
+            for (int phaseIndex = 0; phaseIndex < phases.Length; phaseIndex++)
+            {
+            int phase = phases[phaseIndex];
             foreach (string actionId in _actionSnapshot)
             {
-                if (!_bindings.TryGetMounts(actionId, out var mounts) ||
-                    DispatchPhase(input, actionId) != phase) continue;
+                if (!_bindings.TryGetMounts(actionId, out var mounts)) continue;
+                bool valueChange = IsValueChange(actionId);
+                if (DispatchPhase(input, actionId, valueChange) != phase) continue;
 
-                System.Numerics.Vector2 pointer;
-                if (actionId == ReservedInputActionIds.PointerMoved)
+                System.Numerics.Vector2 actionValue = default;
+                System.Numerics.Vector2 pointer = default;
+                if (valueChange)
                 {
-                    pointer = input.ReadAction<System.Numerics.Vector2>(ReservedInputActionIds.PointerPos);
-                    if (!float.IsNaN(lastPointer.X) && lastPointer == pointer) continue;
-                    lastPointer = pointer;
+                    string watchedId = actionId == ReservedInputActionIds.PointerMoved
+                        ? ReservedInputActionIds.PointerPos
+                        : actionId;
+                    if (!input.TryReadPresentVector2(watchedId, out actionValue)) continue;
+                    if (actionId == ReservedInputActionIds.PointerMoved)
+                    {
+                        pointer = actionValue;
+                    }
+                    else if (!input.TryReadPresentVector2(ReservedInputActionIds.PointerPos, out pointer))
+                    {
+                        pointer = default;
+                    }
                 }
-                else if (!FiredThisTick(input, actionId) ||
-                         !TryResolveEventPointer(actionId, IsRelease(actionId), out pointer))
+                else if (!DispatchButtonEdges(session, input, possessedRep, actionId, mounts))
+                {
+                    continue;
+                }
+
+                if (!valueChange)
                 {
                     continue;
                 }
@@ -165,8 +175,83 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     Entity rep = mount.Scope;
                     if (!mount.IsActionRegistered || rep == Entity.Null || rep == default ||
                         (possessedRep.HasValue && rep != possessedRep.Value)) continue;
-                    Dispatch(session, mount, actionId, rep, pointer, modifiers);
+                    if (valueChange && !mount.ConsumeActionValueSample(actionValue)) continue;
+                    Dispatch(session, mount, actionId, rep, pointer, modifiers, valueChange, actionValue, bindingInt: null);
                 }
+            }
+            }
+        }
+
+        /// <summary>
+        /// Integer bindings dispatch once per matching edge and suppress the aggregate
+        /// edge. The aggregate is the 0-to-nonzero transition of the summed value, so
+        /// a second slot pressed while another is held would otherwise never fire, and
+        /// firing both would double the first slot.
+        /// </summary>
+        private bool DispatchButtonEdges(
+            MapSession session,
+            IInputActionReader input,
+            Entity? possessedRep,
+            string actionId,
+            IReadOnlyList<TriggerGraphMountTrigger> mounts)
+        {
+            bool release = IsRelease(actionId);
+            _intFires.Clear();
+            input.CopyBindingIntFires(actionId, _intFires);
+            int matched = 0;
+            for (int f = 0; f < _intFires.Count; f++)
+            {
+                InputBindingIntFire fire = _intFires[f];
+                if (release ? !fire.Released : !fire.Pressed)
+                {
+                    continue;
+                }
+
+                matched++;
+                if (!TryResolveEventPointer(actionId, release, out System.Numerics.Vector2 pointer))
+                {
+                    continue;
+                }
+
+                DispatchMounts(session, input, possessedRep, mounts, actionId, pointer, stampActionValue: false, default, fire.Value);
+            }
+
+            if (matched > 0)
+            {
+                return true;
+            }
+
+            if (!FiredThisTick(input, actionId) ||
+                !TryResolveEventPointer(actionId, release, out System.Numerics.Vector2 aggregatePointer))
+            {
+                return true;
+            }
+
+            DispatchMounts(session, input, possessedRep, mounts, actionId, aggregatePointer, stampActionValue: false, default, bindingInt: null);
+            return true;
+        }
+
+        private void DispatchMounts(
+            MapSession session,
+            IInputActionReader input,
+            Entity? possessedRep,
+            IReadOnlyList<TriggerGraphMountTrigger> mounts,
+            string actionId,
+            System.Numerics.Vector2 pointer,
+            bool stampActionValue,
+            System.Numerics.Vector2 actionValue,
+            int? bindingInt)
+        {
+            int modifiers = ReadHeldModifiers(input);
+            CopyMounts(mounts);
+            for (int i = 0; i < _mountSnapshot.Count; i++)
+            {
+                TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                Entity rep = mount.Scope;
+                if (!mount.IsActionRegistered || rep == Entity.Null || rep == default ||
+                    (possessedRep.HasValue && rep != possessedRep.Value)) continue;
+                if (stampActionValue && !mount.ConsumeActionValueSample(actionValue)) continue;
+                Dispatch(session, mount, actionId, rep, pointer, modifiers, stampActionValue, actionValue, bindingInt);
             }
         }
 
@@ -176,7 +261,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
             string actionId,
             Entity rep,
             System.Numerics.Vector2 pointer,
-            int modifiers)
+            int modifiers,
+            bool stampActionValue,
+            System.Numerics.Vector2 actionValue,
+            int? bindingInt)
         {
             ScriptContext context = _createContext();
             context.Set(CoreServiceKeys.MapId, session.MapId);
@@ -186,13 +274,24 @@ namespace Ludots.Core.Gameplay.MapTriggers
             context.Set(MapTriggerEventPayloadKeys.PointerScreenX, pointer.X);
             context.Set(MapTriggerEventPayloadKeys.PointerScreenY, pointer.Y);
             context.Set(MapTriggerEventPayloadKeys.Modifiers, modifiers);
+            if (stampActionValue)
+            {
+                context.Set(MapTriggerEventPayloadKeys.ActionValueX, actionValue.X);
+                context.Set(MapTriggerEventPayloadKeys.ActionValueY, actionValue.Y);
+            }
+
+            if (bindingInt.HasValue)
+            {
+                context.Set(MapTriggerEventPayloadKeys.BindingInt, bindingInt.Value);
+            }
+
             _triggerManager.DispatchMountedTrigger(mount, context);
             _reconcileContext(rep);
         }
 
-        private int DispatchPhase(IInputActionReader input, string actionId)
+        private int DispatchPhase(IInputActionReader input, string actionId, bool valueChange)
         {
-            if (actionId == ReservedInputActionIds.PointerMoved) return 3;
+            if (valueChange) return 3;
             if (!IsRelease(actionId)) return 1;
             return input.IsDown(actionId) && input.PressedThisFrame(actionId) ? 0 : 2;
         }
@@ -210,7 +309,18 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 : input.PressedThisFrame(actionId);
         }
 
+        private bool IsValueChange(string actionId)
+        {
+            if (actionId == ReservedInputActionIds.PointerMoved) return true;
+            return RequireFiresOn(actionId) == InputActionDef.FiresOnChange;
+        }
+
         private bool IsRelease(string actionId)
+        {
+            return RequireFiresOn(actionId) == InputActionDef.FiresOnRelease;
+        }
+
+        private string RequireFiresOn(string actionId)
         {
             if (!_firesOnByAction.TryGetValue(actionId, out string? firesOn))
             {
@@ -218,7 +328,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"LUDOTS_INPUT_ACTION_FIRES_ON_MISSING: TriggerGraph binds action '{actionId}' but the input config does not define it.");
             }
 
-            return firesOn == InputActionDef.FiresOnRelease;
+            if (firesOn != InputActionDef.FiresOnPress &&
+                firesOn != InputActionDef.FiresOnRelease &&
+                firesOn != InputActionDef.FiresOnChange)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: TriggerGraph binds action '{actionId}' but its firesOn is '{firesOn}'.");
+            }
+
+            return firesOn;
         }
 
         private bool TryResolveEventPointer(string actionId, bool release, out System.Numerics.Vector2 pointer)
@@ -283,16 +401,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     throw new InvalidOperationException($"Input config actions[{i}] has an empty id.");
                 }
 
-                string firesOn = string.IsNullOrWhiteSpace(action.FiresOn)
-                    ? InputActionDef.FiresOnPress
-                    : action.FiresOn;
-                if (firesOn != InputActionDef.FiresOnPress && firesOn != InputActionDef.FiresOnRelease)
-                {
-                    throw new InvalidOperationException(
-                        $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: action '{action.Id}' firesOn must be '{InputActionDef.FiresOnPress}' or '{InputActionDef.FiresOnRelease}' (got '{action.FiresOn}').");
-                }
-
-                lookup[action.Id] = firesOn;
+                lookup[action.Id] = action.FiresOn ?? string.Empty;
             }
 
             return lookup;

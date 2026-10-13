@@ -2,7 +2,6 @@ using System;
 using System.Numerics;
 using System.Text;
 using Arch.Core;
-using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -16,6 +15,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
+using Ludots.Core.Input.Config;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -131,7 +131,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private Entity[] SnapshotCommandSource()
         {
             return TryResolveLocalCommandSourceOwner(out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"))
                 : Array.Empty<Entity>();
         }
 
@@ -143,7 +143,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                        _world,
                        _engine.GlobalContext,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                        out entity);
         }
 
@@ -162,12 +162,10 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private string BuildInputSummary()
         {
-            string ground = ResolveDebugValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, "<none>");
-            string order = ResolveDebugValue(LocalOrderSourceHelper.LastOrderDebugKey, "<none>");
             string snapshot = string.IsNullOrWhiteSpace(_runtime.LatestDebugSnapshotPath)
                 ? "<pending>"
                 : _runtime.LatestDebugSnapshotPath!;
-            return $"Input ground={ground}\nInput order={order}\nSnapshot file={snapshot}";
+            return $"Snapshot file={snapshot}";
         }
 
         private string BuildQueueLine(in OrderBuffer buffer, in Order activeOrder, bool hasRoadActiveOrder, int roadMoveFollowOrderTypeId)
@@ -354,18 +352,6 @@ namespace RoadNetworkShowcaseMod.Runtime
                    _world.IsAlive(owner)
                 ? owner
                 : Entity.Null;
-        }
-
-        private string ResolveDebugValue(string key, string fallback)
-        {
-            if (_engine.GlobalContext.TryGetValue(key, out object? value) &&
-                value is string text &&
-                !string.IsNullOrWhiteSpace(text))
-            {
-                return text;
-            }
-
-            return fallback;
         }
 
         private string DescribeQueuedOrders(in OrderBuffer buffer, int roadMoveFollowOrderTypeId)

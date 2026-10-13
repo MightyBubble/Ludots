@@ -27,7 +27,6 @@ namespace Ludots.Tests.Presentation
         private static readonly string[] TimerMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "PresenterTimerTestMod",
         };
 
@@ -137,14 +136,12 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, TimerMods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var input = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                input.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(input);
 
             engine.SetService(CoreServiceKeys.InputHandler, input);
             engine.SetService(CoreServiceKeys.UiCaptured, false);

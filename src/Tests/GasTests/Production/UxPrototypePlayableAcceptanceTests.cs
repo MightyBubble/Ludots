@@ -77,7 +77,6 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "EntityInfoPanelsMod",
             "EntityCommandPanelMod",
@@ -297,7 +296,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("UxPrototype command panel source should support activation.");
             Assert.That(
                 actions.ActivateSlot(target, 0, 2).State,
-                Is.EqualTo(InputOrderActivationState.Submitted));
+                Is.EqualTo(EntityCommandPanelActivationState.Accepted));
 
             object state = GetPrototypeState(engine);
             object queueSnapshot = ReadObjectProperty(BuildSnapshot(state, engine), "SelectedQueue");
@@ -850,7 +849,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
 
             AcceptanceUiHostInstaller.Install(engine);
@@ -898,10 +897,7 @@ namespace Ludots.Tests.GAS.Production
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

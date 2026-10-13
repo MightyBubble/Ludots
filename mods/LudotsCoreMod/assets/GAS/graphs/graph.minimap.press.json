@@ -1,0 +1,427 @@
+[
+  {
+    "id": "graph.minimap.press",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_select_begin",
+        "action": "Select.Begin",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "region",
+        "op": "QueryMinimapRegion"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "c3",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "eq3",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "j3",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "preset",
+        "op": "MinimapTogglePreset"
+      },
+      {
+        "id": "c4",
+        "op": "ConstInt",
+        "intValue": 4
+      },
+      {
+        "id": "eq4",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "j4",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "rotate",
+        "op": "MinimapToggleRotate"
+      },
+      {
+        "id": "c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "eq2",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "j2",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "gesture2",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "minimap.gesture"
+      },
+      {
+        "id": "zoom",
+        "op": "MinimapSetZoomFromPointer"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "eq1",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "j1",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "gesture1",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "minimap.gesture"
+      },
+      {
+        "id": "ground",
+        "op": "MinimapScreenToWorld"
+      },
+      {
+        "id": "gj",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "jump",
+        "op": "MinimapJumpCamera"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "c3"
+      },
+      {
+        "from": "c3",
+        "fromPort": "next",
+        "to": "eq3"
+      },
+      {
+        "from": "eq3",
+        "fromPort": "next",
+        "to": "j3"
+      },
+      {
+        "from": "j3",
+        "fromPort": "true",
+        "to": "preset"
+      },
+      {
+        "from": "preset",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "j3",
+        "fromPort": "false",
+        "to": "c4"
+      },
+      {
+        "from": "c4",
+        "fromPort": "next",
+        "to": "eq4"
+      },
+      {
+        "from": "eq4",
+        "fromPort": "next",
+        "to": "j4"
+      },
+      {
+        "from": "j4",
+        "fromPort": "true",
+        "to": "rotate"
+      },
+      {
+        "from": "rotate",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "j4",
+        "fromPort": "false",
+        "to": "c2"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "eq2"
+      },
+      {
+        "from": "eq2",
+        "fromPort": "next",
+        "to": "j2"
+      },
+      {
+        "from": "j2",
+        "fromPort": "true",
+        "to": "gesture2"
+      },
+      {
+        "from": "gesture2",
+        "fromPort": "next",
+        "to": "zoom"
+      },
+      {
+        "from": "zoom",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "j2",
+        "fromPort": "false",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "eq1"
+      },
+      {
+        "from": "eq1",
+        "fromPort": "next",
+        "to": "j1"
+      },
+      {
+        "from": "j1",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "j1",
+        "fromPort": "true",
+        "to": "gesture1"
+      },
+      {
+        "from": "gesture1",
+        "fromPort": "next",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "gj"
+      },
+      {
+        "from": "gj",
+        "fromPort": "true",
+        "to": "jump"
+      },
+      {
+        "from": "jump",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "gj",
+        "fromPort": "false",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "region",
+        "fromPort": "value",
+        "to": "eq3",
+        "toPort": "a"
+      },
+      {
+        "from": "c3",
+        "fromPort": "value",
+        "to": "eq3",
+        "toPort": "b"
+      },
+      {
+        "from": "eq3",
+        "fromPort": "value",
+        "to": "j3",
+        "toPort": "condition"
+      },
+      {
+        "from": "region",
+        "fromPort": "value",
+        "to": "eq4",
+        "toPort": "a"
+      },
+      {
+        "from": "c4",
+        "fromPort": "value",
+        "to": "eq4",
+        "toPort": "b"
+      },
+      {
+        "from": "eq4",
+        "fromPort": "value",
+        "to": "j4",
+        "toPort": "condition"
+      },
+      {
+        "from": "region",
+        "fromPort": "value",
+        "to": "eq2",
+        "toPort": "a"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "eq2",
+        "toPort": "b"
+      },
+      {
+        "from": "eq2",
+        "fromPort": "value",
+        "to": "j2",
+        "toPort": "condition"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "gesture2",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "gesture2",
+        "toPort": "value"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "zoom",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "zoom",
+        "toPort": "b"
+      },
+      {
+        "from": "region",
+        "fromPort": "value",
+        "to": "eq1",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "eq1",
+        "toPort": "b"
+      },
+      {
+        "from": "eq1",
+        "fromPort": "value",
+        "to": "j1",
+        "toPort": "condition"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "gesture1",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "gesture1",
+        "toPort": "value"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "gj",
+        "toPort": "condition"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

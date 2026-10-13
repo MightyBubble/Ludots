@@ -10,7 +10,46 @@
       "name": "Gameplay_SelectEnd",
       "type": "Button",
       "firesOn": "release"
+    },
+    {
+      "id": "Minimap.Zoom",
+      "name": "Minimap_Zoom",
+      "type": "Axis1D",
+      "firesOn": "change"
     }
   ],
-  "contexts": []
+  "contexts": [
+    {
+      "id": "Minimap.Device",
+      "priority": 80,
+      "bindings": [
+        {
+          "actionId": "Minimap.Zoom",
+          "path": "<Mouse>/ScrollY"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
+      ]
+    },
+    {
+      "id": "Core.Select",
+      "priority": 40,
+      "bindings": [
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
+      ]
+    }
+  ]
 }

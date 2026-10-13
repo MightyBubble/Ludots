@@ -28,8 +28,9 @@ namespace Ludots.Tests.GAS.Production
             try
             {
                 engine.InitializeWithConfigPipeline(
-                    RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }),
-                    assetsRoot);
+                    RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }),
+                    assetsRoot,
+                    Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
                 engine.Start();
                 engine.LoadStartupMap();

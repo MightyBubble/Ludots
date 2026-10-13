@@ -1,0 +1,38 @@
+{
+  "op": "LoadEntityFacing",
+  "driver": "linear",
+  "title": "读出木桩的朝向",
+  "beat": "不靠眼睛看，图里直接读木桩面朝哪一度，读数顺手折成伤打出去。",
+  "detailTemplate": "木桩面朝 {result} 度；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "度"
+  ],
+  "featuredNodeId": "face",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

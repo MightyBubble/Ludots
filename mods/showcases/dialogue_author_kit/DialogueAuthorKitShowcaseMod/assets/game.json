@@ -1,13 +1,11 @@
 {
   "startupMapId": "dialogue_author_kit_gate",
   "panelTheme": "kit-amber",
-  "startupInputContexts": [
-    "DialogueAuthorKit.Controls"
-  ],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ]
 }

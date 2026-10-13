@@ -266,6 +266,11 @@ namespace Ludots.Core.Engine
         /// </summary>
         public GameConfig MergedConfig { get; private set; }
 
+        /// <summary>
+        /// Host directory for per-user data. <c>user://</c> expands against this root.
+        /// </summary>
+        public string UserDataRoot { get; private set; } = string.Empty;
+
         public void RegisterSystem(ISystem<float> system, SystemGroup group)
         {
             if (group == SystemGroup.LocalInput && system is ITimeSlicedSystem)
@@ -395,33 +400,45 @@ namespace Ludots.Core.Engine
             return ctx;
         }
 
-        /// <summary>
-        /// New initialization method using ConfigPipeline to merge game.json from all sources.
-        /// This is the recommended initialization path.
-        /// </summary>
         public RegistrationConflictReport ConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigConflictReport ConfigConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigCatalog ConfigCatalog { get; private set; }
         public Ludots.Core.Gameplay.AI.Config.AiCompiledRuntime AiRuntime { get; private set; }
         private Ludots.Core.GraphRuntime.GraphFunctionCatalog? _graphFunctionCatalog;
 
-        public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
+        /// <summary>
+        /// Initialize with ConfigPipeline merging game.json from Core and mods.
+        /// <paramref name="userDataRoot"/> is the host directory for per-user data; required.
+        /// <c>user://</c> expands against it.
+        /// </summary>
+        public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot, string userDataRoot)
         {
-            InitializeWithConfigPipelineInternal(modPaths, null, assetsRoot);
+            InitializeWithConfigPipelineInternal(modPaths, null, assetsRoot, userDataRoot);
         }
 
-        public void InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, string assetsRoot)
+        public void InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, string assetsRoot, string userDataRoot)
         {
             if (modPlan == null)
             {
                 throw new ArgumentNullException(nameof(modPlan));
             }
 
-            InitializeWithConfigPipelineInternal(null, modPlan, assetsRoot);
+            InitializeWithConfigPipelineInternal(null, modPlan, assetsRoot, userDataRoot);
         }
 
-        private void InitializeWithConfigPipelineInternal(List<string>? modPaths, ResolvedModLoadPlan? modPlan, string assetsRoot)
+        private void InitializeWithConfigPipelineInternal(
+            List<string>? modPaths,
+            ResolvedModLoadPlan? modPlan,
+            string assetsRoot,
+            string userDataRoot)
         {
+            if (string.IsNullOrWhiteSpace(userDataRoot))
+            {
+                throw new ArgumentException("userDataRoot is required.", nameof(userDataRoot));
+            }
+
+            UserDataRoot = userDataRoot;
+
             // Early log bootstrap with console backend — will be upgraded after config merge
             if (Diagnostics.Log.Backend is NullLogBackend)
                 Diagnostics.Log.Initialize(new ConsoleLogBackend());
@@ -891,6 +908,7 @@ namespace Ludots.Core.Engine
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var inputCollectionKeyDeclarations = LoadInputCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            WireEntityCollectionMembershipEvents(entityCollectionStore);
             var intIdCollectionStore = new IntIdCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
@@ -1048,7 +1066,8 @@ namespace Ludots.Core.Engine
                 customEventCatalog.Schemas,
                 enumCatalog,
                 intIdCollectionStore,
-                graphHandlers);
+                graphHandlers,
+                inputCollectionKeyDeclarations);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1174,7 +1193,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.DueWheel = effectDueWheel;
             gasGraphApi.AggregateDirty = aggregateDirtyRegistry;
             gasGraphApi.BindTriggerManager(TriggerManager, CreateContext);
-            gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
+            gasGraphApi.BindPointerSample(new Ludots.Core.Input.PointerSample.GraphPointerSampleRuntime(World, GlobalContext));
             var commandIntentSubmissions = new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer(
                 gasRuntimeCapacity.CommandIntentScratchCapacity);
             gasGraphApi.BindCommandIntentSubmissions(commandIntentSubmissions);
@@ -1235,9 +1254,6 @@ namespace Ludots.Core.Engine
                 graphProgramScratchCapacity: gasRuntimeCapacity.EffectPhaseGraphProgramScratchCapacity);
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
-            var interactionActionBindings = config.InteractionActions
-                ?? throw new InvalidOperationException("game.json interactionActions must be explicitly configured.");
-            interactionActionBindings.Validate();
             var filterProfileIdRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var filterProfileRegistry = new FilterProfileRegistry(filterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
@@ -1549,7 +1565,7 @@ namespace Ludots.Core.Engine
                     _ => 0,
                 },
                 instancedBatchAssets.GetId,
-                entityCollectionKeyRegistry.Register,
+                key => entityCollectionKeyRegistry.Register(key),
                 interactionContextProfileIds.GetId,
                 presenterCommandKinds,
                 presenterBehaviorKinds,
@@ -1564,7 +1580,8 @@ namespace Ludots.Core.Engine
                     }
 
                     return definition.ArgCount;
-                }).Load(ConfigCatalog, ConfigConflictReport);
+                },
+                collectionRoles: inputCollectionKeyDeclarations).Load(ConfigCatalog, ConfigConflictReport);
             presenterDefinitions.RebuildCompiledViews();
 
             int ResolveVfxAssetId(string key)
@@ -1601,14 +1618,13 @@ namespace Ludots.Core.Engine
                 "MeshAssetRegistry: 'sphere' descriptor missing or invalid after config load");
 
             var worldHudStrings = new WorldHudStringTable(presentationTextCatalog, presentationTextLocaleSelection);
+            var pointerRegionContexts = new Ludots.Core.Input.PointerRegionContextRegistry();
+            SetService(CoreServiceKeys.PointerRegionContextRegistry, pointerRegionContexts);
             var minimapRuntime = new MinimapRuntime(presentationConfig.Minimap);
             var chunkDebugPanelRuntime = new ChunkDebugPanelRuntime();
             var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
             var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
-            var inputFrameConsumers = new List<IInputFrameConsumer>
-            {
-                new MinimapInputConsumer(minimapRuntime, presentationConfig.Minimap.Actions)
-            };
+            var inputFrameConsumers = new List<IInputFrameConsumer>();
             SetService(
                 CoreServiceKeys.MinimapKnowledgeViewerProvider,
                 static (GameEngine engine, out Entity viewer) =>
@@ -1771,7 +1787,7 @@ namespace Ludots.Core.Engine
                 commandIntentTargetGate.CanTarget);
             commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
+            // Interaction context profiles (RFC-0065 CTX-6).
             // Id fields resolve at install: collection keys into the store's key space, filter and
             // command intent names against their kernel registries (installed above), so unknown
             // references fail fast at startup. The engine installs no profile of its own — the
@@ -1786,11 +1802,19 @@ namespace Ludots.Core.Engine
                     graphProgramRegistry,
                     inputConfigRoot.Actions.Select(action => action.Id),
                     graphOutputSchemas));
+            string minimapContextId = presentationConfig.Minimap.InteractionContextId;
+            if (!interactionContextProfileRegistry.ProfileIdRegistry.TryGetId(minimapContextId, out int minimapProfileId) ||
+                !interactionContextProfileRegistry.IsInstalled(minimapProfileId))
+            {
+                throw new InvalidOperationException(
+                    $"POINTER_REGION.ERR.UnknownContext: presentation.minimap.interactionContextId '{minimapContextId}' is not an installed interaction context profile.");
+            }
             var interactionContextInstances = new InteractionContextInstanceRuntime(
                 World,
                 interactionContextProfileRegistry,
                 presentationEventStream,
                 GameSession);
+            WireContextLifecycleEvents(interactionContextInstances, interactionContextProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextInstances, interactionContextInstances);
             gasGraphApi.BindContextInstances(interactionContextInstances);
             MapLoader.SetInitialInteractionContexts(interactionContextProfileRegistry);
@@ -1798,23 +1822,8 @@ namespace Ludots.Core.Engine
 
             gasGraphApi.BindCustomEvents(customEventCatalog.Names);
             var collectionApplier = new CollectionApplier(World, entityCollectionStore);
-            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.CastRawKeyId);
+            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.RequireRoleKeyId("castRaw"));
             gasGraphApi.BindCollectionApplier(collectionApplier);
-            var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
-            castCommitProfileRegistry.Install(new CastCommitProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-
-            // Client cast preference scope chain (RFC-0065 CTX-8, §5.6): player preference layers plus
-            // the mod lock set; template/form-set keys resolve through the engine-wide id spaces.
-            var clientCastPreferences = new ClientCastPreferenceStore(
-                castCommitProfileRegistry,
-                MapLoader.EntityTemplateKeys.Register,
-                MapLoader.EntityTemplateKeys.GetName,
-                RequireAbilityFormSetId,
-                AbilityFormSetIdRegistry.GetName);
-            clientCastPreferences.InstallLocks(new ClientCastPreferenceConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-
             // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
             var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1826,22 +1835,29 @@ namespace Ludots.Core.Engine
             // The player input handler is adapter-bound after engine init, so it is resolved per
             // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            string schemePreferencePath = ClientControlSchemePreferenceStore.ResolveConfiguredPath(
+                MergedConfig.ControlSchemePreferencePath,
+                UserDataRoot);
+            var schemePreferences = new ClientControlSchemePreferenceStore(schemePreferencePath);
+            schemePreferences.Load(schemePreferencePath);
             var controlSchemeRuntime = new ControlSchemeRuntime(
                 controlSchemeIds,
                 orderTypeRegistry,
+                schemePreferences,
                 () => GetService(CoreServiceKeys.InputHandler),
-                clientCastPreferences,
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Game-instance InteractionPref seed: the player-level default intent +
-            // dispatch pair map binding plants on every bound player representative lacking the
-            // component. Seed ids are the kernel registries' own id spaces — the spaces the
-            // arbiter and mounted contexts resolve in.
+            // Preference keys are mod data. Context profiles are already installed, so a
+            // context-valued key can require each allowed value to be a profile id.
+            var interactionPrefCatalog = new InteractionPrefCatalog();
             _interactionPrefSeed = InteractionPrefConfigLoader.ResolveSeed(
                 new InteractionPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 commandIntentProfileRegistry,
-                castDispatchProfileRegistry);
+                castDispatchProfileRegistry,
+                interactionPrefCatalog,
+                interactionContextProfileRegistry,
+                abilityDefinitions);
 
 
             // Per-seat input interpretation channels: zero channels for sole-seat clients (their
@@ -1850,8 +1866,7 @@ namespace Ludots.Core.Engine
             var clientLocalSeatInputRuntime = new Client.ClientLocalSeatInputRuntime(
                 GlobalContext,
                 controlSchemeRuntime,
-                inputConfigRoot,
-                MergedConfig.StartupInputContexts);
+                inputConfigRoot);
 
 
             // Interaction mode catalog: simulation-side modes projected onto handler IMC
@@ -1863,6 +1878,8 @@ namespace Ludots.Core.Engine
                 new InteractionModeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 inputConfigRoot);
             gasGraphApi.BindInteractionModeMap(interactionModeMap);
+            gasGraphApi.BindInteractionPrefCatalog(interactionPrefCatalog);
+            gasGraphApi.BindAbilityDefinitions(abilityDefinitions);
 
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
@@ -1993,13 +2010,12 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
-            SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextProfileRegistry, interactionContextProfileRegistry);
-            SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
-            SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
+            SetService(CoreServiceKeys.InteractionPrefCatalog, interactionPrefCatalog);
+            SetService(CoreServiceKeys.ClientControlSchemePreferenceStore, schemePreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
             SetService(CoreServiceKeys.InteractionModeMap, interactionModeMap);
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
@@ -2149,7 +2165,10 @@ namespace Ludots.Core.Engine
             var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
             SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
             var virtualCameraRegistry = new VirtualCameraRegistry();
-            new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
+            new VirtualCameraDefinitionLoader(
+                ConfigPipeline,
+                virtualCameraRegistry,
+                inputCollectionKeyDeclarations).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             _gasGraphRuntimeApi.BindVirtualCameras(virtualCameraRegistry, GlobalContext);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
@@ -2273,6 +2292,14 @@ namespace Ludots.Core.Engine
                 orderQueue,
                 playerEntityLookup,
                 controlDomainQuery,
+                new Ludots.Core.Input.Orders.ContextScoredOrderResolver(
+                    World,
+                    contextGroups,
+                    graphProgramRegistry,
+                    SpatialQueries,
+                    gasGraphApi,
+                    commandIntentTargetGate.CanTarget,
+                    graphHandlers),
                 gasRuntimeCapacity.CommandIntentScratchCapacity,
                 eqsQueries: eqsQueryRegistry,
                 abilities: abilityDefinitions,
@@ -2284,26 +2311,19 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
             RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // Local IMC projection: mode components on possessed reps and the mounted
-            // active interaction context diff into per-seat (seatId, contextId, op) commands;
-            // handler resolution mirrors scheme activation — per-seat channel handler where one
-            // exists, the sole-seat global handler otherwise. Runs after possession sync so the
-            // same tick's possession is what gets projected.
             RegisterSystem(
-                new Ludots.Core.Input.Systems.InputContextProjectionSystem(
+                new Ludots.Core.Input.Systems.PointerRegionContextSystem(
                     World,
                     GlobalContext,
-                    interactionModeMap,
-                    interactionContextProfileRegistry,
-                    seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
-                        ? channel.Handler
-                        : GetService(CoreServiceKeys.InputHandler)),
+                    pointerRegionContexts,
+                    interactionContextInstances,
+                    interactionContextProfileRegistry),
                 SystemGroup.InputCollection);
             // Context trigger gate — the world-side active context set diff
             // mounts/unmounts profile-declared triggers[] graphs on the context subject and
             // runs the onActivated/onDeactivated lifecycle slot bodies at the mount window
-            // boundaries; simulation-side twin of the local IMC projection above (observers
-            // and all context writers included, not only local seats).
+            // boundaries. Observers and every context writer are included, not only local seats.
+            // The local IMC projection runs later, after ability exec has mounted its context.
             var interactionContextTriggerGate = new Gameplay.MapTriggers.InteractionContextTriggerMountSystem(
                 World,
                 TriggerManager,
@@ -2313,7 +2333,8 @@ namespace Ludots.Core.Engine
                 customEventCatalog.Schemas,
                 () => MapSessions,
                 graphReturnWriter,
-                gasGraphApi);
+                gasGraphApi,
+                interactionContextInstances);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
             // Bind the change-point Deactivated slot runner — DeactivateContext op
@@ -2397,6 +2418,20 @@ namespace Ludots.Core.Engine
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             // RFC-0065 CTX-6: exec lifecycle mount/reclaim of the entity-mounted active context.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextProfileRegistry, abilityDefinitions, controlDomainQuery), SystemGroup.AbilityActivation);
+            // IMC projection sits after the exec mount. Input is sampled at the start of the
+            // next platform frame, before the following logic step, so the handler must already
+            // carry this tick's context IMC when the logic tick returns. Projecting in
+            // InputCollection misses a context that AbilityActivation mounts later in the same tick.
+            RegisterSystem(
+                new Ludots.Core.Input.Systems.InputContextProjectionSystem(
+                    World,
+                    GlobalContext,
+                    interactionModeMap,
+                    interactionContextProfileRegistry,
+                    seatId => clientLocalSeatInputRuntime.TryGetChannel(seatId, out Client.ClientLocalSeatInputChannel channel)
+                        ? channel.Handler
+                        : GetService(CoreServiceKeys.InputHandler)),
+                SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
 
@@ -2506,7 +2541,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(entityLocalClockSystem, SystemGroup.AttributeCalculation);
-            RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(new CameraProfileBindingSystem(World, GlobalContext, virtualCameraRegistry), SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
@@ -2540,6 +2574,9 @@ namespace Ludots.Core.Engine
                     () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime),
                     interactionContextTriggerGate.ReconcileAfterInputAction),
                 SystemGroup.DeferredTriggerCollection);
+            // Sole per-tick writer of CameraManager.State. Action graphs enqueue
+            // CameraPoseRequest; publishing here applies that request in the same fixed step.
+            RegisterSystem(_cameraRuntimeSystem, SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)
             RegisterSystem(
@@ -2884,18 +2921,6 @@ namespace Ludots.Core.Engine
             }
 
             return orderTypeId;
-        }
-
-        private static int RequireAbilityFormSetId(string formSetKey)
-        {
-            int formSetId = AbilityFormSetIdRegistry.GetId(formSetKey);
-            if (formSetId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Cast preference references unknown ability form set '{formSetKey}'. Declare it in GAS/ability_form_sets.json.");
-            }
-
-            return formSetId;
         }
 
         public void LoadMap(string mapId) => LoadMap(MapLoadRequest.FromMapId(mapId));

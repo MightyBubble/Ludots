@@ -1,0 +1,38 @@
+{
+  "op": "MinimapToggleRotate",
+  "driver": "linear",
+  "title": "切换小地图跟不跟相机转",
+  "beat": "小地图跟相机转，或者不跟，切一次。",
+  "detailTemplate": "转过了，木桩从{healthBefore}掉到{healthAfter}。",
+  "assertDetailContains": [
+    "转过了"
+  ],
+  "featuredNodeId": "spin",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

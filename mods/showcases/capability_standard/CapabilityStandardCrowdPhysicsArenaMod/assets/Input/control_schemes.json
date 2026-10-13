@@ -1,0 +1,11 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": [
+        "Camera.Rig",
+        "CrowdPhysicsArena.Controls"
+      ]
+    }
+  ]
+}

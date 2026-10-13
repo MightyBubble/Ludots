@@ -38,11 +38,11 @@ namespace Ludots.Tests.GAS.Production
             var scenarios = new List<ScenarioResult>();
             try
             {
-                scenarios.Add(RunScenario("MOBA", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }, "entry", RunMobaScenario));
-                scenarios.Add(RunScenario("TCG/Modify", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_modify", RunTcgModifyScenario));
-                scenarios.Add(RunScenario("TCG/Hook", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_hook", RunTcgHookScenario));
-                scenarios.Add(RunScenario("ARPG", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", RunArpgScenario));
-                scenarios.Add(RunScenario("4X", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "FourXDemoMod" }, "fourx_entry", RunFourXScenario));
+                scenarios.Add(RunScenario("MOBA", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }, "entry", RunMobaScenario));
+                scenarios.Add(RunScenario("TCG/Modify", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_modify", RunTcgModifyScenario));
+                scenarios.Add(RunScenario("TCG/Hook", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_hook", RunTcgHookScenario));
+                scenarios.Add(RunScenario("ARPG", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod", "CommandSourceCoreFixtureMod" }, "arpg_entry", RunArpgScenario));
+                scenarios.Add(RunScenario("4X", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "FourXDemoMod", "CommandSourceCoreFixtureMod" }, "fourx_entry", RunFourXScenario));
             }
             finally
             {
@@ -78,7 +78,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 var modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods);
 
-                engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InstallDummyInput(engine);
                 engine.Start();
                 engine.LoadMap(mapId);

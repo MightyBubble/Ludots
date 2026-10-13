@@ -33,12 +33,6 @@ namespace Ludots.Platform.Abstractions
         // Attribute domain events
         AttributeValueChanged = 40,
 
-        // Ability aim presentation events
-        AbilityAimUpdated = 60,
-        AbilityAimEnded = 61,
-        AbilityAimBegun = 62,
-        AbilityAimSlotAdvanced = 63,
-
         // Entity collection presentation events
         EntityCollectionMemberAdded = 70,
         EntityCollectionMemberRemoved = 71,

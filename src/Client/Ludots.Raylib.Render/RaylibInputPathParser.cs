@@ -1,4 +1,5 @@
 using System;
+using Ludots.Platform.Abstractions;
 using Raylib_cs;
 
 namespace Ludots.Raylib.Render
@@ -74,5 +75,84 @@ namespace Ludots.Raylib.Render
                 _ => null
             };
         }
+
+        /// <summary>
+        /// Slot from a <c>&lt;Gamepad&gt;</c> / <c>&lt;GamepadN&gt;</c> tag. Returns -1 when the path is not a gamepad path.
+        /// An illegal slot or an unknown control throws.
+        /// </summary>
+        public static int ParseGamepadIndex(string path)
+        {
+            if (!GamepadControlPath.TryParse(path, out GamepadControlPath parsed))
+            {
+                return -1;
+            }
+
+            return parsed.Pad;
+        }
+
+        public static GamepadButton? ParseGamepadButton(string path)
+        {
+            if (!GamepadControlPath.TryParse(path, out GamepadControlPath parsed))
+            {
+                return null;
+            }
+
+            if (parsed.Kind is GamepadControlKind.Button or GamepadControlKind.Trigger)
+            {
+                return ToRaylibButton(parsed.Button);
+            }
+
+            return null;
+        }
+
+        public static (int Pad, GamepadAxis Axis)? ParseGamepadAxis(string path)
+        {
+            if (!GamepadControlPath.TryParse(path, out GamepadControlPath parsed))
+            {
+                return null;
+            }
+
+            if (parsed.Kind is GamepadControlKind.StickAxis or GamepadControlKind.Trigger)
+            {
+                return (parsed.Pad, ToRaylibAxis(parsed.Axis));
+            }
+
+            return null;
+        }
+
+        public static GamepadButton ToRaylibButton(GamepadButtonControl button) => button switch
+        {
+            GamepadButtonControl.LeftFaceUp => GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_UP,
+            GamepadButtonControl.LeftFaceRight => GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+            GamepadButtonControl.LeftFaceDown => GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_DOWN,
+            GamepadButtonControl.LeftFaceLeft => GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_LEFT,
+            GamepadButtonControl.RightFaceUp => GamepadButton.GAMEPAD_BUTTON_RIGHT_FACE_UP,
+            GamepadButtonControl.RightFaceRight => GamepadButton.GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
+            GamepadButtonControl.RightFaceDown => GamepadButton.GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+            GamepadButtonControl.RightFaceLeft => GamepadButton.GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
+            GamepadButtonControl.LeftShoulder => GamepadButton.GAMEPAD_BUTTON_LEFT_TRIGGER_1,
+            GamepadButtonControl.RightShoulder => GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_1,
+            GamepadButtonControl.LeftTrigger => GamepadButton.GAMEPAD_BUTTON_LEFT_TRIGGER_2,
+            GamepadButtonControl.RightTrigger => GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+            GamepadButtonControl.MiddleLeft => GamepadButton.GAMEPAD_BUTTON_MIDDLE_LEFT,
+            GamepadButtonControl.Middle => GamepadButton.GAMEPAD_BUTTON_MIDDLE,
+            GamepadButtonControl.MiddleRight => GamepadButton.GAMEPAD_BUTTON_MIDDLE_RIGHT,
+            GamepadButtonControl.LeftThumb => GamepadButton.GAMEPAD_BUTTON_LEFT_THUMB,
+            GamepadButtonControl.RightThumb => GamepadButton.GAMEPAD_BUTTON_RIGHT_THUMB,
+            _ => throw new InvalidOperationException(
+                $"LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN: button control '{button}' has no raylib mapping."),
+        };
+
+        public static GamepadAxis ToRaylibAxis(GamepadAxisControl axis) => axis switch
+        {
+            GamepadAxisControl.LeftX => GamepadAxis.GAMEPAD_AXIS_LEFT_X,
+            GamepadAxisControl.LeftY => GamepadAxis.GAMEPAD_AXIS_LEFT_Y,
+            GamepadAxisControl.RightX => GamepadAxis.GAMEPAD_AXIS_RIGHT_X,
+            GamepadAxisControl.RightY => GamepadAxis.GAMEPAD_AXIS_RIGHT_Y,
+            GamepadAxisControl.LeftTrigger => GamepadAxis.GAMEPAD_AXIS_LEFT_TRIGGER,
+            GamepadAxisControl.RightTrigger => GamepadAxis.GAMEPAD_AXIS_RIGHT_TRIGGER,
+            _ => throw new InvalidOperationException(
+                $"LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN: axis control '{axis}' has no raylib mapping."),
+        };
     }
 }

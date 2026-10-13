@@ -182,6 +182,25 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey ResponseChainPromptClosed = new EventKey("ResponseChain.PromptClosed");
 
+        /// <summary>
+        /// Map-scoped: a collection's member set gained or lost an entity. Payload:
+        /// CollectionKeyId (ConfigKey of the collection key name), MemberEntity, OwnerEntity.
+        /// Same event for add and remove; the subscriber re-reads the collection.
+        /// </summary>
+        public static readonly EventKey EntityCollectionMembershipChanged = new EventKey("EntityCollectionMembershipChanged");
+
+        /// <summary>
+        /// Map-scoped: a derived interaction context instance became active.
+        /// Payload: SourceEntity (the subject), ContextKeyId (ConfigKey of the profile name).
+        /// </summary>
+        public static readonly EventKey ContextActivated = new EventKey("ContextActivated");
+
+        /// <summary>
+        /// Map-scoped: a derived interaction context instance was removed.
+        /// Payload matches <see cref="ContextActivated"/>.
+        /// </summary>
+        public static readonly EventKey ContextDeactivated = new EventKey("ContextDeactivated");
+
         public static bool IsMapScoped(string eventName)
         {
             return eventName == MapLoaded.Value ||
@@ -203,7 +222,10 @@ namespace Ludots.Core.Scripting
                 eventName == RelationMetricChanged.Value ||
                 eventName == RelationFlagChanged.Value ||
                 eventName == ResponseChainPromptOpened.Value ||
-                eventName == ResponseChainPromptClosed.Value;
+                eventName == ResponseChainPromptClosed.Value ||
+                eventName == EntityCollectionMembershipChanged.Value ||
+                eventName == ContextActivated.Value ||
+                eventName == ContextDeactivated.Value;
         }
     }
 }

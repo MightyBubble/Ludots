@@ -9,7 +9,7 @@
 - 方案保持：`ControlSchemeRuntime.Install/TrySwitch`；白名单空=全允许，非空即封闭集合。
 - 轴移动保持：`AxisMoveOrderSystem` 按 throttleTicks/stepDistanceCm 节流提交订单。
 - 属性绑定保持：全字段显式必填（无缺省路径）；三开关（UI 抢捕清零/滚轮抢占抑制/快照保持）语义保持。
-- **治理项**：根默认输入的关键动作（Hotkey1-9、PrimaryClick 等）只绑在 `Physics2D_Playground`，默认玩法上下文 `Default_Gameplay` 缺绑定——补根绑定或提供"玩法上下文必绑清单"校验（O9）。
+- **治理项**：根默认输入的关键动作（Hotkey1-9、PrimaryClick 等）只绑在 `Physics2D_Playground`，相机键位上下文 `Camera.Rig` 缺绑定——补根绑定或提供"玩法上下文必绑清单"校验（O9）。
 
 ## 3. 精确语义与不变量
 - 上下文优先级决定同抢裁决，高者胜且稳定可预期。

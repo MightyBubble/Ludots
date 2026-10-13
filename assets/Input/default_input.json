@@ -128,8 +128,8 @@
   ],
   "contexts": [
     {
-      "id": "Default_Gameplay",
-      "name": "Default Gameplay",
+      "id": "Camera.Rig",
+      "name": "Camera Rig",
       "priority": 0,
       "bindings": [
         { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },

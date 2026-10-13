@@ -60,7 +60,13 @@ namespace Ludots.Core.Map
                     throw new InvalidOperationException($"MapLaunchContext.LocalSeats[{i}].PlayerId must be positive.");
                 }
 
-                normalized[i] = new LocalSeatLaunchBinding(seatId, seat.PlayerId, seat.ControlSchemeId);
+                if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                {
+                    throw new InvalidOperationException(
+                        $"MapLaunchContext.LocalSeats[{i}].ControlSchemeId must be a non-empty string.");
+                }
+
+                normalized[i] = new LocalSeatLaunchBinding(seatId, seat.PlayerId, seat.ControlSchemeId.Trim());
             }
 
             return normalized;

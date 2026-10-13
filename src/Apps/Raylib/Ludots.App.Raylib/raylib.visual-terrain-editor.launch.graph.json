@@ -3,17 +3,12 @@
   "generatedAtUtc": "2026-04-08T00:00:00.0000000Z",
   "orderedModIds": [
     "LudotsCoreMod",
-    "CoreInputMod",
     "VisualTerrainEditorMod"
   ],
   "plannedMods": [
     {
       "id": "LudotsCoreMod",
       "rootPath": "../../../../../../../mods/LudotsCoreMod"
-    },
-    {
-      "id": "CoreInputMod",
-      "rootPath": "../../../../../../../mods/CoreInputMod"
     },
     {
       "id": "VisualTerrainEditorMod",

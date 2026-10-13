@@ -124,6 +124,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Summary,
                 collectionKeyId);
         }
+
+        public GraphOutputBinding WithResolvedCollection(string collectionKey, int collectionKeyId)
+        {
+            return new GraphOutputBinding(
+                Id,
+                Destination,
+                ValueKind,
+                Register,
+                KeyId,
+                Key,
+                collectionKey,
+                CollectionRole,
+                Title,
+                Summary,
+                collectionKeyId);
+        }
     }
 
     public sealed class GraphOutputSchema

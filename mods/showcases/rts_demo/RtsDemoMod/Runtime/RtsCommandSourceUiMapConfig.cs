@@ -14,8 +14,6 @@ namespace RtsDemoMod.Runtime
 
         public bool ToolbarVisible { get; set; } = true;
 
-        public bool SkillBarVisible { get; set; }
-
         public float? CameraFocusDistanceCm { get; set; }
 
         public float? CameraFocusFovYDeg { get; set; }

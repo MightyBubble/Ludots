@@ -70,7 +70,6 @@ public sealed record LauncherRecordingResult(
 
 public static class LauncherEvidenceRecorder
 {
-        private const string EvidenceCommandSourceKey = "collection.command.source";
     private static readonly QueryDescription CameraNamedEntityQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm>();
 
@@ -205,7 +204,13 @@ public static class LauncherEvidenceRecorder
 
     private static RecordingRuntime CreateRaylibRuntime(LauncherLaunchPlan plan, string bootstrapPath)
     {
-        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
+        string userDataRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Ludots");
+        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(
+            plan.AppOutputDirectory,
+            bootstrapPath,
+            userDataRoot);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
         try
@@ -237,8 +242,8 @@ public static class LauncherEvidenceRecorder
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
-        PushStartupInputContexts(config, inputHandler);
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
 
@@ -311,7 +316,13 @@ public static class LauncherEvidenceRecorder
 
     private static RecordingRuntime CreateWebRuntime(LauncherLaunchPlan plan, string bootstrapPath)
     {
-        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
+        string userDataRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Ludots");
+        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(
+            plan.AppOutputDirectory,
+            bootstrapPath,
+            userDataRoot);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
         try
@@ -341,8 +352,8 @@ public static class LauncherEvidenceRecorder
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
-        PushStartupInputContexts(config, inputHandler);
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
 
@@ -406,22 +417,6 @@ public static class LauncherEvidenceRecorder
             viewController,
             screenHud,
             heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
-    }
-
-    private static void PushStartupInputContexts(GameConfig config, PlayerInputHandler inputHandler)
-    {
-        if (config.StartupInputContexts == null)
-        {
-            return;
-        }
-
-        foreach (string contextId in config.StartupInputContexts)
-        {
-            if (!string.IsNullOrWhiteSpace(contextId))
-            {
-                inputHandler.PushContext(contextId);
-            }
-        }
     }
 
     private static LauncherRecordingResult RecordRfc0065ShowcaseArtifacts(LauncherRecordingRequest request)
@@ -1398,7 +1393,7 @@ public static class LauncherEvidenceRecorder
             ? EntityCollectionContextRuntime.Snapshot(
                 runtime.Engine.GlobalContext,
                 commandSourceOwner,
-                EvidenceCommandSourceKey)
+                InputCollectionKeyDeclarations.RequireRole(runtime.Engine, "commandSource"))
             : Array.Empty<Entity>();
         for (int i = 0; i < commandActors.Length; i++)
         {
@@ -1639,7 +1634,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `AutoPathService`, `SplineRibbonBuffer`, `LoadedChunksSource`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `CommandIntentBufferDrainSystem`, `AutoPathService`, `SplineRibbonBuffer`, `LoadedChunksSource`");
         return sb.ToString();
     }
 
@@ -2535,7 +2530,7 @@ public static class LauncherEvidenceRecorder
         Entity[] commandActorArray = commandActors.ToArray();
 
         var descriptor = EntityCollectionDescriptor.Create(
-            EvidenceCommandSourceKey,
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
             EntityCollectionSourceKind.UiAcquisition,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -3322,7 +3317,7 @@ public static class LauncherEvidenceRecorder
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
         Entity owner = RequireSoleLocalSeat(engine).PossessedRep;
-        return owner != Entity.Null && collections.TryGetView(owner, EvidenceCommandSourceKey, out EntityCollectionView view)
+        return owner != Entity.Null && collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view)
             ? view.Count
             : 0;
     }
@@ -3636,7 +3631,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore, enqueue one logical `massNavigationMove` fan-out through an OrderQueue shared batch, then use formal OrderBuffer activation on each actor.");
+        sb.AppendLine("2. Seed `command source` through EntityCollectionStore, enqueue one logical `massNavigationMove` fan-out through an OrderQueue shared batch, then use formal OrderBuffer activation on each actor.");
         sb.AppendLine("3. Wait for sampled agents to move, record a settled baseline, submit a second shared-batch `massNavigationMove` back across the crowd, and require sampled agents to move again from that baseline.");
         sb.AppendLine("4. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("5. Fail if sampled units do not move for both logical commands, units are recreated/reset, presenter payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
@@ -3760,7 +3755,7 @@ public static class LauncherEvidenceRecorder
             "flowchart TD",
             "    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]",
             "    B --> C[Verify presenter owners and minimap markers]",
-            "    C --> D[Seed collection.command.source]",
+            "    C --> D[Seed command source]",
             "    D --> E[OrderQueue shared batch then formal OrderBuffer activation]",
             "    E --> F[Verify sampled units moved after first command]",
             "    F --> G[Submit second shared batch crossing order]",

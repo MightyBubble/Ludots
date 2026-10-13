@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS.Production
             "rts_war3_training",
             "Barracks",
             "Footman",
-            new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod", "RtsWar3TrainingShowcaseMod" },
+            new[] { "LudotsCoreMod", "EntityCommandPanelMod", "RtsDemoMod", "RtsWar3TrainingShowcaseMod" },
             "Minerals",
             1,
             135f,
@@ -52,7 +52,7 @@ namespace Ludots.Tests.GAS.Production
             "rts_cnc_training",
             "War Factory",
             "Rhino Tank",
-            new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod", "RtsCncTrainingShowcaseMod" },
+            new[] { "LudotsCoreMod", "EntityCommandPanelMod", "RtsDemoMod", "RtsCncTrainingShowcaseMod" },
             "Credits",
             1,
             900f,
@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS.Production
             "rts_sc2_training",
             "Gateway",
             "Zealot",
-            new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod", "RtsSc2TrainingShowcaseMod" },
+            new[] { "LudotsCoreMod", "EntityCommandPanelMod", "RtsDemoMod", "RtsSc2TrainingShowcaseMod" },
             "Minerals",
             1,
             100f,
@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallDummyInput(engine);
             var uiRoot = new UIRoot(new SkiaUiRenderer());
             uiRoot.Resize(1920f, 1080f);
@@ -420,7 +420,7 @@ namespace Ludots.Tests.GAS.Production
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,

@@ -6,7 +6,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.AimSource;
+using Ludots.Core.Input.PointerSample;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -55,7 +55,7 @@ public sealed class IndexedScreenQueryTests
             [CoreServiceKeys.ScreenRayProvider.Name] = projection,
             [CoreServiceKeys.ScreenProjector.Name] = projection
         };
-        var aim = new GraphAimSourceRuntime(world, globals);
+        var aim = new GraphPointerSampleRuntime(world, globals);
         var rect = new ScreenRect(-500, -500, 500, 500);
         Assert.That(aim.QueryScreenRegion(source, rect, null).Length, Is.EqualTo(501));
         Assert.That(aim.QueryScreenRegion(source, rect, null).Contains(edge), Is.True);
@@ -109,7 +109,7 @@ public sealed class IndexedScreenQueryTests
             [CoreServiceKeys.ScreenRayProvider.Name] = projection,
             [CoreServiceKeys.ScreenProjector.Name] = projection
         };
-        var aim = new GraphAimSourceRuntime(world, globals);
+        var aim = new GraphPointerSampleRuntime(world, globals);
 
         // A zero-area hover rect on the near cluster must keep the coarse phase local:
         // the bounds themselves stay under a kilometer, and distant entities (441 total
@@ -173,7 +173,7 @@ public sealed class IndexedScreenQueryTests
             [CoreServiceKeys.ScreenRayProvider.Name] = projection,
             [CoreServiceKeys.ScreenProjector.Name] = projection
         };
-        var aim = new GraphAimSourceRuntime(world, globals);
+        var aim = new GraphPointerSampleRuntime(world, globals);
 
         // Aim at the pixel the production pose path itself projects the entity to:
         // cm→meters runs through fixed-point in production, which at this magnitude

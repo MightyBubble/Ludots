@@ -186,6 +186,7 @@ namespace Ludots.Tests.Presentation
                 MinZoomExplicitHalfExtentCm = 750f,
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = 50000f,
+                InteractionContextId = "interaction.context.minimap",
                 Actions = MinimapTestActions.Create(),
             });
         }
@@ -195,8 +196,9 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             return engine;
         }
 

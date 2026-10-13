@@ -1,0 +1,272 @@
+[
+  {
+    "id": "graph.aim.refresh_gesture",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "refresh",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "q",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "is_click",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "deact_click",
+        "op": "DeactivateContext",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "act_click",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.click",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "is_release",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "deact_release",
+        "op": "DeactivateContext",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "act_release",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.release",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "q"
+      },
+      {
+        "from": "q",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "is_click"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "next",
+        "to": "click_jump"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "true",
+        "to": "deact_click"
+      },
+      {
+        "from": "deact_click",
+        "fromPort": "next",
+        "to": "act_click"
+      },
+      {
+        "from": "act_click",
+        "fromPort": "next",
+        "to": "is_release"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "false",
+        "to": "is_release"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "next",
+        "to": "release_jump"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "true",
+        "to": "deact_release"
+      },
+      {
+        "from": "deact_release",
+        "fromPort": "next",
+        "to": "act_release"
+      },
+      {
+        "from": "act_release",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "source"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "value",
+        "to": "click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deact_click",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_click",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "source"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "value",
+        "to": "release_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deact_release",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_release",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

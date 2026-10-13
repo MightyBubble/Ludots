@@ -34,7 +34,6 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "SelectionInteractionMod",
             "MassNavigationMod",
@@ -185,7 +184,8 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine, backend);
             AcceptanceUiHostInstaller.Install(engine);
             engine.Start();
@@ -196,10 +196,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

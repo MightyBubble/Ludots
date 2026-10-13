@@ -5,6 +5,9 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation.Components;
@@ -40,6 +43,10 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<int, byte>? _resolveTextTokenArgCount;
         private readonly PresenterCommandKindRegistry? _commandKinds;
         private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
+        private readonly InputCollectionKeyDeclarations? _collectionRoles;
+        private readonly Dictionary<string, string> _presenterSourceMods = new(StringComparer.Ordinal);
+        private string _loadingPresenterId = string.Empty;
+        private string _loadingPresenterSourceMod = string.Empty;
 
         public PresenterDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -59,10 +66,12 @@ namespace Ludots.Core.Presentation.Config
             PresenterCommandKindRegistry? commandKinds = null,
             PresenterBehaviorKindRegistry? behaviorKinds = null,
             Func<int, GraphKind>? resolveGraphProgramKind = null,
-            Func<int, byte>? resolveTextTokenArgCount = null)
+            Func<int, byte>? resolveTextTokenArgCount = null,
+            InputCollectionKeyDeclarations? collectionRoles = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _collectionRoles = collectionRoles;
             _resolveAttributeName = resolveAttributeName ?? (_ => AttributeRegistry.InvalidId);
             _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
@@ -72,7 +81,18 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimatorControllerId = resolveAnimatorControllerId ?? (_ => 0);
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
-            _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            Func<string, int> registerEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            _resolveEntityCollectionKeyId = key =>
+            {
+                string resolved = InputCollectionKeyDeclarations.Resolve(
+                    _collectionRoles,
+                    key,
+                    string.IsNullOrEmpty(_loadingPresenterId)
+                        ? "presenter"
+                        : $"presenter '{_loadingPresenterId}'",
+                    _loadingPresenterSourceMod);
+                return registerEntityCollectionKeyId(resolved);
+            };
             _resolveInteractionContextProfileId = resolveInteractionContextProfileId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
             _resolveGraphProgramKind = resolveGraphProgramKind;
@@ -83,6 +103,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            _presenterSourceMods.Clear();
             var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/presenters.json", ConfigMergePolicy.ArrayById, "id");
             var fragments = _configs.CollectFragmentsWithSources(in entry);
             ValidateRawDefinitionIds(fragments, entry.RelativePath);
@@ -117,6 +138,7 @@ namespace Ludots.Core.Presentation.Config
                     "Presentation/presenters.json entry id");
 
                 mergedByKey[key] = obj;
+                _presenterSourceMods[key] = TriggerGraphHookWeaver.OwningMod(merged[i].SourceUri);
                 _registry.GetOrRegisterId(key);
             }
 
@@ -275,6 +297,8 @@ namespace Ludots.Core.Presentation.Config
             };
             CopyBindSpawnField(createCommand, bindSpawn, "scopeTag");
             CopyBindSpawnField(createCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerCollection");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerMemberIndex");
             CopyBindSpawnField(createCommand, bindSpawn, "useEventPosition");
 
             var destroyCommand = new JsonObject
@@ -284,6 +308,8 @@ namespace Ludots.Core.Presentation.Config
             };
             CopyBindSpawnField(destroyCommand, bindSpawn, "scopeTag");
             CopyBindSpawnField(destroyCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerCollection");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerMemberIndex");
 
             var spawnRule = new JsonObject
             {
@@ -657,6 +683,10 @@ namespace Ludots.Core.Presentation.Config
         private (string key, PresenterDefinition def) ParseDefinition(JsonNode node)
         {
             string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Presenter id");
+            _loadingPresenterId = key;
+            _loadingPresenterSourceMod = _presenterSourceMods.TryGetValue(key, out string? sourceMod)
+                ? sourceMod
+                : string.Empty;
 
             if (node is not JsonObject definitionObject)
             {
@@ -940,7 +970,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] BindSpawnFields =
         {
             "template", "spawnedOn", "destroyedOn", "condition",
-            "scopeTag", "scopeSource", "ownerSource", "useEventPosition",
+            "scopeTag", "scopeSource", "ownerSource", "ownerCollection", "ownerMemberIndex", "useEventPosition",
         };
 
         private static readonly string[] BehaviorSlotFields =
@@ -1176,6 +1206,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] CommandFields =
         {
             "kind", "route", "definitionId", "scopeTag", "scopeSource", "ownerSource",
+            "ownerCollection", "ownerMemberIndex",
             "useEventPosition", "paramKey", "paramLane", "valueSource",
             "paramValue", "intValue", "vectorValue", "paramGraphProgramId",
             "vectorXSource", "vectorYSource", "vectorZSource", "vectorWSource",
@@ -1510,10 +1541,6 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.EntityCollectionMemberRemoved => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
                 PresentationEventKind.ContextActivated => ResolveRequired(_resolveInteractionContextProfileId(key), kind, "interaction context profile", key),
                 PresentationEventKind.ContextDeactivated => ResolveRequired(_resolveInteractionContextProfileId(key), kind, "interaction context profile", key),
-                PresentationEventKind.AbilityAimBegun => PresentationEventKeyRegistry.Register(key),
-                PresentationEventKind.AbilityAimSlotAdvanced => PresentationEventKeyRegistry.Register(key),
-                PresentationEventKind.AbilityAimUpdated => PresentationEventKeyRegistry.Register(key),
-                PresentationEventKind.AbilityAimEnded => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.WorldOverlayUpdated => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.WorldOverlayEnded => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.WorldHudUpdated => PresentationEventKeyRegistry.Register(key),
@@ -1572,6 +1599,8 @@ namespace Ludots.Core.Presentation.Config
             bool hasVectorSources = HasCommandVectorSources(obj);
             bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
             PresenterCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
+            PresenterCommandEntitySource ownerSource = ParseCommandOwnerSource(obj, commandKind, context);
+            ParseOwnerCollection(obj, ownerSource, context, out int ownerCollectionKeyId, out int ownerMemberIndex);
             return new PresenterCommand
             {
                 CommandKind = commandKind,
@@ -1581,7 +1610,9 @@ namespace Ludots.Core.Presentation.Config
                 ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(obj["scopeTag"]),
                 ScopeSource = ParseCommandScopeSource(obj, commandKind, context),
-                OwnerSource = ParseCommandOwnerSource(obj, commandKind, context),
+                OwnerSource = ownerSource,
+                OwnerCollectionKeyId = ownerCollectionKeyId,
+                OwnerMemberIndex = ownerMemberIndex,
                 UseEventPosition = ParseCommandUseEventPosition(obj, commandKind, context),
                 HasParamPayload = hasParamPayload,
                 ParamKey = commandKind == PresenterCommandKind.SetParam || hasParamPayload
@@ -1719,6 +1750,10 @@ namespace Ludots.Core.Presentation.Config
                 : PresenterCommandValueSource.Fixed;
             int paramGraphProgramId = ParseExtensionCommandParamGraphProgramId(obj, hasParamPayload, valueSource, context);
             bool hasVectorSources = HasCommandVectorSources(obj);
+            PresenterCommandEntitySource ownerSource = obj["ownerSource"] != null
+                ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
+                : PresenterCommandEntitySource.EventSource;
+            ParseOwnerCollection(obj, ownerSource, context, out int ownerCollectionKeyId, out int ownerMemberIndex);
 
             return new PresenterCommand
             {
@@ -1733,9 +1768,9 @@ namespace Ludots.Core.Presentation.Config
                 ScopeSource = obj["scopeSource"] != null
                     ? ParseRequiredEnum<PresenterCommandScopeSource>(obj["scopeSource"], $"{context}.scopeSource")
                     : PresenterCommandScopeSource.Fixed,
-                OwnerSource = obj["ownerSource"] != null
-                    ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
-                    : PresenterCommandEntitySource.EventSource,
+                OwnerSource = ownerSource,
+                OwnerCollectionKeyId = ownerCollectionKeyId,
+                OwnerMemberIndex = ownerMemberIndex,
                 UseEventPosition = obj["useEventPosition"] != null &&
                     ParseRequiredBool(obj["useEventPosition"], $"{context}.useEventPosition"),
                 HasParamPayload = hasParamPayload,
@@ -1890,6 +1925,49 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return ParseRequiredEnum<PresenterCommandEntitySource>(node, $"{context}.ownerSource");
+        }
+
+        private void ParseOwnerCollection(
+            JsonObject obj,
+            PresenterCommandEntitySource ownerSource,
+            string context,
+            out int keyId,
+            out int index)
+        {
+            JsonNode? collection = obj["ownerCollection"];
+            JsonNode? indexNode = obj["ownerMemberIndex"];
+            if (ownerSource != PresenterCommandEntitySource.EventSourceCollectionMember)
+            {
+                if (collection != null || indexNode != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.ownerCollection is only valid when ownerSource is '{PresenterCommandEntitySource.EventSourceCollectionMember}'.");
+                }
+
+                keyId = 0;
+                index = 0;
+                return;
+            }
+
+            string name = ParseRequiredSemanticString(collection, $"{context}.ownerCollection");
+            keyId = _resolveEntityCollectionKeyId(name);
+            if (keyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.ownerCollection references unknown entity collection '{name}'.");
+            }
+
+            index = 0;
+            if (indexNode == null)
+            {
+                return;
+            }
+
+            index = ParseRequiredInt(indexNode, $"{context}.ownerMemberIndex");
+            if (index < 0)
+            {
+                throw new InvalidOperationException($"{context}.ownerMemberIndex must be >= 0.");
+            }
         }
 
         private static PresenterCommandScopeSource ParseCommandScopeSource(
@@ -2227,14 +2305,7 @@ namespace Ludots.Core.Presentation.Config
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)
         {
             string keyName = ParseRequiredSemanticString(node, $"{context} ownerBlackboardFloat.sourceId");
-            int keyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(keyName);
-            if (keyId <= Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
-            {
-                throw new InvalidOperationException(
-                    $"{context} ownerBlackboardFloat.sourceId '{keyName}' did not resolve to a config key id.");
-            }
-
-            return keyId;
+            return OrderBlackboardKeyRegistry.Resolve(keyName);
         }
 
         private static void RejectRemovedBindingFields(JsonNode node, string context)

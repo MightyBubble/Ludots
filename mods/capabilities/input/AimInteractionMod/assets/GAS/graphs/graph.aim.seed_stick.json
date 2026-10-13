@@ -1,0 +1,58 @@
+[
+  {
+    "id": "graph.aim.seed_stick",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "seed",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "prep"
+      },
+      {
+        "from": "prep",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

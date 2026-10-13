@@ -16,6 +16,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
 using Ludots.WebUI.PanelKit;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.WebUiPanelKit;
 
@@ -50,7 +51,7 @@ public sealed class CommandDeckDisplayModeTests
 			Id = GlobalProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.Global,
 			SourceKind = CommandDeckSourceKindIds.SolePossessedRep,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			Topic = Topic
 		});
@@ -59,7 +60,7 @@ public sealed class CommandDeckDisplayModeTests
 			solePossessedRep: player,
 			focusedEntity: Entity.Null,
 			collectionOwner: player,
-			instanceKey: "collection.command.source",
+			instanceKey: "core.selection",
 			visibilityConditionSatisfied: false);
 
 		CommandDeckSnapshot snapshot = harness.Projector.Project(harness.Profiles.Require(GlobalProfileId), in binding);
@@ -138,7 +139,7 @@ public sealed class CommandDeckDisplayModeTests
 			Id = AggregateProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.AggregateFiltered,
 			SourceKind = CommandDeckSourceKindIds.EntityCollection,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			AggregationProfileId = AggregationByAbilityId,
 			RouteProfileId = RouteNearestId,
@@ -146,7 +147,7 @@ public sealed class CommandDeckDisplayModeTests
 			Topic = Topic
 		});
 
-		var binding = new CommandDeckBindingContext(owner, Entity.Null, owner, "collection.command.source", false);
+		var binding = new CommandDeckBindingContext(owner, Entity.Null, owner, "core.selection", false);
 		CommandDeckSnapshot snapshot = harness.Projector.Project(
 			harness.Profiles.Require(AggregateProfileId),
 			in binding,
@@ -178,19 +179,19 @@ public sealed class CommandDeckDisplayModeTests
 			Id = PinnedProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.ConditionalPinned,
 			SourceKind = CommandDeckSourceKindIds.SolePossessedRep,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			VisibilityConditionId = CommandDeckVisibilityConditionIds.BindingFlag,
 			Topic = Topic
 		});
 
 		CommandDeckProfile profile = harness.Profiles.Require(PinnedProfileId);
-		var visibleBinding = new CommandDeckBindingContext(player, Entity.Null, player, "collection.command.source", true);
+		var visibleBinding = new CommandDeckBindingContext(player, Entity.Null, player, "core.selection", true);
 		CommandDeckSnapshot visible = harness.Projector.Project(profile, in visibleBinding);
 		Assert.That(visible.Visible, Is.True);
 		Assert.That(visible.Entries, Has.Count.EqualTo(1));
 
-		var hiddenBinding = new CommandDeckBindingContext(player, Entity.Null, player, "collection.command.source", false);
+		var hiddenBinding = new CommandDeckBindingContext(player, Entity.Null, player, "core.selection", false);
 		CommandDeckSnapshot hidden = harness.Projector.Project(profile, in hiddenBinding);
 		Assert.That(hidden.Visible, Is.False);
 		Assert.That(hidden.Entries, Is.Empty);
@@ -211,7 +212,7 @@ public sealed class CommandDeckDisplayModeTests
 			Id = AggregateProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.AggregateFiltered,
 			SourceKind = CommandDeckSourceKindIds.EntityCollection,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			AggregationProfileId = AggregationByAbilityId,
 			RouteProfileId = RouteNearestId,
@@ -264,7 +265,7 @@ public sealed class CommandDeckDisplayModeTests
 			Id = AggregateProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.AggregateFiltered,
 			SourceKind = CommandDeckSourceKindIds.EntityCollection,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			AggregationProfileId = AggregationByAbilityId,
 			RouteProfileId = RouteNearestId,
@@ -272,7 +273,7 @@ public sealed class CommandDeckDisplayModeTests
 			Topic = Topic
 		});
 
-		var binding = new CommandDeckBindingContext(owner, Entity.Null, owner, "collection.command.source", false);
+		var binding = new CommandDeckBindingContext(owner, Entity.Null, owner, "core.selection", false);
 		CommandDeckSnapshot snapshot = harness.Projector.Project(
 			harness.Profiles.Require(AggregateProfileId),
 			in binding,
@@ -302,11 +303,11 @@ public sealed class CommandDeckDisplayModeTests
 			world.Get<GameplayTagContainer>(lab).AddTag(researchTag);
 
 			var keyRegistry = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
-			keyRegistry.Register("collection.command.source");
+			keyRegistry.Register("core.selection");
 			keyRegistry.Register(EntityViewKeys.CommandDeckFiltered);
 			var collections = new EntityCollectionStore(keyRegistry, 8, 32);
 			var descriptor = EntityCollectionDescriptor.Create(
-				"collection.command.source",
+				"core.selection",
 				EntityCollectionSourceKind.Explicit,
 				EntityCollectionRoleKind.CommandSource,
 				contextEntity: player,
@@ -373,21 +374,21 @@ public sealed class CommandDeckDisplayModeTests
 				Id = AggregateProfileId,
 				DisplayMode = CommandDeckDisplayModeIds.Global,
 				SourceKind = CommandDeckSourceKindIds.EntityCollection,
-				SourceRef = "collection.command.source",
+				SourceRef = "core.selection",
 				CommandPanelSourceId = PanelSourceId,
 				FilterProfileId = filterId,
 				CategoryTagPrefix = "category.",
 				Topic = Topic
 			});
 
-			var binding = new CommandDeckBindingContext(player, Entity.Null, player, "collection.command.source", false);
+			var binding = new CommandDeckBindingContext(player, Entity.Null, player, "core.selection", false);
 			CommandDeckSnapshot snapshot = harness.Projector.Project(harness.Profiles.Require(AggregateProfileId), in binding);
 
 			Assert.That(snapshot.Entries, Has.Count.EqualTo(1));
 			Assert.That(snapshot.Entries[0].CategoryId, Is.EqualTo("category.train"));
 			Assert.That(snapshot.Entries[0].DisplayLabel, Is.EqualTo("Train"));
 
-			Assert.That(collections.TryGet(player, "collection.command.source", out EntityCollectionHandle originalHandle), Is.True);
+			Assert.That(collections.TryGet(player, "core.selection", out EntityCollectionHandle originalHandle), Is.True);
 			var originalMembers = new Entity[8];
 			int originalCount = collections.CopyEntities(originalHandle, 0, originalMembers);
 			Assert.That(originalCount, Is.EqualTo(2), "Filter must not overwrite the original sourceRef collection.");
@@ -414,7 +415,7 @@ public sealed class CommandDeckDisplayModeTests
 			world.Get<GameplayTagContainer>(barracks).AddTag(trainTag);
 			world.Get<GameplayTagContainer>(lab).AddTag(researchTag);
 
-			const string sourceKey = "collection.command.source";
+			const string sourceKey = "core.selection";
 			var keyRegistry = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
 			keyRegistry.Register(sourceKey);
 			keyRegistry.Register(EntityViewKeys.CommandDeckFiltered);
@@ -533,7 +534,7 @@ public sealed class CommandDeckDisplayModeTests
 		var ownership = new OwnershipResolver(relationships, ownsTypeId);
 		var query = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
 		var keyRegistry = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
-		int keyId = keyRegistry.Register("collection.command.source");
+		int keyId = keyRegistry.Register("core.selection");
 		keyRegistry.Register(EntityViewKeys.ControlPlaneCommand);
 		var collections = new EntityCollectionStore(keyRegistry, 8, 32);
 		var writer = new CollectionApplier(world, collections);
@@ -605,13 +606,13 @@ public sealed class CommandDeckDisplayModeTests
 			Id = GlobalProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.Global,
 			SourceKind = CommandDeckSourceKindIds.ControlPlaneView,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			Topic = Topic
 		});
 
 		CommandDeckProfile profile = harness.Profiles.Require(GlobalProfileId);
-		var binding = new CommandDeckBindingContext(p1, Entity.Null, p1, "collection.command.source", false);
+		var binding = new CommandDeckBindingContext(p1, Entity.Null, p1, "core.selection", false);
 
 		CommandDeckSnapshot before = harness.Projector.Project(profile, in binding, world);
 		Assert.That(before.Entries, Has.Count.EqualTo(1));
@@ -648,7 +649,7 @@ public sealed class CommandDeckDisplayModeTests
 				Id = AggregateProfileId,
 				DisplayMode = CommandDeckDisplayModeIds.AggregateFiltered,
 				SourceKind = CommandDeckSourceKindIds.EntityCollection,
-				SourceRef = "collection.command.source",
+				SourceRef = "core.selection",
 				CommandPanelSourceId = PanelSourceId,
 				AggregationProfileId = AggregationByAbilityId,
 				RouteProfileId = "dispatch.missing",
@@ -670,7 +671,7 @@ public sealed class CommandDeckDisplayModeTests
 				Id = AggregateProfileId,
 				DisplayMode = CommandDeckDisplayModeIds.AggregateFiltered,
 				SourceKind = CommandDeckSourceKindIds.EntityCollection,
-				SourceRef = "collection.command.source",
+				SourceRef = "core.selection",
 				CommandPanelSourceId = PanelSourceId,
 				AggregationProfileId = "aggregation.missing",
 				RouteProfileId = RouteNearestId,
@@ -694,7 +695,7 @@ public sealed class CommandDeckDisplayModeTests
 			Id = GlobalProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.Global,
 			SourceKind = CommandDeckSourceKindIds.SolePossessedRep,
-			SourceRef = "collection.command.source",
+			SourceRef = "core.selection",
 			CommandPanelSourceId = PanelSourceId,
 			Topic = Topic
 		});
@@ -704,7 +705,7 @@ public sealed class CommandDeckDisplayModeTests
 			Topic,
 			harness.Projector,
 			profile,
-			() => new CommandDeckBindingContext(player, Entity.Null, player, "collection.command.source", false));
+			() => new CommandDeckBindingContext(player, Entity.Null, player, "core.selection", false));
 
 		using var runtime = new WebUiDataPlaneRuntime();
 		runtime.RegisterTopic(producer);
@@ -730,7 +731,7 @@ public sealed class CommandDeckDisplayModeTests
 				"hud.command-deck.aggregate",
 				CommandDeckPanelDescriptor.DisplayModeAggregateFiltered,
 				"entityCollection",
-				"collection.command.source",
+				"core.selection",
 				PanelSourceId,
 				Topic,
 				WebUiPanelKitSampleCatalog.CommandDeckAggregateProfileId,

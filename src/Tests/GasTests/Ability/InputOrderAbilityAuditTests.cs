@@ -1795,6 +1795,60 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void AbilityExecLoader_CompileAbility_AcceptsTargetingWithoutAKindList()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var ranged = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 1200,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+            var rangedDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(ranged, "Ability.Test.Ranged", "GAS/abilities.json");
+            That(rangedDef.HasTargeting, Is.True);
+            That(rangedDef.Targeting.CastRangeCm, Is.EqualTo(1200f));
+
+            var zero = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 0,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+            var zeroDef = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(zero, "Ability.Test.ZeroRange", "GAS/abilities.json");
+            That(zeroDef.HasTargeting, Is.True);
+            That(zeroDef.Targeting.CastRangeCm, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRetiredTargetingKindList()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            string field = string.Concat("target", "Kinds");
+            var obj = JsonNode.Parse(
+                "{" +
+                "\"exec\":{\"clockId\":\"FixedFrame\",\"items\":[{\"kind\":\"End\",\"tick\":0}]}," +
+                "\"targeting\":{\"castRangeCm\":620,\"impactEffect\":\"Effect.Guard.Impact\",\"" + field + "\":[\"unit\"]}" +
+                "}")!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.RetiredKindList", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting." + field));
+            That(ex.Message, Does.Contain("is removed"));
+            That(ex.Message, Does.Contain("TriggerGraphs"));
+        }
+
+        [Test]
         public void AbilityExecLoader_CompileAbility_RejectsRemovedIndicatorField()
         {
             var obj = JsonNode.Parse(

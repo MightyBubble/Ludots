@@ -6,7 +6,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -84,7 +84,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
         if (_programs == null || _behavior == null) throw new InvalidOperationException("Bind required.");
 
         _world = World.Create();
-        _distanceKeyId = ConfigKeyRegistry.Register(DistanceKey);
+        _distanceKeyId = OrderBlackboardKeyRegistry.Resolve(DistanceKey);
         var api = new GasGraphRuntimeApi(_world);
 
         int n = _config.FeaturedAgentCount;

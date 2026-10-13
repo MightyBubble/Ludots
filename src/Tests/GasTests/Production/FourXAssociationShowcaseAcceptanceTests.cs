@@ -28,7 +28,6 @@ public sealed class FourXAssociationShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "EntityCommandPanelMod",
         "AssociationStressShowcaseMod",
         "FogVisionDecayShowcaseMod",
@@ -127,7 +126,8 @@ public sealed class FourXAssociationShowcaseAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
 
         AcceptanceUiHostInstaller.Install(engine);
@@ -139,10 +139,7 @@ public sealed class FourXAssociationShowcaseAcceptanceTests
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var backend = new TestInputBackend();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

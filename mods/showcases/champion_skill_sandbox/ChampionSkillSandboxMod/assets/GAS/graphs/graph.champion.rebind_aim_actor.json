@@ -1,0 +1,170 @@
+[
+  {
+    "id": "graph.champion.rebind_aim_actor",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "rebind",
+        "event": "AimBind",
+        "start": "r_rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "r_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "r_q",
+        "op": "QueryFromCollection",
+        "collectionKey": "role:commandSource"
+      },
+      {
+        "id": "r_lim",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "r_c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "r_write",
+        "op": "WriteCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "r_actor",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "r_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "r_alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "r_halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "r_pick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.pick.hostile"
+      },
+      {
+        "id": "r_prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
+      },
+      {
+        "id": "r_refresh",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.refresh_gesture"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "r_rep",
+        "fromPort": "next",
+        "to": "r_q"
+      },
+      {
+        "from": "r_q",
+        "fromPort": "next",
+        "to": "r_lim"
+      },
+      {
+        "from": "r_lim",
+        "fromPort": "next",
+        "to": "r_c0"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "next",
+        "to": "r_write"
+      },
+      {
+        "from": "r_write",
+        "fromPort": "next",
+        "to": "r_actor"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "next",
+        "to": "r_alive"
+      },
+      {
+        "from": "r_alive",
+        "fromPort": "next",
+        "to": "r_alive_jump"
+      },
+      {
+        "from": "r_alive_jump",
+        "fromPort": "false",
+        "to": "r_halt"
+      },
+      {
+        "from": "r_pick",
+        "fromPort": "next",
+        "to": "r_refresh"
+      },
+      {
+        "from": "r_alive_jump",
+        "fromPort": "true",
+        "to": "r_prep"
+      },
+      {
+        "from": "r_refresh",
+        "fromPort": "next",
+        "to": "r_halt"
+      },
+      {
+        "from": "r_prep",
+        "fromPort": "next",
+        "to": "r_pick"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "r_rep",
+        "fromPort": "value",
+        "to": "r_q",
+        "toPort": "source"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "value",
+        "to": "r_write",
+        "toPort": "value"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "value",
+        "to": "r_actor",
+        "toPort": "value"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "value",
+        "to": "r_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "r_alive",
+        "fromPort": "value",
+        "to": "r_alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "value",
+        "to": "r_halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

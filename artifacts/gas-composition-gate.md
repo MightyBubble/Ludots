@@ -1,42 +1,63 @@
-# GAS Composition Gate — Self Review
+# GAS Composition Gate — 小地图指针区域与滚轮
 
-- **Task / Issue**: ScreenRegionToEntities 增加可选 `tolerance` 显式传参端口；`graph.core.select_hit` 明文接线 ConstFloat(20)。owner 裁定：点击宽容应完全图化或明文传参组装，几何过滤器不得内部读配置（#1634 剥离判断语义的后续收口）。
-- **Date**: 2026-09-22
-- **Agent / Author**: ZCode（test-red-clearing session）
+- **Task / Issue**: 谁显示小地图谁进入小地图交互状态；滚轮改成该状态上的图
+- **Date**: 2026-10-13
+- **Agent / Author**: cloud agent
 
-## 1. Core judgment
+## GAS Composition Gate — Self Review
 
-新变体主要交付物是（A/B/C/D）: **A**（既有 op 增加一个显式可选值输入端口 + 一条图数据接线）
+- **Task / Issue**: 小地图屏幕区域激活前台交互状态；滚轮缩放改为绑定与图；命令点地仍用显式投影
+- **Date**: 2026-10-13
+- **Agent / Author**: cloud agent
 
-结论: **PASS**
+### 1. Core judgment
 
-一句话理由: 拾取宽容从几何过滤器内部配置读取改为调用方显式传参（op 可选引脚 + 图内明文 ConstFloat），零新 enum/开关/管线。
+新变体主要交付物是（A/B/C/D）: A
 
-## 2. Layer assignment
+结论: PASS
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 几何过滤签名 | 0 | FilterScreenRegionEntities(…, float tolerancePixels) 纯函数参数 |
-| op 可选端口 | 0 | ScreenRegionToEntities tolerance 引脚（缺省 0xFF→0），描述表/校验/发射 |
-| 图接线 | 2 | graph.core.select_hit + ConstFloat(20)→tolerance（数据） |
-| 文档 | 3 | wiki 端口表 |
+一句话理由: 区域只是屏幕矩形，激活走已有的 `Activate` / `Deactivate`；滚轮是一颗原子节点，上下文 profile 仍只声明已有的 foreground / pointerRouting / bindings / triggers。
 
-## 3. Reuse list
+### 2. Layer assignment
 
-- 既有 byte.MaxValue 可选哨兵模式（SubmitCast B/C 同款）
-- 既有 ValueInputKey 可选边校验模式（ReadMapVar source 同款）
-- 既有接口默认重载模式（旧 4 参签名全兼容，测试直调不受影响）
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 滚轮增量写到小地图缩放 | 0 | GraphNodeOp `MinimapApplyWheelZoom`（550） |
+| 命中区域、屏幕点投地面、跳相机、缩放条、两个切换 | 0 | 已有 GraphNodeOp 544–549 |
+| 按下 / 松开 / 移动 / 命令 / 滚轮 | 2 | `graph.minimap.press` / `release` / `track` / `command` / `zoom` |
+| 前台状态与指针归 UI | 2 | 已有 `foreground`、`pointerRouting` |
+| 屏幕矩形打开哪个交互状态 | 2 | `presentation.minimap.interactionContextId` 加通用指针区域登记 |
 
-## 4. New Layer 0 ops (if any)
+### 3. Reuse list
 
-N/A（无新 op，仅既有 op 加可选参数）
+- Handlers: `GasGraphOpHandlerTable`、`IGraphRuntimeApi` / `GasGraphRuntimeApi`、`MinimapRuntime.ApplyWheelZoom`
+- Queues / Systems: `TriggerGraphActionBindingSystem`、`InteractionContextTriggerMountSystem`、`InteractionContextInstanceRuntime.Activate`、`CameraRuntimeSystem`、`suppressOnUiWheelCaptured`
+- Resolvers / Registries: `InteractionContextProfileRegistry`、`ConfigMerger.MergeDeepObjectArrayById`
+- Existing presets / graphs: `MinimapScreenToWorld`、`SubmitCommandIntent`、`DeactivateOwnContext`
 
-## 5. Transaction boundary
+### 4. New Layer 0 ops (if any)
 
-无（纯查询过滤参数化，无副作用）
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| MinimapApplyWheelZoom | 把滚轮增量 F[A] 作用到指针 (F[B], F[C]) 处的小地图缩放 | `MinimapSetZoomFromPointer` 吃的是缩放条上的屏幕点，不是轴增量；轴值也不能冒充屏幕点 |
 
-## 6. Config SSOT
+### 5. Transaction boundary
 
-行为配置落在: graph JSON（graph.core.select_hit 的 ConstFloat(20) 明文值）
+必须原子 rollback 的步骤: 无。滚轮一次写入；投地失败仍由已有 `JumpIfFalse` 停掉后续提交。
 
-是否新增 JSON schema: **NO**
+### 6. Config SSOT
+
+行为配置落在: `mods/LudotsCoreMod/assets/GAS/graphs/graph.minimap.*.json`（含滚轮图和 `Minimap.Zoom` 绑定）、`mods/CoreInputMod/assets/Input/interaction_context_profiles.json`（把 `Command` 合并进 `interaction.context.minimap`）、`mods/LudotsCoreMod/assets/game.json` 的 `presentation.minimap.interactionContextId`
+
+是否新增 JSON schema: NO — 交互上下文 profile、TriggerGraph、以及小地图配置上的一个已有对象字段。指针区域不是新的玩法枚举。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线，或 `presentation.minimap.interactionContextId` 指向的已有交互状态。不改 Core enum。

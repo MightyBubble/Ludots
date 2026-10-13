@@ -44,9 +44,9 @@ namespace Ludots.Core.Hosting
             ResolvedModLoadPlan ModLoadPlan,
             BrowserRuntimeConfig? BrowserRuntime);
 
-        public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory)
+        public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string userDataRoot)
         {
-            return InitializeFromBaseDirectory(baseDirectory, "launcher.runtime.json");
+            return InitializeFromBaseDirectory(baseDirectory, "launcher.runtime.json", userDataRoot);
         }
 
         public static string ResolveBootstrapPath(string baseDirectory, string bootstrapFile)
@@ -66,7 +66,10 @@ namespace Ludots.Core.Hosting
         /// 3. Use ConfigPipeline to merge all game.json files (Core -> Mods)
         /// 4. Pass merged config to GameEngine
         /// </summary>
-        public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string gameConfigFile)
+        public static GameBootstrapResult InitializeFromBaseDirectory(
+            string baseDirectory,
+            string gameConfigFile,
+            string userDataRoot)
         {
             if (string.IsNullOrWhiteSpace(baseDirectory))
                 throw new ArgumentException("Base directory is required.", nameof(baseDirectory));
@@ -99,7 +102,7 @@ namespace Ludots.Core.Hosting
             // Step 2 & 3: Initialize engine with launcher-resolved plan
             // Engine will internally use ConfigPipeline to merge game.json
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(resolvedPlan.ModLoadPlan, assetsRoot);
+            engine.InitializeWithConfigPipeline(resolvedPlan.ModLoadPlan, assetsRoot, userDataRoot);
 
             // Get the merged config from engine
             var mergedConfig = engine.MergedConfig;

@@ -42,7 +42,7 @@ public sealed class SoundShowcaseAcceptanceTests
             new[] { "LudotsCoreMod", "CapabilityStandardSoundShowcaseMod" });
 
         using var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         HeadlessPresentationTestHost.Install(engine);
 
         MeshAssetRegistry meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
@@ -162,7 +162,7 @@ public sealed class SoundShowcaseAcceptanceTests
             new[] { "LudotsCoreMod", "CapabilityStandardSoundShowcaseMod" });
 
         using var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+        engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         HeadlessPresentationTestHost.Install(engine);
 
         MeshAssetRegistry meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)

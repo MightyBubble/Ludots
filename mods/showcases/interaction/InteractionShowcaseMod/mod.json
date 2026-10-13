@@ -1,15 +1,21 @@
 {
   "name": "InteractionShowcaseMod",
   "version": "1.0.0",
-  "description": "Unified interaction showcase for target-first, smart-cast, RTS aim-cast, context-scored action combat, and stress validation.",
+  "description": "Unified interaction showcase. QWER aim goes through AimInteractionMod; rune, toggle, dash, and form routing stay in this mod.",
   "main": "bin/net9.0/InteractionShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
+    "AimInteractionMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0",
     "EntityInfoPanelsMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["interaction", "showcase", "gas", "input", "ecs"]
+  "tags": [
+    "interaction",
+    "showcase",
+    "gas",
+    "input",
+    "ecs"
+  ]
 }

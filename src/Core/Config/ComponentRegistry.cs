@@ -113,7 +113,6 @@ namespace Ludots.Core.Config
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
             Register<BlackboardFloatBuffer>("BlackboardFloatBuffer");
-            Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
             Register("CullState", SetCullState, null, Component<CullState>.ComponentType);
             Register<ContinuousHeightmapSampleState>("ContinuousHeightmapSampleState");
@@ -1885,21 +1884,6 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
             }
         }
 
-        private static void SetAbilityExecAimSync(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("AbilityExecAimSync requires an object payload.");
-            }
-            ValidateProperties(obj, "AbilityExecAimSync", "abilitySlot", "syncFacing");
-
-            entity.Add(new AbilityExecAimSync
-            {
-                AbilitySlot = ReadIntProperty(obj, "abilitySlot", "AbilityExecAimSync"),
-                SyncFacing = ParseBooleanByte(RequireProperty(obj, "syncFacing", "AbilityExecAimSync"), "AbilityExecAimSync.syncFacing"),
-            });
-        }
-
         private static void SetManifestationMotion2D(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -2098,6 +2082,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 "None" => ManifestationFacingSource2D.None,
                 "SweepVelocity" => ManifestationFacingSource2D.SweepVelocity,
                 "ParentExecutionTarget" => ManifestationFacingSource2D.ParentExecutionTarget,
+                "ParentCastFacing" => ManifestationFacingSource2D.ParentCastFacing,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
             };
         }

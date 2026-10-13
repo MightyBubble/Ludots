@@ -49,7 +49,7 @@
 
 ## 3. 文件结构
 
-`assets/Input/` 下五文件：`default_input.json`、`filter_profiles.json`、`control_schemes.json`、`interaction_prefs.json`、`action_attribute_bindings.json`（引擎根资产持默认，mod 深合并补充）。
+`assets/Input/` 下五文件：`default_input.json`、`filter_profiles.json`、`control_schemes.json`、`interaction_prefs.json`、`action_attribute_bindings.json`（引擎根资产持默认，mod 深合并补充）。`control_schemes.json` 的 `schemes` 按 `id` 合并，`allowedSchemes` 追加，重复 id 失败。
 
 ## 4. 运行时加载效果
 
@@ -67,4 +67,4 @@
 
 - 根四文件：`assets/Input/default_input.json`（22 动作 2 上下文）、`filter_profiles.json`、`control_schemes.json`、`action_attribute_bindings.json`
 
-**相关文档**：[input-05 PRD](../prd/input-05-filters-and-schemes.md) · [ord-06 配置说明](ord-06-input-mappings.md)
+**相关文档**：[input-05 PRD](../prd/input-05-filters-and-schemes.md) · [input-03 配置说明](input-03-interaction-context.md)

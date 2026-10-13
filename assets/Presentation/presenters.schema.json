@@ -126,7 +126,6 @@
             "CastCommitted", "CastFailed", "CastStarted", "CastFinished", "CastInterrupted",
             "GlobalDayNight", "GlobalRegionChanged", "GlobalWeather",
             "AttributeValueChanged",
-            "AbilityAimBegun", "AbilityAimUpdated", "AbilityAimEnded", "AbilityAimSlotAdvanced",
             "EntityCollectionMemberAdded", "EntityCollectionMemberRemoved",
             "WorldOverlayUpdated", "WorldOverlayEnded",
             "WorldHudUpdated", "WorldHudEnded",

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -71,6 +72,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string WaitOp = GraphAuthoringSugar.Wait;
         public const string WhileOp = GraphAuthoringSugar.While;
         public const string UntilOp = GraphAuthoringSugar.Until;
+
+        /// <summary>
+        /// Instruction flag bit: the op's immediate (radius, or relationship type id) comes
+        /// from a value register. Spatial capacity policy uses bit 0 only, so this bit is
+        /// applied after that policy overwrites <see cref="GraphInstruction.Flags"/>.
+        /// </summary>
+        public const byte QueryValueFromRegisterFlag = 2;
 
         private readonly struct SugarScratch
         {
@@ -261,8 +269,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             Ludots.Core.Scripting.EnumCatalog? enums,
-            GasGraphOpRegistry? opRegistry = null)
-            => CompileCore(document, eventSchemas, enums, opRegistry) with { Document = document };
+            GasGraphOpRegistry? opRegistry = null,
+            InputCollectionKeyDeclarations? collectionRoles = null,
+            string? sourceMod = null)
+            => CompileCore(document, eventSchemas, enums, opRegistry, collectionRoles, sourceMod) with { Document = document };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
             GraphControlFlowDocument document)
@@ -275,7 +285,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             Ludots.Core.Scripting.EnumCatalog? enums,
-            GasGraphOpRegistry? opRegistry = null)
+            GasGraphOpRegistry? opRegistry = null,
+            InputCollectionKeyDeclarations? collectionRoles = null,
+            string? sourceMod = null)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
@@ -296,7 +308,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 BuildDispatchEventSchemas(nodes, graphKind, eventSchemas, graphId, diagnostics);
 
             List<TriggerGraphEntryConfig> triggerGraphEntries = ValidateTriggerGraphEntries(
-                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas);
+                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas, collectionRoles, sourceMod);
 
             if (graphKind != GraphKind.TriggerGraph &&
                 !string.IsNullOrWhiteSpace(document.Entry) &&
@@ -452,7 +464,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     entry.NormalizedRefire,
                     entry.Priority,
                     entry.ParsedHook != null,
-                    entry.Action);
+                    entry.Action,
+                    entry.NormalizedBudget);
             }
 
             return compiled;
@@ -626,13 +639,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
+        private static string NormalizeEntryBudget(
+            string? budget,
+            string graphId,
+            string entryLabel,
+            List<GraphDiagnostic> diagnostics)
+        {
+            string token = (budget ?? string.Empty).Trim();
+            if (token.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            if (string.Equals(token, TriggerGraphEntry.BudgetSingleSlice, StringComparison.Ordinal))
+            {
+                return TriggerGraphEntry.BudgetSingleSlice;
+            }
+
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                $"TriggerGraph graph '{graphId}' entry '{entryLabel}' budget must be '{TriggerGraphEntry.BudgetSingleSlice}' or omitted (got '{token}').",
+                entryLabel));
+            return string.Empty;
+        }
+
         private static List<TriggerGraphEntryConfig> ValidateTriggerGraphEntries(
             GraphControlFlowDocument document,
             Dictionary<string, int> nodeIndices,
             GraphKind graphKind,
             string graphId,
             List<GraphDiagnostic> diagnostics,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            InputCollectionKeyDeclarations? collectionRoles,
+            string? sourceMod)
         {
             if (graphKind != GraphKind.TriggerGraph)
             {
@@ -654,6 +692,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 string label = (authored[i].Label ?? string.Empty).Trim();
                 string shown = label.Length > 0 ? label : $"entries[{i}]";
+                authored[i].NormalizedBudget = NormalizeEntryBudget(authored[i].Budget, graphId, shown, diagnostics);
                 if (label.Length == 0)
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
@@ -706,7 +745,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,
                     NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
-                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName, collectionRoles, sourceMod),
                     ParsedHook = ParseEntryHook(authored[i], graphId, shown, diagnostics)
                 });
             }
@@ -836,7 +875,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string shown,
             List<GraphDiagnostic> diagnostics,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            string eventName)
+            string eventName,
+            InputCollectionKeyDeclarations? collectionRoles,
+            string? sourceMod)
         {
             if (filters == null)
             {
@@ -1000,6 +1041,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         {
                             // 配置期符号、运行期 int：int 参数的字符串期望值是符号，编译成
                             // ConfigKey id（幂等，装载/编译顺序无关），派发期 int 比较。
+                            // role:<name> 在这里绑成 collection_keys 里的集合名；没绑就装载失败。
+                            expected = InputCollectionKeyDeclarations.Resolve(
+                                collectionRoles,
+                                expected,
+                                $"graph '{graphId}' entry '{shown}' filters payload '{payloadKey}'",
+                                sourceMod);
                             (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
                                 new TriggerGraphEntryPayloadFilter(
                                     payloadKey,
@@ -2568,11 +2615,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             switch (op.NodeOp)
             {
                 case GraphNodeOp.ConstInt:
+                    if (!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue != 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}': ConstInt carries relationshipType only when intValue is 0.", node.Id));
+                    }
+
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.ConstInt,
                         Dst = outputRegisters[nodeIndex],
-                        Imm = node.IntValue
+                        Imm = !string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue == 0
+                            ? Intern(symbolToIndex, symbols, node.RelationshipType)
+                            : node.IntValue,
+                        Flags = (byte)(!string.IsNullOrWhiteSpace(node.RelationshipType) && node.IntValue == 0 ? 1 : 0)
                     };
                     definedInts[outputRegisters[nodeIndex]] = true;
                     SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.ConstInt), GraphControlFlowPorts.Enter);

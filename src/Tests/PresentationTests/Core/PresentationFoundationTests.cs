@@ -272,12 +272,11 @@ namespace Ludots.Tests.Presentation
             var modPaths = new System.Collections.Generic.List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "fixtures", "animation", "AnimationAcceptanceMod"),
             };
 
             using var engine = new Ludots.Core.Engine.GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var registry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimatorControllerRegistry);
             Assert.That(registry, Is.Not.Null);
@@ -468,12 +467,11 @@ namespace Ludots.Tests.Presentation
             var modPaths = new System.Collections.Generic.List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "fixtures", "animation", "AnimationAcceptanceMod"),
             };
 
             using var engine = new Ludots.Core.Engine.GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var controllerRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimatorControllerRegistry);
             var presenterRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.PresenterDefinitionRegistry);

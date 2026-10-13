@@ -142,7 +142,8 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "PanelEntityListShowcaseMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         AcceptanceUiHostInstaller.Install(engine);
         return engine;
     }

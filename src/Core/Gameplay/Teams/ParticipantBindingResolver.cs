@@ -319,7 +319,8 @@ namespace Ludots.Core.Gameplay.Teams
                     ClientLocalSeat seat = seats.Require(seats.SeatIds[i]);
                     if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
                     {
-                        continue;
+                        throw new InvalidOperationException(
+                            $"ClientLocalSeat '{seat.SeatId}' requires controlSchemeId.");
                     }
 
                     throw new InvalidOperationException(
@@ -333,12 +334,11 @@ namespace Ludots.Core.Gameplay.Teams
         /// The sole seat's declared ControlSchemeId is the per-entry launch truth and activates the
         /// global ControlSchemeRuntime (sole consumption path) as a runtime-only switch: the
         /// map-entry truth is transient and never rewrites the persisted preference store, so the
-        /// player's own choice survives for later maps without a declaration. Seats without a
-        /// declaration keep the runtime's initial/preference activation. Multi-seat tables never
-        /// touch this global runtime; their declared schemes activate per seat in
-        /// <see cref="PublishSeatInputChannels"/>. A declared scheme with the runtime
-        /// unregistered, uninstalled, or refused by the allowed-set is a configuration error and
-        /// fails fast instead of falling back to the initial scheme.
+        /// player's own choice survives for later maps. A seat with no controlSchemeId is a load
+        /// error. Multi-seat tables never touch this global runtime; their declared schemes
+        /// activate per seat in <see cref="PublishSeatInputChannels"/>. A declared scheme with the
+        /// runtime unregistered, uninstalled, or refused by the allowed-set is a configuration
+        /// error and fails fast.
         /// </summary>
         private static void ActivateSoleSeatControlScheme(
             IDictionary<string, object> globals,
@@ -352,7 +352,8 @@ namespace Ludots.Core.Gameplay.Teams
             ClientLocalSeat seat = seats.Require(seats.SeatIds[0]);
             if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' requires controlSchemeId.");
             }
 
             if (!globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) ||

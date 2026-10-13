@@ -71,7 +71,6 @@ namespace Ludots.Tests.Architecture
             Assert.That(plan.RootModIds, Does.Contain("NavMeshDebugLaunchMod"));
             Assert.That(plan.RootModIds, Does.Contain(expectedMapSelectorModId));
             Assert.That(plan.OrderedModIds, Does.Contain("LudotsCoreMod"));
-            Assert.That(plan.OrderedModIds, Does.Contain("CoreInputMod"));
             Assert.That(plan.OrderedModIds, Does.Contain("CameraProfilesMod"));
             Assert.That(plan.OrderedModIds, Does.Contain("NavMeshDebugLaunchMod"));
             Assert.That(plan.OrderedModIds, Does.Contain(expectedMapSelectorModId));

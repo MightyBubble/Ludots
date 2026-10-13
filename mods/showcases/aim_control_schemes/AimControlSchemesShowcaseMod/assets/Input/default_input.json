@@ -1,0 +1,55 @@
+{
+  "actions": [],
+  "contexts": [
+    {
+      "id": "Aim.Kbm",
+      "name": "Aim Keyboard Mouse",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Aim.Slot",
+          "path": "<Keyboard>/t",
+          "intValue": 4
+        },
+        {
+          "actionId": "Aim.Slot.Release",
+          "path": "<Keyboard>/t",
+          "intValue": 4
+        },
+        {
+          "actionId": "Aim.Slot",
+          "path": "<Keyboard>/y",
+          "intValue": 5
+        },
+        {
+          "actionId": "Aim.Slot.Release",
+          "path": "<Keyboard>/y",
+          "intValue": 5
+        }
+      ]
+    },
+    {
+      "id": "AimSchemes.Controls",
+      "name": "Aim Control Schemes Controls",
+      "priority": 90,
+      "bindings": [
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "Aim.CastMode.Smart",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "Aim.CastMode.AimRelease",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "Aim.CastMode.AimClick",
+          "path": "<Keyboard>/f3"
+        }
+      ]
+    }
+  ]
+}

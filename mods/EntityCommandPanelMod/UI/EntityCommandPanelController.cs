@@ -19,6 +19,9 @@ namespace EntityCommandPanelMod.UI
 {
     internal sealed class EntityCommandPanelController
     {
+        private const string EmptyHintBadge = "—";
+        private const float EmptyHintProgress = 0.42f;
+
         private readonly GameEngine _engine;
         private readonly EntityCommandPanelRuntime _runtime;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
@@ -124,13 +127,26 @@ namespace EntityCommandPanelMod.UI
         private UiElementBuilder BuildGlobalToolbar(IEntityCommandPanelToolbarProvider provider, float viewportWidth)
         {
             var buttons = new EntityCommandPanelToolbarButtonView[16];
-            int buttonCount = provider.CopyButtons(buttons);
+            int buttonCount;
+            Action<string> activate;
+            if (provider is EntityCommandPanelToolbarComposer composer && composer.ActiveToolbarReadsRep)
+            {
+                Entity rep = EntityCommandPanelToolbarRep.Require(_engine);
+                buttonCount = composer.CopyButtons(rep, buttons);
+                activate = buttonId => composer.Activate(rep, buttonId);
+            }
+            else
+            {
+                buttonCount = provider.CopyButtons(buttons);
+                activate = buttonId => provider.Activate(buttonId);
+            }
+
             var buttonElements = new UiElementBuilder[buttonCount];
             for (int i = 0; i < buttonCount; i++)
             {
                 var button = buttons[i];
                 string accent = NormalizeColor(button.AccentColorHex, button.Active ? "#F6D37A" : "#4FA9E6");
-                buttonElements[i] = Ui.Button(button.Label, _ => { provider.Activate(button.ButtonId); })
+                buttonElements[i] = Ui.Button(button.Label, _ => { activate(button.ButtonId); })
                     .Padding(10f, 7f)
                     .Radius(999f)
                     .Background(button.Active ? accent : "#132232")
@@ -325,12 +341,11 @@ namespace EntityCommandPanelMod.UI
             string themeId = EntityCommandPanelShowcaseTheme.LolId;
             string title = _runtime.ResolveEntityTitle(state.TargetEntity);
             string accent = ResolvePrimaryAccent(slots);
-            string interactionModeKey = ResolveInteractionModeKey();
             var primarySlots = new UiElementBuilder[4];
             for (int i = 0; i < primarySlots.Length; i++)
             {
                 primarySlots[i] = i < slots.Length
-                    ? BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], interactionModeKey, 124f, 12f, false)
+                    ? BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], 124f, 12f, false)
                     : BuildShowcasePlaceholderCard(themeId, "-", string.Empty, "Unbound", "#415060", 124f, 12f, false);
             }
 
@@ -356,19 +371,19 @@ namespace EntityCommandPanelMod.UI
                                                         .FontSize(24f)
                                                         .Color("#F3E3A4")
                                                         .TextShadow(0f, 1f, 2f, new UiColor(0x06, 0x09, 0x0E)),
-                                                    Ui.Text($"Theme LoL | {ResolveModeBadge(interactionModeKey)} | {ResolveGroupLine(group, groupCount, state.GroupIndex)}")
+                                                    Ui.Text($"Theme LoL | {EmptyHintBadge} | {ResolveGroupLine(group, groupCount, state.GroupIndex)}")
                                                         .FontFamily("Segoe UI")
                                                         .FontSize(11f)
                                                         .Color("#C6D3DE"))
                                                 .Gap(4f),
                                             Ui.Row(
-                                                    BuildShowcaseInfoPill("CAST", ResolveModeBadge(interactionModeKey), "#1A2430", "#ECD28B"),
+                                                    BuildShowcaseInfoPill("CAST", EmptyHintBadge, "#1A2430", "#ECD28B"),
                                                     BuildShowcaseInfoPill("HUD", "LoL", "#1A2430", "#D9E6F2"))
                                                 .Gap(8f))
                                         .Justify(UiJustifyContent.SpaceBetween)
                                         .Align(UiAlignItems.Center),
                                     BuildShowcaseBar("Resource", "Mana Ready", 0.84f, "#2C8CE4", "#102035", 564f),
-                                    BuildShowcaseBar("Lockout Sync", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#D2A755", "#241C0D", 564f),
+                                    BuildShowcaseBar("Lockout Sync", EmptyHintBadge, EmptyHintProgress, "#D2A755", "#241C0D", 564f),
                                     Ui.Row(primarySlots).Gap(8f),
                                     Ui.Row(utilitySlots).Gap(8f))
                                 .Gap(10f)
@@ -400,12 +415,11 @@ namespace EntityCommandPanelMod.UI
             string themeId = EntityCommandPanelShowcaseTheme.Dota2Id;
             string title = _runtime.ResolveEntityTitle(state.TargetEntity);
             string accent = ResolvePrimaryAccent(slots);
-            string interactionModeKey = ResolveInteractionModeKey();
             var abilitySlots = new UiElementBuilder[6];
             for (int i = 0; i < abilitySlots.Length; i++)
             {
                 abilitySlots[i] = i < slots.Length
-                    ? BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], interactionModeKey, 116f, 11f, false)
+                    ? BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], 116f, 11f, false)
                     : BuildShowcasePlaceholderCard(themeId, "-", string.Empty, "Unbound", "#6A5647", 116f, 11f, false);
             }
 
@@ -434,12 +448,12 @@ namespace EntityCommandPanelMod.UI
                                         .Width(220f)
                                         .Height(170f)
                                         .FlexShrink(0f),
-                                    BuildShowcaseBar("Routing", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#A76B44", "#21140E", 220f))
+                                    BuildShowcaseBar("Routing", EmptyHintBadge, EmptyHintProgress, "#A76B44", "#21140E", 220f))
                                 .Gap(10f)
                                 .FlexShrink(0f),
                             Ui.Column(
                                     Ui.Row(
-                                            BuildShowcaseInfoPill("CAST", ResolveModeBadge(interactionModeKey), "#2A1D16", "#F0D8AE"),
+                                            BuildShowcaseInfoPill("CAST", EmptyHintBadge, "#2A1D16", "#F0D8AE"),
                                             BuildShowcaseInfoPill("GROUP", groupCount <= 0 ? "0/0" : $"{state.GroupIndex + 1}/{groupCount}", "#2A1D16", "#D8C5B1"),
                                             BuildShowcaseInfoPill("HUD", "Dota2", "#2A1D16", "#D6905B"))
                                         .Gap(8f),
@@ -474,13 +488,12 @@ namespace EntityCommandPanelMod.UI
             string themeId = EntityCommandPanelShowcaseTheme.Sc2Id;
             string title = _runtime.ResolveEntityTitle(state.TargetEntity);
             string accent = ResolvePrimaryAccent(slots);
-            string interactionModeKey = ResolveInteractionModeKey();
             var cells = new UiElementBuilder[15];
             for (int i = 0; i < cells.Length; i++)
             {
                 if (i < slots.Length)
                 {
-                    cells[i] = BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], interactionModeKey, 82f, 9f, false);
+                    cells[i] = BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], 82f, 9f, false);
                     continue;
                 }
 
@@ -518,12 +531,12 @@ namespace EntityCommandPanelMod.UI
                                                         .FontFamily("Segoe UI Semibold")
                                                         .FontSize(22f)
                                                         .Color("#D7F6FF"),
-                                                    Ui.Text($"Theme SC2 | {ResolveGroupLine(group, groupCount, state.GroupIndex)} | {ResolveModeBadge(interactionModeKey)}")
+                                                    Ui.Text($"Theme SC2 | {ResolveGroupLine(group, groupCount, state.GroupIndex)} | {EmptyHintBadge}")
                                                         .FontFamily("Segoe UI")
                                                         .FontSize(11f)
                                                         .Color("#93BED7"))
                                                 .Gap(4f),
-                                            BuildShowcaseBar("Command Sync", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#4CB6E9", "#0D2131", 254f))
+                                            BuildShowcaseBar("Command Sync", EmptyHintBadge, EmptyHintProgress, "#4CB6E9", "#0D2131", 254f))
                                         .Justify(UiJustifyContent.SpaceBetween)
                                         .Align(UiAlignItems.Center),
                                     Ui.Row(cells[0], cells[1], cells[2], cells[3], cells[4]).Gap(8f),
@@ -550,14 +563,13 @@ namespace EntityCommandPanelMod.UI
             int groupIndex,
             IEntityCommandPanelSource? source,
             in EntityCommandPanelSlotView slot,
-            string interactionModeKey,
             float width,
             float labelFontSize,
             bool showDetail)
         {
             string accent = ResolveAbilityAccent(in slot);
-            string glyph = ResolveAbilityGlyph(in slot, interactionModeKey);
-            string hotkey = ResolveActionKeyLabel(slot.ActionId);
+            string glyph = ResolveAbilityGlyph(in slot);
+            string hotkey = ResolveActionKeyLabel(in slot);
             string art = _showcaseArtFactory.BuildSlotArt(
                 themeId,
                 glyph,
@@ -784,18 +796,6 @@ namespace EntityCommandPanelMod.UI
                 : artWidth * 1.15625f;
         }
 
-        private static float ResolveModeProgress(string interactionModeKey)
-        {
-            return interactionModeKey switch
-            {
-                nameof(CastModeType.SmartCast) => 0.96f,
-                nameof(CastModeType.SmartCastWithIndicator) => 0.72f,
-                nameof(CastModeType.PressReleaseAimCast) => 0.58f,
-                nameof(CastModeType.AimCast) => 0.51f,
-                _ => 0.42f
-            };
-        }
-
         private string ResolvePrimaryAccent(IReadOnlyList<EntityCommandPanelSlotView> slots)
         {
             for (int i = 0; i < slots.Count; i++)
@@ -969,13 +969,12 @@ namespace EntityCommandPanelMod.UI
             bool pendingTarget = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.PendingTarget);
             bool active = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active);
             bool interactive = !blocked && EntityCommandPanelSourceDispatch.CanActivate(source);
-            string interactionModeKey = ResolveInteractionModeKey();
             string detailLabel = ResolveDetailLabel(in slot);
-            string actionKey = ResolveActionKeyLabel(slot.ActionId);
+            string actionKey = ResolveActionKeyLabel(in slot);
 
             UiElementBuilder card = Ui.Card(
                     Ui.Row(
-                            BuildAbilityIcon(in slot, interactionModeKey),
+                            BuildAbilityIcon(in slot),
                             Ui.Column(
                                     Ui.Text(ResolveAbilityLabel(in slot))
                                         .FontSize(14f)
@@ -1020,23 +1019,17 @@ namespace EntityCommandPanelMod.UI
             Span<EntityCommandPanelStatusView> statuses,
             int queueItemCount,
             Span<EntityCommandPanelQueueItemView> queueItems,
-            in InputOrderActivationResult lastActivationResult,
+            in EntityCommandPanelActivationResult lastActivationResult,
             in RtsHudTheme theme)
         {
             string footerText;
-            if (lastActivationResult.State == InputOrderActivationState.Rejected)
+            if (lastActivationResult.State == EntityCommandPanelActivationState.Rejected)
             {
                 footerText = $"Command failed: {lastActivationResult.Rejection}";
             }
-            else if (lastActivationResult.State == InputOrderActivationState.EnteredAiming)
+            else if (lastActivationResult.State == EntityCommandPanelActivationState.Accepted)
             {
-                footerText = "Choose target";
-            }
-            else if (lastActivationResult.State == InputOrderActivationState.Submitted)
-            {
-                footerText = lastActivationResult.OrderId > 0
-                    ? $"Order {lastActivationResult.OrderId} submitted"
-                    : "Order submitted";
+                footerText = "Command sent";
             }
             else if (statusCount > 0)
             {
@@ -1300,7 +1293,6 @@ namespace EntityCommandPanelMod.UI
             bool isInteractiveGroup,
             in EntityCommandPanelSlotView slot)
         {
-            string interactionModeKey = ResolveInteractionModeKey();
             string abilityLabel = ResolveAbilityLabel(in slot);
             string detailLabel = ResolveDetailLabel(in slot);
             if (!isInteractiveGroup && !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
@@ -1308,7 +1300,7 @@ namespace EntityCommandPanelMod.UI
                 detailLabel = $"Preview only · {detailLabel}";
             }
 
-            string actionKey = isInteractiveGroup ? ResolveActionKeyLabel(slot.ActionId) : "VIEW";
+            string actionKey = isInteractiveGroup ? ResolveActionKeyLabel(in slot) : "VIEW";
 
             var flags = new List<UiElementBuilder>(4);
             AppendFlag(flags, !isInteractiveGroup, "PREVIEW", "#1D3142", "#D5E8F8");
@@ -1325,7 +1317,7 @@ namespace EntityCommandPanelMod.UI
 
             UiElementBuilder row = Ui.Card(
                     Ui.Row(
-                            BuildAbilityIcon(in slot, interactionModeKey),
+                            BuildAbilityIcon(in slot),
                             Ui.Column(
                                     Ui.Text(abilityLabel)
                                         .FontSize(13f)
@@ -1362,7 +1354,7 @@ namespace EntityCommandPanelMod.UI
             int groupIndex,
             int slotIndex)
         {
-            InputOrderActivationResult result = EntityCommandPanelSourceDispatch.ActivateSlot(
+            EntityCommandPanelActivationResult result = EntityCommandPanelSourceDispatch.ActivateSlot(
                 source,
                 in sourceContext,
                 groupIndex,
@@ -1448,14 +1440,14 @@ namespace EntityCommandPanelMod.UI
                 .Border(1f, ParseUiColor("#20384A"));
         }
 
-        private UiElementBuilder BuildAbilityIcon(in EntityCommandPanelSlotView slot, string interactionModeKey)
+        private UiElementBuilder BuildAbilityIcon(in EntityCommandPanelSlotView slot)
         {
-            string glyph = ResolveAbilityGlyph(in slot, interactionModeKey);
+            string glyph = ResolveAbilityGlyph(in slot);
             string accent = ResolveAbilityAccent(in slot);
             string iconUri = _iconFactory.Build(
                 glyph,
                 accent,
-                ResolveModeBadge(interactionModeKey),
+                EmptyHintBadge,
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty));
@@ -1616,7 +1608,7 @@ namespace EntityCommandPanelMod.UI
                 .Gap(0f);
         }
 
-        private string ResolveAbilityGlyph(in EntityCommandPanelSlotView slot, string interactionModeKey)
+        private string ResolveAbilityGlyph(in EntityCommandPanelSlotView slot)
         {
             if (slot.AbilityId > 0 &&
                 _abilityDefinitions != null &&
@@ -1624,7 +1616,7 @@ namespace EntityCommandPanelMod.UI
                 definition.HasPresentation &&
                 definition.Presentation != null)
             {
-                return definition.Presentation.ResolveIconGlyph(interactionModeKey, ResolveFallbackGlyph(slot));
+                return definition.Presentation.ResolveIconGlyph(null, ResolveFallbackGlyph(slot));
             }
 
             return ResolveFallbackGlyph(slot);
@@ -1662,7 +1654,7 @@ namespace EntityCommandPanelMod.UI
 
         private string ResolveFallbackGlyph(in EntityCommandPanelSlotView slot)
         {
-            string actionKey = ResolveActionKeyLabel(slot.ActionId);
+            string actionKey = ResolveActionKeyLabel(in slot);
             if (!string.IsNullOrWhiteSpace(actionKey))
             {
                 return ShortenGlyph(actionKey);
@@ -1688,33 +1680,18 @@ namespace EntityCommandPanelMod.UI
             return trimmed[..1].ToUpperInvariant();
         }
 
-        private static string ResolveActionKeyLabel(string actionId)
+        private string ResolveActionKeyLabel(in EntityCommandPanelSlotView slot)
         {
-            if (string.IsNullOrWhiteSpace(actionId))
+            if (!slot.BindsInput)
             {
                 return string.Empty;
             }
 
-            if (actionId.StartsWith("Skill", StringComparison.OrdinalIgnoreCase) &&
-                actionId.Length > "Skill".Length)
-            {
-                return actionId["Skill".Length..].ToUpperInvariant();
-            }
-
-            return actionId;
-        }
-
-        private static string ResolveModeBadge(string interactionModeKey)
-        {
-            return interactionModeKey switch
-            {
-                nameof(CastModeType.SmartCast) => "SC",
-                nameof(CastModeType.SmartCastWithIndicator) => "RC",
-                nameof(CastModeType.AimCast) => "RTS",
-                nameof(CastModeType.PressReleaseAimCast) => "PR",
-                nameof(CastModeType.ContextScored) => "CTX",
-                _ => "TF"
-            };
+            return EntityCommandPanelBindingKeys.Resolve(
+                _engine,
+                slot.ActionId,
+                slot.HasBindingInt,
+                slot.BindingInt);
         }
 
         private static string ShortenName(string value)
@@ -1726,16 +1703,6 @@ namespace EntityCommandPanelMod.UI
         private IEntityCommandPanelToolbarProvider? ResolveToolbarProvider()
         {
             return _engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-        }
-
-        private string ResolveInteractionModeKey()
-        {
-            if (_engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                return mapping.InteractionMode.ToString();
-            }
-
-            return nameof(CastModeType.TargetFirst);
         }
 
         private string ResolveShowcaseThemeId()
@@ -1840,7 +1807,7 @@ namespace EntityCommandPanelMod.UI
                     continue;
                 }
 
-                string actionKey = ResolveActionKeyLabel(slot.ActionId);
+                string actionKey = ResolveActionKeyLabel(in slot);
                 string label = ResolveAbilityLabel(in slot);
                 return string.IsNullOrWhiteSpace(actionKey)
                     ? $"Queue {label} to start production."

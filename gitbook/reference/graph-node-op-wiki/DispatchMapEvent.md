@@ -46,6 +46,7 @@ ConstInt → ConstInt → ConstInt → **DispatchMapEvent**（本篇） → Halt
 - 图种边界：可用于 TriggerGraph；Effect / Score / Validation / Derived / Query / Script 图不可用（编译期白名单拒绝）。
 - 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
+- 可以另接一个 int 口 `ability`。接上之后这次派发带上技能编号，只叫醒这张技能自己挂的触发图，并把跑这张图的人写成事件来源。事件参数里不能再有名叫 ability 的参数。global 不能接这个口。技能编号小于等于 0 直接失败。
 - 同类用法：见手册分册的场景节。
 ## 怎么进
 

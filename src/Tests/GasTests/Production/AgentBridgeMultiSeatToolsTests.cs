@@ -35,8 +35,8 @@ namespace Ludots.Tests.GasTests.Production
     {
         private const float DeltaTime = 1f / 60f;
         private const float FovDeg = 60f;
+        private static readonly string[] Mods = { "LudotsCoreMod", "CommandSourceCoreFixtureMod" };
 
-        private static readonly string[] Mods = { "LudotsCoreMod", "CoreInputMod" };
 
         [Test]
         public void SessionInfo_DualSeat_ListsEverySeatWithBindingRects()
@@ -227,7 +227,7 @@ namespace Ludots.Tests.GasTests.Production
             var tool = new InputInjectTool(runtime);
             JsonObject result = (JsonObject)tool.Execute(new JsonObject
             {
-                ["actionId"] = "Command",
+                ["actionId"] = "Select.Begin",
                 ["mode"] = "set",
                 ["value"] = new JsonObject { ["x"] = 0d, ["y"] = 1d },
                 ["seatId"] = "seat.1",
@@ -237,9 +237,9 @@ namespace Ludots.Tests.GasTests.Production
             Assert.That((string)result["seatId"]!, Is.EqualTo("seat.1"));
             Tick(engine, 1);
 
-            Assert.That(channelOne.Reader.ReadAction<Vector3>("Command"), Is.EqualTo(new Vector3(0f, 1f, 1f)),
+            Assert.That(channelOne.Reader.ReadAction<Vector3>("Select.Begin"), Is.EqualTo(new Vector3(0f, 1f, 1f)),
                 "seat.1's frozen snapshot carries the injected value (unset axes default to 1, tool semantics)");
-            Assert.That(channelZero.Reader.ReadAction<Vector3>("Command"), Is.EqualTo(default(Vector3)),
+            Assert.That(channelZero.Reader.ReadAction<Vector3>("Select.Begin"), Is.EqualTo(default(Vector3)),
                 "seat.0's channel never sees seat.1's injection");
 
             JsonArray ledger = runtime.InputEventLog();
@@ -249,7 +249,7 @@ namespace Ludots.Tests.GasTests.Production
 
             AgentToolException unknown = Assert.Throws<AgentToolException>(() => tool.Execute(new JsonObject
             {
-                ["actionId"] = "Command",
+                ["actionId"] = "Select.Begin",
                 ["mode"] = "press",
                 ["seatId"] = "seat.9",
             }, context));
@@ -269,14 +269,14 @@ namespace Ludots.Tests.GasTests.Production
             var tool = new InputInjectTool(runtime);
             JsonObject result = (JsonObject)tool.Execute(new JsonObject
             {
-                ["actionId"] = "Command",
+                ["actionId"] = "Select.Begin",
                 ["mode"] = "press",
                 ["seatId"] = "seat.0",
             }, context)!;
 
             Assert.That((bool)result["injected"]!, Is.True);
             PlayerInputHandler global = engine.GetService(CoreServiceKeys.InputHandler)!;
-            Assert.That(global.IsInjectionActive("Command"), Is.True,
+            Assert.That(global.IsInjectionActive("Select.Begin"), Is.True,
                 "sole-seat seatId addressing lands on the engine-global handler");
         }
 
@@ -300,7 +300,8 @@ namespace Ludots.Tests.GasTests.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, Mods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             engine.Start();
             engine.MergedConfig.StartupPresentLayout = PresentBinding.HorizontalEqualSplitLayoutId;
@@ -316,13 +317,13 @@ namespace Ludots.Tests.GasTests.Production
                 players.Register(8, playerEight);
                 localSeats = new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
-                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.default"),
                 };
             }
             else
             {
-                localSeats = new[] { new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null) };
+                localSeats = new[] { new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default") };
             }
 
             ParticipantBindingResolver.PublishFocused(
@@ -336,10 +337,7 @@ namespace Ludots.Tests.GasTests.Production
             var backend = new IdleInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

@@ -19,6 +19,7 @@ namespace Ludots.Core.Input.Config
     {
         public const string FiresOnPress = "press";
         public const string FiresOnRelease = "release";
+        public const string FiresOnChange = "change";
 
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; }
@@ -26,12 +27,13 @@ namespace Ludots.Core.Input.Config
         public InputActionType Type { get; set; } = InputActionType.Button;
 
         /// <summary>
-        /// When a TriggerGraph entry binds this action: which moment fires it —
-        /// <see cref="FiresOnPress"/> (default, press started) or
-        /// <see cref="FiresOnRelease"/> (release completed). Timing belongs on the
-        /// action definition, not on the graph entry.
+        /// TriggerGraph dispatch moment. Load leaves a blank value blank, then
+        /// normalizes a blank Button to <see cref="FiresOnPress"/>; every other
+        /// type stays blank (the action is not a trigger moment).
+        /// <see cref="FiresOnPress"/> and <see cref="FiresOnRelease"/> are Button
+        /// only. <see cref="FiresOnChange"/> is Axis1D and Axis2D.
         /// </summary>
-        public string FiresOn { get; set; } = FiresOnPress;
+        public string? FiresOn { get; set; }
     }
 
     /// <summary>
@@ -66,6 +68,13 @@ namespace Ludots.Core.Input.Config
 
         public List<InputModifierDef> Processors { get; set; } = new List<InputModifierDef>();
         public List<InputModifierDef> Interactions { get; set; } = new List<InputModifierDef>();
+
+        /// <summary>
+        /// Optional integer stamped on each edge of this binding. Absent means the
+        /// binding contributes only to the action's summed value. Every binding of
+        /// one action must agree: all carry an integer, or none do.
+        /// </summary>
+        public int? IntValue { get; set; }
     }
 
     /// <summary>

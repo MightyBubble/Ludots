@@ -16,6 +16,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -955,7 +956,7 @@ namespace Ludots.Tests.GAS
                     ControlsTypeId = controlsTypeId,
                     AllyTypeId = allyTypeId,
                     GrantedFlagId = grantedFlagId,
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
                 };
             }
 

@@ -9,14 +9,8 @@ namespace ChampionSkillSandboxMod
         public const string StressMapId = "champion_skill_stress";
         public const string InputContextId = "ChampionSkillSandbox.Controls";
 
-        public const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
-        public const string IndicatorModeId = "ChampionSkillSandbox.Mode.Indicator";
-        public const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
         public const string TacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
 
-        public const string SmartCastActionId = "CastModeSmart";
-        public const string IndicatorActionId = "CastModeIndicator";
-        public const string PressReleaseActionId = "CastModePressRelease";
         public const string ResetCameraActionId = "ResetCamera";
         public const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         public const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
@@ -71,13 +65,6 @@ namespace ChampionSkillSandboxMod
         public static bool IsStressMap(string? mapId)
         {
             return string.Equals(mapId, StressMapId, StringComparison.Ordinal);
-        }
-
-        public static bool IsSandboxMode(string? modeId)
-        {
-            return string.Equals(modeId, SmartCastModeId, StringComparison.Ordinal) ||
-                   string.Equals(modeId, IndicatorModeId, StringComparison.Ordinal) ||
-                   string.Equals(modeId, PressReleaseModeId, StringComparison.Ordinal);
         }
 
         public static bool IsCameraFollowMode(string? buttonId)

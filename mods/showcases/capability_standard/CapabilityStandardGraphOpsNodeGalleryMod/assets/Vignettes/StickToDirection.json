@@ -1,6 +1,6 @@
 {
   "op": "StickToDirection",
-  "driver": "aimsource",
+  "driver": "pointerSample",
   "title": "摇杆掰方向",
   "beat": "摇杆斜掰，箭头随之指向东北。",
   "detailTemplate": "摇杆掰向 {deg} 度。",

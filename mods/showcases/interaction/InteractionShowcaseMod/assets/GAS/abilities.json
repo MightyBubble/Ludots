@@ -4,7 +4,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -20,6 +25,14 @@
       "blockedAny": [
         "Cooldown.Arcweaver.Q"
       ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
+    "targeting": {
+      "castRangeCm": 900,
+      "impactEffect": "Effect.Interaction.DuelBolt"
     }
   },
   {
@@ -27,7 +40,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -39,6 +57,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 520,
       "impactEffect": "Effect.Interaction.BlinkStep"
@@ -54,7 +76,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -66,6 +93,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 760,
       "impactEffect": "Effect.Interaction.FireLance"
@@ -81,7 +112,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -94,6 +130,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.none"
+    ],
     "targeting": {
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.NovaPulse"
@@ -109,7 +149,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Z", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.Z",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -121,6 +166,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.ArcDash"
@@ -136,7 +185,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.F", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.F",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -186,7 +240,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Rune", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Arcweaver.Rune",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -198,6 +257,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
       "castRangeCm": 780,
       "impactEffect": "Effect.Interaction.RuneBurst"
@@ -213,7 +276,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -229,6 +297,14 @@
       "blockedAny": [
         "Cooldown.Vanguard.Q"
       ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
+    "targeting": {
+      "castRangeCm": 480,
+      "impactEffect": "Effect.Interaction.Challenge"
     }
   },
   {
@@ -236,7 +312,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -248,6 +329,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 440,
       "impactEffect": "Effect.Interaction.BannerLeap"
@@ -263,7 +348,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -275,6 +365,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.CleaveCone"
@@ -290,7 +384,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -303,6 +402,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.none"
+    ],
     "targeting": {
       "castRangeCm": 0,
       "impactEffect": "Effect.Interaction.Shockwave"
@@ -318,7 +421,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Z", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.Z",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -330,6 +438,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 300,
       "impactEffect": "Effect.Interaction.ChargeDash"
@@ -345,7 +457,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.F", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.F",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -390,7 +507,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Rune", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Vanguard.Rune",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -402,6 +524,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
       "castRangeCm": 520,
       "impactEffect": "Effect.Interaction.GroundSlam"
@@ -417,7 +543,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -433,6 +564,14 @@
       "blockedAny": [
         "Cooldown.Commander.Q"
       ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
+    "targeting": {
+      "castRangeCm": 800,
+      "impactEffect": "Effect.Interaction.SupportBeam"
     }
   },
   {
@@ -440,7 +579,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -452,6 +596,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 560,
       "impactEffect": "Effect.Interaction.TacticalJump"
@@ -467,7 +615,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -479,6 +632,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 720,
       "impactEffect": "Effect.Interaction.VolleyLine"
@@ -494,7 +651,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -510,6 +672,14 @@
       "blockedAny": [
         "Cooldown.Commander.R"
       ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.none"
+    ],
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Interaction.Overclock"
     }
   },
   {
@@ -517,7 +687,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Z", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.Z",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -529,6 +704,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.ground_only"
+    ],
     "targeting": {
       "castRangeCm": 320,
       "impactEffect": "Effect.Interaction.ThrustJump"
@@ -544,7 +723,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.F", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.F",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -589,7 +773,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Rune", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Commander.Rune",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -601,6 +790,10 @@
         }
       ]
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
       "castRangeCm": 820,
       "impactEffect": "Effect.Interaction.OrbitalStrike"
@@ -616,7 +809,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Stress.Fireball", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Lockout.Stress.Fireball",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,

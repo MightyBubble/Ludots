@@ -576,7 +576,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         entry.Refire,
                         entry.Priority,
                         entry.IsHookFragment,
-                        entry.ActionId);
+                        entry.ActionId,
+                        entry.Budget);
                 }
 
                 var refirePolicy = entry.Refire == TriggerGraphEntry.RefireRestart
@@ -674,7 +675,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 entry.Refire,
                 entry.Priority,
                 entry.IsHookFragment,
-                entry.ActionId);
+                entry.ActionId,
+                entry.Budget);
         }
 
         private static string? RequireTrimmedFilterField(string? value, string field, string graph, string ownerLabel)

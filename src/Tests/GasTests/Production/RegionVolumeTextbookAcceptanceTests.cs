@@ -33,7 +33,6 @@ public sealed class RegionVolumeTextbookAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "RegionVolumeTextbookMod",
     };
 
@@ -164,7 +163,8 @@ public sealed class RegionVolumeTextbookAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.UiCaptured, false);
         return engine;
     }

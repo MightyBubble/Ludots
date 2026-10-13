@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "fc1a940db",
+    "head": "459faf9edf",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -6683,7 +6683,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "将该单位设为当前唯一选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -6945,7 +6945,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把框内单位设为当前选中并结束框选"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7114,7 +7114,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把闭合圈内单位设为当前选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7305,7 +7305,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按修饰键翻转该单位的选中状态"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7416,7 +7416,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按同类型筛出可见单位并整批选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7631,7 +7631,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "绑定玩家唯一可控角色"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7777,7 +7777,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "启用载具输入映射与命令集"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7893,7 +7893,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "点空地后清空当前全部选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7975,7 +7975,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "给选中单位下达移动到该点的指令"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8122,7 +8122,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "命中检测遇敌后插入攻击再续行"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8281,7 +8281,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "切换为坚守姿态：不追击只还击"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8551,7 +8551,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "弹出队首路点并自动执行下一项"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8662,7 +8662,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把兵营新生单位的默认集结点设好"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8785,7 +8785,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "下达卸载并在旁生成下车单位"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8843,9 +8843,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按鼠标位移增量更新视角或准星朝向"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-142",
@@ -8905,9 +8905,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按右摇杆偏移量持续更新视角或准星朝向"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-142",
@@ -8988,9 +8988,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把最近合法敌人记为软锁辅助目标"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-143",
@@ -9108,9 +9108,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "硬锁目标切换到下一合法敌人"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-118",
@@ -9239,9 +9239,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按准星重算落点合法性"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-148",
@@ -9373,9 +9373,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "退出瞄准且不扣资源、不进冷却"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-116",
@@ -10688,9 +10688,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "对自身施加该技能增益并进冷却"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-095",
@@ -10774,9 +10774,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "以自身为圆心结算范围伤害"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-128",
@@ -10842,9 +10842,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "沿面朝瞬移到合法落点"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-104",
@@ -10949,9 +10949,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "切回原形态并还原技能组"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-067",
@@ -11119,7 +11119,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把点中敌人记为技能目标并释放"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11210,7 +11210,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "准星已有合法目标则跳过指示器直接放"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11339,7 +11339,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "判定友军合法并结算治疗"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11459,7 +11459,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "凑齐两目标后结算技能连接"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11610,7 +11610,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把点击地面记为落点并结算技能"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11706,7 +11706,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "在松手位置确认释放"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11813,7 +11813,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "确认放置并开始建造或落地"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11895,7 +11895,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把小地图点击映射为大地图落点"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -14425,7 +14425,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "确认点击后在指示器落点出手"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -14547,7 +14547,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "Alt 修饰则跳过选目标直接自施"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -14691,7 +14691,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "前序走完后自动执行排队施法"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -14788,7 +14788,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "双击判定成立则走双击技能变体"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -25157,7 +25157,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "玩家绿点自动施法：缺失。现有是 AI Utility Autocast，不是玩家开关。",
       "todos": [
-        "TODO: 每技能 Autocast 开关写入偏好并参与 CastCommit"
+        "TODO: 每技能 Autocast 开关还没接到施法图"
       ],
       "familyTitle": "自动施法",
       "actionNo": "UX-082",

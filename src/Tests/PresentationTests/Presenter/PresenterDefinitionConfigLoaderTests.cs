@@ -1356,6 +1356,90 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_OwnerCollectionMember_ResolvesTheCollectionKeyAndDefaultsTheIndex()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "range_marker",
+                    "rules": [
+                      {
+                        "event": { "kind": "ContextActivated", "key": "interaction.context.sample" },
+                        "command": {
+                          "kind": "CreatePresenter",
+                          "definitionId": "range_marker",
+                          "scopeSource": "EventKeyId",
+                          "ownerSource": "EventSourceCollectionMember",
+                          "ownerCollection": "sample.actors"
+                        },
+                        "condition": { "inline": "OwnerHasVisualTransform" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityCollectionKeyId: key => string.Equals(key, "sample.actors", StringComparison.Ordinal) ? 44 : 0,
+                resolveInteractionContextProfileId: key => string.Equals(key, "interaction.context.sample", StringComparison.Ordinal) ? 9 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("range_marker"), out var definition), Is.True);
+            PresenterRule rule = definition.Rules[0];
+            Assert.That(rule.Event.Kind, Is.EqualTo(PresentationEventKind.ContextActivated));
+            Assert.That(rule.Event.KeyId, Is.EqualTo(9));
+            Assert.That(rule.Condition.Inline, Is.EqualTo(InlineConditionKind.OwnerHasVisualTransform));
+            Assert.That(rule.Command.OwnerSource, Is.EqualTo(PresenterCommandEntitySource.EventSourceCollectionMember));
+            Assert.That(rule.Command.OwnerCollectionKeyId, Is.EqualTo(44));
+            Assert.That(rule.Command.OwnerMemberIndex, Is.EqualTo(0));
+            Assert.That(rule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventKeyId));
+        }
+
+        [Test]
+        public void Load_OwnerCollection_RejectedUnlessTheOwnerSourceReadsAMember()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "range_marker",
+                    "rules": [
+                      {
+                        "event": { "kind": "ContextActivated", "key": "interaction.context.sample" },
+                        "command": {
+                          "kind": "CreatePresenter",
+                          "definitionId": "range_marker",
+                          "scopeSource": "EventKeyId",
+                          "ownerSource": "EventSource",
+                          "ownerCollection": "sample.actors"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveInteractionContextProfileId: key => string.Equals(key, "interaction.context.sample", StringComparison.Ordinal) ? 9 : 0);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(error!.Message, Does.Contain("ownerCollection"));
+            Assert.That(error.Message, Does.Contain("EventSourceCollectionMember"));
+        }
+
+        [Test]
         public void Load_BindSpawn_ExpandsIntoCanonicalCreateAndDestroyRules()
         {
             WriteCatalog();

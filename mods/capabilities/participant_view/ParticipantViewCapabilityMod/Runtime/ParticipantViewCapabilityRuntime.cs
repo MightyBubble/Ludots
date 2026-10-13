@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Map;
 using Ludots.Core.Client;
@@ -11,12 +12,6 @@ using ParticipantViewCapabilityMod.Systems;
 using ParticipantViewCapabilityMod.UI;
 
 namespace ParticipantViewCapabilityMod.Runtime;
-    /// <summary>Collection keys consumed by participant view; declared/written by LudotsCoreMod selection graphs.</summary>
-    internal static class ParticipantViewCollectionKeys
-    {
-        public const string CommandSource = "collection.command.source";
-    }
-
 
 internal sealed class ParticipantViewCapabilityRuntime
 {
@@ -192,7 +187,12 @@ internal sealed class ParticipantViewCapabilityRuntime
                 ? ParticipantViewProjection.ResolveTeamMembers(engine.World, session, _selectedTeamId)
                 : Array.Empty<Entity>();
 
-        PublishCommandSourceProjection(collections, commandSourceOwner, viewViewer, members);
+        PublishCommandSourceProjection(
+            collections,
+            commandSourceOwner,
+            viewViewer,
+            members,
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
     }
 
     private void RefreshMountedPanel(GameEngine engine)
@@ -292,10 +292,11 @@ internal sealed class ParticipantViewCapabilityRuntime
         EntityCollectionStore collections,
         Entity owner,
         Entity contextEntity,
-        Entity[] members)
+        Entity[] members,
+        string commandSourceKey)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            ParticipantViewCollectionKeys.CommandSource,
+            commandSourceKey,
             EntityCollectionSourceKind.DynamicParticipant,
             EntityCollectionRoleKind.CommandSource,
             contextEntity,
