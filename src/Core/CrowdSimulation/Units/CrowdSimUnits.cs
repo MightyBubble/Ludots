@@ -564,6 +564,65 @@ public sealed class CrowdSimUnits
     }
 
     /// <summary>
+    /// 稠密表的唯一退场。ConsumeEntity 销毁实体，槽位代 +1，空闲槽 LIFO 压回。
+    /// 与末行交换时调用方必须同时搬走避让行。生成尚未落地时拒绝。
+    /// </summary>
+    internal void ReleaseDense(int dense)
+    {
+        if (_pendingCount != 0)
+        {
+            throw new InvalidOperationException("单位生成尚未落地。");
+        }
+
+        if ((uint)dense >= (uint)_dense.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(dense));
+        }
+
+        Entity entity = _dense[dense];
+        int slot = _slotOfDense[dense];
+        if (entity != Entity.Null && _world.IsAlive(entity))
+        {
+            if (_world.Has<PlayerOwner>(entity))
+            {
+                SubtractSelected(entity, _world.Get<PlayerOwner>(entity).PlayerId);
+            }
+
+            ReleaseOwnership(entity);
+            EntityLifecycleAtomicOps.ConsumeEntity(_world, entity, "CrowdSimulation.Release");
+        }
+
+        _gen[slot] = (ushort)((_gen[slot] + 1) & GenMask);
+        _sparse[slot] = -1;
+        _freeSlots[_freeTop++] = slot;
+        int last = _dense.Count - 1;
+        if (dense != last)
+        {
+            Entity moved = _dense[last];
+            int movedSlot = _slotOfDense[last];
+            _dense[dense] = moved;
+            _slotOfDense[dense] = movedSlot;
+            _sparse[movedSlot] = dense;
+        }
+
+        _dense.RemoveAt(last);
+        _slotOfDense.RemoveAt(last);
+    }
+
+    private readonly Entity[] _selectedSubtract = new Entity[1];
+
+    private void SubtractSelected(Entity entity, int playerId)
+    {
+        var applier = _presentation.CollectionApplier;
+        var reps = _presentation.PlayerReps;
+        if (applier == null || reps == null || (uint)playerId >= (uint)reps.Length) return;
+        Entity rep = reps[playerId];
+        if (rep == Entity.Null || !_world.IsAlive(rep)) return;
+        _selectedSubtract[0] = entity;
+        applier.Apply(rep, _presentation.SelectedCollectionKeyId, CollectionWriteOp.Subtract, _selectedSubtract);
+    }
+
+    /// <summary>
     /// 清空稠密表。已绑定且仍存活的单位走 ConsumeEntity，当帧从仿真里消失。
     /// 引擎世界有呈现消费者，实体留到销毁事件发布之后才 Destroy。
     /// 无头世界在构造时声明没有消费者，ConsumeEntity 当场收尾销毁。

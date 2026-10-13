@@ -48,6 +48,7 @@ public sealed partial class CrowdSimulationRuntime
 {
     private CrowdSimulationConfig? _configDto;
     private CrowdSimulationDebugConfig? _debug;
+    private CrowdSimulationDebugViewConfig? _debugView;
     internal bool HasFormalConfig => _configDto != null;
     private string? _focusedCrowdMapId;
     internal string? FormalConfigMapId => _focusedCrowdMapId;
@@ -253,21 +254,35 @@ public sealed partial class CrowdSimulationRuntime
         if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {
             _debug = null;
+        }
+        else
+        {
+            CrowdSimulationDebugConfig debug = ConfigMergeProvenance.Wrap(CrowdSimulationDebugPath, engine.ConfigConflictReport, tracked =>
+            {
+                var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, tracked)
+                    ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
+                return CrowdSimulationDebugConfig.Load(debugMerged);
+            });
+            _debug = debug;
+            _presentation = debug.Presentation;
+            if (_presentation?.FogDecal != null)
+            {
+                engine.SetService(CoreServiceKeys.FogDecalPalette, _presentation.FogDecal.ToPalette());
+            }
+        }
+
+        if (!catalog.TryGet(CrowdSimulationDebugViewPath, out var viewEntry))
+        {
+            _debugView = null;
             return;
         }
 
-        CrowdSimulationDebugConfig debug = ConfigMergeProvenance.Wrap(CrowdSimulationDebugPath, engine.ConfigConflictReport, tracked =>
+        _debugView = ConfigMergeProvenance.Wrap(CrowdSimulationDebugViewPath, engine.ConfigConflictReport, tracked =>
         {
-            var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, tracked)
-                ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
-            return CrowdSimulationDebugConfig.Load(debugMerged);
+            var viewMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in viewEntry, tracked)
+                ?? throw new InvalidOperationException($"{CrowdSimulationDebugViewPath} 存在目录登记但合并为空。");
+            return CrowdSimulationDebugViewConfig.Load(viewMerged, CrowdSimulationDebugViewPath);
         });
-        _debug = debug;
-        _presentation = debug.Presentation;
-        if (_presentation?.FogDecal != null)
-        {
-            engine.SetService(CoreServiceKeys.FogDecalPalette, _presentation.FogDecal.ToPalette());
-        }
     }
 
     private TimeSpan RequirePlanTimeout()
@@ -276,6 +291,7 @@ public sealed partial class CrowdSimulationRuntime
 
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
+    private const string CrowdSimulationDebugViewPath = "CrowdSimulationDebugView.json";
     private const string SessionTemplateId = "crowd_simulation.session";
     private const string SelectedCollectionKey = CrowdSimPresentationWiring.SelectedCollectionKey;
 
@@ -496,6 +512,7 @@ public sealed partial class CrowdSimulationRuntime
 
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
+            _session.StageDeferredCommands = _demoScript.StageFormable;
         }
 
         _autoReplayAtTick = _debug?.Session?.AutoReplayAtTick ?? -1;
@@ -559,7 +576,12 @@ public sealed partial class CrowdSimulationRuntime
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
-        _demoScript?.ApplyDue(session);
+        if (session.PlaybackHeld)
+        {
+            session.FlushDueCommands();
+            return;
+        }
+
         if (!session.Step(out _))
         {
             if (!_stallLogged)

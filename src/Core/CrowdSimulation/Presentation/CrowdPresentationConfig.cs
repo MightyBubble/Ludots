@@ -116,6 +116,22 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.Actions.Remove, "deploy.actions.remove");
         RequireText(deploy.Actions.Place, "deploy.actions.place");
         RequireText(deploy.Actions.Validate, "deploy.actions.validate");
+        RequireText(deploy.Actions.ToolOff, "deploy.actions.toolOff");
+        RequireText(deploy.Actions.ToolBoom, "deploy.actions.toolBoom");
+        RequireText(deploy.Actions.ToolSpawn, "deploy.actions.toolSpawn");
+        RequireText(deploy.Actions.ToolStructure, "deploy.actions.toolStructure");
+        RequireText(deploy.Actions.ToolDemolish, "deploy.actions.toolDemolish");
+        RequireText(deploy.Actions.Deploy, "deploy.actions.deploy");
+        RequireText(deploy.Actions.Scatter, "deploy.actions.scatter");
+        RequireText(deploy.Actions.Stress, "deploy.actions.stress");
+        RequireText(deploy.Actions.ClearCaches, "deploy.actions.clearCaches");
+        RequireText(deploy.Actions.AvoidDown, "deploy.actions.avoidDown");
+        RequireText(deploy.Actions.AvoidUp, "deploy.actions.avoidUp");
+        RequireText(deploy.Actions.SliceDown, "deploy.actions.sliceDown");
+        RequireText(deploy.Actions.SliceUp, "deploy.actions.sliceUp");
+        RequireText(deploy.Actions.Pause, "deploy.actions.pause");
+        RequireText(deploy.Actions.SpeedDown, "deploy.actions.speedDown");
+        RequireText(deploy.Actions.SpeedUp, "deploy.actions.speedUp");
         RequireText(deploy.BuildActivity, "deploy.buildActivity");
         RequireText(deploy.ObserveActivity, "deploy.observeActivity");
         RequireText(deploy.PlaceOk, "deploy.placeOk");
@@ -148,10 +164,18 @@ internal sealed class CrowdPresentationConfig
                     $"CrowdSimulationDebug.json {at}.shape=road 需要 roadLengthCm > 0。");
             }
         }
+        else if (row.Shape == S4DeployDemoRuntime.ShapeDisc || row.Shape == S4DeployDemoRuntime.ShapeSpan)
+        {
+            if (row.RoadLengthCm != null)
+            {
+                throw new InvalidOperationException(
+                    $"CrowdSimulationDebug.json {at}.shape={row.Shape} 不能带 roadLengthCm。");
+            }
+        }
         else
         {
             throw new InvalidOperationException(
-                $"CrowdSimulationDebug.json {at}.shape \"{row.Shape}\" 需为 {S4DeployDemoRuntime.ShapePoint} / {S4DeployDemoRuntime.ShapeRoad}。");
+                $"CrowdSimulationDebug.json {at}.shape \"{row.Shape}\" 需为 {S4DeployDemoRuntime.ShapePoint} / {S4DeployDemoRuntime.ShapeRoad} / {S4DeployDemoRuntime.ShapeDisc} / {S4DeployDemoRuntime.ShapeSpan}。");
         }
     }
 
@@ -225,6 +249,22 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string Remove { get; set; } = string.Empty;
     [JsonRequired] public string Place { get; set; } = string.Empty;
     [JsonRequired] public string Validate { get; set; } = string.Empty;
+    [JsonRequired] public string ToolOff { get; set; } = string.Empty;
+    [JsonRequired] public string ToolBoom { get; set; } = string.Empty;
+    [JsonRequired] public string ToolSpawn { get; set; } = string.Empty;
+    [JsonRequired] public string ToolStructure { get; set; } = string.Empty;
+    [JsonRequired] public string ToolDemolish { get; set; } = string.Empty;
+    [JsonRequired] public string Deploy { get; set; } = string.Empty;
+    [JsonRequired] public string Scatter { get; set; } = string.Empty;
+    [JsonRequired] public string Stress { get; set; } = string.Empty;
+    [JsonRequired] public string ClearCaches { get; set; } = string.Empty;
+    [JsonRequired] public string AvoidDown { get; set; } = string.Empty;
+    [JsonRequired] public string AvoidUp { get; set; } = string.Empty;
+    [JsonRequired] public string SliceDown { get; set; } = string.Empty;
+    [JsonRequired] public string SliceUp { get; set; } = string.Empty;
+    [JsonRequired] public string Pause { get; set; } = string.Empty;
+    [JsonRequired] public string SpeedDown { get; set; } = string.Empty;
+    [JsonRequired] public string SpeedUp { get; set; } = string.Empty;
 }
 
 internal sealed class CrowdFogDecalColors

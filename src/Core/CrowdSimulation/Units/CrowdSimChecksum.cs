@@ -506,6 +506,12 @@ public static class CrowdSimChecksum
         h = Mix(h, cmd.FogTerrain ? 1u : 0u);
         h = MixString(h, cmd.ShapeId);
         h = MixString(h, cmd.TemplateId);
+        h = Mix(h, (uint)cmd.RadiusCm);
+        h = MixI64(h, cmd.RingScale.RawValue);
+        h = MixI64(h, cmd.Impulse.RawValue);
+        h = Mix(h, (uint)cmd.TickHz);
+        h = MixI64(h, cmd.AvoidHz.RawValue);
+        h = Mix(h, (uint)cmd.Slices);
         return MixArea(h, cmd.Area);
     }
 
