@@ -166,7 +166,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     [Test]
     public void NightRaid_InterModOverride_ThresholdAndStackedFlows()
     {
-        string[] mods = { BaseMods[0], BaseMods[1], "NightRaidOverrideMod", BaseMods[2] };
+        string[] mods = { BaseMods[0], "NightRaidOverrideMod", BaseMods[1] };
         using GameEngine engine = CreateEngine(mods);
         engine.Start();
         engine.LoadMap(MapId);
