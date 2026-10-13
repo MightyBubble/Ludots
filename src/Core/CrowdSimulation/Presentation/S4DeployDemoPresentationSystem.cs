@@ -107,7 +107,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             previewShown = true;
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
             previewValid = CanPlace(store, _demo.Template, px, py);
-            // 足迹/拆除轮廓线宽 = 0.5 格长(31m):细线角标在丘陵远景下实测可视性不足,加粗一档
+            // 足迹/拆除轮廓线宽 = 0.5 格长（62.5m 格的一半是 31.25m）
             AddRectOutline(PreviewOutline, FootprintVisual(_demo.Template, px, py), navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
             int hoverId = store.EntityAt(Fix64.FromInt(px), Fix64.FromInt(py));
             if (hoverId >= 0)

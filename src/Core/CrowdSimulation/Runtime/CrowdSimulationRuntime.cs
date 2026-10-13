@@ -88,11 +88,11 @@ public sealed partial class CrowdSimulationRuntime
 
     public CrowdSimSession? Session => _session;
     public Entity SessionEntity => _sessionEntity;
-    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
     private readonly CrowdSimulationTelemetry _detachedTelemetry = new();
     /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
     public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
+    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
     public int ReplayStatus { get; private set; }
     public int ReplayDivergenceTick { get; private set; } = -1;
 
@@ -106,8 +106,7 @@ public sealed partial class CrowdSimulationRuntime
         public const string UnitRadiusKey = "crowd_simulation.unit.radius_m";
     }
 
-    /// <summary>迷雾观察口径:-1 = 全知 debug 视图(默认,玩家视角迷雾用键切换,
-    /// 两种观察范围并存);≥ 0 = 只看该视野组。渲染底座读它决定画哪份 View()。</summary>
+    /// <summary>迷雾观察口径:-1 = 全知，≥ 0 = 只看该视野组。当前没有读取点。</summary>
     public int FogViewGroup { get; set; } = -1;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
@@ -443,7 +442,7 @@ public sealed partial class CrowdSimulationRuntime
         var session = _session;
         if (session == null) return;
         // 系统组 FixedHz 的 tick 边界，先于本 tick 的指令和运动。
-        // 先重读玩家代表的 Team，再在修订号变化时重算矩阵。队伍没变且修订号没变时不重算、不分配。
+        // 先重读玩家代表的 Team。队伍变了就抛。修订号变了就在临时缓冲重算；与现场矩阵不同也抛，不写回。相同则只更新修订号。
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
