@@ -1369,4 +1369,62 @@ public sealed class CrowdSimPlanner
         plan.Orders.Clear();
         _planPool.Push(plan);
     }
+
+    /// <summary>在途规划与流场刷新的身份，挂在 groups 诊断链末尾。</summary>
+    internal uint MixInFlight(uint h)
+    {
+        h = CrowdSimChecksum.Mix(h, (uint)_pending.Count);
+        for (int p = 0; p < _pending.Count; p++)
+        {
+            PendingPlan plan = _pending[p];
+            h = CrowdSimChecksum.Mix(h, (uint)plan.DueTick);
+            h = CrowdSimChecksum.Mix(h, (uint)plan.Orders.Count);
+            for (int o = 0; o < plan.Orders.Count; o++)
+            {
+                PendingOrder order = plan.Orders[o];
+                h = CrowdSimChecksum.Mix(h, (uint)order.Order.Id);
+                h = CrowdSimChecksum.Mix(h, (uint)order.Groups.Count);
+                for (int g = 0; g < order.Groups.Count; g++)
+                {
+                    PendingGroup pg = order.Groups[g];
+                    h = CrowdSimChecksum.Mix(h, (uint)pg.GroupId);
+                    h = CrowdSimChecksum.Mix(h, (uint)pg.PlanSeq);
+                    h = CrowdSimChecksum.Mix(h, (uint)pg.NavId);
+                    h = CrowdSimChecksum.Mix(h, (uint)pg.Goal);
+                    h = CrowdSimChecksum.Mix(h, (uint)pg.RequestId);
+                    h = CrowdSimChecksum.Mix(h, (uint)pg.Version);
+                }
+
+                h = CrowdSimChecksum.Mix(h, (uint)order.Leaders.Count);
+                for (int l = 0; l < order.Leaders.Count; l++)
+                {
+                    PendingLeader leader = order.Leaders[l];
+                    h = CrowdSimChecksum.Mix(h, (uint)leader.StrictestGroupId);
+                    h = CrowdSimChecksum.Mix(h, (uint)leader.StartCell);
+                    h = CrowdSimChecksum.Mix(h, (uint)leader.RequestId);
+                    h = CrowdSimChecksum.Mix(h, (uint)leader.BucketCount);
+                    int n = leader.BucketCount;
+                    if (n > leader.BucketGroupIds.Length) n = leader.BucketGroupIds.Length;
+                    for (int b = 0; b < n; b++) h = CrowdSimChecksum.Mix(h, (uint)leader.BucketGroupIds[b]);
+                }
+            }
+        }
+
+        h = CrowdSimChecksum.Mix(h, (uint)_pendingRefreshes.Count);
+        for (int i = 0; i < _pendingRefreshes.Count; i++)
+        {
+            PendingRefresh refresh = _pendingRefreshes[i];
+            h = CrowdSimChecksum.Mix(h, (uint)refresh.RequestId);
+            h = CrowdSimChecksum.Mix(h, (uint)refresh.DueTick);
+            h = CrowdSimChecksum.Mix(h, (uint)refresh.GroupId);
+            h = CrowdSimChecksum.Mix(h, (uint)refresh.Seq);
+            h = CrowdSimChecksum.Mix(h, (uint)refresh.NavId);
+            h = CrowdSimChecksum.Mix(h, (uint)refresh.Version);
+        }
+
+        h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue.Count);
+        for (int i = 0; i < _refreshQueue.Count; i++)
+            h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue[i].Id);
+        return h;
+    }
 }

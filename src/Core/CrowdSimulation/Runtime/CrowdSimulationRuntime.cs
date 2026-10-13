@@ -81,9 +81,9 @@ public sealed partial class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
-    // 校验码历史:定长环形,零逐 tick 分配。回放按 tick 对上环里还在的记录。
+    // 分区摘要历史:定长环形。回放按 tick 对上环里还在的记录，再比断面。合计在摘要的 Total 上。
     private readonly int[] _hashTicks = new int[4096];
-    private readonly ulong[] _hashValues = new ulong[4096];
+    private readonly CrowdSimStateDigest[] _hashDigests = new CrowdSimStateDigest[4096];
     private int _hashCount, _hashHead;
     private readonly List<CrowdCommand> _pendingScript = new();
     private int _autoReplayAtTick = -1;
@@ -95,9 +95,20 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
     public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
-    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
+    /// <summary>回放结论:0 未跑 / 1 合计相同 / 2 合计分歧。诊断断面不改这个结论。</summary>
     public int ReplayStatus { get; private set; }
+
+    /// <summary>合计的首个分歧 tick。-1 表示合计一致，-2 表示两边条数不同。</summary>
     public int ReplayDivergenceTick { get; private set; } = -1;
+
+    /// <summary>合计的首个分歧分区名。合计一致或条数不同时为空。</summary>
+    public string ReplayDivergenceSection { get; private set; } = "";
+
+    /// <summary>最早一个诊断断面有差的 tick。没有时为 -1。</summary>
+    public int ReplayDiagnosticTick { get; private set; } = -1;
+
+    /// <summary>最早诊断分歧 tick 上有差的诊断断面。没有时为 0。</summary>
+    public CrowdSimDiagnosticSection ReplayDivergenceDiagnostic { get; private set; }
 
     /// <summary>停用本次激活的自动回放:现场指令(玩家交互)进入会话后,自动回放的对拍自证
     /// 不再是"同输入重放"。只拦自动触发;RunReplay 与对拍语义本身不动。</summary>
@@ -434,8 +445,12 @@ public sealed partial class CrowdSimulationRuntime
         _session.Commands.Schedule(_session, _pendingScript);
         _autoReplayAtTick = _debug.Session?.AutoReplayAtTick ?? -1;
         _autoReplayDone = false;
+        if (_autoReplayAtTick >= 0) _session.DiagnosticDigest = true;
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
+        ReplayDivergenceSection = "";
+        ReplayDiagnosticTick = -1;
+        ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
         _hashCount = 0;
         _hashHead = 0;
 
@@ -469,6 +484,9 @@ public sealed partial class CrowdSimulationRuntime
         _pendingScript.Clear();
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
+        ReplayDivergenceSection = "";
+        ReplayDiagnosticTick = -1;
+        ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
         engine.RemoveService(CoreServiceKeys.CrowdSimulationSession);
         engine.RemoveService(CoreServiceKeys.CrowdSimulationRuntime);
         engine.RemoveService(CoreServiceKeys.TeamColorPalette);
@@ -484,7 +502,7 @@ public sealed partial class CrowdSimulationRuntime
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
-        if (!session.Step(out var hash))
+        if (!session.Step(out _))
         {
             if (!_stallLogged)
             {
@@ -501,25 +519,28 @@ public sealed partial class CrowdSimulationRuntime
         session.PublishTelemetryFrame(stalled: false,
             (double)(_tickWatch.ElapsedTicks - t0) / System.Diagnostics.Stopwatch.Frequency * 1000.0);
         _stallLogged = false;
-        if (_hashCount == _hashTicks.Length)
+        if (_hashCount == _hashDigests.Length)
         {
+            _hashDigests[_hashHead] = session.LastDigest;
             _hashTicks[_hashHead] = session.TickCount;
-            _hashValues[_hashHead] = hash;
-            _hashHead = (_hashHead + 1) % _hashTicks.Length;
+            _hashHead = (_hashHead + 1) % _hashDigests.Length;
         }
         else
         {
-            int w = (_hashHead + _hashCount) % _hashTicks.Length;
+            int w = (_hashHead + _hashCount) % _hashDigests.Length;
+            _hashDigests[w] = session.LastDigest;
             _hashTicks[w] = session.TickCount;
-            _hashValues[w] = hash;
             _hashCount++;
         }
         if (!_autoReplayDone && _autoReplayAtTick >= 0 && session.TickCount >= _autoReplayAtTick)
         {
             _autoReplayDone = true;
             RunReplay();
+            string diag = CrowdSimChecksum.FormatDiagnostic(ReplayDivergenceDiagnostic);
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick}.");
+                diag.Length == 0
+                    ? $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection}."
+                    : $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection} diag differs: {diag} @tick {ReplayDiagnosticTick}.");
         }
 
         if (session.TickCount % session.Config.FixedHz == 0)
@@ -534,10 +555,21 @@ public sealed partial class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
-        // 日志载荷是边界一次成形的 struct,回放直接复用(无需克隆,解析后只读)。
-        var entries = session.Commands.Log
-            .Select(e => new CrowdCommand(e.Tick, e.Cmd))
-            .ToArray();
+        // Flush 只在执行时写日志。尚未到点的脚本行还在队列里，回放输入是日志再接上这段队列。
+        var log = session.Commands.Log;
+        int pending = session.Commands.PendingCount;
+        var entries = new CrowdCommand[log.Count + pending];
+        for (int i = 0; i < log.Count; i++)
+        {
+            var e = log[i];
+            entries[i] = new CrowdCommand(e.Tick, e.Cmd);
+        }
+
+        for (int i = 0; i < pending; i++)
+        {
+            var e = session.Commands.PendingAt(i);
+            entries[log.Count + i] = new CrowdCommand(e.Tick, e.Cmd);
+        }
         int ticks = session.TickCount;
         // 回放派生接线:共享模板数据,稳定 id 全新分配(回放世界用后即弃),选中属主置空——
         // 选中镜像与集合仓写入都按空属主跳过,活呈现状态零触碰。
@@ -553,6 +585,7 @@ public sealed partial class CrowdSimulationRuntime
             Collections = session.Presentation.Collections,
         };
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius, replayWiring);
+        replay.DiagnosticDigest = session.DiagnosticDigest;
         // 回放 = 全新仿真(参考 createHeadless / runReplay 同形):结构 op 会改写导航上下文,
         // 回放共享活会话的导航即带着已生效的结构变更从头跑(首个分歧恰在首个规划落地)。
         // 有结构仓的会话,回放用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存。
@@ -594,40 +627,77 @@ public sealed partial class CrowdSimulationRuntime
             replay.SetStaticBlockers(session.Structures == null ? session.Blockers : null);
             replay.BlockOnDueReplies = true;
             replay.Commands.Schedule(replay, entries);
-            var replayHashes = new List<ulong>(ticks);
-            replay.Advance(ticks, replayHashes);
-            CompareReplay(replayHashes);
+            var replayDigests = new List<CrowdSimStateDigest>(ticks);
+            replay.Advance(ticks, digests: replayDigests);
+            CompareReplay(replayDigests);
             return;
         }
 
         replay.Commands.Schedule(replay, entries);
-        var replayHashes2 = new List<ulong>(ticks);
-        replay.Advance(ticks, replayHashes2);
-        CompareReplay(replayHashes2);
+        var replayDigests2 = new List<CrowdSimStateDigest>(ticks);
+        replay.Advance(ticks, digests: replayDigests2);
+        CompareReplay(replayDigests2);
     }
 
-    private void CompareReplay(List<ulong> replayHashes)
+    private void CompareReplay(List<CrowdSimStateDigest> replayDigests)
     {
-        ReplayDivergenceTick = -1;
+        bool chained = false;
+        int chainedTick = -1;
+        string section = "";
+        bool diagnostic = false;
+        int diagnosticTick = -1;
+        var mask = CrowdSimDiagnosticSection.None;
+        bool missing = false;
+        int n = _hashDigests.Length;
         for (int i = 0; i < _hashCount; i++)
         {
-            int w = (_hashHead + i) % _hashTicks.Length;
+            int w = (_hashHead + i) % n;
             int tick = _hashTicks[w];
             int index = tick - 1;
-            if ((uint)index >= (uint)replayHashes.Count)
+            if ((uint)index >= (uint)replayDigests.Count || replayDigests[index].Tick != tick)
             {
-                ReplayDivergenceTick = -2;
+                missing = true;
                 break;
             }
 
-            if (_hashValues[w] != replayHashes[index])
+            bool chainedHere = CrowdSimChecksum.TryFirstSection(
+                _hashDigests[w], replayDigests[index], out string name, out CrowdSimDiagnosticSection flags);
+            if (!chained && chainedHere)
             {
-                ReplayDivergenceTick = tick;
-                break;
+                chained = true;
+                chainedTick = tick;
+                section = name;
             }
+
+            if (!diagnostic && flags != CrowdSimDiagnosticSection.None)
+            {
+                diagnostic = true;
+                diagnosticTick = tick;
+                mask = flags;
+            }
+
+            if (chained && diagnostic) break;
         }
 
-        ReplayStatus = ReplayDivergenceTick == -1 ? 1 : 2;
+        if (chained)
+        {
+            ReplayDivergenceTick = chainedTick;
+            ReplayDivergenceSection = section;
+        }
+        else if (missing)
+        {
+            ReplayDivergenceTick = -2;
+            ReplayDivergenceSection = "";
+        }
+        else
+        {
+            ReplayDivergenceTick = -1;
+            ReplayDivergenceSection = "";
+        }
+
+        ReplayDiagnosticTick = diagnostic ? diagnosticTick : -1;
+        ReplayDivergenceDiagnostic = diagnostic ? mask : CrowdSimDiagnosticSection.None;
+        ReplayStatus = chained || missing ? 2 : 1;
     }
 
     private static string RequireHeightAssetPath(MapConfig mapConfig, MapId mapId)

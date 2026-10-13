@@ -27,6 +27,8 @@ public sealed class FlowField
     public int Reached { get; set; }
     public int Goal { get; set; }
     public int NavId { get; set; }
+    /// <summary>本缓冲被 Build 成功填过的次数。池内复用继续累加。诊断身份，不进合计。</summary>
+    public int BuildRevision { get; internal set; }
     /// <summary>来源池(还回时物归原主,池才能平台化)。</summary>
     public FlowPool? OriginPool { get; set; }
 }
@@ -221,6 +223,7 @@ public static class FlowFieldBuilder
         if (f.MaskBuf == null || f.MaskBuf.Length != mask.Length) f.MaskBuf = new byte[mask.Length];
         Array.Copy(mask, f.MaskBuf, mask.Length);
         f.Goal = goal; f.Mask = f.MaskBuf; f.Reached = reached; f.Lk = lk; f.Links = links; f.NavId = nav.Id;
+        f.BuildRevision++;
         return f;
     }
 
