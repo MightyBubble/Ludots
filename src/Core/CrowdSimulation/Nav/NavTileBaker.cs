@@ -130,7 +130,7 @@ public static class NavTileBaker
 {
     private const int KEY = 1 << 21;
 
-    public static NavTileEntry Bake(ushort[] pass, int navCellsPerTile, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly, PolygonBakeScratch scratch)
+    public static NavTileEntry Bake(ushort[] pass, int navCellsPerTile, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly)
     {
         var buffers = new TileBakeScratch(navCellsPerTile, maxVertsPerPoly);
         var slot = NavTileEntry.CreateBuffer(navCellsPerTile, maxVertsPerPoly);
