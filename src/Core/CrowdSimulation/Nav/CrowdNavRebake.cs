@@ -347,12 +347,14 @@ public static class CrowdNavRebake
         var queue = Ensure(ref nav.FloodQueue, n2);
         int compCount = NavContextBaker.Components(nav.Passable, navCellsPerSide, comp, queue);
 
+        int[]? deckLocal = null;
         if (sources.Deck.TileOrder.Length > 0)
         {
             var merged = Ensure(ref nav.MergeBuffer, n2);
+            deckLocal = Ensure(ref nav.DeckCompBuffer, n2);
             compCount = UpperLayerBake.MergeDeckComponents(
                 comp, compCount, nav.Passable, nav.UpPass, nav.Portal, navCellsPerSide, merged,
-                Ensure(ref nav.DeckCompBuffer, n2), queue, Ensure(ref nav.UnionParent, n2 * 2), Ensure(ref nav.UnionDense, n2 * 2));
+                deckLocal, queue, Ensure(ref nav.UnionParent, n2 * 2), Ensure(ref nav.UnionDense, n2 * 2));
             (nav.Comp, nav.MergeBuffer) = (merged, comp);
             comp = nav.Comp;
         }
@@ -372,7 +374,7 @@ public static class CrowdNavRebake
             RelinkComponents(nav.Links, comp);
         }
 
-        RefillDeckReach(nav, compCount, nav.Links);
+        RefillDeckReach(nav, compCount, nav.Links, deckLocal);
         nav.Hpa!.Update(nav, nav.Links, dirtyTiles, sameTiles);
     }
 
@@ -397,11 +399,10 @@ public static class CrowdNavRebake
         nav.CellCount = w;
     }
 
-    private static void RefillDeckReach(NavContext nav, int compCount, NavLinkSet? links)
+    private static void RefillDeckReach(NavContext nav, int compCount, NavLinkSet? links, int[]? deckLocal)
     {
         int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
         var upComp = nav.UpComp ??= new int[n2];
-        Array.Fill(upComp, -1);
         var reach = nav.ReachOut ??= new Dictionary<int, HashSet<int>>(CrowdSimulationLimits.HotPathSlotReserve);
         nav.ReleaseReachGraph(reach);
         if (links != null)
@@ -417,30 +418,13 @@ public static class CrowdNavRebake
             }
         }
 
-        var areaComp = nav.AreaCompScratch;
-        areaComp.Clear();
-        int next = compCount;
+        nav.CompCountTotal = NavContextBaker.WriteDeckLabels(upComp, nav.UpPass, compCount, deckLocal);
         for (int c = 0; c < n2; c++)
         {
-            if (nav.UpPass[c] == 0) continue;
-            int area = nav.UpArea[c];
-            if (!areaComp.TryGetValue(area, out int id))
-            {
-                id = next++;
-                areaComp[area] = id;
-            }
-
-            upComp[c] = id;
-        }
-
-        for (int c = 0; c < n2; c++)
-        {
-            if (nav.Portal[c] == 0 || nav.Comp[c] < 0 || nav.UpPass[c] == 0) continue;
+            if (nav.Portal[c] == 0 || nav.Comp[c] < 0 || upComp[c] < 0) continue;
             AddReachEdge(nav, nav.Comp[c], upComp[c]);
             AddReachEdge(nav, upComp[c], nav.Comp[c]);
         }
-
-        nav.CompCountTotal = next;
     }
 
     private static void AddReachEdge(NavContext nav, int from, int to)
@@ -524,6 +508,24 @@ public static class CrowdNavRebake
         }
 
         VerifyPartition(inc.Comp, full.Comp, what, "地面连通域");
+        if (inc.UpComp == null || full.UpComp == null)
+        {
+            if (inc.UpComp != null || full.UpComp != null)
+            {
+                throw new InvalidOperationException($"{what}: 桥面连通域存在性不一致");
+            }
+        }
+        else
+        {
+            VerifyPartition(inc.UpComp, full.UpComp, what, "桥面连通域");
+        }
+
+        if (inc.CompCountTotal != full.CompCountTotal)
+        {
+            throw new InvalidOperationException($"{what}: 连通域总数 {inc.CompCountTotal} ≠ 全量 {full.CompCountTotal}");
+        }
+
+        VerifyReach(inc, full, what);
         if (inc.CellCount != full.CellCount) throw new InvalidOperationException($"{what}: 增量格表长度 {inc.CellCount} ≠ 全量 {full.CellCount}");
         for (int i = 0; i < inc.CellCount; i++)
         {
@@ -532,6 +534,73 @@ public static class CrowdNavRebake
 
         VerifyLinks(inc.Links, full.Links, what);
         VerifyHpa(inc.Hpa!, full.Hpa!, what);
+    }
+
+    /// <summary>桥面编号按同一套 4 连通划分比对；可达图按这个划分下的边集比对，边集相同则 CanReach 相同。</summary>
+    private static void VerifyReach(NavContext inc, NavContext full, string what)
+    {
+        var mapInc = CanonIds(inc);
+        var mapFull = CanonIds(full);
+        var edgesInc = CanonEdges(inc.ReachOut, mapInc, what, "增量");
+        var edgesFull = CanonEdges(full.ReachOut, mapFull, what, "全量");
+        if (edgesInc.Count != edgesFull.Count)
+        {
+            throw new InvalidOperationException($"{what}: 可达边数 {edgesInc.Count} ≠ 全量 {edgesFull.Count}");
+        }
+
+        foreach (var kv in edgesInc)
+        {
+            if (!edgesFull.TryGetValue(kv.Key, out var other) || !kv.Value.SetEquals(other))
+            {
+                throw new InvalidOperationException($"{what}: 可达边与全量不一致 @域 {kv.Key}");
+            }
+        }
+    }
+
+    private static Dictionary<int, int> CanonIds(NavContext nav)
+    {
+        var map = new Dictionary<int, int>();
+        void Add(int id)
+        {
+            if (id >= 0) map.TryAdd(id, map.Count);
+        }
+
+        int n = nav.Comp.Length;
+        var up = nav.UpComp;
+        for (int i = 0; i < n; i++)
+        {
+            Add(nav.Comp[i]);
+            if (up != null && i < up.Length) Add(up[i]);
+        }
+
+        return map;
+    }
+
+    private static Dictionary<int, HashSet<int>> CanonEdges(
+        Dictionary<int, HashSet<int>>? graph, Dictionary<int, int> map, string what, string side)
+    {
+        var edges = new Dictionary<int, HashSet<int>>();
+        if (graph == null) return edges;
+        foreach (var kv in graph)
+        {
+            if (!map.TryGetValue(kv.Key, out int from))
+            {
+                throw new InvalidOperationException($"{what}: {side}可达边的起点 {kv.Key} 不在连通域里");
+            }
+
+            if (!edges.TryGetValue(from, out var set)) edges[from] = set = new HashSet<int>();
+            foreach (int next in kv.Value)
+            {
+                if (!map.TryGetValue(next, out int to))
+                {
+                    throw new InvalidOperationException($"{what}: {side}可达边的终点 {next} 不在连通域里");
+                }
+
+                set.Add(to);
+            }
+        }
+
+        return edges;
     }
 
     private static void VerifyPartition(int[] inc, int[] full, string what, string name)
