@@ -100,6 +100,9 @@ public sealed class CrowdSpatialHash
         return (ox.ToArray(), oy.ToArray(), ringEnd.ToArray());
     }
 
+    /// <summary>把 stamp 代推到给定值。下一次 Build 先加一，加一溢出时会清 stamp。</summary>
+    internal void PrimeStampGeneration(uint generation) => _generation = generation;
+
     private readonly int _cellSizeInt;
 
     private int CellAtCm(Fix64 vCm)

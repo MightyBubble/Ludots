@@ -20,6 +20,7 @@ public sealed class CrowdPresentationConfigTests
 
         var s4 = ParseMod("CrowdSimulationS4DeployMod");
         Assert.That(s4.Kind, Is.EqualTo(CrowdPresentationConfig.KindDeploy));
+        Assert.That(s4.Deploy!.Actions.Validate, Is.EqualTo("CrowdSimulation.Validate"));
         Assert.That(s4.Deploy!.Structures, Has.Length.EqualTo(3));
         Assert.That(s4.Deploy.Structures[0].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapePoint));
         Assert.That(s4.Deploy.Structures[0].RoadLengthCm, Is.Null);

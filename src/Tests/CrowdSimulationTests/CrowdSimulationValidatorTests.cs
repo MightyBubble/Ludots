@@ -1,9 +1,13 @@
+using System.Reflection;
 using System.Text.Json.Nodes;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Runtime;
+using Ludots.Core.CrowdSimulation.Structures;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
@@ -17,21 +21,13 @@ namespace CrowdSimulationTests;
 public sealed class CrowdSimulationValidatorTests
 {
     [Test]
-    public void DebugSwitch_DefaultsOff_AndRejectsNegative()
+    public void DebugSwitch_RejectsTickValidationKey()
     {
         var absent = CrowdSimulationDebugConfig.Load(JsonNode.Parse("""{"session":{}}""")!.AsObject());
-        Assert.That(absent.Session!.ValidateEveryNTicks, Is.EqualTo(0));
-
-        var zero = CrowdSimulationDebugConfig.Load(
-            JsonNode.Parse("""{"session":{"validateEveryNTicks":0}}""")!.AsObject());
-        Assert.That(zero.Session!.ValidateEveryNTicks, Is.EqualTo(0));
-
-        var on = CrowdSimulationDebugConfig.Load(
-            JsonNode.Parse("""{"session":{"validateEveryNTicks":12}}""")!.AsObject());
-        Assert.That(on.Session!.ValidateEveryNTicks, Is.EqualTo(12));
+        Assert.That(absent.Session, Is.Not.Null);
 
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(
-            JsonNode.Parse("""{"session":{"validateEveryNTicks":-1}}""")!.AsObject()));
+            JsonNode.Parse("""{"session":{"validateEveryNTicks":1}}""")!.AsObject()));
         Assert.That(ex!.Message, Does.Contain("validateEveryNTicks"));
     }
 
@@ -39,7 +35,6 @@ public sealed class CrowdSimulationValidatorTests
     public void ValidateSim_BlockedCell_NamesUnitAndCell()
     {
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
-        Assert.That(session.ValidateEveryNTicks, Is.EqualTo(0));
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
         Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateSim(session));
 
@@ -120,7 +115,7 @@ public sealed class CrowdSimulationValidatorTests
         const int cell = 0;
         nav.Cost[cell] += Fix64.OneValue;
 
-        Assert.That(session.ValidateEveryNTicks, Is.EqualTo(0));
+        Assert.DoesNotThrow(() => Assert.That(session.Step(out _), Is.True));
         Assert.DoesNotThrow(() => Assert.That(session.Step(out _), Is.True));
 
         var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateNav(session));
@@ -133,26 +128,17 @@ public sealed class CrowdSimulationValidatorTests
         Assert.That(ex.Message, Does.Contain($"nav {nav.Id}"));
         Assert.That(ex.Message, Does.Contain("tile 0:"));
         Assert.That(ex.Message, Does.Contain("(0,0)"));
-
-        session.ValidateEveryNTicks = 1;
-        var stepped = Assert.Throws<CrowdSimulationInvariantException>(() => session.Step(out _));
-        TestContext.Out.WriteLine(stepped!.Message);
-        Assert.That(stepped.Tick, Is.EqualTo(session.TickCount));
-        Assert.That(stepped.Message, Does.Contain($"nav {nav.Id}"));
-        Assert.That(stepped.Message, Does.Contain("tile 0:"));
     }
 
     [Test]
-    public void StructureScript_ValidationEveryNTicks_BlockedRestsStayZero()
+    public void StructureScript_BlockedRestsStayZero()
     {
         const int ticks = 160;
-        const int every = 80;
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
         session.TruthNavFrozen = true;
-        session.ValidateEveryNTicks = every;
 
         var scriptJson = new JsonArray();
         foreach (var (tick, json) in new (int Tick, string Json)[]
@@ -180,10 +166,132 @@ public sealed class CrowdSimulationValidatorTests
             dwell += CrowdSimulationValidator.CountBlockedRests(session);
         }
 
-        TestContext.Out.WriteLine($"ticks={session.TickCount} validateEveryNTicks={every} blockedRests={dwell}");
+        TestContext.Out.WriteLine($"ticks={session.TickCount} blockedRests={dwell}");
         Assert.That(session.TickCount, Is.EqualTo(ticks));
-        Assert.That(session.TickCount % every, Is.EqualTo(0));
         Assert.That(dwell, Is.EqualTo(0));
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateSim(session));
+    }
+
+    [Test]
+    public void ValidateSim_JumpOnBlockedCell_IsAllowed()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
+        var entity = session.Units.EntityAt(0);
+        int n = session.Config.NavCellsPerSide;
+        int cell = IndexOf(session.Structures!.Blocked, 1);
+        PlaceAtCell(session, entity, cell % n, cell / n);
+        var state = session.World.Get<CrowdSimulationUnitState>(entity);
+        state.State = (byte)CrowdUnitState.Jump;
+        session.World.Set(entity, state);
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateSim(session));
+    }
+
+    [Test]
+    public void ValidateSim_OutOfBounds_NamesCell()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
+        var entity = session.Units.EntityAt(0);
+        session.World.Set(entity, new WorldPositionCm { Value = new Fix64Vec2(Fix64.FromInt(-10), Fix64.FromInt(10)) });
+        var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(ex!.Message, Does.Contain("越界"));
+        Assert.That(ex.CellX, Is.LessThan(0));
+    }
+
+    [Test]
+    public void ValidateSim_HandlePoolLeak_NamesSlot()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateSim(session));
+        var field = typeof(CrowdSimUnits).GetField("_freeTop", BindingFlags.Instance | BindingFlags.NonPublic);
+        field!.SetValue(session.Units, session.Units.FreeTop - 1);
+        var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(ex!.Message, Does.Contain("句柄池泄漏"));
+    }
+
+    [Test]
+    public void ValidateSim_UnboundUnit_FailsHandleMapping()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        var group = session.Groups.Alloc(1, 0, 0, FirstNav(session).Id);
+        session.Units.Add(new CrowdUnitSpawnRequest(
+            Fix64.FromInt(480000), Fix64.FromInt(560000), 0, 0, group.Id, 1, Fix64.FromInt(40), 0, 0));
+        var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(ex!.Message, Does.Contain("还没绑定实体"));
+    }
+
+    [Test]
+    public void ValidateSim_GroupCountTeamOrderAndRecycledFlow()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 2, 1, 0, 0), Is.EqualTo(2));
+        var entity = session.Units.EntityAt(0);
+        var state = session.World.Get<CrowdSimulationUnitState>(entity);
+        var group = session.Groups.Groups[state.GroupId]!;
+        group.Count--;
+        var countEx = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(countEx!.Message, Does.Contain("计数"));
+        group.Count++;
+
+        int owner = session.World.Get<PlayerOwner>(entity).PlayerId;
+        session.World.Set(entity, new PlayerOwner { PlayerId = owner == 1 ? 2 : 1 });
+        var teamEx = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(teamEx!.Message, Does.Contain("玩家序"));
+        session.World.Set(entity, new PlayerOwner { PlayerId = owner });
+
+        group.OrderId = 404;
+        var orderEx = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(orderEx!.Message, Does.Contain("不在指令簿"));
+        Assert.That(orderEx.GroupId, Is.EqualTo(group.Id));
+        group.OrderId = 0;
+
+        var pool = new FlowPool(session.Config.NavCellsPerSide, 2);
+        var flow = pool.Take();
+        flow.NavId = group.NavId;
+        group.Leader = new CrowdLeader(1);
+        group.Flow = flow;
+        pool.Give(flow);
+        var flowEx = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
+        Assert.That(flowEx!.Message, Does.Contain("流场已回收"));
+        Assert.That(flowEx.GroupId, Is.EqualTo(group.Id));
+    }
+
+    [Test]
+    public void ValidateStructures_FreshMatches_CorruptAreaAndBlockerFail()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateStructures(session));
+        session.Structures!.Area[0] ^= 1;
+        var areaEx = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateStructures(session));
+        Assert.That(areaEx!.Message, Does.Contain("结构栅格"));
+        session.Structures.Area[0] ^= 1;
+
+        var blocker = (HashSet<int>)typeof(CrowdStructuresStore).GetField("_blocker", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(session.Structures)!;
+        int id = 0;
+        foreach (int entityId in session.Structures.EntityIds)
+        {
+            if (!blocker.Contains(entityId)) continue;
+            id = entityId;
+            break;
+        }
+
+        Assert.That(blocker.Remove(id), Is.True);
+        var componentEx = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateStructures(session));
+        Assert.That(componentEx!.Message, Does.Contain("阻挡组件"));
+        Assert.That(componentEx.EntityId, Is.EqualTo(id));
+    }
+
+    [Test]
+    public void DebugValidation_WithoutSession_ReportsOnThePanel()
+    {
+        var runtime = new CrowdSimulationRuntime();
+        runtime.RunDebugValidation();
+        Assert.That(runtime.DebugValidationRan, Is.True);
+        Assert.That(runtime.DebugValidationFailed, Is.True);
+        Assert.That(runtime.DebugValidationLine, Does.Contain("无会话"));
     }
 
     private static NavContext FirstNav(CrowdSimSession session)

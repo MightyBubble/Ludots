@@ -143,8 +143,8 @@
       "originXPx": 16,
       "originYPx": 16,
       "widthPx": 1568,
-      "heightPx": 148,
-    "keys": "V 视图 {view} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{templateIndex}] · 建造模式下左键放置 · {activity}{pending}"
+      "heightPx": 176,
+      "keys": "V 视图 {view} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{templateIndex}] · F8 校验 · 建造模式下左键放置 · {activity}{pending}"
   },
   "fogDecal": {
     "unseen": [0, 0, 0, 255],
@@ -157,7 +157,8 @@
         "cycleView": "CrowdSimulation.S4.CycleView",
         "toggleBuild": "CrowdSimulation.S4.ToggleBuild",
         "remove": "CrowdSimulation.S4.RemoveStructure",
-        "place": "CrowdSimulation.S4.Place"
+        "place": "CrowdSimulation.S4.Place",
+        "validate": "CrowdSimulation.Validate"
       },
       "buildActivity": "建造模式 · {label}{placeHint}",
       "observeActivity": "观察模式",

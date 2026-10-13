@@ -409,6 +409,33 @@ public sealed class CrowdBeliefNavs
         };
     }
 
+    /// <summary>已经建好的变体及其当前认知场。不调用 Get，不新建变体。乐观层缺失则抛错。</summary>
+    internal void CopyMaterialized(List<(NavContext Nav, CrowdStructuresStore Field)> destination)
+    {
+        destination.Clear();
+        var planner = _sim.Planner ?? throw new InvalidOperationException("认知注册表没有规划器，无法读取已构建变体。");
+        planner.Service.RunExclusive(() =>
+        {
+            foreach (var slot in _slots.Values)
+            {
+                foreach (var nav in slot.Navs.Values)
+                {
+                    CrowdStructuresStore field;
+                    if (slot.Unknown == null)
+                    {
+                        field = slot.Field;
+                    }
+                    else if (!slot.Layers.TryGetValue(nav.LayerIndex, out field!))
+                    {
+                        throw new InvalidOperationException($"认知变体 {nav.Id} 的乐观层 {nav.LayerIndex} 还没有场。");
+                    }
+
+                    destination.Add((nav, field));
+                }
+            }
+        });
+    }
+
     private static List<(int Id, int TplIndex, CrowdStructureFootprint Fp)> EntitiesOf(CrowdStructuresStore s)
     {
         var res = new List<(int, int, CrowdStructureFootprint)>();

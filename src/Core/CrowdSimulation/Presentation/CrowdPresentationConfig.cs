@@ -115,6 +115,7 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.Actions.ToggleBuild, "deploy.actions.toggleBuild");
         RequireText(deploy.Actions.Remove, "deploy.actions.remove");
         RequireText(deploy.Actions.Place, "deploy.actions.place");
+        RequireText(deploy.Actions.Validate, "deploy.actions.validate");
         RequireText(deploy.BuildActivity, "deploy.buildActivity");
         RequireText(deploy.ObserveActivity, "deploy.observeActivity");
         RequireText(deploy.PlaceOk, "deploy.placeOk");
@@ -223,6 +224,7 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string ToggleBuild { get; set; } = string.Empty;
     [JsonRequired] public string Remove { get; set; } = string.Empty;
     [JsonRequired] public string Place { get; set; } = string.Empty;
+    [JsonRequired] public string Validate { get; set; } = string.Empty;
 }
 
 internal sealed class CrowdFogDecalColors

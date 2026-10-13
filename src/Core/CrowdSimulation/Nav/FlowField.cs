@@ -63,6 +63,20 @@ public sealed class FlowPool
     public int Reused { get; private set; }
     public int FreeCount { get { lock (_freeLock) { return _free.Count; } } }
 
+    /// <summary>空闲栈按引用查找。枚举会分配，只给调试校验用。</summary>
+    internal bool Holds(FlowField field)
+    {
+        lock (_freeLock)
+        {
+            foreach (var item in _free)
+            {
+                if (ReferenceEquals(item, field)) return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>取未初始化缓冲(构建方会填满它读到的每个数组)。场对象和数组一起复用。</summary>
     public FlowField Take()
     {

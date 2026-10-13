@@ -257,6 +257,12 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _overlay.AddText(left, top + 78, _hudText.Keys, 16, new Vector4(0.75f, 0.9f, 1f, 1f));
         _overlay.AddText(left, top + 96, _hudText.Telemetry, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
         if (expanded) _overlay.AddText(left, top + 114, _hudText.TelemetryDetail, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
+        Vector4 validationColor = _hudText.ValidationFailed
+            ? new Vector4(1f, 0.35f, 0.3f, 1f)
+            : _hudText.ValidationRan
+                ? new Vector4(0.45f, 1f, 0.55f, 1f)
+                : new Vector4(0.75f, 0.75f, 0.75f, 1f);
+        _overlay.AddText(left, top + 132, _hudText.Validation, 16, validationColor);
     }
 
     /// <summary>可见数、已探索数取本机座位的视野组。没有座位时保持 0，不改用第一组。</summary>
@@ -279,6 +285,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         => runtime != null && runtime.TryLocalSeatPlayerId(out int seatPlayer)
             ? session.SelectedCollectionCount(seatPlayer)
             : -1;
+
+    private const string NoSessionValidation = "校验:无会话";
 
     /// <summary>同一 tick 重复绘制复用字符串;数值变化新建一条,因为 ScreenOverlayBuffer.AddText 接收 string——呈现帧分配,不是仿真 tick 分配。</summary>
     private sealed class HudTextCache
@@ -306,6 +314,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public string Keys = string.Empty;
         public string Telemetry = string.Empty;
         public string TelemetryDetail = string.Empty;
+        public string Validation = string.Empty;
+        public bool ValidationFailed;
+        public bool ValidationRan;
 
         public bool Matches(
             CrowdSimSession? session,
@@ -345,7 +356,11 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             if (runtime != null && (ReplayStatus != runtime.ReplayStatus || Divergence != runtime.ReplayDivergenceTick
                 || ReplayDiagnosticTick != runtime.ReplayDiagnosticTick
                 || ReplayDiagnostic != runtime.ReplayDivergenceDiagnostic
-                || !string.Equals(ReplaySection, runtime.ReplayDivergenceSection, StringComparison.Ordinal))) return false;
+                || !string.Equals(ReplaySection, runtime.ReplayDivergenceSection, StringComparison.Ordinal)
+                || ValidationFailed != runtime.DebugValidationFailed
+                || ValidationRan != runtime.DebugValidationRan
+                || !string.Equals(Validation, runtime.DebugValidationLine, StringComparison.Ordinal))) return false;
+            if (runtime == null && (ValidationFailed || ValidationRan || !string.Equals(Validation, NoSessionValidation, StringComparison.Ordinal))) return false;
             if (Interactive != demo.InteractiveMode || BuildMode != demo.BuildMode) return false;
             if (TemplateIndex != demo.TemplateIndex || ViewMode != demo.ViewMode || Pending != pending) return false;
             if (!string.Equals(TemplateLabel, templateLabel, StringComparison.Ordinal)
@@ -474,6 +489,19 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             {
                 PreviewShown = preview.Value.Shown;
                 PreviewValid = preview.Value.Valid;
+            }
+
+            if (runtime == null)
+            {
+                Validation = NoSessionValidation;
+                ValidationFailed = false;
+                ValidationRan = false;
+            }
+            else
+            {
+                Validation = runtime.DebugValidationLine;
+                ValidationFailed = runtime.DebugValidationFailed;
+                ValidationRan = runtime.DebugValidationRan;
             }
 
             string placeHint = preview == null

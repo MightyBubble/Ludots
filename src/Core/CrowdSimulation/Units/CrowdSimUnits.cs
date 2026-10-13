@@ -122,6 +122,9 @@ public sealed class CrowdSimUnits
     public ushort GenOf(int slot) => _gen[slot];
     public uint HandleAt(int dense) => (uint)(((_gen[_slotOfDense[dense]] & GenMask) << SlotBits) | _slotOfDense[dense]);
     public int FreeTop => _freeTop;
+    internal int PendingCount => _pendingCount;
+    internal int SparseAt(int slot) => _sparse[slot];
+    internal int FreeSlotAt(int freeIndex) => _freeSlots[freeIndex];
     public int LargestSpawnBatch => _spawns.LargestTemplateBatch;
 
     public bool TryHandleOf(Entity entity, out uint handle)

@@ -45,12 +45,6 @@ internal sealed class CrowdSimulationDebugConfig
             CrowdPresentationConfig.Validate(cfg.Presentation);
         }
 
-        if (cfg.Session is { ValidateEveryNTicks: < 0 })
-        {
-            throw new InvalidOperationException(
-                "CrowdSimulationDebug.json: session.validateEveryNTicks 需为 ≥ 0 的整数。");
-        }
-
         return cfg;
     }
 }
@@ -61,8 +55,6 @@ internal sealed class CrowdDebugSession
     public int? AutoReplayAtTick { get; init; }
     public string? CameraId { get; init; }
     public bool IncrementalNavVerify { get; init; }
-    /// <summary>0 = 关闭。正整数 = 每这么多 tick 跑仿真与导航不变量。</summary>
-    public int ValidateEveryNTicks { get; init; }
 }
 
 internal sealed class CrowdDebugScriptEntry

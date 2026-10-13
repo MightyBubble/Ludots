@@ -1,5 +1,6 @@
 using System;
 using Arch.System;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -54,6 +55,12 @@ internal sealed class S4DeployInputSystem : ISystem<float>
             _demo.EnqueueRemove((int)Math.Floor(xCm), (int)Math.Floor(yCm));
         }
 
+        if (actions.PressedThisTick(_bindings.Validate) &&
+            _engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime runtime))
+        {
+            runtime.RunDebugValidation();
+        }
+
         _demo.Tick();
     }
 }
@@ -64,4 +71,5 @@ internal sealed class CrowdDeployBindings
     public required string ToggleBuild { get; init; }
     public required string Remove { get; init; }
     public required string Place { get; init; }
+    public required string Validate { get; init; }
 }

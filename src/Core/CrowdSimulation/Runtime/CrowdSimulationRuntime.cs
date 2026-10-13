@@ -11,6 +11,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
@@ -54,6 +55,35 @@ public sealed partial class CrowdSimulationRuntime
     private TimeSpan? _planTimeout;
 
     private CrowdSimSession? _session;
+    public string DebugValidationLine { get; private set; } = "校验:未跑";
+    public bool DebugValidationFailed { get; private set; }
+    public bool DebugValidationRan { get; private set; }
+
+    /// <summary>在 tick 之间跑全部不变量。步进本身不调用。</summary>
+    public void RunDebugValidation()
+    {
+        if (_session == null)
+        {
+            DebugValidationLine = "校验:无会话";
+            DebugValidationFailed = true;
+            DebugValidationRan = true;
+            return;
+        }
+
+        try
+        {
+            CrowdSimulationValidator.RunAll(_session);
+            DebugValidationLine = $"校验:通过 tick {_session.TickCount}";
+            DebugValidationFailed = false;
+            DebugValidationRan = true;
+        }
+        catch (Exception ex)
+        {
+            DebugValidationLine = "校验:失败 " + ex.Message;
+            DebugValidationFailed = true;
+            DebugValidationRan = true;
+        }
+    }
     private CrowdPairRulesSessionGuard? _pairRulesGuard;
     private Entity _sessionEntity;
 
@@ -414,7 +444,6 @@ public sealed partial class CrowdSimulationRuntime
         _session.NavTileCache = cache;
         // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
         _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
-        _session.ValidateEveryNTicks = _debug?.Session?.ValidateEveryNTicks ?? 0;
         _activeMapId = mapId.Value;
 
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引

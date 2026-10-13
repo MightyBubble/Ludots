@@ -152,6 +152,7 @@ public sealed partial class CrowdSimulationRuntime
             ToggleBuild = deploy.Actions.ToggleBuild,
             Remove = deploy.Actions.Remove,
             Place = deploy.Actions.Place,
+            Validate = deploy.Actions.Validate,
         };
         var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
         for (int i = 0; i < deploy.Structures.Length; i++)
