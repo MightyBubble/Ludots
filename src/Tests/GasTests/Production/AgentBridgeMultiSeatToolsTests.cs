@@ -226,7 +226,7 @@ namespace Ludots.Tests.GasTests.Production
             var tool = new InputInjectTool(runtime);
             JsonObject result = (JsonObject)tool.Execute(new JsonObject
             {
-                ["actionId"] = "Command",
+                ["actionId"] = "Select.Begin",
                 ["mode"] = "set",
                 ["value"] = new JsonObject { ["x"] = 0d, ["y"] = 1d },
                 ["seatId"] = "seat.1",
@@ -236,9 +236,9 @@ namespace Ludots.Tests.GasTests.Production
             Assert.That((string)result["seatId"]!, Is.EqualTo("seat.1"));
             Tick(engine, 1);
 
-            Assert.That(channelOne.Reader.ReadAction<Vector3>("Command"), Is.EqualTo(new Vector3(0f, 1f, 1f)),
+            Assert.That(channelOne.Reader.ReadAction<Vector3>("Select.Begin"), Is.EqualTo(new Vector3(0f, 1f, 1f)),
                 "seat.1's frozen snapshot carries the injected value (unset axes default to 1, tool semantics)");
-            Assert.That(channelZero.Reader.ReadAction<Vector3>("Command"), Is.EqualTo(default(Vector3)),
+            Assert.That(channelZero.Reader.ReadAction<Vector3>("Select.Begin"), Is.EqualTo(default(Vector3)),
                 "seat.0's channel never sees seat.1's injection");
 
             JsonArray ledger = runtime.InputEventLog();
@@ -248,7 +248,7 @@ namespace Ludots.Tests.GasTests.Production
 
             AgentToolException unknown = Assert.Throws<AgentToolException>(() => tool.Execute(new JsonObject
             {
-                ["actionId"] = "Command",
+                ["actionId"] = "Select.Begin",
                 ["mode"] = "press",
                 ["seatId"] = "seat.9",
             }, context));
@@ -268,14 +268,14 @@ namespace Ludots.Tests.GasTests.Production
             var tool = new InputInjectTool(runtime);
             JsonObject result = (JsonObject)tool.Execute(new JsonObject
             {
-                ["actionId"] = "Command",
+                ["actionId"] = "Select.Begin",
                 ["mode"] = "press",
                 ["seatId"] = "seat.0",
             }, context)!;
 
             Assert.That((bool)result["injected"]!, Is.True);
             PlayerInputHandler global = engine.GetService(CoreServiceKeys.InputHandler)!;
-            Assert.That(global.IsInjectionActive("Command"), Is.True,
+            Assert.That(global.IsInjectionActive("Select.Begin"), Is.True,
                 "sole-seat seatId addressing lands on the engine-global handler");
         }
 
