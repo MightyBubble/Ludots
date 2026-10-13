@@ -167,14 +167,25 @@ public static class Program
             Console.WriteLine($"fuzz FAIL {report.FuzzError}");
         }
 
-        if (fog is > 0)
+        if (fog == 0)
         {
-            Console.WriteLine("fog FAIL UAT-FOG 要核对渲染层是否隐藏单位，这个无头入口没有这份检查。");
-            failed = true;
+            Console.WriteLine("fog skip");
         }
         else
         {
-            Console.WriteLine("fog FOLLOW-UP UAT-FOG 要核对渲染层是否隐藏单位，这个入口没有跑。");
+            try
+            {
+                string scenePath = Path.Combine(repo, catalog.Fog.SceneAsset);
+                var scene = JsonNode.Parse(File.ReadAllText(scenePath)) as JsonObject
+                    ?? throw new InvalidOperationException($"{scenePath} 根必须是对象。");
+                RunFog(repo, catalog, scene);
+                Console.WriteLine("fog pass");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"fog FAIL {ex.Message}");
+                failed = true;
+            }
         }
 
         Console.WriteLine(failed ? "result fail" : "result pass");
@@ -206,6 +217,40 @@ public static class Program
         });
         World.SharedJobScheduler = scheduler;
         return scheduler;
+    }
+
+    private static void RunFog(string repo, CrowdSimRegressCatalog catalog, JsonObject scene)
+    {
+        JobScheduler? scheduler = InstallScheduler();
+        try
+        {
+            using var hide = SessionHost.Open(
+                Path.Combine(repo, catalog.Fog.SeedAssets),
+                Path.Combine(repo, catalog.StandardAssets),
+                Path.Combine(repo, catalog.CapabilityAssets),
+                movement: true);
+            CrowdFogAcceptance.RunHide(hide.Session, scene);
+            using var off = SessionHost.Open(
+                Path.Combine(repo, catalog.Fog.SeedAssets),
+                Path.Combine(repo, catalog.StandardAssets),
+                Path.Combine(repo, catalog.CapabilityAssets),
+                movement: true);
+            CrowdFogAcceptance.RunTerrain(off.Session, scene, optimistic: false);
+            using var on = SessionHost.Open(
+                Path.Combine(repo, catalog.Fog.SeedAssets),
+                Path.Combine(repo, catalog.StandardAssets),
+                Path.Combine(repo, catalog.CapabilityAssets),
+                movement: true);
+            CrowdFogAcceptance.RunTerrain(on.Session, scene, optimistic: true);
+        }
+        finally
+        {
+            if (scheduler != null)
+            {
+                scheduler.Dispose();
+                World.SharedJobScheduler = null;
+            }
+        }
     }
 
     private static bool NeedsMovement(IReadOnlyList<CrowdSimRegressScenario> scenarios, bool fuzzMoves)
@@ -257,7 +302,9 @@ public static class Program
             return new CrowdSimRegressScenario { Id = id, UnavailableReason = spec.UnavailableReason };
         }
 
-        string path = Path.Combine(repo, spec.SeedAssets!, spec.ScriptAsset!);
+        string path = spec.ScriptFromRepo
+            ? Path.Combine(repo, spec.ScriptAsset!)
+            : Path.Combine(repo, spec.SeedAssets!, spec.ScriptAsset!);
         var document = JsonNode.Parse(File.ReadAllText(path)) as JsonObject
             ?? throw new InvalidOperationException($"{path} 根必须是对象。");
         return new CrowdSimRegressScenario
@@ -267,7 +314,31 @@ public static class Program
             Ticks = CrowdSimRegressCatalog.TickCount(document, spec.TicksFrom!),
             Movement = spec.Movement,
             TruthNavFrozen = spec.TruthNavFrozen,
+            ExpectAbsentTemplates = OptionalStrings(document, "expectAbsentTemplates"),
+            ExpectPresentTemplates = OptionalStrings(document, "expectPresentTemplates"),
         };
+    }
+
+    private static string[]? OptionalStrings(JsonObject document, string key)
+    {
+        if (!document.ContainsKey(key)) return null;
+        if (document[key] is not JsonArray array)
+        {
+            throw new InvalidOperationException($"场景脚本的 {key} 需为字符串数组。");
+        }
+
+        var list = new string[array.Count];
+        for (int i = 0; i < array.Count; i++)
+        {
+            if (array[i] is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"场景脚本的 {key}[{i}] 需为非空字符串。");
+            }
+
+            list[i] = text;
+        }
+
+        return list;
     }
 
     private static string Need(string[] args, ref int index, string flag)

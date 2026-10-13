@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
 
 namespace Ludots.Core.CrowdSimulation.Diagnostics;
@@ -14,6 +15,8 @@ public sealed class CrowdSimRegressScenario
     public int Ticks { get; init; }
     public bool Movement { get; init; }
     public bool TruthNavFrozen { get; init; }
+    public IReadOnlyList<string>? ExpectAbsentTemplates { get; init; }
+    public IReadOnlyList<string>? ExpectPresentTemplates { get; init; }
 }
 
 public sealed class CrowdSimRegressHost : IDisposable
@@ -164,8 +167,7 @@ public static class CrowdSimRegress
         var differing = new List<string>();
         double bake = 0;
         ulong checksum = 0;
-        CrowdSimStateDigest first = default;
-        ulong firstHandles = 0;
+        List<CrowdSimPartition>? firstPartitions = null;
         bool have = false;
         string? error = null;
         try
@@ -197,21 +199,22 @@ public static class CrowdSimRegress
                     ran++;
                 }
 
+                CheckTemplates(session, scenario);
                 CrowdSimStateDigest end = scenario.Ticks == 0
                     ? CrowdSimChecksum.Compute(session)
                     : session.LastDigest;
-                ulong handles = CrowdSimChecksum.MixHandles(session);
+                var partitions = new List<CrowdSimPartition>();
+                CrowdSimPartitions.Copy(session, partitions);
                 if (!have)
                 {
                     have = true;
                     checksum = end.Total;
-                    first = end;
-                    firstHandles = handles;
+                    firstPartitions = partitions;
                 }
                 else
                 {
                     var found = new List<string>();
-                    CrowdSimChecksum.CollectDifferences(first, firstHandles, end, handles, found);
+                    CrowdSimPartitions.CollectDifferences(firstPartitions!, partitions, found);
                     for (int n = 0; n < found.Count; n++)
                     {
                         if (!differing.Contains(found[n])) differing.Add(found[n]);
@@ -265,5 +268,47 @@ public static class CrowdSimRegress
             Checksum = checksum,
             Differing = differing,
         };
+    }
+
+    private static void CheckTemplates(CrowdSimSession session, CrowdSimRegressScenario scenario)
+    {
+        if (scenario.ExpectAbsentTemplates == null && scenario.ExpectPresentTemplates == null) return;
+        var store = session.Structures ?? throw new InvalidOperationException("场景要核对结构模板，会话没有结构仓。");
+        if (scenario.ExpectAbsentTemplates != null)
+        {
+            for (int i = 0; i < scenario.ExpectAbsentTemplates.Count; i++)
+            {
+                string template = scenario.ExpectAbsentTemplates[i];
+                if (HasTemplate(store, template))
+                {
+                    throw new InvalidOperationException($"模板 {template} 仍在场。");
+                }
+            }
+        }
+
+        if (scenario.ExpectPresentTemplates != null)
+        {
+            for (int i = 0; i < scenario.ExpectPresentTemplates.Count; i++)
+            {
+                string template = scenario.ExpectPresentTemplates[i];
+                if (!HasTemplate(store, template))
+                {
+                    throw new InvalidOperationException($"模板 {template} 不在场。");
+                }
+            }
+        }
+    }
+
+    private static bool HasTemplate(CrowdStructuresStore store, string templateId)
+    {
+        int template = store.TemplateIndexOf(templateId);
+        if (template < 0) throw new InvalidOperationException($"未知结构模板 \"{templateId}\"。");
+        var ids = store.EntityIds;
+        for (int i = 0; i < ids.Count; i++)
+        {
+            if (store.TryGetTemplate(ids[i], out int live) && live == template) return true;
+        }
+
+        return false;
     }
 }
