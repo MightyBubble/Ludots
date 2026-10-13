@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text.Json.Nodes;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Fog;
@@ -36,6 +37,38 @@ public sealed class CrowdFogLineOfSightTests
         int behind = Behind(fogOff, placed.ObserverX, placed.ObserverY);
         Assert.That(Visible(fogOff, 0, behind), Is.True, "视线关闭时，墙后的格应在视盘里");
         Assert.That(Visible(fogOn, 0, behind), Is.False, "视线打开时，墙挡住墙后的格");
+    }
+
+    [Test]
+    public void S1337_RunHide_MatchesTheSceneAsset()
+    {
+        var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337", lineOfSight: false);
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(60), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
+        var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(
+            root,
+            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json")))!.AsObject();
+        Ludots.Core.CrowdSimulation.Diagnostics.CrowdFogAcceptance.RunHide(session, scene);
+    }
+
+    [Test]
+    public void S1337_RunTerrain_MatchesTheSceneAsset()
+    {
+        string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
+        var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(
+            root,
+            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json")))!.AsObject();
+        RunTerrain(scene, optimistic: false);
+        RunTerrain(scene, optimistic: true);
+    }
+
+    private static void RunTerrain(JsonObject scene, bool optimistic)
+    {
+        var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337", lineOfSight: false);
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(60), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        Ludots.Core.CrowdSimulation.Diagnostics.CrowdFogAcceptance.RunTerrain(session, scene, optimistic);
     }
 
     [Test]
