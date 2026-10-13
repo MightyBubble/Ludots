@@ -91,6 +91,14 @@ public sealed class CrowdSimulationTelemetry
     public int Arrived { get; private set; }
     public int Unreachable { get; private set; }
     public int Jumping { get; private set; }
+    /// <summary>本 tick 计入航向均值的抽样次数。0 表示没有可比较的相邻步。</summary>
+    public int MotionSamples { get; private set; }
+    /// <summary>移动单位相邻步航向变化的绝对值均值(度)。没有样本时为 0。</summary>
+    public double HeadingDeg { get; private set; }
+    public int FlipCount { get; private set; }
+    public int SteerPairs { get; private set; }
+    /// <summary>左右转向反复率，0..<see cref="CrowdSimulationLimits.FullPercent"/>。没有转向对时为 0。</summary>
+    public int FlipPct { get; private set; }
     public double LastTickMs { get; private set; }
     public double TickMs { get; private set; }
     public double MaxTickMs { get; private set; }
@@ -134,14 +142,30 @@ public sealed class CrowdSimulationTelemetry
         Jumping = jumping;
     }
 
+    /// <summary>本 tick 运动质量。反复率用整数百分数，分母为 0 时记 0。</summary>
+    public void SetMotion(int samples, double headingDeg, int flips, int steerPairs)
+    {
+        MotionSamples = samples;
+        HeadingDeg = headingDeg;
+        FlipCount = flips;
+        SteerPairs = steerPairs;
+        FlipPct = steerPairs > 0
+            ? (int)((long)CrowdSimulationLimits.FullPercent * flips / steerPairs)
+            : 0;
+    }
+
     public void ResetCounters()
     {
         Ticks = Units = Contacts = Rebakes = FogRefreshes = PathWaits = StallTicks = 0;
         SubStepClamped = EvictStuck = Plans = 0;
         Idle = Moving = Arrived = Unreachable = Jumping = 0;
+        MotionSamples = FlipCount = SteerPairs = FlipPct = 0;
+        HeadingDeg = 0;
         LastTickMs = TickMs = MaxTickMs = 0;
         _phaseFrame = _lastPhaseTicks = _sumPhaseTicks = default;
     }
+
+    internal static double TicksToMs(long ticks) => ticks * 1000d / Stopwatch.Frequency;
 
     internal void BeginPhaseFrame() => _phaseFrame = default;
 

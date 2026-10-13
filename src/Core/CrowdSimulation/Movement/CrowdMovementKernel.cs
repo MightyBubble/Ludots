@@ -120,6 +120,16 @@ public sealed class CrowdMovementKernel
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 TurnEpsRad { get; init; }
 
+    private Fix64[] _prevVx = Array.Empty<Fix64>();
+    private Fix64[] _prevVy = Array.Empty<Fix64>();
+    private sbyte[] _steer = Array.Empty<sbyte>();
+    private int _sampleCursor;
+    private double _headingSum;
+    private int _headingCount;
+    private int _flips;
+    private int _steerPairs;
+    private double _sinEps2 = double.NaN;
+
     /// <summary>场外时回调。当前没有走廊扩展;场外转向见意图层。</summary>
     public Action<int, int>? OnStray { get; init; }
 
@@ -135,7 +145,63 @@ public sealed class CrowdMovementKernel
         if (Speeds.Length < unitCapacity) Speeds = new Fix64[unitCapacity];
         if (PushPriorities.Length < unitCapacity) PushPriorities = new Fix64[unitCapacity];
         if (PlayerIdx.Length < unitCapacity) PlayerIdx = new int[unitCapacity];
+        if (_prevVx.Length < unitCapacity)
+        {
+            Array.Resize(ref _prevVx, unitCapacity);
+            Array.Resize(ref _prevVy, unitCapacity);
+            Array.Resize(ref _steer, unitCapacity);
+        }
+
         EnsureAvoidanceCapacity(unitCapacity);
+    }
+
+    public void BeginMotionTick()
+    {
+        _headingSum = 0;
+        _headingCount = 0;
+        _flips = 0;
+        _steerPairs = 0;
+    }
+
+    public void SampleMotion()
+    {
+        if (double.IsNaN(_sinEps2))
+        {
+            double s = Math.Sin((double)TurnEpsRad);
+            _sinEps2 = s * s;
+        }
+
+        CrowdMotionQuality.Scan(
+            Session.Units.Count, _sampleCursor,
+            States, Kins, _prevVx, _prevVy, _steer, _sinEps2,
+            ref _headingSum, ref _headingCount, ref _flips, ref _steerPairs);
+    }
+
+    public void PublishMotion()
+    {
+        _sampleCursor += CrowdSimulationLimits.MotionQualitySamplesPerTick;
+        double heading = _headingCount > 0 ? _headingSum / _headingCount : 0;
+        Session.Telemetry.SetMotion(_headingCount, heading, _flips, _steerPairs);
+    }
+
+    public void ClearMotionMemory()
+    {
+        Array.Clear(_prevVx);
+        Array.Clear(_prevVy);
+        Array.Clear(_steer);
+        _sampleCursor = 0;
+        _headingSum = 0;
+        _headingCount = 0;
+        _flips = 0;
+        _steerPairs = 0;
+    }
+
+    public void ClearMotionSlot(int slot)
+    {
+        if ((uint)slot >= (uint)_prevVx.Length) return;
+        _prevVx[slot] = default;
+        _prevVy[slot] = default;
+        _steer[slot] = 0;
     }
 
     /// <summary>tick 首:按 chunk 列收拢到稠密下标。组级备忘失效。</summary>
