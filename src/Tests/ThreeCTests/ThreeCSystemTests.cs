@@ -319,7 +319,10 @@ namespace Ludots.Tests.ThreeC
             });
             var pointer = new Vector2(80f, 40f);
             var resolution = new Vector2(1920f, 1080f);
+            // 激活只写入虚拟相机运行态，第一次 Update 才套到 State。地面点必须在这次套用之后采样。
+            manager.Update(0.016f);
             CameraStateSnapshot before = CameraStateSnapshot.FromState(manager.State);
+            Assert.That(before.DistanceCm, Is.EqualTo(8000f));
             Assert.That(CameraViewportUtil.TryGroundCmUnderPointer(in before, pointer, resolution, 16f / 9f, out Vector2 ground), Is.True);
             Vector2 targetBefore = manager.State.TargetCm;
             SetBehaviorInput(behaviorInput, zoom: 1f);
