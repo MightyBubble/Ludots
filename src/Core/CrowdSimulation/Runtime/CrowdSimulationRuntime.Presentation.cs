@@ -22,6 +22,7 @@ public sealed partial class CrowdSimulationRuntime
     private bool _deployPresentationInstalled;
     private S3PathDemoRuntime? _pathDemo;
     private S4DeployDemoRuntime? _deployDemo;
+    private S4DeployDemoViewProjector? _deployViewProjector;
     private CrowdPresentationConfig? _presentation;
     private CrowdFieldProjectorSlot? _projectorSlot;
     private ISystem<float>? _pathInput;
@@ -86,6 +87,7 @@ public sealed partial class CrowdSimulationRuntime
 
         _deployDemo = null;
         OrderPrefs = null;
+        _deployViewProjector = null;
         UnregisterFixed(engine, ref _deployInput, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _deployPresentation);
         _deployPresentationInstalled = false;
@@ -220,6 +222,7 @@ public sealed partial class CrowdSimulationRuntime
         }
 
         var demoProjector = new S4DeployDemoViewProjector(demo, sessionSource, terrain);
+        _deployViewProjector = demoProjector;
         CrowdDebugViewFrame? debugView = _debugView == null ? null : new CrowdDebugViewFrame(_debugView);
         slot.Current = debugView == null
             ? demoProjector

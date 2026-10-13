@@ -329,5 +329,51 @@ namespace Ludots.Tests.GAS
                 }
             }
         }
+
+        [Test]
+        public void DataRegistry_Reload_ReplacesWholeTableAndKeepsOldTableWhenItemFails()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_ConfigCatalogTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string core = Path.Combine(root, "Core");
+                string templatesPath = Path.Combine(core, "Entities", "templates.json");
+                Directory.CreateDirectory(Path.Combine(core, "Entities"));
+                File.WriteAllText(
+                    Path.Combine(core, "config_catalog.json"),
+                    "[{ \"Path\": \"Entities/templates.json\", \"Policy\": \"ArrayById\", \"IdField\": \"id\" }]");
+                File.WriteAllText(templatesPath, "[{ \"id\": \"first\", \"components\": {} }]");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", core);
+                var modLoader = new ModLoader(vfs, new Ludots.Core.Scripting.FunctionRegistry(), new Ludots.Core.Scripting.TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var templates = new DataRegistry<EntityTemplate>(pipeline);
+
+                templates.Load("Entities/templates.json", catalog);
+                Assert.That(templates.Contains("first"), Is.True);
+
+                File.WriteAllText(templatesPath, "[{ \"id\": \"second\", \"components\": {} }]");
+                templates.Load("Entities/templates.json", catalog);
+                Assert.That(templates.Contains("first"), Is.False);
+                Assert.That(templates.Contains("second"), Is.True);
+
+                File.WriteAllText(
+                    templatesPath,
+                    "[{ \"id\": \"third\", \"components\": {} }, { \"id\": \"broken\", \"components\": 5 }]");
+                Assert.Throws<ConfigLoadException>(() => templates.Load("Entities/templates.json", catalog));
+                Assert.That(templates.Contains("second"), Is.True);
+                Assert.That(templates.Contains("third"), Is.False);
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
+        }
     }
 }

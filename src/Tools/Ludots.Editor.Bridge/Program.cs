@@ -3455,7 +3455,14 @@ static bool TryLoadSiblingDocumentsForWeave(
     return true;
 }
 
-app.Run("http://localhost:5299");
+Ludots.Editor.Bridge.CrowdSimulationEditorEndpoints.Map(app, repoRoot);
+string? editorBridgeUrl = Environment.GetEnvironmentVariable("LUDOTS_EDITOR_BRIDGE_URL");
+if (string.IsNullOrWhiteSpace(editorBridgeUrl))
+{
+    editorBridgeUrl = "http://localhost:5299";
+}
+
+app.Run(editorBridgeUrl);
 
 static bool TryResolveModGraphsPath(LauncherService launcher, string modId, out string graphsPath, out IResult? error)
 {

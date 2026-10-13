@@ -66,6 +66,13 @@ public static class CrowdSimulationValidator
             ValidateFlow(session, group);
             ValidateOrder(session, group);
         }
+
+        if (session.Planner?.FlowCacheInvalidReason() is { } cacheReason)
+        {
+            throw new CrowdSimulationInvariantException(
+                $"tick {session.TickCount} {cacheReason}",
+                session.TickCount, -1, -1, -1, -1, -1, -1, -1);
+        }
     }
 
     /// <summary>实体组件互相覆盖，阻挡格和区域格与按当前实体全量重标的结果一致。</summary>
@@ -300,6 +307,20 @@ public static class CrowdSimulationValidator
         {
             throw new CrowdSimulationInvariantException(
                 $"tick {session.TickCount} 组 {group.Id} 流场导航 {flow.NavId} 不属于本组 {group.NavId}",
+                session.TickCount, -1, -1, -1, -1, flow.NavId, -1, group.Id);
+        }
+
+        if (flow.Refs < 1)
+        {
+            throw new CrowdSimulationInvariantException(
+                $"tick {session.TickCount} 组 {group.Id} 流场引用已释放",
+                session.TickCount, -1, -1, -1, -1, flow.NavId, -1, group.Id);
+        }
+
+        if (flow.Cached && (session.Planner == null || !session.Planner.FlowCacheContains(flow)))
+        {
+            throw new CrowdSimulationInvariantException(
+                $"tick {session.TickCount} 组 {group.Id} 流场缓存标记与缓存不一致",
                 session.TickCount, -1, -1, -1, -1, flow.NavId, -1, group.Id);
         }
     }
