@@ -574,7 +574,7 @@ public sealed partial class CrowdSimulationRuntime
         if (session.TickCount % session.Config.FixedHz == 0)
         {
             Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={FormatLocalSeatSelected(session)}, hash={Units.CrowdSimChecksum.Format(session.LastDigest.Total)}");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={FormatLocalSeatSelected(session)}, hash={session.LastDigest.Total}");
         }
     }
 
