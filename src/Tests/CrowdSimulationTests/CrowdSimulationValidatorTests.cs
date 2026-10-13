@@ -154,7 +154,8 @@ public sealed class CrowdSimulationValidatorTests
         session.TruthNavFrozen = true;
         session.ValidateEveryNTicks = every;
 
-        (int Tick, string Json)[] entries =
+        var scriptJson = new JsonArray();
+        foreach (var (tick, json) in new (int Tick, string Json)[]
         {
             (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"unitType":0,"rIdx":0}"""),
             (2, """{"type":"order","xCm":1200000,"yCm":800000,"player":1,"shape":"box"}"""),
@@ -162,21 +163,19 @@ public sealed class CrowdSimulationValidatorTests
             (60, """{"type":"removeStructureAt","xCm":503125,"yCm":565625}"""),
             (90, """{"type":"placeStructure","template":"s7barrier","xCm":521875,"yCm":571875,"sizeCm":7000}"""),
             (120, """{"type":"placeStructure","template":"road","xCm":496875,"yCm":565625,"sizeCm":3000,"toXCm":521875,"toYCm":565625}"""),
-        };
-        var script = new List<CrowdCommand>();
-        foreach (var (tick, json) in entries)
+        })
         {
-            script.Add(new CrowdCommand(tick, CrowdSimCommand.Parse(JsonNode.Parse(json)!)));
+            scriptJson.Add(new JsonObject { ["tick"] = tick, ["cmd"] = JsonNode.Parse(json) });
         }
 
-        session.Commands.Schedule(session, script);
+        var script = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
         int dwell = 0;
         int guard = ticks * CrowdSimulationLimits.AdvanceStallGuardFactor + CrowdSimulationLimits.AdvanceStallGuardFactor;
         int ran = 0;
         while (ran < ticks)
         {
             if (guard-- <= 0) Assert.Fail("会话推进停摆过长");
-            if (!session.Step(out _)) continue;
+            if (!script.Step(session, out _)) continue;
             ran++;
             dwell += CrowdSimulationValidator.CountBlockedRests(session);
         }

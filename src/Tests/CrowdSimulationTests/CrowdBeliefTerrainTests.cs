@@ -17,6 +17,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Registry;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -207,6 +208,7 @@ public class CrowdBeliefTerrainTests
             session.Structures = store;
             session.RebakeSources = sources;
             session.NavTileCache = cache;
+            session.BindVision(new FogLayerRegistry(), new FogFieldStore());
             var service = new PathQueryService(navs, config, 1, System.TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
 
