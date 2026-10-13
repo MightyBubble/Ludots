@@ -51,7 +51,7 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public double KillImpulse { get; init; }
     [JsonRequired] public int KillXCm { get; init; }
     [JsonRequired] public int KillYCm { get; init; }
-    [JsonRequired] public float SceneDistanceCm { get; init; }
+    [JsonRequired] public int EnemyMarkRadiusCm { get; init; }
     [JsonRequired] public float HillshadeStrength { get; init; }
     [JsonRequired] public int MaxBeliefMarkers { get; init; }
     [JsonRequired] public string CameraId { get; init; } = "";
@@ -112,8 +112,8 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: dashCm 与 gapCm 需为 ≥ 1 的整数。");
         if (MaxDashes < 1 || MaxDashes > (1 << 8))
             throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
-        if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1)
-            throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm 与 crossArmCm 需为 ≥ 1 的整数。");
+        if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1 || EnemyMarkRadiusCm < 1)
+            throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm、crossArmCm 与 enemyMarkRadiusCm 需为 ≥ 1 的整数。");
         if (StatusCardW < 1 || StatusCardH < 1 || FontSize < 1 || LinePx < 1)
             throw new InvalidOperationException($"{path}: 状态卡尺寸、字号和线宽需为 ≥ 1 的整数。");
         if (KillRadiusCm < 1)
@@ -122,7 +122,6 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: killRingScale 必须 > 1。");
         if (KillImpulse < 0d || !double.IsFinite(KillImpulse))
             throw new InvalidOperationException($"{path}: killImpulse 必须 ≥ 0。");
-        RequirePositive(path, "sceneDistanceCm", SceneDistanceCm);
         RequirePositive(path, "hillshadeStrength", HillshadeStrength);
         if (MaxBeliefMarkers < 1 || MaxBeliefMarkers > 4096)
             throw new InvalidOperationException($"{path}: maxBeliefMarkers 需为 1..4096 的整数。");
@@ -272,6 +271,7 @@ internal sealed class CrowdPlayerViewColors
     [JsonRequired] public CrowdDebugRgba Ripple { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Card { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Text { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba EnemyMark { get; init; } = null!;
 
     public void Validate(string path)
     {
@@ -286,5 +286,6 @@ internal sealed class CrowdPlayerViewColors
         Ripple.Validate(path, "colors.ripple");
         Card.Validate(path, "colors.card");
         Text.Validate(path, "colors.text");
+        EnemyMark.Validate(path, "colors.enemyMark");
     }
 }

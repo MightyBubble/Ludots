@@ -1,3 +1,4 @@
+using System.IO;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -22,6 +23,23 @@ namespace CrowdSimulationTests;
 
 public sealed class CrowdPlayerViewTests
 {
+    [Test]
+    public void PlayerFogScene_ClustersEnemiesAndLeavesHideFixtureAlone()
+    {
+        string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
+        string mod = Path.Combine(root, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulation");
+        var fixture = JsonNode.Parse(File.ReadAllText(Path.Combine(mod, "regress", "fog-acceptance.json")))!.AsObject();
+        var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(mod, "player-fog-check.json")))!.AsObject();
+        Assert.That(fixture["spawnCount"]!.GetValue<int>(), Is.EqualTo(1));
+        Assert.That(scene["spawnCount"]!.GetValue<int>(), Is.EqualTo(5));
+        Assert.That(scene["enemyXCm"]!.GetValue<int>(), Is.EqualTo(fixture["enemyXCm"]!.GetValue<int>()));
+        Assert.That(scene["viewerXCm"]!.GetValue<int>(), Is.EqualTo(fixture["viewerXCm"]!.GetValue<int>()));
+        int span = (scene["spawnCount"]!.GetValue<int>() - 1) * scene["clusterSpacingCm"]!.GetValue<int>();
+        Assert.That(span, Is.LessThan(25000), "一排敌方必须落在同一格迷雾里，遮挡才是整排一起消失。");
+        Assert.That(scene["outsideLookXCm"]!.GetValue<int>(), Is.EqualTo(scene["enemyXCm"]!.GetValue<int>()));
+        Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.Not.EqualTo(scene["outsideLookXCm"]!.GetValue<int>()));
+    }
+
     [Test]
     public void OrderMode_UsesPadAndSpreadThresholds()
     {
@@ -237,7 +255,7 @@ public sealed class CrowdPlayerViewTests
         var colors = new JsonObject();
         foreach (var name in new[]
         {
-            "plan", "ink", "paper", "selected", "terrainLow", "terrainHigh", "terrainShade", "goal", "ripple", "card", "text",
+            "plan", "ink", "paper", "selected", "terrainLow", "terrainHigh", "terrainShade", "goal", "ripple", "card", "text", "enemyMark",
         })
         {
             colors[name] = new JsonObject { ["red"] = 10, ["green"] = 20, ["blue"] = 30, ["alpha"] = 40 };
@@ -284,7 +302,7 @@ public sealed class CrowdPlayerViewTests
             ["killImpulse"] = 0,
             ["killXCm"] = 800000,
             ["killYCm"] = 800000,
-            ["sceneDistanceCm"] = 40000,
+            ["enemyMarkRadiusCm"] = 2400,
             ["hillshadeStrength"] = 1.2,
             ["maxBeliefMarkers"] = 4096,
             ["cameraId"] = "cam",

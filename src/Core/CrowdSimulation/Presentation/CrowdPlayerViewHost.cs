@@ -35,6 +35,7 @@ internal sealed class CrowdPlayerViewHost
     private const int GoalCrossHId = 902;
     private const int GoalCrossVId = 903;
     private const int RouteEndId = 904;
+    private const int EnemyMarkIdBase = 6000;
     private const int DashIdBase = 910;
     private const int StructureIdBase = 2000;
     private const int MaxPlayers = 8;
@@ -48,12 +49,14 @@ internal sealed class CrowdPlayerViewHost
     private readonly Vector4 _ripple;
     private readonly Vector4 _card;
     private readonly Vector4 _text;
+    private readonly Vector4 _enemyMark;
     private readonly StringBuilder _sb = new(512);
     private readonly float _dashVisual;
     private readonly float _gapVisual;
     private readonly float _routeThicknessVisual;
     private readonly float _rippleRadiusVisual;
     private readonly float _markerRadiusVisual;
+    private readonly float _enemyMarkRadiusVisual;
     private readonly float _crossArmVisual;
 
     private CrowdSimSession? _boundSession;
@@ -101,6 +104,10 @@ internal sealed class CrowdPlayerViewHost
     private int _boxingProfileId;
     private int _boxingContextKeyId;
     private CrowdFogCheckScene? _scene;
+    private int _markPlayer = -1;
+    private int _markXCm;
+    private int _markYCm;
+    private int _markCatchCm;
     private bool _logArmed;
     private int _seenLog;
     private long _rippleStart = long.MinValue;
@@ -139,11 +146,13 @@ internal sealed class CrowdPlayerViewHost
         _ripple = config.Colors.Ripple.ToVector4();
         _card = config.Colors.Card.ToVector4();
         _text = config.Colors.Text.ToVector4();
+        _enemyMark = config.Colors.EnemyMark.ToVector4();
         _dashVisual = WorldUnits.CmToM(config.DashCm);
         _gapVisual = WorldUnits.CmToM(config.GapCm);
         _routeThicknessVisual = WorldUnits.CmToM(config.RouteThicknessCm);
         _rippleRadiusVisual = WorldUnits.CmToM(config.RippleRadiusCm);
         _markerRadiusVisual = WorldUnits.CmToM(config.MarkerRadiusCm);
+        _enemyMarkRadiusVisual = WorldUnits.CmToM(config.EnemyMarkRadiusCm);
         _crossArmVisual = WorldUnits.CmToM(config.CrossArmCm);
         Prefs = new CrowdPlayerOrderPrefs
         {
@@ -566,6 +575,11 @@ internal sealed class CrowdPlayerViewHost
                 hidden.Hidden = !shown;
             }
 
+            if (shown && _sceneKind != 0 && owner == _markPlayer)
+            {
+                DrawEnemyMark(session, routes, i);
+            }
+
             if (latest == null)
             {
                 continue;
@@ -758,8 +772,8 @@ internal sealed class CrowdPlayerViewHost
     {
         CrowdFogCheckScene scene = RequireScene();
         EnqueueKill(demo);
-        EnqueueSpawn(demo, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.SpawnCount, scene.UnitType, scene.RIdx);
-        EnqueueSpawn(demo, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.SpawnCount, scene.UnitType, scene.RIdx);
+        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm);
+        EnqueueCluster(demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -768,7 +782,9 @@ internal sealed class CrowdPlayerViewHost
             YCm = scene.UnseenYCm,
             SizeCm = scene.UnseenSizeCm,
         });
-        Occupy(session, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm);
+        Occupy(session, scene.ViewerPlayer);
+        Frame(scene.OutsideLookXCm, scene.OutsideLookYCm, scene.OutsideDistanceCm, scene.OutsideYaw, scene.OutsidePitch);
+        ArmMark(scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm);
         _sceneKind = 1;
         _fogHide = true;
     }
@@ -784,8 +800,14 @@ internal sealed class CrowdPlayerViewHost
         int wallX = ((fx + scene.WallCellsEast) * cellCm) + (cellCm / 2);
         int wallY = (fy * cellCm) + (cellCm / 2);
         int behindX = ((fx + scene.BehindCellsEast) * cellCm) + (cellCm / 2);
+        int span = (scene.SpawnCount - 1) * scene.ClusterSpacingCm;
+        if (span >= cellCm)
+        {
+            throw new InvalidOperationException("核对单位的间距超出一格迷雾，遮挡会把他们拆进不同格子。");
+        }
+
         EnqueueKill(demo);
-        EnqueueSpawn(demo, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.SpawnCount, scene.UnitType, scene.RIdx);
+        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -794,14 +816,16 @@ internal sealed class CrowdPlayerViewHost
             YCm = wallY,
             SizeCm = scene.WallSizeCm,
         });
-        EnqueueSpawn(demo, scene.EnemyPlayer, behindX, wallY, scene.SpawnCount, scene.UnitType, scene.RIdx);
+        EnqueueCluster(demo, scene, scene.EnemyPlayer, behindX, wallY);
         demo.EnqueueCommand(new CrowdSimCommand { Kind = CrowdSimCommandKind.FogSight, On = _lineOfSight });
-        Occupy(session, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm);
+        Occupy(session, scene.ViewerPlayer);
+        Frame(scene.BehindLookXCm, scene.BehindLookYCm, scene.BehindDistanceCm, scene.BehindYaw, scene.BehindPitch);
+        ArmMark(scene, scene.EnemyPlayer, behindX, wallY);
         _sceneKind = 2;
         _fogHide = true;
     }
 
-    private void Occupy(CrowdSimSession session, int playerId, int xCm, int yCm)
+    private void Occupy(CrowdSimSession session, int playerId)
     {
         Entity[]? reps = session.Presentation.PlayerReps;
         if (reps == null || (uint)playerId >= (uint)reps.Length || reps[playerId] == Entity.Null)
@@ -813,20 +837,68 @@ internal sealed class CrowdPlayerViewHost
         if (_engine != null)
         {
             ClientLocalSeatBindings.BindSoleSeat(_engine, reps[playerId], playerId, _config.SeatId);
-            if (_engine.TryGetService(CoreServiceKeys.LogicViewRegistry, out LogicViewRegistry? views) &&
-                views != null &&
-                views.TryGetClientPresentCamera(out CameraManager camera))
-            {
-                camera.ApplyPose(new CameraPoseRequest
-                {
-                    VirtualCameraId = _config.CameraId,
-                    TargetCm = new Vector2(xCm, yCm),
-                    DistanceCm = _config.SceneDistanceCm,
-                });
-            }
         }
 
         _player = playerId;
+    }
+
+    private void Frame(int xCm, int yCm, float distanceCm, float yaw, float pitch)
+    {
+        if (_engine == null)
+        {
+            return;
+        }
+
+        if (_engine.TryGetService(CoreServiceKeys.LogicViewRegistry, out LogicViewRegistry? views) &&
+            views != null &&
+            views.TryGetClientPresentCamera(out CameraManager camera))
+        {
+            camera.ApplyPose(new CameraPoseRequest
+            {
+                VirtualCameraId = _config.CameraId,
+                TargetCm = new Vector2(xCm, yCm),
+                DistanceCm = distanceCm,
+                Yaw = yaw,
+                Pitch = pitch,
+            });
+        }
+    }
+
+    private void ArmMark(CrowdFogCheckScene scene, int player, int xCm, int yCm)
+    {
+        _markPlayer = player;
+        _markXCm = xCm;
+        _markYCm = yCm;
+        _markCatchCm = (((scene.SpawnCount - 1) * scene.ClusterSpacingCm) / 2) + scene.ClusterSpacingCm;
+    }
+
+    /// <summary>
+    /// 核对机位下单位网格只有几像素。环只画仍被迷雾判定为可见的敌方，半径来自玩家视图配置。
+    /// </summary>
+    private void DrawEnemyMark(CrowdSimSession session, RouteVisualBuffer routes, int dense)
+    {
+        if (session.Movement == null)
+        {
+            return;
+        }
+
+        Fix64Vec2 pos = session.Movement.Positions[dense];
+        long dx = (pos.X - Fix64.FromInt(_markXCm)).ToLong();
+        long dy = (pos.Y - Fix64.FromInt(_markYCm)).ToLong();
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx > _markCatchCm || dy > _markCatchCm)
+        {
+            return;
+        }
+
+        routes.AddMarker(
+            new RouteVisualId(EnemyMarkIdBase + dense),
+            new Vector2(WorldUnits.CmToM(pos.X.ToFloat()), WorldUnits.CmToM(pos.Y.ToFloat())),
+            RouteVisualMarkerShape.Ring,
+            _enemyMarkRadiusVisual,
+            _routeThicknessVisual,
+            _enemyMark);
     }
 
     private void EnqueueKill(S4DeployDemoRuntime demo)
@@ -840,6 +912,17 @@ internal sealed class CrowdPlayerViewHost
             RingScale = Fix64.FromDouble(_config.KillRingScale),
             Impulse = Fix64.FromDouble(_config.KillImpulse),
         });
+    }
+
+    private static void EnqueueCluster(S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm)
+    {
+        int count = scene.SpawnCount;
+        int spacing = scene.ClusterSpacingCm;
+        int origin = -((count - 1) * spacing) / 2;
+        for (int i = 0; i < count; i++)
+        {
+            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacing), 1, scene.UnitType, scene.RIdx);
+        }
     }
 
     private static void EnqueueSpawn(S4DeployDemoRuntime demo, int player, int xCm, int yCm, int count, int unitType, int rIdx)
