@@ -98,10 +98,14 @@ public static class CrowdSimChecksum
     public const string JumpSection = "jump";
     public const string CommandsSection = "commands";
 
+    /// <summary>捕获和回放用的句柄断面。不进 <see cref="Compute"/> 的合计。</summary>
+    public const string HandlesSection = "units.handles";
+
     private const uint Offset = 2166136261u, Prime = 16777619u;
     private const uint GroupsDomain = 0x67727073u;
     private const uint JumpDomain = 0x6A756D70u;
     private const uint CommandsDomain = 0x636D6473u;
+    private const uint HandlesDomain = 0x68646C73u;
 
     public static ulong ComputeValue(CrowdSimSession sim) => Compute(sim).Total;
 
@@ -269,6 +273,47 @@ public static class CrowdSimChecksum
 
     /// <summary>展示/对拍把合计打成 8 位十六进制。</summary>
     public static string Format(ulong checksum) => checksum.ToString("x8");
+
+    /// <summary>
+    /// 句柄池断面：稠密序上的句柄和实体，再加上空闲栈。
+    /// 不写进 <see cref="Compute"/>，部署真值的每 tick 合计保持原词序。
+    /// </summary>
+    public static ulong MixHandles(CrowdSimSession sim)
+    {
+        var units = sim.Units;
+        int n = units.Count;
+        uint h = Mix(HandlesDomain, (uint)n);
+        for (int i = 0; i < n; i++)
+        {
+            var entity = units.EntityAt(i);
+            h = Mix(h, units.HandleAt(i));
+            h = Mix(h, (uint)entity.Id);
+            h = Mix(h, (uint)entity.Version);
+        }
+
+        h = Mix(h, (uint)units.Capacity);
+        h = Mix(h, (uint)units.FreeTop);
+        for (int i = 0; i < units.FreeTop; i++) h = Mix(h, (uint)units.FreeSlotAt(i));
+        return Seal(h);
+    }
+
+    /// <summary>按固定词序收集有差的分区。调用方的列表只追加，不清空。</summary>
+    public static void CollectDifferences(
+        in CrowdSimStateDigest left,
+        ulong leftHandles,
+        in CrowdSimStateDigest right,
+        ulong rightHandles,
+        List<string> names)
+    {
+        if (left.Position != right.Position) names.Add(PositionSection);
+        if (left.Motion != right.Motion) names.Add(MotionSection);
+        if (left.State != right.State) names.Add(StateSection);
+        if (left.Avoidance != right.Avoidance) names.Add(AvoidanceSection);
+        if (left.Groups != right.Groups) names.Add(GroupsSection);
+        if (left.Jump != right.Jump) names.Add(JumpSection);
+        if (left.Commands != right.Commands) names.Add(CommandsSection);
+        if (leftHandles != rightHandles) names.Add(HandlesSection);
+    }
 
     internal static uint Mix(uint h, uint v) => (h ^ v) * Prime;
 
