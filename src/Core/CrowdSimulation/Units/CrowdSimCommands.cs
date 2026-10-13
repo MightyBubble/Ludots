@@ -60,8 +60,8 @@ public static class CrowdSimCommands
 
     public static object? Exec(CrowdSimSession sim, CrowdSimCommand cmd)
     {
-        // 每条指令前收尾未完的重烘 job(参考端 exec 同点):指令看到的结构变更必须完整生效,
-        // 只在结构 op 前收尾会让紧随的非结构指令与参考端的报告 tick 错位一拍。
+        // 每条指令前收尾未完的重烘 job。指令看到的结构变更必须完整生效。
+        // 只在结构 op 前收尾会让紧随的非结构指令的报告 tick 错位一拍。
         if (sim.RebakeJob != null) Structures.CrowdStructureOps.FinishRebake(sim);
         switch (cmd.Kind)
         {
@@ -97,8 +97,7 @@ public static class CrowdSimCommands
                 return null;
             case CrowdSimCommandKind.Order:
                 RequirePlayer(sim, cmd.Player);
-                // 乐观迷雾开关随下令提交(参考端 issueOrder 的 opts.fogTerrain;随日志回放,
-                // 确定性)。切换即同步认知(与参考端同点:指令内联)。
+                // 乐观迷雾开关随下令提交，写进指令日志，回放可复现。切换后立刻同步认知。
                 if (cmd.HasFogTerrain)
                 {
                     var fog = sim.Fog ?? throw new System.InvalidOperationException("order: 迷雾未启用(会话没有运动内核)。");
@@ -148,7 +147,7 @@ public static class CrowdSimCommands
         }
     }
 
-    /// <summary>迷雾/知识面命令(sim/playerCommands.js fogCmd 移植):主体 = 玩家(实体域
+    /// <summary>迷雾/知识面命令。主体 = 玩家(实体域
     /// 语法糖)→ 其视野组,组内玩家同享。area = rect/circle/poly 恰一(米→厘米在脚本边界换算)。
     /// 命令只改迷雾数据;认知同步在下一 tick 管线拾起(fogShare 的 force 除外——并组当场标记)。</summary>
     private static object? FogCmd(CrowdSimSession sim, CrowdSimCommand cmd)

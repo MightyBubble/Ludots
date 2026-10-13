@@ -194,7 +194,7 @@ public class S1SurfaceTruthTests
         var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
         var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
-        // 地图实体按导出端参考 id 序加载,不排序(F02 认知的逐 id 语义要求两端 id 同构)
+        // 地图实体按抽取时的遍历序返回，这里不排序。
         return (blockers, bridges);
     }
 

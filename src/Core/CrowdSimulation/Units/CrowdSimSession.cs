@@ -172,7 +172,7 @@ public sealed class CrowdSimSession
         return false;
     }
 
-    /// <summary>组的规划句柄解析(参考 navFor):玩家视野组当前槽的变体号(0 = 真相号)。</summary>
+    /// <summary>组的规划句柄：玩家视野组当前槽的变体号。槽 0 是真相号。</summary>
     public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
     {
         int truth = NavByLayerRadius[(layerIdx, rIdx)].Id;
@@ -187,8 +187,7 @@ public sealed class CrowdSimSession
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
     public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }
 
-    /// <summary>回放会话换装全新烘焙的导航上下文(参考端回放 = 全新仿真:结构 op 会改写共享上下文,
-    /// 带着已生效的变更从头跑必然分歧)。</summary>
+    /// <summary>回放会话换装全新烘焙的导航上下文。结构 op 会改写共享上下文，带着已生效的变更从头跑会分歧。</summary>
     public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
 
     // 选中镜像、下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
@@ -301,7 +300,7 @@ public sealed class CrowdSimSession
             Movement.GatherUnits();
             for (int s = 0; s < SubSteps; s++)
             {
-                // 子步序与参考 tick() 一致:哈希重建 → 分离求解(+相位前移) → 领队 → 意图 → 马达
+                // 子步序：哈希重建，分离求解（含相位前移），领队，意图，马达。
                 Movement.RebuildHash();
                 Movement.SolveSeparation();
                 Movement.Step(SubStepDt);
@@ -311,8 +310,7 @@ public sealed class CrowdSimSession
             _stateHistogramMembers = Units.Count;
         }
 
-        // 运动后、tick 计数前做迷雾更新和认知同步(与参考端 advance 的挂点同序;
-        // truth 冻结时跳过两者)
+        // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
         if (Fog != null && !TruthNavFrozen)
         {
             Fog.Update(TickCount, this);

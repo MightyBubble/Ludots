@@ -270,7 +270,7 @@ public sealed partial class CrowdSimulationRuntime
         CrowdSimulationAuthoringContract.Validate(
             engine.MapLoader.TemplateRegistry.GetAll(), _configDto!, mapConfig, agentProfiles);
 
-        // ── 资产(走 VFS,跨 mod 解析,冲突即 fail-fast)──
+        // 资产走 VFS，跨 mod 解析，冲突即失败。
         var surface = NavSurfaceAsset.Read(OpenAsset(engine, "assets/" + runtimeConfig.SurfaceAsset));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(
             mapConfig,
@@ -312,7 +312,7 @@ public sealed partial class CrowdSimulationRuntime
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
 
-        // ── 呈现接线(模板键/黑板键/集合键全部预解析成 id)──
+        // 呈现接线：模板键、黑板键、集合键全部预解析成 id。
         var templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 EntityTemplateKeyRegistry 服务。");
         var stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)

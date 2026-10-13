@@ -72,7 +72,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         var runtime = _runtimeSource();
         var ground = _demo.HoverCm;
 
-        // ── 路线通道(gameplay 视觉) ─────────────────────────────
+        // 路线通道是 gameplay 视觉。
         _routeVisuals.BeginFrame();
         if (session == null)
         {
@@ -122,7 +122,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         // 重烘脏 tile 闪烁:最近一笔报告发布后短暂高亮其受影响 tile 并集
         CurrentFlash(session, navCellVisual);
 
-        // ── HUD(全部读内核现成状态) ─────────────────────────────
+        // HUD 全部读内核现成状态。
         DrawHud(session, runtime, (previewShown, previewValid));
     }
 

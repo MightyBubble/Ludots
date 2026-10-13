@@ -29,8 +29,7 @@ public readonly record struct CrowdUnitSpawnRequest(
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
 /// 带 CrowdSimulationAgent(速度、半径、推挤优先级和下标)、CrowdSimulationUnitState(仿真身份)、
 /// WorldPositionCm、PlayerOwner。管理层只持三件东西:稠密序(创建序)、
-/// 槽位代数组与空闲槽池——与参考实现 units 的 18 位槽位 + 14 位代句柄同构,
-/// 句柄稳定且回放可复现。
+/// 槽位代数组与空闲槽池。句柄是 18 位槽位加 14 位代，回放可复现。
 /// 单位实体走引擎模板生成管线(EntityBuilder.UseTemplate→Build,RuntimeEntitySpawnSystem
 /// 同款同步路径)实例化;出生算法(盐流/搜索/散布)留在内核,生成后钩子只补逐实例事实
 /// (位置/玩家/仿真身份/呈现预置件)并把稠密序与句柄登记进来。

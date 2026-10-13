@@ -130,7 +130,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         };
     }
 
-    // ── 呈现线程输入(只入队) ─────────────────────────────
+    // 呈现线程输入只入队。
     public void EnqueueSetStart(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { StartCell = cell; _pathDirty = true; }); }
     public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
     public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }

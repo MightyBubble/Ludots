@@ -8,9 +8,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// 初始部署与点名生成(sim/population.js 的 spawn / spawnAt 移植,Fix64 为准):
-/// 每条指令从自己加盐的 mulberry32 流取值;出生点抖动、编组中心、散布位置、
-/// 格内落点的每个取值顺序与参考实现逐一对应——同一份指令流,两端部署逐位一致。
+/// 初始部署与点名生成，长度用 Fix64。
+/// 每条指令从自己加盐的 mulberry32 流取值。出生点抖动、编组中心、散布位置、
+/// 格内落点按固定顺序取值，同一份指令流部署结果逐位一致。
 /// </summary>
 public static class CrowdDeployment
 {
@@ -197,7 +197,7 @@ public static class CrowdDeployment
         throw new InvalidOperationException($"代理体型缺失: 移动类型 {agentTypeIndex} × 半径级 {rIdx}。");
     }
 
-    /// <summary>全体半径级(升序去重的 radiusCm 表;与参考实现 radiusClasses 的顺序对应)。</summary>
+    /// <summary>全体半径级，radiusCm 升序去重。</summary>
     public static IReadOnlyList<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg) => cfg.RadiusClasses;
 
     public static int IndexOfRadiusClass(IReadOnlyList<int> radiusClasses, int radiusCm)

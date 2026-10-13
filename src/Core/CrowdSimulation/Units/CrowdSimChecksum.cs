@@ -6,9 +6,9 @@ namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
 /// S4 规范校验码(FNV-1a 32,Fix64 原始值口径——甲方体系):
-/// 字段顺序与参考实现 unitChecksum 一致(tick、单位数、x/y、vx/vy、slotX/slotY、
-/// blend、stall、state、group、id、order、mode、level,再指令与领队),
-/// 每个定点字段按原始 int64 的低 32 位 → 高 32 位依次混合(与参考实现逐 f64 词序同构)。
+/// 字段顺序是 tick、单位数、x/y、vx/vy、slotX/slotY、
+/// blend、stall、state、group、id、order、mode、level，再指令与领队。
+/// 每个定点字段按原始 int64 的低 32 位，再高 32 位，依次混合。
 /// 读面:有运动栈的会话在 tick 末从内核 SoA 读(scatter 后同值);纯部署会话(无运动栈)
 /// 保留组件直读。两条路径值等价——SoA 即 scatter 落回前的组件值。
 /// </summary>
@@ -23,7 +23,7 @@ public static class CrowdSimChecksum
         var movement = sim.Movement;
         uint h = Mix(Mix(Offset, (uint)sim.TickCount), (uint)n);
 
-        // 位置(Fix64 原始值,先低后高;与参考实现 f64 词序同构)
+        // 位置。Fix64 原始值先低 32 位再高 32 位。
         for (int i = 0; i < n; i++)
         {
             var pos = Position(sim, movement, i);
@@ -38,9 +38,8 @@ public static class CrowdSimChecksum
             h = Mix(h, (uint)(pos.Y.RawValue >> 32));
         }
 
-        // 运动字段(vx / vy / slotX / slotY / blend / stall,与参考实现同序)
-        // 每个定点字段按原始 int64 低 32 → 高 32 两词混入(与导出端 mixI64 同形);
-        // 旧口径只混低 32 词,随 S6 校验码混法变更一并作废。
+        // 运动字段顺序：vx、vy、slotX、slotY、blend、stall。
+        // 每个定点字段按原始 int64 低 32 位再高 32 位混入。
         for (int k = 0; k < 6; k++)
         {
             for (int i = 0; i < n; i++)

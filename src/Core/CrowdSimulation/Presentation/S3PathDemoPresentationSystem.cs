@@ -56,7 +56,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         float navCellVisual = WorldUnits.CmToM(_runtime.Config.NavCellSizeCm);
         int hoveredCell = _runtime.HoveredCell;
 
-        // ── 覆盖层(gameplay 通道) ─────────────────────────────
+        // 覆盖层走 gameplay 通道。
         _routeVisuals.BeginFrame();
         float markerRadius = navCellVisual * 1.2f;
         if (hoveredCell >= 0)
@@ -101,7 +101,6 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
             _routeVisuals.AddPolyline(RouteLine, pts, navCellVisual * 0.35f, Magenta);
         }
 
-        // ── HUD ─────────────────────────────
         if (!_caption.Matches(_runtime)) _caption.Rebuild(_presentation, _runtime);
         DrawCaption(_overlay, _presentation.Hud, _presentation.Title, _caption.Detail, _caption.Keys);
     }

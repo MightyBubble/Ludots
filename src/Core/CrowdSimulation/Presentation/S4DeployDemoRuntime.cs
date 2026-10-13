@@ -69,7 +69,7 @@ public sealed class S4DeployDemoRuntime
     public bool TelemetryExpanded =>
         _engine?.GetService(CoreServiceKeys.ChunkDebugPanelRuntime) is ChunkDebugPanelRuntime panel && panel.Visible;
 
-    // ── 固定步入口(只入队) ─────────────────────────────
+    // 固定步入口只入队。
     public void EnqueueCycleView() => Enqueue(() => ViewMode = (ViewMode + 1) % _viewModeCount);
     public void EnqueueToggleBuild() => Enqueue(() => BuildMode = !BuildMode);
     public void EnqueueSelectTemplate(int index) => Enqueue(() => TemplateIndex = index);

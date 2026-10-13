@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// 导航组注册表(参考实现 sim.groups 移植):组 = (玩家 × 移动类型 × 半径级),
+/// 导航组注册表。组 = (玩家 × 移动类型 × 半径级),
 /// 单位按组计数;空组释放进 LIFO 空闲栈,编号在重放中可复现。
 /// 组是规划与校验的组织单元(S5 的领队 / 流场按组挂),本阶段只持身份与计数。
 /// </summary>
@@ -87,7 +87,7 @@ public sealed class CrowdNavGroupSet
         return g;
     }
 
-    /// <summary>释放全部空组(deploy / spawnAt 收尾调用,顺序与参考实现一致)。</summary>
+    /// <summary>释放全部空组。deploy / spawnAt 收尾调用，按组号升序。</summary>
     public void ReleaseEmpty()
     {
         for (int i = 0; i < _groups.Count; i++)

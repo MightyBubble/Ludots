@@ -10,7 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Units;
 public readonly record struct CrowdCommand(int Tick, CrowdSimCommand Cmd);
 
 /// <summary>
-/// TICK 戳指令队列(core/commands.js CommandQueue 移植):
+/// 带 tick 的指令队列。
 /// submit(现场指令,当前 tick 执行并记日志)、schedule(按 tick 升序的脚本,与存量归并)、
 /// flush(执行本 tick 及以前的全部到点指令;迟到的指令按实际执行 tick 记日志并标 lateFrom)。
 /// 两个入队口都先过校验:载荷结构在 CrowdSimCommand.Parse 边界一次成形,会话域(玩家号/
