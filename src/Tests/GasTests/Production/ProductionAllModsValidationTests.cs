@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
@@ -87,6 +88,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "CameraProfilesMod",
+                    new[] { "LudotsCoreMod", "CameraProfilesMod", "CommandSourceCoreFixtureMod" },
                     true))
                 .SetName("ProdModSmoke_CameraProfilesMod");
 
@@ -276,6 +278,7 @@ namespace Ludots.Tests.GAS.Production
                 InstallDummyInput(engine);
 
                 engine.Start();
+                EnsureEntryClientSeat(engine);
                 engine.LoadStartupMap();
 
                 for (int i = 0; i < 10; i++)
@@ -298,6 +301,25 @@ namespace Ludots.Tests.GAS.Production
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
+        }
+
+        private static void EnsureEntryClientSeat(GameEngine engine)
+        {
+            if (engine.MergedConfig.HasStartupLocalSeats ||
+                !string.Equals(engine.MergedConfig.StartupMapId, "entry", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            engine.MergedConfig.StartupLocalSeats = new List<StartupLocalSeatConfig>
+            {
+                new()
+                {
+                    SeatId = "seat.0",
+                    PlayerId = 1,
+                    ControlSchemeId = "scheme.default",
+                },
+            };
         }
 
         private static void InstallDummyInput(GameEngine engine)

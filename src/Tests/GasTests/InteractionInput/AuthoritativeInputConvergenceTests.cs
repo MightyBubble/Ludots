@@ -941,6 +941,19 @@ namespace Ludots.Tests.GAS
             // One Tick must finish the fixed step. The default 4ms budget yields inside
             // earlier time-sliced systems, so context mounts never reach action dispatch.
             engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            if (!engine.MergedConfig.HasStartupLocalSeats)
+            {
+                engine.MergedConfig.StartupLocalSeats = new List<Ludots.Core.Config.StartupLocalSeatConfig>
+                {
+                    new()
+                    {
+                        SeatId = "seat.0",
+                        PlayerId = 1,
+                        ControlSchemeId = "scheme.default",
+                    },
+                };
+            }
+
             engine.Start();
             // The command owner's game.json replaces startupMapId. The click still runs on the core entry map.
             if (mountMinimapCommand)
