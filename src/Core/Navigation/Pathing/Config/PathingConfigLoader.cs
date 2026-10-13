@@ -21,11 +21,14 @@ namespace Ludots.Core.Navigation.Pathing.Config
             ConfigConflictReport report = null,
             string relativePath = "Navigation/pathing.json")
         {
+            return ConfigMergeProvenance.Wrap(relativePath, report, tracked =>
+            {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, tracked);
             if (mergedObject == null) throw new InvalidOperationException("PathingConfig not found in any source.");
 
             return Parse(mergedObject);
+            });
         }
 
         /// <summary>校验并物化已经合并好的 pathing.json。目录合并与文件合并走同一条校验。</summary>

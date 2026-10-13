@@ -2,6 +2,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Hosting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
@@ -311,6 +312,20 @@ app.MapGet("/api/mods", () =>
 {
     var mods = launcher.DiscoverMods();
     return Results.Ok(new { ok = true, mods });
+});
+
+app.MapGet("/api/mods/{modId}/config-provenance", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        ConfigProvenanceSnapshot snapshot = EditorRepo.LoadConfigProvenance(repoRoot, modId);
+        return Results.Ok(new { ok = true, files = snapshot.Files, error = snapshot.Error });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 app.MapGet("/api/mods/{modId}/thumbnail", (string modId) =>
@@ -4742,6 +4757,18 @@ static class EditorRepo
             ModsById = mods,
             LoadOrder = order
         };
+    }
+
+    public static ConfigProvenanceSnapshot LoadConfigProvenance(string repoRoot, string targetModId)
+    {
+        IReadOnlyList<ResolvedModLoadEntry> plan = NavMeshBakeConfigLoader.ResolveModLoadPlan(repoRoot, targetModId);
+        var mounts = new List<ConfigModMount>(plan.Count);
+        for (int i = 0; i < plan.Count; i++)
+        {
+            mounts.Add(new ConfigModMount(plan[i].Id, plan[i].RootPath));
+        }
+
+        return ConfigMergeProvenance.Capture(Path.Combine(repoRoot, "assets"), mounts);
     }
 
     public static List<string> DiscoverMaps(ModContext ctx)

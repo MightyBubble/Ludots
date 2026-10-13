@@ -38,13 +38,17 @@ public sealed class CrowdSimulationConfigLoader
     public CrowdSimulationConfig LoadConfig(ConfigCatalog catalog, ConfigConflictReport? report = null)
     {
         var entry = ConfigPipeline.RequireEntry(catalog, RelativePath, ConfigMergePolicy.DeepObject);
-        JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-        if (merged == null)
+        CrowdSimulationConfig config = ConfigMergeProvenance.Wrap(RelativePath, report, tracked =>
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 没有任何来源提供该文件（标准参数在 CrowdSimulationStandardMod，地图事实在地图 Mod）。");
-        }
+            JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, tracked);
+            if (merged == null)
+            {
+                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 没有任何来源提供该文件（标准参数在 CrowdSimulationStandardMod，地图事实在地图 Mod）。");
+            }
 
-        return CrowdSimulationConfig.Load(merged);
+            return CrowdSimulationConfig.Load(merged);
+        });
+        return config;
     }
 
     /// <summary>求解器互斥：两份配置 mapId 相同才冲突。</summary>

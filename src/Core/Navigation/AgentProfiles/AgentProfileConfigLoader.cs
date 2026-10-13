@@ -20,12 +20,14 @@ namespace Ludots.Core.Navigation.AgentProfiles
 
         public AgentProfileRegistry Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            return ConfigMergeProvenance.Wrap(RelativePath, report, tracked =>
+            {
             ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(
                 catalog,
                 RelativePath,
                 ConfigMergePolicy.ArrayById,
                 defaultIdField: "id");
-            IReadOnlyList<MergedConfigEntry> entries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            IReadOnlyList<MergedConfigEntry> entries = _pipeline.MergeArrayByIdFromCatalog(in entry, tracked);
             if (entries == null || entries.Count == 0)
             {
                 throw new InvalidOperationException("Navigation/agent_profiles.json must define at least one profile.");
@@ -46,6 +48,7 @@ namespace Ludots.Core.Navigation.AgentProfiles
             }
 
             return new AgentProfileRegistry(profiles);
+            });
         }
 
         private static readonly string[] RequiredProperties =
