@@ -51,11 +51,7 @@ public sealed class HpaGraph
     // Heap/Dist 是烘焙期簇内 Dijkstra 的暂存，重烘在导航锁内。查询用 HpaQuery.Scratch，不碰这里。
     public NavMinHeap Heap = new(4096);
     public Fix64[] Dist => _dist;
-    public Fix64[] StartDist => _startDist;
-    public Fix64[] GoalDist => _goalDist;
     private Fix64[] _dist;
-    private Fix64[] _startDist;
-    private Fix64[] _goalDist;
     private int[] _localNb = Array.Empty<int>();
     private Fix64[] _localW = Array.Empty<Fix64>();
     private byte[] _localWant = Array.Empty<byte>();
@@ -149,8 +145,6 @@ public sealed class HpaGraph
             EdgeCount = EdgeCount,
             Heap = new NavMinHeap(4096),
             _dist = new Fix64[_dist.Length],
-            _startDist = new Fix64[_startDist.Length],
-            _goalDist = new Fix64[_goalDist.Length],
             _localNb = new int[_localNb.Length == 0 ? NavCellsPerTile * NavCellsPerTile * 8 : _localNb.Length],
             _localW = new Fix64[_localW.Length == 0 ? NavCellsPerTile * NavCellsPerTile * 8 : _localW.Length],
             _localWant = new byte[_localWant.Length == 0 ? NavCellsPerTile * NavCellsPerTile : _localWant.Length],
@@ -214,8 +208,6 @@ public sealed class HpaGraph
             EdgeCount = 0,
         };
         g._dist = new Fix64[navCellsPerTile * navCellsPerTile];
-        g._startDist = new Fix64[navCellsPerTile * navCellsPerTile];
-        g._goalDist = new Fix64[navCellsPerTile * navCellsPerTile];
         g._localNb = new int[navCellsPerTile * navCellsPerTile * 8];
         g._localW = new Fix64[navCellsPerTile * navCellsPerTile * 8];
         g._localWant = new byte[navCellsPerTile * navCellsPerTile];
