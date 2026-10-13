@@ -116,8 +116,13 @@ public sealed class CrowdSimSession
     public int BaseStride { get; private set; }
     /// <summary>当前避让频率。创建内核时取配置,rates 成功后改成指令值。</summary>
     public Fix64 AvoidHz { get; private set; }
-    /// <summary>为真时 Flush 到点指令,但不推进运动、脚本和 tick。现场 Submit 不受影响。</summary>
+    /// <summary>为真时冲刷队列里 tick 已到的指令，不推进运动，也不增加 TickCount。现场 Submit 不受影响。</summary>
     public bool PlaybackHeld { get; set; }
+    /// <summary>
+    /// 冲刷前后调用。返回 true 表示刚排入了新指令，调用方再冲刷一次。
+    /// 演示脚本用它把尚未到点的行放进队列，诊断断面才能和回放对上。
+    /// </summary>
+    internal Func<CrowdSimSession, bool>? StageDeferredCommands { get; set; }
     public int ScatterSeq { get; set; }
 
     internal void SetAvoidHz(Fix64 hz) => AvoidHz = hz;
@@ -329,7 +334,7 @@ public sealed class CrowdSimSession
     public NavContext NavFor(int layer, int r) => NavByLayerRadius[(layer, r)];
 
     /// <summary>
-    /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
+    /// 推进一个 tick:先把已能成形的演示脚本行排进队列 → 冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
     /// → tickCount+1 → 流场刷新排队 → 校验码。TruthNavFrozen 跳过迷雾和认知同步。
@@ -343,8 +348,15 @@ public sealed class CrowdSimSession
         long mark = Stopwatch.GetTimestamp();
         try
         {
+            StageDeferredCommands?.Invoke(this);
             Commands.Flush(this, ExecCommand);
             Units.MaterializePending();
+            while (StageDeferredCommands?.Invoke(this) == true)
+            {
+                Commands.Flush(this, ExecCommand);
+                Units.MaterializePending();
+            }
+
             telemetry.AddCommandTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
             if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
             if (Structures != null) CrowdStructureOps.ExpireStructures(this);

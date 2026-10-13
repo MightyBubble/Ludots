@@ -162,6 +162,62 @@ public sealed class CrowdDebugCommandTests
     }
 
     [Test]
+    public void PendingCommandPayload_ChangesCommandsDiagnostic()
+    {
+        using var moving = Moving("s1337");
+        var session = moving.Session;
+        session.DiagnosticDigest = true;
+        var kill = new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.Kill,
+            XCm = 480000,
+            YCm = 560000,
+            RadiusCm = 1000,
+            RingScale = Fix64.FromInt(2),
+            Impulse = Fix64.FromInt(4),
+        };
+        ulong radiusA = PendingCommands(session, kill);
+        ulong radiusB = PendingCommands(session, kill with { RadiusCm = 3000 });
+        ulong ring = PendingCommands(session, kill with { RingScale = Fix64.FromInt(3) });
+        ulong impulse = PendingCommands(session, kill with { Impulse = Fix64.FromInt(5) });
+        Assert.That(radiusB, Is.Not.EqualTo(radiusA));
+        Assert.That(ring, Is.Not.EqualTo(radiusA));
+        Assert.That(impulse, Is.Not.EqualTo(radiusA));
+
+        int fixedHz = session.Config.FixedHz;
+        var rates = new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.Rates,
+            TickHz = fixedHz,
+            AvoidHz = Fix64.FromInt(15),
+        };
+        ulong avoidA = PendingCommands(session, rates);
+        ulong avoidB = PendingCommands(session, rates with { AvoidHz = Fix64.FromInt(10) });
+        Assert.That(avoidB, Is.Not.EqualTo(avoidA));
+
+        ulong slicesA = PendingCommands(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.RebakeSlices, Slices = 1 });
+        ulong slicesB = PendingCommands(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.RebakeSlices, Slices = 3 });
+        Assert.That(slicesB, Is.Not.EqualTo(slicesA));
+
+        ulong scatter = PendingCommands(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.Scatter });
+        ulong clear = PendingCommands(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.ClearCaches });
+        Assert.That(clear, Is.Not.EqualTo(scatter));
+    }
+
+    private static ulong PendingCommands(CrowdSimSession session, CrowdSimCommand command)
+    {
+        session.Reset();
+        session.DiagnosticDigest = true;
+        session.Commands.Schedule(session, new[]
+        {
+            new CrowdCommand(session.TickCount + 1000, command),
+        });
+        Assert.That(session.Step(out _), Is.True);
+        Assert.That(session.Commands.PendingCount, Is.EqualTo(1));
+        return session.LastDigest.Commands;
+    }
+
+    [Test]
     public void Footprints_RectDiscAndPath_ChangeWalkabilityAfterRebake()
     {
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");

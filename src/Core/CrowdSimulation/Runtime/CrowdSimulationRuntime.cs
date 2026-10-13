@@ -467,6 +467,7 @@ public sealed partial class CrowdSimulationRuntime
 
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
+            _session.StageDeferredCommands = _demoScript.StageFormable;
         }
 
         _autoReplayAtTick = _debug?.Session?.AutoReplayAtTick ?? -1;
@@ -536,7 +537,6 @@ public sealed partial class CrowdSimulationRuntime
             return;
         }
 
-        _demoScript?.ApplyDue(session);
         if (!session.Step(out _))
         {
             if (!_stallLogged)
