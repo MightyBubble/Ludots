@@ -772,8 +772,8 @@ internal sealed class CrowdPlayerViewHost
     {
         CrowdFogCheckScene scene = RequireScene();
         EnqueueKill(demo);
-        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm);
-        EnqueueCluster(demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm);
+        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
+        EnqueueCluster(demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -784,7 +784,7 @@ internal sealed class CrowdPlayerViewHost
         });
         Occupy(session, scene.ViewerPlayer);
         Frame(scene.OutsideLookXCm, scene.OutsideLookYCm, scene.OutsideDistanceCm, scene.OutsideYaw, scene.OutsidePitch);
-        ArmMark(scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm);
+        ArmMark(scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm, scene.SpawnCount);
         _sceneKind = 1;
         _fogHide = true;
     }
@@ -802,19 +802,28 @@ internal sealed class CrowdPlayerViewHost
         // 墙贴遮挡格东缘、敌方贴下一格西缘。格心相距一整格，同一机位要么看不见墙，要么看不见人。
         int wallX = wallCellEast - (scene.WallSizeCm / 2);
         int wallY = (fy * cellCm) + (cellCm / 2);
-        int behindX = wallCellEast + scene.BehindFromCellWestCm;
+        int navCm = session.Config.NavCellSizeCm;
+        // 格心正好落在导航格线上，点名生成会把一排拆进相邻格子，迷雾只亮其中一格。收到格心后整排一起可见或一起消失。
+        int behindX = SnapNavCenter(wallCellEast + scene.BehindFromCellWestCm, navCm);
+        int clusterY = SnapNavCenter(wallY, navCm);
         if (scene.BehindFromCellWestCm >= cellCm || wallX - (scene.WallSizeCm / 2) < wallCellWest)
         {
             throw new InvalidOperationException("墙和墙后敌方必须分别落在相邻两格迷雾里。");
         }
-        int span = (scene.SpawnCount - 1) * scene.ClusterSpacingCm;
-        if (span >= cellCm)
+        int span = (scene.SpawnCount - 1) * scene.BehindClusterSpacingCm;
+        if (span >= cellCm || span >= navCm)
         {
-            throw new InvalidOperationException("核对单位的间距超出一格迷雾，遮挡会把他们拆进不同格子。");
+            throw new InvalidOperationException("核对单位的间距超出一格，遮挡会把他们拆开。");
+        }
+        int behindCell = behindX / cellCm;
+        int clusterCell = clusterY / cellCm;
+        if (behindCell != wallCellEast / cellCm || clusterCell != wallY / cellCm)
+        {
+            throw new InvalidOperationException("墙后敌方收进导航格心后离开了遮挡东侧那一格迷雾。");
         }
 
         EnqueueKill(demo);
-        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm);
+        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -823,13 +832,24 @@ internal sealed class CrowdPlayerViewHost
             YCm = wallY,
             SizeCm = scene.WallSizeCm,
         });
-        EnqueueCluster(demo, scene, scene.EnemyPlayer, behindX, wallY);
+        EnqueueCluster(demo, scene, scene.EnemyPlayer, behindX, clusterY, scene.BehindClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand { Kind = CrowdSimCommandKind.FogSight, On = _lineOfSight });
         Occupy(session, scene.ViewerPlayer);
         Frame(scene.BehindLookXCm, scene.BehindLookYCm, scene.BehindDistanceCm, scene.BehindYaw, scene.BehindPitch);
-        ArmMark(scene, scene.EnemyPlayer, behindX, wallY);
+        ArmMark(scene.EnemyPlayer, behindX, clusterY, scene.BehindClusterSpacingCm, scene.SpawnCount);
         _sceneKind = 2;
         _fogHide = true;
+    }
+
+    private static int SnapNavCenter(int cm, int navCm)
+    {
+        if (navCm < 1)
+        {
+            throw new InvalidOperationException("导航格尺寸必须 > 0。");
+        }
+
+        int index = cm / navCm;
+        return (index * navCm) + (navCm / 2);
     }
 
     private void Occupy(CrowdSimSession session, int playerId)
@@ -868,12 +888,12 @@ internal sealed class CrowdPlayerViewHost
         });
     }
 
-    private void ArmMark(CrowdFogCheckScene scene, int player, int xCm, int yCm)
+    private void ArmMark(int player, int xCm, int yCm, int spacingCm, int count)
     {
         _markPlayer = player;
         _markXCm = xCm;
         _markYCm = yCm;
-        _markCatchCm = (((scene.SpawnCount - 1) * scene.ClusterSpacingCm) / 2) + scene.ClusterSpacingCm;
+        _markCatchCm = (((count - 1) * spacingCm) / 2) + spacingCm;
     }
 
     /// <summary>
@@ -918,14 +938,13 @@ internal sealed class CrowdPlayerViewHost
         });
     }
 
-    private static void EnqueueCluster(S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm)
+    private static void EnqueueCluster(S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm, int spacingCm)
     {
         int count = scene.SpawnCount;
-        int spacing = scene.ClusterSpacingCm;
-        int origin = -((count - 1) * spacing) / 2;
+        int origin = -((count - 1) * spacingCm) / 2;
         for (int i = 0; i < count; i++)
         {
-            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacing), 1, scene.UnitType, scene.RIdx);
+            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacingCm), 1, scene.UnitType, scene.RIdx);
         }
     }
 

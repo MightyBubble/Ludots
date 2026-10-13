@@ -40,6 +40,7 @@ internal sealed class CrowdFogCheckScene
     [JsonRequired] public int VisionTicks { get; init; }
     [JsonRequired] public int TravelTicks { get; init; }
     [JsonRequired] public int ClusterSpacingCm { get; init; }
+    [JsonRequired] public int BehindClusterSpacingCm { get; init; }
     [JsonRequired] public int OutsideLookXCm { get; init; }
     [JsonRequired] public int OutsideLookYCm { get; init; }
     [JsonRequired] public float OutsideDistanceCm { get; init; }
@@ -72,8 +73,8 @@ internal sealed class CrowdFogCheckScene
             throw new InvalidOperationException($"{path}: 敌方格必须紧贴墙格东侧。");
         if (scene.BehindFromCellWestCm < 1)
             throw new InvalidOperationException($"{path}: behindFromCellWestCm 必须 > 0。");
-        if (scene.ClusterSpacingCm < 1)
-            throw new InvalidOperationException($"{path}: clusterSpacingCm 必须 > 0。");
+        if (scene.ClusterSpacingCm < 1 || scene.BehindClusterSpacingCm < 1)
+            throw new InvalidOperationException($"{path}: clusterSpacingCm 与 behindClusterSpacingCm 必须 > 0。");
         RequireCamera(path, "outside", scene.OutsideDistanceCm, scene.OutsideYaw, scene.OutsidePitch);
         RequireCamera(path, "behind", scene.BehindDistanceCm, scene.BehindYaw, scene.BehindPitch);
         if (string.IsNullOrWhiteSpace(scene.WallTemplate) || string.IsNullOrWhiteSpace(scene.UnseenTemplate))

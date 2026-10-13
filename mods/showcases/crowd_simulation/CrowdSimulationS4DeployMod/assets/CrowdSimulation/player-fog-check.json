@@ -28,6 +28,7 @@
   "visionTicks": 24,
   "travelTicks": 400,
   "clusterSpacingCm": 4000,
+  "behindClusterSpacingCm": 1200,
   "outsideLookXCm": 391500,
   "outsideLookYCm": 552500,
   "outsideDistanceCm": 28000,
