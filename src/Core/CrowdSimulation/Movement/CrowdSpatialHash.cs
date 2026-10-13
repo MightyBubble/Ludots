@@ -105,7 +105,7 @@ public sealed class CrowdSpatialHash
 
     private int CellAtCm(Fix64 vCm)
     {
-        // 向零截断与参考端 (x * inv) | 0 逐字对齐。格长是正整数时，非负坐标的商与定点除法逐位相同。
+        // 格长是正整数时走 raw 整数除（向零）。否则走定点除法。
         int c = _cellSizeInt != 0
             ? (int)Fix64.DivPositiveInt(vCm, _cellSizeInt).ToLong()
             : (int)(vCm / CellSizeCm).ToLong();

@@ -316,7 +316,6 @@ public sealed class CrowdSimSession
                 telemetry.AddGatherTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
                 for (int s = 0; s < SubSteps; s++)
                 {
-                    // 子步序与参考 tick() 一致:哈希重建 → 分离求解(+相位前移) → 领队 → 意图 → 马达
                     Movement.RebuildHash();
                     telemetry.AddHashTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
                     Movement.SolveSeparation();
@@ -330,8 +329,7 @@ public sealed class CrowdSimSession
                 _stateHistogramMembers = Units.Count;
             }
 
-            // F02:运动后、tick 计数前——迷雾更新 + 认知同步(与参考端 advance 的挂点逐位同;
-            // truth 冻结口径跳过两者,等价参考端 __S7_TRUTH_NAV__ 导出补丁)
+            // 运动后、tick 计数前做迷雾更新和认知同步。TruthNavFrozen 时跳过。
             if (Fog != null && !TruthNavFrozen)
             {
                 Fog.Update(TickCount, this);
