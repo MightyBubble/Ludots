@@ -1,4 +1,4 @@
-export type AuthoringToolId = 'blueprint' | 'bt' | 'fsm' | 'dialogue' | 'text' | 'timeline' | 'provenance';
+export type AuthoringToolId = 'blueprint' | 'bt' | 'fsm' | 'dialogue' | 'text' | 'timeline' | 'provenance' | 'crowd';
 
 export type AuthoringTool = {
   id: AuthoringToolId;
@@ -10,7 +10,7 @@ export type AuthoringTool = {
 };
 
 /**
- * 作者工作室正门列这七件。地图、面板、场编辑、技能数值不进这张表。
+ * 作者工作室正门列这八件。地图、面板、场编辑、技能数值不进这张表。
  * 路径别名留给旧书签：/gas-graphs、/story-authoring。
  */
 export const AUTHORING_TOOLS: readonly AuthoringTool[] = [
@@ -69,6 +69,14 @@ export const AUTHORING_TOOLS: readonly AuthoringTool[] = [
     title: '合并溯源',
     blurb: '按文件看合并顺序、最后一份片段，以及每个 id 的胜出。不画逐字段时间线。',
     hint: 'config_catalog.json',
+  },
+  {
+    id: 'crowd',
+    path: '/crowd-config',
+    aliases: [],
+    title: '群体配置',
+    blurb: '改场景、全局、单位模板和代价。校验走装载器。调试参数和调试视图当场生效。',
+    hint: 'CrowdSimulationConfig.json',
   },
 ];
 
