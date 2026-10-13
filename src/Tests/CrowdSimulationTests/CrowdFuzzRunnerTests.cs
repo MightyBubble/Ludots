@@ -1,7 +1,14 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Diagnostics;
+using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -43,36 +50,82 @@ public sealed class CrowdFuzzRunnerTests
     }
 
     [Test]
-    public void Runner_ReservedKill_IsListedAndNotExecuted()
+    public void Runner_ReservedOp_IsListedAndNotExecuted()
     {
         var (_, session) = S4DeployTruthTests.BuildSession("s7");
-        var kill = new CrowdFuzzOp { Id = "kill", ProbeHandles = true, Reserved = true };
-        var result = CrowdFuzzRunner.Run(session, Plan(seed: 9, opCount: 3, spawn, kill));
+        var held = new CrowdFuzzOp { Id = "hold", ProbeHandles = true, Reserved = true };
+        var result = CrowdFuzzRunner.Run(session, Plan(seed: 9, opCount: 3, spawn, held));
         Assert.That(result.Passed, Is.True, result.Error);
-        Assert.That(result.Reserved, Does.Contain("kill"));
+        Assert.That(result.Reserved, Does.Contain("hold"));
         Assert.That(session.Units.Count, Is.GreaterThan(0));
     }
 
     [Test]
-    public void Runner_PluggedClear_ProbesDeadHandles()
+    public void Runner_Kill_ProbesHandlesWithoutFreezingPositions()
     {
         var (_, session) = S4DeployTruthTests.BuildSession("s7");
         Spawn(session, 6);
-        var kill = new CrowdFuzzOp { Id = "kill", ProbeHandles = true, Reserved = true };
-        var extra = new Dictionary<string, CrowdFuzzOpExecutor>
+        var source = CatalogPlan();
+        var kill = source.Ops.Single(op => op.Id == "kill");
+        Assert.That(kill.Reserved, Is.False);
+        Assert.That(kill.ProbeHandles, Is.True);
+        var plan = new CrowdFuzzPlan
         {
-            // Clear 只还槽。组计数还指着已经销毁的单位，接着查仿真会报计数不一致。
-            ["kill"] = (sim, _, _) =>
-            {
-                sim.Units.Clear();
-                sim.Groups.Reset();
-                sim.Orders.Clear();
-            },
+            Seed = 4,
+            OpCount = 1,
+            StepsPerOp = source.StepsPerOp,
+            ProbeHandleCount = source.ProbeHandleCount,
+            SpawnCount = source.SpawnCount,
+            PlaceTemplate = source.PlaceTemplate,
+            PlaceSizeCm = source.PlaceSizeCm,
+            OrderShape = source.OrderShape,
+            OrderMemberCap = source.OrderMemberCap,
+            StallGuard = source.StallGuard,
+            BoomRadiusCm = source.BoomRadiusCm,
+            RingScale = source.RingScale,
+            Impulse = source.Impulse,
+            Ops = new[] { kill },
         };
-        var result = CrowdFuzzRunner.Run(session, Plan(seed: 4, opCount: 1, kill), extra);
+        int before = session.Units.Count;
+        var result = CrowdFuzzRunner.Run(session, plan);
         Assert.That(result.Passed, Is.True, result.Error);
         Assert.That(result.Reserved, Is.Empty);
-        Assert.That(session.Units.Count, Is.EqualTo(0));
+        Assert.That(session.Units.Count, Is.LessThan(before));
+    }
+
+    [Test]
+    [Explicit("seeds 1..10 × 200，不进默认套件")]
+    public void Seeds1To10_TwoHundredOps()
+    {
+        var catalog = CatalogPlan();
+        for (long seed = 1; seed <= 10; seed++)
+        {
+            var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
+            using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+            session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+            session.BlockOnDueReplies = true;
+            session.TruthNavFrozen = true;
+            var plan = new CrowdFuzzPlan
+            {
+                Seed = seed,
+                OpCount = 200,
+                StepsPerOp = catalog.StepsPerOp,
+                ProbeHandleCount = catalog.ProbeHandleCount,
+                SpawnCount = catalog.SpawnCount,
+                PlaceTemplate = catalog.PlaceTemplate,
+                PlaceSizeCm = catalog.PlaceSizeCm,
+                OrderShape = catalog.OrderShape,
+                OrderMemberCap = catalog.OrderMemberCap,
+                StallGuard = catalog.StallGuard,
+                BoomRadiusCm = catalog.BoomRadiusCm,
+                RingScale = catalog.RingScale,
+                Impulse = catalog.Impulse,
+                Ops = catalog.Ops,
+            };
+            var result = CrowdFuzzRunner.Run(session, plan);
+            TestContext.Out.WriteLine($"seed {seed} passed={result.Passed} step={result.Step} op={result.OpId} error={result.Error}");
+            Assert.That(result.Passed, Is.True, $"seed {seed} step {result.Step} op {result.OpId}: {result.Error}");
+        }
     }
 
     [Test]
@@ -125,8 +178,18 @@ public sealed class CrowdFuzzRunnerTests
         OrderShape = "box",
         OrderMemberCap = 4,
         StallGuard = CrowdSimulationLimits.AdvanceStallGuardFactor,
+        BoomRadiusCm = 1,
+        RingScale = Fix64.FromInt(2),
+        Impulse = Fix64.Zero,
         Ops = ops,
     };
+
+    private static CrowdFuzzPlan CatalogPlan()
+    {
+        string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
+        string path = Path.Combine(root, "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json");
+        return CrowdSimRegressCatalog.Parse(JsonNode.Parse(File.ReadAllText(path))!.AsObject()).CreateFuzzPlan(1, 1);
+    }
 
     private static void Spawn(CrowdSimSession session, int count)
     {

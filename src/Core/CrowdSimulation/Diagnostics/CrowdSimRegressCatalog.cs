@@ -2,8 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Diagnostics;
+
+/// <summary>UAT-FOG 的种子目录和场景资产。场景路径从仓库根起。</summary>
+public sealed class CrowdSimRegressFogSpec
+{
+    public required string SeedAssets { get; init; }
+    public required string SceneAsset { get; init; }
+}
 
 /// <summary>场景表里的一条。没有脚本时 <see cref="UnavailableReason"/> 说明缺哪份数据。</summary>
 public sealed class CrowdSimRegressScenarioSpec
@@ -11,6 +19,7 @@ public sealed class CrowdSimRegressScenarioSpec
     public string? UnavailableReason { get; init; }
     public string? SeedAssets { get; init; }
     public string? ScriptAsset { get; init; }
+    public bool ScriptFromRepo { get; init; }
     public string? TicksFrom { get; init; }
     public bool Movement { get; init; }
     public bool TruthNavFrozen { get; init; }
@@ -30,6 +39,9 @@ public sealed class CrowdSimRegressCatalog
     private readonly string _orderShape;
     private readonly int _orderMemberCap;
     private readonly int _stallGuard;
+    private readonly int _boomRadiusCm;
+    private readonly Fix64 _ringScale;
+    private readonly Fix64 _impulse;
     private readonly IReadOnlyList<CrowdFuzzOp> _ops;
 
     private CrowdSimRegressCatalog(
@@ -52,7 +64,11 @@ public sealed class CrowdSimRegressCatalog
         string orderShape,
         int orderMemberCap,
         int stallGuard,
-        IReadOnlyList<CrowdFuzzOp> ops)
+        int boomRadiusCm,
+        Fix64 ringScale,
+        Fix64 impulse,
+        IReadOnlyList<CrowdFuzzOp> ops,
+        CrowdSimRegressFogSpec fog)
     {
         Defaults = defaults;
         Full = full;
@@ -73,7 +89,11 @@ public sealed class CrowdSimRegressCatalog
         _orderShape = orderShape;
         _orderMemberCap = orderMemberCap;
         _stallGuard = stallGuard;
+        _boomRadiusCm = boomRadiusCm;
+        _ringScale = ringScale;
+        _impulse = impulse;
         _ops = ops;
+        Fog = fog;
     }
 
     public IReadOnlyList<string> Defaults { get; }
@@ -87,6 +107,7 @@ public sealed class CrowdSimRegressCatalog
     public string FuzzSeedAssets { get; }
     public bool FuzzMovement { get; }
     public bool FuzzTruthNavFrozen { get; }
+    public CrowdSimRegressFogSpec Fog { get; }
 
     public CrowdFuzzPlan CreateFuzzPlan(long seed, int opCount) => new()
     {
@@ -100,6 +121,9 @@ public sealed class CrowdSimRegressCatalog
         OrderShape = _orderShape,
         OrderMemberCap = _orderMemberCap,
         StallGuard = _stallGuard,
+        BoomRadiusCm = _boomRadiusCm,
+        RingScale = _ringScale,
+        Impulse = _impulse,
         Ops = _ops,
     };
 
@@ -107,7 +131,7 @@ public sealed class CrowdSimRegressCatalog
     {
         ArgumentNullException.ThrowIfNull(root);
         RequireExact(root, "regress catalog",
-            "defaults", "full", "repeat", "seed", "fuzzOps", "standardAssets", "capabilityAssets", "scenarios", "fuzz");
+            "defaults", "full", "repeat", "seed", "fuzzOps", "standardAssets", "capabilityAssets", "scenarios", "fuzz", "fog");
         var scenarios = ParseScenarios(RequireObject(root, "scenarios"));
         var defaults = Strings(root["defaults"], "defaults");
         var full = Strings(root["full"], "full");
@@ -116,7 +140,8 @@ public sealed class CrowdSimRegressCatalog
         var fuzz = RequireObject(root, "fuzz");
         RequireExact(fuzz, "regress catalog fuzz",
             "seedAssets", "movement", "truthNavFrozen", "stepsPerOp", "probeHandles", "spawnCount",
-            "placeTemplate", "placeSizeCm", "orderShape", "orderMemberCap", "stallGuard", "ops");
+            "placeTemplate", "placeSizeCm", "orderShape", "orderMemberCap", "stallGuard",
+            "boomRadiusCm", "ringScale", "impulse", "ops");
         return new CrowdSimRegressCatalog(
             defaults,
             full,
@@ -137,7 +162,21 @@ public sealed class CrowdSimRegressCatalog
             RequireString(fuzz, "orderShape"),
             RequireInt(fuzz, "orderMemberCap", 0, null),
             RequireInt(fuzz, "stallGuard", 1, null),
-            ParseOps(fuzz["ops"] as JsonArray ?? throw new InvalidOperationException("regress catalog: fuzz.ops 需为数组。")));
+            RequireInt(fuzz, "boomRadiusCm", 1, null),
+            RequireRingScale(fuzz),
+            RequireFix(fuzz, "impulse", Fix64.Zero),
+            ParseOps(fuzz["ops"] as JsonArray ?? throw new InvalidOperationException("regress catalog: fuzz.ops 需为数组。")),
+            ParseFog(RequireObject(root, "fog")));
+    }
+
+    private static CrowdSimRegressFogSpec ParseFog(JsonObject fog)
+    {
+        RequireExact(fog, "regress catalog fog", "seedAssets", "sceneAsset");
+        return new CrowdSimRegressFogSpec
+        {
+            SeedAssets = RequireString(fog, "seedAssets"),
+            SceneAsset = RequireString(fog, "sceneAsset"),
+        };
     }
 
     public static JsonArray Script(JsonObject document)
@@ -192,10 +231,12 @@ public sealed class CrowdSimRegressCatalog
                 throw new InvalidOperationException($"regress catalog: 场景 {entry.Key} 的 ticksFrom 需为 frames 或 ticks。");
             }
 
+            string scriptAsset = RequireString(body, "scriptAsset");
             map.Add(entry.Key, new CrowdSimRegressScenarioSpec
             {
                 SeedAssets = RequireString(body, "seedAssets"),
-                ScriptAsset = RequireString(body, "scriptAsset"),
+                ScriptAsset = scriptAsset,
+                ScriptFromRepo = scriptAsset.StartsWith("mods/", StringComparison.Ordinal),
                 TicksFrom = ticksFrom,
                 Movement = RequireBool(body, "movement"),
                 TruthNavFrozen = RequireBool(body, "truthNavFrozen"),
@@ -303,6 +344,34 @@ public sealed class CrowdSimRegressCatalog
         }
 
         return number;
+    }
+
+    private static Fix64 RequireRingScale(JsonObject obj)
+    {
+        var scale = RequireFix(obj, "ringScale", Fix64.Zero);
+        if (scale <= Fix64.OneValue)
+        {
+            throw new InvalidOperationException("regress catalog: ringScale 必须 > 1。");
+        }
+
+        return scale;
+    }
+
+    private static Fix64 RequireFix(JsonObject obj, string key, Fix64 min)
+    {
+        if (obj[key] is not JsonValue value || !value.TryGetValue<double>(out double number)
+            || double.IsNaN(number) || double.IsInfinity(number))
+        {
+            throw new InvalidOperationException($"regress catalog: {key} 需为有限数值。");
+        }
+
+        var fix = Fix64.FromDouble(number);
+        if (fix < min)
+        {
+            throw new InvalidOperationException($"regress catalog: {key} 低于下限。");
+        }
+
+        return fix;
     }
 
     private static long RequireLong(JsonObject obj, string key)

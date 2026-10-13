@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -43,10 +44,17 @@ public sealed class CrowdSimRegressTests
         var catalog = CrowdSimRegressCatalog.Parse(JsonNode.Parse(File.ReadAllText(CatalogPath(root)))!.AsObject());
         Assert.That(catalog.Defaults, Is.EqualTo(new[] { "deploy", "rebake", "areas" }));
         Assert.That(catalog.Full, Is.EqualTo(new[] { "stress" }));
-        Assert.That(catalog.Scenarios["areas"].UnavailableReason, Does.Contain("s7area-truth.json"));
-        Assert.That(catalog.Scenarios["stress"].UnavailableReason, Is.Not.Null);
+        Assert.That(catalog.Scenarios["areas"].UnavailableReason, Is.Null);
+        Assert.That(catalog.Scenarios["areas"].ScriptFromRepo, Is.True);
+        Assert.That(catalog.Scenarios["stress"].ScriptFromRepo, Is.True);
         var plan = catalog.CreateFuzzPlan(7, 200);
-        Assert.That(plan.Ops.Any(op => op.Id == "kill" && op.Reserved && op.ProbeHandles), Is.True);
+        Assert.That(plan.Ops.Any(op => op.Id == "kill" && !op.Reserved && op.ProbeHandles), Is.True);
+        var tools = JsonNode.Parse(File.ReadAllText(Path.Combine(
+            root, "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))!
+            ["tools"]!.AsObject();
+        Assert.That(plan.BoomRadiusCm, Is.EqualTo(tools["boomRadiusCm"]!.GetValue<int>()));
+        Assert.That(plan.RingScale.ToDouble(), Is.EqualTo(tools["ringScale"]!.GetValue<double>()).Within(1e-6));
+        Assert.That(plan.Impulse.ToDouble(), Is.EqualTo(tools["impulse"]!.GetValue<double>()).Within(1e-6));
         Assert.That(plan.Seed, Is.EqualTo(7));
         Assert.That(plan.OpCount, Is.EqualTo(200));
 

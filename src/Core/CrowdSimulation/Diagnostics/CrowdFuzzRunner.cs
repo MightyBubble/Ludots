@@ -13,7 +13,7 @@ public sealed class CrowdFuzzOp
     public bool Structure { get; init; }
     public bool ProbeHandles { get; init; }
 
-    /// <summary>没有外加执行器时不抽中。单体移除还没进指令集，调用方用这份标记把它留在表里。</summary>
+    /// <summary>没有外加执行器时不抽中。调用方用这份标记把还没接上的操作留在表里。</summary>
     public bool Reserved { get; init; }
 }
 
@@ -30,6 +30,9 @@ public sealed class CrowdFuzzPlan
     public required string OrderShape { get; init; }
     public required int OrderMemberCap { get; init; }
     public required int StallGuard { get; init; }
+    public required int BoomRadiusCm { get; init; }
+    public required Fix64 RingScale { get; init; }
+    public required Fix64 Impulse { get; init; }
     public required IReadOnlyList<CrowdFuzzOp> Ops { get; init; }
 }
 
@@ -46,10 +49,172 @@ public sealed class CrowdFuzzResult
 public readonly record struct CrowdFuzzHandleProbe(uint Handle, int EntityId, int Version);
 
 /// <summary>
-/// 外加执行器。内建只有生成、下令、放置、拆除。
-/// 单体移除或爆炸由调用方按操作 id 接上，不在这里补指令。
+/// 外加执行器。内建是生成、下令、放置、拆除和爆炸。
+/// 表里标了保留、又没有同名执行器的操作不抽中。
 /// </summary>
 public delegate void CrowdFuzzOpExecutor(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng);
+
+/// <summary>
+/// 同一条模糊运行可以一次跑完，也可以按时间片接着跑。
+/// 一片开始前看预算；已经开工的操作会做完。预算用 <see cref="TimeSpan.MaxValue"/> 时一次跑完。
+/// </summary>
+public sealed class CrowdFuzzCursor
+{
+    private readonly CrowdFuzzPlan _plan;
+    private readonly IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? _extra;
+    private readonly List<CrowdFuzzOp> _drawable;
+    private readonly IReadOnlyList<string> _reserved;
+    private CrowdSimRng? _rng;
+    private List<(int UnitType, int RIdx)>? _options;
+    private bool _blockSaved;
+    private bool _previousBlock;
+    private bool _opened;
+
+    public CrowdFuzzCursor(CrowdFuzzPlan plan, IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extraExecutors = null)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        _plan = plan;
+        _extra = extraExecutors;
+        _reserved = CrowdFuzzRunner.ReservedWithoutExecutor(plan.Ops, extraExecutors);
+        _drawable = new List<CrowdFuzzOp>(plan.Ops.Count);
+        for (int i = 0; i < plan.Ops.Count; i++)
+        {
+            var op = plan.Ops[i];
+            if (op.Reserved && (extraExecutors == null || !extraExecutors.ContainsKey(op.Id))) continue;
+            _drawable.Add(op);
+        }
+    }
+
+    public int Completed { get; private set; }
+    public bool Finished { get; private set; }
+    public CrowdFuzzResult? Result { get; private set; }
+
+    /// <summary>这一片里调用过 <see cref="CrowdSimSession.Step"/>。</summary>
+    public bool Stepped { get; private set; }
+
+    public void Advance(CrowdSimSession session, TimeSpan budget)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        Stepped = false;
+        if (Finished) return;
+        if (_plan.OpCount < 0 || _plan.StepsPerOp < 1 || _plan.ProbeHandleCount < 0 || _plan.StallGuard < 1
+            || _plan.BoomRadiusCm <= 0 || _plan.RingScale <= Fix64.OneValue || _plan.Impulse < Fix64.Zero)
+        {
+            Finish(CrowdFuzzRunner.Fail(_plan, _reserved, 0, "", "操作数、每步推进、句柄条数、停摆上限或爆炸参数无效。"));
+            return;
+        }
+
+        if (_plan.OpCount == 0)
+        {
+            Finish(new CrowdFuzzResult
+            {
+                Passed = true,
+                Seed = _plan.Seed,
+                Step = 0,
+                OpId = "",
+                Reserved = _reserved,
+            });
+            return;
+        }
+
+        if (_drawable.Count == 0)
+        {
+            Finish(CrowdFuzzRunner.Fail(_plan, _reserved, 0, "", "没有可执行的操作。"));
+            return;
+        }
+
+        if (!_opened)
+        {
+            _opened = true;
+            _rng = CrowdSimRng.Create(_plan.Seed);
+            _options = CrowdFuzzRunner.SpawnOptions(session);
+            _previousBlock = session.BlockOnDueReplies;
+            _blockSaved = true;
+            session.BlockOnDueReplies = true;
+        }
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        int began = Completed;
+        try
+        {
+            while (Completed < _plan.OpCount)
+            {
+                if (Completed > began && watch.Elapsed >= budget) return;
+                var op = _drawable[CrowdFuzzRunner.NextInt(_rng!, _drawable.Count)];
+                int step = Completed + 1;
+                try
+                {
+                    CrowdFuzzHandleProbe[]? probes = op.ProbeHandles
+                        ? CrowdFuzzRunner.Snapshot(session, _plan.ProbeHandleCount, _rng!)
+                        : null;
+                    CrowdFuzzRunner.Execute(session, _plan, _rng!, op, _extra, _options!);
+                    if (probes != null)
+                    {
+                        string? probeError = CrowdFuzzRunner.CheckHandles(session, probes);
+                        if (probeError != null)
+                        {
+                            Finish(CrowdFuzzRunner.Fail(_plan, _reserved, step, op.Id, probeError));
+                            return;
+                        }
+                    }
+
+                    int guard = _plan.StallGuard;
+                    int ran = 0;
+                    while (ran < _plan.StepsPerOp)
+                    {
+                        if (guard-- <= 0)
+                        {
+                            throw new InvalidOperationException("会话推进停摆过长:路径服务答复未到。");
+                        }
+
+                        bool ok = session.Step(out _);
+                        Stepped = true;
+                        if (!ok) continue;
+                        ran++;
+                    }
+
+                    CrowdSimulationValidator.ValidateSim(session);
+                    if (op.Structure)
+                    {
+                        CrowdSimulationValidator.ValidateStructures(session);
+                        CrowdSimulationValidator.ValidateNav(session);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Finish(CrowdFuzzRunner.Fail(_plan, _reserved, step, op.Id, ex.Message));
+                    return;
+                }
+
+                Completed = step;
+            }
+
+            Finish(new CrowdFuzzResult
+            {
+                Passed = true,
+                Seed = _plan.Seed,
+                Step = _plan.OpCount,
+                OpId = "",
+                Reserved = _reserved,
+            });
+        }
+        finally
+        {
+            if (Finished && _blockSaved)
+            {
+                session.BlockOnDueReplies = _previousBlock;
+                _blockSaved = false;
+            }
+        }
+    }
+
+    private void Finish(CrowdFuzzResult result)
+    {
+        Finished = true;
+        Result = result;
+        Completed = result.Passed ? _plan.OpCount : result.Step;
+    }
+}
 
 /// <summary>
 /// 按种子抽操作。每个操作后成功推进 <see cref="CrowdFuzzPlan.StepsPerOp"/> 次并查仿真不变量。
@@ -65,98 +230,9 @@ public static class CrowdFuzzRunner
         IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extraExecutors = null)
     {
         ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(plan);
-        var reserved = ReservedWithoutExecutor(plan.Ops, extraExecutors);
-        if (plan.OpCount < 0 || plan.StepsPerOp < 1 || plan.ProbeHandleCount < 0 || plan.StallGuard < 1)
-        {
-            return Fail(plan, reserved, 0, "", "操作数、每步推进、句柄条数或停摆上限无效。");
-        }
-
-        if (plan.OpCount == 0)
-        {
-            return new CrowdFuzzResult
-            {
-                Passed = true,
-                Seed = plan.Seed,
-                Step = 0,
-                OpId = "",
-                Reserved = reserved,
-            };
-        }
-
-        var drawable = new List<CrowdFuzzOp>(plan.Ops.Count);
-        for (int i = 0; i < plan.Ops.Count; i++)
-        {
-            var op = plan.Ops[i];
-            if (op.Reserved && (extraExecutors == null || !extraExecutors.ContainsKey(op.Id))) continue;
-            drawable.Add(op);
-        }
-
-        if (drawable.Count == 0)
-        {
-            return Fail(plan, reserved, 0, "", "没有可执行的操作。");
-        }
-
-        var rng = CrowdSimRng.Create(plan.Seed);
-        var options = SpawnOptions(session);
-        bool block = session.BlockOnDueReplies;
-        session.BlockOnDueReplies = true;
-        try
-        {
-            for (int step = 1; step <= plan.OpCount; step++)
-            {
-                var op = drawable[NextInt(rng, drawable.Count)];
-                try
-                {
-                    CrowdFuzzHandleProbe[]? probes = op.ProbeHandles
-                        ? Snapshot(session, plan.ProbeHandleCount, rng)
-                        : null;
-                    Execute(session, plan, rng, op, extraExecutors, options);
-                    if (probes != null)
-                    {
-                        string? probeError = CheckHandles(session, probes);
-                        if (probeError != null) return Fail(plan, reserved, step, op.Id, probeError);
-                    }
-
-                    int guard = plan.StallGuard;
-                    int ran = 0;
-                    while (ran < plan.StepsPerOp)
-                    {
-                        if (guard-- <= 0)
-                        {
-                            throw new InvalidOperationException("会话推进停摆过长:路径服务答复未到。");
-                        }
-
-                        if (!session.Step(out _)) continue;
-                        ran++;
-                    }
-
-                    CrowdSimulationValidator.ValidateSim(session);
-                    if (op.Structure)
-                    {
-                        CrowdSimulationValidator.ValidateStructures(session);
-                        CrowdSimulationValidator.ValidateNav(session);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return Fail(plan, reserved, step, op.Id, ex.Message);
-                }
-            }
-        }
-        finally
-        {
-            session.BlockOnDueReplies = block;
-        }
-
-        return new CrowdFuzzResult
-        {
-            Passed = true,
-            Seed = plan.Seed,
-            Step = plan.OpCount,
-            OpId = "",
-            Reserved = reserved,
-        };
+        var cursor = new CrowdFuzzCursor(plan, extraExecutors);
+        cursor.Advance(session, TimeSpan.MaxValue);
+        return cursor.Result ?? Fail(plan, Array.Empty<string>(), 0, "", "模糊运行没有结果。");
     }
 
     public static CrowdFuzzHandleProbe[] Snapshot(CrowdSimSession session, int count, CrowdSimRng rng)
@@ -210,7 +286,7 @@ public static class CrowdFuzzRunner
         return null;
     }
 
-    private static void Execute(
+    internal static void Execute(
         CrowdSimSession session,
         CrowdFuzzPlan plan,
         CrowdSimRng rng,
@@ -237,6 +313,9 @@ public static class CrowdFuzzRunner
                 return;
             case "remove":
                 ExecRemove(session, plan, rng);
+                return;
+            case "kill":
+                ExecKill(session, plan, rng);
                 return;
             default:
                 throw new InvalidOperationException($"操作 {op.Id} 没有执行器。");
@@ -334,6 +413,37 @@ public static class CrowdFuzzRunner
         session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
     }
 
+    private static void ExecKill(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng)
+    {
+        int x;
+        int y;
+        int n = session.Units.Count;
+        if (n > 0)
+        {
+            var entity = session.Units.EntityAt(NextInt(rng, n));
+            var pos = session.World.Get<Ludots.Core.Components.WorldPositionCm>(entity).Value;
+            x = pos.X.ToInt();
+            y = pos.Y.ToInt();
+        }
+        else
+        {
+            int side = WorldSideCm(session);
+            x = NextInt(rng, side);
+            y = NextInt(rng, side);
+        }
+
+        var cmd = new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.Kill,
+            XCm = x,
+            YCm = y,
+            RadiusCm = plan.BoomRadiusCm,
+            RingScale = plan.RingScale,
+            Impulse = plan.Impulse,
+        };
+        session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
+    }
+
     private static void ExecRemove(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng)
     {
         int side = WorldSideCm(session);
@@ -346,7 +456,7 @@ public static class CrowdFuzzRunner
         session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
     }
 
-    private static List<(int UnitType, int RIdx)> SpawnOptions(CrowdSimSession session)
+    internal static List<(int UnitType, int RIdx)> SpawnOptions(CrowdSimSession session)
     {
         var list = new List<(int, int)>();
         var cfg = session.Config;
@@ -424,7 +534,7 @@ public static class CrowdFuzzRunner
         return false;
     }
 
-    private static int NextInt(CrowdSimRng rng, int count)
+    internal static int NextInt(CrowdSimRng rng, int count)
     {
         if (count <= 1) return 0;
         long value = (rng.Next() * Fix64.FromInt(count)).ToLong();
@@ -433,7 +543,7 @@ public static class CrowdFuzzRunner
         return (int)value;
     }
 
-    private static IReadOnlyList<string> ReservedWithoutExecutor(
+    internal static IReadOnlyList<string> ReservedWithoutExecutor(
         IReadOnlyList<CrowdFuzzOp> ops,
         IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extra)
     {
@@ -449,7 +559,7 @@ public static class CrowdFuzzRunner
         return list;
     }
 
-    private static CrowdFuzzResult Fail(
+    internal static CrowdFuzzResult Fail(
         CrowdFuzzPlan plan, IReadOnlyList<string> reserved, int step, string opId, string message)
         => new()
         {

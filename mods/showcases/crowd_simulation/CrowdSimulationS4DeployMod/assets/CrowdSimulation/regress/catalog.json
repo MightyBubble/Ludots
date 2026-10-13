@@ -22,10 +22,18 @@
       "truthNavFrozen": true
     },
     "areas": {
-      "unavailable": "s7area-truth.json 是迷雾格用例，不是可推进的指令脚本。"
+      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+      "scriptAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/areas-road-flood-fire.json",
+      "ticksFrom": "ticks",
+      "movement": false,
+      "truthNavFrozen": true
     },
     "stress": {
-      "unavailable": "仓库没有 5 万单位的压力场景脚本。50k 门禁写在测试里，回归入口不复制那份脚本。"
+      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+      "scriptAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json",
+      "ticksFrom": "ticks",
+      "movement": true,
+      "truthNavFrozen": false
     }
   },
   "fuzz": {
@@ -40,12 +48,19 @@
     "orderShape": "box",
     "orderMemberCap": 8,
     "stallGuard": 64,
+    "boomRadiusCm": 12500,
+    "ringScale": 2,
+    "impulse": 4,
     "ops": [
       { "id": "spawn", "structure": false, "probeHandles": false, "reserved": false },
       { "id": "order", "structure": false, "probeHandles": false, "reserved": false },
       { "id": "place", "structure": true, "probeHandles": false, "reserved": false },
       { "id": "remove", "structure": true, "probeHandles": false, "reserved": false },
-      { "id": "kill", "structure": false, "probeHandles": true, "reserved": true }
+      { "id": "kill", "structure": false, "probeHandles": true, "reserved": false }
     ]
+  },
+  "fog": {
+    "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+    "sceneAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json"
   }
 }
