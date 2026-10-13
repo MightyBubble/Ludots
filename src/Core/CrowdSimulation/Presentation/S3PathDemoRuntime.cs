@@ -82,9 +82,9 @@ public sealed class S3PathDemoRuntime : IDisposable
             .Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        var surface = NavSurfaceAsset.Read(CrowdSimulationRuntime.OpenAsset(engine, "assets/" + runtime.SurfaceAsset));
+        string surfaceAssetPath = "assets/" + runtime.SurfaceAsset;
+        var surface = NavSurfaceAsset.Read(CrowdSimulationRuntime.OpenAsset(engine, surfaceAssetPath));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
-        var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
         string? heightRel = map.ContinuousHeightmap?.Asset;
         if (string.IsNullOrWhiteSpace(heightRel))
         {
@@ -92,7 +92,18 @@ public sealed class S3PathDemoRuntime : IDisposable
         }
 
         var heightAsset = ContinuousHeightmapBinary.Read(CrowdSimulationRuntime.OpenAsset(engine, heightRel));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
+        var board = NavSolverDeclaration.RequireBoard(map, NavSolverDeclaration.RequireMap(navmesh, map.Id));
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtime,
+            board.WidthCm,
+            board.HeightCm,
+            surface,
+            surfaceAssetPath,
+            heightAsset,
+            heightRel,
+            mapSurface.Blockers);
+        var grid = ingested.Grid;
+        var heights = ingested.Heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
 
         var cache = new NavTileCache(

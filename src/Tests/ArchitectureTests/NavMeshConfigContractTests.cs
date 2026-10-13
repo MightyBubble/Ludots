@@ -440,6 +440,7 @@ namespace Ludots.Tests.Architecture
             navmesh["maps"] = mapsNode;
             var mapNode = new System.Text.Json.Nodes.JsonObject
             {
+                ["solver"] = "navmesh",
                 ["navProfiles"] = new System.Text.Json.Nodes.JsonArray(
                     System.Text.Json.Nodes.JsonValue.Create("Small"),
                     System.Text.Json.Nodes.JsonValue.Create("Medium"),

@@ -79,29 +79,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     }
 
     /// <summary>
-    /// 群体地图的判定：合并后的 maps.&lt;mapId&gt;.terrainAreas 非空。
-    /// </summary>
-    public static class CrowdMapDeclaration
-    {
-        public static bool IsCrowdMap(JsonObject mergedNavmesh, string mapId)
-        {
-            if (mergedNavmesh == null || string.IsNullOrWhiteSpace(mapId))
-            {
-                return false;
-            }
-
-            if (mergedNavmesh["maps"] is not JsonObject maps ||
-                !maps.TryGetPropertyValue(mapId, out JsonNode mapNode) ||
-                mapNode is not JsonObject mapObj)
-            {
-                return false;
-            }
-
-            return mapObj["terrainAreas"] is JsonArray terrainAreas && terrainAreas.Count > 0;
-        }
-    }
-
-    /// <summary>
     /// 地图会话的网格查询范围。未指定（default）表示调用方不是地图会话，查询仍按请求现建。
     /// 地图装载总是指定范围：没有 nav 标签时列表为空，不建查询。
     /// </summary>

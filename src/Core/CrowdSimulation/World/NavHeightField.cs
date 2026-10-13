@@ -28,16 +28,6 @@ public sealed class NavHeightField
         }
 
         int b = asset.SampleColumns;
-        if (asset.SampleRows != b)
-        {
-            throw new InvalidOperationException("NavHeightField 需要正方形高度采样。");
-        }
-
-        if (b < navCellCount || b % navCellCount != 0)
-        {
-            throw new InvalidOperationException($".height 分辨率（{b}）必须 ≥ 且能整除导航格数（{navCellCount}）。");
-        }
-
         var scale = asset.SampleScale;
         int navCellsPerSide = navCellCount;
         var raw = asset.HeightSamplesRaw;

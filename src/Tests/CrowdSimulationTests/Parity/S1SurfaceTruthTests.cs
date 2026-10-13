@@ -8,6 +8,8 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Parity;
@@ -50,10 +52,27 @@ public class S1SurfaceTruthTests
             JumpCandidates = surface.JumpCandidates,
         };
 
-        Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.NavCellsX + 1, surface.NavCellsY, surface.NavCellSizeCm, surface.TerrainTypeIds), runtime));
-        Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm * 2, surface.TerrainTypeIds), runtime));
+        int boardCm = runtime.NavCellsPerSide * runtime.NavCellSizeCm;
+        var height = ContinuousHeightmapAsset.CreateSingleLayerFromRawUInt16(
+            new WorldAabbCm(0, 0, boardCm, boardCm),
+            runtime.NavCellsPerSide,
+            runtime.NavCellsPerSide,
+            new ushort[runtime.NavCellsPerSide * runtime.NavCellsPerSide],
+            ContinuousHeightSampleScale.IdentityCentimeters);
+        const string surfacePath = "assets/terrain/crowd_simulation_s1337.navsurface";
+        const string heightPath = "assets/terrain/crowd_simulation_s1337.height";
+        var cells = Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.ValidateWorldSize(
+                boardCm, boardCm, runtime.NavCellsPerSide, runtime.NavCellSizeCm,
+                Mutate(surface.NavCellsX + 1, surface.NavCellsY, surface.NavCellSizeCm, surface.TerrainTypeIds),
+                surfacePath, height, heightPath));
+        Assert.That(cells!.Message, Does.StartWith(surfacePath));
+        var cellSize = Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.ValidateWorldSize(
+                boardCm, boardCm, runtime.NavCellsPerSide, runtime.NavCellSizeCm,
+                Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm * 2, surface.TerrainTypeIds),
+                surfacePath, height, heightPath));
+        Assert.That(cellSize!.Message, Does.StartWith(surfacePath));
         string[] renamed = surface.TerrainTypeIds.Select(id => id + "_x").ToArray();
         Assert.Throws<InvalidOperationException>(() =>
             NavSurfaceContract.Validate(Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm, renamed), runtime));

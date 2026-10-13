@@ -95,7 +95,7 @@ public static class Program
     {
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, capabilityDir);
-        var heights = NavHeightField.FromHeightmap(bundle.Height, bundle.Runtime.NavCellsPerSide, bundle.Runtime.NavCellSizeCm);
+        var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
 
         var seen = new HashSet<int>();
@@ -162,7 +162,7 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, capabilityDir);
         var runtime = bundle.Runtime;
-        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
+        var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile, c = navCellsPerSide / t;
 
@@ -232,7 +232,7 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, capabilityDir);
         var runtime = bundle.Runtime;
-        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
+        var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile;
 
@@ -346,7 +346,7 @@ public static class Program
     {
         var bundle = Load(seedDir, standardDir, capabilityDir);
         var runtime = bundle.Runtime;
-        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
+        var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
@@ -472,7 +472,8 @@ public static class Program
         NavSurfaceAsset Surface,
         ContinuousHeightmapAsset Height,
         CrowdSimulationMapSurface MapSurface,
-        SurfaceGrid Grid);
+        SurfaceGrid Grid,
+        NavHeightField Heights);
 
     /// <summary>单位创建单路径的无头装配:与引擎同一装载链(VFS 挂载能力 mod 资产 →
     /// ConfigPipeline → MapLoader.LoadTemplates)取模板注册表与模板键;选中属主置空,不镜像。</summary>
@@ -650,22 +651,34 @@ public static class Program
         var unitTemplates = JsonSerializer.Deserialize<List<EntityTemplate>>(
             File.ReadAllText(Path.Combine(capabilityDir, "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        var bake = NavMeshBakeConfigLoader.Parse(navmeshJson, profiles);
         var runtime = CrowdSimulationConfigLoader.Load(
             config,
             map,
             profiles,
-            NavMeshBakeConfigLoader.Parse(navmeshJson, profiles),
+            bake,
             pathing,
             CrowdUnitTemplateFacts.FromTemplates(unitTemplates),
             ReadSeedFixedHz(seedDir),
             ProjectSeedMap(seedDir, config, map));
 
-        var surface = NavSurfaceAsset.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.navsurface")));
+        string surfacePath = Path.Combine(seedDir, "terrain", $"{mapId}.navsurface");
+        string heightPath = Path.Combine(seedDir, "terrain", $"{mapId}.height");
+        var surface = NavSurfaceAsset.Read(File.OpenRead(surfacePath));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
-        var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var height = ContinuousHeightmapBinary.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.height")));
+        var height = ContinuousHeightmapBinary.Read(File.OpenRead(heightPath));
+        var board = NavSolverDeclaration.RequireBoard(map, NavSolverDeclaration.RequireMap(bake, map.Id));
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtime,
+            board.WidthCm,
+            board.HeightCm,
+            surface,
+            surfacePath,
+            height,
+            heightPath,
+            mapSurface.Blockers);
 
-        return new SeedBundle(mapId, runtime, surface, height, mapSurface, grid);
+        return new SeedBundle(mapId, runtime, surface, height, mapSurface, ingested.Grid, ingested.Heights);
     }
 
     private static void RenderTypes(NavSurfaceAsset surface, ContinuousHeightmapAsset height, string path)

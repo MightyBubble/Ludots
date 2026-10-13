@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -188,7 +190,18 @@ public class NavSurfaceAssetTests
             TerrainCells = new byte[128 * 128],
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
         };
-        var ex = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.Validate(wrong, runtime));
-        Assert.That(ex!.Message, Does.Contain("导航网格"));
+        int boardCm = runtime.NavCellsPerSide * runtime.NavCellSizeCm;
+        var height = ContinuousHeightmapAsset.CreateSingleLayerFromRawUInt16(
+            new WorldAabbCm(0, 0, boardCm, boardCm),
+            runtime.NavCellsPerSide,
+            runtime.NavCellsPerSide,
+            new ushort[runtime.NavCellsPerSide * runtime.NavCellsPerSide],
+            ContinuousHeightSampleScale.IdentityCentimeters);
+        const string surfacePath = "assets/terrain/fixture.navsurface";
+        var ex = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.ValidateWorldSize(
+            boardCm, boardCm, runtime.NavCellsPerSide, runtime.NavCellSizeCm,
+            wrong, surfacePath, height, "assets/terrain/fixture.height"));
+        Assert.That(ex!.Message, Does.StartWith(surfacePath));
+        Assert.That(ex.Message, Does.Contain("128×128"));
     }
 }

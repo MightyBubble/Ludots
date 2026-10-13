@@ -11,16 +11,24 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 /// </summary>
 internal sealed class CrowdSimulationDebugConfig
 {
-    public CrowdDebugWorker? Worker { get; init; }
     public CrowdDebugSession? Session { get; init; }
     public CrowdPresentationConfig? Presentation { get; init; }
-
-    public TimeSpan? PlanTimeout =>
-        Worker == null ? null : TimeSpan.FromMilliseconds(Worker.PlanTimeoutMs);
 
     public static CrowdSimulationDebugConfig Load(JsonObject debug)
     {
         ArgumentNullException.ThrowIfNull(debug);
+        if (debug["session"] is JsonObject session && session.ContainsKey("autostart"))
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationDebug.json: 已删除 session.autostart。群体会话随地图焦点创建，挂起时释放。哪张图跑群体模拟，在 Navigation/navmesh.json 的 maps.<mapId>.solver 写 crowd-simulation。");
+        }
+
+        if (debug.ContainsKey("worker"))
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationDebug.json: 已删除 worker.planTimeoutMs。路径规划超时写在 CrowdSimulationConfig.json 的 worker.planTimeoutMs。");
+        }
+
         CrowdSimulationDebugConfig cfg;
         try
         {
@@ -32,11 +40,6 @@ internal sealed class CrowdSimulationDebugConfig
             throw new InvalidOperationException($"CrowdSimulationDebug.json: {ex.Message}", ex);
         }
 
-        if (cfg.Worker != null && cfg.Worker.PlanTimeoutMs <= 0)
-        {
-            throw new InvalidOperationException("CrowdSimulationDebug.json: worker.planTimeoutMs 需为 > 0 的整数毫秒。");
-        }
-
         if (cfg.Presentation != null)
         {
             CrowdPresentationConfig.Validate(cfg.Presentation);
@@ -46,14 +49,8 @@ internal sealed class CrowdSimulationDebugConfig
     }
 }
 
-internal sealed class CrowdDebugWorker
-{
-    [JsonRequired] public int PlanTimeoutMs { get; init; }
-}
-
 internal sealed class CrowdDebugSession
 {
-    public bool Autostart { get; init; }
     public CrowdDebugScriptEntry[]? Script { get; init; }
     public int? AutoReplayAtTick { get; init; }
     public string? CameraId { get; init; }

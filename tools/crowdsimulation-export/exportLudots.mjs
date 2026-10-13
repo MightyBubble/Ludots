@@ -205,6 +205,7 @@ for (const terrain of config.terrainTypes) {
 writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
   maps: {
     [mapId]: {
+      solver: 'crowd-simulation',
       navAreas: ['Default', 'shallow', 'rough', 'sheer', 'deep', 'road', 'deck', 'flooded', 'burning'],
       terrainAreas,
     },

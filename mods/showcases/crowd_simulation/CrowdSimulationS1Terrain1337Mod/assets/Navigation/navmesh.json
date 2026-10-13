@@ -1,6 +1,7 @@
 {
   "maps": {
     "crowd_simulation_s1337": {
+      "solver": "crowd-simulation",
       "navAreas": [
         "Default",
         "shallow",

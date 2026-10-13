@@ -144,10 +144,13 @@ public static class CrowdStructureOps
         CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect, byte kind, CrowdStructureFootprint fp)
     {
         FinishRebake(sim);
-        var planner = sim.Planner!;
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
-        var dirty = planner.Service.RunExclusive(new RebakeCall(sim, rect, cache), RebakeExclusive);
+        // 无头 BuildSession 不挂规划器。有路径服务时重烘必须进它的互斥域。
+        var call = new RebakeCall(sim, rect, cache);
+        List<CrowdNavRebakeContextResult> dirty = sim.Planner is { } planner
+            ? planner.Service.RunExclusive(call, RebakeExclusive)
+            : RebakeExclusive(call);
         // 真相重烘完调用 TruthChanged。全拷贝变体的数组不跟真相重烘一起改。
         sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;
@@ -210,12 +213,14 @@ public static class CrowdStructureOps
     /// <summary>阶段 1:队伍反应(重规划清单 + 流场刷新)、唤醒变更附近休眠单位、挤离新阻挡。</summary>
     private static void StageReaction(CrowdSimSession sim, CrowdRebakeJob job)
     {
-        var planner = sim.Planner!;
-        var built = planner.ReactRebake(job.ContextResults);
-        job.Orders.Clear();
-        for (int i = 0; i < built.Count; i++) job.Orders.Add(built[i]);
-        // 反应结束时记下刷新队列长度。每 tick 预算会在步末排空队列，所以报告不在阶段 2 再读队列。
-        job.Refreshes = planner.RefreshQueueCount;
+        if (sim.Planner is { } planner)
+        {
+            var built = planner.ReactRebake(job.ContextResults);
+            job.Orders.Clear();
+            for (int i = 0; i < built.Count; i++) job.Orders.Add(built[i]);
+            // 反应结束时记下刷新队列长度。每 tick 预算会在步末排空队列，所以报告不在阶段 2 再读队列。
+            job.Refreshes = planner.RefreshQueueCount;
+        }
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
         job.Stuck = sim.EvictStuck;
@@ -224,8 +229,10 @@ public static class CrowdStructureOps
     /// <summary>阶段 2:受影响指令重规划(固定生效帧)+ 发布报告。</summary>
     private static void StagePublish(CrowdSimSession sim, CrowdRebakeJob job)
     {
-        var planner = sim.Planner!;
-        if (job.Orders.Count > 0) planner.Plan(job.Orders, sim.TickCount);
+        if (sim.Planner is { } planner && job.Orders.Count > 0)
+        {
+            planner.Plan(job.Orders, sim.TickCount);
+        }
         var bbox = job.Fp.Bbox();
         var report = sim.ReportScratch ??= new CrowdRebakeReport();
         report.ExecTick = job.ExecTick;

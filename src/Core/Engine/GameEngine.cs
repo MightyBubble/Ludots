@@ -3033,6 +3033,12 @@ namespace Ludots.Core.Engine
                         GetService(CoreServiceKeys.OwnershipResolver)));
                 SetMapEntitiesSuspended(mid, true);
 
+                if (previousFocused != null)
+                {
+                    _massNavigationRuntime.HandleMapSuspended(this, previousFocused.MapId);
+                    _crowdSimulationRuntime.HandleMapSuspended(this, previousFocused.MapId);
+                }
+
                 // Instantiate map triggers + apply decorators
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
                 var triggers = InstantiateMapTriggers(definition, mapConfig, session);

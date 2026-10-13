@@ -19,6 +19,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
+using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
@@ -36,10 +38,10 @@ namespace Ludots.Core.CrowdSimulation.Runtime;
 
 /// <summary>
 /// CrowdSimulation 会话宿主(引擎持有,MassNavigationRuntime 同款形态):
-/// 配置目录带 CrowdSimulationConfig.json 时,地图聚焦装正式配置。
-/// 调试目录项由提供 CrowdSimulationDebug.json 的 Mod 登记;没有这项时不建会话。
-/// 调试配置声明 session.autostart 时才建会话——会话跑在引擎世界上,单位带呈现投影接线,
-/// 部署/脚本/回放都是指令流(数据),回放另起一次性世界逐帧对拍校验码。
+/// maps.&lt;mapId&gt;.solver 为 crowd-simulation 的地图在聚焦时必须合并出 CrowdSimulationConfig.json,然后建会话;挂起时释放。
+/// 调试目录项由提供 CrowdSimulationDebug.json 的 Mod 登记,只带脚本、相机和演示呈现。
+/// 会话跑在引擎世界上,单位带呈现投影接线;部署/脚本/回放都是指令流(数据),
+/// 回放另起一次性世界逐帧对拍校验码。
 /// </summary>
 public sealed partial class CrowdSimulationRuntime
 {
@@ -49,7 +51,6 @@ public sealed partial class CrowdSimulationRuntime
     private string? _focusedCrowdMapId;
     internal string? FormalConfigMapId => _focusedCrowdMapId;
     internal bool HasDebugConfig => _debug != null;
-    private bool _configResolved;
     private TimeSpan? _planTimeout;
 
     private CrowdSimSession? _session;
@@ -136,23 +137,22 @@ public sealed partial class CrowdSimulationRuntime
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine) || _configDto == null) return false;
         if (!IsCrowdMap(engine, mapId.Value)) return false;
-        _focusedCrowdMapId = mapId.Value;
-        if (engine.ConfigCatalog != null && engine.ConfigCatalog.TryGet("MassNavigationConfig.json", out var massEntry))
+        RequireConfig(engine, mapId.Value);
+        if (_session != null && !string.Equals(_activeMapId, mapId.Value, StringComparison.Ordinal))
         {
-            var massMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in massEntry);
-            CrowdSimulationConfigLoader.EnsureSolverExclusive(massMerged?["mapId"]?.GetValue<string>(), mapId.Value);
+            throw new InvalidOperationException(
+                $"群体会话仍绑在地图 \"{_activeMapId}\"，聚焦 \"{mapId.Value}\" 之前要先挂起或卸载。");
         }
 
-        if (_debug == null) return true;
-        CrowdSimulationDebugConfig debug = _debug;
+        _focusedCrowdMapId = mapId.Value;
+        if (_session == null)
+        {
+            Activate(engine, mapId, mapConfig);
+        }
 
         string? presentationKind = PresentationKindName;
         if (presentationKind == CrowdPresentationConfig.KindPath) InstallPathPresentation(engine, mapConfig);
-        if (!IsAutostartEnabled(debug)) return presentationKind == CrowdPresentationConfig.KindPath;
-
-        Activate(engine, mapId, mapConfig);
         if (presentationKind == CrowdPresentationConfig.KindDeploy) InstallDeployPresentation(engine);
         return true;
     }
@@ -171,26 +171,6 @@ public sealed partial class CrowdSimulationRuntime
     public bool HandleMapSuspended(GameEngine engine, MapId mapId) => HandleMapUnloaded(engine, mapId);
 
     private NavMeshBakeConfig _navmesh;
-    private JsonObject _mergedNavmesh;
-
-    private JsonObject RequireMergedNavmesh(GameEngine engine)
-    {
-        if (_mergedNavmesh != null)
-        {
-            return _mergedNavmesh;
-        }
-
-        ConfigCatalog catalog = engine.ConfigCatalog
-            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 ConfigCatalog。");
-        if (!catalog.TryGet(NavMeshConfigPaths.BakeConfigPath, out var entry))
-        {
-            throw new InvalidOperationException($"{NavMeshConfigPaths.BakeConfigPath} 没有目录登记。");
-        }
-
-        _mergedNavmesh = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{NavMeshConfigPaths.BakeConfigPath} 合并为空。");
-        return _mergedNavmesh;
-    }
 
     private NavMeshBakeConfig RequireLoadedNavmesh(GameEngine engine)
     {
@@ -214,31 +194,36 @@ public sealed partial class CrowdSimulationRuntime
     }
 
     private bool IsCrowdMap(GameEngine engine, string mapId)
-        => CrowdMapDeclaration.IsCrowdMap(RequireMergedNavmesh(engine), mapId);
+        => NavSolverDeclaration.Is(RequireLoadedNavmesh(engine), mapId, NavSolverDeclaration.CrowdSimulation);
 
-    private bool TryEnsureConfig(GameEngine engine)
+    private void RequireConfig(GameEngine engine, string mapId)
     {
-        if (_configResolved) return _configDto != null;
-        _configResolved = true;
+        if (_configDto != null)
+        {
+            return;
+        }
 
         var catalog = engine.ConfigCatalog;
         if (catalog == null || !catalog.TryGet(CrowdSimulationConfigPath, out var configEntry))
         {
-            return false;
+            throw new InvalidOperationException(
+                $"地图 \"{mapId}\" 的 solver 是 {NavSolverDeclaration.CrowdSimulation}，但 {CrowdSimulationConfigPath} 缺失或合并为空。");
         }
 
         _configDto = ConfigMergeProvenance.Wrap(CrowdSimulationConfigPath, engine.ConfigConflictReport, tracked =>
         {
             var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, tracked)
-                ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
+                ?? throw new InvalidOperationException(
+                    $"地图 \"{mapId}\" 的 solver 是 {NavSolverDeclaration.CrowdSimulation}，但 {CrowdSimulationConfigPath} 缺失或合并为空。");
             return CrowdSimulationConfig.Load(merged);
         });
+
+        _planTimeout = TimeSpan.FromMilliseconds(_configDto.Worker.PlanTimeoutMs);
 
         if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {
             _debug = null;
-            _planTimeout = null;
-            return true;
+            return;
         }
 
         CrowdSimulationDebugConfig debug = ConfigMergeProvenance.Wrap(CrowdSimulationDebugPath, engine.ConfigConflictReport, tracked =>
@@ -248,27 +233,21 @@ public sealed partial class CrowdSimulationRuntime
             return CrowdSimulationDebugConfig.Load(debugMerged);
         });
         _debug = debug;
-        _planTimeout = debug.PlanTimeout;
         _presentation = debug.Presentation;
         if (_presentation?.FogDecal != null)
         {
             engine.SetService(CoreServiceKeys.FogDecalPalette, _presentation.FogDecal.ToPalette());
         }
-
-        return true;
     }
 
     private TimeSpan RequirePlanTimeout()
         => _planTimeout ?? throw new InvalidOperationException(
-            "CrowdSimulationDebug.json: 路径服务需要 worker.planTimeoutMs。");
+            "CrowdSimulationConfig.json: 路径服务需要 worker.planTimeoutMs。");
 
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
     private const string SessionTemplateId = "crowd_simulation.session";
     private const string SelectedCollectionKey = CrowdSimPresentationWiring.SelectedCollectionKey;
-
-    private static bool IsAutostartEnabled(CrowdSimulationDebugConfig debug) =>
-        debug.Session?.Autostart == true;
 
     private void Activate(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
@@ -302,25 +281,38 @@ public sealed partial class CrowdSimulationRuntime
             _configDto!, mapConfig, agentProfiles, navmesh, pathing, templateFacts,
             (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
 
+        SolverAgentExclusivity.RejectMassNavigationAgent(engine.World, mapId);
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
         // 与配置门禁构成同一条装载检查链;失败即报错,不进入烘焙与生成。
         CrowdSimulationAuthoringContract.Validate(
             engine.MapLoader.TemplateRegistry.GetAll(), _configDto!, mapConfig, agentProfiles);
 
-        // 资产走 VFS，跨 mod 解析，冲突即失败。
-        var surface = NavSurfaceAsset.Read(OpenAsset(engine, "assets/" + runtimeConfig.SurfaceAsset));
+        // 资产走 VFS，跨 mod 解析，冲突即失败。尺寸对照在进图装配里做。
+        string surfaceAssetPath = "assets/" + runtimeConfig.SurfaceAsset;
+        var surface = NavSurfaceAsset.Read(OpenAsset(engine, surfaceAssetPath));
+        string heightAssetPath = RequireHeightAssetPath(mapConfig, mapId);
+        var heightAsset = ContinuousHeightmapBinary.Read(OpenAsset(engine, heightAssetPath));
+        BoardConfig solverBoard = NavSolverDeclaration.RequireBoard(
+            mapConfig, NavSolverDeclaration.RequireMap(navmesh, mapConfig.Id));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(
             mapConfig,
             engine.MapLoader.TemplateRegistry.GetAll().Where(t => !string.IsNullOrWhiteSpace(t.Id))
                 .ToDictionary(t => t.Id, StringComparer.Ordinal));
-        var grid = SurfaceGrid.Build(runtimeConfig, surface, mapSurface.Blockers);
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtimeConfig,
+            solverBoard.WidthCm,
+            solverBoard.HeightCm,
+            surface,
+            surfaceAssetPath,
+            heightAsset,
+            heightAssetPath,
+            mapSurface.Blockers);
+        var grid = ingested.Grid;
         _surfaceGrid = grid;
         _jumpCandidates = surface.JumpCandidates;
         _mapSurfaceBlockers = mapSurface.Blockers;
         _mapSurfaceBridges = mapSurface.Bridges;
-        var heights = NavHeightField.FromHeightmap(
-            ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
-            runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
+        var heights = ingested.Heights;
         _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
         _deck = deck;
@@ -420,14 +412,15 @@ public sealed partial class CrowdSimulationRuntime
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
         _session.NavTileCache = cache;
-        // 调试开关:每次结构变更后跑增量 vs 全量一致性检查(debug 配置驱动)
-        _session.VerifyIncrementalNav = _debug!.Session?.IncrementalNavVerify == true;
+        // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
+        _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
         _activeMapId = mapId.Value;
 
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
         // (有结构仓时 Blockers 跟随仓的活 CSR,这里的静态索引不生效)
         _pathService?.Dispose();
-        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, RequirePlanTimeout(), _session.ResolveNavContext);
+        TimeSpan planTimeout = RequirePlanTimeout();
+        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, planTimeout, _session.ResolveNavContext);
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.BindVision(
@@ -463,7 +456,7 @@ public sealed partial class CrowdSimulationRuntime
 
         // 脚本与自动回放(指令流即数据;脚本与对拍资产同构,演示自己跑一遍规范场景)
         _pendingScript.Clear();
-        if (_debug!.Session?.Script is { } script && script.Length > 0)
+        if (_debug?.Session?.Script is { Length: > 0 } script)
         {
             var rows = new JsonArray();
             foreach (var entry in script)
@@ -474,7 +467,8 @@ public sealed partial class CrowdSimulationRuntime
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
         }
-        _autoReplayAtTick = _debug.Session?.AutoReplayAtTick ?? -1;
+
+        _autoReplayAtTick = _debug?.Session?.AutoReplayAtTick ?? -1;
         _autoReplayDone = false;
         if (_autoReplayAtTick >= 0) _session.DiagnosticDigest = true;
         ReplayStatus = 0;
@@ -488,7 +482,7 @@ public sealed partial class CrowdSimulationRuntime
         engine.SetService(CoreServiceKeys.CrowdSimulationSession, _session);
         engine.SetService(CoreServiceKeys.CrowdSimulationRuntime, this);
         // 演示相机:debug 配置指名一个虚拟相机(数据),经引擎现成的 VirtualCameraRequest 通道切换
-        if (_debug.Session?.CameraId is { } cameraId && !string.IsNullOrWhiteSpace(cameraId))
+        if (_debug?.Session?.CameraId is { } cameraId && !string.IsNullOrWhiteSpace(cameraId))
         {
             engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new Ludots.Core.Gameplay.Camera.VirtualCameraRequest { Id = cameraId };
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,

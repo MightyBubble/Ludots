@@ -1,6 +1,7 @@
 {
   "maps": {
     "road_network_showcase_chunked": {
+      "solver": "mass-navigation",
       "navProfiles": [
         "Small"
       ],

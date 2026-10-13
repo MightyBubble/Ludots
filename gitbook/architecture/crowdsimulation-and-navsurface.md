@@ -12,7 +12,7 @@ NavSurface（`.navsurface`）是新增的地表资产：逐导航格的地形类
 
 四个结构性原因：每个成员同步寻路且每次调用都重建网格；地图变化不会让路线失效；方向场是启发式而非沿路网积分；避让与到达规则参数无法一一对应。调参数对齐不了行为，所以内核按 CrowdSimulation 重写。
 
-并存期的纪律：**一张地图只能启用一种求解器**（加载时按 mapId 互斥检查），同一单位模板不能同时带 `CrowdSimulationAgent` 与 `MassNavigationAgent`。MassNavigation 的删除不做在对拍通过之前——它仍被 GAS 下令链、Physics2D 桥、10k 性能门禁与 showcase 引用，对拍基线建立后按 S8 之后的决议退役。
+一张地图只声明一种求解器。`Navigation/navmesh.json` 的 `maps.<mapId>.solver` 取 `navmesh`、`mass-navigation`、`crowd-simulation` 之一。跑群体模拟写 `crowd-simulation`，跑大规模导航写 `mass-navigation`。这个字段只有一个值，两种求解器不会同时落在同一张图上。同一单位模板仍不能同时带 `CrowdSimulationAgent` 与 `MassNavigationAgent`。MassNavigation 的删除不做在对拍通过之前。消费方和删除条件见文末「MassNavigation 退役」。
 
 ## 数学一律走 Ludots 定点体系
 
@@ -91,7 +91,7 @@ src/Tests/CrowdSimulationTests/      S0 配置门禁到 S7 对拍都在这个目
 
 ### 并存权属
 
-- **一图一求解器互斥已在活路径**：配置门禁与实体模板合同都拒绝同一地图同时声明 MassNavigation 与 CrowdSimulation 求解器；这不是待办，是装载即拒的现行规则。
+- **一图一求解器**：`maps.<mapId>.solver` 只有一个值。实体模板合同拒绝同一模板同时带 `CrowdSimulationAgent` 与 `MassNavigationAgent`。群体会话在 `CompleteMapLoad` / `CompleteMapResume` 聚焦时创建，挂起时释放；恢复会再建一份会话。调试文件不再写 `session.autostart`。
 - **crowd 会话对自己单位的位置写权**：单位位置、运动学、仿真身份组件由会话步进独占写入，引擎侧系统（分区同步、呈现投影）只读。会话步进系统注册在 PostMovement 组、排在 `SpatialPartitionUpdateSystem` 之前——分区按 `PreviousWorldPositionCm != WorldPositionCm` 判移动，步进晚于同步会让成员格冻结。其他组件域（GAS 效果、交互上下文）不写 crowd 会话状态。
 - **GAS 下令链**：现场右键经 `QueryFromCollection`（`selected` 非空用它；空则调用查询图 `graph.crowd_simulation.own_units`，从玩家代表向外查 `Owns`，再用 `QueryFilterTagNone` 去掉带 `crowd_simulation.hidden_template` 的单位。`RelationshipQueryOutgoing` 只写在 Query 图里）→ `SubmitCommandIntent` → `CommandIntentBufferDrainSystem` → `CommandIntentProfileRegistry.RouteGroup` → `OrderQueue`。群体桥在安装时向 `OrderBufferSystem` 登记 `crowdSimulationMove` 的外部消费者；当时没有 `OrderBufferSystem` 就抛错。排空由 `OrderBufferSystem.ProcessIncomingOrders` 在 AbilityActivation 做，晚于本拍的会话步进，现场点击要等下一拍会话步进才执行。同一次排空里，已登记的外部批次都会交给消费者，排在前面的单位订单仍走实体接入。消费者把批次收成一条带成员句柄的群体 `order` 并排到下一拍：地面点取 `WorldCm` 的 X 与 Z（写入时是 (X, 0, Y)），按整数截断，形状为 `box`（普通右键只有一个地面点，成员共用这一点）。同一批次由 `OrderBufferSystem` 写上 `EntityIntake`，`GlobalIntake` 在下一步开始时已经配过对。成员在提交时钉死。群体指令日志仍是确定性记录。`AuthoritativeAction` 的帧合同装不下同 tick 顺序和变长成员（见上节），日志继续留在 `CrowdCommandQueue`。S3 的探路键鼠仍读 `AuthoritativeInput` 的 `PressedThisTick`。
 
@@ -123,7 +123,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。群体的 AgentTypeIndex 是被单位模板引用的 pathing agent type，按合并后的属性顺序编号。`maps.<mapId>.terrainAreas` 是有序数组，每项 `{ terrainId, areaId }`，数组下标就是 `.navsurface` 的地形编号。`.navsurface` 从地图的 `ContinuousHeightmap.asset` 推导：去掉 `assets/` 前缀，把 `.height` 换成 `.navsurface`。带导航标签的地图用 `maps.<mapId>.navProfiles` 列出要烘焙和装载瓦片库的能力档 id，数组顺序就是烘焙顺序。绑定了移动类型的地图写 `maps.<mapId>.navAreas`（区域 id 数组）。`terrainAreas` 的 `areaId` 必须是它的子集；结构模板会动态铺上的 `deck`、`road`、`flooded`、`burning` 也写进去。没有 nav 标签，或没有 `navProfiles`，启动时不建网格查询。查询只给 PreferMesh / AutoCheapest、且体型 `navProfileId` 在这张图 `navProfiles` 里的类型。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，地图把模板绑进会话就失败，报文带模板 id 和 agent id。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
 
-覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是合并后的属性顺序，不按键名重排。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.navProfiles` 是能力档 id 数组，按下标烘焙和装载，列出的档没有瓦片就是装载错误。`maps.<mapId>.navAreas` 写在 navmesh.json。带 `terrainAreas` 的地图按群体地图装载。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。
+覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是合并后的属性顺序，不按键名重排。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.navProfiles` 是能力档 id 数组，按下标烘焙和装载，列出的档没有瓦片就是装载错误。`maps.<mapId>.navAreas` 写在 navmesh.json。登记进 `maps` 的地图必须写 `solver`，取值只能是 `navmesh`、`mass-navigation`、`crowd-simulation`。求解器板写在 `maps.<mapId>.boards`，有这个键时只能有一块，空对象会拒绝。不写 `boards` 时，群体会话和大规模导航用 `MapManager.ResolveRootBoard` 决定仿真哪一块板：写了 `RootBoard` 就按名字找（大小写不敏感），没写就用第一块板。带 `Feature.NavMesh:On` 的地图仍要写 `maps.<mapId>.boards`，瓦片尺寸在这块声明里，`LoadNavForMap` 找不到就失败。`solver` 为 `crowd-simulation` 的地图在聚焦时建群体会话，并按 `CrowdSimulationConfig.json` 的 `worker.planTimeoutMs` 建路径服务、调用 `EnableMovement`。这个值是必填的正整数毫秒。调试文件再写 `worker.planTimeoutMs` 会报错，并指向这份配置。`terrainAreas` 只记地形类型到区域的对应，不决定跑哪种求解器。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。`CrowdSimulationDebug.json` 再写 `session.autostart` 会报错。`MassNavigationConfig.json` 再写 `mapId` 会报错：哪张图跑大规模导航只看 `solver`。
 
 时钟由各地图 Mod 的 `assets/Engine/clock.json` 写 `FixedHz`。引擎要求这个值 ≥ 1。群体配置不再另设 10 到 240 的范围。全局变速走 TimeFlow，不走群体配置。
 
@@ -172,13 +172,19 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 `Team` 是这一步读的组件。`MemberOf`（玩家代表 → 队伍代表）是主干的队伍真相。改这条边会抬修订号，`RelationshipRuntime` 随即 `SyncTeam`，把队伍号写进 `Team`。只改 `Team`、不改边，修订号不动，所以每个 tick 都读组件。
 
-调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，会话不自动激活。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。要开路径服务，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
+调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，聚焦仍建会话和路径服务。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。
 
 需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
 
+## 玩家和队伍字段
+
+地图 `Maps/<id>.json` 的 `Players[]` 写 `PlayerId`、`TeamId`、`RepresentativeInstanceId`，玩家数 1 到 16。`Teams[]` 写 `TeamId` 和队伍代表的 `RepresentativeInstanceId`。
+
+会话激活时 `CrowdPairRulesProjection.Project` 用 `PlayerEntityLookup` 取每个玩家的代表实体。功能位矩阵，以及 tick 里核对队伍号和关系修订号，见上文「关系功能位」。
+
 ## .navsurface v1 格式要点
 
-小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产必须与配置的 `world.terrainTypes` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。
+小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产的地形类型表必须与 `maps.<mapId>.terrainAreas` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。
 
 ## 阶段路线（来自 Web 规格第三部分）
 
@@ -187,7 +193,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S1 交付：地形与障碍物（本次）
 
 - **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
-- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换（config 按 mapId 绑定地图，多地图共用一份配置的问题见缺口）。
+- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
 
@@ -244,7 +250,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`,MassNavigationRuntime 同款形态）在地图聚焦时按配置目录合并出的 CrowdSimulationConfig + CrowdSimulationDebug 建会话——会话跑在**引擎世界**上（此前演示 mod 在侧世界 `ArchWorld.Create()` 起会话,呈现管线根本看不见单位,这是 S4 演示最初看不到单位的根因）,tick 由系统组的 FixedHz 驱动,会话与运行时注册成服务。S1/S3 演示 mod 的同款 Load 样板后续都往这里收。
 - **单位接入呈现投影**：稳定 id、模板键、`PreviousWorldPositionCm`、`VisualTransform`、`CullState`、`ContinuousHeightmapSampleState` 和半径黑板由生成系统在物化时写上。批车道带 `PresentationLifecycleState`，生命周期的出生查询不会再给这些单位建 presenter；单条车道由 `TryBootstrapPresenter` 标 `PresenterRootBootstrapHandled`。人群代码不调用 `CreateHierarchy`。无头接线没有 presenter 运行时，不建 presenter。校验码不读这些呈现字段。
 - **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + 新增的 `TeamColorPalette` 服务（`deploy.bases[].color` 是配置数据;`PresenterBehaviorSystem` 优先读调色板,未注册回退原双色解析,旧场景零影响）;选中环 = 玩家代表实体上的 `selected` 集合。框选经 `CollectionApplier` 写入，presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中。
-- **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
+- **演示 = 数据脚本**：S4 演示 mod 是纯数据（无 main）。地图聚焦后会话建立。`CrowdSimulationDebug.json` 的 `session.script` 写与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **接线约束**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——会话只物化单位模板点名的档案，不把注册表里其余体型当成半径级;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
 - **相机**：S4 mod 用同 id 片段把演示相机的 `edgePanMarginPx` 关成 0（无头跑证据时指针静置在窗口边缘会把镜头慢慢拖走,抓屏全都对不上）。
 - **选中与参考脚本**：选中只活在玩家代表的 `selected` 集合里，`CrowdSimulationUnitState` 不存选中，`select` / `selectAll` / `clearSelection` 不进群体指令日志。现场框选按修饰键替换、追加或减去，写进这个集合；右键把提交当时的成员句柄钉进 `order`，地面点取 `WorldCm` 的 X 与 Z。参考真值 JSON 仍保留 select 记录和无成员 order，不重导。对拍调用 `CrowdReferenceScript`：影子选中留在翻译器里，到点记录译成带成员句柄的 order（影子非空用影子，否则用本方单位，带 `crowd_simulation.hidden_template` 的除外），然后会话只冲刷队列。演示调试脚本走 `CrowdDemoScript`，到点的无成员 order 用本方单位补成员，不保留选中影子。译后的日志不含选中记录，回放只重放这份日志。选中不进校验码。空成员在入日志前拒收，报错 `order: 成员集为空。`。S4 演示的玩家模板挂 `interaction.context.crowd_simulation.battle`，左键框选、右键下令走上面的主线图。HUD 的选中数读本机座位的玩家号。
@@ -374,10 +380,116 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。座位没有、未占有、或解析不出 scope 时这两格计数保持 0。宿主每个视口经 `ISeatVisionScope` 取本机座位的 `ScopeKey`，只把这份雾贴到地形贴花。`Flow` / `Walkable` 仍优先占这个槽。座位没有 scope 时不贴雾，不取缓冲里的第一份，也不把缓冲里的雾画成平面四边形。`Vision/` 不写玩家号。群体侧 `CrowdSeatVisionScope` 用座位占有的玩家找到视野组，scope = 组号 + 1。雾展厅的座位 scope 是场景固定的 `ScopeKeyId`。贴花四色来自 `presentation.fogDecal`（`unseen` / `explored` / `visible` / `denied`）。雾展厅把这四色写在自己的 `WarFog/showcase.json`，地形贴花演示写在 `Vision/scripted_fog_source.json`。画雾时没有调色板就失败，信息里写出 `presentation.fogDecal`。
 
 `reveal` / `obscure` / `forget` / `fogShare` 仍由群体命令写这一份场：揭示把未见格标成已探索并对账足迹，遮蔽清掉当前可见并挡住后续盖章直到到期，遗忘把命令格写回未见。`fogShare` 低组号存活，可见和已探索按格 OR，信念仍在 `CrowdFog` 里并进存活组，玩家改挂存活组。源 scope 用 `FogFieldStore.Remove` 从存储摘掉，`Update` 不再给它盖章。认知导航版本和到达集合还没有基线。
+## MassNavigation 退役
+
+下面的名单来自仓库里对 `MassNavigation` 的引用。群体侧已有对应实现的，写对应类型；没有的，写「无」。
+
+### 能力 Mod 与展厅
+
+`mod.json` 依赖 `MassNavigationMod` 的展厅：
+
+- `mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod`
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod`（内核有 `CrowdFormations`，这个展厅仍走 MassNavigation；地图 `formation_capability_showcase`，`assets/Navigation/navmesh.json` 第 4 行 `solver` 为 `mass-navigation`）
+- `mods/showcases/total_war_flow/TotalWarFlowShowcaseMod`（地图 `total_war_flow_field`，`assets/Navigation/navmesh.json` 第 33 行 `solver` 为 `mass-navigation`）
+- `mods/showcases/wasd_sandbox/WasdSandboxMod`
+- `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod`（地图 `crowd_physics_arena`，`assets/Navigation/navmesh.json` 第 4 行 `solver` 为 `mass-navigation`）
+- `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod`
+
+`mod.json` 不依赖 `MassNavigationMod`，求解器仍是 `mass-navigation` 的展厅：
+
+- `mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod`（地图 `east_asia_visual_heightmap`，`assets/Navigation/navmesh.json` 第 25 行）
+
+另外这些文件引用了 MassNavigation 类型或配置，但 `mod.json` 没有把 `MassNavigationMod` 写成依赖：
+
+- `mods/showcases/road_network/RoadNetworkShowcaseMod`：地图 `road_network_showcase_chunked`，`assets/Navigation/navmesh.json` 第 4 行 `solver` 为 `mass-navigation`。`RoadNetworkMassNavigationRuntimeAccessor`，以及 `RoadMoveExecutionSystem`、`RoadMoveLifecycleSystem`、`RoadMoveOrderBindingSystem`、`RoadMovePlanSelectionSystem`、`InstallRoadNetworkShowcaseOnMapFocusTrigger`
+- `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod`：配置类型用 `MassNavigationFlowSolverConfig`、`MassNavigationRuntimeCapacityConfig`、`MassNavigationFlowArrivalTuning`、`MassNavigationFlowAvoidanceTuning`、`MassNavigationCrowdSemantics`
+- `mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod`：`config_catalog.json` 登记 `MassNavigationConfig.json`
+- `mods/FeatureHubMod/Systems/FeatureHubNavigationSystem.cs`：键盘 8 进入地图 `mass_navigation`
+
+启动图：`src/Apps/Raylib/Ludots.App.Raylib/raylib.mass-navigation.launch.graph.json`、`raylib.mass-navigation-10k-hud.launch.graph.json`、`raylib.tw-flow.launch.graph.json`、`raylib.formation-capability-showcase.launch.graph.json`。
+
+能力 Mod 本体：`mods/capabilities/navigation/MassNavigationMod`（模板、`GAS/graphs.json`、`GAS/effects.json`、`Maps/mass_navigation.json`、`config_catalog.json`）。地图 `mass_navigation` 的 `solver` 在 `assets/Navigation/navmesh.json` 第 4 行。
+
+### 系统与接入点
+
+`src/Core/MassNavigation/Systems/`：
+
+- `MassNavigationSimulationStepSystem`：步进、流场重建、局部转向、硬解析。群体侧对应 `CrowdSimSession.Step`、`FlowField`、`CrowdAvoidance`。
+- `MassNavigationAuthoredAgentBindingSystem`：把作者写的 agent 绑进求解器。群体侧对应模板上的 `CrowdSimulationAgent`，激活时走 `CrowdSimulationAuthoringContract`。
+- `MassNavigationAgentMetadataSyncSystem`：同步 agent 档案与层。群体侧单位层在模板和 `CrowdNavGroupSet`，没有同名同步系统。
+- `MassNavigationEnvironmentBindingSystem`：把 `MassNavigationFlowObstacleProjection` 收进求解器。群体侧阻挡在 `SurfaceGrid`，高度在 `NavHeightField`。
+- `MassNavigationScenarioBootstrap`：按场景生成单位。群体侧对应 `CrowdDeployment.Spawn` / `SpawnAt`，会话由 `CrowdSimulationRuntime.Activate` 建立。
+- `MassNavigationMovePlanExecutionSystem`：实现 `IMovePlanCommandGroupExecutionSystem`。群体侧无此接口；移动在 `CrowdMotor`，路线在 `PathQueryService`。
+- `MassNavigationLocomotionAnimatorParamSystem`：把速度写进 presenter 动画参数。群体侧无。
+- `MassNavigationPoseAuthorityBridge`：实现 `IPoseAuthorityTransitionListener`，同步 displaced。群体侧无。
+- `MassNavigationObserverDisclosure`：把已生成 agent 标成启动地图本地观察者的 LiveVisible。群体侧无。`CrowdFog` 是战争迷雾，不做这件披露。
+
+同目录运行时里，展厅和测试还直接用这些类型：`MassNavigationRuntime`、`MassNavigationSimulationRuntime`、`MassNavigationGroupRuntime`（群体侧编组是 `CrowdNavGroupSet`）、`MassNavigationRouteExecutionSink`、`MassNavigationMovePlanExecutionSink`（群体侧路线是 `PathQueryService` / `TilePathQuery` / `HpaQuery` / `CorridorQuery`）、`MassNavigationTelemetry`、`MassNavigationDomainRelationshipProjection`（群体侧关系投影是 `CrowdPairRulesProjection`）、`MassNavigationFlowSolverState` 及其避让、到达、位移、空间哈希。
+
+`MassNavigationTelemetry` 有分阶段毫秒、FPS、视野内人数。`CrowdSimulationTelemetry` 记 tick、单位数、接触、重烘、迷雾刷新、等路、停摆，以及阶段耗时（`LastPhaseTicks`）。HUD 读这些读数。
+
+目录外的接入：
+
+- `GameEngine` 持有 `MassNavigationRuntime`。`GameEngine.MapLoadLifecycle.InstallMassNavigationMovePlanOrderAdapter` 要求 `GAS/order_types.json` 定义 `MassNavigationOrderKeys.Move`（`massNavigationMove`）。群体指令是 `CrowdSimCommand`，没有这个 order type。
+- `ComponentRegistry` 登记 `MassNavigationAgent`、`MassNavigationBlocker`、`MassNavigationHotspotMarker`，并注册层名 `MassNavigationLayerNames.Agent`。
+- `MapLoader` 在装载时调用 `NavSessionBinding.RequireMassNavigationTemplate`。
+- `SolverAgentExclusivity` 与 `CrowdSimulationAuthoringContract` 拒绝同一模板同时带 `CrowdSimulationAgent` 和 `MassNavigationAgent`。`NavSolverDeclaration` 认 `navmesh`、`mass-navigation`、`crowd-simulation`。
+- `RaylibHostLoop` 在计时诊断里读 `MassNavigationSimulationRuntime` 的硬解析计数。`PresentationTimingDiagnostics` 有 MassNavigation 分阶段毫秒字段。
+- `MassNavKinematicPoseFeedSystem2D`、`MovementPhysics2DBridgeInstaller`：kinematic 体喂位姿。群体侧无。
+- `ManifestationObstacleBridge2DSystem` 写入 `MassNavigationFlowObstacleProjection`。群体侧无这个投影组件。
+- `DisplacementRuntimeSystem`：目标带 `MassNavigationAgentIndex` 时走位姿写权，禁止静默双写 `WorldPositionCm`。
+- `AttachmentOps`、`AttachmentPositionSyncSystem`：调用 `MassNavigationMembership.Suspend` / `Restore`。
+- `EffectPhaseSideEffectTransaction`：事务里保存 `MassNavigationAgent`、`MassNavigationAgentIndex`、`MassNavigationAgentProfile`、`SuspendedNavMembership`。
+- `RuntimeEntitySpawnSystem` 与 `MapLoader` 一样调用 `NavSessionBinding.RequireMassNavigationTemplate`。群体单位由 `CrowdSimUnits` 在指令 tick 内用模板生成。
+- `MovementParticipation` 把求解器产出的位姿标成 MassNavigation。
+- `src/Tools/Ludots.Launcher.Backend/MassNavigationEvidenceContracts.cs`、`src/Tools/Ludots.Launcher.Evidence/LauncherEvidenceRecorder.cs`：启动器证据合同。
+
+### 测试
+
+求解器与展厅测试：
+
+- `src/Tests/PresentationTests/MassNavigation/` 下 16 个测试文件（含 `CapabilityStandardMassNavigationLargeWorld10kProductionPathTests`、`MassNavSelectionChainTests`）。`ExpectedAgentCount = 10000` 是 `CapabilityStandardMassNavigationLargeWorld10kProductionPathTests` 的常量，不是 `CapabilityStandardMassNavigationLargeWorld10kMod` 的字段。`MassNavigationMapFocusTests` 的夹具地图 `mass_probe_a`、`mass_probe_b` 也把 `solver` 写成 `mass-navigation`。
+- `src/Tests/PresentationTests/MassNavigationGroupRuntimeTransactionTests.cs`
+- `src/Tests/PresentationTests/MassNavigationIssue671RuntimeTests.cs`
+- `src/Tests/PresentationTests/MassNavigationMovePlanExecutionTests.cs`
+- `src/Tests/PresentationTests/MassNavigationOrderChainTests.cs`
+- `src/Tests/PresentationTests/Movement/MassNavKinematicBridgeTests.cs`
+- `src/Tests/PresentationTests/FormationCapabilityLifecycleTests.cs`
+- `src/Tests/PresentationTests/CrowdPhysicsArena/CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs`
+- `src/Tests/GasTests/Production/EastAsiaBordersLandSeaAcceptanceTests.cs`
+- `src/Tests/GasTests/Production/TotalWarFlowAcceptanceTests.cs`
+- `src/Tests/GasTests/Production/WasdSandboxWalkAcceptanceTests.cs`
+- `src/Tests/GasTests/Production/CapabilityStandardTimeFlowShowcaseAcceptanceTests.cs`
+- `src/Tests/GasTests/Production/ParticipantViewKnowledgeShowcaseAcceptanceTests.cs`
+- `src/Tests/GasTests/Map/RoadNetworkShowcaseTests.cs`
+- `src/Tests/CrowdSimulationTests/CrowdSimulationAuthoringContractTests.cs`、`NavSchemaAuditTests.cs`、`SolverDeclarationTests.cs`（互斥与求解器声明）
+
+其余引用了这个名字、删除时要一起改的测试：`ArchitectureTests` 的 `ArchitectureGuardTests`、`LauncherBootstrapContractTests`、`NavigationLegacyDomainRemovalContractTests`、`NavigationObstacleAuthoringContractTests`、`NavigationSpatialScaleMagicNumberContractTests`、`PresentationBehaviorAndPrefabConfigContractTests`、`Rfc0065InteractionCastingBoundaryContractTests`；`GasTests` 的 `ConfigCatalogTests`、`EntityAttachmentTests`、`SeatDiagScratchTests`、`RuntimeManifestationBridgeTests`、`ChampionSkillSandboxPlayableAcceptanceTests`；`RaylibAdapterTests` 的 `ContinuousHeightmapAbsoluteDisplayHeightTests`、`RaylibGpuSkinnedContractTests`、`RaylibGpuSkinnedSsboEquivalenceTests`。
+
+### 删除前要满足的条件
+
+1. 功能：上一节写「无」的职责，要么群体侧有了承担它的类型，要么展厅、启动图和测试不再引用原来的类型。仍被引用的包括：`IMovePlanCommandGroupExecutionSystem` 与 order type `massNavigationMove`、`IPoseAuthorityTransitionListener` 的 MassNavigation 实现、运动动画参数、观察者 LiveVisible 披露、Physics2D kinematic 喂姿、`MassNavigationFlowObstacleProjection`、`MassNavigationTelemetry` 的分阶段毫秒 / FPS / 视野内人数。
+2. 性能：`CapabilityStandardMassNavigationLargeWorld10kProductionPathTests` 用常量 `ExpectedAgentCount = 10000` 跑这条生产路径，要有群体会话上的对等测试。`CrowdKernel50KBenchmarkTests` 继续把 50000 单位、200 tick 稳态窗的平均、P50、P95、最大写到 `artifacts/benchmarks/crowd-kernel-50k-tick/`。优化构建要求 P95 < 33 ms；Debug 记为未测。
+3. 展厅：上面依赖 `MassNavigationMod` 的展厅改为依赖群体模拟或删除；`EastAsiaNavMeshDebugMod` 的地图 `east_asia_visual_heightmap`（`navmesh.json` 第 25 行，`solver` 为 `mass-navigation`，`mod.json` 不依赖 `MassNavigationMod`）改为群体模拟或删除；路网地图 `road_network_showcase_chunked`、TimeFlow、参与者视图、FeatureHub 的 `mass_navigation` 入口，以及四份 Raylib 启动图，不再引用 MassNavigation。
+4. 求解器：`maps.<mapId>.solver` 仍只有一个值。`src/Core/MassNavigation` 和 `MassNavigationMod` 还在时，`SolverAgentExclusivity` 继续拒绝同一模板带两种 Agent。
+
+## 现在的范围
+
+原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，后三条里迷雾和动态建造已经在内核里，高度笔刷也有；导航区域笔刷和正方形阻挡仍然在。
+
+阻挡物仍然只能是正方形。`CrowdSimulationAuthoringContract` 要求地图上 `sinkNavigationObstacle` 的实体 `shape` 为 `Box`，并且 `halfWidthCm` 等于 `halfHeightCm`。圆形非阻挡区域实体不走这条拒绝。结构模板的 `blocker` 只接受 `footprint` 为 `rect`；`CrowdStructureFootprint.Make` 把 rect 写成 `Hx = Hy = sizeCm / 2`。`disc` 和 `path` 可以当结构，不能当阻挡。
+
+部署配置 `deploy` 仍是出生点加散布：`initialUnits`、`spreadCm`、`baseJitterCm`、`centersPerGroup`、`bases[]`（`playerId`、`xCm`、`yCm`）。指令里另有 `spawnAt`，按点、玩家、兵种和半径级生成。原句「仅出生点加散布」只覆盖配置节，指令集里还有 `spawnAt`。
+
+动态建造已经有。`placeStructure` 和 `removeStructureAt` 在指令 tick 执行，结构带寿命，变更走脏 tile 重烘。`CrowdStructuresStore` 在 `layered` 为真时拒绝放置，报文写明动态上层烘焙未开放。桥面层仍由会话激活时的 `UpperLayerBake.RasterizeDecks` 从地图桥实体生成。原句「无动态建造」不再成立；动态分层桥仍然没有。
+
+迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
+
+编辑器：`VisualTerrainEditorDocument.PaintWorld` 只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。没有把导航区域画进 `.navsurface` 的笔刷。原句「无编辑器笔刷」对高度笔刷已不成立；导航区域笔刷仍然没有。
 
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
-- 多地图共用一份 CrowdSimulationConfig 的寻址方式未定——DeepObject 合并只产出一份配置，按 mapId 绑定意味着一张地图一个地图 Mod；14.1 协议冻结时需定案。
+- 多张地图共用标准参数 Mod 的一份 CrowdSimulationConfig。地图自己的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。聚焦哪张图，就为哪张图建会话。动态分层桥仍然没有：桥面层由会话激活时从地图桥实体生成，结构模板 `layered` 为真时拒绝放置。
 - Raylib 宿主内的地形类型着色 / 阻挡格叠加层还没有 presenter（当前宿主画面是高程着色的高度图地形）；阻挡物还没有呈现网格。
 - Web 侧对拍基线的定点数学适配未开工（Fix64 语义在 Ludots 侧，Web 需跟进同一套）。
