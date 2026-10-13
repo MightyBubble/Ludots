@@ -48,9 +48,13 @@ internal sealed class CrowdPlayerViewHost
     private readonly Vector4 _ripple;
     private readonly Vector4 _card;
     private readonly Vector4 _text;
-    private readonly StringBuilder _sb = new(256);
-    private readonly float _dashM;
-    private readonly float _gapM;
+    private readonly StringBuilder _sb = new(512);
+    private readonly float _dashVisual;
+    private readonly float _gapVisual;
+    private readonly float _routeThicknessVisual;
+    private readonly float _rippleRadiusVisual;
+    private readonly float _markerRadiusVisual;
+    private readonly float _crossArmVisual;
 
     private CrowdSimSession? _boundSession;
     private bool[] _layers = Array.Empty<bool>();
@@ -135,8 +139,12 @@ internal sealed class CrowdPlayerViewHost
         _ripple = config.Colors.Ripple.ToVector4();
         _card = config.Colors.Card.ToVector4();
         _text = config.Colors.Text.ToVector4();
-        _dashM = WorldUnits.CmToM(config.DashCm);
-        _gapM = WorldUnits.CmToM(config.GapCm);
+        _dashVisual = WorldUnits.CmToM(config.DashCm);
+        _gapVisual = WorldUnits.CmToM(config.GapCm);
+        _routeThicknessVisual = WorldUnits.CmToM(config.RouteThicknessCm);
+        _rippleRadiusVisual = WorldUnits.CmToM(config.RippleRadiusCm);
+        _markerRadiusVisual = WorldUnits.CmToM(config.MarkerRadiusCm);
+        _crossArmVisual = WorldUnits.CmToM(config.CrossArmCm);
         Prefs = new CrowdPlayerOrderPrefs
         {
             ShapeId = config.DefaultShapeId,
@@ -599,7 +607,7 @@ internal sealed class CrowdPlayerViewHost
         {
             _formLine[0] = new Vector2(WorldUnits.CmToM(_formX0), WorldUnits.CmToM(_formY0));
             _formLine[1] = new Vector2(WorldUnits.CmToM(_formX1), WorldUnits.CmToM(_formY1));
-            routes.AddPolylineShared(new RouteVisualId(FormationLineId), _formLine, _config.RouteThicknessM, _plan);
+            routes.AddPolylineShared(new RouteVisualId(FormationLineId), _formLine, _routeThicknessVisual, _plan);
         }
 
         long now = Environment.TickCount64;
@@ -609,8 +617,8 @@ internal sealed class CrowdPlayerViewHost
                 new RouteVisualId(RippleMarkerId),
                 new Vector2(WorldUnits.CmToM(_rippleX), WorldUnits.CmToM(_rippleY)),
                 RouteVisualMarkerShape.Ring,
-                _config.RippleRadiusM,
-                _config.RouteThicknessM,
+                _rippleRadiusVisual,
+                _routeThicknessVisual,
                 _ripple);
         }
 
@@ -987,7 +995,7 @@ internal sealed class CrowdPlayerViewHost
         pts[2] = new Vector2(maxX, maxY);
         pts[3] = new Vector2(minX, maxY);
         pts[4] = new Vector2(minX, minY);
-        routes.AddPolylineShared(new RouteVisualId(StructureIdBase + index), pts, _config.RouteThicknessM, _ink);
+        routes.AddPolylineShared(new RouteVisualId(StructureIdBase + index), pts, _routeThicknessVisual, _ink);
     }
 
     private void DrawBox(ScreenOverlayBuffer overlay)
@@ -1033,13 +1041,13 @@ internal sealed class CrowdPlayerViewHost
         float goalY = WorldUnits.CmToM(gy);
         if (unfinished)
         {
-            float arm = _config.CrossArmM;
+            float arm = _crossArmVisual;
             _crossH[0] = new Vector2(goalX - arm, goalY);
             _crossH[1] = new Vector2(goalX + arm, goalY);
             _crossV[0] = new Vector2(goalX, goalY - arm);
             _crossV[1] = new Vector2(goalX, goalY + arm);
-            routes.AddPolylineShared(new RouteVisualId(GoalCrossHId), _crossH, _config.RouteThicknessM, _goal);
-            routes.AddPolylineShared(new RouteVisualId(GoalCrossVId), _crossV, _config.RouteThicknessM, _goal);
+            routes.AddPolylineShared(new RouteVisualId(GoalCrossHId), _crossH, _routeThicknessVisual, _goal);
+            routes.AddPolylineShared(new RouteVisualId(GoalCrossVId), _crossV, _routeThicknessVisual, _goal);
         }
 
         if (!_route)
@@ -1052,7 +1060,7 @@ internal sealed class CrowdPlayerViewHost
         float dx = goalX - leadX;
         float dy = goalY - leadY;
         float len = MathF.Sqrt((dx * dx) + (dy * dy));
-        float period = _dashM + _gapM;
+        float period = _dashVisual + _gapVisual;
         int segments = 0;
         float t = 0f;
         while (len > 0f && t < len)
@@ -1062,11 +1070,11 @@ internal sealed class CrowdPlayerViewHost
                 throw new InvalidOperationException("玩家路线虚线超出 maxDashes。");
             }
 
-            float end = MathF.Min(len, t + _dashM);
+            float end = MathF.Min(len, t + _dashVisual);
             Vector2[] seg = _dashes[segments];
             seg[0] = new Vector2(leadX + (dx * (t / len)), leadY + (dy * (t / len)));
             seg[1] = new Vector2(leadX + (dx * (end / len)), leadY + (dy * (end / len)));
-            routes.AddPolylineShared(new RouteVisualId(DashIdBase + segments), seg, _config.RouteThicknessM, _plan);
+            routes.AddPolylineShared(new RouteVisualId(DashIdBase + segments), seg, _routeThicknessVisual, _plan);
             segments++;
             t += period;
         }
@@ -1075,8 +1083,8 @@ internal sealed class CrowdPlayerViewHost
             new RouteVisualId(RouteEndId),
             new Vector2(goalX, goalY),
             RouteVisualMarkerShape.Diamond,
-            _config.MarkerRadiusM,
-            _config.RouteThicknessM,
+            _markerRadiusVisual,
+            _routeThicknessVisual,
             _goal);
     }
 

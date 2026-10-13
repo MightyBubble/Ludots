@@ -31,13 +31,13 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int RadiusMinIndex { get; init; }
     [JsonRequired] public int RadiusMaxIndex { get; init; }
     [JsonRequired] public int RippleMs { get; init; }
-    [JsonRequired] public float RippleRadiusM { get; init; }
+    [JsonRequired] public int RippleRadiusCm { get; init; }
     [JsonRequired] public int DashCm { get; init; }
     [JsonRequired] public int GapCm { get; init; }
     [JsonRequired] public int MaxDashes { get; init; }
-    [JsonRequired] public float RouteThicknessM { get; init; }
-    [JsonRequired] public float MarkerRadiusM { get; init; }
-    [JsonRequired] public float CrossArmM { get; init; }
+    [JsonRequired] public int RouteThicknessCm { get; init; }
+    [JsonRequired] public int MarkerRadiusCm { get; init; }
+    [JsonRequired] public int CrossArmCm { get; init; }
     [JsonRequired] public int StatusCardX { get; init; }
     [JsonRequired] public int StatusCardY { get; init; }
     [JsonRequired] public int StatusCardW { get; init; }
@@ -106,14 +106,14 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: radiusMaxIndex 不能小于 radiusMinIndex。");
         if (RippleMs < 1)
             throw new InvalidOperationException($"{path}: rippleMs 需为 ≥ 1 的整数。");
-        RequirePositive(path, "rippleRadiusM", RippleRadiusM);
+        if (RippleRadiusCm < 1)
+            throw new InvalidOperationException($"{path}: rippleRadiusCm 需为 ≥ 1 的整数。");
         if (DashCm < 1 || GapCm < 1)
             throw new InvalidOperationException($"{path}: dashCm 与 gapCm 需为 ≥ 1 的整数。");
-        if (MaxDashes < 1 || MaxDashes > 256)
+        if (MaxDashes < 1 || MaxDashes > (1 << 8))
             throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
-        RequirePositive(path, "routeThicknessM", RouteThicknessM);
-        RequirePositive(path, "markerRadiusM", MarkerRadiusM);
-        RequirePositive(path, "crossArmM", CrossArmM);
+        if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1)
+            throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm 与 crossArmCm 需为 ≥ 1 的整数。");
         if (StatusCardW < 1 || StatusCardH < 1 || FontSize < 1 || LinePx < 1)
             throw new InvalidOperationException($"{path}: 状态卡尺寸、字号和线宽需为 ≥ 1 的整数。");
         if (KillRadiusCm < 1)
