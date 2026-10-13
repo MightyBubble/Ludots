@@ -5,7 +5,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// S4 规范校验码(FNV-1a 32,Fix64 原始值口径——甲方体系):
+/// S4 规范校验码(FNV-1a 32，按 Ludots Fix64 原始值计算):
 /// 字段顺序是 tick、单位数、x/y、vx/vy、slotX/slotY、
 /// blend、stall、state、group、id、order、mode、level，
 /// 然后是分离 X、分离 Y、calm（逐单位，低 32 再高 32），最后是相位一词。不含指令，不含领队。

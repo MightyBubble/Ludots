@@ -18,7 +18,7 @@ NavSurface（`.navsurface`）是新增的地表资产：逐导航格的地形类
 
 不引入第二套数学：内核全部使用 `src/Core/Math/FixedPoint` 的 Fix64 / Fix64Math（Q31.32 与其确定性超越函数），长度单位为厘米，与 `WorldPositionCm` 同单位制。配置文件维持 Ludots 约定（厘米、`Cm` 后缀）。一部分世界距离在装载时除以 `profiles.cellSizeCm` 变成导航格。magic box、结构足迹和单位位置保持厘米。马达仍用导航格边长把导航格换回厘米。四种格的名字、单位和配置键以 [空间尺度 SSOT](spatial-scale-and-resolution-ssot.md) 为准：导航格 `NavCell`、导航 tile `NavTile`、迷雾格 `FogCell`、避让哈希格 `AvoidanceHashCell`。HPA 的一块就叫 tile。对拍时以 Ludots 定点语义为准生成基线，Web 参考实现如需对拍要适配同一套定点算法。
 
-**定案（2026-10-09）：要的是行为对拍，不是数值逐位。** 不为对齐参考端的 f32 存储量化格而在 C# 侧做二次量化（逐位一致在双数值系下不可达，量化对齐 = 让 Ludots 的 Fix64 数系迁就参考端的存储层）。验收口径定格为：结构性字段（生成位置、状态机 state/level/order、重烘焙报告、指令序）逐位；派生量（轨迹位置、mode、接触计数骑线）按实测带宽与容忍线，口径一旦写明不接受"再收紧"诉求——系统性分歧（接触集大面积错、状态机翻字、重烘报告字段差）才是这道门要拦的东西。
+**定案（2026-10-09）：要的是行为对拍，不是数值逐位。数值体系以 Ludots 的 Fix64 为准，不迁就 Web 端。** 不为对齐 Web 端的 f32 存储量化格而在 C# 侧做二次量化（逐位一致在双数值系下不可达）。验收口径定格为：结构性字段（生成位置、状态机 state/level/order、重烘焙报告、指令序）逐位；派生量（轨迹位置、mode、接触计数骑线）按实测带宽与容忍线，口径一旦写明不接受"再收紧"诉求——系统性分歧（接触集大面积错、状态机翻字、重烘报告字段差）才是这道门要拦的东西。
 
 烘焙期边界：运行期内核（部署 / 移动 / 规划）全 Fix64；`NavHeightField` 的 .height 样本解码与 `NavTileBaker` 的简化 / 边长阈值比较、格心归属判定允许 IEEE double，产物进定点域（定点厘米 / 整数格角点）前一次性转换，依据见 S2 段——定点域内直接乘会溢出 Q31.32，且 Web 导出端同样从量化样本重建，两端读同一份输入。
 
@@ -233,7 +233,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（速度、个人半径、推挤优先级、special，以及生成时写入的档案下标和移动类型下标；profileId / agentTypeId 留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
 - **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有单独的组件集：测试装配把 CrowdSimulationMod 的模板挂进 VFS，再经同一条 EntityBuilder.UseTemplate 实例化。出生算法（盐流/环形搜索/编组/散布）留在内核;S4/S5 真值测试原样全绿。
 - **部署算法**：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数，失败不留半生成状态。
-- **规范校验码（FNV-1a 32,Fix64 原始值口径——Ludots 的 Fix64 口径）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位）。
+- **规范校验码（FNV-1a 32，按 Ludots Fix64 原始值计算）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位）。
 - **指令队列与回放**：指令是数据，tick 边界执行。回放输入是指令日志，回放是新会话加上同一份日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
 - **对拍（`S4DeployTruthTests`,3 种子）**：同一份脚本（spawn 12000 → 框选 → 点名生成 20 → 全选 → 清空）逐帧校验码与沙盒一致（150 帧 × 3）;12020 个单位逐条（玩家 / 模板 / 半径级 / 组 / 位置原始值）一致;同一份记录回放两次校验码相同。
 - **玩家号**：参考端玩家 0 与 Ludots 玩家号 1..P 的换算只在 `PlayerOwner` 与脚本数据边界做一次,内部编号序不受影响。镜像侧若把位置乘法也取整,奇数半档比 Ludots 少 50 个原始单位。
