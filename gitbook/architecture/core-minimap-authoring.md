@@ -135,9 +135,9 @@ Core runtime 类型：`MinimapRuntime`。
 
 小地图上的滚轮缩放读 `presentation.minimap.actions.zoom` 这个动作（LudotsCoreMod 的 `game.json` 默认写 `Minimap.Zoom`），没写启动就报错。这个动作绑哪个键，由用到小地图的 showcase 在自己的 `default_input.json` 里声明。
 
-点击、拖拽用的确认键和命令键来自 `game.json` 的 `interactionActions`，鼠标位置用引擎保留的 `PointerPos` 动作。
+点击、拖拽、缩放条和两个切换按钮走 `interaction.context.minimap`。这个状态在 LudotsCoreMod 的 `Input/interaction_context_profiles.json` 里声明，`foreground` 为真，`pointerRouting` 为 `ui`。`graph.minimap.hover` 挂在 `interaction.context.moba.battle`：指针落在小地图区域时打开小地图状态，上层点选图停掉，世界点击不会发出。按下、松开、移动、命令分别是 `graph.minimap.press`、`graph.minimap.release`、`graph.minimap.track`、`graph.minimap.command`。鼠标位置用引擎保留的 `PointerPos`。别的战斗上下文要自己挂 `graph.minimap.hover`。
 
-输入必须走统一 input 基建。滚轮、点击、拖拽、缩放条和两个切换按钮都通过 `MinimapInputConsumer` 消费，并在命中小地图交互区域时设置 pointer capture，防止穿透到相机或世界交互。
+滚轮不进图。指针在小地图交互区域时，`InputRuntimeSystem` 调 `MinimapRuntime.TryConsumePointerWheel`，再按既有的 `suppressOnUiWheelCaptured` 压住相机缩放。
 
 ## 7. 缩放配置
 

@@ -187,7 +187,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`）。`user://` 按宿主传入的用户数据根展开。缺根在引擎初始化时报 `userDataRoot`。坏文件报路径。存的方案 id 不在允许集里直接抛。测试引擎每次传一个新的临时目录 |
 | 座位 `controlSchemeId` 在 SHOW-6 以外可以留空 | 空值保持当前已激活的方案，这是 `ParticipantBindingResolver` 的合同 | 已知，这轮不改。`CoreInputMod` 收尾时关掉：启动必须声明方案，缺了就报错 |
 | `allowedSchemes` 里同一个 id 出现两次 | 追加合并只往后接，不去重 | 已知。校验读到重复 id 直接失败关闭 |
-| Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | 改名为输入采样，和小地图指针那一片一起做。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 是各自领域的词，不归这条线 |
+| Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | **已改**：类型、命名空间和服务绑定改成 `GraphPointerSampleRuntime` / `IGraphPointerSampleRuntime`（`Ludots.Core.Input.PointerSample`，`BindPointerSample`）。`ScreenPointToGround` 这些操作名本来就不含 aim，保持不动。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 不归这条线 |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**
@@ -212,9 +212,9 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
 
-**还没删的 `CoreInputMod` 部分：** 小地图指针交互改走前台交互状态（删 `MinimapInputConsumer` / `PointerInputCaptured` / `interactionActions`）；`collection.command.source` 换成各 mod 自己的集合；最后删 `CoreInputMod` 目录和它的依赖，去掉 `Default_Gameplay`，启动交互状态找不到就报错，加禁名守卫。
+**还没删的 `CoreInputMod` 部分：** 小地图指针 **已改**。`interaction.context.minimap` 写在 LudotsCoreMod 的 `Input/interaction_context_profiles.json`，`foreground` 为真，`pointerRouting` 为 `ui`。`graph.minimap.hover` 挂在 `interaction.context.moba.battle` 上，指针落在小地图区域时打开这个前台状态，上层点选图停掉，世界点击不会开 `interaction.context.core.selecting`。点击跳相机、拖拽、缩放条、两个切换按钮是 `graph.minimap.press` / `graph.minimap.track` / `graph.minimap.release`；命令点地是 `graph.minimap.command`。`MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions` 已删，`CorePointerVocabularyGuardTests` 守着 Core 里不再出现这些名字，也不再出现 `GraphAimSourceRuntime`。滚轮仍由 `InputRuntimeSystem` 调 `MinimapRuntime.TryConsumePointerWheel`，再走既有的 `suppressOnUiWheelCaptured`。别的战斗上下文要自己挂 `graph.minimap.hover`。还没做：`collection.command.source` 换成各 mod 自己的集合；删 `CoreInputMod` 目录和它的依赖，去掉 `Default_Gameplay`，启动交互状态找不到就报错。
 
-**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
 ### 3.4 不要当成这轮图能力去合
 

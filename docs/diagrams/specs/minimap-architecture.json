@@ -12,7 +12,7 @@
     "items": [
       { "label": "Navigation Data", "tint": "steel" },
       { "label": "Presentation System", "tint": "stone" },
-      { "label": "Input Consumer", "tint": "mauve" }
+      { "label": "Interaction Context", "tint": "mauve" }
     ]
   },
 
@@ -47,9 +47,9 @@
     { "id": "overlay", "title": "ScreenOverlayBuffer", "tint": "stone",
       "x": 940, "y": 800, "w": 460, "h": 120,
       "items": ["UI Render Output"] },
-    { "id": "input", "title": "MinimapInputConsumer", "tint": "mauve",
+    { "id": "input", "title": "interaction.context.minimap", "tint": "mauve",
       "x": 1040, "y": 1030, "w": 380, "h": 120,
-      "items": ["toggle/zoom/pan/click"] }
+      "items": ["hover/press/drag/command"] }
   ],
 
   "edges": [

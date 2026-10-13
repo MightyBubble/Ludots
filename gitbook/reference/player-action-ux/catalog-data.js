@@ -11610,7 +11610,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把点击地面记为落点并结算技能"
         }
       ],
-      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11706,7 +11706,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "在松手位置确认释放"
         }
       ],
-      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11813,7 +11813,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "确认放置并开始建造或落地"
         }
       ],
-      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11895,7 +11895,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把小地图点击映射为大地图落点"
         }
       ],
-      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],

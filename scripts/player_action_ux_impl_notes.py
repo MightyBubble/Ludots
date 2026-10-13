@@ -46,7 +46,7 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         ["双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"],
     ),
     "ground-skill": (
-        "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
+        "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地走 interaction.context.minimap 的 graph.minimap.command。",
         ["InputCastSpec（套索/多边形）RFC 有、代码未落地"],
     ),
     "direction-skill": (

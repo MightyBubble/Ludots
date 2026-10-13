@@ -135,6 +135,16 @@
 - [这一击的单据上写着打谁](LoadContextTarget.md) — 从这一击自带单据里取出目标，取到木桩，扣 12 血。
 - [连击数加一](AddInt.md) — 两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。
 
+## 指针采样
+
+> 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。
+
+- [光标点到谁](ScreenPointToEntity.md) — 光标压在人群一侧，点名线牵住被点到的那人。
+- [把光标钉到地上](ScreenPointToGround.md) — 光标点下的地方，落点圈在地图上亮起。
+- [摇杆掰方向](StickToDirection.md) — 摇杆斜掰，箭头随之指向东北。
+- [朝落点转向](PointToDirection.md) — 指挥转身，炮口指向地图东北的落点。
+- [框一圈点名](ScreenRegionToEntities.md) — 虚线框罩住西边一段，框里的人被点名线逐个牵住。
+
 ## 放置区域名册
 
 > 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
@@ -154,16 +164,6 @@
 
 - [只点框内的敌军](QueryScreenRegionCollection.md) — 左半场点名，友军与框外敌军留在圈外。
 - [换队后，名单跟着变](BindQueryCollection.md) — 左侧士兵换队，点名圈随之摘下或补回。
-
-## 瞄准源
-
-> 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。
-
-- [光标点到谁](ScreenPointToEntity.md) — 光标压在人群一侧，点名线牵住被点到的那人。
-- [把光标钉到地上](ScreenPointToGround.md) — 光标点下的地方，落点圈在地图上亮起。
-- [摇杆掰方向](StickToDirection.md) — 摇杆斜掰，箭头随之指向东北。
-- [朝落点转向](PointToDirection.md) — 指挥转身，炮口指向地图东北的落点。
-- [框一圈点名](ScreenRegionToEntities.md) — 虚线框罩住西边一段，框里的人被点名线逐个牵住。
 
 ## 空间圈人
 
@@ -193,8 +193,11 @@
 - [亮出情报面板](ShowPanel.md) — 选中单位的一瞬间，属性卡跟着亮起来。
 - [伤害拉长一半](MulFloat.md) — 20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
 - [先看坐标读不读得出](LoadEntityPosValid.md) — 图里先确认木桩站在原地，坐标读得出才谈得上追击。
+- [光标落在小地图哪一块](QueryMinimapRegion.md) — 屏幕上的点问小地图，落在场地、缩放条、预设按钮、旋转按钮，还是哪块都不是。
 - [关掉当前这个交互状态](DeactivateOwnContext.md) — 图关掉正在跑自己的那个交互状态。
 - [写下地面落点](SetTargetPos.md) — 两个厘米数写进图的地面点，后面的提交和夹取读的就是它。
+- [切换小地图全图和跟随](MinimapTogglePreset.md) — 在全图和跟随相机两种预设之间切一次。
+- [切换小地图跟不跟相机转](MinimapToggleRotate.md) — 小地图跟相机转，或者不跟，切一次。
 - [刻死的一刀](ConstFloat.md) — 台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
 - [命运袋里掏一件](WeightedPick.md) — 掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。
 - [图内切瞄准](SetInteractionMode.md) — 不用碰键位表，一枚目标在图里被切进了瞄准模式。
@@ -202,9 +205,11 @@
 - [图内激活瞄准 context](ActivateContext.md) — 不用碰键位表，一枚指令把木桩切进瞄准 context，实例集里立起一条。
 - [图内造兵](SpawnTemplate.md) — 不用预置实体，阈值一到援军从图里长了出来。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
+- [小地图上的点换成地面](MinimapScreenToWorld.md) — 屏幕点按小地图投到地面厘米，投不中得到假。
 - [开方求真长度](SqrtFloat.md) — 81 的平方开出来是 9，折成 9 点伤打在木桩上。
 - [按偏好打开交互状态](ActivateContextFromPref.md) — 图读出这条偏好的取值，打开同名的交互状态。
 - [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
+- [按缩放条位置改小地图缩放](MinimapSetZoomFromPointer.md) — 用屏幕点的横坐标在缩放条上取一个缩放。
 - [撞到上限就停](ClampFloat.md) — 90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。
 - [收起情报面板](HidePanel.md) — 点掉选中，属性卡跟着隐去。
 - [整数换算成浮点刻度](IntToFloat.md) — 记在整数位上的 -9，换到浮点刻度再打出去，数值不变，刻度变了。
@@ -212,6 +217,7 @@
 - [永远放行的许可](ConstBool.md) — 门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。
 - [浮点折回整数位](FloatToInt.md) — -8.6 的伤害按四舍五入折回整数位，折完是多少打多少。
 - [热座换手](SetPanelAudience.md) — 回合一换，面板受众跟着换到当令座位，等待的座位点不动面板。
+- [相机跳到小地图记下的地面点](MinimapJumpCamera.md) — 把图里记下的地面点交给小地图，相机跳过去，点会被世界边界夹住。
 - [真的那条路不走失败](Fail.md) — 条件为真，失败节点留在另一支，木桩照常掉血。
 - [砍不砍得死，比一下](CompareGtFloat.md) — 同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
 - [记下一个偏好](SetPref.md) — 图把一个取值写进代表的玩家级偏好。
