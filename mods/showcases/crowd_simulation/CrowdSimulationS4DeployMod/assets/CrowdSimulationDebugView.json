@@ -1,0 +1,451 @@
+{
+  "version": 1,
+  "arrowMinScreenPx": 10,
+  "lineThicknessPx": 6,
+  "unitMarkPx": 14,
+  "maxScreenSegments": 2800,
+  "maxFieldCells": 8192,
+  "maxWorldSegments": 65536,
+  "densityMax": 8,
+  "overlayReserve": 128,
+  "dirtyPulsePercent": 70,
+  "inspect": {
+    "layerIndex": 0,
+    "radiusIndex": 0
+  },
+  "beliefGroup": 0,
+  "unitColor": "off",
+  "overlays": {
+    "funnel": false,
+    "corridor": false,
+    "hpaGraph": false,
+    "navPolygons": false,
+    "tileGrid": false,
+    "flow": false,
+    "density": false,
+    "obstacles": false,
+    "jumpLinks": false,
+    "belief": false
+  },
+  "colors": {
+    "nav": {
+      "r": 70,
+      "g": 74,
+      "b": 160,
+      "a": 210
+    },
+    "plan": {
+      "r": 150,
+      "g": 42,
+      "b": 72,
+      "a": 180
+    },
+    "tile": {
+      "r": 214,
+      "g": 154,
+      "b": 42,
+      "a": 200
+    },
+    "tileDirty": {
+      "r": 230,
+      "g": 170,
+      "b": 40,
+      "a": 230
+    },
+    "ink": {
+      "r": 24,
+      "g": 18,
+      "b": 28,
+      "a": 210
+    },
+    "paper": {
+      "r": 236,
+      "g": 230,
+      "b": 214,
+      "a": 48
+    },
+    "twoWay": {
+      "r": 70,
+      "g": 74,
+      "b": 160,
+      "a": 230
+    },
+    "oneWay": {
+      "r": 214,
+      "g": 154,
+      "b": 42,
+      "a": 230
+    },
+    "densityLow": {
+      "r": 60,
+      "g": 90,
+      "b": 170,
+      "a": 50
+    },
+    "densityHigh": {
+      "r": 200,
+      "g": 50,
+      "b": 40,
+      "a": 190
+    },
+    "beliefDiff": {
+      "r": 70,
+      "g": 130,
+      "b": 200,
+      "a": 170
+    },
+    "beliefGhost": {
+      "r": 150,
+      "g": 70,
+      "b": 170,
+      "a": 190
+    },
+    "leader": {
+      "r": 170,
+      "g": 48,
+      "b": 78,
+      "a": 240
+    },
+    "funnel": {
+      "r": 190,
+      "g": 60,
+      "b": 90,
+      "a": 240
+    },
+    "panelText": {
+      "r": 236,
+      "g": 232,
+      "b": 220,
+      "a": 255
+    },
+    "teams": [
+      {
+        "r": 229,
+        "g": 57,
+        "b": 57,
+        "a": 230
+      },
+      {
+        "r": 229,
+        "g": 186,
+        "b": 57,
+        "a": 230
+      },
+      {
+        "r": 143,
+        "g": 229,
+        "b": 57,
+        "a": 230
+      },
+      {
+        "r": 57,
+        "g": 229,
+        "b": 100,
+        "a": 230
+      },
+      {
+        "r": 57,
+        "g": 229,
+        "b": 229,
+        "a": 230
+      },
+      {
+        "r": 57,
+        "g": 100,
+        "b": 229,
+        "a": 230
+      },
+      {
+        "r": 143,
+        "g": 57,
+        "b": 229,
+        "a": 230
+      },
+      {
+        "r": 229,
+        "g": 57,
+        "b": 186,
+        "a": 230
+      }
+    ],
+    "templates": [
+      {
+        "r": 242,
+        "g": 84,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 114,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 143,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 173,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 202,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 232,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 222,
+        "g": 242,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 193,
+        "g": 242,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 163,
+        "g": 242,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 133,
+        "g": 242,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 104,
+        "g": 242,
+        "b": 84,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 242,
+        "b": 94,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 242,
+        "b": 124,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 242,
+        "b": 153,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 242,
+        "b": 183,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 242,
+        "b": 212,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 242,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 212,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 183,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 153,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 124,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 84,
+        "g": 94,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 104,
+        "g": 84,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 133,
+        "g": 84,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 163,
+        "g": 84,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 193,
+        "g": 84,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 222,
+        "g": 84,
+        "b": 242,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 84,
+        "b": 232,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 84,
+        "b": 202,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 84,
+        "b": 173,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 84,
+        "b": 143,
+        "a": 230
+      },
+      {
+        "r": 242,
+        "g": 84,
+        "b": 114,
+        "a": 230
+      }
+    ],
+    "priorities": [
+      {
+        "r": 89,
+        "g": 77,
+        "b": 75,
+        "a": 230
+      },
+      {
+        "r": 107,
+        "g": 83,
+        "b": 80,
+        "a": 230
+      },
+      {
+        "r": 124,
+        "g": 86,
+        "b": 81,
+        "a": 230
+      },
+      {
+        "r": 142,
+        "g": 86,
+        "b": 78,
+        "a": 230
+      },
+      {
+        "r": 160,
+        "g": 82,
+        "b": 72,
+        "a": 230
+      },
+      {
+        "r": 178,
+        "g": 76,
+        "b": 62,
+        "a": 230
+      },
+      {
+        "r": 196,
+        "g": 66,
+        "b": 49,
+        "a": 230
+      },
+      {
+        "r": 214,
+        "g": 53,
+        "b": 32,
+        "a": 230
+      },
+      {
+        "r": 232,
+        "g": 38,
+        "b": 11,
+        "a": 230
+      }
+    ]
+  },
+  "layers": {
+    "paper": 20,
+    "corridor": 21,
+    "obstacles": 22,
+    "density": 23,
+    "belief": 24,
+    "flow": 3
+  },
+  "actions": {
+    "toggleFunnel": "CrowdSimulation.S4.ToggleFunnel",
+    "toggleCorridor": "CrowdSimulation.S4.ToggleCorridor",
+    "toggleHpaGraph": "CrowdSimulation.S4.ToggleHpaGraph",
+    "toggleNavPolygons": "CrowdSimulation.S4.ToggleNavPolygons",
+    "toggleTileGrid": "CrowdSimulation.S4.ToggleTileGrid",
+    "toggleFlow": "CrowdSimulation.S4.ToggleFlow",
+    "toggleDensity": "CrowdSimulation.S4.ToggleDensity",
+    "toggleObstacles": "CrowdSimulation.S4.ToggleObstacles",
+    "toggleJumpLinks": "CrowdSimulation.S4.ToggleJumpLinks",
+    "toggleBelief": "CrowdSimulation.S4.ToggleBelief",
+    "cycleUnitColor": "CrowdSimulation.S4.CycleUnitColor",
+    "cycleBeliefGroup": "CrowdSimulation.S4.CycleBeliefGroup",
+    "cycleInspectLayer": "CrowdSimulation.S4.CycleInspectLayer",
+    "cycleInspectRadius": "CrowdSimulation.S4.CycleInspectRadius"
+  },
+  "panel": {
+    "x": 16,
+    "y": 220,
+    "fontSize": 18
+  }
+}
