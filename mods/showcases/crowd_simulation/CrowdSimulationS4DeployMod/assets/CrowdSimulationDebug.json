@@ -148,8 +148,14 @@
       "originYPx": 16,
       "widthPx": 1568,
       "heightPx": 148,
-      "keys": "V 视图 {view} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{templateIndex}] · 建造模式下左键放置 · {activity}{pending}"
-    },
+    "keys": "V 视图 {view} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{templateIndex}] · 建造模式下左键放置 · {activity}{pending}"
+  },
+  "fogDecal": {
+    "unseen": [0, 0, 0, 255],
+    "explored": [72, 96, 148, 235],
+    "visible": [0, 0, 0, 0],
+    "denied": [120, 24, 36, 245]
+  },
     "deploy": {
       "actions": {
         "cycleView": "CrowdSimulation.S4.CycleView",

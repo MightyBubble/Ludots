@@ -8,6 +8,7 @@ using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
@@ -102,6 +103,15 @@ public sealed class CrowdSimSession
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
 
+    private FogLayerRegistry? _visionLayers;
+    private FogFieldStore? _visionFields;
+
+    public void BindVision(FogLayerRegistry layers, FogFieldStore fields)
+    {
+        _visionLayers = layers ?? throw new ArgumentNullException(nameof(layers));
+        _visionFields = fields ?? throw new ArgumentNullException(nameof(fields));
+    }
+
     public void EnableMovement(CrowdMovementKernel kernel, CrowdSimPlanner planner)
     {
         Movement = kernel;
@@ -110,7 +120,12 @@ public sealed class CrowdSimSession
         // 纯部署会话(S4 形状)不建迷雾。LOS 开启需要高度场(装配缺口即报)。
         if (Structures != null)
         {
-            Fog = new CrowdFog(Config, Config.PairRules, Structures);
+            if (_visionLayers == null || _visionFields == null)
+            {
+                throw new InvalidOperationException("迷雾盖章需要先绑定雾层注册表和雾场。");
+            }
+
+            Fog = new CrowdFog(Config, Config.PairRules, Structures, _visionLayers, _visionFields);
             if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
             Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);

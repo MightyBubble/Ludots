@@ -10,14 +10,15 @@ using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.CrowdSimulation.Fog;
 
 /// <summary>
 /// 迷雾 + 认知(belief),按视野组(fog/fog.js 移植):sharesVisionWith 两个方向都成立的玩家并成一组,
-/// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell) 的 fog 格)上:
-/// visible 每 fog.rateHz 重建(组按 round-robin 摊到周期各 tick,单位只在本组槽位 tick 盖章);
-/// explored 粘滞;belief = 实体 id → 末次所见快照 {tpl, fp}(地图初始实体全员已知;运行时
+/// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell) 的 fog 格)上
+/// 有一份 FogField:可见格按 fog.rateHz 重建(组按 round-robin 摊到周期各 tick,单位只在本组槽位 tick 盖章),
+/// 已探索粘滞。belief = 实体 id → 末次所见快照 {tpl, fp}(地图初始实体全员已知;运行时
 /// 实体见即知;真值已拆的实体留残影,直到其地面再被看见);key = 认知实体集的交换 XOR 哈希
 /// ——同 key 的组共享一个认知槽(槽归属永远经集合相等确认,哈希碰撞不可能错分)。
 /// 确定性:只由 tick 计数与单位状态驱动。马达永远走真相;规划侧经 CrowdBeliefSync 消费认知。
@@ -33,9 +34,8 @@ public sealed class CrowdFog
     public readonly int NavCellsPerSide;          // 导航格边长
     public readonly int VisionGroupCount;          // 视野组数
     public readonly int NavCellsPerTile, NavTilesPerSide;       // tile 边长(导航格)/ tile 网格边长
-    public readonly byte[] Visible, Explored, Occ;   // VisionGroupCount × FogCellsPerSide²
-    /// <summary>每组派生计数:可见格、已探索格、残影(认知有、真相无足迹)。与格子/认知同步增减,不进校验码。</summary>
-    public readonly int[] VisibleCount, ExploredCount, GhostCount;
+    /// <summary>每组残影(认知有、真相无足迹)。与认知同步增减,不进校验码。可见/已探索计数在 FogField。</summary>
+    public readonly int[] GhostCount;
     public readonly uint[] Version, Key, TileKey, Seen, Gone;
     /// <summary>BV-6 精确变更计数(参考端 Float64 计数器):认知实体集变 / 实体集或 tile 集变。</summary>
     public readonly long[] EntRev, Rev;
@@ -54,6 +54,14 @@ public sealed class CrowdFog
     /// <summary>在途遮蔽:{组, 格集, until tick},按指令序。</summary>
     private List<(int GroupIndex, int[] Cells, int Until)> _obscured = new();
     public readonly ushort[] ObsN;  // 每组每格的活跃遮蔽条目数
+    private readonly FogFieldStore _fieldStore;
+    private readonly FogField[] _vision;
+    private readonly bool[] _retired;
+    private readonly int[] _disc;
+    private readonly int[] _stampCells;
+    private readonly byte[] _stampSeen;
+    private readonly int[] _stampCount;
+    private readonly byte[] _visibleMask;
 
     // 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)。
     // 每格的集在构造时留好;放置只往已有集里加 id,不再按格 new。
@@ -65,16 +73,25 @@ public sealed class CrowdFog
     private readonly HashSet<int> _reconcileDone;
     private readonly List<int> _reconcileForget = new();
     private readonly List<(int GroupIndex, int[] Cells, int Until)> _obscureKeep = new();
-    private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
     private Fix64[]? _hAvgM, _hMaxM;  // LOS:fog 格均高 / 最高高(米,Fix64)
     private readonly Fix64 _eyeM;   // 眼高(米)
     private byte[]? _opaque;
     private bool _opaqueDirty;
     public int Refreshes;           // 诊断:刷新次数
 
-    public CrowdFog(CrowdSimulationRuntimeConfig config, CrowdPairRules pairRules, CrowdStructuresStore store)
+    public CrowdFog(
+        CrowdSimulationRuntimeConfig config,
+        CrowdPairRules pairRules,
+        CrowdStructuresStore store,
+        FogLayerRegistry layers,
+        FogFieldStore fields)
     {
         Store = store;
+        if (fields == null)
+        {
+            throw new ArgumentNullException(nameof(fields));
+        }
+
         var fc = config.Fog;
         NavCellsPerSide = config.NavCellsPerSide;
         NavCellsPerFogCell = fc.NavCellsPerFogCell;
@@ -90,11 +107,22 @@ public sealed class CrowdFog
         GroupOf = BuildVisionGroups(pairRules.SharesVisionByPair, pairRules.PlayerCount, out int visionGroupCount);
         VisionGroupCount = visionGroupCount;
         int f2 = FogCellsPerSide * FogCellsPerSide;
-        Visible = new byte[VisionGroupCount * f2];
-        Explored = new byte[VisionGroupCount * f2];
-        Occ = new byte[VisionGroupCount * f2];
-        VisibleCount = new int[VisionGroupCount];
-        ExploredCount = new int[VisionGroupCount];
+        int updateHz = Math.Max(1, (int)Math.Round(fc.RateHz.ToDouble(), MidpointRounding.AwayFromZero));
+        FogLayerDefinition layer = layers.Get(CrowdFogLayerBinding.Require(layers, FogCellSizeCm, updateHz));
+        _fieldStore = fields;
+        _vision = new FogField[VisionGroupCount];
+        _retired = new bool[VisionGroupCount];
+        for (int g = 0; g < VisionGroupCount; g++)
+        {
+            FogField field = fields.GetOrCreate(g + 1, layer);
+            field.EnsureCellBlock(FogCellsPerSide);
+            _vision[g] = field;
+        }
+
+        _stampCells = new int[VisionGroupCount * f2];
+        _stampSeen = new byte[VisionGroupCount * f2];
+        _stampCount = new int[VisionGroupCount];
+        _visibleMask = new byte[f2];
         GhostCount = new int[VisionGroupCount];
         Version = new uint[VisionGroupCount];
         Key = new uint[VisionGroupCount];
@@ -119,23 +147,7 @@ public sealed class CrowdFog
             Tiles[g] = new HashSet<int>(NavTilesPerSide * NavTilesPerSide);
         }
 
-        double radius = fc.VisionCm.ToDouble() / FogCellSizeCm;
-        int r = (int)Math.Ceiling(radius);
-        // 视盘平铺(dx0, dy0, dx1, dy1, …;dy 外层 dx 内层,与参考端遍历序一致)
-        var disc = new List<int>();
-        for (int dy = -r; dy <= r; dy++)
-        {
-            for (int dx = -r; dx <= r; dx++)
-            {
-                if (dx * dx + dy * dy <= radius * radius)
-                {
-                    disc.Add(dx);
-                    disc.Add(dy);
-                }
-            }
-        }
-
-        _disc = disc.ToArray();
+        _disc = VisionBulkStamp.BuildOffsets((int)fc.VisionCm.ToLong(), FogCellSizeCm);
 
         // 初始认知:地图实体全员已知 + 索引
         foreach (int id in store.EntityIds)
@@ -311,22 +323,39 @@ public sealed class CrowdFog
         return true;
     }
 
+    public int VisibleCountOf(int group) => _vision[group].VisibleCount;
+
+    public int ExploredCountOf(int group) => _vision[group].ExploredInclusiveCount;
+
+    public FogField VisionField(int group) => _vision[group];
+
+    internal FogFieldStore Fields => _fieldStore;
+
+    public bool ScopeRetired(int group) => (uint)group < (uint)_retired.Length && _retired[group];
+
+    public CellVisibility CellVisibilityOf(int group, int cell)
+    {
+        return _vision[group].GetVisibility(new FogCell(cell % FogCellsPerSide, cell / FogCellsPerSide));
+    }
+
     /// <summary>一个 tick:刷新本 tick 槽位的组(单位位置取 Fix64 厘米域,格号向零截断)。</summary>
     public void Update(int tick, CrowdSimSession sim)
     {
         int slot = tick % Period;
-        int f2 = FogCellsPerSide * FogCellsPerSide;
+        int side = FogCellsPerSide;
+        int f2 = side * side;
         if (_obscured.Count > 0) ExpireObscured(tick);
         bool any = false;
         for (int g = slot; g < VisionGroupCount; g += Period)
         {
-            Array.Clear(Occ, g * f2, f2);
+            if (_retired[g]) continue;
+            Array.Clear(_stampSeen, g * f2, f2);
+            _stampCount[g] = 0;
             any = true;
         }
 
         if (!any) return;
 
-        var units = sim.Units;
         var movement = sim.Movement;
         if (movement == null)
         {
@@ -335,61 +364,85 @@ public sealed class CrowdFog
 
         var positions = movement.Positions;
         var players = movement.PlayerIdx;
-        int unitCount = units.Count;
+        int unitCount = sim.Units.Count;
         for (int i = 0; i < unitCount; i++)
         {
             int g = GroupOf[players[i]];
-            if (g % Period != slot) continue;
+            if (_retired[g] || g % Period != slot) continue;
             var p = positions[i];
-            // 双向夹紧(负坐标会写进上一组的切片)
-            int fx = Math.Max(0, Math.Min(FogCellsPerSide - 1, (int)(p.X / Fix64.FromInt(FogCellSizeCm)).ToLong()));
-            int fy = Math.Max(0, Math.Min(FogCellsPerSide - 1, (int)(p.Y / Fix64.FromInt(FogCellSizeCm)).ToLong()));
-            Occ[g * f2 + fy * FogCellsPerSide + fx] = 1;
+            int fx = Math.Max(0, Math.Min(side - 1, (int)(p.X / Fix64.FromInt(FogCellSizeCm)).ToLong()));
+            int fy = Math.Max(0, Math.Min(side - 1, (int)(p.Y / Fix64.FromInt(FogCellSizeCm)).ToLong()));
+            int local = fy * side + fx;
+            int mark = g * f2 + local;
+            if (_stampSeen[mark] != 0) continue;
+            _stampSeen[mark] = 1;
+            _stampCells[g * f2 + _stampCount[g]++] = local;
         }
 
         int refreshesBefore = Refreshes;
-        for (int g = slot; g < VisionGroupCount; g += Period) Refresh(g);
+        for (int g = slot; g < VisionGroupCount; g += Period)
+        {
+            if (_retired[g]) continue;
+            Refresh(g);
+        }
         int groups = Refreshes - refreshesBefore;
         if (groups > 0) sim.Telemetry.MarkFogRefresh(groups);
     }
 
     private void Refresh(int g)
     {
-        int f2 = FogCellsPerSide * FogCellsPerSide, o = g * f2;
-        Array.Clear(Visible, o, f2);
+        int side = FogCellsPerSide;
+        int f2 = side * side;
         if (Los && _opaqueDirty) BuildOpaque();
-        bool hide = _obscured.Count > 0;
-        int visible = 0;
-        for (int c = 0; c < f2; c++)
+        ReadOnlySpan<int> occupied = _stampCells.AsSpan(g * f2, _stampCount[g]);
+        ReadOnlySpan<ushort> obscured = _obscured.Count > 0 ? ObsN.AsSpan(g * f2, f2) : default;
+        FogField field = _vision[g];
+        if (Los)
         {
-            if (Occ[o + c] == 0) continue;
-            int cx = c % FogCellsPerSide, cy = c / FogCellsPerSide;
-            for (int k = 0; k < _disc.Length; k += 2)
-            {
-                int x = cx + _disc[k], y = cy + _disc[k + 1];
-                if (x >= 0 && y >= 0 && x < FogCellsPerSide && y < FogCellsPerSide && (!Los || Sight(cx, cy, x, y)) && !(hide && ObsN[o + y * FogCellsPerSide + x] > 0))
-                {
-                    int cell = o + y * FogCellsPerSide + x;
-                    if (Visible[cell] == 0)
-                    {
-                        Visible[cell] = 1;
-                        visible++;
-                    }
-
-                    if (Explored[cell] == 0)
-                    {
-                        Explored[cell] = 1;
-                        ExploredCount[g]++;
-                        Explore(g, x, y);
-                    }
-                }
-            }
+            var filter = new LosStamp(this, g);
+            VisionBulkStamp.Stamp(field, side, occupied, _disc, obscured, _visibleMask, ref filter);
+        }
+        else
+        {
+            var filter = new OpenStamp(this, g);
+            VisionBulkStamp.StampOpen(field, side, occupied, _disc, obscured, _visibleMask, ref filter);
         }
 
-        VisibleCount[g] = visible;
         Reconcile(g);
         Version[g]++;
         Refreshes++;
+    }
+
+    private struct OpenStamp : IVisionStampFilter
+    {
+        public OpenStamp(CrowdFog fog, int group)
+        {
+            Fog = fog;
+            Group = group;
+        }
+
+        public CrowdFog Fog;
+        public int Group;
+
+        public readonly bool Allows(int originX, int originY, int cellX, int cellY) => true;
+
+        public readonly void OnFirstExplore(int cellX, int cellY) => Fog.Explore(Group, cellX, cellY);
+    }
+
+    private struct LosStamp : IVisionStampFilter
+    {
+        public LosStamp(CrowdFog fog, int group)
+        {
+            Fog = fog;
+            Group = group;
+        }
+
+        public CrowdFog Fog;
+        public int Group;
+
+        public readonly bool Allows(int originX, int originY, int cellX, int cellY) => Fog.Sight(originX, originY, cellX, cellY);
+
+        public readonly void OnFirstExplore(int cellX, int cellY) => Fog.Explore(Group, cellX, cellY);
     }
 
     /// <summary>含任何阻挡导航格的 fog 格不透明(真值实体变更后重建)。</summary>
@@ -469,14 +522,17 @@ public sealed class CrowdFog
     /// 只读可见格索引到的实体(bbox 触可见格 ⇔ 足迹被看见)。</summary>
     private void Reconcile(int g)
     {
-        int f2 = FogCellsPerSide * FogCellsPerSide, o = g * f2;
+        int f2 = FogCellsPerSide * FogCellsPerSide;
         var done = _reconcileDone;
         var forget = _reconcileForget;
         done.Clear();
         forget.Clear();
         for (int c = 0; c < f2; c++)
         {
-            if (Visible[o + c] != 0) ReconcileCell(g, c, done, forget);
+            if (_visibleMask[c] != 0)
+            {
+                ReconcileCell(g, c, done, forget);
+            }
         }
 
         DropUnbelieved(forget);
@@ -529,18 +585,20 @@ public sealed class CrowdFog
     /// <summary>如同组刚看过该区域:explored + 真相对账(不点 visible)。</summary>
     public void RevealArea(int g, int[] cells)
     {
-        int o = g * FogCellsPerSide * FogCellsPerSide;
+        FogField field = _vision[g];
         var done = _reconcileDone;
         var forget = _reconcileForget;
         done.Clear();
         forget.Clear();
         foreach (int c in cells)
         {
-            if (Explored[o + c] == 0)
+            int x = c % FogCellsPerSide;
+            int y = c / FogCellsPerSide;
+            var cell = new FogCell(x, y);
+            if (field.GetVisibility(cell) == CellVisibility.Unseen)
             {
-                Explored[o + c] = 1;
-                ExploredCount[g]++;
-                Explore(g, c % FogCellsPerSide, c / FogCellsPerSide);
+                field.SetExplored(cell);
+                Explore(g, x, y);
             }
 
             ReconcileCell(g, c, done, forget);
@@ -554,17 +612,17 @@ public sealed class CrowdFog
     public void ObscureArea(int g, int[] cells, int until)
     {
         int o = g * FogCellsPerSide * FogCellsPerSide;
+        FogField field = _vision[g];
         _obscured.Add((g, cells, until));
         foreach (int c in cells)
         {
-            int cell = o + c;
-            if (Visible[cell] != 0)
+            var cell = new FogCell(c % FogCellsPerSide, c / FogCellsPerSide);
+            if (field.GetVisibility(cell) == CellVisibility.Visible)
             {
-                Visible[cell] = 0;
-                VisibleCount[g]--;
+                field.SetExplored(cell);
             }
 
-            ObsN[cell]++;
+            ObsN[o + c]++;
         }
     }
 
@@ -593,16 +651,16 @@ public sealed class CrowdFog
     /// 足迹全落在区域内的认知实体。</summary>
     public void ForgetArea(int g, int[] cells, (int X0, int Y0, int X1, int Y1) box)
     {
-        int o = g * FogCellsPerSide * FogCellsPerSide;
+        FogField field = _vision[g];
         var member = new HashSet<int>(cells);
         var ids = new HashSet<int>();
         foreach (int c in cells)
         {
-            int cell = o + c;
-            if (Explored[cell] != 0)
+            var cell = new FogCell(c % FogCellsPerSide, c / FogCellsPerSide);
+            CellVisibility visibility = field.GetVisibility(cell);
+            if (visibility == CellVisibility.Explored || visibility == CellVisibility.Visible)
             {
-                Explored[cell] = 0;
-                ExploredCount[g]--;
+                field.SetVisibility(cell, CellVisibility.Unseen);
             }
 
             if (_idx[c].Count > 0) ids.UnionWith(_idx[c]);
@@ -621,7 +679,7 @@ public sealed class CrowdFog
                 {
                     for (int fx = Fcell(tx * NavCellsPerTile); fx <= Fcell((tx + 1) * NavCellsPerTile - 1); fx++)
                     {
-                        if (Explored[o + fy * FogCellsPerSide + fx] != 0)
+                        if (Known(field, fx, fy))
                         {
                             still = true;
                             break;
@@ -654,28 +712,31 @@ public sealed class CrowdFog
         DropUnbelieved(dropped);
     }
 
-    /// <summary>共享视野:组 b 并入 a(低组号存活,与构造的 root[max]=min 同款)。visible OR、
-    /// explored OR 并触发 tile 入集、认知实体并(只有一侧见过的已拆实体留残影直到地面再见)。
-    /// 被并掉的组无玩家,认知同步会把它停在真相槽。返回存活组;同组返回 -1。
-    /// 拆组不支持(union-find 不能删;参考端 TODO 同款)。</summary>
+    /// <summary>共享视野:组 b 并入 a(低组号存活)。可见和已探索按格 OR，信念并进存活组。
+    /// 源 scope 从雾场摘掉，之后不再盖章；玩家改挂存活组。同组返回 -1。拆组不支持。</summary>
     public int MergeGroups(int a, int b)
     {
         if (a == b) return -1;
         int to = Math.Min(a, b), from = Math.Max(a, b);
         int f2 = FogCellsPerSide * FogCellsPerSide, ot = to * f2, of = from * f2;
+        FogField toField = _vision[to];
+        FogField fromField = _vision[from];
         for (int c = 0; c < f2; c++)
         {
-            if (Visible[of + c] != 0 && Visible[ot + c] == 0)
+            int x = c % FogCellsPerSide;
+            int y = c / FogCellsPerSide;
+            var cell = new FogCell(x, y);
+            CellVisibility src = fromField.GetVisibility(cell);
+            CellVisibility dst = toField.GetVisibility(cell);
+            if (src == CellVisibility.Visible && dst != CellVisibility.Visible)
             {
-                Visible[ot + c] = 1;
-                VisibleCount[to]++;
+                toField.SetVisibility(cell, CellVisibility.Visible);
+                if (dst == CellVisibility.Unseen) Explore(to, x, y);
             }
-
-            if (Explored[of + c] != 0 && Explored[ot + c] == 0)
+            else if (src == CellVisibility.Explored && dst == CellVisibility.Unseen)
             {
-                Explored[ot + c] = 1;
-                ExploredCount[to]++;
-                Explore(to, c % FogCellsPerSide, c / FogCellsPerSide);
+                toField.SetExplored(cell);
+                Explore(to, x, y);
             }
         }
 
@@ -705,15 +766,21 @@ public sealed class CrowdFog
             {
                 ObsN[of + c]--;
                 ObsN[ot + c]++;
-                int cell = ot + c;
-                if (Visible[cell] != 0)
+                var cell = new FogCell(c % FogCellsPerSide, c / FogCellsPerSide);
+                if (toField.GetVisibility(cell) == CellVisibility.Visible)
                 {
-                    Visible[cell] = 0;
-                    VisibleCount[to]--;
+                    toField.SetExplored(cell);
                 }
             }
 
             _obscured[i] = (to, e.Item2, e.Item3);
+        }
+
+        _retired[from] = true;
+        if (!_fieldStore.Remove(fromField.ScopeKeyId, fromField.LayerId))
+        {
+            throw new InvalidOperationException(
+                $"视野组 {from} 的雾场 scope {fromField.ScopeKeyId} 不在存储里，无法退役。");
         }
 
         return to;
@@ -738,10 +805,22 @@ public sealed class CrowdFog
     /// <summary>呈现查询面(W2 渲染底座只读):0 = 未探索,1 = 已探索,2 = 可见。</summary>
     public byte[] View(int g)
     {
-        int f2 = FogCellsPerSide * FogCellsPerSide, o = g * f2;
+        int f2 = FogCellsPerSide * FogCellsPerSide;
+        FogField field = _vision[g];
         var res = new byte[f2];
-        for (int c = 0; c < f2; c++) res[c] = Visible[o + c] != 0 ? (byte)2 : Explored[o + c];
+        for (int c = 0; c < f2; c++)
+        {
+            CellVisibility visibility = field.GetVisibility(new FogCell(c % FogCellsPerSide, c / FogCellsPerSide));
+            res[c] = visibility == CellVisibility.Visible ? (byte)2 : visibility == CellVisibility.Explored ? (byte)1 : (byte)0;
+        }
+
         return res;
+    }
+
+    private static bool Known(FogField field, int x, int y)
+    {
+        CellVisibility visibility = field.GetVisibility(new FogCell(x, y));
+        return visibility == CellVisibility.Explored || visibility == CellVisibility.Visible;
     }
 
     /// <summary>参考端 mix(32 位雪崩哈希;JS Math.imul = NavTilesPerSide# unchecked int 乘)。</summary>

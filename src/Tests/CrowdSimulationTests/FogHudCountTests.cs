@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -64,11 +65,11 @@ public sealed class FogHudCountTests
             for (int g = 0; g < fog.VisionGroupCount; g++)
             {
                 int visible = 0, explored = 0;
-                int origin = g * f2;
                 for (int c = 0; c < f2; c++)
                 {
-                    if (fog.Visible[origin + c] != 0) visible++;
-                    if (fog.Explored[origin + c] != 0) explored++;
+                    CellVisibility visibility = fog.CellVisibilityOf(g, c);
+                    if (visibility == CellVisibility.Visible) visible++;
+                    if (visibility == CellVisibility.Visible || visibility == CellVisibility.Explored) explored++;
                 }
 
                 int ghosts = 0;
@@ -77,8 +78,8 @@ public sealed class FogHudCountTests
                     if (!fog.Store.TryGetFootprint(id, out _)) ghosts++;
                 }
 
-                Assert.That(fog.VisibleCount[g], Is.EqualTo(visible), $"tick {t} 组 {g} 可见格");
-                Assert.That(fog.ExploredCount[g], Is.EqualTo(explored), $"tick {t} 组 {g} 已探索格");
+                Assert.That(fog.VisibleCountOf(g), Is.EqualTo(visible), $"tick {t} 组 {g} 可见格");
+                Assert.That(fog.ExploredCountOf(g), Is.EqualTo(explored), $"tick {t} 组 {g} 已探索格");
                 Assert.That(fog.GhostCount[g], Is.EqualTo(ghosts), $"tick {t} 组 {g} 残影");
                 if (visible > sawVisible) sawVisible = visible;
                 if (explored > sawExplored) sawExplored = explored;
