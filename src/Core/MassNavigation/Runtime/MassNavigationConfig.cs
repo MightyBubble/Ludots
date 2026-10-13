@@ -220,8 +220,7 @@ public sealed class MassNavigationConfig
             "radiusCm");
         RequireProperties(
             RequireProperty(root, "flow"),
-            "enabled",
-            "iterationsPerStep");
+            "crowdStampBudgetUnits");
         RequireProperties(
             RequireProperty(root, "arrival"),
             "enabled",

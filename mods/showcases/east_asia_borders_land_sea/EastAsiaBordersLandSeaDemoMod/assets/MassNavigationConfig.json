@@ -112,8 +112,7 @@
     "cooperativeRelation": "Friendly"
   },
   "flow": {
-    "enabled": false,
-    "iterationsPerStep": 4096
+    "crowdStampBudgetUnits": 0
   },
   "arrival": {
     "enabled": true,

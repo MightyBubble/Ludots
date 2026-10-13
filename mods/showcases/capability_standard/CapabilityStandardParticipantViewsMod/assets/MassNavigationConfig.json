@@ -59,7 +59,7 @@
     { "teamA": 1, "teamB": 1, "relation": "Friendly", "symmetric": false }
   ],
   "flow": {
-    "iterationsPerStep": 16
+    "crowdStampBudgetUnits": 0
   },
   "semantics": {
     "route": {
