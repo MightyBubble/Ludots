@@ -399,6 +399,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SetPref or
                 GraphNodeOp.ActivateContextFromPref or
                 GraphNodeOp.DeactivateOwnContext or
+                GraphNodeOp.QueryMinimapRegion or
+                GraphNodeOp.MinimapScreenToWorld or
+                GraphNodeOp.MinimapJumpCamera or
+                GraphNodeOp.MinimapSetZoomFromPointer or
+                GraphNodeOp.MinimapTogglePreset or
+                GraphNodeOp.MinimapToggleRotate or
                 GraphNodeOp.SetTargetPos or
                 GraphNodeOp.LoadAbilityCastRange or
                 GraphNodeOp.LoadSlotAbilityId or
@@ -983,6 +989,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SetPref, HandleSetPref, "SetPref graph opcode.");
             Register(GraphNodeOp.ActivateContextFromPref, HandleActivateContextFromPref, "ActivateContextFromPref graph opcode.");
             Register(GraphNodeOp.DeactivateOwnContext, HandleDeactivateOwnContext, "DeactivateOwnContext graph opcode.");
+            Register(GraphNodeOp.QueryMinimapRegion, HandleQueryMinimapRegion, "QueryMinimapRegion graph opcode.");
+            Register(GraphNodeOp.MinimapScreenToWorld, HandleMinimapScreenToWorld, "MinimapScreenToWorld graph opcode.");
+            Register(GraphNodeOp.MinimapJumpCamera, HandleMinimapJumpCamera, "MinimapJumpCamera graph opcode.");
+            Register(GraphNodeOp.MinimapSetZoomFromPointer, HandleMinimapSetZoomFromPointer, "MinimapSetZoomFromPointer graph opcode.");
+            Register(GraphNodeOp.MinimapTogglePreset, HandleMinimapTogglePreset, "MinimapTogglePreset graph opcode.");
+            Register(GraphNodeOp.MinimapToggleRotate, HandleMinimapToggleRotate, "MinimapToggleRotate graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
             Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
@@ -1865,6 +1877,44 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.DeactivateOwnContext();
         }
 
+        private static void HandleQueryMinimapRegion(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.QueryMinimapRegion(s.F[ins.A], s.F[ins.B]);
+        }
+
+        private static void HandleMinimapScreenToWorld(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Api.TryMinimapScreenToWorld(s.F[ins.A], s.F[ins.B], out IntVector2 worldCm))
+            {
+                s.B[ins.Dst] = 1;
+                s.TargetPosCm = worldCm;
+            }
+            else
+            {
+                s.B[ins.Dst] = 0;
+            }
+        }
+
+        private static void HandleMinimapJumpCamera(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.MinimapJumpCamera(s.TargetPosCm);
+        }
+
+        private static void HandleMinimapSetZoomFromPointer(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.MinimapSetZoomFromPointer(s.F[ins.A], s.F[ins.B]);
+        }
+
+        private static void HandleMinimapTogglePreset(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.MinimapTogglePreset();
+        }
+
+        private static void HandleMinimapToggleRotate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.MinimapToggleRotate();
+        }
+
         private static void HandleSetTargetPos(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             var rounded = Fix64Vec2.FromFloat(s.F[ins.A], s.F[ins.B]).RoundToInt();
@@ -2701,7 +2751,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (seatKeyId > 0 && string.IsNullOrWhiteSpace(seatId))
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.AimSourceSeatKey: {operation} references unregistered seat key id {seatKeyId}.");
+                    $"GAS.GRAPH.ERR.PointerSampleSeatKey: {operation} references unregistered seat key id {seatKeyId}.");
             }
 
             return seatId;

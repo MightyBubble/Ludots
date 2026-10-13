@@ -1,0 +1,214 @@
+[
+  {
+    "id": "graph.minimap.command",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_command",
+        "action": "Command",
+        "start": "px",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "region",
+        "op": "QueryMinimapRegion"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "on_field",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "ground",
+        "op": "MinimapScreenToWorld"
+      },
+      {
+        "id": "gj",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "eq"
+      },
+      {
+        "from": "eq",
+        "fromPort": "next",
+        "to": "on_field"
+      },
+      {
+        "from": "on_field",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "on_field",
+        "fromPort": "true",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "gj"
+      },
+      {
+        "from": "gj",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "gj",
+        "fromPort": "true",
+        "to": "rep"
+      },
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "region",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "b"
+      },
+      {
+        "from": "eq",
+        "fromPort": "value",
+        "to": "on_field",
+        "toPort": "condition"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "gj",
+        "toPort": "condition"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -5,15 +5,15 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Aimsource pure-helper per-op galleries: each vignette compiles as a real Query
-/// document, runs against the production aimsource kernel over the gallery binding,
+/// Pointer sample pure-helper per-op galleries: each vignette compiles as a real Query
+/// document, runs against the production pointer sample kernel over the gallery binding,
 /// and surfaces the computed ground point / picked entity / region count / direction
 /// angle in the player caption.
 /// </summary>
 [TestFixture]
 [NonParallelizable]
 [Category("ci-gate")]
-public sealed class GraphOpsNodeGalleryAimSourceAcceptanceTests
+public sealed class GraphOpsNodeGalleryPointerSampleAcceptanceTests
 {
     [Test]
     public void ScreenPointToGround_QuotesResolvedGroundPoint()

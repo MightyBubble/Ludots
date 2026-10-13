@@ -80,7 +80,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private readonly NetworkCommandAdmissionOutcome[] _admissionProgressScratch;
 
     private PlayerInputHandler? _input;
-    private InteractionActionBindings? _bindings;
+    private const string SelectBeginActionId = "Select.Begin";
+    private const string CommandActionId = "Command";
+
     private AuthoritativeGroundPointerOverride? _groundOverride;
     private IReplicatedClientCommandPort? _commandPort;
     private IReplicatedClientRuntimeStatus? _clientStatus;
@@ -242,8 +244,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         PlayerInputHandler input = _engine.GetService(CoreServiceKeys.InputHandler)
             ?? throw new InvalidOperationException("Acceptance client requires PlayerInputHandler.");
-        InteractionActionBindings bindings = _engine.GetService(CoreServiceKeys.InteractionActionBindings)
-            ?? throw new InvalidOperationException("Acceptance client requires interaction action bindings.");
         AuthoritativeGroundPointerOverride groundOverride = _engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
             ?? throw new InvalidOperationException("Acceptance client requires authoritative ground pointer override.");
         IReplicatedClientCommandPort commandPort = _engine.GetService(CoreServiceKeys.ReplicatedClientCommandPort)
@@ -278,7 +278,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
             ?? throw new InvalidOperationException("Acceptance client requires the interaction context profile registry.");
 
         _input = input;
-        _bindings = bindings;
         _groundOverride = groundOverride;
         _commandPort = commandPort;
         _clientStatus = clientStatus;
@@ -289,8 +288,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _contextProfiles = contextProfiles;
         _infantryBodyTemplateId = infantryBodyTemplateId;
 
-        RequireInputAction(bindings.ConfirmActionId);
-        RequireInputAction(bindings.CommandActionId);
+        RequireInputAction(SelectBeginActionId);
+        RequireInputAction(CommandActionId);
         RequireInputAction(ReservedInputActionIds.PointerPos);
         RequireInputAction(_frontline.ReadyActionId);
         RequireInputAction("SkillQ");
@@ -1384,7 +1383,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException("Cannot select a dead replicated entity.");
         }
         BeginPointerGesture(
-            _bindings!.ConfirmActionId,
+            SelectBeginActionId,
             ProjectEntity(entity),
             worldCm: null,
             additive,
@@ -1400,7 +1399,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void BeginEntityCommand(string actionName, Entity target, Vector2 screen)
     {
         BeginPointerGesture(
-            _bindings!.CommandActionId,
+            CommandActionId,
             screen,
             GetWorldPosition(target),
             additive: false,
@@ -1589,7 +1588,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void BeginGroundCommand(string actionName, WorldCmInt2 target, Vector2 screen)
     {
         BeginPointerGesture(
-            _bindings!.CommandActionId,
+            CommandActionId,
             screen,
             target,
             additive: false,
@@ -1642,7 +1641,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 throw new InvalidOperationException("A prior authoritative ground pointer override was not consumed.");
             }
             WorldCmInt2 point = worldCm.Value;
-            _groundOverride.Set(_bindings!.CommandActionId, new Vector2(point.X, point.Y));
+            _groundOverride.Set(CommandActionId, new Vector2(point.X, point.Y));
         }
         if (screen.HasValue)
         {

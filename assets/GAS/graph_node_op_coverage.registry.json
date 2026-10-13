@@ -1875,7 +1875,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.PointToDirection_QuotesTheAimAngle"
+        "GraphOpsNodeGalleryPointerSampleAcceptanceTests.PointToDirection_QuotesTheAimAngle"
       ],
       "codegenStatus": "covered"
     },
@@ -3177,7 +3177,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToEntity_NamesThePickedCandidate"
+        "GraphOpsNodeGalleryPointerSampleAcceptanceTests.ScreenPointToEntity_NamesThePickedCandidate"
       ],
       "codegenStatus": "covered"
     },
@@ -3194,7 +3194,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToGround_QuotesResolvedGroundPoint"
+        "GraphOpsNodeGalleryPointerSampleAcceptanceTests.ScreenPointToGround_QuotesResolvedGroundPoint"
       ],
       "codegenStatus": "covered"
     },
@@ -3211,7 +3211,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenRegionToEntities_CountsTheRectHits"
+        "GraphOpsNodeGalleryPointerSampleAcceptanceTests.ScreenRegionToEntities_CountsTheRectHits"
       ],
       "codegenStatus": "covered"
     },
@@ -3440,7 +3440,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.StickToDirection_QuotesTheStickAngle"
+        "GraphOpsNodeGalleryPointerSampleAcceptanceTests.StickToDirection_QuotesTheStickAngle"
       ],
       "codegenStatus": "covered"
     },
@@ -4473,6 +4473,114 @@
       ],
       "codegenStatus": "covered",
       "showcaseId": "capability_standard_graph_op_DeactivateOwnContext"
+    },
+    {
+      "op": "QueryMinimapRegion",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.QueryMinimapRegionVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_QueryMinimapRegion"
+    },
+    {
+      "op": "MinimapScreenToWorld",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.MinimapScreenToWorldVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_MinimapScreenToWorld"
+    },
+    {
+      "op": "MinimapJumpCamera",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.MinimapJumpCameraVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_MinimapJumpCamera"
+    },
+    {
+      "op": "MinimapSetZoomFromPointer",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.MinimapSetZoomFromPointerVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_MinimapSetZoomFromPointer"
+    },
+    {
+      "op": "MinimapTogglePreset",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.MinimapTogglePresetVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_MinimapTogglePreset"
+    },
+    {
+      "op": "MinimapToggleRotate",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.MinimapToggleRotateVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_MinimapToggleRotate"
     },
     {
       "op": "SetTargetPos",

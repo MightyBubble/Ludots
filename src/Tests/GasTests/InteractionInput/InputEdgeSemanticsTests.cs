@@ -199,12 +199,6 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ConfirmActionId = "Select.Begin",
-                    CommandActionId = "Command",
-                    CancelActionId = "Cancel",
-                },
             };
             var frameSystem = new InputRuntimeSystem(globals, accumulator);
             var snapshotSystem = new AuthoritativeInputSnapshotSystem(snapshot, accumulator);

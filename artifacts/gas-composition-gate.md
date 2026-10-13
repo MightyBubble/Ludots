@@ -1,8 +1,14 @@
-# GAS Composition Gate — Self Review
+# GAS Composition Gate — 小地图指针交互状态
 
-- **Task / Issue**: 技能瞄准规则改由技能引用的共享 TriggerGraph 决定
+- **Task / Issue**: 小地图指针改走前台交互状态；Core 指针采样改名 PointerSample
 - **Date**: 2026-10-12
-- **Agent / Author**: Cursor cloud agent
+- **Agent / Author**: cloud agent
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: 小地图点击、拖拽、缩放条、切换按钮、命令点地改为交互状态上的图
+- **Date**: 2026-10-12
+- **Agent / Author**: cloud agent
 
 ### 1. Core judgment
 
@@ -10,47 +16,44 @@
 
 结论: PASS
 
-一句话理由: 按下、确认、松开只读出槽位上的技能编号，再把队列修饰符派给这颗技能自己挂上的规则图。规则图是共享数据，多颗技能引用同一张。Core 不解释这颗技能打什么。
+一句话理由: 行为是六颗原子节点在 `graph.minimap.*` 里连线，上下文 profile 只声明已有的 foreground / pointerRouting / bindings / triggers，没有新的玩法枚举。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 读出槽位上的技能编号 | 0 | `LoadSlotAbilityId` |
-| 把事件派到该技能挂上的图 | 0 | `DispatchMapEvent` 的 ability route（传输元数据 `MapTrigger.AbilityId`，施法者写入 `SourceEntity`） |
-| 问某个情境是否还开着 | 0 | `IsContextActive` |
-| 无目标 / 只单位 / 只地面 / 单位或地面 | 2 | `graph.aim.rule.none`、`graph.aim.rule.unit_only`、`graph.aim.rule.ground_only`、`graph.aim.rule.unit_or_ground` |
-| 哪颗技能用哪条规则 | 2 的数据 | `abilities.json` 的 `triggerGraphs` |
-| 槽位上的技能没有规则图接住 | 2 | 规则图写 `aim.rule.handled`，按下图读不到就 `Fail` |
-| 范围圈和指示线跟着情境开关 | 2 | `aim.rules` 订阅 `ContextActivated` / `ContextDeactivated`，key 是 `interaction.context.aim.click` 与 `interaction.context.aim.release` |
-| 指示器画在事件源拥有的集合成员上 | 0 | `PresenterCommandEntitySource.EventSourceCollectionMember`（`ownerCollection` + `ownerMemberIndex`），条件 `OwnerHasVisualTransform` |
-| 悬停圈 | 2 | 集合 `aim.hover` 的成员增减，presenter `aim.target` |
+| 命中哪一块、屏幕点投地面、跳相机、按指针写缩放、切预设、切旋转 | 0 | GraphNodeOp 544–549 |
+| 按下 / 松开 / 移动 / 命令 / 悬停 | 2 | LudotsCoreMod `assets/GAS/graphs/graph.minimap.*.json` |
+| 前台状态与指针归 UI | 2 | 已有 `InteractionContextProfile` 字段 `foreground`、`pointerRouting` |
+| 滚轮缩放 | 2 | `MinimapRuntime.TryConsumePointerWheel`，再走已有 `suppressOnUiWheelCaptured` |
 
 ### 3. Reuse list
 
-- Handlers: `DispatchMapEvent` 增加 ability route，不新开事件种类
-- Queues / Systems: `TriggerManager.FireMapEvent` 同步派发；技能域挂载已有的 `AbilityId` 过滤
-- Resolvers / Registries: `AbilitySlotResolver`（槽位解析不重写）、`EventSchemaRegistry` 的传输元数据
-- Existing presets / graphs: `graph.aim.resolve_submit`、`graph.aim.indicate`、选中单位改绑的 hook
-- Presenter: 已有 `ContextActivated` / `ContextDeactivated`（事件源是情境主体）。指示器要画在主体拥有的集合成员上，所以命令增加通用的 `ownerSource=EventSourceCollectionMember`，不新增瞄准事件种类
+- Handlers: `GasGraphOpHandlerTable`、`IGraphRuntimeApi` / `GasGraphRuntimeApi`
+- Queues / Systems: `TriggerGraphActionBindingSystem`、`InteractionContextTriggerMountSystem`、`InputRuntimeSystem`、`CommandIntentBufferDrainSystem`
+- Resolvers / Registries: `InteractionContextProfileRegistry`、`MinimapRuntime`、`AuthoritativeGroundPointerHelper`
+- Existing presets / graphs: `ActivateContext`（省略 `parentContext`）、`DeactivateOwnContext`、`JumpIfFalse`、`SubmitCommandIntent`、`QueryFromCollection`
 
 ### 4. New Layer 0 ops (if any)
 
 | Op 名 | 单一职责 | 为何不能组合现有 op |
 |-------|----------|---------------------|
-| `LoadSlotAbilityId` | 演员 + 槽位索引 → 技能编号 | `QueryCollectAbilitySlots` 收集槽位列表，不按索引返回技能编号 |
-| `IsContextActive` | 主体是否带着命名情境 | 没有读取情境是否激活的 op |
-| `DispatchMapEvent` ability route | 派发时带上技能编号 | 自定义事件 schema 不能声明保留的 `MapTrigger.` 命名空间，技能编号不能做成事件参数 |
+| QueryMinimapRegion | 屏幕点落在小地图哪一块 | 没有现成节点读小地图命中矩形；区域码是小地图布局，不是通用 UI 查询 |
+| MinimapScreenToWorld | 屏幕点按小地图投到地面厘米 | `ScreenPointToGround` 走相机射线，不读小地图投影 |
+| MinimapJumpCamera | 把 TargetPosCm 交给小地图跳相机 | 没有现成节点写 `MinimapRuntime.JumpCameraTo` |
+| MinimapSetZoomFromPointer | 用屏幕点在缩放条上写缩放 | 没有现成节点写 `SetZoomFromSliderPointer` |
+| MinimapTogglePreset | 全图 / 跟随相机切一次 | 没有现成节点切 `MinimapPreset` |
+| MinimapToggleRotate | 跟不跟相机转切一次 | 没有现成节点翻转 `RotateWithCamera` |
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无。按下图先把 `aim.rule.handled` 写成 0；规则图在自己的切片里写成 1。没有挂载接住时按下图 `Fail`。规则图对不上施法模式时自己 `Fail`，异常穿出派发，不吞掉。
+必须原子 rollback 的步骤: 无。每颗节点一次写入；图用 `JumpIfFalse` 在投地失败时停掉后续跳相机或提交。
 
 ### 6. Config SSOT
 
-行为配置落在: AimInteractionMod 的 `graph.aim.rule.*`，以及各技能 `abilities.json` 的 `triggerGraphs`。交接事件 `Aim.Rule.Press` / `Aim.Rule.Resolve` 是该 Mod 的 `Events/custom_events.json`。
+行为配置落在: `mods/LudotsCoreMod/assets/GAS/graphs/graph.minimap.*.json` 与 `mods/LudotsCoreMod/assets/Input/interaction_context_profiles.json`
 
-是否新增 JSON schema: NO — 事件走已有 custom event 通道，Core 技能定义不新增字段。
+是否新增 JSON schema: NO — 沿用交互上下文 profile 和 TriggerGraph 文档。滚轮不新加图节点，仍走 `presentation.minimap.actions.zoom`。
 
 ### 7. Red flag scan
 
@@ -61,6 +64,4 @@
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线
-
-新的瞄准规则是再挂一张图，或让技能改引用另一张已有的图。不改 Core enum。
+「下一个 Mod 变体」将修改: graph 连线。别的战斗上下文挂上 `graph.minimap.hover` 即得到同一套指针行为；不改 Core enum。

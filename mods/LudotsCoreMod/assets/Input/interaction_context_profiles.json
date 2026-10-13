@@ -13,6 +13,9 @@
         },
         {
           "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.minimap.hover"
         }
       ]
     },
@@ -25,6 +28,24 @@
         {
           "trigger": "graph.core.select_commit"
         }
+      ]
+    },
+    {
+      "id": "interaction.context.minimap",
+      "foreground": true,
+      "pointerRouting": "ui",
+      "bindings": [
+        "Select.Begin",
+        "Select.End"
+      ],
+      "triggers": [
+        { "trigger": "graph.minimap.press" },
+        { "trigger": "graph.minimap.release" },
+        { "trigger": "graph.minimap.track" },
+        { "trigger": "graph.minimap.command" }
+      ],
+      "onActivated": [
+        "graph.minimap.seed"
       ]
     }
   ]

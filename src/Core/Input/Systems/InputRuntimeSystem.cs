@@ -3,9 +3,9 @@ using System.Numerics;
 using Arch.System;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
  
 namespace Ludots.Core.Input.Systems
@@ -50,12 +50,11 @@ namespace Ludots.Core.Input.Systems
             bool uiWheelCaptured = _globals.TryGetValue(CoreServiceKeys.UiWheelCaptured.Name, out var wheelCapturedObj) && wheelCapturedObj is bool wb && wb;
             input.InputBlocked = uiCaptured;
             input.Update(dt);
-            if (uiWheelCaptured)
+            if (uiWheelCaptured || TryConsumeMinimapWheel(input))
             {
                 SuppressCameraZoom(input);
             }
             RunFrameConsumers(input, dt);
-            ApplyPointerCaptureSuppression(input);
             if (_authoritativeInput != null)
             {
                 _authoritativeInput.CaptureVisualFrame(input);
@@ -96,18 +95,21 @@ namespace Ludots.Core.Input.Systems
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
 
+        private bool TryConsumeMinimapWheel(PlayerInputHandler input)
+        {
+            return _globals.TryGetValue(CoreServiceKeys.MinimapRuntime.Name, out object? runtimeObj) &&
+                runtimeObj is MinimapRuntime runtime &&
+                runtime.TryConsumePointerWheel(input);
+        }
+
         private void CapturePointerButtons(PlayerInputHandler input)
         {
-            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
-            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
-            CapturePointerButton(input, bindings.ConfirmActionId, pointer);
-            CapturePointerButton(input, bindings.CommandActionId, pointer);
-            CapturePointerButton(input, bindings.CancelActionId, pointer);
             if (_pointerLifecycleActionIds == null)
             {
                 return;
             }
 
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
             for (int i = 0; i < _pointerLifecycleActionIds.Count; i++)
             {
                 CapturePointerButton(input, _pointerLifecycleActionIds[i], pointer);
@@ -165,38 +167,6 @@ namespace Ludots.Core.Input.Systems
                 input.IsDown(actionId),
                 input.PressedThisFrame(actionId),
                 input.ReleasedThisFrame(actionId));
-        }
-
-        private void ApplyPointerCaptureSuppression(PlayerInputHandler input)
-        {
-            if (!_globals.TryGetValue(CoreServiceKeys.PointerInputCaptured.Name, out var capturedObj) ||
-                capturedObj is not bool captured ||
-                !captured)
-            {
-                return;
-            }
-
-            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
-            bool preserveCommandAction = ShouldPreserveCapturedCommand(bindings.CommandActionId);
-            Suppress(input, bindings.ConfirmActionId);
-            if (!preserveCommandAction)
-            {
-                Suppress(input, bindings.CommandActionId);
-            }
-            Suppress(input, bindings.CancelActionId);
-            if (_globals is Dictionary<string, object> mutable)
-            {
-                mutable[CoreServiceKeys.PointerInputCaptured.Name] = false;
-            }
-        }
-
-        private bool ShouldPreserveCapturedCommand(string actionId)
-        {
-            return !string.IsNullOrWhiteSpace(actionId) &&
-                _globals.TryGetValue(CoreServiceKeys.AuthoritativeGroundPointerOverride.Name, out var overrideObj) &&
-                overrideObj is AuthoritativeGroundPointerOverride pointerOverride &&
-                pointerOverride.HasOverride &&
-                string.Equals(pointerOverride.ActionId, actionId, System.StringComparison.Ordinal);
         }
 
         private void SuppressCameraZoom(PlayerInputHandler input)

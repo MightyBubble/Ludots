@@ -924,6 +924,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.DeactivateOwnContext:
+                case GraphNodeOp.MinimapJumpCamera:
+                case GraphNodeOp.MinimapTogglePreset:
+                case GraphNodeOp.MinimapToggleRotate:
+                    break;
+
+                case GraphNodeOp.QueryMinimapRegion:
+                case GraphNodeOp.MinimapScreenToWorld:
+                case GraphNodeOp.MinimapSetZoomFromPointer:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SetTargetPos:
@@ -2387,6 +2397,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.DeactivateOwnContext:
+                case GraphNodeOp.MinimapJumpCamera:
+                case GraphNodeOp.MinimapTogglePreset:
+                case GraphNodeOp.MinimapToggleRotate:
+                    break;
+
+                case GraphNodeOp.QueryMinimapRegion:
+                case GraphNodeOp.MinimapScreenToWorld:
+                case GraphNodeOp.MinimapSetZoomFromPointer:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SetTargetPos:

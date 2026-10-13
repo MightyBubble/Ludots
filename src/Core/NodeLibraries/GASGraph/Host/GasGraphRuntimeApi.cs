@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -16,6 +17,7 @@ using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
@@ -135,7 +137,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Action<string>? _startDialogue;
         private Func<Span<int>, int>? _collectActiveDialogueChoices;
         private Func<int, string?>? _resolveDialogueChoiceDisplayText;
-        private IGraphAimSourceRuntime? _aimSource;
+        private IGraphPointerSampleRuntime? _pointerSample;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -730,24 +732,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ?? throw new ArgumentNullException(nameof(collectActiveDialogueChoices));
         }
 
-        public void BindAimSource(IGraphAimSourceRuntime aimSource)
+        public void BindPointerSample(IGraphPointerSampleRuntime pointerSample)
         {
-            _aimSource = aimSource ?? throw new ArgumentNullException(nameof(aimSource));
+            _pointerSample = pointerSample ?? throw new ArgumentNullException(nameof(pointerSample));
         }
 
-        private IGraphAimSourceRuntime RequireAimSource()
+        private IGraphPointerSampleRuntime RequirePointerSample()
         {
-            return _aimSource ?? throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            return _pointerSample ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         public bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
         {
-            return RequireAimSource().TryScreenPointToGround(screenX, screenY, seatId, out groundCm);
+            return RequirePointerSample().TryScreenPointToGround(screenX, screenY, seatId, out groundCm);
         }
 
         public Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
         {
-            return RequireAimSource().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
+            return RequirePointerSample().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
         }
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
@@ -755,12 +757,90 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
         {
-            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels);
+            return RequirePointerSample().FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels);
         }
 
         public bool TryReadLivePointerScreen(out float screenX, out float screenY)
         {
-            return RequireAimSource().TryReadLivePointerScreen(out screenX, out screenY);
+            return RequirePointerSample().TryReadLivePointerScreen(out screenX, out screenY);
+        }
+
+        public int QueryMinimapRegion(float screenX, float screenY)
+        {
+            MinimapRuntime runtime = RequireMinimap();
+            var point = new Vector2(screenX, screenY);
+            if (runtime.ContainsPresetToggle(point))
+            {
+                return 3;
+            }
+
+            if (runtime.ContainsRotateToggle(point))
+            {
+                return 4;
+            }
+
+            if (runtime.ContainsZoomSlider(point))
+            {
+                return 2;
+            }
+
+            if (runtime.ContainsField(point))
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        public bool TryMinimapScreenToWorld(float screenX, float screenY, out IntVector2 worldCm)
+        {
+            worldCm = default;
+            if (!RequireMinimap().TryScreenToWorldClamped(new Vector2(screenX, screenY), out Vector2 world))
+            {
+                return false;
+            }
+
+            worldCm = new IntVector2(
+                (int)MathF.Round(world.X, MidpointRounding.AwayFromZero),
+                (int)MathF.Round(world.Y, MidpointRounding.AwayFromZero));
+            return true;
+        }
+
+        public void MinimapJumpCamera(IntVector2 worldCm)
+        {
+            RequireMinimap().JumpCameraTo(RequireEngine(), new Vector2(worldCm.X, worldCm.Y));
+        }
+
+        public void MinimapSetZoomFromPointer(float screenX, float screenY)
+        {
+            RequireMinimap().SetZoomFromSliderPointer(new Vector2(screenX, screenY));
+        }
+
+        public void MinimapTogglePreset()
+        {
+            RequireMinimap().ToggleRtsFollowCameraPreset();
+        }
+
+        public void MinimapToggleRotate()
+        {
+            RequireMinimap().ToggleRotateWithCamera();
+        }
+
+        private GameEngine RequireEngine()
+        {
+            GameEngine? engine = _engineResolver?.Invoke();
+            if (engine == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.EngineUnavailable");
+            }
+
+            return engine;
+        }
+
+        private MinimapRuntime RequireMinimap()
+        {
+            return RequireEngine().GetService(CoreServiceKeys.MinimapRuntime)
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
         }
 
         public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)
@@ -2056,7 +2136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth)
         {
             if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
-            ReadOnlySpan<Entity> hits = RequireAimSource().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
+            ReadOnlySpan<Entity> hits = RequirePointerSample().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
             Span<Entity> result = GetEntityQueryBuffer(depth, hits.Length);
             hits.CopyTo(result);
             return result[..hits.Length];

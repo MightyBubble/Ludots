@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Input.Runtime;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -504,6 +505,30 @@ namespace Ludots.Core.Presentation.Minimap
             overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
         }
 
+        public bool TryConsumePointerWheel(PlayerInputHandler input)
+        {
+            ArgumentNullException.ThrowIfNull(input);
+            if (!Visible)
+            {
+                return false;
+            }
+
+            float wheel = input.ReadAction<float>(_config.Actions.Zoom);
+            if (wheel == 0f)
+            {
+                return false;
+            }
+
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
+            if (!ContainsInteractiveRegion(pointer))
+            {
+                return false;
+            }
+
+            ApplyWheelZoom(wheel, pointer);
+            return true;
+        }
+
         public bool ContainsField(Vector2 screenPosition)
         {
             return Visible &&
@@ -601,8 +626,12 @@ namespace Ludots.Core.Presentation.Minimap
             var clamped = new Vector2(
                 Math.Clamp(worldCm.X, bounds.Left, bounds.Right),
                 Math.Clamp(worldCm.Y, bounds.Top, bounds.Bottom));
-            Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine)
-                .ApplyPose(new CameraPoseRequest { TargetCm = clamped });
+            CameraManager camera = Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine);
+            camera.ApplyPose(new CameraPoseRequest { TargetCm = clamped });
+            // ApplyPose writes the virtual-camera runtime. CameraRuntimeSystem has already
+            // copied that runtime into State for this fixed step, so publish State here or
+            // the jump waits until the next step.
+            camera.State.TargetCm = clamped;
             _cameraTargetXcm = clamped.X;
             _cameraTargetYcm = clamped.Y;
         }

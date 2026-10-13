@@ -1192,7 +1192,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.DueWheel = effectDueWheel;
             gasGraphApi.AggregateDirty = aggregateDirtyRegistry;
             gasGraphApi.BindTriggerManager(TriggerManager, CreateContext);
-            gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
+            gasGraphApi.BindPointerSample(new Ludots.Core.Input.PointerSample.GraphPointerSampleRuntime(World, GlobalContext));
             var commandIntentSubmissions = new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer(
                 gasRuntimeCapacity.CommandIntentScratchCapacity);
             gasGraphApi.BindCommandIntentSubmissions(commandIntentSubmissions);
@@ -1253,9 +1253,6 @@ namespace Ludots.Core.Engine
                 graphProgramScratchCapacity: gasRuntimeCapacity.EffectPhaseGraphProgramScratchCapacity);
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
-            var interactionActionBindings = config.InteractionActions
-                ?? throw new InvalidOperationException("game.json interactionActions must be explicitly configured.");
-            interactionActionBindings.Validate();
             var filterProfileIdRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var filterProfileRegistry = new FilterProfileRegistry(filterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
@@ -1623,10 +1620,7 @@ namespace Ludots.Core.Engine
             var chunkDebugPanelRuntime = new ChunkDebugPanelRuntime();
             var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
             var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
-            var inputFrameConsumers = new List<IInputFrameConsumer>
-            {
-                new MinimapInputConsumer(minimapRuntime, presentationConfig.Minimap.Actions)
-            };
+            var inputFrameConsumers = new List<IInputFrameConsumer>();
             SetService(
                 CoreServiceKeys.MinimapKnowledgeViewerProvider,
                 static (GameEngine engine, out Entity viewer) =>
@@ -2006,7 +2000,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
-            SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);

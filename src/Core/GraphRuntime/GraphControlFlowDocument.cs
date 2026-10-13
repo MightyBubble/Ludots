@@ -270,7 +270,7 @@ namespace Ludots.Core.GraphRuntime
         public string? ParentContext { get; set; }
         /// <summary>Virtual camera id symbol for ActivateVirtualCamera; must name a <c>Camera/virtual_cameras.json</c> entry.</summary>
         public string? Camera { get; set; }
-        /// <summary>Seat id symbol for the aimsource family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
+        /// <summary>Seat id symbol for the pointer-sample family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
         public string? Seat { get; set; }
         /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
         public float PickRadiusPx { get; set; }

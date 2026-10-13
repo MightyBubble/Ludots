@@ -179,7 +179,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SyntheticInputDevice> SyntheticInput = new("SyntheticInput");
         public static readonly ServiceKey<IHostFrameCapture> HostFrameCapture = new("HostFrameCapture");
         public static readonly ServiceKey<List<IInputFrameConsumer>> InputFrameConsumers = new("InputFrameConsumers");
-        public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
         public static readonly ServiceKey<InputActionAttributeBindingRegistry> InputActionAttributeBindingRegistry = new("InputActionAttributeBindingRegistry");
         public static readonly ServiceKey<IInputDeviceWatcher> InputDeviceWatcher = new("InputDeviceWatcher");
         public static readonly ServiceKey<Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex> TriggerGraphActionBindings = new("TriggerGraphActionBindings");
@@ -329,7 +328,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CollectionApplier> CollectionApplier = new("CollectionApplier");
         public static readonly ServiceKey<Ludots.Core.Input.Config.InputCollectionKeyDeclarations> InputCollectionKeys = new("InputCollectionKeys");
         public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
-        public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<FilterProfileRegistry> FilterProfileRegistry = new("FilterProfileRegistry");
         public static readonly ServiceKey<CommandIntentProfileRegistry> CommandIntentProfileRegistry = new("CommandIntentProfileRegistry");
         public static readonly ServiceKey<CastDispatchProfileRegistry> CastDispatchProfileRegistry = new("CastDispatchProfileRegistry");

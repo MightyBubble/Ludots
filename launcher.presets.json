@@ -3835,6 +3835,60 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapJumpCamera_raylib",
+      "name": "Graph Op MinimapJumpCamera Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapJumpCamera"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapScreenToWorld_raylib",
+      "name": "Graph Op MinimapScreenToWorld Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapScreenToWorld"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapSetZoomFromPointer_raylib",
+      "name": "Graph Op MinimapSetZoomFromPointer Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapSetZoomFromPointer"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapTogglePreset_raylib",
+      "name": "Graph Op MinimapTogglePreset Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapTogglePreset"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapToggleRotate_raylib",
+      "name": "Graph Op MinimapToggleRotate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinimapToggleRotate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryMinimapRegion_raylib",
+      "name": "Graph Op QueryMinimapRegion Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryMinimapRegion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

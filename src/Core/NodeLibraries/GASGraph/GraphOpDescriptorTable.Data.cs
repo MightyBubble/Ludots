@@ -16,7 +16,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private const GraphKindMask QueryOnly = GraphKindMask.Query;
 
         // Named per-op TriggerGraph authoring carve-outs over the Query-class set (never a
-        // class-wide mask widening): the aimsource kernel ops and the collection-query
+        // class-wide mask widening): the pointer-sample kernel ops and the collection-query
         // seed/filter family are the read-side vocabulary input-event TriggerGraphs need.
         // The runtime triple is kind=TriggerGraph (this mask bit) && op listed by name on a
         // QueryAndTriggerGraph row && Pure effect metadata; every other Query-class op stays
@@ -253,7 +253,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryCollectProgressionNodes, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectAbilityHolders, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryCollectActiveDialogueChoices, QueryOnly, queryOut: GraphValueType.IntIdList);
-            // ── Aimsource pure helpers: read-only screen/pointer/stick math for aim graphs ──
+            // ── Pointer sample pure helpers: read-only screen/pointer/stick math for aim graphs ──
             Add(rows, GraphNodeOp.ScreenPointToGround, QueryAndTriggerGraph, GraphValueType.Bool, queryOut: GraphValueType.Bool, queryPorts: portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.ScreenPointToEntity, QueryAndTriggerGraph, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadPointerScreenX, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
@@ -364,6 +364,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SetPref, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ActivateContextFromPref, EffectAndScript, GraphValueType.Void, portSourceTargetValue, scriptPorts: portSourceTargetValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.DeactivateOwnContext, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.QueryMinimapRegion, EffectAndScript, GraphValueType.Int, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.MinimapScreenToWorld, EffectAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
+            Add(rows, GraphNodeOp.MinimapJumpCamera, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapSetZoomFromPointer, EffectAndScript, GraphValueType.Void, portAB, scriptPorts: portAB, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapTogglePreset, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapToggleRotate, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetTargetPos, LinearQueryScript, GraphValueType.Void, portAB, queryPorts: portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.LoadAbilityCastRange, LinearQueryScript, GraphValueType.Float, portSourceValue, queryOut: GraphValueType.Float, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadSlotAbilityId, LinearQueryScript, GraphValueType.Int, portSourceValue, queryOut: GraphValueType.Int, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Int);

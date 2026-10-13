@@ -903,7 +903,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return false;
         }
 
-        // ── Aimsource pure helpers (input/command chain aim graphs) ──
+        // ── Pointer sample pure helpers (input graphs) ──
 
         /// <summary>
         /// Resolves a screen point against the authoritative ground (camera ray +
@@ -914,7 +914,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
         {
             groundCm = default;
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         /// <summary>
@@ -925,7 +925,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         /// <summary>
@@ -936,12 +936,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         bool TryReadLivePointerScreen(out float screenX, out float screenY)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
+        }
+
+        int QueryMinimapRegion(float screenX, float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        bool TryMinimapScreenToWorld(float screenX, float screenY, out IntVector2 worldCm)
+        {
+            worldCm = default;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapJumpCamera(IntVector2 worldCm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapSetZoomFromPointer(float screenX, float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapTogglePreset()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapToggleRotate()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
         }
     }
 

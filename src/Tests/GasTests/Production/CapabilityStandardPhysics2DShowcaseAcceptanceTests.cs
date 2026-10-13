@@ -154,12 +154,9 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("AuthoritativeInput missing.");
             var pointerButtons = engine.GetService(CoreServiceKeys.AuthoritativePointerButtons)
                 ?? throw new InvalidOperationException("AuthoritativePointerButtons missing.");
-            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-                engine.GlobalContext,
-                nameof(CapabilityStandardPhysics2DShowcaseAcceptanceTests));
-            SetPointerButtonState(pointerButtons, bindings.ConfirmActionId, worldCm, isDown: false, pressed: false);
-            SetPointerButtonState(pointerButtons, bindings.CancelActionId, worldCm, isDown: false, pressed: false);
-            SetPointerButtonState(pointerButtons, bindings.CommandActionId, worldCm, isDown: true, pressed: true);
+            SetPointerButtonState(pointerButtons, "Confirm", worldCm, isDown: false, pressed: false);
+            SetPointerButtonState(pointerButtons, "Cancel", worldCm, isDown: false, pressed: false);
+            SetPointerButtonState(pointerButtons, "Command", worldCm, isDown: true, pressed: true);
             if (input is FrozenInputActionReader frozen)
             {
                 frozen.SetActionState(
@@ -183,7 +180,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             control.Update(0f);
-            pointerButtons.SuppressAction(bindings.CommandActionId);
+            pointerButtons.SuppressAction("Command");
         }
 
         private static void SetPointerButtonState(

@@ -6,7 +6,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.AimSource;
+using Ludots.Core.Input.PointerSample;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Persistence;
@@ -224,14 +224,8 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = new FixedPointerActionReader(
                 new Vector2(PinnedPointerPx, PinnedPointerPx)),
-            [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-            {
-                ConfirmActionId = "GraphOpsGallery.Confirm",
-                CommandActionId = "GraphOpsGallery.Command",
-                CancelActionId = "GraphOpsGallery.Cancel",
-            },
         };
-        ctx.Api.BindAimSource(new GraphAimSourceRuntime(ctx.SimWorld, globals));
+        ctx.Api.BindPointerSample(new GraphPointerSampleRuntime(ctx.SimWorld, globals));
     }
 
     private sealed class FixedPointerActionReader : IInputActionReader

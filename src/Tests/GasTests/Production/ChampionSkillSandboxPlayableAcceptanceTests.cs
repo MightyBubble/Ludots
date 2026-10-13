@@ -1130,10 +1130,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-                engine.GlobalContext,
-                nameof(ChampionSkillSandboxPlayableAcceptanceTests));
-            groundOverride.Set(bindings.CommandActionId, worldCm);
+            groundOverride.Set("Command", worldCm);
         }
 
         private static void CenterMouse(TestInputBackend backend)
@@ -2575,11 +2572,6 @@ Assert.Fail(
                 details.Add($"backendRight={backend.GetButton("<Mouse>/RightButton")}");
                 details.Add($"backendLeft={backend.GetButton("<Mouse>/LeftButton")}");
             }
-
-            bool pointerCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.PointerInputCaptured.Name, out var pointerCapturedObj) &&
-                pointerCapturedObj is bool pointerCapturedValue &&
-                pointerCapturedValue;
-            details.Add($"pointerCaptured={pointerCaptured}");
 
             if (engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is AuthoritativeGroundPointerOverride groundOverride)
             {

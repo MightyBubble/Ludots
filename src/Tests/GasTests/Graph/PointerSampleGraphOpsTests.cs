@@ -4,7 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Input.AimSource;
+using Ludots.Core.Input.PointerSample;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -18,14 +18,14 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.Graph
 {
     /// <summary>
-    /// Aimsource op family end to end: authored Query graphs compile to the new opcodes
-    /// and execute against the production aimsource runtime bound over stub engine
+    /// Pointer sample op family end to end: authored Query graphs compile to the new opcodes
+    /// and execute against the production pointer sample runtime bound over stub engine
     /// globals (screen px ↔ world cm 1:1 projector, flat heightmap ground). Screen point
     /// to ground, knowledge-gated candidate pick, rect region filter, and the two
     /// direction helpers.
     /// </summary>
     [TestFixture]
-    public sealed class AimSourceGraphOpsTests
+    public sealed class PointerSampleGraphOpsTests
     {
         [SetUp]
         public void SetUp()
@@ -312,7 +312,7 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         [Test]
-        public void AimSourceApi_WithoutBoundRuntime_FailsClosed()
+        public void PointerSampleApi_WithoutBoundRuntime_FailsClosed()
         {
             using var world = World.Create();
             var api = new GasGraphRuntimeApi(world);
@@ -382,7 +382,7 @@ namespace Ludots.Tests.GasTests.Graph
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100),
             };
             var api = new GasGraphRuntimeApi(world);
-            api.BindAimSource(new GraphAimSourceRuntime(world, globals));
+            api.BindPointerSample(new GraphPointerSampleRuntime(world, globals));
 
             GraphControlFlowCompileResult result = GraphControlFlowCompiler.Compile(doc);
             Assert.That(result.Diagnostics, Is.Empty, string.Join("; ", result.Diagnostics));
@@ -464,7 +464,7 @@ namespace Ludots.Tests.GasTests.Graph
         [Test]
         public void SeatRoutedKernel_TwoBindings_EachSeatAnswersUnderItsOwnCamera()
         {
-            // Split-screen routing at the aimsource kernel: two seats, two present
+            // Split-screen routing at the pointer sample kernel: two seats, two present
             // bindings (left/right half of a 1600x900 host), each binding's LogicView
             // camera aimed at its own world target. The same window point answered under
             // different seats resolves different ground, and the region filter keeps only
@@ -506,7 +506,7 @@ namespace Ludots.Tests.GasTests.Graph
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
             };
-            var kernel = new GraphAimSourceRuntime(world, globals);
+            var kernel = new GraphPointerSampleRuntime(world, globals);
 
             // Each seat's own half-center window point: under its own name it lands on
             // that seat's camera target — same binding-local answer, different cameras.

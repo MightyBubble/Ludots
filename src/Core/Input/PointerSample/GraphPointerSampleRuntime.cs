@@ -17,10 +17,10 @@ using Ludots.Core.Components;
 using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Core.Input.AimSource
+namespace Ludots.Core.Input.PointerSample
 {
     /// <summary>
-    /// Production aimsource kernel over the engine globals: ground resolution reuses the
+    /// Production pointer sample kernel over the engine globals: ground resolution reuses the
     /// authoritative pointer helper's camera-ray + heightmap chain, entity pick reuses the
     /// pointer hit resolver's knowledge-gated chain over an explicit candidate set, and the
     /// region filter reuses the spatial bounds utility's screen-rect intersection. A named
@@ -29,7 +29,7 @@ namespace Ludots.Core.Input.AimSource
     /// into the binding's local surface); a null seat answers under the installed
     /// sole/global providers, window-rect routing included when several bindings exist.
     /// </summary>
-    public sealed class GraphAimSourceRuntime : IGraphAimSourceRuntime
+    public sealed class GraphPointerSampleRuntime : IGraphPointerSampleRuntime
     {
         private readonly World _world;
         private readonly IReadOnlyDictionary<string, object> _globals;
@@ -171,7 +171,7 @@ namespace Ludots.Core.Input.AimSource
             return (_minHeightMeters, _maxHeightMeters);
         }
 
-        public GraphAimSourceRuntime(World world, IReadOnlyDictionary<string, object> globals)
+        public GraphPointerSampleRuntime(World world, IReadOnlyDictionary<string, object> globals)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
@@ -371,7 +371,7 @@ namespace Ludots.Core.Input.AimSource
         {
             return _globals as Dictionary<string, object>
                 ?? throw new InvalidOperationException(
-                    "GAS.GRAPH.ERR.AimSourceGlobalsReadOnly: the pointer hit resolver requires a mutable globals store.");
+                    "GAS.GRAPH.ERR.PointerSampleGlobalsReadOnly: the pointer hit resolver requires a mutable globals store.");
         }
     }
 }

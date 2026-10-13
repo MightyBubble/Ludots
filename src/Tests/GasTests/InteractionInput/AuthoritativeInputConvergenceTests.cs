@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -130,12 +131,6 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.InputActionAttributeBindingRegistry.Name] = registry,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ConfirmActionId = "Select.Begin",
-                    CommandActionId = "Command",
-                    CancelActionId = "Cancel",
-                },
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -412,12 +407,6 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ConfirmActionId = "Select.Begin",
-                    CommandActionId = "Command",
-                    CancelActionId = "Cancel",
-                },
             };
 
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -442,12 +431,6 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ConfirmActionId = "Select.Begin",
-                    CommandActionId = "Command",
-                    CancelActionId = "Cancel",
-                },
                 [CoreServiceKeys.AuthoritativeGroundPointerOverride.Name] = groundOverride,
             };
 
@@ -484,10 +467,12 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.InteractionActionBindings.Name] = TestInteractionActionBindings()
             };
 
-            var system = new InputRuntimeSystem(globals, pointerButtons: pointerButtons);
+            var system = new InputRuntimeSystem(
+                globals,
+                pointerButtons: pointerButtons,
+                pointerLifecycleActionIds: new[] { "Confirm" });
 
             backend.MousePosition = new Vector2(120f, 240f);
             system.Update(1f / 60f);
@@ -515,88 +500,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputRuntimeSystem_MinimapConsumerCapturesPointerAndZoomThroughUnifiedInput()
+        public void InputRuntimeSystem_MinimapClickJumpsCameraAndDoesNotStartWorldSelect()
         {
-            using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
-                Path.Combine(FindRepoRoot(), "assets"),
-                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
-
-            var backend = new TestInputBackend();
-            var config = new InputConfigRoot
-            {
-                Actions = new List<InputActionDef>
-                {
-                    new() { Id = "Confirm", Type = InputActionType.Button },
-                    new() { Id = "Command", Type = InputActionType.Button },
-                    new() { Id = "Cancel", Type = InputActionType.Button },
-                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
-                    new() { Id = "Zoom", Type = InputActionType.Axis1D },
-                    new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
-                },
-                Contexts = new List<InputContextDef>
-                {
-                    new()
-                    {
-                        Id = "Gameplay",
-                        Priority = 1,
-                        Bindings = new List<InputBindingDef>
-                        {
-                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
-                            new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
-                            new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
-                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
-                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                        }
-                    }
-                }
-            };
-
-            var handler = new PlayerInputHandler(backend, config);
-            handler.PushContext("Gameplay");
-
-            var minimap = CreateInputConvergenceMinimap();
-            var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
-                ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
-            var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
-                ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
-            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
-            minimap.Visible = true;
-            minimap.UseRtsFullMapPreset();
-            minimap.Refresh(engine, markerBuffer, screenMarkers);
-
-            engine.SetService(CoreServiceKeys.InputHandler, handler);
-            engine.SetService(CoreServiceKeys.InputBackend, backend);
-            engine.SetService(CoreServiceKeys.InteractionActionBindings, TestInteractionActionBindings());
-            engine.SetService(CoreServiceKeys.UiCaptured, false);
-            engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
-            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
-
-            var input = new AuthoritativeInputAccumulator();
-            var pointerButtons = new AuthoritativePointerButtonAccumulator();
-            var pointerSnapshot = new AuthoritativePointerButtonSnapshot();
-            var system = new InputRuntimeSystem(engine.GlobalContext, input, pointerButtons);
+            using var engine = CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap);
+            Entity hero = FindNamed(engine.World, "Hero");
+            Assert.That(hero, Is.Not.EqualTo(Entity.Null));
 
             Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.75f), minimap.FieldY + (minimap.FieldSize * 0.25f));
-            float beforeHalfExtent = minimap.HalfExtentCm;
-            backend.MousePosition = click;
-            backend.MouseWheel = 1f;
-            backend.Buttons["<Mouse>/LeftButton"] = true;
             Assert.That(minimap.TryScreenToWorld(click, out Vector2 expectedTarget), Is.True);
+            backend.MousePosition = click;
+            StepLogic(engine);
 
-            system.Update(1f / 60f);
-            pointerButtons.BuildTickSnapshot(pointerSnapshot);
-
-            Assert.That(minimap.HalfExtentCm, Is.LessThan(beforeHalfExtent));
-            Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Minimap click must consume the shared confirm action before authoritative gameplay capture.");
-            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0f), "Minimap wheel must suppress the shared camera zoom action for this frame.");
-            Assert.That(pointerSnapshot.TryGetState("Confirm", out var selectState), Is.True);
-            Assert.That(selectState.PressedThisFrame, Is.False, "Pointer buttons snapshot must not leak minimap clicks into gameplay selection.");
-
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            StepLogic(engine);
             Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
             Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedTarget.Y).Within(1f));
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False,
+                "A click on the minimap field must not open the world select context.");
+
+            backend.Buttons["<Mouse>/LeftButton"] = false;
+            StepLogic(engine);
+            backend.MousePosition = new Vector2(minimap.FieldX - 12f, minimap.FieldY - 12f);
+            StepLogic(engine);
+            Assert.That(ContextActive(engine, hero, "interaction.context.minimap"), Is.False);
+
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            StepLogic(engine);
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.True,
+                "A click outside the minimap still opens world select.");
         }
 
         [Test]
@@ -651,18 +582,14 @@ namespace Ludots.Tests.GAS
             var rayProvider = new CountingScreenRayProvider();
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
-            engine.SetService(CoreServiceKeys.InteractionActionBindings, TestInteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
-            engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
-            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
             engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
             engine.SetService(CoreServiceKeys.ContinuousHeightmap, CreateFlatHeightmap());
             engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100));
 
             var input = new AuthoritativeInputAccumulator();
             var snapshot = new FrozenInputActionReader();
-            var pointerButtons = new AuthoritativePointerButtonAccumulator();
-            var system = new InputRuntimeSystem(engine.GlobalContext, input, pointerButtons);
+            var system = new InputRuntimeSystem(engine.GlobalContext, input);
 
             Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.80f), minimap.FieldY + (minimap.FieldSize * 0.20f));
             Assert.That(minimap.TryScreenToWorld(click, out Vector2 expectedWorldCm), Is.True);
@@ -681,140 +608,89 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputRuntimeSystem_MinimapConsumerScopesWheelDragAndRotationToggleToUnifiedInput()
+        public void InputRuntimeSystem_MinimapContextScopesWheelDragAndRotationToggle()
         {
-            using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
-                Path.Combine(FindRepoRoot(), "assets"),
-                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
-
-            var backend = new TestInputBackend();
-            var config = new InputConfigRoot
-            {
-                Actions = new List<InputActionDef>
-                {
-                    new() { Id = "Confirm", Type = InputActionType.Button },
-                    new() { Id = "Command", Type = InputActionType.Button },
-                    new() { Id = "Cancel", Type = InputActionType.Button },
-                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
-                    new() { Id = "Zoom", Type = InputActionType.Axis1D },
-                    new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
-                },
-                Contexts = new List<InputContextDef>
-                {
-                    new()
-                    {
-                        Id = "Gameplay",
-                        Priority = 1,
-                        Bindings = new List<InputBindingDef>
-                        {
-                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
-                            new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
-                            new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
-                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
-                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                        }
-                    }
-                }
-            };
-
-            var handler = new PlayerInputHandler(backend, config);
-            handler.PushContext("Gameplay");
-
-            var minimap = CreateInputConvergenceMinimap();
-            var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
-                ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
-            var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
-                ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
-            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
-            minimap.Visible = true;
-            minimap.UseRtsFullMapPreset();
-            engine.AuthorityCamera().ApplyPose(new CameraPoseRequest { Yaw = 90f });
-            minimap.Refresh(engine, markerBuffer, screenMarkers);
-
-            engine.SetService(CoreServiceKeys.InputHandler, handler);
-            engine.SetService(CoreServiceKeys.InputBackend, backend);
-            engine.SetService(CoreServiceKeys.InteractionActionBindings, TestInteractionActionBindings());
-            engine.SetService(CoreServiceKeys.UiCaptured, false);
-            engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
-            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
-
-            var input = new AuthoritativeInputAccumulator();
-            var pointerButtons = new AuthoritativePointerButtonAccumulator();
-            var system = new InputRuntimeSystem(engine.GlobalContext, input, pointerButtons);
+            using var engine = CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap);
+            Entity hero = FindNamed(engine.World, "Hero");
 
             Vector2 outside = new(minimap.FieldX - 12f, minimap.FieldY - 12f);
             float halfBeforeOutsideWheel = minimap.HalfExtentCm;
             float zoomBeforeOutsideWheel = minimap.ZoomNormalized;
             backend.MousePosition = outside;
             backend.MouseWheel = 1f;
-            system.Update(1f / 60f);
-
+            StepLogic(engine);
             Assert.That(minimap.HalfExtentCm, Is.EqualTo(halfBeforeOutsideWheel).Within(0.01f));
             Assert.That(minimap.ZoomNormalized, Is.EqualTo(zoomBeforeOutsideWheel).Within(0.0001f));
-            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(1f), "Wheel outside minimap must remain available to camera/gameplay input.");
+            PlayerInputHandler handler = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler missing.");
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0.1f),
+                "Wheel outside the minimap stays on camera Zoom. Default_Gameplay scales ScrollY by 0.1.");
 
             backend.MouseWheel = 0f;
             Vector2 slider = new(minimap.ZoomSliderX + (minimap.ZoomSliderWidth * 0.2f), minimap.ZoomSliderY + (minimap.ZoomSliderHeightPx * 0.5f));
             backend.MousePosition = slider;
+            StepLogic(engine);
+            Assert.That(ContextActive(engine, hero, "interaction.context.minimap"), Is.True);
             backend.Buttons["<Mouse>/LeftButton"] = true;
-            system.Update(1f / 60f);
-            Assert.That(minimap.ZoomNormalized, Is.EqualTo(0.2f).Within(0.03f), "Zoom slider must write the same normalized zoom state used by wheel zoom.");
+            StepLogic(engine);
+            Assert.That(minimap.ZoomNormalized, Is.EqualTo(0.2f).Within(0.03f));
             float halfAfterSlider = minimap.HalfExtentCm;
             float zoomAfterSlider = minimap.ZoomNormalized;
             backend.Buttons["<Mouse>/LeftButton"] = false;
-            system.Update(1f / 60f);
+            StepLogic(engine);
 
             Vector2 insideFieldForWheel = new(minimap.FieldX + (minimap.FieldSize * 0.5f), minimap.FieldY + (minimap.FieldSize * 0.5f));
             backend.MousePosition = insideFieldForWheel;
             backend.MouseWheel = 1f;
-            system.Update(1f / 60f);
-            Assert.That(minimap.ZoomNormalized, Is.LessThan(zoomAfterSlider), "Wheel zoom must mutate the same normalized zoom SSOT as the slider.");
-            Assert.That(minimap.HalfExtentCm, Is.LessThan(halfAfterSlider), "Wheel zoom in should shrink the metric half extent.");
+            StepLogic(engine);
+            Assert.That(minimap.ZoomNormalized, Is.LessThan(zoomAfterSlider));
+            Assert.That(minimap.HalfExtentCm, Is.LessThan(halfAfterSlider));
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0f));
 
             backend.MouseWheel = 0f;
             Vector2 firstDrag = new(minimap.FieldX + (minimap.FieldSize * 0.25f), minimap.FieldY + (minimap.FieldSize * 0.25f));
             Vector2 secondDrag = new(minimap.FieldX + (minimap.FieldSize * 0.85f), minimap.FieldY + (minimap.FieldSize * 0.72f));
             backend.MousePosition = firstDrag;
+            StepLogic(engine);
             backend.Buttons["<Mouse>/LeftButton"] = true;
             Assert.That(minimap.TryScreenToWorld(firstDrag, out Vector2 expectedFirstTarget), Is.True);
-            system.Update(1f / 60f);
+            StepLogic(engine);
             Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedFirstTarget.X).Within(1f));
             Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedFirstTarget.Y).Within(1f));
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False);
 
             backend.MousePosition = secondDrag;
             Assert.That(minimap.TryScreenToWorld(secondDrag, out Vector2 expectedSecondTarget), Is.True);
-            system.Update(1f / 60f);
+            StepLogic(engine);
             Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedSecondTarget.X).Within(1f));
             Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedSecondTarget.Y).Within(1f));
-            Assert.That(handler.IsDown("Confirm"), Is.False, "Held minimap drag must keep suppressing gameplay confirm.");
 
             backend.Buttons["<Mouse>/LeftButton"] = false;
-            system.Update(1f / 60f);
+            StepLogic(engine);
 
             Vector2 presetToggle = new(
                 minimap.PresetToggleX + (minimap.PresetToggleWidth * 0.5f),
                 minimap.PresetToggleY + (minimap.PresetToggleHeight * 0.5f));
             backend.MousePosition = presetToggle;
+            StepLogic(engine);
             backend.Buttons["<Mouse>/LeftButton"] = true;
-            system.Update(1f / 60f);
-            Assert.That(minimap.Preset, Is.EqualTo(MinimapPreset.FollowCamera), "Mode toggle button must switch to follow-camera through the shared pointer confirm input.");
-            Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Mode toggle clicks must not leak into gameplay confirm.");
+            StepLogic(engine);
+            Assert.That(minimap.Preset, Is.EqualTo(MinimapPreset.FollowCamera));
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False);
 
             backend.Buttons["<Mouse>/LeftButton"] = false;
-            system.Update(1f / 60f);
+            StepLogic(engine);
 
             Vector2 rotateToggle = new(
                 minimap.RotateToggleX + (minimap.RotateToggleWidth * 0.5f),
                 minimap.RotateToggleY + (minimap.RotateToggleHeight * 0.5f));
             bool beforeRotation = minimap.RotateWithCamera;
             backend.MousePosition = rotateToggle;
+            StepLogic(engine);
             backend.Buttons["<Mouse>/LeftButton"] = true;
-            system.Update(1f / 60f);
-            Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation), "Rotate toggle button must use the shared pointer confirm input.");
-            Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Rotate toggle clicks must not leak into gameplay confirm.");
+            StepLogic(engine);
+            Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation));
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False);
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()
@@ -865,9 +741,82 @@ namespace Ludots.Tests.GAS
             });
         }
 
-        private static MinimapInputConsumer CreateMinimapInputConsumer(MinimapRuntime minimap)
+
+        // Context mounts and action graphs run on the fixed step. A 1/60 visual frame
+        // does not cross FixedDeltaTime (engine clock is 20 Hz), so it never opens the minimap context.
+        private static void StepLogic(GameEngine engine) => engine.Tick(Time.FixedDeltaTime);
+
+        private static GameEngine CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap)
         {
-            return new MinimapInputConsumer(minimap, InputConvergenceMinimapActions);
+            var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
+                Path.Combine(FindRepoRoot(), "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
+            // One Tick must finish the fixed step. The default 4ms budget yields inside
+            // earlier time-sliced systems, so context mounts never reach action dispatch.
+            engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            engine.Start();
+            engine.LoadStartupMap();
+
+            minimap = CreateInputConvergenceMinimap();
+            var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+                ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+            var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+                ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
+            minimap.Visible = true;
+            minimap.UseRtsFullMapPreset();
+            minimap.Refresh(engine, markerBuffer, screenMarkers);
+
+            backend = new TestInputBackend();
+            var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
+            var handler = new PlayerInputHandler(backend, inputConfig);
+            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
+            {
+                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
+            }
+
+            engine.SetService(CoreServiceKeys.InputHandler, handler);
+            engine.SetService(CoreServiceKeys.InputBackend, backend);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            return engine;
+        }
+
+        private static bool ContextActive(GameEngine engine, Entity hero, string profileName)
+        {
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
+            if (!profiles.ProfileIdRegistry.TryGetId(profileName, out int profileId))
+            {
+                throw new InvalidOperationException($"Interaction context '{profileName}' is not installed.");
+            }
+
+            Span<int> ids = stackalloc int[16];
+            int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(engine.World, hero, ids);
+            for (int i = 0; i < count; i++)
+            {
+                if (ids[i] == profileId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static Entity FindNamed(World world, string name)
+        {
+            var query = new QueryDescription().WithAll<Ludots.Core.Components.Name>();
+            Entity found = Entity.Null;
+            world.Query(in query, (Entity entity, ref Ludots.Core.Components.Name named) =>
+            {
+                if (string.Equals(named.Value, name, StringComparison.Ordinal))
+                {
+                    found = entity;
+                }
+            });
+            return found;
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildCameraHandler()
@@ -896,16 +845,6 @@ namespace Ludots.Tests.GAS
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Camera");
             return (backend, handler);
-        }
-
-        private static InteractionActionBindings TestInteractionActionBindings()
-        {
-            return new InteractionActionBindings
-            {
-                ConfirmActionId = "Confirm",
-                CommandActionId = "Command",
-                CancelActionId = "Cancel",
-            };
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildConfirmCommandHandler()

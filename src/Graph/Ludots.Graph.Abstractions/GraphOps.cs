@@ -592,6 +592,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         DeactivateOwnContext = 543,
 
+        /// <summary>
+        /// I[Dst] = minimap hit of screen point (F[A], F[B]).
+        /// 0 none, 1 field, 2 zoom slider, 3 preset toggle, 4 rotate toggle.
+        /// Overlaps resolve preset, then rotate, then slider, then field.
+        /// A missing minimap runtime fails closed.
+        /// </summary>
+        QueryMinimapRegion = 544,
+
+        /// <summary>
+        /// B[Dst] = 1 when the minimap can project screen point (F[A], F[B]) into world centimeters,
+        /// clamped to the field. TargetPosCm is that point. 0 when the minimap is hidden.
+        /// </summary>
+        MinimapScreenToWorld = 545,
+
+        /// <summary>
+        /// Move the local camera to TargetPosCm through the minimap jump. The point is clamped to the world bounds.
+        /// </summary>
+        MinimapJumpCamera = 546,
+
+        /// <summary>
+        /// Write normalized minimap zoom from the zoom-slider x of screen point (F[A], F[B]).
+        /// </summary>
+        MinimapSetZoomFromPointer = 547,
+
+        /// <summary>Toggle the minimap between the full-map preset and the follow-camera preset.</summary>
+        MinimapTogglePreset = 548,
+
+        /// <summary>Toggle whether the minimap rotates with the camera.</summary>
+        MinimapToggleRotate = 549,
+
     }
 
     /// <summary>

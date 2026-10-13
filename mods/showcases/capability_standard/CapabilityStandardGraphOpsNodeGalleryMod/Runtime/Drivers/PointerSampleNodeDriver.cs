@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
-using Ludots.Core.Input.AimSource;
+using Ludots.Core.Input.PointerSample;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Terrain;
@@ -15,13 +15,13 @@ using Ludots.Platform.Abstractions;
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
-/// Hosts the aimsource pure-helper vignettes: screen point to ground, pointer pick,
+/// Hosts the pointer sample pure-helper vignettes: screen point to ground, pointer pick,
 /// region filter, and the two direction helpers. The featured graphs run against the
-/// production aimsource kernel over a deterministic gallery binding (screen px ↔
+/// production pointer sample kernel over a deterministic gallery binding (screen px ↔
 /// world cm 1:1 projector, flat heightmap ground), so every caption quotes a value the
 /// real kernel chain computed.
 /// </summary>
-public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
+public sealed class PointerSampleNodeDriver : IGraphOpsNodeDriver
 {
     private const float UnitRadius = 0.85f;
     private const float UnitRingThickness = 0.16f;
@@ -36,7 +36,7 @@ public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
     {
         GraphOpsNodeActorBinding.RequireMapActors(ctx);
         _ = GraphOpsNodeActorBinding.RequireRole(ctx, "caster");
-        ctx.Api.BindAimSource(new GraphAimSourceRuntime(ctx.SimWorld, BuildGalleryGlobals()));
+        ctx.Api.BindPointerSample(new GraphPointerSampleRuntime(ctx.SimWorld, BuildGalleryGlobals()));
         CollectUnits(ctx);
 
         if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.ScreenPointToEntity), StringComparison.Ordinal))
@@ -66,7 +66,7 @@ public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
     {
         if (!_seeded)
         {
-            throw new InvalidOperationException($"Aimsource gallery '{ctx.Vignette.Op}' must Seed before Tick.");
+            throw new InvalidOperationException($"Pointer sample gallery '{ctx.Vignette.Op}' must Seed before Tick.");
         }
 
         _last = ctx.ExecuteFeaturedGraph();
@@ -213,7 +213,7 @@ public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
                     !ctx.Api.TryScreenPointToGround(400f, 150f, null, out IntVector2 groundCm))
                 {
                     throw new InvalidOperationException(
-                        $"Aimsource gallery '{ctx.Vignette.Op}' ground resolution failed; caption cannot quote a value.");
+                        $"Pointer sample gallery '{ctx.Vignette.Op}' ground resolution failed; caption cannot quote a value.");
                 }
 
                 values["x"] = FormatMeters(groundCm.X);
@@ -238,7 +238,7 @@ public sealed class AimSourceNodeDriver : IGraphOpsNodeDriver
                 values["deg"] = _last.FloatValue.ToString("0", CultureInfo.InvariantCulture);
                 break;
             default:
-                throw new InvalidOperationException($"Aimsource driver does not host op '{ctx.Vignette.Op}'.");
+                throw new InvalidOperationException($"Pointer sample driver does not host op '{ctx.Vignette.Op}'.");
         }
     }
 

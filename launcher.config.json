@@ -2834,6 +2834,54 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPrefEntryMod",
         "projectPath": "CapabilityStandardGraphOpSetPrefEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapJumpCamera",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapJumpCameraEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapJumpCameraEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapScreenToWorld",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapScreenToWorldEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapScreenToWorldEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapSetZoomFromPointer",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapSetZoomFromPointerEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapSetZoomFromPointerEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapTogglePreset",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapTogglePresetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapTogglePresetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapToggleRotate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapToggleRotateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapToggleRotateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryMinimapRegion",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryMinimapRegionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryMinimapRegionEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

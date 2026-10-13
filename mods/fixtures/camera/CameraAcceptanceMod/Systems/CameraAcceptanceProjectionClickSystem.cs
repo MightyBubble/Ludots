@@ -6,7 +6,6 @@ using CameraAcceptanceMod.Runtime;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.CommandSources;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -48,10 +47,7 @@ namespace CameraAcceptanceMod.Systems
                 return;
             }
 
-            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-                engine.GlobalContext,
-                nameof(CameraAcceptanceProjectionClickSystem));
-            if (!input.PressedThisFrame(bindings.ConfirmActionId))
+            if (!input.PressedThisFrame("Select.Begin"))
             {
                 return;
             }
