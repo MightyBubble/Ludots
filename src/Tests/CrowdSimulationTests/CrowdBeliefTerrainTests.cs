@@ -93,7 +93,7 @@ public class CrowdBeliefTerrainTests
         Assert.That(ex.Message, Does.Contain("链接数").Or.Contain("代价"));
     }
 
-    private sealed class LandWorld : System.IDisposable
+        internal sealed class LandWorld : System.IDisposable
     {
         public CrowdSimulationRuntimeConfig Config { get; }
         public CrowdStructuresStore Store { get; }
