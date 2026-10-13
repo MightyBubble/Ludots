@@ -17,7 +17,7 @@
       {
         "id": "r_q",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "r_lim",

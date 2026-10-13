@@ -9,7 +9,7 @@
         "start": "rep",
         "filters": {
           "payload": {
-            "MapTrigger.CollectionKeyId": "collection.command.source"
+            "MapTrigger.CollectionKeyId": "commandSource"
           }
         }
       }

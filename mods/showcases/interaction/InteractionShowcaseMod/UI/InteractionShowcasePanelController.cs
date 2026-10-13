@@ -19,6 +19,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Surface;
+using Ludots.Core.Input.Config;
 
 namespace InteractionShowcaseMod.UI
 {
@@ -669,7 +670,7 @@ namespace InteractionShowcaseMod.UI
             group4 = SelectionGroupSummary.Empty;
 
             liveCount = TryResolveCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
                 : 0;
         }
 
@@ -695,14 +696,14 @@ namespace InteractionShowcaseMod.UI
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                        out primary);
         }
 
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             return TryResolveCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
                 : Array.Empty<Entity>();
         }
 
@@ -1028,7 +1029,7 @@ namespace InteractionShowcaseMod.UI
             }
 
             owner = localPlayer;
-            collectionKeyId = collections.KeyRegistry.Register("collection.command.source");
+            collectionKeyId = collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
             return true;
         }
 

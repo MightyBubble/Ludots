@@ -12,6 +12,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Input.Config;
 
 namespace EntityCommandPanelShowcaseMod.Runtime
 {
@@ -218,7 +219,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 localPlayer,

@@ -52,6 +52,7 @@ using Rl = Raylib_cs.Raylib;
 using SkiaSharp;
 using Ludots.Raylib.Render;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -2732,7 +2733,7 @@ namespace Ludots.Adapter.Raylib
                         engine.World,
                         debugCollections,
                         debugOwner,
-                        "collection.command.source",
+                        InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                         out Entity commandSource) &&
                     commandSource != Entity.Null)
                 {

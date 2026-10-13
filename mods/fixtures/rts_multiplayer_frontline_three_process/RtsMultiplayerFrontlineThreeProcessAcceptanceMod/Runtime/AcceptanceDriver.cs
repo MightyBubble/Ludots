@@ -30,6 +30,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using RtsMultiplayerFrontlineMod.Runtime;
+using Ludots.Core.Input.Config;
 
 namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
@@ -2025,7 +2026,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void CaptureCommandActors()
     {
         Entity owner = RequireLocalPlayerEntity();
-        _commandActorCount = _collections!.CopyEntities(owner, "collection.command.source", _commandActors);
+        _commandActorCount = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _commandActors);
         if (_commandActorCount <= 0)
         {
             throw new InvalidOperationException("Player input command has no formally selected command-source actors.");
@@ -2074,7 +2075,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private string[] CaptureSelectedHandles()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _entityScratch);
         var handles = new string[count];
         for (int i = 0; i < count; i++)
         {
@@ -2086,7 +2087,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private AcceptancePositionEvidence[] CaptureSelectedPositions()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _entityScratch);
         var result = new AcceptancePositionEvidence[count];
         for (int i = 0; i < count; i++)
         {
@@ -2105,7 +2106,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void RequireSelectedSet(ReadOnlySpan<Entity> expected)
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _entityScratch);
         if (count != expected.Length)
         {
             throw new InvalidOperationException(
@@ -2243,7 +2244,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreSelectedActorsNear(WorldCmInt2 destination, int toleranceCm)
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _entityScratch);
         if (count <= 0)
         {
             return false;
@@ -2268,7 +2269,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreSelectedActorsVisibleWithPresenterPayload()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _entityScratch);
         if (count <= 0)
         {
             return false;
@@ -3102,7 +3103,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
         }
 
-        int count = _collections.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _entityScratch);
         var selected = new AcceptanceSelectedActorCheckpoint[count];
         for (int i = 0; i < count; i++)
         {

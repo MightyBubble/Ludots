@@ -19,7 +19,7 @@
       {
         "id": "rot_sel",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "rot_idx0",

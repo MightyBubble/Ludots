@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
@@ -23,12 +24,6 @@ using ParticipantViewCapabilityMod.Runtime;
 using Ludots.Platform.Abstractions;
 
 namespace ParticipantViewCapabilityMod.UI;
-    /// <summary>Collection keys consumed by participant view; declared/written by LudotsCoreMod selection graphs.</summary>
-    internal static class ParticipantViewCollectionKeys
-    {
-        public const string CommandSource = "collection.command.source";
-    }
-
 
 internal sealed class ParticipantViewPanelController
 {
@@ -385,7 +380,7 @@ internal sealed class ParticipantViewPanelController
             ? EntityCollectionContextRuntime.GetCount(
                 engine.GlobalContext,
                 commandSourceOwner,
-                ParticipantViewCollectionKeys.CommandSource)
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
             : 0;
         return new ParticipantViewPanelState(
             MapId: session.MapId.Value,

@@ -21,7 +21,7 @@
       {
         "id": "fromUiBox",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "teamBlue",

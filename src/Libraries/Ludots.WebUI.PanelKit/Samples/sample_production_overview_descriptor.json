@@ -1,7 +1,7 @@
 {
   "id": "panel-kit.sample.production-overview",
   "sourceKind": "entityCollection",
-  "sourceRef": "collection.command.source",
+  "sourceRef": "core.selection",
   "commandPanelSourceId": "gas.ability-slots",
   "queueSourceKind": "commandPanelSupplemental",
   "workerCollectionKey": "collection.workers",

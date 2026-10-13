@@ -9,7 +9,7 @@
         "start": "b_rep",
         "filters": {
           "payload": {
-            "MapTrigger.CollectionKeyId": "collection.command.source"
+            "MapTrigger.CollectionKeyId": "commandSource"
           }
         }
       }
@@ -22,7 +22,7 @@
       {
         "id": "b_qsel",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "b_lim",

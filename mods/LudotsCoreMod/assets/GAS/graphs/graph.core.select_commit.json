@@ -38,7 +38,7 @@
       {
         "id": "commit_replace",
         "op": "WriteCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "op_add",
@@ -48,7 +48,7 @@
       {
         "id": "commit_add",
         "op": "WriteCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "op_subtract",
@@ -58,7 +58,7 @@
       {
         "id": "commit_subtract",
         "op": "WriteCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "ok",

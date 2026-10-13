@@ -18,6 +18,7 @@ using RoadNetworkShowcaseMod.UI;
 using Ludots.UI;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.Config;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -252,12 +253,12 @@ namespace RoadNetworkShowcaseMod.Runtime
             if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections)
             {
                 EnsureCommandSourceComponents(engine.World, owner);
-                if (ShouldSeedCommandSource(engine.World, collections, owner))
+                if (ShouldSeedCommandSource(engine, collections, owner))
                 {
                     Span<Entity> initialCommandSource = stackalloc Entity[1];
                     initialCommandSource[0] = owner;
                     var descriptor = EntityCollectionDescriptor.Create(
-                        "collection.command.source",
+                        InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                         EntityCollectionSourceKind.Explicit,
                         EntityCollectionRoleKind.CommandSource,
                         owner,
@@ -384,9 +385,10 @@ namespace RoadNetworkShowcaseMod.Runtime
             });
         }
 
-        private static bool ShouldSeedCommandSource(World world, EntityCollectionStore collections, Entity owner)
+        private static bool ShouldSeedCommandSource(GameEngine engine, EntityCollectionStore collections, Entity owner)
         {
-            if (!collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view))
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+            if (!collections.TryGetView(owner, commandSourceKey, out EntityCollectionView view))
             {
                 return true;
             }
@@ -397,7 +399,8 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             var selected = new Entity[view.Count];
-            int written = collections.CopyEntities(owner, "collection.command.source", selected);
+            int written = collections.CopyEntities(owner, commandSourceKey, selected);
+            World world = engine.World;
             for (int i = 0; i < written; i++)
             {
                 if (world.IsAlive(selected[i]))
@@ -579,7 +582,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                     engine.World,
                     engine.GlobalContext,
                     owner,
-                    "collection.command.source",
+                    InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                     out Entity selected) &&
                 engine.World.IsAlive(selected))
             {

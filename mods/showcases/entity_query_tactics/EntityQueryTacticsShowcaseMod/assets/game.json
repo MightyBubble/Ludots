@@ -13,7 +13,7 @@
       "relationFilter": "Friendly"
     },
     "acquisition": {
-      "collectionKey": "collection.command.source",
+      "collectionKey": "entity_query.selection",
       "title": "UI box acquisition"
     }
   },

@@ -15,6 +15,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
+using Ludots.Core.Input.Config;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -130,7 +131,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private Entity[] SnapshotCommandSource()
         {
             return TryResolveLocalCommandSourceOwner(out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine))
                 : Array.Empty<Entity>();
         }
 
@@ -142,7 +143,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                        _world,
                        _engine.GlobalContext,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                        out entity);
         }
 

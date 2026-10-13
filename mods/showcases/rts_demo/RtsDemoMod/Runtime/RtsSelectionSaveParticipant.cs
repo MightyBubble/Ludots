@@ -7,6 +7,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Client;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
+using Ludots.Core.Input.Config;
 
 namespace RtsDemoMod.Runtime;
 
@@ -41,7 +42,7 @@ public sealed class RtsSelectionSaveParticipant : ISaveParticipant
             _engine.World,
             _engine.GlobalContext,
             owner,
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
             out Entity primary) &&
             _engine.World.TryGet(primary, out Name name)
                 ? name.Value
@@ -76,7 +77,7 @@ public sealed class RtsSelectionSaveParticipant : ISaveParticipant
             return;
         }
 
-        int keyId = store.KeyRegistry.GetId("collection.command.source");
+        int keyId = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine));
         Span<Entity> members = stackalloc Entity[1];
         members[0] = primary;
         applier.Apply(owner, keyId, CollectionWriteOp.Replace, members);

@@ -19,7 +19,7 @@
       {
         "id": "sel",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "idx0",
@@ -55,7 +55,7 @@
       {
         "id": "members",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "slot",

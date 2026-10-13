@@ -70,7 +70,6 @@ public sealed record LauncherRecordingResult(
 
 public static class LauncherEvidenceRecorder
 {
-        private const string EvidenceCommandSourceKey = "collection.command.source";
     private static readonly QueryDescription CameraNamedEntityQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm>();
 
@@ -1410,7 +1409,7 @@ public static class LauncherEvidenceRecorder
             ? EntityCollectionContextRuntime.Snapshot(
                 runtime.Engine.GlobalContext,
                 commandSourceOwner,
-                EvidenceCommandSourceKey)
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(runtime.Engine))
             : Array.Empty<Entity>();
         for (int i = 0; i < commandActors.Length; i++)
         {
@@ -2547,7 +2546,7 @@ public static class LauncherEvidenceRecorder
         Entity[] commandActorArray = commandActors.ToArray();
 
         var descriptor = EntityCollectionDescriptor.Create(
-            EvidenceCommandSourceKey,
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
             EntityCollectionSourceKind.UiAcquisition,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -3334,7 +3333,7 @@ public static class LauncherEvidenceRecorder
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
         Entity owner = RequireSoleLocalSeat(engine).PossessedRep;
-        return owner != Entity.Null && collections.TryGetView(owner, EvidenceCommandSourceKey, out EntityCollectionView view)
+        return owner != Entity.Null && collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView view)
             ? view.Count
             : 0;
     }
@@ -3648,7 +3647,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore, enqueue one logical `massNavigationMove` fan-out through an OrderQueue shared batch, then use formal OrderBuffer activation on each actor.");
+        sb.AppendLine("2. Seed `command source` through EntityCollectionStore, enqueue one logical `massNavigationMove` fan-out through an OrderQueue shared batch, then use formal OrderBuffer activation on each actor.");
         sb.AppendLine("3. Wait for sampled agents to move, record a settled baseline, submit a second shared-batch `massNavigationMove` back across the crowd, and require sampled agents to move again from that baseline.");
         sb.AppendLine("4. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("5. Fail if sampled units do not move for both logical commands, units are recreated/reset, presenter payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
@@ -3772,7 +3771,7 @@ public static class LauncherEvidenceRecorder
             "flowchart TD",
             "    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]",
             "    B --> C[Verify presenter owners and minimap markers]",
-            "    C --> D[Seed collection.command.source]",
+            "    C --> D[Seed command source]",
             "    D --> E[OrderQueue shared batch then formal OrderBuffer activation]",
             "    E --> F[Verify sampled units moved after first command]",
             "    F --> G[Submit second shared batch crossing order]",

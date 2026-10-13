@@ -25,6 +25,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.Config;
 
 namespace EntityQueryTacticsShowcaseMod.Systems
 {
@@ -694,7 +695,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    "collection.command.source",
+                    InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                     out EntityCollectionView commandSourceView)
                 ? commandSourceView.Revision
                 : 0u;
@@ -705,7 +706,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            int count = collections.CopyEntities(ScenarioContext.Owner, "collection.command.source", _selectionScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _selectionScratch);
             var descriptor = EntityCollectionDescriptor.Create(
                 Config.Collections.CommandSourceMirror,
                 EntityCollectionSourceKind.Explicit,
@@ -713,7 +714,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 contextEntity: ScenarioContext.Owner,
                 primaryEntity: count > 0 ? _selectionScratch[0] : Entity.Null,
                 title: "Command source mirror",
-                summary: $"collection.command.source | {count} entities");
+                summary: $"command source | {count} entities");
             collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), default, BuildPrimaryFlags(count));
             _lastMirroredCommandSourceRevision = commandSourceRevision;
             _commandSourceMirrorReady = true;
@@ -736,7 +737,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 ScenarioContext.Owner,
@@ -744,7 +745,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 "Command source",
                 $"Committed UI box | {count} entities");
             collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), ScenarioContext.Owner);
-            int committed = collections.CopyEntities(ScenarioContext.Owner, "collection.command.source", _collectionScratch);
+            int committed = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _collectionScratch);
             if (committed != count)
             {
                 throw new InvalidOperationException(
@@ -778,7 +779,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    "collection.command.source",
+                    InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                     out EntityCollectionView descriptor)
                 ? descriptor.Revision
                 : 0u;
@@ -787,7 +788,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            int count = collections.CopyEntities(ScenarioContext.Owner, "collection.command.source", _formationScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _formationScratch);
             WriteFormationCollection(count);
             _lastSyncedCommandSourceRevision = commandSourceRevision;
         }

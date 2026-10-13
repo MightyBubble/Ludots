@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -158,7 +159,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         var commandMembersSystem = new FormationCommandMembersSystem(
             engine.World,
             engine.GlobalContext,
-            config.CommandSourceCollectionKey,
+            ResolveCommandSourceKey(engine, config),
             config.CommandMembersCollectionKey,
             ResolveMaxSlotsPerFormation(config),
             config.OrderBatchCapacity);
@@ -329,7 +330,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("Formation Capability showcase requires RuntimeEntitySpawnQueue.");
 
-        ClearCommandSource(engine, config.CommandSourceCollectionKey);
+        ClearCommandSource(engine, ResolveCommandSourceKey(engine, config));
         BuildAgentPlans(engine, simulation, config);
         DestroyShowcaseOwnedEntities(engine);
 
@@ -1123,7 +1124,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         _initialCommandSourceScratch[0] = formation;
         var descriptor = EntityCollectionDescriptor.Create(
-            config.CommandSourceCollectionKey,
+            ResolveCommandSourceKey(engine, config),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -1436,6 +1437,14 @@ internal sealed class FormationCapabilityShowcaseRuntime
         public float WorldXCm { get; }
         public float WorldYCm { get; }
         public float RadiusCm { get; }
+    }
+
+    private static string ResolveCommandSourceKey(GameEngine engine, FormationCapabilityShowcaseConfig config)
+    {
+        return InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+            config.CommandSourceCollectionKey,
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+            "FormationCapabilityShowcaseConfig.commandSourceCollectionKey");
     }
 
     private readonly record struct PendingFormationBinding(Entity Entity, int FormationIndex);

@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Client;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Config;
 
 namespace CameraAcceptanceMod.Runtime
 {
@@ -12,14 +13,14 @@ namespace CameraAcceptanceMod.Runtime
         public static int CopySelectedEntities(World world, Dictionary<string, object> globals, Span<Entity> destination)
         {
             return TryResolveLocalCommandSourceOwner(world, globals, out Entity owner)
-                ? EntityCollectionContextRuntime.Copy(globals, owner, "collection.command.source", destination)
+                ? EntityCollectionContextRuntime.Copy(globals, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(globals), destination)
                 : 0;
         }
 
         public static Entity[] SnapshotSelectedEntities(World world, Dictionary<string, object> globals)
         {
             return TryResolveLocalCommandSourceOwner(world, globals, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(globals, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.Snapshot(globals, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(globals))
                 : Array.Empty<Entity>();
         }
 

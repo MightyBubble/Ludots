@@ -17,6 +17,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using UxPrototypeMod.UI;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.Config;
 
 namespace UxPrototypeMod.Runtime;
 
@@ -731,7 +732,7 @@ internal sealed class UxPrototypeScenarioState
                    engine.World,
                    engine.GlobalContext,
                    owner,
-                   "collection.command.source",
+                   InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                    out Entity entity)
             ? entity
             : Entity.Null;

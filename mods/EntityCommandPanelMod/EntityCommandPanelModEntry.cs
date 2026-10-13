@@ -4,6 +4,7 @@ using EntityCommandPanelMod.Systems;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Modding;
 using Ludots.Core.Networking.Runtime;
@@ -60,10 +61,11 @@ namespace EntityCommandPanelMod
             var sources = new EntityCommandPanelSourceRegistry();
             var handles = new EntityCommandPanelAliasStore();
             var collectionQueries = new EntityCommandPanelCollectionQueryConfigRegistry();
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
             collectionQueries.Register(new EntityCommandPanelCollectionQueryConfig
             {
-                Id = "collection.command.source",
-                CollectionKey = "collection.command.source",
+                Id = commandSourceKey,
+                CollectionKey = commandSourceKey,
                 Title = "Collection Commands",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel

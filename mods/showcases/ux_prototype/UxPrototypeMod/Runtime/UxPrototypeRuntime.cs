@@ -11,6 +11,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using UxPrototypeMod.UI;
+using Ludots.Core.Input.Config;
 
 namespace UxPrototypeMod.Runtime;
 
@@ -323,7 +324,7 @@ internal sealed class UxPrototypeRuntime
                    engine.World,
                    engine.GlobalContext,
                    owner,
-                   "collection.command.source",
+                   InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                    out Entity commandSourcePrimary)
             ? commandSourcePrimary
             : Entity.Null;

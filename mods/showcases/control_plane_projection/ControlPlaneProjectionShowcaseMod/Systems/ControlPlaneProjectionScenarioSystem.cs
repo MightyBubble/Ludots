@@ -14,6 +14,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using ControlPlaneProjectionShowcaseMod.Runtime;
+using Ludots.Core.Input.Config;
 
 namespace ControlPlaneProjectionShowcaseMod.Systems
 {
@@ -117,7 +118,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             _state.AllyTypeId = RequireTypeId(relationshipTypes, ControlPlaneProjectionShowcaseIds.AllyRelationshipType);
             _state.OfflineTagId = TagRegistry.Register(ControlPlaneProjectionShowcaseIds.OfflineTag);
 
-            _state.CommandSourceKeyId = collectionKeys.Register("collection.command.source");
+            _state.CommandSourceKeyId = collectionKeys.Register(InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine));
             _state.OwnedProjectionKeyId = collectionKeys.Register(ControlPlaneProjectionShowcaseIds.OwnedProjectionCollectionKey);
             _state.ProxiedProjectionKeyId = collectionKeys.Register(ControlPlaneProjectionShowcaseIds.ProxiedProjectionCollectionKey);
             _state.RefereePhase0ProjectionKeyId = collectionKeys.Register(ControlPlaneProjectionShowcaseIds.RefereePhase0ProjectionCollectionKey);
@@ -178,7 +179,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             relationships.EnsureLink(_state.RefereeRep, _state.P2Rep, _state.ControlsTypeId);
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 title: "SHOW-3 referee command-source fixture",
@@ -223,7 +224,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             selected[0] = _state.P1Units[0];
             selected[1] = _state.P2Units[0];
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 _state.P1Rep,

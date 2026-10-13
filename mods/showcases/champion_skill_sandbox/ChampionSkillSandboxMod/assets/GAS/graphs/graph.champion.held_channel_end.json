@@ -24,7 +24,7 @@
       {
         "id": "held_sel",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "held_tagged",
@@ -55,7 +55,7 @@
       {
         "id": "members",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "slot",

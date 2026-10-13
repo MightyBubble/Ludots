@@ -38,7 +38,7 @@
     "enableZoom": false,
     "followMode": "AlwaysFollow",
     "followTargetKind": "EntityCollectionPrimary",
-    "followCollectionKey": "collection.command.source",
+    "followCollectionKey": "commandSource",
     "allowUserInput": false
   }
 ]

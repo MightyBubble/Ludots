@@ -32,7 +32,7 @@
       {
         "id": "q_a",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "lim_a",
@@ -59,7 +59,7 @@
       {
         "id": "q_v",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "lim_v",
@@ -86,7 +86,7 @@
       {
         "id": "q_c",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "commandSource"
       },
       {
         "id": "lim_c",

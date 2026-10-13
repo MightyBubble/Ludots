@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
+using Ludots.Core.Input.Config;
 
 namespace CameraShowcaseMod.Runtime
 {
@@ -36,7 +37,7 @@ namespace CameraShowcaseMod.Runtime
                 BlendDurationSeconds = blendDurationSeconds,
                 FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = "collection.command.source",
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                 SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true

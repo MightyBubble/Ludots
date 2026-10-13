@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
+using Ludots.Core.Input.Config;
 
 namespace MinimapShowcaseMod.Triggers;
 
@@ -116,7 +117,7 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
         }
 
         var descriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,

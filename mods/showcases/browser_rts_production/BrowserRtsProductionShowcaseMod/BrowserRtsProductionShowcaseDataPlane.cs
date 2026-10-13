@@ -15,6 +15,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
+using Ludots.Core.Input.Config;
 
 namespace BrowserRtsProductionShowcaseMod;
 
@@ -416,7 +417,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
         var descriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -628,7 +629,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
         var descriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -656,7 +657,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     private Entity[] SnapshotCommandSource()
     {
         return TryResolveLocalCommandSourceOwner(out Entity owner)
-            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, "collection.command.source")
+            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine))
             : Array.Empty<Entity>();
     }
 
@@ -668,7 +669,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                    _engine.World,
                    _engine.GlobalContext,
                    owner,
-                   "collection.command.source",
+                   InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
                    out entity);
     }
 
