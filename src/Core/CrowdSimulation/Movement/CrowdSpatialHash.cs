@@ -49,12 +49,12 @@ public sealed class CrowdSpatialHash
     public readonly sbyte[] Ox, Oy;
 
     /// <summary>格边长与触及距离为定点精确值。整数截断会系统性移格划分。</summary>
-    public CrowdSpatialHash(int worldSizeCm, Fix64 navCellSizeCm, int capacity, int rings, Fix64 reachCm)
+    public CrowdSpatialHash(int worldSizeCm, Fix64 hashCellSizeCm, int capacity, int rings, Fix64 reachCm)
     {
-        CellSizeCm = navCellSizeCm;
+        CellSizeCm = hashCellSizeCm;
         _rings = rings;
         _reachCm = reachCm;
-        _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / navCellSizeCm).ToLong();
+        _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / hashCellSizeCm).ToLong();
         int cells = _dim * _dim;
         (Ox, Oy, RingEnd) = BuildRingOffsets(rings);
         Width = Ox.Length;
