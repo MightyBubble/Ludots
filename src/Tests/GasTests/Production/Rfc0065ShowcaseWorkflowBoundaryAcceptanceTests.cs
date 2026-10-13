@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
             Entity[] actors = { arcweaver, vanguard, commander };
             Assert.That(
-                collections.TryGet(localPlayer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionHandle sourceHandle),
+                collections.TryGet(localPlayer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionHandle sourceHandle),
                 Is.True,
                 "Interaction showcase startup must seed command source directly for command routing.");
             Assert.That(CopyCollection(collections, sourceHandle), Is.EquivalentTo(actors));
@@ -168,7 +168,7 @@ namespace Ludots.Tests.GAS.Production
                 dispatchProfileId,
                 schemeId,
                 launchScheme,
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
         }
 
         [Test]
@@ -831,7 +831,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            if (!collections.TryGet(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionHandle handle) ||
+            if (!collections.TryGet(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionHandle handle) ||
                 !collections.TryGetView(handle, out EntityCollectionView view))
             {
                 builder.Append(" collection=missing");

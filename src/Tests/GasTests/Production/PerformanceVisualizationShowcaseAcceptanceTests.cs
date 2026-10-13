@@ -26,6 +26,7 @@ namespace Ludots.Tests.GAS.Production
         {
             "LudotsCoreMod",
             "PerformanceVisualizationMod",
+            "CommandSourceCoreFixtureMod"
         };
 
         [Test]

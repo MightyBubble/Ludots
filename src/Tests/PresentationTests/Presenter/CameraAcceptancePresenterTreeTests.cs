@@ -86,6 +86,7 @@ namespace Ludots.Tests.Presentation
             modLoader.LoadMods(RepoModPaths.ResolveExplicit(_repoRoot, new[]
             {
                 "LudotsCoreMod",
+                "CommandSourceCoreFixtureMod"
             }));
 
             var pipeline = new ConfigPipeline(vfs, modLoader);

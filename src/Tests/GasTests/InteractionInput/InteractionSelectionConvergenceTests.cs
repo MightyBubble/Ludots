@@ -114,7 +114,7 @@ namespace Ludots.Tests.GAS
         private static void AssertCommandSource(Dictionary<string, object> globals, Entity owner, params Entity[] expected)
         {
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            That(collections.TryGet(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(globals), out EntityCollectionHandle handle), Is.True);
+            That(collections.TryGet(owner, InputCollectionKeyDeclarations.RequireRole(globals, "commandSource"), out EntityCollectionHandle handle), Is.True);
             That(collections.TryGetView(handle, out EntityCollectionView view), Is.True);
             That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.UiAcquisition));
             That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));

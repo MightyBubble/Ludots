@@ -758,7 +758,11 @@ namespace Ludots.Tests.Presentation
         {
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
+                new List<string>
+                {
+                    Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod"),
+                    Path.Combine(FindRepoRoot(), "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
+                },
                 Path.Combine(FindRepoRoot(), "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 

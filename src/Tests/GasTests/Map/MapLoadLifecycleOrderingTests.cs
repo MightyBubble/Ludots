@@ -796,6 +796,7 @@ public sealed class MapLoadLifecycleOrderingTests
                 new List<string>
                 {
                     Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                    Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
                     Path.Combine(Root, "TestLifecycleMod")
                 },
                 Path.Combine(repoRoot, "assets"),

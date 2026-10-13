@@ -61,7 +61,7 @@ namespace EntityCommandPanelMod
             var sources = new EntityCommandPanelSourceRegistry();
             var handles = new EntityCommandPanelAliasStore();
             var collectionQueries = new EntityCommandPanelCollectionQueryConfigRegistry();
-            string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             collectionQueries.Register(new EntityCommandPanelCollectionQueryConfig
             {
                 Id = commandSourceKey,

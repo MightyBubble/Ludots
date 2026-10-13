@@ -192,7 +192,7 @@ internal sealed class ParticipantViewCapabilityRuntime
             commandSourceOwner,
             viewViewer,
             members,
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
     }
 
     private void RefreshMountedPanel(GameEngine engine)

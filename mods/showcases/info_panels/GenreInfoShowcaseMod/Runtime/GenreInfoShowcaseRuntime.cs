@@ -184,7 +184,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 EntityCollectionRoleKind.Display,
                 members,
                 "Formation view");
-            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
             return true;
         }
@@ -196,7 +196,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 return false;
             }
 
-            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             return true;
         }
 
@@ -209,7 +209,7 @@ namespace GenreInfoShowcaseMod.Runtime
 
             if (!collections.TryGetView(viewer, GenreInfoShowcaseIds.FormationCollectionKey, out _))
             {
-                Entity[] members = SnapshotCollection(collections, viewer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+                Entity[] members = SnapshotCollection(collections, viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
                 ReplaceCollection(
                     collections,
                     viewer,
@@ -447,7 +447,7 @@ namespace GenreInfoShowcaseMod.Runtime
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key
-                : InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
         }
 
         private static Entity[] SnapshotCollection(EntityCollectionStore collections, Entity viewer, string key)
@@ -477,7 +477,7 @@ namespace GenreInfoShowcaseMod.Runtime
             string summary)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 viewer,

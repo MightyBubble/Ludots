@@ -19,7 +19,7 @@
       {
         "id": "members",
         "op": "QueryFromCollection",
-        "collectionKey": "commandSource"
+        "collectionKey": "role:commandSource"
       },
       {
         "id": "slot",

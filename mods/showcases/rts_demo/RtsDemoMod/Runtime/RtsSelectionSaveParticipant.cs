@@ -42,7 +42,7 @@ public sealed class RtsSelectionSaveParticipant : ISaveParticipant
             _engine.World,
             _engine.GlobalContext,
             owner,
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+            InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
             out Entity primary) &&
             _engine.World.TryGet(primary, out Name name)
                 ? name.Value
@@ -77,7 +77,7 @@ public sealed class RtsSelectionSaveParticipant : ISaveParticipant
             return;
         }
 
-        int keyId = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine));
+        int keyId = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"));
         Span<Entity> members = stackalloc Entity[1];
         members[0] = primary;
         applier.Apply(owner, keyId, CollectionWriteOp.Replace, members);

@@ -270,8 +270,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             Ludots.Core.Scripting.EnumCatalog? enums,
             GasGraphOpRegistry? opRegistry = null,
-            string? commandSourceCollectionKey = null)
-            => CompileCore(document, eventSchemas, enums, opRegistry, commandSourceCollectionKey) with { Document = document };
+            InputCollectionKeyDeclarations? collectionRoles = null,
+            string? sourceMod = null)
+            => CompileCore(document, eventSchemas, enums, opRegistry, collectionRoles, sourceMod) with { Document = document };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
             GraphControlFlowDocument document)
@@ -285,7 +286,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             Ludots.Core.Scripting.EnumCatalog? enums,
             GasGraphOpRegistry? opRegistry = null,
-            string? commandSourceCollectionKey = null)
+            InputCollectionKeyDeclarations? collectionRoles = null,
+            string? sourceMod = null)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
@@ -306,7 +308,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 BuildDispatchEventSchemas(nodes, graphKind, eventSchemas, graphId, diagnostics);
 
             List<TriggerGraphEntryConfig> triggerGraphEntries = ValidateTriggerGraphEntries(
-                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas, commandSourceCollectionKey);
+                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas, collectionRoles, sourceMod);
 
             if (graphKind != GraphKind.TriggerGraph &&
                 !string.IsNullOrWhiteSpace(document.Entry) &&
@@ -667,7 +669,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string graphId,
             List<GraphDiagnostic> diagnostics,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            string? commandSourceCollectionKey)
+            InputCollectionKeyDeclarations? collectionRoles,
+            string? sourceMod)
         {
             if (graphKind != GraphKind.TriggerGraph)
             {
@@ -742,7 +745,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,
                     NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
-                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName, commandSourceCollectionKey),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName, collectionRoles, sourceMod),
                     ParsedHook = ParseEntryHook(authored[i], graphId, shown, diagnostics)
                 });
             }
@@ -873,7 +876,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<GraphDiagnostic> diagnostics,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             string eventName,
-            string? commandSourceCollectionKey)
+            InputCollectionKeyDeclarations? collectionRoles,
+            string? sourceMod)
         {
             if (filters == null)
             {
@@ -1037,11 +1041,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         {
                             // 配置期符号、运行期 int：int 参数的字符串期望值是符号，编译成
                             // ConfigKey id（幂等，装载/编译顺序无关），派发期 int 比较。
-                            // commandSource 是角色记号，这里绑成 collection_keys 里的集合名；没绑就装载失败。
-                            expected = InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+                            // role:<name> 在这里绑成 collection_keys 里的集合名；没绑就装载失败。
+                            expected = InputCollectionKeyDeclarations.Resolve(
+                                collectionRoles,
                                 expected,
-                                commandSourceCollectionKey,
-                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}'");
+                                $"graph '{graphId}' entry '{shown}' filters payload '{payloadKey}'",
+                                sourceMod);
                             (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
                                 new TriggerGraphEntryPayloadFilter(
                                     payloadKey,

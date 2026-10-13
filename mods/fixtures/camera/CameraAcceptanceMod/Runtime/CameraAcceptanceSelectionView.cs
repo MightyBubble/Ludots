@@ -13,14 +13,14 @@ namespace CameraAcceptanceMod.Runtime
         public static int CopySelectedEntities(World world, Dictionary<string, object> globals, Span<Entity> destination)
         {
             return TryResolveLocalCommandSourceOwner(world, globals, out Entity owner)
-                ? EntityCollectionContextRuntime.Copy(globals, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(globals), destination)
+                ? EntityCollectionContextRuntime.Copy(globals, owner, InputCollectionKeyDeclarations.RequireRole(globals, "commandSource"), destination)
                 : 0;
         }
 
         public static Entity[] SnapshotSelectedEntities(World world, Dictionary<string, object> globals)
         {
             return TryResolveLocalCommandSourceOwner(world, globals, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(globals, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(globals))
+                ? EntityCollectionContextRuntime.Snapshot(globals, owner, InputCollectionKeyDeclarations.RequireRole(globals, "commandSource"))
                 : Array.Empty<Entity>();
         }
 

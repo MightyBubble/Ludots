@@ -108,7 +108,7 @@
     "zoomCmPerWheel": 120,
     "followMode": "AlwaysFollow",
     "followTargetKind": "EntityCollectionPrimary",
-    "followCollectionKey": "commandSource",
+    "followCollectionKey": "role:commandSource",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": true
@@ -139,7 +139,7 @@
     "zoomCmPerWheel": 600,
     "followMode": "AlwaysFollow",
     "followTargetKind": "EntityCollectionPrimary",
-    "followCollectionKey": "commandSource",
+    "followCollectionKey": "role:commandSource",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": true

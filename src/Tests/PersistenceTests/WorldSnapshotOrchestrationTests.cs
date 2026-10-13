@@ -299,7 +299,7 @@ public sealed class WorldSnapshotOrchestrationTests
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
             Path.Combine(repoRoot, "assets"),
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.LoadStartupMap();

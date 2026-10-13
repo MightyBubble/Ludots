@@ -9,7 +9,7 @@
         "start": "rep",
         "filters": {
           "payload": {
-            "MapTrigger.CollectionKeyId": "commandSource"
+            "MapTrigger.CollectionKeyId": "role:commandSource"
           }
         }
       }
@@ -46,7 +46,7 @@
       {
         "id": "write_cmd",
         "op": "WriteCollection",
-        "collectionKey": "commandSource"
+        "collectionKey": "role:commandSource"
       },
       {
         "id": "member",

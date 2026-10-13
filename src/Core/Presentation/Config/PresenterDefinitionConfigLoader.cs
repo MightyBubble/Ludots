@@ -6,6 +6,8 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation.Components;
@@ -41,6 +43,10 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<int, byte>? _resolveTextTokenArgCount;
         private readonly PresenterCommandKindRegistry? _commandKinds;
         private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
+        private readonly InputCollectionKeyDeclarations? _collectionRoles;
+        private readonly Dictionary<string, string> _presenterSourceMods = new(StringComparer.Ordinal);
+        private string _loadingPresenterId = string.Empty;
+        private string _loadingPresenterSourceMod = string.Empty;
 
         public PresenterDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -60,10 +66,12 @@ namespace Ludots.Core.Presentation.Config
             PresenterCommandKindRegistry? commandKinds = null,
             PresenterBehaviorKindRegistry? behaviorKinds = null,
             Func<int, GraphKind>? resolveGraphProgramKind = null,
-            Func<int, byte>? resolveTextTokenArgCount = null)
+            Func<int, byte>? resolveTextTokenArgCount = null,
+            InputCollectionKeyDeclarations? collectionRoles = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _collectionRoles = collectionRoles;
             _resolveAttributeName = resolveAttributeName ?? (_ => AttributeRegistry.InvalidId);
             _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
@@ -73,7 +81,18 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimatorControllerId = resolveAnimatorControllerId ?? (_ => 0);
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
-            _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            Func<string, int> registerEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            _resolveEntityCollectionKeyId = key =>
+            {
+                string resolved = InputCollectionKeyDeclarations.Resolve(
+                    _collectionRoles,
+                    key,
+                    string.IsNullOrEmpty(_loadingPresenterId)
+                        ? "presenter"
+                        : $"presenter '{_loadingPresenterId}'",
+                    _loadingPresenterSourceMod);
+                return registerEntityCollectionKeyId(resolved);
+            };
             _resolveInteractionContextProfileId = resolveInteractionContextProfileId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
             _resolveGraphProgramKind = resolveGraphProgramKind;
@@ -84,6 +103,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            _presenterSourceMods.Clear();
             var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/presenters.json", ConfigMergePolicy.ArrayById, "id");
             var fragments = _configs.CollectFragmentsWithSources(in entry);
             ValidateRawDefinitionIds(fragments, entry.RelativePath);
@@ -118,6 +138,7 @@ namespace Ludots.Core.Presentation.Config
                     "Presentation/presenters.json entry id");
 
                 mergedByKey[key] = obj;
+                _presenterSourceMods[key] = TriggerGraphHookWeaver.OwningMod(merged[i].SourceUri);
                 _registry.GetOrRegisterId(key);
             }
 
@@ -662,6 +683,10 @@ namespace Ludots.Core.Presentation.Config
         private (string key, PresenterDefinition def) ParseDefinition(JsonNode node)
         {
             string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Presenter id");
+            _loadingPresenterId = key;
+            _loadingPresenterSourceMod = _presenterSourceMods.TryGetValue(key, out string? sourceMod)
+                ? sourceMod
+                : string.Empty;
 
             if (node is not JsonObject definitionObject)
             {

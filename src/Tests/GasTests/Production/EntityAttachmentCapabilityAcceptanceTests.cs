@@ -29,7 +29,7 @@ namespace Ludots.Tests.GAS.Production
         private const float DeltaTime = 1f / 60f;
         private const string MapId = "attachment_capability";
 
-        private static readonly string[] AcceptanceMods = { "LudotsCoreMod", "AttachmentCapabilityMod" };
+        private static readonly string[] AcceptanceMods = { "LudotsCoreMod", "AttachmentCapabilityMod" , "CommandSourceCoreFixtureMod"};
 
         private readonly List<string> _battleLog = new();
         private readonly List<string> _trace = new();

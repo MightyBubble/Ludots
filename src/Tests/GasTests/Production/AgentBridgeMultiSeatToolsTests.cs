@@ -36,7 +36,7 @@ namespace Ludots.Tests.GasTests.Production
         private const float DeltaTime = 1f / 60f;
         private const float FovDeg = 60f;
 
-        private static readonly string[] Mods = { "LudotsCoreMod", "CoreInputMod" };
+        private static readonly string[] Mods = { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"};
 
         [Test]
         public void SessionInfo_DualSeat_ListsEverySeatWithBindingRects()

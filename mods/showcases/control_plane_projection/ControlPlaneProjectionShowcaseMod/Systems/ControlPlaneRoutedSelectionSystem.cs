@@ -50,7 +50,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
                 return;
             }
 
-            if (!collections.TryGetView(_state.P1Rep, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), out EntityCollectionView view))
+            if (!collections.TryGetView(_state.P1Rep, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), out EntityCollectionView view))
             {
                 return;
             }
@@ -61,7 +61,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             }
 
             EnsureScratchCapacity(view.Count);
-            int count = collections.CopyEntities(_state.P1Rep, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _selectionScratch);
+            int count = collections.CopyEntities(_state.P1Rep, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _selectionScratch);
             // Every unit on this map is owned by a domain rep, so unresolved entities are a scenario bug.
             writer.ReplaceRouted(
                 _state.P1Rep,

@@ -131,7 +131,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private Entity[] SnapshotCommandSource()
         {
             return TryResolveLocalCommandSourceOwner(out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine))
+                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"))
                 : Array.Empty<Entity>();
         }
 
@@ -143,7 +143,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                        _world,
                        _engine.GlobalContext,
                        owner,
-                       InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+                       InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                        out entity);
         }
 

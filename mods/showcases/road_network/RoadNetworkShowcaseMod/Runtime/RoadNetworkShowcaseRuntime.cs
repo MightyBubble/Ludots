@@ -258,7 +258,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                     Span<Entity> initialCommandSource = stackalloc Entity[1];
                     initialCommandSource[0] = owner;
                     var descriptor = EntityCollectionDescriptor.Create(
-                        InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                        InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                         EntityCollectionSourceKind.Explicit,
                         EntityCollectionRoleKind.CommandSource,
                         owner,
@@ -387,7 +387,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private static bool ShouldSeedCommandSource(GameEngine engine, EntityCollectionStore collections, Entity owner)
         {
-            string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             if (!collections.TryGetView(owner, commandSourceKey, out EntityCollectionView view))
             {
                 return true;
@@ -582,7 +582,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                     engine.World,
                     engine.GlobalContext,
                     owner,
-                    InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                     out Entity selected) &&
                 engine.World.IsAlive(selected))
             {

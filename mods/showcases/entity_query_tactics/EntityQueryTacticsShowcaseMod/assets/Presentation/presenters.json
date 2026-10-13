@@ -226,7 +226,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberAdded",
-          "key": "commandSource"
+          "key": "role:commandSource"
         },
         "command": {
           "kind": "CreatePresenter",
@@ -237,7 +237,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberRemoved",
-          "key": "commandSource"
+          "key": "role:commandSource"
         },
         "command": {
           "kind": "DestroyScopedPresenter",

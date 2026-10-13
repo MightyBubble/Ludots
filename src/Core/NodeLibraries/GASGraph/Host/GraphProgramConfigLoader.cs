@@ -33,7 +33,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         // the weave pass after registration (WeaveHooks) and cleared afterwards.
         private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
         private readonly Dictionary<string, string> _pendingOwningMods = new(StringComparer.OrdinalIgnoreCase);
-        private readonly string? _commandSourceCollectionKey;
+        private readonly InputCollectionKeyDeclarations? _collectionRoles;
 
         public GraphProgramConfigLoader(
             ConfigPipeline pipeline,
@@ -48,7 +48,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             Ludots.Core.Scripting.EnumCatalog? enums = null,
             IntIdCollectionStore? intIdCollections = null,
             GasGraphOpHandlerTable? operationHandlers = null,
-            string? commandSourceCollectionKey = null)
+            InputCollectionKeyDeclarations? collectionRoles = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -62,7 +62,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _builtinHandlers = builtinHandlers;
             _eventSchemas = eventSchemas;
             _enums = enums;
-            _commandSourceCollectionKey = commandSourceCollectionKey;
+            _collectionRoles = collectionRoles;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -157,7 +157,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 try
                 {
                     GraphControlFlowCompileResult compiled =
-                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums, _opRegistry, _commandSourceCollectionKey);
+                        GraphControlFlowCompiler.Compile(
+                            pair.Value,
+                            _eventSchemas,
+                            _enums,
+                            _opRegistry,
+                            _collectionRoles,
+                            OwningMod(id));
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -197,7 +203,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < packages.Count; i++)
             {
                 var (name, symbols, program, kind, mapTriggerEntries) = packages[i];
-                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections, _builtinHandlers, _commandSourceCollectionKey);
+                GraphProgramSymbolPatcher.Patch(
+                    symbols,
+                    program,
+                    _symbolResolver,
+                    _entityCollections,
+                    _builtinHandlers,
+                    _collectionRoles,
+                    OwningMod(name),
+                    name);
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
                 if (kind == GraphKind.None)
@@ -220,7 +234,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 if (_outputSchemas != null)
                 {
                     GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
-                        ? ResolveOutputBindingKeys(pendingSchema)
+                        ? ResolveOutputBindingKeys(name, pendingSchema)
                         : GraphOutputSchema.Empty;
                     _outputSchemas.Register(id, schema);
                 }
@@ -248,7 +262,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _enums,
                 _opRegistry,
                 _pendingOwningMods,
-                _commandSourceCollectionKey);
+                _collectionRoles);
             _pendingDocuments.Clear();
             _pendingOwningMods.Clear();
         }
@@ -270,7 +284,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _registry.ValidateInvokeTargets();
         }
 
-        private GraphOutputSchema ResolveOutputBindingKeys(GraphOutputSchema schema)
+        private string OwningMod(string graphId)
+        {
+            return _pendingOwningMods.TryGetValue(graphId, out string? mod) ? mod : string.Empty;
+        }
+
+        private GraphOutputSchema ResolveOutputBindingKeys(string graphId, GraphOutputSchema schema)
         {
             if (!schema.HasBindings)
             {
@@ -285,7 +304,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 if (GraphOutputDestinationKinds.IsEntityBagDestination(binding.Destination))
                 {
                     resolved[i] = _entityCollections != null && !string.IsNullOrWhiteSpace(binding.CollectionKey)
-                        ? ResolveCollectionOutput(binding, _entityCollections.KeyRegistry)
+                        ? ResolveCollectionOutput(graphId, binding, _entityCollections.KeyRegistry)
                         : binding;
                     continue;
                 }
@@ -299,7 +318,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     }
 
                     resolved[i] = !string.IsNullOrWhiteSpace(binding.CollectionKey)
-                        ? ResolveCollectionOutput(binding, _intIdCollections.KeyRegistry)
+                        ? ResolveCollectionOutput(graphId, binding, _intIdCollections.KeyRegistry)
                         : binding;
                     continue;
                 }
@@ -328,12 +347,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return new GraphOutputSchema(resolved);
         }
 
-        private GraphOutputBinding ResolveCollectionOutput(GraphOutputBinding binding, StringIntRegistry keys)
+        private GraphOutputBinding ResolveCollectionOutput(string graphId, GraphOutputBinding binding, StringIntRegistry keys)
         {
-            string collectionKey = InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+            string collectionKey = InputCollectionKeyDeclarations.Resolve(
+                _collectionRoles,
                 binding.CollectionKey,
-                _commandSourceCollectionKey,
-                $"graph output '{binding.Id}' collectionKey");
+                $"graph '{graphId}' output '{binding.Id}' collectionKey",
+                OwningMod(graphId));
             return binding.WithResolvedCollection(collectionKey, keys.Register(collectionKey));
         }
     }

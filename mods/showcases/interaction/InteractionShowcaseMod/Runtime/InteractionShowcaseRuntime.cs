@@ -223,7 +223,7 @@ namespace InteractionShowcaseMod.Runtime
 
         private int CopyCommandSourceActors(GameEngine engine, EntityCollectionStore collections, Entity viewer)
         {
-            string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             if (!collections.TryGetView(viewer, commandSourceKey, out EntityCollectionView view))
             {
                 return 0;
@@ -291,7 +291,7 @@ namespace InteractionShowcaseMod.Runtime
             Entity[] current = EntityCollectionContextRuntime.Snapshot(
                 engine.GlobalContext,
                 viewer,
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             if (current.Length <= 0)
             {
                 return false;
@@ -327,7 +327,7 @@ namespace InteractionShowcaseMod.Runtime
         {
             engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 0;
             return TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) &&
-                   collections.TryGetView(viewer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView view) &&
+                   collections.TryGetView(viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view) &&
                    view.Count > 0;
         }
 
@@ -485,7 +485,7 @@ namespace InteractionShowcaseMod.Runtime
                 new EntityInfoPanelRequest(
                     EntityInfoPanelKind.EntityCollectionInspector,
                     EntityInfoPanelSurface.Ui,
-                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine)),
+                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource")),
                     new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 632f, 332f),
                     EntityInfoGasDetailFlags.None,
                     true));
@@ -550,7 +550,7 @@ namespace InteractionShowcaseMod.Runtime
                     engine.World,
                     collections,
                     commandSourceOwner,
-                    InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                     out Arch.Core.Entity selected))
             {
                 return null;
@@ -786,7 +786,7 @@ namespace InteractionShowcaseMod.Runtime
             AddInitialCommandActor(engine, InteractionShowcaseIds.CommanderName, initialCommandActors, ref count);
             if (count > 0)
             {
-                if (!collections.TryGetView(viewer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView commandView) ||
+                if (!collections.TryGetView(viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView commandView) ||
                     commandView.Count <= 0)
                 {
                     PublishShowcaseCommandSource(engine, viewer, initialCommandActors[..count]);
@@ -815,14 +815,14 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
                 primaryEntity: actors[0],
                 title: "Active hero command group",
                 summary: "The showcase starts with these heroes ready for pointer commands.");
-            applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine)), in descriptor, actors, writerDomain: owner);
+            applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource")), in descriptor, actors, writerDomain: owner);
         }
 
         private static void TrySeedHoverTargetForVisibleUat(GameEngine engine, Entity owner, ReadOnlySpan<Entity> actors)
@@ -850,7 +850,7 @@ namespace InteractionShowcaseMod.Runtime
         {
             if (!string.Equals(Environment.GetEnvironmentVariable("LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET"), "1", StringComparison.Ordinal) ||
                 !TryResolveCollectionContext(engine, out EntityCollectionStore commandCollections, out Entity viewer) ||
-                !commandCollections.TryGet(viewer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionHandle commandHandle) ||
+                !commandCollections.TryGet(viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionHandle commandHandle) ||
                 !commandCollections.TryGetEntityAt(commandHandle, 1, out Entity hovered) ||
                 hovered == Entity.Null ||
                 !engine.World.IsAlive(hovered) ||

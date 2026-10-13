@@ -3,7 +3,7 @@
   "formationAnchor": {
     "templateId": "formation_capability_showcase_formation_anchor"
   },
-  "commandSourceCollectionKey": "commandSource",
+  "commandSourceCollectionKey": "role:commandSource",
   "commandMembersCollectionKey": "formation.command.members",
   "initialCommandSourceFormationId": "shu_left_vanguard",
   "initialCommandSourceEntityCapacity": 1,

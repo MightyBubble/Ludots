@@ -18,7 +18,8 @@ namespace Ludots.Tests.ThreeC
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "SharedThreeCProfilesMod"
+                "SharedThreeCProfilesMod",
+                "CommandSourceCoreFixtureMod"
             });
 
             using var engine = new GameEngine();

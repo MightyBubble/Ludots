@@ -25,7 +25,7 @@ public sealed class GenreInfoPanelAuthoringAcceptanceTests
         string assetsRoot = Path.Combine(repoRoot, "assets");
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod", "FourXDemoMod", "EntityInfoPanelsMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod", "FourXDemoMod", "EntityInfoPanelsMod" , "CommandSourceCoreFixtureMod"}),
             assetsRoot,
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);

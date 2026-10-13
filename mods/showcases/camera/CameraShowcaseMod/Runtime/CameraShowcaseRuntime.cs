@@ -117,7 +117,7 @@ namespace CameraShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,

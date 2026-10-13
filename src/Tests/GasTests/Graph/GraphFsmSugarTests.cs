@@ -724,6 +724,7 @@ namespace Ludots.Tests.Gas.Graph
                     new List<string>
                     {
                         Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                        Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
                         Path.Combine(Root, ModId),
                     },
                     Path.Combine(repoRoot, "assets"),

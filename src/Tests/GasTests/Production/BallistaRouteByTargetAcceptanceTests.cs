@@ -203,7 +203,7 @@ namespace Ludots.Tests.GAS
                 int contextKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("interaction.context.ballista");
                 runtime.Activate(ballista, contextKeyId, 0);
 
-                string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(Engine);
+                string commandSourceKey = InputCollectionKeyDeclarations.RequireRole(Engine, "commandSource");
                 int collectionKeyId = store.KeyRegistry.Register(commandSourceKey);
 
                 var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(

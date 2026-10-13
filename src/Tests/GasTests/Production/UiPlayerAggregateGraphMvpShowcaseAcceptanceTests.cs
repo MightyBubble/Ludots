@@ -42,6 +42,7 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
         "LudotsCoreMod",
         "CoreInputMod",
         ShowcaseModId,
+        "CommandSourceCoreFixtureMod"
     };
 
     [Test]

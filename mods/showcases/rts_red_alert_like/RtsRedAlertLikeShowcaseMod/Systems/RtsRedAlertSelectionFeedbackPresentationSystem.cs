@@ -72,7 +72,7 @@ internal sealed class RtsRedAlertSelectionFeedbackPresentationSystem : ISystem<f
                    _engine.World,
                    _engine.GlobalContext,
                    owner,
-                   InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+                   InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                    out entity);
     }
 

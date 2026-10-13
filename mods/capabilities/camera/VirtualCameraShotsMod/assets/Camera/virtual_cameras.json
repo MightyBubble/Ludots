@@ -28,7 +28,7 @@
     "distanceCm": 480,
     "fovYDeg": 58,
     "followTargetKind": "EntityCollectionPrimary",
-    "followCollectionKey": "commandSource",
+    "followCollectionKey": "role:commandSource",
     "defaultBlendDuration": 0.2,
     "blendCurve": "Linear",
     "allowUserInput": false

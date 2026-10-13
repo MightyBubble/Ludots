@@ -42,7 +42,7 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World ?? throw new InvalidOperationException("GameEngine world was not initialized.");
@@ -183,7 +183,7 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World ?? throw new InvalidOperationException("GameEngine world was not initialized.");

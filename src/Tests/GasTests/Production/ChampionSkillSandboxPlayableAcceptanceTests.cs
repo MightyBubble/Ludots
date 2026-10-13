@@ -1034,7 +1034,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -2705,7 +2705,7 @@ Assert.Fail(
                 details.Add("currentView=<none>");
             }
 
-            details.Add($"localCommandSource={DescribeCollection(engine, collections, localPlayer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))}");
+            details.Add($"localCommandSource={DescribeCollection(engine, collections, localPlayer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))}");
             details.Add($"commandPreview={DescribeCollectionByKey(engine, collections, CommandPreviewCollectionKey)}");
 
             details.Add($"orderBufferSpatial=[{BuildOrderBufferSpatialDiagnostics(engine)}]");

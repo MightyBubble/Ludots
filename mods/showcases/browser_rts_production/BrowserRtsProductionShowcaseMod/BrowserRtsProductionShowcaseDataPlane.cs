@@ -417,7 +417,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
         var descriptor = EntityCollectionDescriptor.Create(
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+            InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -629,7 +629,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
         var descriptor = EntityCollectionDescriptor.Create(
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+            InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -657,7 +657,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     private Entity[] SnapshotCommandSource()
     {
         return TryResolveLocalCommandSourceOwner(out Entity owner)
-            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine))
+            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"))
             : Array.Empty<Entity>();
     }
 
@@ -669,7 +669,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                    _engine.World,
                    _engine.GlobalContext,
                    owner,
-                   InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+                   InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                    out entity);
     }
 

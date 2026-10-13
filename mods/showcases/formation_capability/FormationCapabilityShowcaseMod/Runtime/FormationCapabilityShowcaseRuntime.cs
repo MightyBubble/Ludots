@@ -1441,10 +1441,11 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private static string ResolveCommandSourceKey(GameEngine engine, FormationCapabilityShowcaseConfig config)
     {
-        return InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+        return InputCollectionKeyDeclarations.Resolve(
+            InputCollectionKeyDeclarations.Require(engine),
             config.CommandSourceCollectionKey,
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
-            "FormationCapabilityShowcaseConfig.commandSourceCollectionKey");
+            "FormationCapabilityShowcaseConfig.commandSourceCollectionKey",
+            "FormationCapabilityShowcaseMod");
     }
 
     private readonly record struct PendingFormationBinding(Entity Entity, int FormationIndex);

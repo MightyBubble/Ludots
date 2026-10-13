@@ -145,7 +145,7 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -219,7 +219,7 @@ namespace CameraAcceptanceMod.Runtime
                 BlendDurationSeconds = 0f,
                 FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true

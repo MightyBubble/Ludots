@@ -66,7 +66,7 @@ public sealed class RtsAimGraphAcceptanceTests
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
         store.Replace(
             rep,
-            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
             new[] { caster },
             rep);
 
@@ -133,7 +133,7 @@ public sealed class RtsAimGraphAcceptanceTests
         Entity caster = SpawnOwnedUnit(engine);
         store.Replace(
             rep,
-            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
             new[] { caster },
             rep);
 
@@ -179,7 +179,7 @@ public sealed class RtsAimGraphAcceptanceTests
             store.TryGetView(rh2, out var rv2) &&
             rv2.Count > 0);
 
-        int commandSourceKeyId = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+        int commandSourceKeyId = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
         Assert.That(commandSourceKeyId, Is.GreaterThan(0), "command source 键已注册（battle profile 声明）");
 
         // ── 左键拖框：press 起角+激活 selecting context，release 提交命中到命令源集合 ──
@@ -230,7 +230,7 @@ public sealed class RtsAimGraphAcceptanceTests
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
         store.Replace(
             rep,
-            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
             new[] { footman, peasant, barracks },
             rep);
 

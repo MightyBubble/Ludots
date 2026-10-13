@@ -74,7 +74,7 @@ namespace Ludots.Tests.GAS.Production
             Entity[] commandSourceBeforeTargets = CopyCollectionOrEmpty(
                 preTickStore,
                 preTickState.Commander,
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             Tick(engine, 6);
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
@@ -114,7 +114,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(state.AbilityId, Is.EqualTo(AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId)));
 
             int abilityTargetsKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
-            int commandSourceKey = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+            int commandSourceKey = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             int rawKey = store.KeyRegistry.GetId("collection.ui.cast.raw");
             int casterMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
             int targetMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);

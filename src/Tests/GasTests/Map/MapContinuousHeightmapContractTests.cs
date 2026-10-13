@@ -401,6 +401,7 @@ namespace Ludots.Tests.Gas
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
                 _modRoot,
             }.ToList();
 

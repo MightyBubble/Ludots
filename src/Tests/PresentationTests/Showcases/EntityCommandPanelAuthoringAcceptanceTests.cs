@@ -27,7 +27,7 @@ public sealed class EntityCommandPanelAuthoringAcceptanceTests
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(
                 repoRoot,
-                new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" }),
+                new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" , "CommandSourceCoreFixtureMod"}),
             assetsRoot,
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);

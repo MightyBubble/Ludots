@@ -695,7 +695,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+                    InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                     out EntityCollectionView commandSourceView)
                 ? commandSourceView.Revision
                 : 0u;
@@ -706,7 +706,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            int count = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _selectionScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _selectionScratch);
             var descriptor = EntityCollectionDescriptor.Create(
                 Config.Collections.CommandSourceMirror,
                 EntityCollectionSourceKind.Explicit,
@@ -737,7 +737,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+                InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 ScenarioContext.Owner,
@@ -745,7 +745,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 "Command source",
                 $"Committed UI box | {count} entities");
             collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), ScenarioContext.Owner);
-            int committed = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _collectionScratch);
+            int committed = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _collectionScratch);
             if (committed != count)
             {
                 throw new InvalidOperationException(
@@ -779,7 +779,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine),
+                    InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                     out EntityCollectionView descriptor)
                 ? descriptor.Revision
                 : 0u;
@@ -788,7 +788,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            int count = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine), _formationScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _formationScratch);
             WriteFormationCollection(count);
             _lastSyncedCommandSourceRevision = commandSourceRevision;
         }

@@ -670,7 +670,7 @@ namespace InteractionShowcaseMod.UI
             group4 = SelectionGroupSummary.Empty;
 
             liveCount = TryResolveCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : 0;
         }
 
@@ -696,14 +696,14 @@ namespace InteractionShowcaseMod.UI
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out primary);
         }
 
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             return TryResolveCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : Array.Empty<Entity>();
         }
 
@@ -1029,7 +1029,7 @@ namespace InteractionShowcaseMod.UI
             }
 
             owner = localPlayer;
-            collectionKeyId = collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
+            collectionKeyId = collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             return true;
         }
 

@@ -25,7 +25,7 @@
     "zoomCmPerWheel": 600,
     "followMode": "AlwaysFollow",
     "followTargetKind": "EntityCollectionPrimary",
-    "followCollectionKey": "commandSource",
+    "followCollectionKey": "role:commandSource",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": true

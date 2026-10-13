@@ -324,7 +324,7 @@ internal sealed class UxPrototypeRuntime
                    engine.World,
                    engine.GlobalContext,
                    owner,
-                   InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                   InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                    out Entity commandSourcePrimary)
             ? commandSourcePrimary
             : Entity.Null;

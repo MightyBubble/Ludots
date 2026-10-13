@@ -25,6 +25,7 @@ public sealed class MinimapKnowledgeProjectionTests
     private static readonly string[] EngineMods =
     {
         "LudotsCoreMod",
+        "CommandSourceCoreFixtureMod"
     };
 
     [Test]

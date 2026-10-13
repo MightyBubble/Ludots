@@ -94,7 +94,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         string repoRoot = FindRepoRoot();
         using var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" , "CommandSourceCoreFixtureMod"}),
             Path.Combine(repoRoot, "assets"),
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.NetworkProcessRole, NetworkProcessRole.AuthoritativeServer);

@@ -36,7 +36,8 @@ namespace Ludots.Tests.GAS.Production
             "LudotsCoreMod",
             "CoreInputMod",
             "CameraProfilesMod",
-            ShowcaseModId
+            ShowcaseModId,
+            "CommandSourceCoreFixtureMod"
         };
 
         [Test]

@@ -241,7 +241,7 @@ namespace SuperweaponContextShowcaseMod.UI
                 ? EntityCollectionContextRuntime.GetCount(
                     engine.GlobalContext,
                     owner,
-                    InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : 0;
             if (count <= 0)
             {

@@ -380,7 +380,7 @@ internal sealed class ParticipantViewPanelController
             ? EntityCollectionContextRuntime.GetCount(
                 engine.GlobalContext,
                 commandSourceOwner,
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
             : 0;
         return new ParticipantViewPanelState(
             MapId: session.MapId.Value,

@@ -581,7 +581,7 @@ namespace Ludots.Tests.GAS
         {
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(FindRepoRoot(), "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
@@ -914,7 +914,7 @@ namespace Ludots.Tests.GAS
         {
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(FindRepoRoot(), "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             // One Tick must finish the fixed step. The default 4ms budget yields inside

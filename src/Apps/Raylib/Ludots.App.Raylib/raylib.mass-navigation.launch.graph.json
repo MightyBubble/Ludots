@@ -6,7 +6,8 @@
     "CoreInputMod",
     "CameraProfilesMod",
     "SelectionInteractionMod",
-    "MassNavigationMod"
+    "MassNavigationMod",
+    "CommandSourceCoreFixtureMod"
   ],
   "plannedMods": [
     {
@@ -28,6 +29,10 @@
     {
       "id": "MassNavigationMod",
       "rootPath": "../../../../../../../mods/capabilities/navigation/MassNavigationMod"
+    },
+    {
+      "id": "CommandSourceCoreFixtureMod",
+      "rootPath": "../../../../../../../mods/fixtures/command_source/CommandSourceCoreFixtureMod"
     }
   ]
 }

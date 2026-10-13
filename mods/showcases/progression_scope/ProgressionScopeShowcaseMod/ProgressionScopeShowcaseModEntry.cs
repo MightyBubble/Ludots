@@ -60,7 +60,7 @@ namespace ProgressionScopeShowcaseMod
             Span<Entity> selected = stackalloc Entity[1];
             selected[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 owner,

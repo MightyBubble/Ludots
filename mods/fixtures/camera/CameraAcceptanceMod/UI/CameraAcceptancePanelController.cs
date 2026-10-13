@@ -1298,7 +1298,7 @@ namespace CameraAcceptanceMod.UI
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out entity);
         }
 

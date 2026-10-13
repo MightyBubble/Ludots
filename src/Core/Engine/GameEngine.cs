@@ -1067,7 +1067,7 @@ namespace Ludots.Core.Engine
                 enumCatalog,
                 intIdCollectionStore,
                 graphHandlers,
-                inputCollectionKeyDeclarations.CommandSource);
+                inputCollectionKeyDeclarations);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1565,11 +1565,7 @@ namespace Ludots.Core.Engine
                     _ => 0,
                 },
                 instancedBatchAssets.GetId,
-                key => entityCollectionKeyRegistry.Register(
-                    Ludots.Core.Input.Config.InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
-                        key,
-                        inputCollectionKeyDeclarations.CommandSource,
-                        "presenter entity collection key")),
+                key => entityCollectionKeyRegistry.Register(key),
                 interactionContextProfileIds.GetId,
                 presenterCommandKinds,
                 presenterBehaviorKinds,
@@ -1584,7 +1580,8 @@ namespace Ludots.Core.Engine
                     }
 
                     return definition.ArgCount;
-                }).Load(ConfigCatalog, ConfigConflictReport);
+                },
+                collectionRoles: inputCollectionKeyDeclarations).Load(ConfigCatalog, ConfigConflictReport);
             presenterDefinitions.RebuildCompiledViews();
 
             int ResolveVfxAssetId(string key)
@@ -1825,7 +1822,7 @@ namespace Ludots.Core.Engine
 
             gasGraphApi.BindCustomEvents(customEventCatalog.Names);
             var collectionApplier = new CollectionApplier(World, entityCollectionStore);
-            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.CastRawKeyId);
+            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.RequireRoleKeyId("castRaw"));
             gasGraphApi.BindCollectionApplier(collectionApplier);
             // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
             var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -2172,7 +2169,7 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(
                 ConfigPipeline,
                 virtualCameraRegistry,
-                inputCollectionKeyDeclarations.CommandSource).Load(ConfigCatalog, ConfigConflictReport);
+                inputCollectionKeyDeclarations).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             _gasGraphRuntimeApi.BindVirtualCameras(virtualCameraRegistry, GlobalContext);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);

@@ -28,7 +28,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
         private static readonly string[] CoreInputMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod"
+            "CoreInputMod",
+            "CommandSourceCoreFixtureMod"
         };
 
         private static readonly string[] ShowcaseMods =
@@ -337,7 +338,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity local = GetLocalPlayer(engine);
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: local,
@@ -379,7 +380,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 BlendDurationSeconds = 0f,
                 FollowTargetKindOverride = Ludots.Core.Gameplay.Camera.CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true
             });

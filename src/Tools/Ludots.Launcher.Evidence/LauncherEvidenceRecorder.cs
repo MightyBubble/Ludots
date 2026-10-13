@@ -1409,7 +1409,7 @@ public static class LauncherEvidenceRecorder
             ? EntityCollectionContextRuntime.Snapshot(
                 runtime.Engine.GlobalContext,
                 commandSourceOwner,
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(runtime.Engine))
+                InputCollectionKeyDeclarations.RequireRole(runtime.Engine, "commandSource"))
             : Array.Empty<Entity>();
         for (int i = 0; i < commandActors.Length; i++)
         {
@@ -2546,7 +2546,7 @@ public static class LauncherEvidenceRecorder
         Entity[] commandActorArray = commandActors.ToArray();
 
         var descriptor = EntityCollectionDescriptor.Create(
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
             EntityCollectionSourceKind.UiAcquisition,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -3333,7 +3333,7 @@ public static class LauncherEvidenceRecorder
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
         Entity owner = RequireSoleLocalSeat(engine).PossessedRep;
-        return owner != Entity.Null && collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView view)
+        return owner != Entity.Null && collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view)
             ? view.Count
             : 0;
     }

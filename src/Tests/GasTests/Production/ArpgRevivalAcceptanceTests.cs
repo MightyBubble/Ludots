@@ -94,7 +94,7 @@ public sealed class ArpgRevivalAcceptanceTests
     {
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" , "CommandSourceCoreFixtureMod"}),
             Path.Combine(repoRoot, "assets"),
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();

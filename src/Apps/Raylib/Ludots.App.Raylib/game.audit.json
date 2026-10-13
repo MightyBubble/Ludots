@@ -9,6 +9,7 @@
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/AuditPlaygroundMod",
-    "../../../../../../../mods/DiagnosticsOverlayMod"
+    "../../../../../../../mods/DiagnosticsOverlayMod",
+    "../../../../../../../mods/fixtures/command_source/CommandSourceCoreFixtureMod"
   ]
 }

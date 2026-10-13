@@ -169,7 +169,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     private static void ReplaceCommandSource(GameEngine engine, EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,

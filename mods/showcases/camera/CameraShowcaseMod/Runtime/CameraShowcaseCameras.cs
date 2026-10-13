@@ -37,7 +37,7 @@ namespace CameraShowcaseMod.Runtime
                 BlendDurationSeconds = blendDurationSeconds,
                 FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true

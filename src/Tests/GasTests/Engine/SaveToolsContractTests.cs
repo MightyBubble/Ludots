@@ -184,7 +184,7 @@ namespace Ludots.Tests.Gas
 
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(dir!, new[] { "LudotsCoreMod" }),
+                RepoModPaths.ResolveExplicit(dir!, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(dir!, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.LoadStartupMap();

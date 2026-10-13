@@ -400,7 +400,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out Entity primary)
                 ? primary
                 : Entity.Null;
@@ -409,14 +409,14 @@ namespace SpatialBoundsShowcaseMod.Runtime
         private static int GetCommandSourceCount(GameEngine engine)
         {
             return TryResolveSolePossessedRep(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : 0;
         }
 
         private static int CopyCommandSource(GameEngine engine, Span<Entity> destination)
         {
             return TryResolveSolePossessedRep(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), destination)
+                ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), destination)
                 : 0;
         }
 

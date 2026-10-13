@@ -60,7 +60,7 @@ namespace Ludots.Tests.Architecture
 
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             Assert.That(engine.GetService(CoreServiceKeys.PresentationParticleVfxRegistry), Is.Not.Null);
         }
@@ -77,7 +77,7 @@ namespace Ludots.Tests.Architecture
 
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
@@ -92,7 +92,7 @@ namespace Ludots.Tests.Architecture
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             PresentationEventStream stream = engine.GetService(CoreServiceKeys.PresentationEventStream)
                 ?? throw new InvalidOperationException("PresentationEventStream service missing.");
@@ -118,7 +118,7 @@ namespace Ludots.Tests.Architecture
             string repoRoot = FindRepoRoot();
             using var coreEngine = new GameEngine();
             coreEngine.InitializeWithConfigPipeline(
-                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")},
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             GameConfig coreConfig = coreEngine.MergedConfig
@@ -138,6 +138,7 @@ namespace Ludots.Tests.Architecture
                     Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),
+                    Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")
                 },
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
@@ -1175,7 +1176,7 @@ namespace Ludots.Tests.Architecture
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");

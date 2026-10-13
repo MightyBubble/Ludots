@@ -823,12 +823,17 @@ namespace Ludots.Tests.Architecture
                       "schemaVersion": 1,
                       "planFingerprint": "test-fingerprint",
                       "orderedModIds": [
-                        "LudotsCoreMod"
+                        "LudotsCoreMod",
+                        "CommandSourceCoreFixtureMod"
                       ],
                       "plannedMods": [
                         {
                           "id": "LudotsCoreMod",
                           "rootPath": "{{modRoot.Replace("\\", "\\\\")}}"
+                        },
+                        {
+                          "id": "CommandSourceCoreFixtureMod",
+                          "rootPath": "{{Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod").Replace("\\", "\\\\")}}"
                         }
                       ]
                     }
@@ -900,8 +905,9 @@ namespace Ludots.Tests.Architecture
                       "rootModIds": [
                         "LudotsCoreMod"
                       ],
-                      "orderedModIds": [
-                        "LudotsCoreMod"
+                                            "orderedModIds": [
+                        "LudotsCoreMod",
+                        "CommandSourceCoreFixtureMod"
                       ],
                       "plannedMods": [
                         {
@@ -912,6 +918,10 @@ namespace Ludots.Tests.Architecture
                           "kind": 2,
                           "buildState": 4,
                           "bindingNames": []
+                        },
+                        {
+                          "id": "CommandSourceCoreFixtureMod",
+                          "rootPath": "{{Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod").Replace("\\", "\\\\")}}"
                         }
                       ],
                       "runtimeArtifacts": {
@@ -941,7 +951,8 @@ namespace Ludots.Tests.Architecture
                         "LudotsCoreMod"
                       ],
                       "PlanOrderedModIds": [
-                        "LudotsCoreMod"
+                        "LudotsCoreMod",
+                        "CommandSourceCoreFixtureMod"
                       ],
                       "PlanFingerprint": "full-graph-fingerprint",
                       "PlanSchemaVersion": 1
@@ -1092,7 +1103,7 @@ namespace Ludots.Tests.Architecture
                     preferencesPath,
                     userConfigPath);
 
-                var resolve = launcher.Resolve(new[] { "mod:LudotsCoreMod" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
+                var resolve = launcher.Resolve(new[] { "mod:LudotsCoreMod", "mod:CommandSourceCoreFixtureMod" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
                 var writtenBootstrapPath = launcher.WriteBootstrap(resolve.Plan);
 
                 Assert.That(resolve.Plan.GraphArtifactPath, Is.EqualTo(graphPath));
@@ -2147,6 +2158,14 @@ namespace Ludots.Tests.Architecture
                   "main": "",
                   "priority": {{priority}},
                   "dependencies": {{dependenciesJson ?? "{}"}}
+                }
+                """);
+            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Input"));
+            File.WriteAllText(
+                Path.Combine(modDir, "assets", "Input", "collection_keys.json"),
+                """
+                {
+                  "commandSource": "core.selection"
                 }
                 """);
             return modDir;

@@ -167,7 +167,7 @@ namespace Ludots.Tests.GAS
             // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family,
             // the mod's default profile) is merged before the mod installs at GameStart.
             engine.InitializeWithConfigPipeline(
-                WithSlotActions(RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" })),
+                WithSlotActions(RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" , "CommandSourceCoreFixtureMod"})),
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallUiServices(engine);

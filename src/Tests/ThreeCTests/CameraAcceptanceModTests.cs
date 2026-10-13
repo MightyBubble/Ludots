@@ -1811,14 +1811,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
-            if (!collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView view) ||
+            if (!collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view) ||
                 view.Count <= 0)
             {
                 return Array.Empty<Entity>();
             }
 
             var members = new Entity[view.Count];
-            int written = collections.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), members);
+            int written = collections.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), members);
             if (written == members.Length)
             {
                 return members;
@@ -1834,7 +1834,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: local,

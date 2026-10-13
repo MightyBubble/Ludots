@@ -420,7 +420,7 @@ namespace Ludots.Tests.GAS.Production
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
-                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,

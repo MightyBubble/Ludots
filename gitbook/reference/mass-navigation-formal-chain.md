@@ -51,7 +51,7 @@ Formation anchor 进入这一局的 `commandSource` 集合，但不接收 order�
 
 `FormationCommandMembersSystem` 在 InputCollection 阶段每帧：
 
-1. 读取本地玩家的 `commandSource` 集合。名字来自 `Input/collection_keys.json` 里这个角色合并后的值。
+1. 读取本地玩家的 `commandSource` 集合。图里写 `role:commandSource`，名字来自这一局 `Input/collection_keys.json` 里该角色的值。
 2. 对 anchor 读取 showcase-owned `FormationAnchorState`，按 `FormationIndex + SlotIndex` 查找 live members，排除 `SuspendedTag` 成员；不是 anchor 的单位代表它自己。
 3. 校验 anchor 声明 slot 数、每方阵容量和总容量，超了直接报错。
 4. 按稳定 slot 顺序写进 `formation.command.members`，内容没变就不重写。下令图读到的是上一帧的选择结果，选择和右键落在同一帧才会差一帧。

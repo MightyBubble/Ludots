@@ -294,7 +294,7 @@ namespace Ludots.Tests.GAS
             // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
             // merges additively into the Core structural profiles at engine init (ArrayById).
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallUiServices(engine);

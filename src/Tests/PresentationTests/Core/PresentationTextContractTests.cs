@@ -1205,7 +1205,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void GameEngine_RegistersPresentationTextCatalogServices()
         {
-            using var engine = CreateEngine("LudotsCoreMod", "CoreInputMod");
+            using var engine = CreateEngine("LudotsCoreMod", "CoreInputMod", "CommandSourceCoreFixtureMod");
 
             var catalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
             var selection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);

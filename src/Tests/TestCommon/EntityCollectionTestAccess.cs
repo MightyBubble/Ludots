@@ -14,14 +14,14 @@ namespace Ludots.Tests
         public static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : System.Array.Empty<Entity>();
         }
 
         public static int GetCommandSourceCount(GameEngine engine)
         {
             return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : 0;
         }
 
@@ -33,7 +33,7 @@ namespace Ludots.Tests
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out primary);
         }
 
@@ -45,7 +45,7 @@ namespace Ludots.Tests
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out view);
         }
 
@@ -57,7 +57,7 @@ namespace Ludots.Tests
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       "collection.ui.command.hover",
+                       InputCollectionKeyDeclarations.RequireRole(engine, "hover"),
                        out hovered);
         }
 
@@ -71,7 +71,7 @@ namespace Ludots.Tests
                 world,
                 globals,
                 owner,
-                "collection.ui.command.hover",
+                InputCollectionKeyDeclarations.RequireRole(globals, "hover"),
                 out hovered);
         }
 

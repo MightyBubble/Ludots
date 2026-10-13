@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS.Production
         {
             yield return new TestCaseData(new ModCase(
                     "LudotsCoreMod",
-                    new[] { "LudotsCoreMod" },
+                    new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_LudotsCoreMod");
 
@@ -51,7 +51,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "PerformanceVisualizationMod",
-                    new[] { "LudotsCoreMod", "PerformanceVisualizationMod" },
+                    new[] { "LudotsCoreMod", "PerformanceVisualizationMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_PerformanceVisualizationMod");
 
@@ -69,31 +69,31 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "TerrainBenchmarkMod",
-                    new[] { "LudotsCoreMod", "TerrainBenchmarkMod" },
+                    new[] { "LudotsCoreMod", "TerrainBenchmarkMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_TerrainBenchmarkMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraBootstrapMod",
-                    new[] { "LudotsCoreMod", "CameraBootstrapMod" },
+                    new[] { "LudotsCoreMod", "CameraBootstrapMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_CameraBootstrapMod");
 
             yield return new TestCaseData(new ModCase(
                     "SharedThreeCProfilesMod",
-                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod" },
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_SharedThreeCProfilesMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraProfilesMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_CameraProfilesMod");
 
             yield return new TestCaseData(new ModCase(
                     "VirtualCameraShotsMod",
-                    new[] { "LudotsCoreMod", "VirtualCameraShotsMod" },
+                    new[] { "LudotsCoreMod", "VirtualCameraShotsMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_VirtualCameraShotsMod");
 
@@ -129,7 +129,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "NarrativeFrontendMod",
-                    new[] { "LudotsCoreMod", "NarrativeFrontendMod" },
+                    new[] { "LudotsCoreMod", "NarrativeFrontendMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_NarrativeFrontendMod");
 
@@ -153,19 +153,19 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "FourXDemoMod",
-                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" },
+                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_FourXDemoMod");
 
             yield return new TestCaseData(new ModCase(
                     "TcgDemoMod",
-                    new[] { "LudotsCoreMod", "TcgDemoMod" },
+                    new[] { "LudotsCoreMod", "TcgDemoMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_TcgDemoMod");
 
             yield return new TestCaseData(new ModCase(
                     "ArpgDemoMod",
-                    new[] { "LudotsCoreMod", "ArpgDemoMod" },
+                    new[] { "LudotsCoreMod", "ArpgDemoMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_ArpgDemoMod");
 

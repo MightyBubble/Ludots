@@ -241,7 +241,7 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
@@ -357,7 +357,7 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
                 Path.Combine(repoRoot, "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 

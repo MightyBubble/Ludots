@@ -719,7 +719,7 @@ namespace GenreInfoShowcaseMod.UI
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key
-                : InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
         }
 
         private static string ControlGroupCollectionKey(int groupIndex) =>
