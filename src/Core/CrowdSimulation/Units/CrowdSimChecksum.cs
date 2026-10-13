@@ -264,7 +264,7 @@ public static class CrowdSimChecksum
         return "";
     }
 
-    /// <summary>展示/对拍边界格式（真值帧列是 8 位十六进制）；tick 路径不产字符串。</summary>
+    /// <summary>展示/对拍把合计打成 8 位十六进制。</summary>
     public static string Format(ulong checksum) => checksum.ToString("x8");
 
     internal static uint Mix(uint h, uint v) => (h ^ v) * Prime;

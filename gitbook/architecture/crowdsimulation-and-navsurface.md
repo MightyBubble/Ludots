@@ -277,7 +277,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ### 校验码分区
 
-合计仍是一条 FNV-1a 32（`CrowdSimChecksum`）。`Compute` 沿这条 Mix 记下四个断面：`position`、`motion`、`state`、`avoidance`。后一个断面从前一个的结果接着混。`Total` 等于最后一个断面 `avoidance`。四个分区按这个顺序接完，合计就是这条 Mix 的终态。`ComputeValue` 返回 `Total`。S4 真值与回放逐位一致只认这个合计，词序和以前相同。
+合计仍是一条 FNV-1a 32（`CrowdSimChecksum`）。`Compute` 沿这条 Mix 记下四个断面：`position`、`motion`、`state`、`avoidance`。后一个断面从前一个的结果接着混。`Total` 等于最后一个断面 `avoidance`。四个分区按这个顺序接完，合计就是这条 Mix 的终态。`ComputeValue` 返回 `Total`。S4 真值与回放只认这个合计。`S4DeployTruthTests.DeployAndChecksums_MatchWebTruth` 和 `Replay_TwiceProducesIdenticalChecksums` 把 `Step` 交出来的 `Total` 和真值帧逐字比对。
 
 诊断断面另起三条 Mix，域词分开，不写进 `Total`。它们只把分歧指到子系统。词可以随定位需要改，不冻结成真值。开关开着和关着，同一段推进的 `Total` 与 `position` 相同。`CrowdSimSession.DiagnosticDigest` 默认关，三个诊断词为 0。打开之后每个成功 tick 都算。`CrowdSimulationRuntime` 在自动回放已武装（`autoReplayAtTick` ≥ 0）时从第一 tick 打开，回放会话复制同一个开关。50k 计时门走默认关：`jump` 要再扫一遍全部单位。
 
@@ -296,7 +296,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 `CrowdSimChecksum.DiffDigest` 同时给出两样。合计的第一处分歧：tick 与 `Section`（position、motion、state、avoidance 的第一个）；没有则为 tick -1、断面名为空。诊断的第一处分歧：`DiagnosticTick` 与掩码；没有则为 tick -1、掩码 0。两样可以落在不同 tick。后段合计接续前段，更早的合计词变了，后面的合计断面会跟着变，函数只报第一个合计断面。共同前缀的合计一致但条数不同时，合计 tick 为 -2，section 为空。
 
-`ReplayStatus` 只看合计。1 是合计逐位一致，2 是合计分歧或条数不同。诊断断面不改这个结论。日志和 HUD 另报最早的诊断分歧，形如 `diag differs: groups`，并带上那个 tick。掩码为空则不附。
+`ReplayStatus` 只看合计。合计相同记成 1，`CrowdStateDigestTests.PendingFutureCommand_DoesNotFlipReplayStatus_DiagnosticLeavesTotalAndPosition` 断言的就是这个 1。2 是合计分歧或条数不同。诊断断面不改这个结论。日志和 HUD 另报最早的诊断分歧，形如 `diag differs: groups`，并带上那个 tick。掩码为空则不附。
 
 开关关闭时诊断词恒为 0。对拍两边要用同一个开关，否则诊断断面会整段报差。
 

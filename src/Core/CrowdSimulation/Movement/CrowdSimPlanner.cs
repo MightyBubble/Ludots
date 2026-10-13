@@ -1373,7 +1373,7 @@ public sealed class CrowdSimPlanner
         _planPool.Push(plan);
     }
 
-    /// <summary>在途规划与流场刷新的身份，挂在 groups 诊断链末尾。不分配。</summary>
+    /// <summary>在途规划与流场刷新的身份，挂在 groups 诊断链末尾。</summary>
     internal uint MixInFlight(uint h)
     {
         h = CrowdSimChecksum.Mix(h, (uint)_pending.Count);

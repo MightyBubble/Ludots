@@ -78,7 +78,7 @@ public sealed partial class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
-    // 分区摘要历史(回放对拍用):定长环形,零逐 tick 分配。合计在摘要的 Total 上。
+    // 分区摘要历史(回放对拍用):定长环形。合计在摘要的 Total 上。
     private readonly CrowdSimStateDigest[] _hashDigests = new CrowdSimStateDigest[4096];
     private int _hashCount, _hashHead;
     private readonly List<CrowdCommand> _pendingScript = new();
@@ -91,7 +91,7 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
     public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
-    /// <summary>回放结论:0 未跑 / 1 合计逐位一致 / 2 合计分歧。诊断断面不改这个结论。</summary>
+    /// <summary>回放结论:0 未跑 / 1 合计相同 / 2 合计分歧。诊断断面不改这个结论。</summary>
     public int ReplayStatus { get; private set; }
 
     /// <summary>合计的首个分歧 tick。-1 表示合计一致，-2 表示两边条数不同。</summary>

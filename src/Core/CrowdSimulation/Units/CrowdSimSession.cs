@@ -291,7 +291,7 @@ public sealed class CrowdSimSession
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → tickCount+1 → 流场刷新排队 → 校验码。
     /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
-    /// checksum 与 <see cref="LastDigest"/> 仅在 true 时有效——tick 路径零字符串分配。
+    /// checksum 与 <see cref="LastDigest"/> 仅在 true 时有效。
     /// </summary>
     public bool Step(out ulong checksum)
     {
