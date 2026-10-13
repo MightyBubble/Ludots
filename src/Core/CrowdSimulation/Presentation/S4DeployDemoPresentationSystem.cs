@@ -72,7 +72,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         var runtime = _runtimeSource();
         var ground = _demo.HoverCm;
 
-        // ── 路线通道(gameplay 视觉) ─────────────────────────────
+        // 路线通道是 gameplay 视觉。
         _routeVisuals.BeginFrame();
         if (session == null)
         {
@@ -107,7 +107,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             previewShown = true;
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
             previewValid = CanPlace(store, _demo.Template, px, py);
-            // 足迹/拆除轮廓线宽 = 0.5 格长(31m):细线角标在丘陵远景下实测可视性不足,加粗一档
+            // 足迹/拆除轮廓线宽 = 0.5 格长（62.5m 格的一半是 31.25m）
             AddRectOutline(PreviewOutline, FootprintVisual(_demo.Template, px, py), navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
             int hoverId = store.EntityAt(Fix64.FromInt(px), Fix64.FromInt(py));
             if (hoverId >= 0)
@@ -122,7 +122,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         // 重烘脏 tile 闪烁:最近一笔报告发布后短暂高亮其受影响 tile 并集
         CurrentFlash(session, navCellVisual);
 
-        // ── HUD(全部读内核现成状态) ─────────────────────────────
+        // HUD 全部读内核现成状态。
         DrawHud(session, runtime, (previewShown, previewValid));
     }
 

@@ -26,7 +26,7 @@ public sealed class CrowdNavRebakeContextResult
     public int NavId { get; set; }
     /// <summary>脏 tile(tile id 升序);空表 = 该上下文什么都看不到,什么都不失效。</summary>
     public List<int> DirtyTiles { get; set; } = new();
-    /// <summary>0 = 无变化,1 = 仅代价,2 = 可走位翻转。</summary>
+    /// <summary>0 = 无变化,2 = 可走位翻转。1 = 代价或速度除数变了,或可走位没变但 tile 条目换了。道路/泛洪/火场只对把这些区域标成可走的移动类型是 1；passable 为 false 的区域铺上去是 2。</summary>
     public int Kind { get; set; }
 }
 
@@ -50,8 +50,8 @@ internal sealed class CrowdRebakeResultScratch
 }
 
 /// <summary>
-/// 结构变更后的导航增量重烘(nav.js rebakeNavRects + finish 移植):
-/// 变更格矩形 → 逐上下文重分类(0 = 无变化 / 1 = 仅代价 / 2 = 可走位翻转)→
+/// 结构变更后的导航增量重烘:
+/// 变更格矩形 → 逐上下文重分类(见 Kind)→
 /// 可走位翻转时净空腐蚀矩形重算、触到的 tile 重烘(内容键缓存命中即复用)、
 /// 连通域与跳跃链接重标、HPA 增量维护;仅代价时 tile 多边形与 HPA 块代价现读重算。
 /// 与同栅格的全量烘焙按覆盖字段逐格一致(一致性检查见 VerifyAgainstFullBake)。
@@ -62,7 +62,7 @@ public static class CrowdNavRebake
     public const byte KindCost = 1;
     public const byte KindPassable = 2;
 
-    /// <summary>全部上下文对同一变更矩形跑一遍增量重烘(rebakeContexts 移植)。</summary>
+    /// <summary>全部上下文对同一变更矩形跑一遍增量重烘。</summary>
     public static List<CrowdNavRebakeContextResult> RebakeContexts(
         Dictionary<int, NavContext> navs,
         CrowdRebakeSources sources,
@@ -174,8 +174,7 @@ public static class CrowdNavRebake
         return prev;
     }
 
-    /// <summary>变更矩形内重分类(参考 classify):0 = 本上下文看不到任何变化,
-    /// 1 = 只有代价变(道路 / 泛洪 / 火场,仍可跨),2 = 有可走位翻转。</summary>
+    /// <summary>变更矩形内重分类。0 = 本上下文看不到任何变化。1 = 代价或速度除数变了。2 = 有可走位翻转。道路/泛洪/火场只对把这些区域标成可走的移动类型是 1。</summary>
     private static int Classify(
         NavContext nav,
         CrowdRebakeSources sources,
@@ -260,7 +259,7 @@ public static class CrowdNavRebake
         return tiles;
     }
 
-    /// <summary>可走位翻转后的净空腐蚀矩形重算(erodeRect 移植):只写矩形内;
+    /// <summary>可走位翻转后的净空腐蚀矩形重算:只写矩形内;
     /// 切比雪夫可分离两遍,行/列连续段计数,读入需外扩腐蚀半径。</summary>
     internal static void ErodeRect(NavContext nav, byte[] walk, int navCellsPerSide, int clearance, (int X0, int Y0, int X1, int Y1) rect, byte[] output)
     {
@@ -330,7 +329,7 @@ public static class CrowdNavRebake
         return changed;
     }
 
-    /// <summary>可走位翻转的收尾(参考 finish 的非稀疏支路):连通域重标(全格 4 连通洪泛,
+    /// <summary>可走位翻转的收尾:连通域重标(全格 4 连通洪泛,
     /// 与全量烘焙同一份划分)+ 桥面合并 + 升序格表重扫 + 链接(端点触矩形才整表重建,否则只
     /// 重导出连通域图)+ 桥面可达 + HPA 增量。</summary>
     private static void FinishPassable(
@@ -451,7 +450,7 @@ public static class CrowdNavRebake
         set.Add(to);
     }
 
-    /// <summary>跳跃候选端点是否触到格矩形(linksTouch 移植)。</summary>
+    /// <summary>跳跃候选端点是否触到格矩形。</summary>
     private static bool LinksTouch(NavSurfaceJumpCandidate[] candidates, (int X0, int Y0, int X1, int Y1) rect, int navCellsPerSide)
     {
         foreach (var cand in candidates)
@@ -465,7 +464,7 @@ public static class CrowdNavRebake
     private static bool Inside(int x, int y, (int X0, int Y0, int X1, int Y1) rect)
         => x >= rect.X0 && x < rect.X1 && y >= rect.Y0 && y < rect.Y1;
 
-    /// <summary>连通域重标后重导出链接的域图(relinkComponents 移植):链表与 CSR 不动,只按
+    /// <summary>连通域重标后重导出链接的域图:链表与 CSR 不动,只按
     /// 新标号重建 compOut。</summary>
     private static void RelinkComponents(NavLinkSet? links, int[] comp)
     {
@@ -492,8 +491,6 @@ public static class CrowdNavRebake
             set.Add(cb);
         }
     }
-
-    // ── 增量 vs 全量一致性检查(调试开关;对拍不跑,验收必跑) ─────────────────────────────
 
     /// <summary>
     /// 把增量重烘后的上下文与"同栅格全量烘焙"逐字段比对:代价 / 可走 / 可通行 / 连通域划分 /

@@ -11,12 +11,12 @@ using Ludots.Core.CrowdSimulation.Units;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// S5 轨迹对拍(带宽口径——浮点派生量的家规,与 S3-c 同族):
+/// S5 轨迹对拍(带宽口径——浮点派生量的家规):
 /// 状态机字段(state/mode/level/order)逐 tick 逐单位逐位一致;
 /// 位置逐 tick 逐单位分层门——p50/p99/p99.9 三档 + 沿航向有符号均值(系统性偏置
 /// 探测:全体单位同向漂移时 max 抓不到、均值抓得到;航向基 = 参考端逐 tick 位移,静止单位
 /// 无航向不进均值)+ max 带宽与末 30 tick 收束带(max/末态只拦卡墙/飞图级结构分歧)。
-/// 带值校准(S5-b 避让开启口径,
+/// 带值校准(避让开启口径,
 /// 600 tick × 241 单位,seed 1337):p50=0.07cm、p99=17.3cm、p99.9=35.1cm、max=136.1cm、
 /// 末 30 tick max=35.1cm;状态机全程零不一致。位置尾差定性:
 /// 首个分歧点 tick 11 单位 163 的马达中间量逐语句对照 + 逐接触对照
@@ -52,7 +52,7 @@ public sealed class S5TrajectoryTruthTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // F02:旧真值在迷雾冻结口径下录制(参考端 S5 导出虽未置门,冻结与活雾在此场景行为等价——认知集恒真相)
+        session.TruthNavFrozen = true; // 旧真值在迷雾冻结口径下录制(参考端 S5 导出虽未置门,冻结与活雾在此场景行为等价——认知集恒真相)
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s5-trajectory-truth.json")))!;
@@ -162,11 +162,11 @@ public sealed class S5TrajectoryTruthTests
         Assert.That(contactMaxDelta, Is.LessThanOrEqualTo(1),
             $"接触计数硬门:单样本幅度 {contactMaxDelta} 超过骑线翻转上限 ±1(全清单:{contactList})");
         Assert.That(p50, Is.LessThanOrEqualTo(P50BandCm),
-            $"分层门(L24):p50={p50:F4}cm 超 {P50BandCm}cm(换数学固有误差档)");
+            $"分层门:p50={p50:F4}cm 超 {P50BandCm}cm(换数学固有误差档)");
         Assert.That(p99, Is.LessThanOrEqualTo(P99BandCm),
-            $"分层门(L24):p99={p99:F2}cm 超 {P99BandCm}cm");
+            $"分层门:p99={p99:F2}cm 超 {P99BandCm}cm");
         Assert.That(p999, Is.LessThanOrEqualTo(P999BandCm),
-            $"分层门(L24):p99.9={p999:F2}cm 超 {P999BandCm}cm");
+            $"分层门:p99.9={p999:F2}cm 超 {P999BandCm}cm");
         Assert.That(Math.Abs(headingMean), Is.LessThanOrEqualTo(HeadingMeanBandCm),
             $"沿航向有符号均值 |{headingMean:F4}|cm 超 {HeadingMeanBandCm}cm——全体单位同向系统性漂移");
         Assert.That(maxDeltaCm, Is.LessThanOrEqualTo(MaxTrajectoryBandCm),

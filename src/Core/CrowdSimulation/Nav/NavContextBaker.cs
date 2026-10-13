@@ -9,10 +9,10 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// 导航上下文烘焙（buildNavContext 的 S2 子集移植）：
-/// 分类（代价 × 坡度 × 阻挡）→ 净空腐蚀 → 可走格表 → 连通域 → 跳跃链接。
-/// 每格分类的唯一语义输入是导航区域栅格：代价 = 移动类型行[区域]；
-/// 未列出的区域代价为 1、可通行；passable 为 false 的区域代价为 0、不可走；非 slopeFree 区域坡度超过 profile 上限不可走；阻挡格不可走。
+/// 导航上下文烘焙。分类读区域代价行、坡度、阻挡和 profile 坡度上限。
+/// 区域行必须列全，省略在装载时抛，不是默认可走代价 1。
+/// passable 为 false 的区域代价为 0、不可走；非 slopeFree 区域坡度超过 profile 上限不可走；阻挡格不可走。
+/// Bake 在链接之后还做桥面、tile 缓存和 HPA。
 /// </summary>
 public static class NavContextBaker
 {
@@ -42,7 +42,6 @@ public static class NavContextBaker
         int navCellsPerSide = config.NavCellsPerSide;
         int n2 = navCellsPerSide * navCellsPerSide;
 
-        // classify
         var cost = new Fix64[n2];
         var speedDivisor = new Fix64[n2];
         var walk = new byte[n2];
@@ -71,14 +70,13 @@ public static class NavContextBaker
         var passable = new byte[n2];
         ClearanceErosion.Erode(walk, navCellsPerSide, clearanceCells, passable);
 
-        // 升序可走格表
         var cellList = new List<int>(n2 / 2);
         for (int i = 0; i < n2; i++)
         {
             if (passable[i] != 0) cellList.Add(i);
         }
 
-        // 连通域:4 连通洪泛(与参考实现的 tile 局部标号 + 边界合并同划分)
+        // 连通域:先 4 连通洪泛,有桥再并桥面块。跳跃链接不参与标号。
         var comp = new int[n2];
         Array.Fill(comp, -1);
         int compCount = Components(passable, navCellsPerSide, comp);
@@ -108,7 +106,7 @@ public static class NavContextBaker
             comp = merged;
         }
 
-        // tile 缓存填充(与 buildNavContext 同点同序):地面全部 tile + 有可走格的桥面 tile
+        // tile 缓存填充:地面全部 tile + 有可走格的桥面 tile
         NavTileEntry?[]? tiles = null;
         Dictionary<int, UpperTileInfo>? upperTiles = null;
         if (tileCache != null)
@@ -161,7 +159,7 @@ public static class NavContextBaker
         var links = BuildLinks(config, surface, profile, passable, comp);
         var (upComp, compCountTotal, reachOut) = BuildDeckReachability(navCellsPerSide, comp, compCount, links, upPass, portal, upArea);
 
-        // 最便宜定价区域代价(minCostOf):A* 启发缩放,只取已定价值的行项
+        // 最便宜定价区域代价:A* 启发缩放,只取已定价值的行项
         Fix64 minCost = Fix64.MaxValue;
         foreach (var areaCost in row)
         {
@@ -215,7 +213,7 @@ public static class NavContextBaker
         return packed;
     }
 
-    /// <summary>跳跃链接过滤（buildProfileLinks 移植）：候选端点都可走、格距 ≤ rangeCells、
+    /// <summary>跳跃链接过滤：候选端点都可走、格距 ≤ rangeCells、
     /// 落差 ≤ downCm 才成链;落差 ≤ upCm 的双向。判定只读 .navsurface 里的量化候选值。
     /// 增量重烘在候选端点触到变更矩形时重建整表(与全量同码)。</summary>
     internal static NavLinkSet? BuildLinks(
@@ -306,7 +304,7 @@ public static class NavContextBaker
     }
 
     /// <summary>
-    /// 桥面可达性(移植:上层标号接在地面连通域之后顺排):桥面区域(UpArea)按格升序首见
+    /// 桥面可达性:上层标号接在地面连通域之后顺排。桥面区域(UpArea)按格升序首见
     /// 分配编号(确定性);桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向互通边。可达图 = 跳跃链接边 + 互通边。
     /// </summary>
     internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(

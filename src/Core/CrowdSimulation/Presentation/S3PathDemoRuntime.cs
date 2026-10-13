@@ -23,7 +23,8 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 /// S3 两点路径演示运行时(spec 演示契约):左键点起点、右键点终点,路线与方向图
 /// 经完整服务契约生效——请求于 requestTick 发出,生效帧 = requestTick + latencyTicks,
 /// 没算完仿真原地等待。按键:Q 巡回代理体型(移动类型 × 净空)、T 巡回后台线程
-/// 1/2/4、G 注入后台变慢(仿真暂停等待,画面不卡)。呈现线程只入队,仿真 tick 消费。
+/// 1/2/4。G 把 TestDelayPerJob 设为 400ms。生效帧上 AwaitDue 阻塞调用方。
+/// 输入系统和仿真 tick 都在 PostMovement，没有单独的呈现线程；这一等会挡住这一帧。
 /// </summary>
 public sealed class S3PathDemoRuntime : IDisposable
 {
@@ -130,7 +131,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         };
     }
 
-    // ── 呈现线程输入(只入队) ─────────────────────────────
+    // 输入在仿真 tick 里出队。这些方法只入队。
     public void EnqueueSetStart(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { StartCell = cell; _pathDirty = true; }); }
     public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
     public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }

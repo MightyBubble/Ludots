@@ -12,7 +12,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// LOS 高度线恰等阈值咬合(L52):工程化高度/不透明表注入真实 CrowdFog.Sight(定点树),
+/// LOS 高度线恰等阈值咬合:工程化高度/不透明表注入真实 CrowdFog.Sight(定点树),
 /// 与沙盒正本导出器 sightFix 同表同例对拍。咬合例 V=15−2^-32 落在定点积(4.9999999981)
 /// 与双精度积(4.9999999999…)之间——双精度实现判定可见、定点判定阻挡,撤掉定点必红;
 /// 恰等例(V=15)钉"严格大于截断积"的阈值语义。眼高 10m、hAvg[to]=40m、rise=30、

@@ -3,7 +3,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
-/// <summary>二叉最小堆(heap.js 移植):Fix64 键 + int 值,无逐次分配;同级比较结构与参考一致。</summary>
+/// <summary>二叉最小堆:Fix64 键 + int 值。容量够时 Push/Pop 不分配。满了会把键数组和值数组各扩成两倍。</summary>
 public sealed class NavMinHeap
 {
     private Fix64[] _keys;

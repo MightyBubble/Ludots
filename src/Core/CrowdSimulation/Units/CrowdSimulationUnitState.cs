@@ -2,8 +2,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
 /// CrowdSimulation 单位的仿真身份组件:S4 校验码的整型字段载体。
-/// 句柄 = 代(14 位) &lt;&lt; 18 | 槽位(18 位),与参考实现 units.id 同构;
-/// state / mode / level / order 本阶段恒为生成初值,随 S5+ 接入运动语义。
+/// 句柄 = 代(14 位) &lt;&lt; 18 | 槽位(18 位)。
+/// State、Mode、Level、Order 由运动栈写入，并进入校验码。
 /// </summary>
 public struct CrowdSimulationUnitState
 {

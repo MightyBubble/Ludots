@@ -5,9 +5,9 @@ using System.Globalization;
 namespace Ludots.Core.CrowdSimulation.Config;
 
 /// <summary>
-/// CrowdSimulationConfig.json 的数值范围与关系校验（数值规则与参考实现
-/// config/schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）。
-/// 所有错误消息带文件 / 字段路径 / 规则，不写管理痕迹。
+/// CrowdSimulationConfig.json 的数值范围与关系校验。
+/// 数值范围就是下面的 Rule(...)。每边导航格数和 tile 派生格数在
+/// CrowdSimulationConfigLoader.Load 里按板宽再查。
 /// </summary>
 public static class CrowdSimulationConfigValidator
 {
@@ -20,7 +20,6 @@ public static class CrowdSimulationConfigValidator
     {
         ArgumentNullException.ThrowIfNull(config);
 
-        // ---- 声明式数值规则（RULES 移植；每边导航格数 / tile 派生格数在组装阶段按板宽校验）----
         Rule("hpa.maxEntranceWidthNavCells", config.Hpa.MaxEntranceWidthNavCells, intRequired: true, min: 1);
         Rule("navtile.sizeCm", config.Navtile.SizeCm, intRequired: true, gt: 0);
         Rule("navtile.cacheCapacity", config.Navtile.CacheCapacity, intRequired: true, min: 1);
@@ -144,9 +143,8 @@ public static class CrowdSimulationConfigValidator
         }
     }
 
-    /// <summary>结构模板表校验(参考 config.js templates.structures 规则):footprint 枚举、
-    /// blocker 只支持 rect、area 与 priority 同进同出、area 必须已定义、priority ≥ 0 整数、
-    /// 非阻挡且无 area 的模板是无效实体、lifetimeSec &gt; 0、id 唯一。</summary>
+    /// <summary>只查 footprint 枚举、blocker 仅 rect、area 与 priority 同进同出、priority ≥ 0、
+    /// 非阻挡且无 area 拒绝、lifetimeSec 若写则 &gt; 0。区域名是否存在由装载解析。</summary>
     private static void ValidateStructureTemplates(CrowdSimulationConfig config)
     {
         var templates = config.Structures.Templates;

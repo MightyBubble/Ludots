@@ -6,7 +6,7 @@ namespace Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 /// <summary>
 /// 一次 tile 烘焙的全部临时缓冲与可复用多边形数组。
-/// 尺寸按 navCellsPerTile 在缓存构造时定死:tick 内的未命中烘焙只改写这些缓冲,不再分配。
+/// 构造时按 tile 边长把缓冲定死。轮廓池或顶点池用尽时仍会 new；RentLoop 池空时把新表交给调用方。
 /// </summary>
 internal sealed class TileBakeScratch
 {

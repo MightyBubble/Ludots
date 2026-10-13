@@ -8,9 +8,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// 初始部署与点名生成(sim/population.js 的 spawn / spawnAt 移植,Fix64 为准):
-/// 每条指令从自己加盐的 mulberry32 流取值;出生点抖动、编组中心、散布位置、
-/// 格内落点的每个取值顺序与参考实现逐一对应——同一份指令流,两端部署逐位一致。
+/// 初始部署与点名生成，长度用 Fix64。
+/// 每条指令从自己加盐的 mulberry32 流取值。出生点抖动、编组中心、散布位置、
+/// 格内落点按固定顺序取值，同一份指令流部署结果逐位一致。
 /// </summary>
 public static class CrowdDeployment
 {
@@ -99,7 +99,7 @@ public static class CrowdDeployment
         return made;
     }
 
-    /// <summary>点名生成(spawnAt 移植):在某点周围为某玩家生成 count 个 (t, r) 单位。</summary>
+    /// <summary>点名生成：在某点周围为某玩家生成 count 个 (t, r) 单位。</summary>
     public static int SpawnAt(CrowdSimSession sim, Fix64 wx, Fix64 wy, int count, int player, int unitType, int rIdx)
     {
         var cfg = sim.Config;
@@ -110,8 +110,8 @@ public static class CrowdDeployment
         int c0 = NearestPassable(nav, CrowdSimulationSpace.CellAtStrict(wx, wy, cfg.NavCellSizeCm, navCellsPerSide));
         if (c0 < 0 || sim.Units.Count >= sim.Units.Capacity) return 0;
         var rng = CrowdSimRng.Create((long)cfg.WorldSeed + (long)++sim.SpawnSeq * SaltSpawnAt);
-        // player 为 Ludots 玩家号(1..P);组内索引 0 基(与批量部署同一编号序)
-        var g = sim.Groups.Alloc(player - 1, l, rIdx, nav.Id);
+        // player 为 Ludots 玩家号(1..P)。组下标用 PairRules.IndexByPlayerId。
+        var g = sim.Groups.Alloc(cfg.PairRules.IndexByPlayerId[player], l, rIdx, nav.Id);
         sim.AttachGroupNav(g); // 规划句柄挂玩家视野组当前槽(马达句柄恒真相)
         int comp = nav.Comp[c0];
         var profile = ProfileOf(cfg, l, rIdx);
@@ -197,7 +197,7 @@ public static class CrowdDeployment
         throw new InvalidOperationException($"代理体型缺失: 移动类型 {agentTypeIndex} × 半径级 {rIdx}。");
     }
 
-    /// <summary>全体半径级(升序去重的 radiusCm 表;与参考实现 radiusClasses 的顺序对应)。</summary>
+    /// <summary>全体半径级，radiusCm 升序去重。</summary>
     public static IReadOnlyList<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg) => cfg.RadiusClasses;
 
     public static int IndexOfRadiusClass(IReadOnlyList<int> radiusClasses, int radiusCm)
@@ -210,7 +210,7 @@ public static class CrowdDeployment
         throw new InvalidOperationException($"半径级表缺半径 {radiusCm}。");
     }
 
-    /// <summary>最近可走格(nearestPassable 移植:逐环外扩,严格小于才换,首优即平局的先见者)。</summary>
+    /// <summary>最近可走格：逐环外扩，严格小于才换，平局留先见者。</summary>
     public static int NearestPassable(NavContext nav, int cell)
     {
         int navCellsPerSide = nav.NavCellsPerSide;
@@ -240,7 +240,7 @@ public static class CrowdDeployment
         return -1;
     }
 
-    /// <summary>detRound 移植(round-half-up:floor(v + 0.5))。</summary>
+    /// <summary>round-half-up：floor(v + 0.5)。</summary>
     public static int DetRound(Fix64 v) => (int)Fix64.Floor(v + Fix64.HalfValue).ToLong();
 
     private static int ClampN(int v, int navCellsPerSide) => Math.Min(navCellsPerSide - 1, Math.Max(0, v));

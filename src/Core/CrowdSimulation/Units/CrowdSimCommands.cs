@@ -51,8 +51,7 @@ public static class CrowdSimCommands
         }
     }
 
-    /// <summary>迷雾启用门:迷雾面指令在无 Fog 会话(纯部署/未启用运动)上入队即拒,
-    /// 与 Exec 防御层同报错口径。</summary>
+    /// <summary>迷雾面指令在没有 Fog 时入队即拒。Fog 只在 EnableMovement 且已有结构仓时建立。</summary>
     private static void RequireFog(CrowdSimSession sim, string type)
     {
         _ = sim.Fog ?? throw new System.InvalidOperationException($"{type}: 迷雾未启用(会话没有运动内核)。");
@@ -60,8 +59,8 @@ public static class CrowdSimCommands
 
     public static object? Exec(CrowdSimSession sim, CrowdSimCommand cmd)
     {
-        // 每条指令前收尾未完的重烘 job(参考端 exec 同点):指令看到的结构变更必须完整生效,
-        // 只在结构 op 前收尾会让紧随的非结构指令与参考端的报告 tick 错位一拍。
+        // 每条指令前收尾未完的重烘 job。指令看到的结构变更必须完整生效。
+        // 只在结构 op 前收尾会让紧随的非结构指令的报告 tick 错位一拍。
         if (sim.RebakeJob != null) Structures.CrowdStructureOps.FinishRebake(sim);
         switch (cmd.Kind)
         {
@@ -97,8 +96,7 @@ public static class CrowdSimCommands
                 return null;
             case CrowdSimCommandKind.Order:
                 RequirePlayer(sim, cmd.Player);
-                // 乐观迷雾开关随下令提交(参考端 issueOrder 的 opts.fogTerrain;随日志回放,
-                // 确定性)。切换即同步认知(与参考端同点:指令内联)。
+                // 乐观迷雾开关随下令提交，写进指令日志，回放可复现。切换后立刻同步认知。
                 if (cmd.HasFogTerrain)
                 {
                     var fog = sim.Fog ?? throw new System.InvalidOperationException("order: 迷雾未启用(会话没有运动内核)。");
@@ -148,8 +146,8 @@ public static class CrowdSimCommands
         }
     }
 
-    /// <summary>迷雾/知识面命令(sim/playerCommands.js fogCmd 移植):主体 = 玩家(实体域
-    /// 语法糖)→ 其视野组,组内玩家同享。area = rect/circle/poly 恰一(米→厘米在脚本边界换算)。
+    /// <summary>迷雾/知识面命令。主体 = 玩家(实体域
+    /// 语法糖)→ 其视野组,组内玩家同享。area 恰为 rect、circle 或 poly 之一。形状坐标已经是厘米，Parse 不乘 100。
     /// 命令只改迷雾数据;认知同步在下一 tick 管线拾起(fogShare 的 force 除外——并组当场标记)。</summary>
     private static object? FogCmd(CrowdSimSession sim, CrowdSimCommand cmd)
     {
@@ -197,8 +195,7 @@ public static class CrowdSimCommands
         return g;
     }
 
-    /// <summary>框选(selectRect 移植,位置单位为厘米):框内本方单位入选;
-    /// additive = false 时清空框外与其余玩家的选择。</summary>
+    /// <summary>框选，位置单位厘米。其余玩家的选择每次都清掉。additive 只决定框外的本方单位是否保留。</summary>
     public static void SelectRect(CrowdSimSession sim, int player, Fix64 x0, Fix64 y0, Fix64 x1, Fix64 y1, bool additive)
     {
         var (ax, bx) = x0 < x1 ? (x0, x1) : (x1, x0);

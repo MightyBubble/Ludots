@@ -15,7 +15,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// CrowdSimulation 仿真会话(S4 部署 + S5 移动):单位(ECS)、导航组、指令队列、
 /// 指令簿(领队/阵型)、规划器与固定帧率推进。
 /// 引擎只有一个时钟(Engine/clock.json 的 FixedHz),会话的 tick 就是 FixedHz 的一步:
-/// 每步先冲刷到点指令(指令数据决定一切状态变化),再落到点的路径答复,再推进运动内核。
+/// 每步先冲刷到点指令，再落到点的路径答复，再推进运动内核。
+/// 未冻结时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync。TruthNavFrozen 跳过这两步。
 /// 答复未按生效帧返回时本 tick 停摆(固定生效帧语义,结果不降级)。
 /// </summary>
 public sealed class CrowdSimSession
@@ -106,18 +107,17 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
-        // 迷雾/认知随运动内核装配:参考端 Fog 在仿真构造期常驻;这里只在运动会话里启用,
-        // 纯部署会话(S4 形状)不建迷雾。LOS 开启需要高度场(装配缺口即报)。
+        // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。有迷雾就注入高度表。
         if (Structures != null)
         {
             Fog = new CrowdFog(Config, Config.PairRules, Structures);
-            if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
+            Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
             Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
         }
     }
 
-    /// <summary>迷雾状态(null = 无头部署会话/未启用运动)。马达永远走真相,规划经认知槽。</summary>
+    /// <summary>迷雾状态。null = 没有结构仓，或没有调用 EnableMovement。马达永远走真相，规划经认知槽。</summary>
     public CrowdFog? Fog { get; private set; }
     public CrowdBeliefNavs? Beliefs { get; private set; }
     public CrowdBeliefState? Belief { get; private set; }
@@ -173,7 +173,7 @@ public sealed class CrowdSimSession
         return false;
     }
 
-    /// <summary>组的规划句柄解析(参考 navFor):玩家视野组当前槽的变体号(0 = 真相号)。</summary>
+    /// <summary>组的规划句柄：玩家视野组当前槽的变体号。槽 0 是真相号。</summary>
     public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
     {
         int truth = NavByLayerRadius[(layerIdx, rIdx)].Id;
@@ -188,8 +188,7 @@ public sealed class CrowdSimSession
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
     public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }
 
-    /// <summary>回放会话换装全新烘焙的导航上下文(参考端回放 = 全新仿真:结构 op 会改写共享上下文,
-    /// 带着已生效的变更从头跑必然分歧)。</summary>
+    /// <summary>回放会话换装全新烘焙的导航上下文。结构 op 会改写共享上下文，带着已生效的变更从头跑会分歧。</summary>
     public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
 
     // 选中镜像、下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
@@ -278,7 +277,8 @@ public sealed class CrowdSimSession
     /// <summary>
     /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
-    /// (领队→意图→马达)× SubSteps → tickCount+1 → 流场刷新排队 → 校验码。
+    /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
+    /// → tickCount+1 → 流场刷新排队 → 校验码。TruthNavFrozen 跳过迷雾和认知同步。
     /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
     /// checksum 仅在 true 时有效——tick 路径零字符串分配。
     /// </summary>
@@ -302,7 +302,7 @@ public sealed class CrowdSimSession
             Movement.GatherUnits();
             for (int s = 0; s < SubSteps; s++)
             {
-                // 子步序与参考 tick() 一致:哈希重建 → 分离求解(+相位前移) → 领队 → 意图 → 马达
+                // 子步序：哈希重建，分离求解（含相位前移），领队，意图，马达。
                 Movement.RebuildHash();
                 Movement.SolveSeparation();
                 Movement.Step(SubStepDt);
@@ -312,8 +312,7 @@ public sealed class CrowdSimSession
             _stateHistogramMembers = Units.Count;
         }
 
-        // 运动后、tick 计数前做迷雾更新和认知同步(与参考端 advance 的挂点同序;
-        // truth 冻结时跳过两者)
+        // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
         if (Fog != null && !TruthNavFrozen)
         {
             Fog.Update(TickCount, this);
@@ -360,7 +359,7 @@ public sealed class CrowdSimSession
     public void NotifySpawnSkip(int skipped, int requested)
     {
         SpawnSkippedTotal += skipped;
-        Notified?.Invoke($"spawnSkip: 请求 {requested} 个,容量不足跳过 {skipped} 个(上限 {Config.Sim.MaxUnits})");
+        Notified?.Invoke($"spawnSkip: 请求 {requested} 个,该玩家没有可用的类型×半径组合,跳过 {skipped} 个");
     }
 
     public void SetSelectedCount(int count) => SelectedCount = count;

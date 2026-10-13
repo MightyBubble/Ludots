@@ -37,16 +37,15 @@ public sealed class PathServiceFaultException : InvalidOperationException
 }
 
 /// <summary>
-/// 固定生效帧路径服务(planning/localPathService.js + workers/workerPathService.js 契约):
-/// 请求在 requestTick 发出,生效帧 = requestTick + latencyTicks;仿真在生效帧取答复,
-/// 没算完就等待(仿真时钟不走,等待次数计数),超过 planTimeoutMs 未返回即故障报错。
-/// 后台 worker 数 1 / 2 / 4 可切换:任务是镜像静态导航状态的纯函数,每个 worker 持有
-/// 自己的搜索缓冲,结果与线程时序无关。
+/// 路径服务:请求在 requestTick 发出,调用方约定的生效帧 = requestTick + latencyTicks。
+/// 取答复的方法不读生效帧。超过 planTimeoutMs 未返回即故障。
+/// 后台 worker 数 1 / 2 / 4 可切换:worker 在导航锁下读同一份 NavContext;每个 worker 只独占搜索缓冲。
+/// 结果不依赖线程时序,因为计算和重烘互斥。
 /// </summary>
 public sealed class PathQueryService : IDisposable
 {
     private readonly IReadOnlyDictionary<int, NavContext> _navs;
-    /// <summary>认知变体号(≥ BeliefStride)的解析器;null = 纯真相会话(S3 形状)。</summary>
+    /// <summary>认知变体号(≥ BeliefStride)的解析器;null = 纯真相会话。</summary>
     private readonly Func<int, NavContext>? _variantResolver;
     private readonly CrowdSimulationRuntimeConfig _config;
     private readonly int _latencyTicks;
@@ -54,8 +53,7 @@ public sealed class PathQueryService : IDisposable
 
     private readonly object _gate = new();
     /// <summary>导航态互斥:worker 计算与仿真侧结构变更重烘共用同一份
-    /// 导航上下文,经本锁串行——任何在途计算恰好看见其请求之前生效的全部结构 op,时序不进结果。
-    /// (参考端用 worker 私有镜像 + 消息序达到同一契约;C# 单份状态省镜像内存。)</summary>
+    /// 导航上下文,经本锁串行——任何在途计算恰好看见其请求之前生效的全部结构 op,时序不进结果。</summary>
     private readonly object _navGate = new();
     private readonly Queue<(int Id, PathQuery Query)> _pending;
     private readonly Dictionary<int, PathResult> _replies;
@@ -83,6 +81,15 @@ public sealed class PathQueryService : IDisposable
     public TimeSpan TestDelayPerJob { get; set; } = TimeSpan.Zero;
 
     public int Waits { get; private set; }
+
+    /// <summary>还没取走的请求数。组消失或状态序对不上时也要取走，否则这里会涨。</summary>
+    public int OutstandingReplyCount
+    {
+        get
+        {
+            lock (_gate) return _sentAtMs.Count;
+        }
+    }
     public bool Faulted { get; private set; }
     public string? FaultMessage { get; private set; }
     public int WorkerCount { get { lock (_gate) return _workerTarget; } }
@@ -172,7 +179,7 @@ public sealed class PathQueryService : IDisposable
         lock (_gate) return _dueTick[id];
     }
 
-    /// <summary>生效帧取答复:没算完就阻塞等待(仿真暂停,结果仍于生效帧生效);超时即故障。</summary>
+    /// <summary>取答复。不读生效帧,算完就返回。没算完就阻塞,超时抛 PathServiceFaultException。</summary>
     public PathResult AwaitDue(int id)
     {
         bool waited = false;
@@ -201,7 +208,7 @@ public sealed class PathQueryService : IDisposable
         }
     }
 
-    /// <summary>轮询(不就绪立刻返回 false;超时检测与 AwaitDue 同契约)。</summary>
+    /// <summary>轮询。超时阈值与 AwaitDue 相同,并且都会 FailLocked。超时返回 false,不抛。</summary>
     public bool Ready(int id)
     {
         lock (_gate)
@@ -302,7 +309,7 @@ public sealed class PathQueryService : IDisposable
             }
             catch (Exception ex)
             {
-                // worker 崩溃 = 服务故障(navClient 契约:报错,绝不静默重试或换算法)
+                // worker 崩溃 = 服务故障:报错,绝不静默重试或换算法
                 lock (_gate)
                 {
                     FailLocked($"路径 worker 内部错误(请求 #{job.Id}): {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");

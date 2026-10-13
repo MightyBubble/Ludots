@@ -78,6 +78,21 @@ public class NavSurfaceAssetTests
     }
 
     [Test]
+    public void HeaderBytes_MustBeExactly32()
+    {
+        var longer = Serialize(Sample());
+        BitConverter.GetBytes((ushort)33).CopyTo(longer, 6);
+        var longHeader = Assert.Throws<InvalidDataException>(() => NavSurfaceAsset.Read(new MemoryStream(longer)));
+        Assert.That(longHeader!.Message, Does.Contain("headerBytes"));
+        Assert.That(longHeader.Message, Does.Contain("32"));
+
+        var shorter = Serialize(Sample());
+        BitConverter.GetBytes((ushort)16).CopyTo(shorter, 6);
+        var shortHeader = Assert.Throws<InvalidDataException>(() => NavSurfaceAsset.Read(new MemoryStream(shorter)));
+        Assert.That(shortHeader!.Message, Does.Contain("headerBytes"));
+    }
+
+    [Test]
     public void TruncatedFile_IsRejected()
     {
         var bytes = Serialize(Sample());

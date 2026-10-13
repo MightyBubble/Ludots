@@ -11,7 +11,7 @@ using Ludots.Core.CrowdSimulation.Units;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// S7-c 认知槽回收复用对拍(脚本:11 轮「放置(未知)→ reveal 发现 → 拆除(残影)→ 再 reveal
+/// 认知槽回收复用对拍(脚本:11 轮「放置(未知)→ reveal 发现 → 拆除(残影)→ 再 reveal
 /// 见地面」+ 重建 S1/S2/S3)。放置未见的实体即刻让认知 ≠ 真值(离真值槽开新槽),发现后回到
 /// 真值槽,拆除留残影再开槽——每轮两槽,休眠槽超 slotCacheCapacity 后最旧先淘汰;重建命中
 /// 已淘汰的认知集必须开新槽(容量回收复用)。淘汰次序 = 注册序(参考端 b.entry 是 JS Map
@@ -205,7 +205,7 @@ public sealed class S7FogRecycleTruthTests
         deltas.Sort();
         double p50 = deltas[deltas.Count / 2];
         TestContext.Out.WriteLine(
-            $"S7-c 认知槽回收:max偏差 {maxDeltaCm:F4}cm p50 {p50:F4}cm;状态机逐位 {structuralMismatches} 处不一致;" +
+            $"认知槽回收:max偏差 {maxDeltaCm:F4}cm p50 {p50:F4}cm;状态机逐位 {structuralMismatches} 处不一致;" +
             $"contacts 逐位 {contactMismatches}/{alignedContactSamples}(最大幅度 {contactMaxDelta});digest 全程逐位一致;报告 {reports.Count} 笔全字段一致;" +
             $"槽账终态 seq={belief.Seq} switches={belief.Switches} entry={belief.Entries.Count} dormant={belief.DormantList.Count}");
         Assert.That(structuralMismatches, Is.EqualTo(0), $"状态机逐位不一致(单位全程停驻,零容忍):{firstMismatch}");

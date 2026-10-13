@@ -341,7 +341,7 @@ public static class Program
         PngWriter.Write(path, RenderSize, RenderSize, px);
     }
 
-    /// <summary>S4 部署探针:跑 spawn 12000,前 8 个单位与 s4-units.bin 逐字段比对。</summary>
+    /// <summary>跑 spawn，把前 8 个单位的玩家、组、位置和 rawEq 打印出来。进程不因不一致而失败。</summary>
     private static int RunS4Probe(string seedDir, string standardDir, string capabilityDir)
     {
         var bundle = Load(seedDir, standardDir, capabilityDir);

@@ -39,14 +39,14 @@ public sealed class CrowdRebakeReport
     public int Stuck { get; set; }
     /// <summary>受影响导航摘要:逐上下文脏 tile 与类别。</summary>
     public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
-    /// <summary>受影响 tile 并集(升序;参考端 stats.dirtyTiles 同源)。</summary>
+    /// <summary>受影响 tile 并集，升序。</summary>
     public List<int> UnionTiles { get; set; } = new(CrowdSimulationLimits.HotPathSpanReserve);
     /// <summary>结构足迹包围盒(厘米;报告语义,不参与对拍)。</summary>
     public (Fix64 MinX, Fix64 MinY, Fix64 MaxX, Fix64 MaxY) Bbox { get; set; }
 }
 
-/// <summary>跨 tick 推进的重烘收尾 job:阶段 0 = 指令内(镜像同步 + 真相重烘),
-/// 阶段 1 = 队伍反应 + 唤醒 + 挤离,阶段 2 = 受影响指令重规划 + 报告发布。tick 驱动保证确定性;
+/// <summary>跨 tick 推进的重烘收尾 job。阶段 0 在指令内：收尾未完 job、锁内重烘真相、TruthChanged。
+/// 阶段 1 是反应/唤醒/挤离，阶段 2 是重规划并发布报告。tick 驱动保证确定性；
 /// 任何新指令或结构变更先把未完 job 收尾。</summary>
 public sealed class CrowdRebakeJob
 {
@@ -69,8 +69,8 @@ public sealed class CrowdRebakeJob
 }
 
 /// <summary>
-/// 结构动态化 op 管线(sim/structureOps.js 移植):放置 / 拆除 / 寿命到期 →
-/// 阶段 0 指令内完成仓变更与真相导航重烘(路径服务与结构变更互斥,op 按指令序生效),
+/// 结构动态化：放置 / 拆除 / 寿命到期。放置/拆除后调用 Fog.OnTruth；真相重烘后调用 Beliefs.TruthChanged。没有单独的 belief 同步函数。
+/// 阶段 0 在指令内完成仓变更与真相导航重烘（路径服务与结构变更互斥，op 按指令序生效），
 /// 队伍反应与重规划按 planning.rebakeSlices 摊到后续 tick。
 /// </summary>
 public static class CrowdStructureOps
@@ -148,9 +148,7 @@ public static class CrowdStructureOps
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
         var dirty = planner.Service.RunExclusive(new RebakeCall(sim, rect, cache), RebakeExclusive);
-        // 真相重烘完 → 认知分歧重推导(参考端 truthChanged 同点)。
-        // detach/settle(变体在真相重烘前私享 tile)不需要:变体是全拷贝,
-        // 真相重烘写不到变体自有的数组。
+        // 真相重烘完调用 TruthChanged。全拷贝变体的数组不跟真相重烘一起改。
         sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;
         foreach (var r in dirty)
@@ -216,7 +214,7 @@ public static class CrowdStructureOps
         var built = planner.ReactRebake(job.ContextResults);
         job.Orders.Clear();
         for (int i = 0; i < built.Count; i++) job.Orders.Add(built[i]);
-        // 刷新队列长在反应末快照(参考端 s0.refreshes 同点);每 tick 预算会在步末排空队列
+        // 反应结束时记下刷新队列长度。每 tick 预算会在步末排空队列，所以报告不在阶段 2 再读队列。
         job.Refreshes = planner.RefreshQueueCount;
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
@@ -231,8 +229,7 @@ public static class CrowdStructureOps
         var bbox = job.Fp.Bbox();
         var report = sim.ReportScratch ??= new CrowdRebakeReport();
         report.ExecTick = job.ExecTick;
-        // 报告可见的 tick 边界:阶段 2 在本 tick 推进中完成,步末 TickCount 再 +1——
-        // 与参考端采样(advance 返回后的 tickCount)同值
+        // 阶段 2 在本 tick 的 TickCount++ 之前完成，报告 tick 写成 TickCount + 1
         report.ReportTick = sim.TickCount + 1;
         report.Kind = job.Kind;
         report.ContextResults = job.ContextResults;
@@ -279,8 +276,7 @@ public static class CrowdStructureOps
         sim.NotifyRebake(report);
     }
 
-    /// <summary>变更格矩形附近的休眠单位唤醒(wakeNear 移植):各自上下文腐蚀半径 + 自身半径 +
-    /// 最大个人半径(触到的邻居上限),量到矩形边——不是对所有单位用同一最宽 reach。</summary>
+    /// <summary>变更格矩形附近的休眠单位唤醒：各自净空格 × 格长 + 自身个人半径 + 全体最大个人半径，量到矩形边。</summary>
     public static void WakeNear(CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect)
     {
         var kernel = sim.Movement;
@@ -307,9 +303,7 @@ public static class CrowdStructureOps
         }
     }
 
-    /// <summary>站在刚变不可走地面上的单位挤到最近可走格中心(evictBlocked 移植):
-    /// 只有变更矩形外扩最大重烘 reach(2 × 腐蚀半径)内的单位需要检查;跳跃中单位查落点、
-    /// 改落点与全长,不查脚下。无处可放计入 stuck。</summary>
+    /// <summary>站在刚变不可走地面上的单位挤到最近可走格中心。外扩 2 × 最大净空；跳跃单位改落点。无处可放计入 stuck。</summary>
     public static int EvictBlocked(CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect)
     {
         var kernel = sim.Movement;
@@ -360,7 +354,7 @@ public static class CrowdStructureOps
             {
                 kin.JumpToCm = new Fix64Vec2(x, y);
                 Fix64 len = CrowdFix.Hypot(x - kin.RestCm.X, y - kin.RestCm.Y);
-                // 参考端下限 1e-3 米 = 0.1 厘米;Fix64 raw = 0.1 × 2^32 ≈ 429496730,有依据取整
+                // 下限 1e-3 米 = 0.1 厘米;Fix64 raw = 0.1 × 2^32 ≈ 429496730,有依据取整
                 kin.JumpLengthCm = Fix64.Max(Fix64.FromRaw(429496730), len);
                 sim.World.Set(entity, kin);
             }

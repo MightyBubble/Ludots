@@ -62,7 +62,7 @@ public sealed class CrowdSimulationConfigLoader
     /// </summary>
     /// <param name="config">catalog 合并后的 CrowdSimulationConfig.json。</param>
     /// <param name="map">地图（Boards / Teams / Players / Entities）。聚焦的地图 id 就是会话地图。</param>
-    /// <param name="profiles">Navigation/agent_profiles.json 注册表。只消费单位模板点名的档案。</param>
+    /// <param name="profiles">Navigation/agent_profiles.json 注册表。运行时体型行只来自带 CrowdSimulationAgent 的模板。校验集另外纳入 pathing agentTypes[].profileId 和地图绑定档案。</param>
     /// <param name="navmesh">Navigation/navmesh.json。区域、能力档、maps.&lt;mapId&gt; 的地形事实。</param>
     /// <param name="pathing">Navigation/pathing.json。移动类型与区域代价。</param>
     /// <param name="templates">带 CrowdSimulationAgent 的单位模板。</param>
@@ -197,12 +197,30 @@ public sealed class CrowdSimulationConfigLoader
             playerIds.Add(p.PlayerId);
         }
 
-        foreach (var b in config.Deploy.Bases)
+        int coloredBases = 0;
+        int blankColorIndex = -1;
+        for (int i = 0; i < config.Deploy.Bases.Length; i++)
         {
-            if (!playerIds.Contains(b.PlayerId))
+            var basis = config.Deploy.Bases[i];
+            if (!playerIds.Contains(basis.PlayerId))
             {
-                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: deploy.bases[].playerId = {b.PlayerId}，必须存在于地图 Players[]");
+                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: deploy.bases[].playerId = {basis.PlayerId}，必须存在于地图 Players[]");
             }
+
+            if (string.IsNullOrWhiteSpace(basis.Color))
+            {
+                if (blankColorIndex < 0) blankColorIndex = i;
+            }
+            else
+            {
+                coloredBases++;
+            }
+        }
+
+        if (coloredBases > 0 && blankColorIndex >= 0)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: deploy.bases[{blankColorIndex}].color 未填。基地颜色必须全部填写，或全部不填。");
         }
 
         return new CrowdSimulationRuntimeConfig

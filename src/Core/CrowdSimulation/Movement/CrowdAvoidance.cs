@@ -7,27 +7,27 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 局部避让(avoidance.js computeSeparation 移植,Fix64 厘米域):非对称分离——
+/// 局部避让(Fix64 厘米域):非对称分离——
 /// 重叠对的让出份额按玩家对功能位分摊。Yield:有效优先级 = 兵种推挤优先级
 /// +(移动中 + movingBonus),低者让(1 - dominantShare)、相等对半、高者近不动。
 /// Hold:优先级失效,休息单位对移动单位不可动、同状态对半。同导航组且都在移动:
 /// 对称对半,不查功能位。跳跃(JUMP)单位腾空:半径记 0,不收推也不推人。
 /// 两个预算保证最坏 O(n) 而不偏袒谁被看见:maxNeighbors 只数重叠对,maxScan 数所有
 /// 读到的候选(含跳过的);查询范围 = 单位自己的哈希环。
-/// 静/动分界(calm):非移动、零速、上次解出的推力低于 restDeadband 即睡;整片可达邻域
+/// 静/动分界(calm):非移动、零速、上次解出的推力低于 restDeadband 即睡;跳跃状态单独把所在占格标醒。整片可达邻域
 /// 全睡的占格是静态岛——不收推不耗算,任何醒着的单位在触及范围内即唤醒整格。
 /// 降频:stride &gt; 1 时本调用只解 cy % stride == phase 的行,其余保留上次向量。
 /// </summary>
 public static class CrowdAvoidance
 {
 
-    /// <summary>完全堆叠对的判定域:参考端 1e-6 m² = (1 mm)²,厘米域即 0.01 cm²(FromDouble 精确落格,非零)。</summary>
+    /// <summary>完全堆叠对的判定域:1e-6 m² = (1 mm)²,厘米域即 0.01 cm²。</summary>
     private static readonly Fix64 StackedD2Cm = Fix64.FromDouble(0.01);
-    /// <summary>堆叠守卫的防零垫:参考端 1e-3 m² = 10 cm²(垫出 ≈3.2 cm 的解算距离)。</summary>
+    /// <summary>堆叠守卫的防零垫:1e-3 m² = 10 cm²。</summary>
     private static readonly Fix64 StackedD2GuardCm = Fix64.FromInt(10);
     /// <summary>堆叠轴的伪随机中心:((lo·16807) % 7) − 2.5,2.5 二进精确。</summary>
     private static readonly Fix64 StackedAxisCenter = Fix64.FromInt(5) / Fix64.FromInt(2);
-    /// <summary>堆叠轴的量纲:参考端轴值是米,乘每米厘米数后与 d2 的 cm² 口径一致。</summary>
+    /// <summary>堆叠轴按米记,乘每米厘米数后与 d2 的 cm² 口径一致。</summary>
     private static readonly Fix64 StackedAxisScaleCm = Fix64.FromInt(CrowdReferenceMeters.CentimetersPerMeter);
 
     public static void Solve(CrowdMovementKernel k)
@@ -61,7 +61,7 @@ public static class CrowdAvoidance
                 gx[kk] = pos.X;
                 gy[kk] = pos.Y;
                 gr[kk] = jump ? Fix64.Zero : k.Radii[j];
-                gp[kk] = (byte)k.PlayerIdx[j]; // 玩家表序下标(参考端 gp 同口径)
+                gp[kk] = (byte)k.PlayerIdx[j];
                 gl[kk] = state.Level;
                 gg[kk] = state.GroupId;
                 gm[kk] = moving ? (byte)1 : (byte)0;

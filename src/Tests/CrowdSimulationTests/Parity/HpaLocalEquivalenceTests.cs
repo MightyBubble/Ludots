@@ -16,7 +16,7 @@ namespace CrowdSimulationTests.Parity;
 public class HpaLocalEquivalenceTests
 {
     [Test]
-    public void LocalFastPath_MatchesClusterDijkstraBitwise()
+    public void LocalFastPath_MatchesTileDijkstraBitwise()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         var nav = session.Navs[runtime.Profiles[0].NavContextId];

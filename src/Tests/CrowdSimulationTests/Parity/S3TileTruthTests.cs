@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// S3-a 逐 tile 对拍:tile 缓存中的每个条目(分水岭 + 轮廓 + 三角化 + 凸合并的完整几何)
+/// 逐 tile 对拍:tile 缓存中的每个条目(分水岭 + 轮廓 + 三角化 + 凸合并的完整几何)
 /// 与 Web 导出逐字段一致。条目按内容键排序(跨端不依赖获取序),uid 不参与。
 /// </summary>
 [TestFixture]

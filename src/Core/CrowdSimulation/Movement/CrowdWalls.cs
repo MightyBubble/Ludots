@@ -7,7 +7,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 盘面接触(walls.js 移植,Fix64):净空侵蚀把圆盘取整成整格环后,可走格中心只保证半格自由,
+/// 盘面接触(Fix64):净空侵蚀把圆盘取整成整格环后,可走格中心只保证半格自由,
 /// 这里精确解掉剩余的亚格重叠。被挡格 = 轴对齐盒。开放格缓存:3×3 邻域全走的格,
 /// r ≤ 格尺寸的圆盘够不到任何被挡格,直接跳过。
 /// </summary>
@@ -38,8 +38,7 @@ public static class CrowdWalls
 
             if (e.Version != nav.Version || !ReferenceEquals(e.Walk, nav.Walk) || !ReferenceEquals(e.UpWalk, nav.UpPass))
             {
-                // 重烘对 Walk 是原地腐蚀(引用不变),失效必须看 NavContext.Version——与参考端
-                // openCells 的版本失效同款;只认引用会让放置当帧马达读到旧开放表。
+                // 重烘对 Walk 是原地腐蚀(引用不变),失效必须看 NavContext.Version。只认引用会让放置当帧马达读到旧开放表。
                 e.Grid ??= new byte[2 * n2];
                 Array.Clear(e.Grid);
                 e.Version = nav.Version;
@@ -120,7 +119,7 @@ public static class CrowdWalls
         int x1 = Math.Min(navCellsPerSide - 1, CrowdSimulationSpace.NavCellCoord(pxCm + radiusCm, navCellSizeCm));
         int y0 = Math.Max(0, CrowdSimulationSpace.NavCellCoord(pyCm - radiusCm, navCellSizeCm));
         int y1 = Math.Min(navCellsPerSide - 1, CrowdSimulationSpace.NavCellCoord(pyCm + radiusCm, navCellSizeCm));
-        if (x0 == x1 && y0 == y1) return false; // 圆盘整个在自格(可走)内
+        if (x0 == x1 && y0 == y1) return false; // 查询矩形只有一格就返回 false,不读 walk
         bool moved = false;
         Fix64 r2 = radiusCm * radiusCm;
         Fix64 px = pxCm, py = pyCm;
@@ -134,7 +133,7 @@ public static class CrowdWalls
                 Fix64 qy = Fix64.Min(by + navCellCm, Fix64.Max(by, py));
                 Fix64 dx = px - qx, dy = py - qy;
                 Fix64 d2 = dx * dx + dy * dy;
-                // 参考端 1e-12 是双精度域守卫,Q31.32 下 FromFloat(1e-12f) 截断为 0——最小正 raw 量即等价语义
+                // Q31.32 下 FromFloat(1e-12f) 截断为 0,最小正 raw 量即守卫
                 if (d2 >= r2 || d2 <= Fix64.FromRaw(1)) continue;
                 Fix64 d = Fix64Math.Sqrt(d2);
                 dx /= d;

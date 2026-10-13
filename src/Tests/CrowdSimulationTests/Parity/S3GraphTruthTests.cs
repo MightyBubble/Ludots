@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// S3-b 对拍:拼装 NavMesh(跨 tile 邻接与边界 portal)与 HPA* 抽象图的拓扑逐位一致;
+/// 对拍:拼装 NavMesh(跨 tile 邻接与边界 portal)与 HPA* 抽象图的拓扑逐位一致;
 /// 代价数组(浮点派生量)按带宽比较并报告最大分歧——两套数学体系的最后位差异不是缺陷。
 /// </summary>
 [TestFixture]

@@ -4,7 +4,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 稀疏占格计数排序空间哈希(spatialHash.js 移植,Fix64 厘米域):每子步重建一次,
+/// 稀疏占格计数排序空间哈希(Fix64 厘米域):每子步重建一次,
 /// 局部避让(物理)与意图层的同指令接触查询(到达辅助)共读。
 /// 格尺寸 = 2 × 最大半径 / rings;半径 r 的单位读 ring(r) = ceil((r + 最大半径) / 格尺寸) 环,
 /// 邻格按环序紧凑排列,每单位的读取范围是它所在格邻表的前缀。
@@ -48,14 +48,13 @@ public sealed class CrowdSpatialHash
     public readonly int[] RingEnd;
     public readonly sbyte[] Ox, Oy;
 
-    /// <summary>格边长与触及距离为定点精确值(参考端 cellSize/reach 是浮点,inv=1/cellSize;
-    /// 整数截断会系统性移格划分,预算裁剪下选出不同接触子集)。</summary>
-    public CrowdSpatialHash(int worldSizeCm, Fix64 navCellSizeCm, int capacity, int rings, Fix64 reachCm)
+    /// <summary>格边长与触及距离为定点精确值。整数截断会系统性移格划分。</summary>
+    public CrowdSpatialHash(int worldSizeCm, Fix64 hashCellSizeCm, int capacity, int rings, Fix64 reachCm)
     {
-        CellSizeCm = navCellSizeCm;
+        CellSizeCm = hashCellSizeCm;
         _rings = rings;
         _reachCm = reachCm;
-        _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / navCellSizeCm).ToLong();
+        _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / hashCellSizeCm).ToLong();
         int cells = _dim * _dim;
         (Ox, Oy, RingEnd) = BuildRingOffsets(rings);
         Width = Ox.Length;
@@ -99,7 +98,7 @@ public sealed class CrowdSpatialHash
 
     private int CellAtCm(Fix64 vCm)
     {
-        // 向零截断与参考端 (x * inv) | 0 逐字对齐
+        // (v / cell).ToLong() 是算术右移,负值向下取整。随后负格钳到 0,所以负坐标的格号仍是 0。
         int c = (int)(vCm / CellSizeCm).ToLong();
         return c < 0 ? 0 : c >= _dim ? _dim - 1 : c;
     }

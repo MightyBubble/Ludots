@@ -13,7 +13,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
-/// <summary>一次单位生成的实例输入。仿真参数在单位模板上，这里只带出生位置和体型半径（呈现环）。</summary>
+/// <summary>一次单位生成的实例输入。带单位类型、半径级、组、玩家、档案下标、代理类型下标和出生位置。速度等档案不在这条请求上。</summary>
 public readonly record struct CrowdUnitSpawnRequest(
     Fix64 XCm,
     Fix64 YCm,
@@ -29,8 +29,7 @@ public readonly record struct CrowdUnitSpawnRequest(
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
 /// 带 CrowdSimulationAgent(速度、半径、推挤优先级和下标)、CrowdSimulationUnitState(仿真身份)、
 /// WorldPositionCm、PlayerOwner。管理层只持三件东西:稠密序(创建序)、
-/// 槽位代数组与空闲槽池——与参考实现 units 的 18 位槽位 + 14 位代句柄同构,
-/// 句柄稳定且回放可复现。
+/// 槽位代数组与空闲槽池。句柄是 18 位槽位加 14 位代，回放可复现。
 /// 单位实体走引擎模板生成管线(EntityBuilder.UseTemplate→Build,RuntimeEntitySpawnSystem
 /// 同款同步路径)实例化;出生算法(盐流/搜索/散布)留在内核,生成后钩子只补逐实例事实
 /// (位置/玩家/仿真身份/呈现预置件)并把稠密序与句柄登记进来。
@@ -194,7 +193,7 @@ public sealed class CrowdSimUnits
         _freeTop = Capacity;
     }
 
-    /// <summary>逐单位读位置与身份的视图(校验 / 遍历用,不复制)。</summary>
+    /// <summary>实体、稠密下标、句柄。不含位置。</summary>
     public readonly struct UnitView
     {
         public required Entity Entity { get; init; }

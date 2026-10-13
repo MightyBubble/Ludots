@@ -78,7 +78,7 @@ public sealed partial class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
-    // 校验码历史(回放对拍用):定长环形,零逐 tick 分配
+    // 校验码历史:定长环形,零逐 tick 分配。回放按 tick 对上环里还在的记录。
     private readonly int[] _hashTicks = new int[4096];
     private readonly ulong[] _hashValues = new ulong[4096];
     private int _hashCount, _hashHead;
@@ -88,11 +88,11 @@ public sealed partial class CrowdSimulationRuntime
 
     public CrowdSimSession? Session => _session;
     public Entity SessionEntity => _sessionEntity;
-    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
     private readonly CrowdSimulationTelemetry _detachedTelemetry = new();
     /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
     public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
+    /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
     public int ReplayStatus { get; private set; }
     public int ReplayDivergenceTick { get; private set; } = -1;
 
@@ -106,8 +106,7 @@ public sealed partial class CrowdSimulationRuntime
         public const string UnitRadiusKey = "crowd_simulation.unit.radius_m";
     }
 
-    /// <summary>迷雾观察口径:-1 = 全知 debug 视图(默认,玩家视角迷雾用键切换,
-    /// 两种观察范围并存);≥ 0 = 只看该视野组。渲染底座读它决定画哪份 View()。</summary>
+    /// <summary>迷雾观察口径:-1 = 全知，≥ 0 = 只看该视野组。当前没有读取点。</summary>
     public int FogViewGroup { get; set; } = -1;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
@@ -270,7 +269,7 @@ public sealed partial class CrowdSimulationRuntime
         CrowdSimulationAuthoringContract.Validate(
             engine.MapLoader.TemplateRegistry.GetAll(), _configDto!, mapConfig, agentProfiles);
 
-        // ── 资产(走 VFS,跨 mod 解析,冲突即 fail-fast)──
+        // 资产走 VFS，跨 mod 解析，冲突即失败。
         var surface = NavSurfaceAsset.Read(OpenAsset(engine, "assets/" + runtimeConfig.SurfaceAsset));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(
             mapConfig,
@@ -312,7 +311,7 @@ public sealed partial class CrowdSimulationRuntime
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
 
-        // ── 呈现接线(模板键/黑板键/集合键全部预解析成 id)──
+        // 呈现接线：模板键、黑板键、集合键全部预解析成 id。
         var templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 EntityTemplateKeyRegistry 服务。");
         var stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
@@ -351,9 +350,9 @@ public sealed partial class CrowdSimulationRuntime
 
         _session = new CrowdSimSession(runtimeConfig, engine.World, navs, navByLayerRadius, wiring);
         // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
-        // 阻挡盒索引取仓的 CSR(reach 生长,参考同形;S5 对拍会话不装阻挡盒,不受影响)。
+        // 阻挡盒索引取仓的 CSR（外扩 ReachCm）。S5 对拍会话不装阻挡盒。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
-        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // 桥入认知仓(id 与导出端参考序同构)
+        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // 桥入认知仓，按给出的 span 顺序续号
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
@@ -372,7 +371,7 @@ public sealed partial class CrowdSimulationRuntime
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
-        // 玩家调色板:deploy.bases[].color 是数据;缺色玩家落到调色板外,呈现层回退默认。
+        // 玩家调色板:deploy.bases[].color 要么全有要么全无。全有才注册；全无则不注册。
         int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
         var palette = new Vector4[maxPlayer + 1];
         bool anyColor = false;
@@ -443,7 +442,7 @@ public sealed partial class CrowdSimulationRuntime
         var session = _session;
         if (session == null) return;
         // 系统组 FixedHz 的 tick 边界，先于本 tick 的指令和运动。
-        // 先重读玩家代表的 Team，再在修订号变化时重算矩阵。队伍没变且修订号没变时不重算、不分配。
+        // 先重读玩家代表的 Team。队伍变了就抛。修订号变了就在临时缓冲重算；与现场矩阵不同也抛，不写回。相同则只更新修订号。
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
@@ -492,7 +491,7 @@ public sealed partial class CrowdSimulationRuntime
         }
     }
 
-    /// <summary>回放:一次性世界重放同一指令日志,逐帧对拍校验码(不进引擎世界,不碰呈现)。</summary>
+    /// <summary>回放:一次性世界重放同一指令日志,按 tick 对上环里还在的校验码(不进引擎世界,不碰呈现)。</summary>
     public void RunReplay()
     {
         var session = _session;
@@ -539,7 +538,7 @@ public sealed partial class CrowdSimulationRuntime
             replay.ReplaceNavs(replayNavs);
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
-            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // 回放仓同构补桥
+            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // 回放仓按同一 span 列表补桥
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, _deck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
             replay.NavTileCache = replayCache;
@@ -557,27 +556,37 @@ public sealed partial class CrowdSimulationRuntime
             replay.Commands.Schedule(replay, entries);
             var replayHashes = new List<ulong>(ticks);
             replay.Advance(ticks, replayHashes);
-            CompareReplay(ticks, replayHashes);
+            CompareReplay(replayHashes);
             return;
         }
 
         replay.Commands.Schedule(replay, entries);
         var replayHashes2 = new List<ulong>(ticks);
         replay.Advance(ticks, replayHashes2);
-        CompareReplay(ticks, replayHashes2);
+        CompareReplay(replayHashes2);
     }
 
-    private void CompareReplay(int ticks, List<ulong> replayHashes)
+    private void CompareReplay(List<ulong> replayHashes)
     {
         ReplayDivergenceTick = -1;
-        int common = Math.Min(_hashCount, replayHashes.Count);
-        for (int i = 0; i < common; i++)
+        for (int i = 0; i < _hashCount; i++)
         {
             int w = (_hashHead + i) % _hashTicks.Length;
-            if (_hashValues[w] != replayHashes[i]) { ReplayDivergenceTick = _hashTicks[w]; break; }
+            int tick = _hashTicks[w];
+            int index = tick - 1;
+            if ((uint)index >= (uint)replayHashes.Count)
+            {
+                ReplayDivergenceTick = -2;
+                break;
+            }
+
+            if (_hashValues[w] != replayHashes[index])
+            {
+                ReplayDivergenceTick = tick;
+                break;
+            }
         }
 
-        if (ReplayDivergenceTick < 0 && _hashCount != replayHashes.Count) ReplayDivergenceTick = -2;
         ReplayStatus = ReplayDivergenceTick == -1 ? 1 : 2;
     }
 

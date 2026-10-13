@@ -6,7 +6,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// 走廊查询(pathJobs.js corridorTo / deckExit / flowPoints 移植):
+/// 走廊查询:
 /// 无跳跃链接的上下文先走 tile 寻址 NavMesh A* + 漏斗;有链接直接 HPA*
 /// (链接是抽象边,NavMesh 上没有);NavMesh 失败也回落 HPA*。命中的 tile 标进走廊掩码。
 /// 桥面起点:先沿桥面 BFS 到最近的桥头 portal,再从那里查地面图,
@@ -172,7 +172,7 @@ public static class CorridorQuery
     }
 
     /// <summary>
-    /// 链接层的领队折线(flowPoints 移植):HPA 路点太粗(只到入口),
+    /// 链接层的领队折线:HPA 路点太粗(只到入口),
     /// 领队路径从流场路点链描出;链不到终点或太短(少于 4 点)都算失败。
     /// </summary>
     public static (Fix64[] Points, int[]? Layers)? FlowPoints(FlowField flow, int start)

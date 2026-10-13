@@ -14,7 +14,7 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// S1 逐格对拍：从 Ludots 侧资产（.navsurface + Maps/<id>.json + 模板）重建与 Web 导出器
-/// 同一字节流，FNV-1a 摘要必须相等。字节流契约见导出器 scripts/exportLudots.mjs 头部注释。
+/// 同一字节流，FNV-1a 摘要必须相等。字节流契约见 `tools/crowdsimulation-export/exportLudots.mjs`（沙盒运行时放在 `scripts/` 下）。
 /// </summary>
 [TestFixture]
 public class S1SurfaceTruthTests
@@ -149,12 +149,13 @@ public class S1SurfaceTruthTests
     internal static NavSurfaceAsset ReadSurface(string seed)
         => NavSurfaceAsset.Read(File.OpenRead(Path.Combine(SeedDir(seed), "terrain", $"crowd_simulation_{seed}.navsurface")));
 
-    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed)
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight = false)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
+        if (lineOfSight) merged["fog"]!["lineOfSight"] = true;
         var config = CrowdSimulationConfig.Load(merged);
 
         var navmeshJson = TestDefaults.StandardNavmeshJson();
@@ -193,7 +194,7 @@ public class S1SurfaceTruthTests
         var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
         var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
-        // 地图实体按导出端参考 id 序加载,不排序(F02 认知的逐 id 语义要求两端 id 同构)
+        // 地图实体按抽取时的遍历序返回，这里不排序。
         return (blockers, bridges);
     }
 

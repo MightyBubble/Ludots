@@ -4,7 +4,7 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.CrowdSimulation;
 
 /// <summary>
-/// 参考端米制求值树的换算口。迷雾面、视线和桥面烘焙的计算留在原处，
+/// 米制换算口。迷雾面、视线和桥面烘焙的计算留在原处，
 /// 这里只固定厘米进米的那一步。几种除法不能互换：Fix64/Fix64 是精确除，
 /// Fix64/int 是原始值整数除，double 与先截断的 int 各走各的舍入。
 /// </summary>

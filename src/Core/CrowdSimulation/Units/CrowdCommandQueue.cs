@@ -5,17 +5,16 @@ using Ludots.Core.CrowdSimulation;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
-/// <summary>一条带 tick 的指令(数据;指令流 + 初始态 = 完整输入,回放即复现)。
-/// 载荷在边界一次解析为 struct,JsonNode 不进队列与日志。</summary>
+/// <summary>一条带 tick 的指令。载荷在边界一次解析为 struct，JsonNode 不进队列与日志。</summary>
 public readonly record struct CrowdCommand(int Tick, CrowdSimCommand Cmd);
 
 /// <summary>
-/// TICK 戳指令队列(core/commands.js CommandQueue 移植):
-/// submit(现场指令,当前 tick 执行并记日志)、schedule(按 tick 升序的脚本,与存量归并)、
-/// flush(执行本 tick 及以前的全部到点指令;迟到的指令按实际执行 tick 记日志并标 lateFrom)。
-/// 两个入队口都先过校验:载荷结构在 CrowdSimCommand.Parse 边界一次成形,会话域(玩家号/
-/// 迷雾启用)在 Validate——坏指令不进日志/队列,live 与回放对称拒收。
-/// 日志是会话的完整输入:sources + log 重放即复现状态。
+/// 带 tick 的指令队列。
+/// submit（现场指令，当前 tick 执行并记日志）、schedule（按 tick 升序的脚本，与存量归并）、
+/// flush（执行本 tick 及以前的全部到点指令）。到点或已过期的指令立即执行。日志 tick 与当前 tick 不同时，只把日志 tick 改成当前 tick，不保留原 tick。
+/// 两个入队口都先过校验：载荷结构在 CrowdSimCommand.Parse 边界一次成形，会话域（玩家号/
+/// 迷雾启用）在 Validate——坏指令不进日志、不进队列。
+/// 回放输入是指令日志。有结构仓时另用烘焙输入重建导航。
 /// </summary>
 public sealed class CrowdCommandQueue
 {
@@ -64,7 +63,7 @@ public sealed class CrowdCommandQueue
         _head = 0;
     }
 
-    /// <summary>执行全部到点指令(已过期的立即执行,日志记实际执行 tick 与 lateFrom)。</summary>
+    /// <summary>执行全部到点指令。已过期的立即执行，日志 tick 改成当前 tick。</summary>
     public void Flush(CrowdSimSession sim, Func<CrowdSimSession, CrowdSimCommand, object?> exec)
     {
         while (_head < _queue.Count && _queue[_head].Tick <= sim.TickCount)

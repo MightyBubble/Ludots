@@ -14,7 +14,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Fog;
 
 /// <summary>
-/// 迷雾 + 认知(belief),按视野组(fog/fog.js 移植):sharesVisionWith 两个方向都成立的玩家并成一组,
+/// 迷雾 + 认知,按视野组:sharesVisionWith 两个方向都成立的玩家并成一组,
 /// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell) 的 fog 格)上:
 /// visible 每 fog.rateHz 重建(组按 round-robin 摊到周期各 tick,单位只在本组槽位 tick 盖章);
 /// explored 粘滞;belief = 实体 id → 末次所见快照 {tpl, fp}(地图初始实体全员已知;运行时
@@ -37,7 +37,7 @@ public sealed class CrowdFog
     /// <summary>每组派生计数:可见格、已探索格、残影(认知有、真相无足迹)。与格子/认知同步增减,不进校验码。</summary>
     public readonly int[] VisibleCount, ExploredCount, GhostCount;
     public readonly uint[] Version, Key, TileKey, Seen, Gone;
-    /// <summary>精确变更计数(参考端 Float64 计数器):认知实体集变 / 实体集或 tile 集变。</summary>
+    /// <summary>认知实体集变更计数，以及实体集或 tile 集变更计数。</summary>
     public readonly long[] EntRev, Rev;
     public long TruthRev;
     public uint TruthKey;
@@ -61,14 +61,14 @@ public sealed class CrowdFog
     private List<int>?[] _cellsOf = Array.Empty<List<int>>();
     private readonly Stack<List<int>> _cellListPool = new();
     // 逐 tick 复用暂存(对账/遗忘/遮蔽到期;调用序不嵌套,清空即借出)
-    // 一次刷新里可见实体数不超过结构上限。容量在构造时给满,首见实体不再扩容。
+    // _reconcileDone 的初始容量是开局实体数 + HotPathSlotReserve。之后放置的实体超过该容量时 HashSet 仍会扩容。_cellsOf 在 id 越界时 Array.Resize。
     private readonly HashSet<int> _reconcileDone;
     private readonly List<int> _reconcileForget = new();
     private readonly List<(int GroupIndex, int[] Cells, int Until)> _obscureKeep = new();
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
     private Fix64[]? _hAvgM, _hMaxM;  // LOS:fog 格均高 / 最高高(米,Fix64)
     private readonly Fix64 _eyeM;   // 眼高(米)
-    private byte[]? _opaque;
+    private readonly byte[] _opaque;
     private bool _opaqueDirty;
     public int Refreshes;           // 诊断:刷新次数
 
@@ -90,6 +90,7 @@ public sealed class CrowdFog
         GroupOf = BuildVisionGroups(pairRules.SharesVisionByPair, pairRules.PlayerCount, out int visionGroupCount);
         VisionGroupCount = visionGroupCount;
         int f2 = FogCellsPerSide * FogCellsPerSide;
+        _opaque = new byte[f2];
         Visible = new byte[VisionGroupCount * f2];
         Explored = new byte[VisionGroupCount * f2];
         Occ = new byte[VisionGroupCount * f2];
@@ -121,7 +122,7 @@ public sealed class CrowdFog
 
         double radius = fc.VisionCm.ToDouble() / FogCellSizeCm;
         int r = (int)Math.Ceiling(radius);
-        // 视盘平铺(dx0, dy0, dx1, dy1, …;dy 外层 dx 内层,与参考端遍历序一致)
+        // 视盘平铺(dx0, dy0, dx1, dy1, …;dy 外层 dx 内层)
         var disc = new List<int>();
         for (int dy = -r; dy <= r; dy++)
         {
@@ -186,8 +187,8 @@ public sealed class CrowdFog
         int Find(int i) => root[i] == i ? i : root[i] = Find(root[i]);
     }
 
-    /// <summary>LOS 高度表(米,Fix64):开启视线遮挡时按需注入;未注入而 LOS 开 = 调用方装配缺口。
-    /// 逐格 cm→米一次 DivPrecise、格内累加(网格和精确)、均值一次除法，求值顺序与参考端逐 op 对齐。</summary>
+    /// <summary>LOS 高度表(米,Fix64)。会话在迷雾装配时注入。
+    /// 逐格一次 CmToMPrecise，格内累加，均值一次除法。</summary>
     public void EnsureHeights(NavHeightField heights)
     {
         if (_hAvgM != null) return;
@@ -209,7 +210,7 @@ public sealed class CrowdFog
         for (int c = 0; c < FogCellsPerSide * FogCellsPerSide; c++) _hAvgM[c] /= Fix64.FromInt(cnt[c]);
     }
 
-    /// <summary>刷新周期(tick)= max(1, round(tickHz / rateHz))。rateHz 超过步进频率报错,不再钳位。</summary>
+    /// <summary>刷新周期 = max(1, round(tickHz / rateHz))。rateHz 大于步进频率则抛错。</summary>
     public void SetPeriod(int tickHz, double rateHz)
     {
         Period = PeriodTicks(tickHz, rateHz);
@@ -394,11 +395,11 @@ public sealed class CrowdFog
     /// <summary>含任何阻挡导航格的 fog 格不透明(真值实体变更后重建)。</summary>
     private void BuildOpaque()
     {
-        Array.Clear(_opaque!);
+        Array.Clear(_opaque);
         var blocked = Store.Blocked;
         for (int i = 0; i < NavCellsPerSide * NavCellsPerSide; i++)
         {
-            if (blocked[i] != 0) _opaque![i / NavCellsPerSide / NavCellsPerFogCell * FogCellsPerSide + i % NavCellsPerSide / NavCellsPerFogCell] = 1;
+            if (blocked[i] != 0) _opaque[i / NavCellsPerSide / NavCellsPerFogCell * FogCellsPerSide + i % NavCellsPerSide / NavCellsPerFogCell] = 1;
         }
 
         _opaqueDirty = false;
@@ -420,7 +421,7 @@ public sealed class CrowdFog
             Fix64 f = Fix64.FromInt(s) / Fix64.FromInt(n);
             int c = (int)((Fix64.FromInt(cy) + Fix64.HalfValue + dy * f).ToLong() * FogCellsPerSide + (Fix64.FromInt(cx) + Fix64.HalfValue + dx * f).ToLong());
             if (c == v || c == t) continue;
-            if (_opaque![c] != 0 || _hMaxM![c] > eye + Fix64Math.MulExact(rise, f)) return false;
+            if (_opaque[c] != 0 || _hMaxM![c] > eye + Fix64Math.MulExact(rise, f)) return false;
         }
 
         return true;
@@ -522,8 +523,7 @@ public sealed class CrowdFog
         }
     }
 
-    // ── 面命令(引擎原语;调用方 sim.exec)。形状 = CrowdFogArea 解析结果。 ──
-    // 命令只改迷雾数据;认知同步在下一 tick 的管线里拾起(beliefSync)。
+    // 面命令只改迷雾数组。认知同步在下一步 CrowdBeliefSync.Sync。
 
     /// <summary>如同组刚看过该区域:explored + 真相对账(不点 visible)。</summary>
     public void RevealArea(int g, int[] cells)
@@ -656,7 +656,7 @@ public sealed class CrowdFog
     /// <summary>共享视野:组 b 并入 a(低组号存活,与构造的 root[max]=min 同款)。visible OR、
     /// explored OR 并触发 tile 入集、认知实体并(只有一侧见过的已拆实体留残影直到地面再见)。
     /// 被并掉的组无玩家,认知同步会把它停在真相槽。返回存活组;同组返回 -1。
-    /// 拆组不支持(union-find 不能删;参考端 TODO 同款)。</summary>
+    /// 不支持拆组。MergeGroups 只把高组号并入低组号。</summary>
     public int MergeGroups(int a, int b)
     {
         if (a == b) return -1;
@@ -731,7 +731,7 @@ public sealed class CrowdFog
     /// <summary>没有玩家的组(被并掉)。</summary>
     public bool Empty(int g) => !GroupOf.Contains((byte)g);
 
-    /// <summary>不同认知的组数(= 规划侧需要的认知变体槽上限参考)。</summary>
+    /// <summary>不同 BeliefKey 的个数。碰撞会把两套认知算成一个。槽分配仍用集合相等确认。</summary>
     public int BeliefCount() => Enumerable.Range(0, VisionGroupCount).Select(BeliefKey).Distinct().Count();
 
     /// <summary>呈现查询面(渲染底座只读):0 = 未探索,1 = 已探索,2 = 可见。</summary>
@@ -743,7 +743,7 @@ public sealed class CrowdFog
         return res;
     }
 
-    /// <summary>参考端 mix(32 位雪崩哈希;JS Math.imul = NavTilesPerSide# unchecked int 乘)。</summary>
+    /// <summary>32 位雪崩。乘法在 unchecked 下进行。</summary>
     public static uint Mix(int x)
     {
         unchecked

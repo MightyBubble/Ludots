@@ -20,7 +20,7 @@ namespace CrowdSimulationTests;
 /// <summary>
 /// 子步钳位、挤离无处安放、规划应用在事件点推进遥测,并出现在调试面板区块。
 /// </summary>
-public sealed class CrowdTelemetryG03Tests
+public sealed class CrowdTelemetryClampEvictPlanTests
 {
     [Test]
     public void Counters_IncrementAtClampEvictAndPlan()

@@ -9,7 +9,7 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// 指令入队校验门(玩家号/迷雾面/恰一形状/字段类型):坏指令在 Submit/Schedule 即拒——
-/// 不进日志、不进队列,live 与回放对称(此前拖到 Exec 才抛,坏指令已入日志再停摆)。
+/// 不进日志、不进队列,live 与回放对称。
 /// 好指令照常入队执行,拒收不污染会话。
 /// </summary>
 public sealed class CrowdCommandQueueGateTests

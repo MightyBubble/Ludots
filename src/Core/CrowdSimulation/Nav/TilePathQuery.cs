@@ -6,16 +6,16 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// TILE 寻址的 NavMesh 查询(tileQuery.js findTilePath 移植):
+/// TILE 寻址的 NavMesh 查询:
 /// 多边形 A* + 漏斗,直接跑在某上下文的 tile 条目上,不经过拼装全局网格:
 ///   poly 引用 = (tile × 2 + 层) × navCellsPerTile² + 局部多边形号(层 0 地面 · 1 桥面)
 ///   同层同 tile → 条目内部邻接;同层邻 tile → 两边界的重叠缝合(带记忆化)
 ///   地面 ↔ 桥面 → 仅在桥头 portal 格,以格心点 portal 相连
-/// 侧边顺序(−y, −x, +x, +y)与拼装网格一致,地面查询的邻居展开序与 findPolyPath 相同。
+/// 侧边顺序(−y, −x, +x, +y)与拼装网格一致。
 /// </summary>
 public static class TilePathQuery
 {
-    // sa, sb, dx, dy(与参考实现 SIDES 同序,邻居展开序即对拍序)
+    // sa, sb, dx, dy。邻居展开序即对拍序。
     private static readonly int[,] Sides = { { 2, 3, 0, -1 }, { 0, 1, -1, 0 }, { 1, 0, 1, 0 }, { 3, 2, 0, 1 } };
 
     /// <summary>查询暂存(每 worker 一份,不可重入)。tile 代价备忘是条目的纯函数,跨查询保留。</summary>
@@ -27,8 +27,7 @@ public static class TilePathQuery
         public Dictionary<int, Fix64> Ey = new(4096);
         public Dictionary<int, int> Parent = new(4096);
         public HashSet<int> Closed = new(4096);
-        /// <summary>逐 (navId, tile 条目) 的地面多边形代价备忘(参考实现挂在 nav 上;worker 跨上下文
-        /// 复用暂存,键必须带上下文与条目引用——增量重烘换条目即失效,旧 poly 表不复用)。</summary>
+        /// <summary>逐 (navId, tile 条目) 的地面多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
         public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> GroundCostMemo = new(1024);
         public List<Fix64> Portals = new();
         public List<Fix64> FunnelPoints = new();
@@ -229,7 +228,7 @@ public static class TilePathQuery
         return s.Found;
     }
 
-    /// <summary>把路线经过的 tile 标进走廊掩码(markTileClusters 移植)。</summary>
+    /// <summary>把路线经过的 tile 标进走廊掩码。</summary>
     public static void MarkNavTiles(NavContext nav, CrowdSimulationRuntimeConfig config, int[] polys, byte[] mask)
         => MarkNavTiles(nav, config, polys, polys.Length, mask);
 

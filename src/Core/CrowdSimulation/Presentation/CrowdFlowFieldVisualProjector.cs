@@ -11,7 +11,7 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
 /// 群体导航流场的呈现源(服务):当前要可视化的流场与它的几何参数。
-/// 谁持有流场谁发布(演示 Mod / 未来的规划器);null = 不呈现。
+/// 谁持有流场谁发布。null = 不呈现。
 /// </summary>
 public sealed class CrowdFlowFieldVisualSource
 {

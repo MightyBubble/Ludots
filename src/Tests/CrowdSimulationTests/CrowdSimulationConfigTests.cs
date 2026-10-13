@@ -76,6 +76,34 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
+    public void MixedBaseColors_AreRejected()
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        ((JsonObject)json["deploy"]!["bases"]![1]!).Remove("color");
+        var config = CrowdSimulationConfig.Load(json);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
+        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
+        Assert.That(ex.Message, Does.Contain("deploy.bases[1].color"));
+    }
+
+    [Test]
+    public void BasesWithoutColors_StillAssemble()
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        foreach (var basis in json["deploy"]!["bases"]!.AsArray())
+        {
+            ((JsonObject)basis!).Remove("color");
+        }
+
+        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json));
+        Assert.That(runtime.Deploy.Bases.Count, Is.GreaterThan(1));
+        foreach (var basis in runtime.Deploy.Bases)
+        {
+            Assert.That(basis.Color, Is.Null);
+        }
+    }
+
+    [Test]
     public void MissingRequiredField_IsRejected()
     {
         var json = TestDefaults.DefaultConfigJson();
@@ -234,7 +262,7 @@ public class CrowdSimulationConfigTests
     [Test]
     public void PairRules_UnorderedPlayerIds_KeepTheFedMatrix()
     {
-        // 玩家对级 overrides 已删除。装载不再从队伍号生成矩阵，只把喂进来的矩阵按下标挂上。
+        // 装载不从队伍号生成矩阵，只把喂进来的矩阵按下标挂上。
         // 玩家号仍要能换成表序，乱序玩家号查的是同一张下标表。
         var map = TestDefaults.DemoMap();
         map.Players.Clear();

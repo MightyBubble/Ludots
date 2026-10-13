@@ -5,9 +5,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// HPA* 抽象图寻路(hpa.js findPath 移植):起点 tile 内 Dijkstra 到本 tile 全部入口,
+/// HPA* 抽象图寻路:起点 tile 内 Dijkstra 到本 tile 全部入口,
 /// 抽象图 A*(块内边 + 跳跃链接边),进入终点 tile 的节点再接终点 tile 内 Dijkstra 收尾。
-/// 返回 tile 走廊 + 途经的入口格;代价为零成本启发 × minCost(octile)。
+/// 返回 tile 走廊 + 途经的入口格。返回的 Cost 是起点 Dijkstra、抽象图边和终点 Dijkstra 的 g 值。堆序用 octile × MinCost，这个乘积不是返回代价。
 /// </summary>
 public static class HpaQuery
 {
@@ -17,10 +17,10 @@ public static class HpaQuery
     /// Relax 是方法而不是局部函数:局部函数会按每次搜索分配一个闭包。</summary>
     public sealed class Scratch
     {
-        public Scratch(int navCellsPerTile)
+        public Scratch(int tileCellCount)
         {
-            StartDist = new Fix64[navCellsPerTile];
-            GoalDist = new Fix64[navCellsPerTile];
+            StartDist = new Fix64[tileCellCount];
+            GoalDist = new Fix64[tileCellCount];
             GScore.EnsureCapacity(4096);
             Parent.EnsureCapacity(4096);
             Closed.EnsureCapacity(4096);
@@ -102,7 +102,7 @@ public static class HpaQuery
         public int Expanded;
     }
 
-    /// <summary>tile 内 8 连通 Dijkstra(clusterDijkstra 移植),dist 按 tile 内局部下标填满。</summary>
+    /// <summary>tile 内 8 连通 Dijkstra,dist 按 tile 内局部下标填满。</summary>
     public static void TileDijkstra(NavContext nav, int cl, int startCell, Fix64[] dist, NavMinHeap heap)
     {
         var hpa = nav.Hpa!;

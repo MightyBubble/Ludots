@@ -9,7 +9,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 移动意图层(intent.js computeIntents 移植):纯转向决策——读路径产物(指令/领队/槽位/流场),
+/// 移动意图层:纯转向决策——读路径产物(指令/领队/槽位/流场),
 /// 写期望速度(厘米/秒)与移动状态机(MOVING→ARRIVED/UNREACHABLE,被推离休息锚点则回到 MOVING),
 /// 永不直接挪位置。到达按单位自己的目的地判:槽位可见时用槽位直线距,否则用流场绷紧路线长;
 /// 地形/链接代价不进任何到达阈值。槽位↔流场连续交叉淡化(blend),视线判定带滞回,槽位跟踪
@@ -83,8 +83,7 @@ public static class CrowdIntents
         var kin = k.Kins[i];
         Fix64 ix = Fix64.Zero, iy = Fix64.Zero;
 
-        // 静态岛在 resting 锚点上睡着(参考 intent 同款门):calm 且零速的到达单位不做任何决策;
-        // 不 calm 的到达单位仍走位移唤醒测试——被推离休息锚点足够远才醒。
+        // 到达且速度非零:保持到达,意图写零,不做位移唤醒。只有速度已是零且不 calm,才按离休息锚点的距离唤醒。
         if (state.State == (byte)CrowdUnitState.Arrived)
         {
             if (kin.Velocity.X == Fix64.Zero && kin.Velocity.Y == Fix64.Zero)
@@ -144,8 +143,7 @@ public static class CrowdIntents
         int cx = CellCoord(px, s.NavCellSizeCm), cy = CellCoord(py, s.NavCellSizeCm);
         int cell = cy * s.NavN + cx;
 
-        // 层切换:双层可走的桥头格上,取到终点路线更短的那层;等长(跨层边 0 代价)
-        // 时按路点打破平局——场会把本层格指向另一层同格。
+        // 桥头双层可走时比较 flow.Integ。等积分时用路点跨层打破平局。
         if (nav.Portal[cell] != 0 && nav.Passable[cell] != 0 && nav.UpPass[cell] != 0)
         {
             Fix64 a = flow.Integ[cell], b = flow.Integ[s.N2 + cell];
@@ -255,7 +253,7 @@ public static class CrowdIntents
                 }
 
                 k.OnStray?.Invoke(g.Id, cell);
-                // 走廊外保持朝领队速度,等走廊扩展落地
+                // 场外时朝领队当前位置的方向,速度用本单位巡航速度
                 Fix64 lx = leader.XCm - px, ly = leader.YCm - py;
                 Fix64 ld = CrowdFix.Hypot(lx, ly);
                 if (ld > Fix64.FromFloat(1e-6f))
@@ -266,7 +264,7 @@ public static class CrowdIntents
             }
             else if (!slotOk && route <= k.GoalArriveNavCells && w < k.BlendCommit)
             {
-                arrived = true; // 聚拢指令:目标格就是目的地
+                arrived = true; // 槽位无效且路线短、混合权重低时,按目标格到达
             }
             else
             {

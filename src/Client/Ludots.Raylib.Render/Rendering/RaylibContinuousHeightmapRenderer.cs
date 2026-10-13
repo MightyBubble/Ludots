@@ -351,7 +351,7 @@ namespace Ludots.Raylib.Render
         public void ClearNavWalkabilityOverlay()
         {
             // 只清 URI 自有绑定;外部持有的贴花(Flow 场等)由持有方经 ClearNavWalkabilityOverlayExternal 管理,
-            // 帧初的 URI 配置轮询不得误清(已踩过:清绑交错导致外部贴花永远画不出来)
+            // 帧初的 URI 配置轮询不得清掉外部贴花。
             if (_navWalkabilityTextureUri == null)
             {
                 return;
@@ -441,7 +441,7 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
-            // B3: chunk 边界法线需要跨界采样邻 chunk 高度;渲染源同时实现连续高度图时记下,
+            // chunk 边界法线需要跨界采样邻 chunk 高度;渲染源同时实现连续高度图时记下,
             // CreateChunkMesh 据此把单边差分换成跨界的中心差分(仅边界顶点,内部顶点路径不变)
             _chunkNormalHeightSampler = source as IContinuousHeightmap;
             ContinuousHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
@@ -466,8 +466,8 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame = 0d;
 
             float aspect = ResolveFrameAspect();
-            // LOD 滞回(B2):已进入 overview 后,footprint 要低于阈值的 80% 才退回 chunk,
-            // 消除切换边界附近的逐帧抖动(已实测边界推拉会反复全量驱逐/重建)
+            // 已进入 overview 后,footprint 要低于阈值的 80% 才退回 chunk,
+            // 消除切换边界附近的逐帧抖动。
             float detailRadiusCm = ResolveDetailRadiusCm(source, VisibleRadiusCm);
             float activationRadiusCm = detailRadiusCm * MathF.Max(1f, profile.OverviewSwitchChunkSpans);
             float footprintRadiusCm = ComputeCameraFootprintRadiusCm(camera, aspect);
@@ -504,9 +504,8 @@ namespace Ludots.Raylib.Render
                 ApplyNavWalkabilityUniforms();
                 DrawnChunkCountLastFrame = 1;
                 TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
-                // D1: overview 驻留期间钉住缓存 chunk(刷新帧龄)——否则 240 帧后全量逐出,
-                // 回切首帧批量 Dispose+次帧全窗重建(实测连续两帧 200ms+)。窗口平移时的
-                // 常规驱逐在 chunk 路径照常进行,钉住只发生在 overview 驻留期间。
+                // overview 驻留期间刷新帧龄,否则 240 帧逐出。
+                // 窗口平移时的常规驱逐在 chunk 路径照常进行,钉住只发生在 overview 驻留期间。
                 foreach (long key in _chunks.Keys)
                 {
                     CollectionsMarshal.GetValueRefOrNullRef(_chunks, key).LastUsedFrame = _frameIndex;
@@ -515,15 +514,14 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            // 窗口必须盖住当帧屏幕 footprint(B1):窗口与切换判据自洽,否则 1.7–3.68 km
-            // 距离带内屏幕边缘 / 四角稳定缺块(已实测,尤其斜视角远边缘)
+            // 窗口必须盖住当帧屏幕 footprint,与切换判据自洽。
             float windowHalfCm = ResolveWindowHalfCm(source, in camera);
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
             int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
 
-            // D2: 窗口与朝向无关的方形窗口在斜视角下大量绘制/构建屏幕外 chunk;
+            // 与朝向无关的方形窗口在斜视角下会盖到屏幕外 chunk;
             // 逐 chunk 对当帧视锥做 AABB 剔除(已建块用紧 Y 界,未建块用垂直棱柱保守判定)
             Span<Vector4> frustumPlanes = stackalloc Vector4[6];
             ExtractFrustumPlanes(in camera, aspect, frustumPlanes);
@@ -1636,7 +1634,7 @@ namespace Ludots.Raylib.Render
             chunk.TryReadHeightCm(x, bottom, out float hBottom);
             int spanStepsX = right - left;
             int spanStepsY = bottom - top;
-            // B3: chunk 边界的单边差分与邻 chunk 在共享列上的单边差分不一致,形成逐 chunk 着色接缝。
+            // chunk 边界的单边差分与邻 chunk 在共享列上的单边差分不一致,形成逐 chunk 着色接缝。
             // 渲染源同时是连续高度图时,越界邻居改取真实跨界格高(地图边缘采样失败则维持单边回退)
             if (worldSampler != null)
             {
@@ -2214,7 +2212,7 @@ namespace Ludots.Raylib.Render
                 MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
         }
 
-        /// <summary>chunk 窗口半边(B1):盖住当帧屏幕 footprint,与切换判据自洽。</summary>
+        /// <summary>chunk 窗口半边:盖住当帧屏幕 footprint,与切换判据自洽。</summary>
         private float ResolveWindowHalfCm(IContinuousHeightmapRenderSource source, in Camera3D camera)
         {
             return MathF.Max(VisibleRadiusCm, ComputeCameraFootprintRadiusCm(camera, ResolveFrameAspect()));

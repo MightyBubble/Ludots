@@ -15,7 +15,7 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// 固定生效帧路径服务验收(S3 怎样算完成 2/3/5):
-/// 后台线程 1 / 2 / 4 结果逐字节相同(RT-03:每 worker 各自持有搜索缓冲);
+/// 后台线程 1 / 2 / 4 结果逐字节相同(每个 worker 自己持有搜索缓冲);
 /// 生效帧恒为请求帧 + latencyTicks,没算完就等待(仿真不走),绝不使用半成品;
 /// 单次规划超过 planTimeoutMs 即故障报错,不悄悄换算法。
 /// </summary>

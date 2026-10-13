@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// TR-03 阵型排序稳定性:JS sort 稳定,平局保"第一处排序的产出序";Array.Sort 不稳定,
+/// 阵型排序稳定性:平局必须保输入序;Array.Sort 不稳定,
 /// ≥16 元素走 introsort 会打乱平局序。20 个单位 dx=0(d/f 全平局, introsort 规模),
 /// s 按 ±100 交错成对相等:第一处排序必须保输入序,行内 s 平局必须保该产出序——
 /// 槽位 X 沿稳定序严格递增。

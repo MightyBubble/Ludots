@@ -79,8 +79,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     }
 
     /// <summary>
-    /// 群体地图的临时判定：合并后的 maps.&lt;mapId&gt;.terrainAreas 非空。
-    /// 随后会改成地图上的显式求解器字段。
+    /// 群体地图的判定：合并后的 maps.&lt;mapId&gt;.terrainAreas 非空。
     /// </summary>
     public static class CrowdMapDeclaration
     {
