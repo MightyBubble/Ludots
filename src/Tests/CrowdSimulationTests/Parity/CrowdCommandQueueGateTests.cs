@@ -30,7 +30,11 @@ public sealed class CrowdCommandQueueGateTests
 
         foreach (int badPlayer in new[] { 0, int.MaxValue })
         {
-            var bad = new JsonObject { ["type"] = "selectAll", ["player"] = badPlayer };
+            var bad = new JsonObject
+            {
+                ["type"] = "spawnAt", ["player"] = badPlayer, ["xCm"] = 0, ["yCm"] = 0,
+                ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0,
+            };
             Assert.Throws<InvalidOperationException>(
                 () => session.Commands.Submit<object?>(session, bad, CrowdSimCommands.Exec),
                 $"player={badPlayer} 现场指令应在入队即拒");
@@ -51,7 +55,7 @@ public sealed class CrowdCommandQueueGateTests
 
         session.Commands.Submit<object?>(
             session,
-            new JsonObject { ["type"] = "selectAll", ["player"] = 1 },
+            new JsonObject { ["type"] = "spawn", ["count"] = 1 },
             CrowdSimCommands.Exec);
 
         Assert.That(session.Commands.Log, Has.Count.EqualTo(1), "好指令照常记日志");
@@ -74,7 +78,7 @@ public sealed class CrowdCommandQueueGateTests
                 ["poly"] = new JsonArray(new JsonArray(0, 0), new JsonArray(10, 0), new JsonArray(0, 10)),
             },
             new JsonObject { ["type"] = "fogShare", ["player"] = 1, ["with"] = 2 },
-            new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 0, ["yCm"] = 0, ["fogTerrain"] = true },
+            new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 0, ["yCm"] = 0, ["fogTerrain"] = true, ["members"] = new JsonArray(1) },
         };
 
         foreach (var cmd in bad)
@@ -148,12 +152,12 @@ public sealed class CrowdCommandQueueGateTests
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
         var bad = new JsonNode[]
         {
-            new JsonObject { ["type"] = "selectAll", ["player"] = "1" },
-            new JsonObject { ["type"] = "selectAll", ["player"] = 1.5 },
-            new JsonObject { ["type"] = "selectAll", ["player"] = new JsonArray(1) },
-            new JsonObject { ["type"] = "selectAll", ["player"] = true },
-            JsonNode.Parse("""{"type":"selectAll","player":"1"}""")!,
-            JsonNode.Parse("""{"type":"select","player":1.5,"x0Cm":0,"y0Cm":0,"x1Cm":1,"y1Cm":1}""")!,
+            new JsonObject { ["type"] = "spawnAt", ["player"] = "1", ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
+            new JsonObject { ["type"] = "spawnAt", ["player"] = 1.5, ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
+            new JsonObject { ["type"] = "spawnAt", ["player"] = new JsonArray(1), ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
+            new JsonObject { ["type"] = "spawnAt", ["player"] = true, ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
+            JsonNode.Parse("""{"type":"spawnAt","player":"1","xCm":0,"yCm":0,"count":1,"unitType":0,"rIdx":0}""")!,
+            JsonNode.Parse("""{"type":"order","player":1,"xCm":0,"yCm":0,"members":[1.5]}""")!,
         };
 
         foreach (var cmd in bad)

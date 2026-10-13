@@ -7,20 +7,21 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 移动下令(issueOrder.js 移植,Fix64 厘米域):选中单位(无选中 = 全体本方)按
+/// 移动下令(Fix64 厘米域):调用方给出的成员句柄按
 /// (移动类型 × 半径级) 重组进新组、挂同一条新指令;magic box 定落点模式;
 /// PRESERVE 时各层块按(层质心 − 指令质心)平移目标。
 /// 同玩家同成员同目标同参数的重复指令 = 空操作(仍进日志,回放逐位一致)。
+/// 成员集在入队时钉死,这里不读选中集合,空成员也不改写成全体。
 /// </summary>
 public static class CrowdIssueOrder
 {
     public static CrowdOrderMode? Issue(
         CrowdSimSession sim, Fix64 wxCm, Fix64 wyCm, int player,
-        string shapeId, bool? auto, Fix64Vec2? face, Fix64 widthCm)
+        string shapeId, bool? auto, Fix64Vec2? face, Fix64 widthCm, ReadOnlySpan<uint> members)
     {
         var world = sim.World;
         var units = sim.Units;
-        bool useSel = sim.SelectedCount > 0;
+        sim.BindMemberSet(members, player);
         int clickCell = CrowdSimulationSpace.CellAtStrict(wxCm, wyCm, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
         var key = CrowdOrderDedupKey.Create(shapeId, auto, face, widthCm);
 
@@ -31,8 +32,7 @@ public static class CrowdIssueOrder
         for (int i = 0; i < units.Count; i++)
         {
             var st = world.Get<CrowdSimulationUnitState>(units.EntityAt(i));
-            if (world.Get<Gameplay.Components.PlayerOwner>(units.EntityAt(i)).PlayerId != player) continue;
-            if (useSel && st.Selected == 0) continue;
+            if (sim.MemberStamp[units.SlotAt(i)] != sim.MemberEpoch) continue;
             var g = sim.Groups.Groups[st.GroupId];
             int oid = g?.OrderId ?? 0;
             CrowdOrder? o = oid > 0 ? FindOrder(sim, oid) : null;
@@ -69,8 +69,7 @@ public static class CrowdIssueOrder
         {
             var entity = units.EntityAt(i);
             var st = world.Get<CrowdSimulationUnitState>(entity);
-            if (world.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId != player) continue;
-            if (useSel && st.Selected == 0) continue;
+            if (sim.MemberStamp[units.SlotAt(i)] != sim.MemberEpoch) continue;
             var old = sim.Groups.Groups[st.GroupId]!;
             int gk = old.LayerIdx * CrowdSimulationLimits.NavContextLayerStride + old.RIdx;
             if (!fresh.TryGetValue(gk, out var g))

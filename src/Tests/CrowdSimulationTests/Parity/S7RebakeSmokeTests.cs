@@ -39,9 +39,13 @@ public class S7RebakeSmokeTests
             (90, """{"type":"placeStructure","template":"s7barrier","xCm":521875,"yCm":571875,"sizeCm":7000}"""),
             (120, """{"type":"placeStructure","template":"road","xCm":496875,"yCm":565625,"sizeCm":3000,"toXCm":521875,"toYCm":565625}"""),
         };
-        var script = new List<CrowdCommand>();
-        foreach (var (tick, json) in entries) script.Add(new CrowdCommand(tick, CrowdSimCommand.Parse(Cmd(json))));
-        session.Commands.Schedule(session, script);
+        var scriptJson = new JsonArray();
+        foreach (var (tick, json) in entries)
+        {
+            scriptJson.Add(new JsonObject { ["tick"] = tick, ["cmd"] = JsonNode.Parse(json)!.AsObject() });
+        }
+
+        var script = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
 
         int rebakes = 0;
         int dirtyTiles = 0;
@@ -51,7 +55,7 @@ public class S7RebakeSmokeTests
             dirtyTiles += r.Tiles;
         };
         var first = new List<ulong>();
-        session.Advance(240, first);
+        script.Advance(session, 240, first);
         Assert.That(rebakes, Is.GreaterThanOrEqualTo(5), $"重烘报告次数 {rebakes}:建筑放置/拆除 + 路障放置/到期 + 道路");
         Assert.That(dirtyTiles, Is.GreaterThan(0), $"重烘焙到的脏 tile 累计 {dirtyTiles}:足迹必须真实盖住格心");
         // 建筑拆除后原阻挡格必须解封(该点后被道路覆盖,EntityAt 非空是对的,查阻挡栅格)
@@ -64,7 +68,7 @@ public class S7RebakeSmokeTests
         session2.EnableMovement(CrowdMovementKernel.Create(session2), new CrowdSimPlanner(session2, service2));
         session2.BlockOnDueReplies = true;
         session2.TruthNavFrozen = true; // F02:回放侧同款冻结
-        session2.Commands.Schedule(session2, script);
+        session2.Commands.Schedule(session2, session.Commands.Log.Select(e => new CrowdCommand(e.Tick, e.Cmd)).ToArray());
         var second = new List<ulong>();
         session2.Advance(240, second);
         Assert.That(second, Is.EqualTo(first).AsCollection, "同脚本回放校验码不一致(结构 op 管线非确定)");

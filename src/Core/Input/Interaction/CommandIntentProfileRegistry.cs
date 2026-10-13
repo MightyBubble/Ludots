@@ -107,9 +107,9 @@ namespace Ludots.Core.Input.Interaction
             }
 
             CommandIntentProfileConfigLoader.Validate(config, nameof(CommandIntentProfilesConfig));
-            for (int i = 0; i < config.Profiles.Count; i++)
+            foreach (var pair in config.Profiles)
             {
-                InstallProfile(config.Profiles[i]);
+                InstallProfile(pair.Value);
             }
         }
 

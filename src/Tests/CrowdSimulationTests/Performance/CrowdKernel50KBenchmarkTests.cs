@@ -41,13 +41,7 @@ public sealed class CrowdKernel50KBenchmarkTests
             new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = Units, ["unitType"] = 0, ["rIdx"] = 0 } },
             new JsonObject { ["tick"] = 2, ["cmd"] = new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 1200000, ["yCm"] = 800000, ["shape"] = "box" } },
         };
-        var commands = new List<CrowdCommand>();
-        foreach (var e in script)
-        {
-            commands.Add(new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)));
-        }
-
-        session.Commands.Schedule(session, commands);
+        var reference = CrowdReferenceScript.Load(script, session.Units.Capacity);
 
         var elapsed = new double[MeasuredTicks];
         var watch = Stopwatch.StartNew();
@@ -56,7 +50,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         {
             if (guard-- <= 0) throw new InvalidOperationException("基准推进停摆过长。");
             watch.Restart();
-            bool advanced = session.Step(out _);
+            bool advanced = reference.Step(session, out _);
             watch.Stop();
             if (!advanced) continue;
             if (ran >= WarmupTicks) elapsed[ran - WarmupTicks] = watch.Elapsed.TotalMilliseconds;

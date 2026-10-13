@@ -28,7 +28,6 @@ public static class CrowdDeployment
         // 单位先清——后续任何异常都不会留下指着已清组的活单位
         sim.Units.Clear();
         sim.Groups.Reset();
-        sim.SetSelectedCount(0);
 
         var types = new List<int>();
         for (int t = 0; t < cfg.UnitTypes.Count; t++)
