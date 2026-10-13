@@ -17,10 +17,10 @@ public static class HpaQuery
     /// Relax 是方法而不是局部函数:局部函数会按每次搜索分配一个闭包。</summary>
     public sealed class Scratch
     {
-        public Scratch(int navCellsPerTile)
+        public Scratch(int tileCellCount)
         {
-            StartDist = new Fix64[navCellsPerTile];
-            GoalDist = new Fix64[navCellsPerTile];
+            StartDist = new Fix64[tileCellCount];
+            GoalDist = new Fix64[tileCellCount];
             GScore.EnsureCapacity(4096);
             Parent.EnsureCapacity(4096);
             Closed.EnsureCapacity(4096);
