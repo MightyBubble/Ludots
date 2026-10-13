@@ -251,10 +251,21 @@ namespace Ludots.Tests.GAS
                     },
                 };
                 var globals = new Dictionary<string, object>();
+                schemes.Install(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        new()
+                        {
+                            Id = "scheme.perseat",
+                            InputContexts = new List<string> { "imc.perseat" },
+                        },
+                    },
+                });
                 var runtime = new ClientLocalSeatInputRuntime(globals, schemes, inputConfig);
                 var seats = new ClientLocalSeatRegistry();
-                seats.Add(new ClientLocalSeat("seat.0"));
-                seats.Add(new ClientLocalSeat("seat.1"));
+                seats.Add(new ClientLocalSeat("seat.0", "scheme.perseat"));
+                seats.Add(new ClientLocalSeat("seat.1", "scheme.perseat"));
                 runtime.PublishSeats(seats);
 
                 return new ChannelHarness { Runtime = runtime, World = world };
