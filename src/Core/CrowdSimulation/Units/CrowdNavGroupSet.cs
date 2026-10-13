@@ -44,7 +44,7 @@ public sealed class CrowdNavGroupSet
 
     internal const int MaxGroups = 4096;
 
-    /// <summary>空组放回流场时走规划器的换场入口。没有规划器时直接还池。</summary>
+    /// <summary>空组放回流场时走规划器的换场入口。流场只由规划器挂上，所以持有流场的组必然有这个入口。</summary>
     internal Action<Group>? ReleaseFlow { get; set; }
 
     private readonly List<Group?> _groups = new();
@@ -102,12 +102,9 @@ public sealed class CrowdNavGroupSet
             {
                 if (empty.Flow != null)
                 {
-                    if (ReleaseFlow != null) ReleaseFlow(empty);
-                    else
-                    {
-                        empty.Flow.OriginPool?.Give(empty.Flow);
-                        empty.Flow = null;
-                    }
+                    var release = ReleaseFlow
+                        ?? throw new InvalidOperationException("组持有流场但没有接上规划器的换场入口。");
+                    release(empty);
                 }
 
                 _groups[i] = null;
