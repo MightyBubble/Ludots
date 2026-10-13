@@ -51,6 +51,16 @@ namespace Ludots.Core.Navigation.Pathing
             return _navMesh.TrySnapToNavigationSurface(agentTypeId, worldXcm, worldZcm, out snappedXcm, out snappedZcm);
         }
 
+        public bool TryReadNavPublication(string agentTypeId, out int layer, out int profile, out uint revision)
+        {
+            if (_auto != null && _auto.TryReadNavPublication(agentTypeId, out layer, out profile, out revision))
+            {
+                return true;
+            }
+
+            return _navMesh.TryReadNavPublication(agentTypeId, out layer, out profile, out revision);
+        }
+
         private static bool FailInvalid(in PathRequest request, out PathResult result)
         {
             result = new PathResult(request.RequestId, request.Actor, PathStatus.InvalidRequest, default, 0, errorCode: 1);
