@@ -18,6 +18,7 @@ export default {
           secondary: 'var(--studio-secondary)',
           muted: 'var(--studio-muted)',
           silver: 'var(--studio-muted)',
+          separator: 'var(--studio-separator)',
           red: 'var(--studio-red)',
           yellow: 'var(--studio-yellow)',
           blue: 'var(--studio-blue)',

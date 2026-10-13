@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { STUDIO_CHROME, diskSaveStatus } from './authoring-studio/authoringTheme';
+import { diskSaveStatus } from './authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
+import { pageClass } from '@/components/ui/chrome';
+import { fieldControlClass, } from '@/components/ui/Field';
 import { DialogueTreeCanvas } from './dialogue-tree-editor/DialogueTreeCanvas';
 import {
   emptyDialogue,
@@ -74,8 +77,8 @@ function defaultCatalogId(tool: StoryAuthoringTool | undefined): string {
   return tool === 'timeline' ? 'sequences' : 'dialogues';
 }
 
-const fieldClass = STUDIO_CHROME.field;
-const labelClass = STUDIO_CHROME.label;
+const fieldClass = fieldControlClass;
+const labelClass = 'block text-xs text-studio-muted';
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -736,9 +739,8 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
 
         <div className="flex items-center justify-between">
           <h3 className="text-sm text-studio-yellow">选中轨道属性</h3>
-          <button
-            type="button"
-            className={STUDIO_CHROME.btnGhost}
+          <Button
+            variant="ghost"
             onClick={() => {
               const nextTracks = [
                 ...tracks,
@@ -749,7 +751,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
             }}
           >
             + 加轨道
-          </button>
+          </Button>
         </div>
 
         {track && (
@@ -838,9 +840,9 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
                 </label>
               </>
             )}
-            <button
-              type="button"
-              className={`col-span-2 ${STUDIO_CHROME.btnDanger}`}
+            <Button
+              variant="danger"
+              className="col-span-2"
               onClick={() => {
                 const copy = tracks.filter((_, i) => i !== ti);
                 replaceSelected({ ...row, tracks: copy });
@@ -848,7 +850,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
               }}
             >
               删除此轨道
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -872,7 +874,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
   };
 
   return (
-    <div className={`${STUDIO_CHROME.page} overflow-hidden p-6 font-sans`}>
+    <div className={`${pageClass} overflow-hidden p-6 font-sans`}>
       <div className="mb-4 flex items-center gap-4 flex-wrap">
         <h1 className="text-xl text-studio-label">
           {tool === 'timeline' ? '时间轴' : tool === 'dialogue' ? '对话' : '叙事配置'}
@@ -936,12 +938,12 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
             ))}
           </ul>
           <div className="flex gap-2">
-            <button type="button" onClick={addEntry} className={`flex-1 ${STUDIO_CHROME.btnGhost}`}>
+            <Button variant="ghost" className="flex-1" onClick={addEntry}>
               新建
-            </button>
-            <button type="button" onClick={removeSelected} className={`flex-1 ${STUDIO_CHROME.btnDanger}`}>
+            </Button>
+            <Button variant="danger" className="flex-1" onClick={removeSelected}>
               删除
-            </button>
+            </Button>
           </div>
           {tool === 'dialogue' && Object.keys(drafts).length + newSpeakers.length > 0 ? (
             <p className="text-[10px] text-studio-yellow">
@@ -952,21 +954,17 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
 
         <main className="col-span-9 flex min-h-0 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => void save()} className={STUDIO_CHROME.btnPrimary}>
+            <Button variant="primary" onClick={() => void save()}>
               保存
-            </button>
+            </Button>
             {tool === 'dialogue' ? (
-              <button
-                type="button"
-                onClick={() => void loadDialogueAuthoringState(modId)}
-                className={STUDIO_CHROME.btnGhost}
-              >
+              <Button variant="ghost" onClick={() => void loadDialogueAuthoringState(modId)}>
                 重载
-              </button>
+              </Button>
             ) : (
-              <button type="button" onClick={() => void loadCatalog(modId, catalogId)} className={STUDIO_CHROME.btnGhost}>
+              <Button variant="ghost" onClick={() => void loadCatalog(modId, catalogId)}>
                 重载
-              </button>
+              </Button>
             )}
             <label className="flex items-center gap-2 text-xs text-studio-muted">
               <input type="checkbox" checked={advancedJson} onChange={(e) => setAdvancedJson(e.target.checked)} />

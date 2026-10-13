@@ -9,6 +9,8 @@ import {
   type TextTokenRow,
 } from './textBankModel';
 import { RichTextArea, RunSpan } from './RichTextArea';
+import { Button } from '@/components/ui/Button';
+import { fieldControlClass } from '@/components/ui/Field';
 import './textBank.css';
 
 type ModInfo = { id: string; name?: string };
@@ -316,7 +318,7 @@ export function TextBankPage() {
   return (
     <div className="text-bank-page">
       <div className="text-bank-toolbar">
-        <select value={modId} onChange={(e) => setModId(e.target.value)}>
+        <select className={fieldControlClass} value={modId} onChange={(e) => setModId(e.target.value)}>
           {mods.map((mod) => (
             <option key={mod.id} value={mod.id}>
               {mod.name ?? mod.id}
@@ -325,19 +327,19 @@ export function TextBankPage() {
         </select>
         <div className="text-bank-group">
           <input
-            className="text-bank-search"
+            className={`${fieldControlClass} min-w-[220px]`}
             type="text"
             placeholder="搜索词条 id 或任意语言内容…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-          <button type="button" onClick={addToken}>
+          <Button variant="ghost" onClick={addToken}>
             + 加词条
-          </button>
+          </Button>
         </div>
         <div className="text-bank-group">
           <input
-            className="text-bank-new-locale"
+            className={`${fieldControlClass} w-[150px]`}
             type="text"
             placeholder="新语言代码,如 ja-JP"
             value={newLocaleDraft}
@@ -346,19 +348,19 @@ export function TextBankPage() {
               if (e.key === 'Enter') addLocale();
             }}
           />
-          <button type="button" onClick={addLocale}>
+          <Button variant="ghost" onClick={addLocale}>
             + 加语言
-          </button>
+          </Button>
         </div>
         <div className="text-bank-group text-bank-group-right">
           {loaded ? (
-            <button type="button" onClick={() => void loadBank(modId)} disabled={!dirty}>
+            <Button variant="ghost" onClick={() => void loadBank(modId)} disabled={!dirty}>
               放弃修改
-            </button>
+            </Button>
           ) : null}
-          <button type="button" className="text-bank-primary" onClick={() => void save()} disabled={!loaded}>
+          <Button variant="primary" onClick={() => void save()} disabled={!loaded}>
             {dirty ? '校验并保存' : '保存'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -420,9 +422,9 @@ export function TextBankPage() {
               有词条的 Mod 才需要语言表；引擎要求每门语言覆盖全部词条，缺了游戏起不来——所以这里和保存门都会拦。
             </p>
             <div className="text-bank-empty-actions">
-              <button type="button" onClick={addToken}>
+              <Button variant="primary" onClick={addToken}>
                 + 加第一条词条
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
