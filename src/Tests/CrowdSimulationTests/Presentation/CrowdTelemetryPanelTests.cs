@@ -160,6 +160,49 @@ public class CrowdTelemetryPanelTests
     }
 
     [Test]
+    public void NavText_ShowsFlowCacheCountsWhenPresent()
+    {
+        var reading = new CrowdNavReadout
+        {
+            HasFlowCache = true,
+            FlowCapacity = 80,
+            FlowCount = 4,
+            FlowHits = 3,
+            FlowMisses = 1,
+            FlowEvicts = 2,
+        };
+        var lines = new string[CrowdNavReadout.Lines];
+        reading.Write(lines);
+        Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("在册 4").And.Contain("75%").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
+        Assert.That(lines[2], Does.Not.Contain("无结果缓存"));
+    }
+
+    [Test]
+    public void TelemetryText_ShowsCorridorExtensionCounts()
+    {
+        var reading = new CrowdTelemetryReadout
+        {
+            HasExtend = true,
+            ExtendCount = 6,
+            ExtendMs = 1.2,
+            Fps = 1,
+            SimMs = 1,
+            AvoidMs = 1,
+            HashMs = 1,
+            RenderMs = 1,
+            HeapBytesPerSec = 1,
+            HasHeading = true,
+            HasFlip = true,
+            FixedHz = 20,
+            SampleMs = 250,
+            History = 48,
+        };
+        var lines = new string[CrowdTelemetryReadout.Lines];
+        reading.Write(lines);
+        Assert.That(lines[10], Is.EqualTo("走廊扩展 6 次 1.2 ms"));
+    }
+
+    [Test]
     public void Alerts_FireOnlyWhenTheReadingCrossesItsThreshold()
     {
         var alerts = LoadShipped().Telemetry.Alerts;
@@ -324,7 +367,7 @@ public class CrowdTelemetryPanelTests
         var lines = new string[CrowdNavReadout.Lines];
         nav.Write(lines);
         Assert.That(lines[1], Does.Contain("容量"));
-        Assert.That(lines[2], Does.Contain("无结果缓存"));
+        Assert.That(lines[2], Does.Contain("流场容量").And.Contain("在册").And.Contain("hit").And.Contain("miss").And.Contain("evict"));
         Assert.That(lines[4], Does.Contain("规划请求"));
         Assert.That(() => session.Step(out _), Throws.Nothing);
         session.BlockOnDueReplies = true;

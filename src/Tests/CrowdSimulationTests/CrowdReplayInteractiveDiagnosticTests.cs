@@ -56,6 +56,128 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
     }
 
+    [Test]
+    public void StrayAndCacheHit_ReplayDiagnosticsMatch()
+    {
+        const string Seed = "s1337";
+        const int Ticks = 260;
+        var (config, session) = Parity.S4DeployTruthTests.BuildSession(Seed);
+        session.DiagnosticDigest = true;
+        session.VerifyIncrementalNav = false;
+        using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        var planner = new CrowdSimPlanner(session, service);
+        session.EnableMovement(CrowdMovementKernel.Create(session), planner);
+        var script = LoadS4Script();
+        script.ValidateStructure(session);
+        session.StageDeferredCommands = script.StageFormable;
+
+        var host = new CrowdSimulationRuntime();
+        Bind(host, session, Seed);
+        int guard = Ticks * 4000;
+        while (session.TickCount < Ticks)
+        {
+            int before = session.TickCount;
+            host.Tick();
+            if (session.TickCount != before) continue;
+            if (service.Faulted) Assert.Fail($"path fault at tick {session.TickCount}: {service.FaultMessage}");
+            if (guard-- <= 0) Assert.Fail($"stalled at tick {session.TickCount}");
+            Thread.Sleep(1);
+        }
+
+        WriteStrayDistribution(planner, service, session.TickCount);
+        Assert.That(planner.ExtendSubmits, Is.GreaterThan(0));
+        Assert.That(planner.FlowCacheHits, Is.GreaterThan(0));
+        Assert.That(planner.ExtendWithinPad + planner.ExtendBeyondPad, Is.EqualTo(planner.ExtendSubmits));
+        host.RunReplay();
+        TestContext.Out.WriteLine(
+            $"replay status={host.ReplayStatus} divTick={host.ReplayDivergenceTick} section={host.ReplayDivergenceSection} diagTick={host.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(host.ReplayDivergenceDiagnostic)}");
+        Assert.That(host.ReplayStatus, Is.EqualTo(1));
+        Assert.That(host.ReplayDivergenceTick, Is.EqualTo(-1));
+        Assert.That(host.ReplayDivergenceSection, Is.EqualTo(""));
+        Assert.That(host.ReplayDiagnosticTick, Is.EqualTo(-1));
+        Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
+    }
+
+    [Test]
+    [Explicit]
+    public void S4Script_ReportsStrayExtensionDistribution()
+    {
+        const string Seed = "s1337";
+        const int Ticks = 260;
+        var (config, session) = Parity.S4DeployTruthTests.BuildSession(Seed);
+        session.VerifyIncrementalNav = false;
+        using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        var planner = new CrowdSimPlanner(session, service);
+        session.EnableMovement(CrowdMovementKernel.Create(session), planner);
+        var script = LoadS4Script();
+        script.ValidateStructure(session);
+        session.StageDeferredCommands = script.StageFormable;
+        var host = new CrowdSimulationRuntime();
+        Bind(host, session, Seed);
+        int guard = Ticks * 8000;
+        while (session.TickCount < Ticks)
+        {
+            int before = session.TickCount;
+            host.Tick();
+            if (session.TickCount != before) continue;
+            if (service.Faulted) Assert.Fail($"path fault at tick {session.TickCount}: {service.FaultMessage}");
+            if (guard-- <= 0) Assert.Fail($"stalled at tick {session.TickCount}");
+            Thread.Sleep(1);
+        }
+
+        WriteStrayDistribution(planner, service, session.TickCount);
+        int sum = 0;
+        for (int i = 0; i < planner.ExtendByGroup.Length; i++) sum += planner.ExtendByGroup[i];
+        Assert.That(sum, Is.EqualTo(planner.ExtendSubmits));
+        Assert.That(planner.ExtendWithinPad + planner.ExtendBeyondPad, Is.EqualTo(planner.ExtendSubmits));
+    }
+
+    private static void WriteStrayDistribution(CrowdSimPlanner planner, PathQueryService service, int tick)
+    {
+        int groups = 0, max = 0, sum = 0;
+        var hist = new int[8];
+        for (int i = 0; i < planner.ExtendByGroup.Length; i++)
+        {
+            int n = planner.ExtendByGroup[i];
+            if (n == 0) continue;
+            groups++;
+            sum += n;
+            if (n > max) max = n;
+            hist[n >= hist.Length ? hist.Length - 1 : n]++;
+        }
+
+        var stats = service.CopyStats();
+        TestContext.Out.WriteLine(
+            $"tick {tick} extends {planner.ExtendSubmits} sum {sum} groups {groups} max {max} " +
+            $"hits {planner.FlowCacheHits} misses {planner.FlowCacheMisses} evict {planner.FlowCacheEvicts} " +
+            $"notes {planner.StrayGroupTicks} skipFlight {planner.StraySkipInFlight} skipClosed {planner.StraySkipNoGrowth} " +
+            $"skipCovered {planner.StraySkipCovered} inPad {planner.ExtendWithinPad} beyond {planner.ExtendBeyondPad} " +
+            $"extendMs {stats.ExtendMs:F1} extendJobs {stats.ExtendJobs}");
+        TestContext.Out.WriteLine("per-group histogram (index = count, last = that many or more): " + string.Join(",", hist));
+        TestContext.Out.WriteLine("tile distance histogram: " + string.Join(",", planner.ExtendDistance));
+    }
+
+    private static CrowdDemoScript LoadS4Script()
+    {
+        var doc = JsonNode.Parse(File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))!;
+        return CrowdDemoScript.Load(doc["session"]!["script"]!.AsArray());
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("找不到 S4 演示脚本。");
+    }
+
     private static JsonArray Script() => new()
     {
         new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawn", ["count"] = 256 } },

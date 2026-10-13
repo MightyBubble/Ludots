@@ -13,6 +13,8 @@ namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
 public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level)
 {
     public byte[]? CorridorMask { get; init; }
+    /// <summary>走廊扩展：统计进扩展次数和耗时。建场仍是 padMask ∪ 原掩码。</summary>
+    public bool Extension { get; init; }
 }
 
 /// <summary>路径答复:折线 + 方向图(流场);不可达时 Points 为 null。</summary>
@@ -54,6 +56,8 @@ internal readonly struct PathServiceStats
     public bool Faulted { get; init; }
     public string? FaultMessage { get; init; }
     public double PlanTimeoutMs { get; init; }
+    public long ExtendJobs { get; init; }
+    public double ExtendMs { get; init; }
 }
 
 /// <summary>
@@ -75,7 +79,8 @@ public sealed class PathQueryService : IDisposable
     /// <summary>导航态互斥:worker 计算与仿真侧结构变更重烘共用同一份
     /// 导航上下文,经本锁串行——任何在途计算恰好看见其请求之前生效的全部结构 op,时序不进结果。</summary>
     private readonly object _navGate = new();
-    private readonly Queue<(int Id, PathQuery Query)> _pending;
+    private Queue<(int Id, PathQuery Query)> _pending;
+    private Queue<(int Id, PathQuery Query)> _keep;
     private readonly Dictionary<int, PathResult> _replies;
     private readonly Dictionary<int, int> _dueTick;
     private readonly Dictionary<int, long> _sentAtMs;
@@ -125,6 +130,10 @@ public sealed class PathQueryService : IDisposable
     private long _navTicks;
     private long _hpaTicks;
     private long _flowTicks;
+    private long _extendJobs;
+    private long _extendTicks;
+    private int[] _retired;
+    private int _retiredCount;
 
     public PathQueryService(
         IReadOnlyDictionary<int, NavContext> navs,
@@ -140,6 +149,8 @@ public sealed class PathQueryService : IDisposable
         _planTimeout = planTimeout;
         int slots = ReplySlotCapacity(config);
         _pending = new Queue<(int Id, PathQuery Query)>(slots);
+        _keep = new Queue<(int Id, PathQuery Query)>(slots);
+        _retired = new int[slots];
         _replies = new Dictionary<int, PathResult>(slots);
         _dueTick = new Dictionary<int, int>(slots);
         _sentAtMs = new Dictionary<int, long>(slots);
@@ -153,11 +164,17 @@ public sealed class PathQueryService : IDisposable
     /// 同时在途的答复上限:刷新预算占满延迟窗,再加一组规划突发。
     /// 槽和请求表按这个数一次备好,稳态不再因为多一个在途请求而涨容。
     /// </summary>
+    private static int InFlightWindow(int perTick, int latencyTicks)
+    {
+        int n = perTick * latencyTicks;
+        return n < 1 ? 1 : n;
+    }
+
     private static int ReplySlotCapacity(CrowdSimulationRuntimeConfig config)
     {
-        int refresh = config.Planning.MaxRefreshesPerTick * config.Planning.RefreshLatencyTicks;
-        if (refresh < 1) refresh = 1;
-        return refresh + Ludots.Core.CrowdSimulation.CrowdSimulationLimits.HotPathSlotReserve;
+        return InFlightWindow(config.Planning.MaxRefreshesPerTick, config.Planning.RefreshLatencyTicks)
+            + InFlightWindow(config.Flowfield.MaxRebuildsPerTick, config.Planning.RefreshLatencyTicks)
+            + Ludots.Core.CrowdSimulation.CrowdSimulationLimits.HotPathSlotReserve;
     }
 
     /// <summary>切换后台线程数(1 / 2 / 4);在途任务继续,答复内容不变。</summary>
@@ -195,16 +212,84 @@ public sealed class PathQueryService : IDisposable
         }
     }
 
-    /// <summary>作废一个请求(被更新的起终点取代):未开工的不再算,已算完的答复直接丢弃。</summary>
-    public void Discard(int id)
+    /// <summary>
+    /// 作废一个请求。返回 true 表示工人不会再读这次请求的走廊掩码：
+    /// 还在队列里的直接拿掉，已经算完的答复连流场一起丢掉。
+    /// 返回 false 表示工人可能正在读掩码，算完后进 <see cref="DrainRetired"/>。
+    /// </summary>
+    public bool Discard(int id)
     {
         lock (_gate)
         {
-            _discarded.Add(id);
-            _replies.Remove(id);
+            bool queued = PullPending(id);
+            bool stored = _replies.Remove(id, out var reply);
             _dueTick.Remove(id);
             _sentAtMs.Remove(id);
+            if (stored)
+            {
+                if (reply != null && reply.Flow != null)
+                {
+                    var flow = reply.Flow;
+                    reply.Flow = null;
+                    flow.OriginPool?.Give(flow);
+                }
+
+                if (reply != null) ReleaseReply(reply);
+                return true;
+            }
+
+            if (queued) return true;
+            _discarded.Add(id);
+            return false;
         }
+    }
+
+    /// <summary>工人已经不会再读这些请求的走廊掩码。调用方据此归还掩码副本。</summary>
+    internal int DrainRetired(int[] dest)
+    {
+        lock (_gate)
+        {
+            int n = _retiredCount;
+            if (n > dest.Length) n = dest.Length;
+            if (n > 0) Array.Copy(_retired, dest, n);
+            int left = _retiredCount - n;
+            if (left > 0) Array.Copy(_retired, n, _retired, 0, left);
+            _retiredCount = left;
+            return n;
+        }
+    }
+
+    private bool PullPending(int id)
+    {
+        bool found = false;
+        while (_pending.Count > 0)
+        {
+            var job = _pending.Dequeue();
+            if (job.Id == id)
+            {
+                found = true;
+                continue;
+            }
+
+            _keep.Enqueue(job);
+        }
+
+        var swap = _pending;
+        _pending = _keep;
+        _keep = swap;
+        return found;
+    }
+
+    private void RetireLocked(int id)
+    {
+        if (_retiredCount == _retired.Length)
+        {
+            var bigger = new int[_retired.Length << 1];
+            Array.Copy(_retired, bigger, _retired.Length);
+            _retired = bigger;
+        }
+
+        _retired[_retiredCount++] = id;
     }
 
     public int DueTick(int id)
@@ -287,20 +372,28 @@ public sealed class PathQueryService : IDisposable
     private void WorkerLoop(object? state)
     {
         int workerIndex = (int)state!;
-        int refreshInFlight = _config.Planning.MaxRefreshesPerTick * _config.Planning.RefreshLatencyTicks;
-        if (refreshInFlight < 1) refreshInFlight = 1;
-        int flowCapacity = _config.Flowfield.PoolCapacity + refreshInFlight;
+        int refreshInFlight = InFlightWindow(_config.Planning.MaxRefreshesPerTick, _config.Planning.RefreshLatencyTicks);
+        int extendInFlight = InFlightWindow(_config.Flowfield.MaxRebuildsPerTick, _config.Planning.RefreshLatencyTicks);
+        // 缓存里的场不回空闲栈。把缓存容量一起备上，换目标时从栈里取，tick 里不再新分配。
+        // 配置的 poolCapacity 是这份工作集之外的空闲余量，不是活场数量的上限。
+        int flowCapacity = _config.Flowfield.PoolCapacity
+            + _config.Flowfield.CacheCapacity
+            + refreshInFlight
+            + extendInFlight;
         var pool = new FlowPool(_config.NavCellsPerSide, flowCapacity);
         _pools.Add(pool);
         int navTilesPerSide = _config.NavCellsPerSide / _config.Hpa.NavCellsPerTile;
         int tileCount = navTilesPerSide * navTilesPerSide;
+        // 边取边还必须先攒齐。否则下一次 Take 拿回刚还的那一份，池里永远只有一块。
+        var flowStock = new FlowField[flowCapacity];
         for (int i = 0; i < flowCapacity; i++)
         {
-            var primedFlow = pool.Take();
-            primedFlow.LkBuf ??= new int[pool.GroundCount];
-            primedFlow.MaskBuf ??= new byte[tileCount];
-            pool.Give(primedFlow);
+            flowStock[i] = pool.Take();
+            flowStock[i].LkBuf ??= new int[pool.GroundCount];
+            flowStock[i].MaskBuf ??= new byte[tileCount];
         }
+
+        for (int i = 0; i < flowCapacity; i++) pool.Give(flowStock[i]);
         var buffers = new WorkerBuffers(_config.Hpa.NavCellsPerTile * _config.Hpa.NavCellsPerTile);
         buffers.EnsureMasks(tileCount);
         for (int i = 0; i < ReplySlotCapacity(_config); i++)
@@ -328,7 +421,11 @@ public sealed class PathQueryService : IDisposable
 
             lock (_gate)
             {
-                if (_discarded.Remove(job.Id)) continue;
+                if (_discarded.Remove(job.Id))
+                {
+                    RetireLocked(job.Id);
+                    continue;
+                }
             }
 
             if (TestDelayPerJob > TimeSpan.Zero) Thread.Sleep(TestDelayPerJob);
@@ -364,6 +461,7 @@ public sealed class PathQueryService : IDisposable
                     if (result.Flow != null) pool.Give(result.Flow);
                     result.Flow = null;
                     ReleaseReply(result);
+                    RetireLocked(job.Id);
                 }
                 else
                 {
@@ -418,7 +516,13 @@ public sealed class PathQueryService : IDisposable
             FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CorridorMask, buffers.Union);
             long refreshMark = Stopwatch.GetTimestamp();
             var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
-            Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - refreshMark);
+            long built = Stopwatch.GetTimestamp() - refreshMark;
+            Interlocked.Add(ref _flowTicks, built);
+            if (q.Extension)
+            {
+                Interlocked.Increment(ref _extendJobs);
+                Interlocked.Add(ref _extendTicks, built);
+            }
             Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, refreshed, q.CorridorMask);
             return slot.Result;
         }
@@ -571,6 +675,8 @@ public sealed class PathQueryService : IDisposable
         long nav = Interlocked.Read(ref _navTicks);
         long hpa = Interlocked.Read(ref _hpaTicks);
         long flow = Interlocked.Read(ref _flowTicks);
+        long extend = Interlocked.Read(ref _extendTicks);
+        long extendJobs = Interlocked.Read(ref _extendJobs);
         long workerSum = Interlocked.Read(ref _workerSumTicks);
         long workerLast = Interlocked.Read(ref _workerLastTicks);
         long workerN = Interlocked.Read(ref _workerSamples);
@@ -593,6 +699,8 @@ public sealed class PathQueryService : IDisposable
                 Faulted = Faulted,
                 FaultMessage = FaultMessage,
                 PlanTimeoutMs = _planTimeout.TotalMilliseconds,
+                ExtendJobs = extendJobs,
+                ExtendMs = CrowdSimulationTelemetry.TicksToMs(extend),
             };
         }
     }

@@ -34,6 +34,12 @@ public sealed class FlowField
     public int BuildRevision { get; internal set; }
     /// <summary>来源池(还回时物归原主,池才能平台化)。</summary>
     public FlowPool? OriginPool { get; set; }
+    /// <summary>跟随的组加上在途请求。和 <see cref="Cached"/> 都是 0 才可以回池。</summary>
+    public int Refs { get; set; }
+    /// <summary>仍占着结果缓存的一个条目。</summary>
+    public bool Cached { get; set; }
+    /// <summary>已经在来源池的空闲栈里。重复 Give 直接返回。</summary>
+    public bool Pooled { get; set; }
 }
 
 /// <summary>
@@ -88,7 +94,11 @@ public sealed class FlowPool
             if (_free.Count > 0)
             {
                 Reused++;
-                return _free.Pop();
+                var reused = _free.Pop();
+                reused.Pooled = false;
+                reused.Refs = 0;
+                reused.Cached = false;
+                return reused;
             }
         }
 
@@ -106,11 +116,16 @@ public sealed class FlowPool
     public void Give(FlowField f)
     {
         if (f.Integ.Length != LayeredCount) return;
+        // 组或缓存在用的缓冲不能进空闲栈。Admit 和换场可能先后还回同一份。
+        if (f.Refs > 0 || f.Cached) return;
         f.Links = null;
         f.Lk = null;
         lock (_freeLock)
         {
-            if (_free.Count < _capacity) _free.Push(f);
+            if (f.Pooled) return;
+            if (_free.Count >= _capacity) return;
+            f.Pooled = true;
+            _free.Push(f);
         }
     }
 }

@@ -130,8 +130,8 @@ public sealed class CrowdMovementKernel
     private int _steerPairs;
     private double _sinEps2 = double.NaN;
 
-    /// <summary>场外时回调。当前没有走廊扩展;场外转向见意图层。</summary>
-    public Action<int, int>? OnStray { get; init; }
+    /// <summary>场外采样回调。意图提交时按稠密下标调用，不把提案计算改成串行。</summary>
+    public Action<int, int>? OnStray { get; set; }
 
     public void EnsureCapacity(int unitCapacity)
     {

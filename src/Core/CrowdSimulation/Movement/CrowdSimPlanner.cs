@@ -14,7 +14,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// <summary>
 /// 指令规划器:指令 → 逐组(目标格/可达替代/成员/出发簇)→
 /// 路径服务请求(固定生效帧)→ 答复落帧时建领队 + 排阵型槽位 + 挂流场。
-/// 本层含重烘反应、认知重定向、原位揭示和流场刷新。走廊扩展没有。
+/// 本层含重烘反应、认知重定向、原位揭示、流场缓存和走廊扩展。
 /// 答复未回则本 tick 停摆；领队路径答复不可达时，非跳跃成员标不可达。
 /// </summary>
 public sealed class CrowdSimPlanner
@@ -35,6 +35,19 @@ public sealed class CrowdSimPlanner
     private StableInt[] _touchRank = Array.Empty<StableInt>();
     private CrowdOrder[] _touchOrders = Array.Empty<CrowdOrder>();
     private int _seq;
+    private readonly FlowFieldCache _cache;
+    private readonly long[] _lruKeys;
+    private readonly byte[] _maskA;
+    private readonly byte[] _maskUnion;
+    private readonly byte[] _strayStamp;
+    private readonly int[] _strayCell;
+    private readonly int[] _extendByGroup;
+    private readonly int[] _extendDist;
+    private readonly Stack<byte[]> _maskCopies;
+    private readonly List<PendingRefresh> _maskHold;
+    private readonly int[] _retiredIds;
+    private int _strayCursor;
+    private int _tilesPerSide;
     private bool _loggedFirstPlan;
     private bool _loggedFirstApply;
 
@@ -123,6 +136,11 @@ public sealed class CrowdSimPlanner
         public int Seq;
         public int NavId;
         public int Version;
+        public bool Extend;
+        public FlowField? Pin;
+        public bool Pinned;
+        /// <summary>交给工人的走廊副本。工人退休前不能回到池里。</summary>
+        public byte[]? MaskCopy;
     }
 
     private sealed class PendingLeader
@@ -163,11 +181,36 @@ public sealed class CrowdSimPlanner
         }
 
         for (int i = 0; i < 32; i++) _leaderReqPool.Push(new PendingLeader());
-        for (int i = 0; i < 16; i++)
-        {
-            _refreshPool.Push(new PendingRefresh());
-            _dirtyTileLists.Add(new List<int>(8));
-        }
+        for (int i = 0; i < 16; i++) _dirtyTileLists.Add(new List<int>(8));
+        int refreshInFlight = InFlight(session.Config.Planning.MaxRefreshesPerTick, session.Config.Planning.RefreshLatencyTicks);
+        int extendInFlight = InFlight(session.Config.Flowfield.MaxRebuildsPerTick, session.Config.Planning.RefreshLatencyTicks);
+        int pendingSlots = refreshInFlight + extendInFlight;
+        for (int i = 0; i < pendingSlots; i++) _refreshPool.Push(new PendingRefresh());
+        _pendingRefreshes.EnsureCapacity(pendingSlots);
+        int n2 = session.Config.NavCellsPerSide * session.Config.NavCellsPerSide;
+        _cache = new FlowFieldCache(session.Config.Flowfield.CacheCapacity, n2);
+        _lruKeys = new long[session.Config.Flowfield.CacheCapacity];
+        int perTile = session.Config.Hpa.NavCellsPerTile;
+        _tilesPerSide = perTile > 0 ? session.Config.NavCellsPerSide / perTile : 1;
+        int tileCount = _tilesPerSide * _tilesPerSide;
+        if (tileCount < 1) tileCount = 1;
+        _maskA = new byte[tileCount];
+        _maskUnion = new byte[tileCount];
+        _strayStamp = new byte[CrowdNavGroupSet.MaxGroups];
+        _strayCell = new int[CrowdNavGroupSet.MaxGroups];
+        _extendByGroup = new int[CrowdNavGroupSet.MaxGroups];
+        _extendDist = new int[_tilesPerSide + 1];
+        _maskCopies = new Stack<byte[]>(pendingSlots);
+        for (int i = 0; i < pendingSlots; i++) _maskCopies.Push(new byte[tileCount]);
+        _maskHold = new List<PendingRefresh>(pendingSlots);
+        _retiredIds = new int[pendingSlots];
+        session.Groups.ReleaseFlow = ReleaseGroupFlow;
+    }
+
+    private static int InFlight(int perTick, int latencyTicks)
+    {
+        int n = perTick * latencyTicks;
+        return n < 1 ? 1 : n;
     }
 
     public int PendingCount => _pending.Count;
@@ -215,6 +258,7 @@ public sealed class CrowdSimPlanner
                 if (g.Flow != null) RecycleFlow(g);
                 g.Leader = null;
                 g.Planning = true;
+                g.Extending = false;
                 g.StateSeq++;
             }
         }
@@ -428,6 +472,7 @@ public sealed class CrowdSimPlanner
     /// block=false:故障后一直返回 false,仿真停在这一帧,不改到主线程重算。</summary>
     public bool ApplyDue(int tick, bool block)
     {
+        ReclaimRetired();
         if ((_pending.Count > 0 || _pendingRefreshes.Count > 0) && _service.Faulted)
         {
             if (block) throw new PathServiceFaultException(_service.FaultMessage ?? "路径服务故障(原因未记录)");
@@ -525,11 +570,16 @@ public sealed class CrowdSimPlanner
                     continue;
                 }
 
-                // 陈旧答复(请求后导航重烘过):场先挂上(刷新落地前组用它),组进裁决清单
+                // 陈旧答复(请求后导航重烘过):场先挂上(刷新落地前组用它),组进裁决清单。
+                // 过渡场不进缓存,避免旧代价被后来的命中复用。
                 var nav = _session.ResolveNavContext(g.NavId);
-                if (nav.Version != pg.Version || g.NavId != pg.NavId) stale.Add(g);
-                result.Flow.BuildRevision = pg.RequestId;
-                g.Flow = result.Flow;
+                bool fresh = nav.Version == pg.Version && g.NavId == pg.NavId;
+                if (!fresh)
+                {
+                    stale.Add(g);
+                    StalePlanApplies++;
+                }
+                SetFlow(g, result.Flow, fresh, pg.RequestId);
                 result.Flow = null;
                 _service.ReleaseReply(result);
                 g.Planning = false;
@@ -817,34 +867,27 @@ public sealed class CrowdSimPlanner
         _service.ReleaseReply(result);
     }
 
-    private void RecycleFlow(CrowdNavGroupSet.Group g)
-    {
-        if (g.Flow is { } f)
-        {
-            RecycleFlow(f);
-            g.Flow = null;
-        }
-    }
+    private void RecycleFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false, 0);
 
-    private static void RecycleFlow(FlowField f)
-    {
-        f.OriginPool?.Give(f);
-    }
+    private void RecycleFlow(FlowField f) => _cache.Release(f);
 
     private void ApplyRefresh(PendingRefresh pr)
     {
+        var result = _service.AwaitDue(pr.RequestId);
+        Unpin(pr);
+        ReleaseMask(pr);
         var g = pr.Group;
         if (!_session.Groups.TryGet(pr.GroupId, out var live) || live != g || g.StateSeq != pr.Seq)
         {
-            Recycle(_service.AwaitDue(pr.RequestId));
+            Recycle(result);
             return;
         }
 
-        var result = _service.AwaitDue(pr.RequestId);
         var nav = _session.ResolveNavContext(g.NavId);
         if (g.NavId != pr.NavId || nav.Version != pr.Version)
         {
-            // 答复基于旧导航:丢弃并重新排队刷新
+            // 版本对不上的扩展必须清标记,否则组会一直停在扩展中。
+            if (pr.Extend && g.Extending && g.StateSeq == pr.Seq) g.Extending = false;
             Recycle(result);
             RefreshFlow(g);
             return;
@@ -852,13 +895,13 @@ public sealed class CrowdSimPlanner
 
         if (result.Flow == null)
         {
+            if (pr.Extend && g.Extending && g.StateSeq == pr.Seq) g.Extending = false;
             Recycle(result);
             return;
         }
 
-        result.Flow.BuildRevision = pr.RequestId;
-        if (g.Flow is { } old) RecycleFlow(old);
-        g.Flow = result.Flow;
+        if (pr.Extend && g.Extending && g.StateSeq == pr.Seq) g.Extending = false;
+        SetFlow(g, result.Flow, true, pr.RequestId);
         result.Flow = null;
         _service.ReleaseReply(result);
     }
@@ -889,6 +932,9 @@ public sealed class CrowdSimPlanner
             for (int ti = 0; ti < r.DirtyTiles.Count; ti++) copy.Add(r.DirtyTiles[ti]);
             dirtyByNav[r.NavId] = copy;
         }
+
+        foreach (var pair in dirtyByNav) _cache.EvictTouching(pair.Key, pair.Value);
+        DiscardExtendsAfterRebake();
 
         int navCellsPerSide = session.Config.NavCellsPerSide;
         var units = session.Units;
@@ -1048,10 +1094,37 @@ public sealed class CrowdSimPlanner
 
     /// <summary>已提交给路径服务的流场重建次数。clearCaches 入队后,由 ProcessRefreshes 在预算内提交。</summary>
     public int FlowRefreshSubmits { get; private set; }
+    /// <summary>已提交的走廊扩展次数。</summary>
+    public int ExtendSubmits { get; private set; }
+    /// <summary>场外组·tick。同一组同一 tick 只计一次。</summary>
+    internal int StrayGroupTicks { get; private set; }
+    /// <summary>扩展标记还在，或上一次答复还占着槽，本次不另提。</summary>
+    internal int StraySkipInFlight { get; private set; }
+    /// <summary>垫一圈也不会变大，掩码已经包住这次走廊。</summary>
+    internal int StraySkipNoGrowth { get; private set; }
+    /// <summary>走失格所在 tile 已经在当前掩码里。不再为它垫外圈。</summary>
+    internal int StraySkipCovered { get; private set; }
+    /// <summary>走失 tile 落在一圈垫层内。</summary>
+    internal int ExtendWithinPad { get; private set; }
+    /// <summary>走失 tile 比一圈垫层更远，这一次重建盖不住它。</summary>
+    internal int ExtendBeyondPad { get; private set; }
+    internal int[] ExtendByGroup => _extendByGroup;
+    internal int[] ExtendDistance => _extendDist;
+    internal int StalePlanApplies { get; private set; }
+    internal int RefreshCacheHits { get; private set; }
+    internal int RefreshCacheMisses { get; private set; }
+    public int FlowCacheHits => _cache.Hits;
+    public int FlowCacheMisses => _cache.Misses;
+    public int FlowCacheEvicts => _cache.Evicts;
+    public int FlowCacheCount => _cache.Count;
+    internal FlowFieldCache FlowCache => _cache;
+    internal string? FlowCacheInvalidReason() => _cache.InvalidReason();
+    internal bool FlowCacheContains(FlowField field) => _cache.Contains(field);
 
-    /// <summary>有流场的组重新排队。旧场留到答复替换,不另建一套跳过等待的缓存。</summary>
+    /// <summary>有流场的组重新排队。先丢掉结果缓存,旧场留到答复替换。</summary>
     public int InvalidateFlows()
     {
+        _cache.DropAll();
         int queued = 0;
         var groups = _session.Groups.Groups;
         for (int i = 0; i < groups.Count; i++)
@@ -1071,38 +1144,24 @@ public sealed class CrowdSimPlanner
         if (!_refreshQueue.Contains(g)) _refreshQueue.Add(g);
     }
 
-    /// <summary>每 tick 预算内的流场刷新提交(生效帧 = tick + refreshLatencyTicks)。
-    /// 不做走廊扩展,也不做同目标共乘。驻扎组是否沿用真相流场在 Retarget,由 SharesFlow 判定。</summary>
+    /// <summary>每 tick 先消化流场刷新,再消化走廊扩展。生效帧都是 tick + refreshLatencyTicks。
+    /// 缓存命中不占预算。驻扎组是否沿用真相流场在 Retarget,由 SharesFlow 判定。</summary>
     public void ProcessRefreshes(int tick)
     {
-        int n = 0;
-        while (_refreshQueue.Count > 0 && n < _session.Config.Planning.MaxRefreshesPerTick)
+        ReclaimRetired();
+        int budget = _session.Config.Planning.MaxRefreshesPerTick;
+        int served = 0;
+        while (_refreshQueue.Count > 0 && served < budget)
         {
             var g = _refreshQueue[0];
             _refreshQueue.RemoveAt(0);
             if (!_session.Groups.TryGet(g.Id, out var live) || live != g || g.Flow == null || g.Planning) continue;
-            SubmitRefresh(g, tick);
-            n++;
+            if (TryRefreshFromCache(g)) continue;
+            SubmitFlow(g, tick, false);
+            served++;
         }
-    }
 
-    private void SubmitRefresh(CrowdNavGroupSet.Group g, int tick)
-    {
-        var nav = _session.ResolveNavContext(g.NavId);
-        // 同走廊:掩码用组现流场的走廊(未填 padding),服务侧按 padMask ∪ 原掩码建场
-        var req = new PathQuery(g.NavId, 0, g.Goal, 0) { CorridorMask = g.Flow!.Mask };
-        int id = _service.Request(req, tick);
-        g.StateSeq++;
-        FlowRefreshSubmits++;
-        if (!_refreshPool.TryPop(out var pr)) pr = new PendingRefresh();
-        pr.RequestId = id;
-        pr.DueTick = tick + _session.Config.Planning.RefreshLatencyTicks;
-        pr.GroupId = g.Id;
-        pr.Group = g;
-        pr.Seq = g.StateSeq;
-        pr.NavId = g.NavId;
-        pr.Version = nav.Version;
-        _pendingRefreshes.Add(pr);
+        ProcessExtensions(tick);
     }
 
     /// <summary>陈旧答复的组:无场或目标被挡则重规划;否则再看成员连通域和领队剩余线,切断才重规划,否则刷新流场。</summary>
@@ -1168,6 +1227,7 @@ public sealed class CrowdSimPlanner
     /// tile 的组(只刷新,不重规划)。返回需重规划的指令。</summary>
     public List<CrowdOrder> Retarget(List<CrowdNavGroupSet.Group> moved, HashSet<CrowdNavGroupSet.Group>? stale = null)
     {
+        DiscardExtendsForMoved(moved);
         var session = _session;
         var units = session.Units;
         var underway = _underway;
@@ -1260,9 +1320,31 @@ public sealed class CrowdSimPlanner
         return a > b || (a == b && g.RIdx > m.RIdx);
     }
 
-    /// <summary>原位揭示:槽的已建变体只重烘被揭 tile。流场挂在组上,踩脏的组由调用方的 stale 集合刷新。</summary>
-    public Dictionary<int, List<int>> RevealBelief(int slot, List<int> tiles) =>
-        _session.Beliefs!.Reveal(slot, tiles);
+    /// <summary>原位揭示:槽的已建变体只重烘被揭 tile。踩到的流场离开缓存,在途扩展作废。</summary>
+    public Dictionary<int, List<int>> RevealBelief(int slot, List<int> tiles)
+    {
+        var dirty = _session.Beliefs!.Reveal(slot, tiles);
+        foreach (var pair in dirty)
+        {
+            _cache.EvictTouching(pair.Key, pair.Value);
+            DiscardExtendsOnNav(pair.Key);
+        }
+
+        return dirty;
+    }
+
+    /// <summary>认知槽删除:该槽的流场离开缓存,在途扩展作废。必须在槽注册表移除之前调用。</summary>
+    public void OnBeliefSlotDropped(int slot)
+    {
+        _cache.EvictSlot(slot, CrowdBeliefNavs.BeliefStride);
+        int stride = CrowdBeliefNavs.BeliefStride;
+        for (int i = _pendingRefreshes.Count - 1; i >= 0; i--)
+        {
+            var pr = _pendingRefreshes[i];
+            if (!pr.Extend) continue;
+            if (pr.NavId >= stride && pr.NavId / stride == slot) DropPendingAt(i);
+        }
+    }
 
     private static int CellOfUnit(CrowdSimSession session, int dense, CrowdSimulationUnitState st)
     {
@@ -1482,14 +1564,322 @@ public sealed class CrowdSimPlanner
             h = CrowdSimChecksum.Mix(h, (uint)refresh.Seq);
             h = CrowdSimChecksum.Mix(h, (uint)refresh.NavId);
             h = CrowdSimChecksum.Mix(h, (uint)refresh.Version);
+            h = CrowdSimChecksum.Mix(h, refresh.Extend ? 1u : 0u);
         }
 
         h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue.Count);
         for (int i = 0; i < _refreshQueue.Count; i++)
             h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue[i].Id);
         h = CrowdSimChecksum.Mix(h, (uint)_seq);
-        // 这条端口没有流场 LRU。仍混入空序，让“没有这项”和“这项为空”分成两个摘要。
-        h = CrowdSimChecksum.Mix(h, 0);
+        int lru = _cache.CopyOldestFirst(_lruKeys);
+        h = CrowdSimChecksum.Mix(h, (uint)lru);
+        for (int i = 0; i < lru; i++) h = CrowdSimChecksum.MixI64(h, _lruKeys[i]);
         return h;
+    }
+
+    /// <summary>场外采样。同一组一 tick 只记第一次,处理在 <see cref="ProcessRefreshes"/>。</summary>
+    public void NoteStray(int groupId, int cell)
+    {
+        if ((uint)groupId >= (uint)_strayStamp.Length) return;
+        if (_strayStamp[groupId] != 0) return;
+        _strayStamp[groupId] = 1;
+        _strayCell[groupId] = cell;
+    }
+
+    /// <param name="buildRevision">非 0 时写成该答复的路径请求号。0 表示沿用场上已有的号：缓存命中复用的就是当初挂上的那份。</param>
+    private void SetFlow(CrowdNavGroupSet.Group g, FlowField? flow, bool admit, int buildRevision)
+    {
+        if (flow != null && buildRevision != 0) flow.BuildRevision = buildRevision;
+        var old = g.Flow;
+        if (ReferenceEquals(old, flow))
+        {
+            if (admit && flow != null) _cache.Admit(flow);
+            return;
+        }
+
+        if (old != null && old.Refs > 0) old.Refs--;
+        g.Flow = flow;
+        if (flow != null) flow.Refs++;
+        if (admit && flow != null) _cache.Admit(flow);
+        if (old != null) _cache.Release(old);
+    }
+
+    private void ReleaseGroupFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false, 0);
+
+    private bool TryRefreshFromCache(CrowdNavGroupSet.Group g)
+    {
+        var mask = g.Flow!.Mask;
+        if (mask == null || !FillServiceMask(mask)) return false;
+        if (!_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit))
+        {
+            RefreshCacheMisses++;
+            return false;
+        }
+
+        RefreshCacheHits++;
+        SetFlow(g, hit, false, 0);
+        g.StateSeq++;
+        return true;
+    }
+
+    private void ProcessExtensions(int tick)
+    {
+        int budget = _session.Config.Flowfield.MaxRebuildsPerTick;
+        var groups = _session.Groups.Groups;
+        int count = groups.Count;
+        int served = 0;
+        int scanned = 0;
+        for (int i = 0; i < count; i++)
+        {
+            var noted = groups[i];
+            if (noted != null && (uint)noted.Id < (uint)_strayStamp.Length && _strayStamp[noted.Id] != 0)
+                StrayGroupTicks++;
+        }
+
+        if (count > 0 && budget > 0)
+        {
+            if (_strayCursor >= count) _strayCursor = 0;
+            for (; scanned < count && served < budget; scanned++)
+            {
+                int index = _strayCursor + scanned;
+                if (index >= count) index -= count;
+                var g = groups[index];
+                if (g == null || (uint)g.Id >= (uint)_strayStamp.Length || _strayStamp[g.Id] == 0) continue;
+                if (SubmitExtension(g, _strayCell[g.Id], tick)) served++;
+            }
+
+            _strayCursor += scanned;
+            if (_strayCursor >= count) _strayCursor -= count;
+        }
+
+        Array.Clear(_strayStamp, 0, _strayStamp.Length);
+    }
+
+    private bool SubmitExtension(CrowdNavGroupSet.Group g, int cell, int tick)
+    {
+        if (g.Planning || g.Flow?.Mask == null || g.Goal < 0) return false;
+        if (g.Extending || _refreshQueue.Contains(g) || HasPending(g))
+        {
+            StraySkipInFlight++;
+            return false;
+        }
+
+        if (!FillServiceMask(g.Flow.Mask)) return false;
+        if (FlowFieldBuilder.MaskSubset(_maskUnion, g.Flow.Mask))
+        {
+            StraySkipNoGrowth++;
+            return false;
+        }
+
+        var nav = _session.ResolveNavContext(g.NavId);
+        int tile = NavGridSteps.TileOf(cell, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, _tilesPerSide);
+        var mask = g.Flow.Mask;
+        // 走失格所在 tile 已经在掩码里。再垫外圈不会把这块 tile 新标进来。
+        if ((uint)tile < (uint)mask.Length && mask[tile] != 0)
+        {
+            StraySkipCovered++;
+            return false;
+        }
+
+        if ((uint)tile < (uint)_maskUnion.Length) _maskUnion[tile] = 1;
+        if (_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit))
+        {
+            SetFlow(g, hit, false, 0);
+            return false;
+        }
+
+        int dist = TileDistance(mask, tile);
+        int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
+        if (dist <= pad) ExtendWithinPad++;
+        else ExtendBeyondPad++;
+        if ((uint)dist < (uint)_extendDist.Length) _extendDist[dist]++;
+
+        SubmitFlow(g, tick, true);
+        if ((uint)g.Id < (uint)_extendByGroup.Length) _extendByGroup[g.Id]++;
+        return true;
+    }
+
+    private int TileDistance(byte[] mask, int tile)
+    {
+        int side = _tilesPerSide;
+        if (side < 1 || (uint)tile >= (uint)mask.Length) return side;
+        int tx = tile % side, ty = tile / side;
+        int best = side;
+        for (int i = 0; i < mask.Length; i++)
+        {
+            if (mask[i] == 0) continue;
+            int d = Math.Max(Math.Abs(i % side - tx), Math.Abs(i / side - ty));
+            if (d < best) best = d;
+            if (best <= 1) break;
+        }
+
+        return best;
+    }
+
+    private bool HasPending(CrowdNavGroupSet.Group g)
+    {
+        for (int i = 0; i < _pendingRefreshes.Count; i++)
+        {
+            if (_pendingRefreshes[i].Group == g) return true;
+        }
+
+        for (int i = 0; i < _maskHold.Count; i++)
+        {
+            if (_maskHold[i].Group == g) return true;
+        }
+
+        return false;
+    }
+
+    private void SubmitFlow(CrowdNavGroupSet.Group g, int tick, bool extend)
+    {
+        var nav = _session.ResolveNavContext(g.NavId);
+        var pinned = g.Flow!;
+        // 在途请求占一个引用。工人读掩码副本,原场可以在答复取走前被换掉。
+        pinned.Refs++;
+        var mask = RentMask(pinned.Mask!);
+        var req = new PathQuery(g.NavId, 0, g.Goal, 0) { CorridorMask = mask, Extension = extend };
+        int id = _service.Request(req, tick);
+        g.StateSeq++;
+        if (extend)
+        {
+            g.Extending = true;
+            ExtendSubmits++;
+        }
+        else FlowRefreshSubmits++;
+        if (!_refreshPool.TryPop(out var pr)) pr = new PendingRefresh();
+        pr.RequestId = id;
+        pr.DueTick = tick + _session.Config.Planning.RefreshLatencyTicks;
+        pr.GroupId = g.Id;
+        pr.Group = g;
+        pr.Seq = g.StateSeq;
+        pr.NavId = g.NavId;
+        pr.Version = nav.Version;
+        pr.Extend = extend;
+        pr.Pin = pinned;
+        pr.Pinned = true;
+        pr.MaskCopy = mask;
+        _pendingRefreshes.Add(pr);
+    }
+
+    private bool FillServiceMask(byte[] mask)
+    {
+        if (mask.Length != _maskA.Length) return false;
+        int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
+        FlowFieldBuilder.PadMaskInto(mask, _tilesPerSide, pad, _maskA);
+        FlowFieldBuilder.OrMaskInto(_maskA, mask, _maskUnion);
+        return true;
+    }
+
+    private byte[] RentMask(byte[] source)
+    {
+        if (!_maskCopies.TryPop(out var copy) || copy.Length != source.Length) copy = new byte[source.Length];
+        Array.Copy(source, copy, source.Length);
+        return copy;
+    }
+
+    private void ReleaseMask(PendingRefresh pr)
+    {
+        if (pr.MaskCopy == null) return;
+        _maskCopies.Push(pr.MaskCopy);
+        pr.MaskCopy = null;
+    }
+
+    private void Unpin(PendingRefresh pr)
+    {
+        if (!pr.Pinned) return;
+        pr.Pinned = false;
+        var pin = pr.Pin;
+        pr.Pin = null;
+        if (pin == null) return;
+        if (pin.Refs > 0) pin.Refs--;
+        _cache.Release(pin);
+    }
+
+    private void DiscardExtendsAfterRebake()
+    {
+        for (int i = _pendingRefreshes.Count - 1; i >= 0; i--)
+        {
+            var pr = _pendingRefreshes[i];
+            if (!pr.Extend) continue;
+            bool dirty = _dirtyByNav.ContainsKey(pr.NavId);
+            var nav = _session.ResolveNavContext(pr.NavId);
+            bool stale = nav.Version != pr.Version || pr.Group.NavId != pr.NavId;
+            if (dirty || stale) DropPendingAt(i);
+        }
+    }
+
+    private void DiscardExtendsOnNav(int navId)
+    {
+        for (int i = _pendingRefreshes.Count - 1; i >= 0; i--)
+        {
+            var pr = _pendingRefreshes[i];
+            if (pr.Extend && pr.NavId == navId) DropPendingAt(i);
+        }
+    }
+
+    private void DiscardExtendsForMoved(List<CrowdNavGroupSet.Group> moved)
+    {
+        for (int i = _pendingRefreshes.Count - 1; i >= 0; i--)
+        {
+            var pr = _pendingRefreshes[i];
+            if (!pr.Extend) continue;
+            bool hit = false;
+            for (int m = 0; m < moved.Count; m++)
+            {
+                if (moved[m] == pr.Group)
+                {
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (!hit)
+            {
+                var nav = _session.ResolveNavContext(pr.NavId);
+                hit = nav.Version != pr.Version || pr.Group.NavId != pr.NavId;
+            }
+
+            if (hit) DropPendingAt(i);
+        }
+    }
+
+    private void DropPendingAt(int index)
+    {
+        var pr = _pendingRefreshes[index];
+        _pendingRefreshes.RemoveAt(index);
+        Unpin(pr);
+        bool idle = _service.Discard(pr.RequestId);
+        if (pr.Extend && pr.Group.Extending && pr.Group.StateSeq == pr.Seq) pr.Group.Extending = false;
+        if (idle)
+        {
+            ReleaseMask(pr);
+            pr.Extend = false;
+            _refreshPool.Push(pr);
+        }
+        else _maskHold.Add(pr);
+    }
+
+    private void ReclaimRetired()
+    {
+        for (;;)
+        {
+            int n = _service.DrainRetired(_retiredIds);
+            if (n == 0) return;
+            for (int k = 0; k < n; k++)
+            {
+                int id = _retiredIds[k];
+                for (int i = _maskHold.Count - 1; i >= 0; i--)
+                {
+                    if (_maskHold[i].RequestId != id) continue;
+                    var pr = _maskHold[i];
+                    _maskHold.RemoveAt(i);
+                    ReleaseMask(pr);
+                    pr.Extend = false;
+                    _refreshPool.Push(pr);
+                    break;
+                }
+            }
+        }
     }
 }
