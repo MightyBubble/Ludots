@@ -217,27 +217,20 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private NavPathResult TryFindPathCore(int startXcm, int startZcm, int goalXcm, int goalZcm, int maxPortals)
         {
-            try
-            {
-                _store.GetOrLoad(LocateTile(startXcm, startZcm));
-                _store.GetOrLoad(LocateTile(goalXcm, goalZcm));
+            _store.GetOrLoad(LocateTile(startXcm, startZcm));
+            _store.GetOrLoad(LocateTile(goalXcm, goalZcm));
 
-                return ResidentDetourNavMesh.FindPath(
-                    _store,
-                    _layer,
-                    Filter,
-                    _tileWidthCm.RoundToInt(),
-                    _tileHeightCm.RoundToInt(),
-                    startXcm,
-                    startZcm,
-                    goalXcm,
-                    goalZcm,
-                    maxPortals);
-            }
-            catch (Exception ex) when (ex is not InvalidOperationException)
-            {
-                return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
+            return ResidentDetourNavMesh.FindPath(
+                _store,
+                _layer,
+                Filter,
+                _tileWidthCm.RoundToInt(),
+                _tileHeightCm.RoundToInt(),
+                startXcm,
+                startZcm,
+                goalXcm,
+                goalZcm,
+                maxPortals);
         }
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)

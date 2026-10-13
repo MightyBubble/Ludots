@@ -148,9 +148,15 @@ namespace Ludots.Core.Navigation.NavMesh
             return slot.BuildCount;
         }
 
-        // 非 null 时整网重建用这个槽位数，让 AddTile 在没有空槽时拒绝。
-        [ThreadStatic]
-        internal static int? MaxTilesOverride;
+        internal static void ReserveTiles(NavTileStore store, int maxTiles)
+        {
+            if (store == null) throw new ArgumentNullException(nameof(store));
+            if (maxTiles < 0) throw new ArgumentOutOfRangeException(nameof(maxTiles));
+            if (!Slots.TryAdd(store, new Slot(maxTiles)))
+            {
+                throw new InvalidOperationException("Resident mesh for this store already exists.");
+            }
+        }
 
         private static int CapacityFor(int kept)
         {
@@ -185,6 +191,17 @@ namespace Ludots.Core.Navigation.NavMesh
             public readonly HashSet<NavTileId> Seen = new();
             public readonly List<NavTileId> RemoveIds = new();
             public NavTile[] ScratchTiles = Array.Empty<NavTile>();
+            // 创建时给定。未给定则按瓦片数留余量。给定 0 时没有空槽，AddTile 拒绝。
+            private readonly int? _maxTiles;
+
+            public Slot()
+            {
+            }
+
+            public Slot(int maxTiles)
+            {
+                _maxTiles = maxTiles;
+            }
 
             public DtNavMesh? Ensure(NavTileStore store, int layer, int tileWidthCm, int tileHeightCm)
             {
@@ -364,7 +381,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
             private void TryRebuild(long originXcm, long originZcm, int maxPolys, int tileWidthCm, int tileHeightCm)
             {
-                int maxTiles = MaxTilesOverride ?? CapacityFor(Filtered.Count);
+                int maxTiles = _maxTiles ?? CapacityFor(Filtered.Count);
                 var navMesh = new DtNavMesh();
                 DtStatus initStatus = navMesh.Init(new DtNavMeshParams
                 {

@@ -159,22 +159,43 @@ public sealed class ResidentDetourNavMeshTests
         NavQueryService service = CreateQuery(tile);
         int originX = chunkX * TileSizeCm;
         int originZ = chunkY * TileSizeCm;
-        ResidentDetourNavMesh.MaxTilesOverride = 0;
-        try
-        {
-            InvalidOperationException first = Assert.Throws<InvalidOperationException>(() =>
-                service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000))!;
-            Assert.Throws<InvalidOperationException>(() =>
-                service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000));
+        ResidentDetourNavMesh.ReserveTiles(service.Store, 0);
 
-            Assert.That(first.Message, Does.Contain($"{chunkX},{chunkY},0"));
-            Assert.That(service.ResidentMesh, Is.Null);
-            Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(0));
-        }
-        finally
-        {
-            ResidentDetourNavMesh.MaxTilesOverride = null;
-        }
+        InvalidOperationException first = Assert.Throws<InvalidOperationException>(() =>
+            service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000))!;
+        Assert.Throws<InvalidOperationException>(() =>
+            service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000));
+
+        Assert.That(first.Message, Does.Contain($"{chunkX},{chunkY},0"));
+        Assert.That(service.ResidentMesh, Is.Null);
+        Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void TrianglelessTile_ReturnsNotReady()
+    {
+        const int chunkX = 1;
+        const int chunkY = 1;
+        NavTile tile = CreateWithoutTriangles(chunkX, chunkY);
+        NavQueryService service = CreateQuery(tile);
+        int originX = chunkX * TileSizeCm;
+        int originZ = chunkY * TileSizeCm;
+
+        NavPathResult first = service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000);
+        NavPathResult second = service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000);
+
+        Assert.That(first.Status, Is.EqualTo(NavPathStatus.NotReady));
+        Assert.That(second.Status, Is.EqualTo(NavPathStatus.NotReady));
+        Assert.That(service.ResidentMesh, Is.Null);
+        Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void MissingTileBytes_PropagatesOpenFailure()
+    {
+        NavQueryService service = CreateQuery(CreateFlat(0, 0));
+
+        Assert.Throws<KeyNotFoundException>(() => service.TryFindPath(-1_000, 1_000, 1_000, 1_000));
     }
 
     private static long Measure(NavQueryService service, int count)
@@ -215,6 +236,30 @@ public sealed class ResidentDetourNavMeshTests
         using var ms = new MemoryStream();
         NavTileBinary.Write(ms, tile);
         blobs[tile.TileId] = ms.ToArray();
+    }
+
+    private static NavTile CreateWithoutTriangles(int chunkX, int chunkY)
+    {
+        int originX = chunkX * TileSizeCm;
+        int originZ = chunkY * TileSizeCm;
+        return new NavTile(
+            new NavTileId(chunkX, chunkY, 0),
+            tileVersion: 1,
+            buildConfigHash: 0UL,
+            checksum: 0UL,
+            originX,
+            originZ,
+            vertexXcm: Array.Empty<int>(),
+            vertexYcm: Array.Empty<int>(),
+            vertexZcm: Array.Empty<int>(),
+            triA: Array.Empty<int>(),
+            triB: Array.Empty<int>(),
+            triC: Array.Empty<int>(),
+            n0: Array.Empty<int>(),
+            n1: Array.Empty<int>(),
+            n2: Array.Empty<int>(),
+            triAreaIds: Array.Empty<byte>(),
+            portals: Array.Empty<NavBorderPortal>());
     }
 
     private static NavTile CreateFlat(int chunkX, int chunkY)
