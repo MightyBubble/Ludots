@@ -75,8 +75,8 @@ internal sealed class CrowdSimulationDebugViewConfig
             throw new InvalidOperationException($"{path}: overlayReserve 需为 ≥ 0 的整数。");
         if (MaxScreenSegments + OverlayReserve > ScreenOverlayBuffer.MaxItems)
             throw new InvalidOperationException($"{path}: maxScreenSegments 与 overlayReserve 之和超过屏幕叠加容量 {ScreenOverlayBuffer.MaxItems}。");
-        if (DirtyPulsePercent < 1 || DirtyPulsePercent > 100)
-            throw new InvalidOperationException($"{path}: dirtyPulsePercent 需为 1..100 的整数。");
+        if (DirtyPulsePercent < 1 || DirtyPulsePercent > CrowdSimulationLimits.FullPercent)
+            throw new InvalidOperationException($"{path}: dirtyPulsePercent 需为 1..{CrowdSimulationLimits.FullPercent} 的整数。");
         if (Inspect.LayerIndex < 0)
             throw new InvalidOperationException($"{path}: inspect.layerIndex 需为 ≥ 0 的整数。");
         if (Inspect.RadiusIndex < 0)
@@ -96,10 +96,10 @@ internal sealed class CrowdSimulationDebugViewConfig
         Actions.Validate(path);
         if (Panel.FontSize < 1)
             throw new InvalidOperationException($"{path}: panel.fontSize 需为 ≥ 1 的整数。");
-        if (Panel.X < 0)
-            throw new InvalidOperationException($"{path}: panel.x 需为 ≥ 0 的整数。");
-        if (Panel.Y < 0)
-            throw new InvalidOperationException($"{path}: panel.y 需为 ≥ 0 的整数。");
+        if (Panel.OriginXPx < 0)
+            throw new InvalidOperationException($"{path}: panel.originXPx 需为 ≥ 0 的整数。");
+        if (Panel.OriginYPx < 0)
+            throw new InvalidOperationException($"{path}: panel.originYPx 需为 ≥ 0 的整数。");
     }
 
     internal static void AtLeast(string path, string field, int value, int min)
@@ -124,26 +124,26 @@ internal sealed class CrowdDebugViewOverlays
     [JsonRequired] public bool TileGrid { get; init; }
     [JsonRequired] public bool Flow { get; init; }
     [JsonRequired] public bool Density { get; init; }
-    [JsonRequired] public bool Obstacles { get; init; }
+    [JsonRequired] public bool Blocked { get; init; }
     [JsonRequired] public bool JumpLinks { get; init; }
     [JsonRequired] public bool Belief { get; init; }
 }
 
 internal sealed class CrowdDebugRgba
 {
-    [JsonRequired] public int R { get; init; }
-    [JsonRequired] public int G { get; init; }
-    [JsonRequired] public int B { get; init; }
-    [JsonRequired] public int A { get; init; }
+    [JsonRequired] public int Red { get; init; }
+    [JsonRequired] public int Green { get; init; }
+    [JsonRequired] public int Blue { get; init; }
+    [JsonRequired] public int Alpha { get; init; }
 
-    public Vector4 ToVector4() => new(R / 255f, G / 255f, B / 255f, A / 255f);
+    public Vector4 ToVector4() => new(Red / 255f, Green / 255f, Blue / 255f, Alpha / 255f);
 
     public void Validate(string path, string field)
     {
-        Channel(path, field, R);
-        Channel(path, field, G);
-        Channel(path, field, B);
-        Channel(path, field, A);
+        Channel(path, field, Red);
+        Channel(path, field, Green);
+        Channel(path, field, Blue);
+        Channel(path, field, Alpha);
     }
 
     private static void Channel(string path, string field, int value)
@@ -216,15 +216,15 @@ internal sealed class CrowdDebugViewLayers
 {
     [JsonRequired] public int Paper { get; init; }
     [JsonRequired] public int Corridor { get; init; }
-    [JsonRequired] public int Obstacles { get; init; }
+    [JsonRequired] public int Blocked { get; init; }
     [JsonRequired] public int Density { get; init; }
     [JsonRequired] public int Belief { get; init; }
     [JsonRequired] public int Flow { get; init; }
 
     public void Validate(string path)
     {
-        int[] ids = { Paper, Corridor, Obstacles, Density, Belief, Flow };
-        string[] names = { "layers.paper", "layers.corridor", "layers.obstacles", "layers.density", "layers.belief", "layers.flow" };
+        int[] ids = { Paper, Corridor, Blocked, Density, Belief, Flow };
+        string[] names = { "layers.paper", "layers.corridor", "layers.blocked", "layers.density", "layers.belief", "layers.flow" };
         for (int i = 0; i < ids.Length; i++)
         {
             if (ids[i] < 1)
@@ -282,7 +282,7 @@ internal sealed class CrowdDebugViewActions
 
 internal sealed class CrowdDebugViewPanel
 {
-    [JsonRequired] public int X { get; init; }
-    [JsonRequired] public int Y { get; init; }
+    [JsonRequired] public int OriginXPx { get; init; }
+    [JsonRequired] public int OriginYPx { get; init; }
     [JsonRequired] public int FontSize { get; init; }
 }

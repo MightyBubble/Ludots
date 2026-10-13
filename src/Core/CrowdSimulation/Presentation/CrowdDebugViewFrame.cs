@@ -42,7 +42,7 @@ internal sealed class CrowdDebugViewFrame
     private CrowdDebugSegment[]? _scratch;
     private CrowdDebugSegment[]? _clip;
     private int[]? _nodes;
-    private GlobalFieldVisualCell[] _fieldCells = new GlobalFieldVisualCell[256];
+    private GlobalFieldVisualCell[] _fieldCells = Array.Empty<GlobalFieldVisualCell>();
     private readonly IntRect[] _dirty = new IntRect[1];
     private byte[] _stamp = Array.Empty<byte>();
     private byte _stampGen;
@@ -51,7 +51,7 @@ internal sealed class CrowdDebugViewFrame
     private int[] _bins = Array.Empty<int>();
     private int[] _beliefCells = Array.Empty<int>();
     private byte[] _beliefGhost = Array.Empty<byte>();
-    private readonly CrowdLeader?[] _seen = new CrowdLeader[256];
+    private CrowdLeader?[]? _seen;
     private string _inspectText = "";
     private string _beliefText = "";
     private int _shownLayer = int.MinValue;
@@ -68,7 +68,7 @@ internal sealed class CrowdDebugViewFrame
     internal bool TileGrid;
     internal bool Flow;
     internal bool Density;
-    internal bool Obstacles;
+    internal bool Blocked;
     internal bool JumpLinks;
     internal bool Belief;
     internal int UnitColorMode;
@@ -89,7 +89,7 @@ internal sealed class CrowdDebugViewFrame
         TileGrid = config.Overlays.TileGrid;
         Flow = config.Overlays.Flow;
         Density = config.Overlays.Density;
-        Obstacles = config.Overlays.Obstacles;
+        Blocked = config.Overlays.Blocked;
         JumpLinks = config.Overlays.JumpLinks;
         Belief = config.Overlays.Belief;
         UnitColorMode = config.UnitColorMode;
@@ -104,7 +104,7 @@ internal sealed class CrowdDebugViewFrame
     }
 
     internal bool Visible =>
-        Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Obstacles || JumpLinks || Belief
+        Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || JumpLinks || Belief
         || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff;
 
     internal static bool ArrowsAllowed(float cellPx, int minPx) => cellPx >= minPx;
@@ -132,7 +132,7 @@ internal sealed class CrowdDebugViewFrame
         if (actions.PressedThisTick(bindings.ToggleTileGrid)) TileGrid = !TileGrid;
         if (actions.PressedThisTick(bindings.ToggleFlow)) Flow = !Flow;
         if (actions.PressedThisTick(bindings.ToggleDensity)) Density = !Density;
-        if (actions.PressedThisTick(bindings.ToggleObstacles)) Obstacles = !Obstacles;
+        if (actions.PressedThisTick(bindings.ToggleObstacles)) Blocked = !Blocked;
         if (actions.PressedThisTick(bindings.ToggleJumpLinks)) JumpLinks = !JumpLinks;
         if (actions.PressedThisTick(bindings.ToggleBelief)) Belief = !Belief;
         if (actions.PressedThisTick(bindings.CycleUnitColor))
@@ -207,7 +207,7 @@ internal sealed class CrowdDebugViewFrame
             FillRect(buffer, _config.Layers.Paper, cell, step, bw, bh, _config.Colors.Paper.ToVector4());
         if (Corridor)
             FillCorridor(buffer, session, cell, step, bw, bh);
-        if (Obstacles && session.Structures != null)
+        if (Blocked && session.Structures != null)
             FillBlocked(buffer, session.Structures.Blocked, n, cell, step, bw, bh);
         if (Density)
             FillDensity(buffer, session, cell, step, bw, bh);
@@ -469,9 +469,10 @@ internal sealed class CrowdDebugViewFrame
     private void EmitFunnel(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget)
     {
         var scratch = Scratch();
-        int seen = 0;
-        int count = CrowdDebugOverlayGeometry.AppendFunnel(session.Groups.Groups, ControllingPlayer, _seen, ref seen, scratch, 0);
-        for (int i = 0; i < seen; i++) _seen[i] = null;
+        var seen = SeenLeaders();
+        int seenCount = 0;
+        int count = CrowdDebugOverlayGeometry.AppendFunnel(session.Groups.Groups, ControllingPlayer, seen, ref seenCount, scratch, 0);
+        for (int i = 0; i < seenCount; i++) seen[i] = null;
         EmitScratch(count, overlay, projector, height, ref used, budget, perKind: true, default, 1f);
     }
 
@@ -537,7 +538,7 @@ internal sealed class CrowdDebugViewFrame
         if (used >= budget) return;
         var color = _config.Colors.PanelText.ToVector4();
         int font = _config.Panel.FontSize;
-        int y = _config.Panel.Y;
+        int y = _config.Panel.OriginYPx;
         if (nav || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff)
         {
             if (_shownLayer != LayerIndex || _shownRadius != RadiusIndex || _shownColor != UnitColorMode)
@@ -550,7 +551,7 @@ internal sealed class CrowdDebugViewFrame
                     : $"检视 移动 {LayerIndex} 半径 {RadiusIndex} 着色 {ColorLabel(UnitColorMode)}";
             }
 
-            if (overlay.AddText(_config.Panel.X, y, _inspectText, font, color))
+            if (overlay.AddText(_config.Panel.OriginXPx, y, _inspectText, font, color))
                 used = overlay.Count;
             y += font + 4;
         }
@@ -564,7 +565,7 @@ internal sealed class CrowdDebugViewFrame
             _beliefText = $"视野组 {BeliefGroup} 分歧 {_diffCount} 残影 {_ghostStat}";
         }
 
-        if (overlay.AddText(_config.Panel.X, y, _beliefText, font, color))
+        if (overlay.AddText(_config.Panel.OriginXPx, y, _beliefText, font, color))
             used = overlay.Count;
     }
 
@@ -653,7 +654,7 @@ internal sealed class CrowdDebugViewFrame
             }
         }
 
-        Publish(buffer, _config.Layers.Obstacles, cellCm, step, bw, bh, count);
+        Publish(buffer, _config.Layers.Blocked, cellCm, step, bw, bh, count);
     }
 
     private void FillDensity(GlobalFieldVisualBuffer buffer, CrowdSimSession session, int cellCm, int step, int bw, int bh)
@@ -752,6 +753,8 @@ internal sealed class CrowdDebugViewFrame
         return true;
     }
 
+    private CrowdLeader?[] SeenLeaders() => _seen ??= new CrowdLeader[_config.MaxWorldSegments];
+
     private CrowdDebugSegment[] Scratch()
     {
         _scratch ??= new CrowdDebugSegment[_config.MaxWorldSegments];
@@ -777,7 +780,7 @@ internal sealed class CrowdDebugViewFrame
 
     private float Pulse()
     {
-        float floor = _config.DirtyPulsePercent / 100f;
+        float floor = _config.DirtyPulsePercent / (float)CrowdSimulationLimits.FullPercent;
         float wave = 0.5f + 0.5f * MathF.Sin(Environment.TickCount64 * 0.006f);
         return floor + (1f - floor) * wave;
     }
