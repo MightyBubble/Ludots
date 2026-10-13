@@ -38,6 +38,7 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
                                      CrowdSimulationMapSurfaceSource（地图实体提取）
   Nav/                               NavContextBaker（分类 / 腐蚀 / 连通域 / 链接）
                                      UpperLayerBake（桥面层栅格化与烘焙、portal 合并）
+                                     GridBake（2D 格网 tile：距离场、分水岭、格角点轮廓、凸多边形）
                                      NavContext / NavLinkSet（上下文产物）
   CrowdSimulationAgent.cs            单位组件：profileId、agentTypeId、speedCmPerSecond、personalRadiusCm、pushPriority、special
 mods/capabilities/navigation/CrowdSimulationMod/
@@ -65,13 +66,14 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 ## 与主干平行组件的存留理由
 
-行为对拍（2026-10-09）之后，下面五处仍不收进主干对应物。每处写自己还在的原因，不用「替换即破对拍」一句盖过去。结构性字段（部署位置、抽象图弹出序、指令日志）仍然逐位。领队折线和接触子集走的是已经写明的行为带宽。这次五处都没有换成主干类型。
+行为对拍（2026-10-09）之后，下面六处仍不收进主干对应物。每处写自己还在的原因，不用「替换即破对拍」一句盖过去。结构性字段（部署位置、抽象图弹出序、指令日志）仍然逐位。领队折线和接触子集走的是已经写明的行为带宽。这次六处都没有换成主干类型。
 
 - `Nav/NavMinHeap` 对 `Collections/Fix64PriorityQueue<T>`。参考对应物 `engine/heap.js`。比较规则已经对齐：同键不上升，下滤时同键留左孩子。仍单独留着，是因为 Dijkstra 用的是 Fix64 键和 int 下标两列，弹出后不把死槽写成 default。`Fix64PriorityQueue<int>` 把键和值包进一个结点，`Clear` 会把死槽清零。S3-b 抽象图拓扑的 FNV 挂在这个弹出序上，弹出序是结构性字段。替换前要用现有拓扑对拍证明弹出序没变。这次不换。
 - `Units/CrowdSimRng` 对 `Engine/Randomization/RngStreamService`。参考对应物 `engine/noise.js` 的 mulberry32。两条流算法不同（RngStream 是 xorshift32），输出也不同（RngStream 的 NextFloat01 是 24 位整数 ÷ (2²⁴−1)；CrowdSimRng 是 u32 ÷ 2³²，直接进 Fix64 原始值）。部署按指令加盐：`CrowdDeployment` 用 worldSeed × spawnSeq 给每条指令自己的流。RngStreamService 是先声明后取用的命名流。生成位置是结构性字段，S4 要求 12020 个单位的位置原始值逐位一致。换流会改这些位置。
 - `Units/CrowdSimCommands` + `CrowdCommandQueue` 对 `Persistence/ReplayRecorder`。参考对应物 `engine/core/commands.js` 的 CommandQueue。指令队列是内核输入面：tick 边界执行、submit 现场记日志、schedule 与存量按 tick 归并、迟到指令按实际执行 tick 记录。载荷在入队边界一次解析为 struct（`CrowdSimCommand.Parse`），JsonNode 不进队列、日志和回放。日志是完整输入，回放是新会话加上同一份日志。它记的是仿真输入指令，不是引擎权威帧。帧合同装不下这份日志，见下一节。
 - `Nav/NavFunnel` 对 `Navigation/NavMesh/Bake/FunnelAlgorithm`。参考对应物 `engine/navquery.js` 的漏斗。判等不同：NavFunnel 用 Fix64 精确等（`ax == rx`），主干是 float32 Vector2 加 1e-6 容差。漏斗折线直接喂给领队。退化 portal 上差一个顶点，后续轨迹会走出 S5 已写明的位置带宽。这次不换。
 - `Movement/CrowdSpatialHash` 对 `Spatial/SpatialHashGrid`。参考对应物 `engine/core/spatialHash.js`。它不只是就近查询。环预计算、逐单位 itemRing、邻接槽位表、唤醒岛、stride 行错峰一起决定接触的枚举顺序。maxNeighbors / maxScan 截断时，顺序决定看见哪些邻居。接触计数的行为门（S5-b 双容忍线）挂在这个子集上。格几何差一点，截断后的邻居集就不同。主干空间结构不保证遍历序，也没有这几张表。这次不换。
+- `Nav/GridBake` 对主干 `RecastNavTileBaker`（DotRecast）。群体导航每层是一张 2D 格网，桥面是另一张 2D 格网，用 portal 缝到地面。产物是整数格角点的凸多边形、两侧共用同一段 tile 边 portal、格到多边形（cell→poly）。单 tile 重烘约 0.06 ms，分配为 0。DotRecast 试过：种子 s2024、s7、s1337 上，短对路径长度相对现在的烘焙器是 1.12–1.61；全量烘焙 383–429 ms，现在的烘焙器是 189–255 ms；单 tile 重烘 0.56 ms，现在的烘焙器是 0.061 ms；重烘在 DotRecast 内部约分配 975 KB，现在的烘焙器是 0。群体导航不用 DotRecast。主干 `RecastNavTileBaker` 继续烘已有的 NavMesh 地图：`navmesh_debug*` showcase、`NavGateShowcaseMod`、`navmesh_debug_openworld`、`EastAsiaNavMeshDebugMod`。
 
 ### 指令日志能否由 ReplayRecorder 承载：不能
 
@@ -200,7 +202,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S3-a 交付：tile 烘焙链与 tile 缓存（本次）
 
-- **移植**（`Nav/Recast/` 与 `Nav/`,顶点与拓扑是整数格角点几何;简化 / 边长阈值比较与格心归属判定用 double,边界见数学段）：距离场（`DistanceField`）、分水岭区域（`WatershedRegions`,含计数排序 / 层级生长 / 小区域合并的完整顺序语义）、轮廓追踪（`ContourTracer`,tile 边界永不简化为墙、格角必留、Douglas-Peucker 整数叉积 + 坐标决胜）、耳切三角化与洞合并与凸合并（`PolygonOps`）、`NavTileBaker`（tile → 凸多边形 + 邻接 + 边界段 + cell→poly）、`NavTileCache`（内容键 LRU,无哈希碰撞）。
+- **2D 格网 tile**（`Nav/GridBake/` 与 `Nav/`，顶点与拓扑是整数格角点；简化、边长阈值比较、格心归属判定用 double，边界见数学段）：距离场（`DistanceField`）、分水岭区域（`WatershedRegions`，计数排序、层级生长、小区域合并的顺序写进产物）、格角点轮廓（`ContourTracer`，tile 边界不简化成墙、格角必留、Douglas-Peucker 整数叉积，并列比坐标，两侧 portal 同一段整数区间）、凸多边形（`PolygonOps`：洞合并、耳切、凸合并）、`NavTileBaker`（tile → 凸多边形 + 邻接 + 边界段 + cell→poly）、`NavTileCache`（内容键 LRU，无哈希碰撞）。
 - **桥面 tile 与地面 tile 共用同一缓存**,条目是独立内容键;无可走格的类型（如 hull 的桥面）不产生条目——S1 先修了一个 +1 编码双重叠加导致的键错位。
 - **对拍**：导出器把五种上下文共享的 tile 缓存逐条目（内容键指纹对齐）落真相,C# 逐字段 FNV 全等——三种子各 769 / 700 / 883 个不同 tile,缓存命中 / 烘焙计数也一致。
 - **踩过的坑（已固化成回归测试 `S3RegressionTests`）**：定点 `Sqrt` 在"路径端点格"上的 ~1e-5 误差会吃掉覆盖判断的 EPS——桥 / 路径跨度按生成器约定轴对齐,轴对齐时单位向量与长度取精确值;斜线路径（S7 道路 / 泛洪）届时再定精度口径。
