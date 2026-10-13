@@ -103,7 +103,7 @@ public sealed class CrowdMovementKernel
     public required Fix64 RestDeadband { get; init; }
     public required int MaxScan { get; init; }
     public required int MaxNeighbors { get; init; }
-    /// <summary>单单位单次求解的推力上限(sep 与参考同为无量纲公式值,阈值逐字同参考 maxPush)。</summary>
+    /// <summary>单单位单次求解的推力上限(无量纲)。</summary>
     public required Fix64 MaxPush { get; init; }
     public required Fix64 Smoothing { get; init; }
     public required Fix64 MovingBonus { get; init; }
