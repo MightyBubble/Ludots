@@ -135,6 +135,12 @@ public sealed class CrowdFlowFieldVisualProjector : IGlobalFieldVisualProjector
         buffer.Upsert(in descriptor, _cells.AsSpan(0, count), _dirty);
     }
 
+    internal static bool TryScreenArrow(FlowField flow, int u, int navCellsPerSide, int n2, Fix64 inf, out float dx, out float dy)
+    {
+        bool hit = TryArrow(flow, u, navCellsPerSide, n2, inf, out dx, out dy, out _);
+        return hit;
+    }
+
     private static bool TryArrow(FlowField flow, int u, int navCellsPerSide, int n2, Fix64 inf, out float dx, out float dy, out float strength)
     {
         dx = dy = strength = 0f;

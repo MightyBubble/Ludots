@@ -191,6 +191,7 @@ internal sealed class CrowdDebugViewFrame
             EmitNodes(session, overlay, projector, height, ref used, budget);
         if (UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff)
             EmitUnits(session, overlay, projector, height, ref used, budget);
+        EmitScreenFields(session, overlay, projector, height, ref used, budget);
         EmitPanel(session, overlay, ref used, budget);
     }
 
@@ -537,7 +538,7 @@ internal sealed class CrowdDebugViewFrame
 
     private void EmitPanel(CrowdSimSession session, ScreenOverlayBuffer overlay, ref int used, int budget)
     {
-        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid;
+        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid || Density || Blocked;
         if (!nav && !Belief && UnitColorMode == CrowdSimulationDebugViewConfig.ColorOff) return;
         if (used >= budget) return;
         var color = _config.Colors.PanelText.ToVector4();
@@ -587,6 +588,142 @@ internal sealed class CrowdDebugViewFrame
         if (!TryScreen(segment.X0, segment.Y0, projector, height, out int x0, out int y0)) return;
         if (!TryScreen(segment.X1, segment.Y1, projector, height, out int x1, out int y1)) return;
         if (overlay.AddLine(x0, y0, x1, y1, _config.LineThicknessPx, color))
+            used = overlay.Count;
+    }
+
+    /// <summary>贴花和地形混合会把小色块洗淡，屏幕矩形用配置颜色盖住同一格。</summary>
+    private void EmitScreenFields(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget)
+    {
+        if (used >= budget) return;
+        if (!Corridor && !Blocked && !Density && !Belief && !Flow) return;
+        int n = session.Config.NavCellsPerSide;
+        int cellCm = session.Config.NavCellSizeCm;
+        int spanX = _x1 - _x0, spanY = _y1 - _y0;
+        if (spanX <= 0 || spanY <= 0) return;
+        int step = CrowdDebugOverlayGeometry.StepFor(spanX, spanY, _config.MaxFieldCells);
+        int mark = (int)MathF.Max(1f, CellPx * step);
+        if (Corridor)
+            EmitCorridorMarks(session, overlay, projector, height, ref used, budget, cellCm, step, mark);
+        if (Blocked && session.Structures != null)
+            EmitBlockedMarks(session.Structures.Blocked, n, overlay, projector, height, ref used, budget, cellCm, step, mark);
+        if (Density)
+            EmitDensityMarks(session, overlay, projector, height, ref used, budget, cellCm, step, mark);
+        if (Belief)
+            EmitBeliefMarks(overlay, projector, height, ref used, budget, cellCm, step, mark);
+        if (Flow && _firstFlow != null && ArrowsAllowed(CellPx, _config.ArrowMinScreenPx))
+            EmitFlowMarks(session, overlay, projector, height, ref used, budget, cellCm, step);
+    }
+
+    private void EmitCorridorMarks(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, int cellCm, int step, int mark)
+    {
+        int tile = session.Config.Hpa.NavCellsPerTile;
+        int tilesPerSide = session.Config.NavCellsPerSide / tile;
+        if (_corridor.Length < tilesPerSide * tilesPerSide) return;
+        var color = _config.Colors.Plan.ToVector4();
+        for (int y = _y0; y < _y1 && used < budget; y += step)
+        {
+            int ty = y / tile;
+            for (int x = _x0; x < _x1 && used < budget; x += step)
+            {
+                if (_corridor[ty * tilesPerSide + x / tile] == 0) continue;
+                EmitCellMark(x, y, cellCm, overlay, projector, height, ref used, budget, mark, color);
+            }
+        }
+    }
+
+    private void EmitBlockedMarks(byte[] blocked, int n, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, int cellCm, int step, int mark)
+    {
+        var color = _config.Colors.Ink.ToVector4();
+        for (int y = _y0; y < _y1 && used < budget; y += step)
+        {
+            int row = y * n;
+            for (int x = _x0; x < _x1 && used < budget; x += step)
+            {
+                if (blocked[row + x] == 0) continue;
+                EmitCellMark(x, y, cellCm, overlay, projector, height, ref used, budget, mark, color);
+            }
+        }
+    }
+
+    private void EmitDensityMarks(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, int cellCm, int step, int mark)
+    {
+        var movement = session.Movement;
+        if (movement == null) return;
+        int spanX = _x1 - _x0, spanY = _y1 - _y0;
+        int bw = (spanX + step - 1) / step, bh = (spanY + step - 1) / step;
+        int bins = bw * bh;
+        if (_bins.Length < bins) _bins = new int[bins];
+        Array.Clear(_bins, 0, bins);
+        int n = session.Config.NavCellsPerSide;
+        int countUnits = CopyUnits(session);
+        for (int i = 0; i < countUnits; i++)
+        {
+            var pos = movement.Positions[_unitIds[i]];
+            int x = (int)MathF.Floor(pos.X.ToFloat() / cellCm);
+            int y = (int)MathF.Floor(pos.Y.ToFloat() / cellCm);
+            if (x < _x0 || x >= _x1 || y < _y0 || y >= _y1 || x < 0 || y < 0 || x >= n || y >= n) continue;
+            _bins[((y - _y0) / step) * bw + (x - _x0) / step]++;
+        }
+
+        var low = _config.Colors.DensityLow.ToVector4();
+        var high = _config.Colors.DensityHigh.ToVector4();
+        for (int i = 0; i < bins && used < budget; i++)
+        {
+            if (_bins[i] == 0) continue;
+            float t = _bins[i] / (float)_config.DensityMax;
+            if (t < 0f) t = 0f;
+            if (t > 1f) t = 1f;
+            int x = _x0 + (i % bw) * step;
+            int y = _y0 + (i / bw) * step;
+            EmitCellMark(x, y, cellCm, overlay, projector, height, ref used, budget, mark, low + (high - low) * t);
+        }
+    }
+
+    private void EmitBeliefMarks(ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, int cellCm, int step, int mark)
+    {
+        if (_diffCount == 0) return;
+        var diff = _config.Colors.BeliefDiff.ToVector4();
+        var ghost = _config.Colors.BeliefGhost.ToVector4();
+        int side = _navSide;
+        for (int i = 0; i < _diffCount && used < budget; i++)
+        {
+            int cell = _beliefCells[i];
+            int x = cell % side, y = cell / side;
+            if (x < _x0 || x >= _x1 || y < _y0 || y >= _y1) continue;
+            EmitCellMark(x, y, cellCm, overlay, projector, height, ref used, budget, mark, _beliefGhost[i] != 0 ? ghost : diff);
+        }
+    }
+
+    private void EmitFlowMarks(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, int cellCm, int step)
+    {
+        var flow = _firstFlow;
+        if (flow == null) return;
+        int n = session.Config.NavCellsPerSide;
+        int n2 = n * n;
+        var inf = Fix64.MaxValue / 4;
+        var color = _config.Colors.Plan.ToVector4();
+        float reach = cellCm * 0.45f;
+        for (int y = _y0; y < _y1 && used < budget; y += step)
+        {
+            for (int x = _x0; x < _x1 && used < budget; x += step)
+            {
+                int c = y * n + x;
+                if (!CrowdFlowFieldVisualProjector.TryScreenArrow(flow, c, n, n2, inf, out float dx, out float dy)
+                    && !CrowdFlowFieldVisualProjector.TryScreenArrow(flow, c + n2, n, n2, inf, out dx, out dy))
+                    continue;
+                float cx = (x + 0.5f) * cellCm, cy = (y + 0.5f) * cellCm;
+                var segment = new CrowdDebugSegment { X0 = cx, Y0 = cy, X1 = cx + dx * reach, Y1 = cy + dy * reach };
+                EmitSegment(segment, overlay, projector, height, ref used, budget, color);
+            }
+        }
+    }
+
+    private void EmitCellMark(int x, int y, int cellCm, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, int mark, Vector4 color)
+    {
+        if (used >= budget) return;
+        float wx = (x + 0.5f) * cellCm, wy = (y + 0.5f) * cellCm;
+        if (!TryScreen(wx, wy, projector, height, out int sx, out int sy)) return;
+        if (overlay.AddRect(sx - mark / 2, sy - mark / 2, mark, mark, color, color))
             used = overlay.Count;
     }
 
