@@ -201,7 +201,8 @@ public static class CrowdStructureOps
         var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Rect, call.Cache);
         if (call.Sim.VerifyIncrementalNav)
         {
-            CrowdNavRebake.VerifyAgainstFullBake(call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!);
+            CrowdNavRebake.VerifyAgainstFullBake(
+                call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Sim.TickCount);
         }
 
         return results;
