@@ -297,6 +297,45 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void VirtualCameraRuntime_ZoomTowardsPointer_KeepsGroundUnderCursor()
+        {
+            var behaviorInput = new CameraBehaviorInputState();
+            var manager = CreateOrbitCameraManager(behaviorInput, new VirtualCameraDefinition
+            {
+                Id = "ZoomCursor",
+                Priority = 0,
+                FacingMode = CameraFacingMode.None,
+                DistanceCm = 8000f,
+                Pitch = 50f,
+                FovYDeg = 50f,
+                Yaw = 40f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.None,
+                EnableZoom = true,
+                ZoomTowardsPointer = true,
+                MinDistanceCm = 2000f,
+                MaxDistanceCm = 20000f,
+                ZoomCmPerWheel = 2000f,
+            });
+            var pointer = new Vector2(80f, 40f);
+            var resolution = new Vector2(1920f, 1080f);
+            CameraStateSnapshot before = CameraStateSnapshot.FromState(manager.State);
+            Assert.That(CameraViewportUtil.TryGroundCmUnderPointer(in before, pointer, resolution, 16f / 9f, out Vector2 ground), Is.True);
+            Vector2 targetBefore = manager.State.TargetCm;
+            SetBehaviorInput(behaviorInput, zoom: 1f);
+            behaviorInput.Apply(CameraBehaviorInputChannels.PointerX, pointer.X, AttributeBindingMode.Override);
+            behaviorInput.Apply(CameraBehaviorInputChannels.PointerY, pointer.Y, AttributeBindingMode.Override);
+            behaviorInput.Apply(CameraBehaviorInputChannels.PointerActive, 1f, AttributeBindingMode.Override);
+            manager.Update(0.016f);
+            CameraStateSnapshot after = CameraStateSnapshot.FromState(manager.State);
+            Assert.That(CameraViewportUtil.TryGroundCmUnderPointer(in after, pointer, resolution, 16f / 9f, out Vector2 shifted), Is.True);
+            Assert.That(shifted.X, Is.EqualTo(ground.X).Within(1f));
+            Assert.That(shifted.Y, Is.EqualTo(ground.Y).Within(1f));
+            Assert.That(manager.State.TargetCm, Is.Not.EqualTo(targetBefore));
+            Assert.That(manager.State.DistanceCm, Is.LessThan(8000f));
+        }
+
+        [Test]
         public void VirtualCameraRuntime_Zoom_ConsumesBehaviorStateThenStopsAfterClear()
         {
             var behaviorInput = new CameraBehaviorInputState();

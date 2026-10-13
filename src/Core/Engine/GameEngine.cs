@@ -2633,7 +2633,8 @@ namespace Ludots.Core.Engine
             var presentationFrameSetup = new PresentationFrameSetupSystem(
                 World,
                 Pacemaker,
-                ResolveExternalPresentationInterpolationSource);
+                ResolveExternalPresentationInterpolationSource,
+                ResolvePresentationAlphaHold);
             RegisterPresentationSystem(presentationFrameSetup);
             SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
 
@@ -5326,6 +5327,9 @@ namespace Ludots.Core.Engine
 
             _cameraRuntimeSystem?.Update(dt);
         }
+
+        private IPresentationAlphaHold? ResolvePresentationAlphaHold()
+            => GetService(CoreServiceKeys.PresentationAlphaHold);
 
         private IPresentationInterpolationSource? ResolveExternalPresentationInterpolationSource()
         {
