@@ -53,7 +53,7 @@ public sealed class CrowdBeliefNavs
     {
         _sim.Planner!.Service.RunExclusive(() =>
         {
-            var field = CrowdStructuresStore.BuildBeliefField(_sim.Config, _sim.Structures!.SnapshotSurface(), entities, ref _beliefRanks);
+            var field = CrowdStructuresStore.BuildBeliefField(_sim.Config, _sim.Structures!.TerrainSurface(), entities, ref _beliefRanks);
             _slots[slot] = new Slot
             {
                 Field = field,
@@ -225,7 +225,7 @@ public sealed class CrowdBeliefNavs
             }
         }
 
-        var layer = CrowdStructuresStore.BuildBeliefField(_sim.Config, b.Field.SnapshotSurface(), EntitiesOf(b.Field), ref _beliefRanks);
+        var layer = CrowdStructuresStore.BuildBeliefField(_sim.Config, b.Field.TerrainSurface(), EntitiesOf(b.Field), ref _beliefRanks);
         layer.ReplaceArea(area);
         b.Layers[layerIdx] = layer;
         return layer;

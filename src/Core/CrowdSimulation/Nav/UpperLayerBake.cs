@@ -181,8 +181,9 @@ public static class UpperLayerBake
     }
 
     /// <summary>
-    /// 连通域合并:地面洪泛结果 + 桥面洪泛 + portal 合并。
-    /// 返回合并后的地面格连通域栅格与总数(桥面域附加在地面域之后)。
+    /// 连通域合并:地面洪泛结果 + 桥面 4 连通洪泛 + portal 合并。
+    /// 返回合并后的地面格连通域栅格与总数。
+    /// deckComp 留下桥面局部号（0 起，格号升序首见；-1 = 无桥面）。UpComp 把这份局部号接在地面编号之后，调用方要留住这块缓冲。
     /// </summary>
     public static int MergeDeckComponents(
         int[] groundComp,
