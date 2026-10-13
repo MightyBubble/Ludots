@@ -571,7 +571,7 @@ public sealed class CrowdSimPlanner
                 var nav = _session.ResolveNavContext(g.NavId);
                 bool fresh = nav.Version == pg.Version && g.NavId == pg.NavId;
                 if (!fresh) stale.Add(g);
-                SetFlow(g, result.Flow, fresh);
+                SetFlow(g, result.Flow, fresh, pg.RequestId);
                 result.Flow = null;
                 _service.ReleaseReply(result);
                 g.Planning = false;
@@ -859,7 +859,7 @@ public sealed class CrowdSimPlanner
         _service.ReleaseReply(result);
     }
 
-    private void RecycleFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false);
+    private void RecycleFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false, 0);
 
     private void RecycleFlow(FlowField f) => _cache.Release(f);
 
@@ -893,7 +893,7 @@ public sealed class CrowdSimPlanner
         }
 
         if (pr.Extend && g.Extending && g.StateSeq == pr.Seq) g.Extending = false;
-        SetFlow(g, result.Flow, true);
+        SetFlow(g, result.Flow, true, pr.RequestId);
         result.Flow = null;
         _service.ReleaseReply(result);
     }
@@ -1561,8 +1561,10 @@ public sealed class CrowdSimPlanner
         _strayCell[groupId] = cell;
     }
 
-    private void SetFlow(CrowdNavGroupSet.Group g, FlowField? flow, bool admit)
+    /// <param name="buildRevision">非 0 时写成该答复的路径请求号。0 表示沿用场上已有的号：缓存命中复用的就是当初挂上的那份。</param>
+    private void SetFlow(CrowdNavGroupSet.Group g, FlowField? flow, bool admit, int buildRevision)
     {
+        if (flow != null && buildRevision != 0) flow.BuildRevision = buildRevision;
         var old = g.Flow;
         if (ReferenceEquals(old, flow))
         {
@@ -1577,14 +1579,14 @@ public sealed class CrowdSimPlanner
         if (old != null) _cache.Release(old);
     }
 
-    private void ReleaseGroupFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false);
+    private void ReleaseGroupFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false, 0);
 
     private bool TryRefreshFromCache(CrowdNavGroupSet.Group g)
     {
         var mask = g.Flow!.Mask;
         if (mask == null || !FillServiceMask(mask)) return false;
         if (!_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit)) return false;
-        SetFlow(g, hit, false);
+        SetFlow(g, hit, false, 0);
         g.StateSeq++;
         return true;
     }
@@ -1626,7 +1628,7 @@ public sealed class CrowdSimPlanner
         if ((uint)tile < (uint)_maskUnion.Length) _maskUnion[tile] = 1;
         if (_cache.TryHit(_cache.KeyOf(g.NavId, g.Goal), _maskUnion, out var hit))
         {
-            SetFlow(g, hit, false);
+            SetFlow(g, hit, false, 0);
             return false;
         }
 
