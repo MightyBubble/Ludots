@@ -185,12 +185,7 @@ public sealed partial class CrowdSimulationRuntime
         var byId = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
         foreach (EntityTemplate template in registry.GetAll())
         {
-            if (template == null || string.IsNullOrEmpty(template.Id))
-            {
-                continue;
-            }
-
-            byId[template.Id] = template;
+            byId.Add(template.Id, template);
         }
 
         EntityTemplateInheritance.ExpandAll(byId, report);
