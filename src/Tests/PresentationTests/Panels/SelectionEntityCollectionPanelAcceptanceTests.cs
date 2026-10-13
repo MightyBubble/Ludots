@@ -92,7 +92,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
                 attributes);
         }
 
-        ReplaceCommandSource(collections, local, selected);
+        ReplaceCommandSource(engine, collections, local, selected);
         Tick(engine, 4);
 
         UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Interaction showcase scene should be mounted.");
@@ -166,10 +166,10 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             }));
     }
 
-    private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
+    private static void ReplaceCommandSource(GameEngine engine, EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            "core.selection",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
