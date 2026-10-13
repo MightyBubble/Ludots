@@ -51,7 +51,7 @@ public sealed class CrowdSimReplayTests
         });
         var report = CrowdSimReplay.Replay(Fresh(live), tampered);
         Assert.That(report.Passed, Is.False);
-        Assert.That(report.Differing, Does.Contain("position"));
+        Assert.That(report.Differing, Does.Contain("units.x"));
         Assert.That(report.Commands, Is.EqualTo(1));
     }
 

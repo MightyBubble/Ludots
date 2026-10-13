@@ -13,7 +13,8 @@ public sealed record CrowdSimReplayCapture(
     int Tick,
     ulong Checksum,
     CrowdSimStateDigest Digest,
-    ulong Handles)
+    ulong Handles,
+    CrowdSimPartition[] Partitions)
 {
     public CrowdSimReplayCapture WithCommands(CrowdCommand[] commands) => this with { Commands = commands };
 }
@@ -59,12 +60,15 @@ public static class CrowdSimReplay
             session.DiagnosticDigest = diagnostic;
         }
 
+        var partitions = new List<CrowdSimPartition>();
+        CrowdSimPartitions.Copy(session, partitions);
         return new CrowdSimReplayCapture(
             commands,
             session.TickCount,
             session.LastDigest.Total,
             digest,
-            CrowdSimChecksum.MixHandles(session));
+            CrowdSimChecksum.MixHandles(session),
+            partitions.ToArray());
     }
 
     public static CrowdSimReplayReport Replay(CrowdSimSession session, CrowdSimReplayCapture capture)
@@ -93,9 +97,10 @@ public static class CrowdSimReplay
         }
 
         var names = new List<string>();
-        CrowdSimChecksum.CollectDifferences(
-            capture.Digest, capture.Handles, session.LastDigest, CrowdSimChecksum.MixHandles(session), names);
-        if (session.LastDigest.Total != capture.Checksum && !names.Contains(CrowdSimChecksum.AvoidanceSection))
+        var live = new List<CrowdSimPartition>();
+        CrowdSimPartitions.Copy(session, live);
+        CrowdSimPartitions.CollectDifferences(capture.Partitions, live, names);
+        if (session.LastDigest.Total != capture.Checksum && names.Count == 0)
         {
             names.Add(CrowdSimChecksum.AvoidanceSection);
         }

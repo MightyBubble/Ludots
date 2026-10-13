@@ -1484,6 +1484,9 @@ public sealed class CrowdSimPlanner
         h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue.Count);
         for (int i = 0; i < _refreshQueue.Count; i++)
             h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue[i].Id);
+        h = CrowdSimChecksum.Mix(h, (uint)_seq);
+        // 这条端口没有流场 LRU。仍混入空序，让“没有这项”和“这项为空”分成两个摘要。
+        h = CrowdSimChecksum.Mix(h, 0);
         return h;
     }
 }

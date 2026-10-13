@@ -317,11 +317,19 @@ public static class CrowdSimChecksum
 
     internal static uint Mix(uint h, uint v) => (h ^ v) * Prime;
 
-    private static ulong Seal(uint h) => h == 0 ? 1ul << 32 : h;
+    internal static ulong Seal(uint h) => h == 0 ? 1ul << 32 : h;
 
-    private static uint MixI64(uint h, long raw) => Mix(Mix(h, (uint)raw), (uint)(raw >> 32));
+    internal static uint MixI64(uint h, long raw) => Mix(Mix(h, (uint)raw), (uint)(raw >> 32));
 
     private static uint MixGroups(CrowdSimSession sim)
+    {
+        uint h = MixGroupRows(sim);
+        h = MixOrderBook(h, sim.Orders);
+        h = sim.Planner != null ? sim.Planner.MixInFlight(h) : Mix(h, 0);
+        return h;
+    }
+
+    internal static uint MixGroupRows(CrowdSimSession sim)
     {
         var groups = sim.Groups.Groups;
         uint h = Mix(GroupsDomain, (uint)groups.Count);
@@ -347,8 +355,6 @@ public static class CrowdSimChecksum
             h = MixFlow(h, g.Flow);
         }
 
-        h = MixOrderBook(h, sim.Orders);
-        h = sim.Planner != null ? sim.Planner.MixInFlight(h) : Mix(h, 0);
         return h;
     }
 
@@ -358,6 +364,8 @@ public static class CrowdSimChecksum
         h = Mix(h, 1);
         h = MixI64(h, leader.XCm.RawValue);
         h = MixI64(h, leader.YCm.RawValue);
+        h = MixI64(h, leader.Vx.RawValue);
+        h = MixI64(h, leader.Vy.RawValue);
         h = MixI64(h, leader.Hx.RawValue);
         h = MixI64(h, leader.Hy.RawValue);
         h = Mix(h, (uint)leader.PathCount);
@@ -386,7 +394,7 @@ public static class CrowdSimChecksum
         return h;
     }
 
-    private static uint MixOrderBook(uint h, CrowdOrderBook book)
+    internal static uint MixOrderBook(uint h, CrowdOrderBook book)
     {
         var list = book.List;
         h = Mix(h, (uint)list.Count);
@@ -417,7 +425,7 @@ public static class CrowdSimChecksum
         return h;
     }
 
-    private static uint MixJump(CrowdSimSession sim, CrowdMovementKernel? movement, int n)
+    internal static uint MixJump(CrowdSimSession sim, CrowdMovementKernel? movement, int n)
     {
         uint h = Mix(JumpDomain, (uint)n);
         for (int i = 0; i < n; i++)
@@ -455,7 +463,7 @@ public static class CrowdSimChecksum
         return h;
     }
 
-    private static uint MixCommands(CrowdSimSession sim)
+    internal static uint MixCommands(CrowdSimSession sim)
     {
         var queue = sim.Commands;
         int n = queue.PendingCount;
@@ -544,15 +552,15 @@ public static class CrowdSimChecksum
         return h;
     }
 
-    private static Fix64Vec2 Position(CrowdSimSession sim, CrowdMovementKernel? movement, int dense) =>
+    internal static Fix64Vec2 Position(CrowdSimSession sim, CrowdMovementKernel? movement, int dense) =>
         movement != null ? movement.Positions[dense]
             : sim.World.Get<WorldPositionCm>(sim.Units.EntityAt(dense)).Value;
 
-    private static CrowdSimulationUnitState State(CrowdSimSession sim, CrowdMovementKernel? movement, int dense) =>
+    internal static CrowdSimulationUnitState State(CrowdSimSession sim, CrowdMovementKernel? movement, int dense) =>
         movement != null ? movement.States[dense]
             : sim.World.Get<CrowdSimulationUnitState>(sim.Units.EntityAt(dense));
 
-    private static long MotionRaw(CrowdSimSession sim, CrowdMovementKernel? movement, int dense, int field)
+    internal static long MotionRaw(CrowdSimSession sim, CrowdMovementKernel? movement, int dense, int field)
     {
         if (movement != null)
         {
