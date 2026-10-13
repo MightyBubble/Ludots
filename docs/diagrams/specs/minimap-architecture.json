@@ -49,7 +49,7 @@
       "items": ["UI Render Output"] },
     { "id": "input", "title": "interaction.context.minimap", "tint": "mauve",
       "x": 1040, "y": 1030, "w": 380, "h": 120,
-      "items": ["hover/press/drag/command"] }
+      "items": ["region/press/drag/command"] }
   ],
 
   "edges": [

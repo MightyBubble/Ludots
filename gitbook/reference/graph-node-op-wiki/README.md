@@ -206,6 +206,7 @@
 - [图内造兵](SpawnTemplate.md) — 不用预置实体，阈值一到援军从图里长了出来。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
 - [小地图上的点换成地面](MinimapScreenToWorld.md) — 屏幕点按小地图投到地面厘米，投不中得到假。
+- [小地图滚轮缩放](MinimapApplyWheelZoom.md) — 滚轮增量写到小地图缩放。
 - [开方求真长度](SqrtFloat.md) — 81 的平方开出来是 9，折成 9 点伤打在木桩上。
 - [按偏好打开交互状态](ActivateContextFromPref.md) — 图读出这条偏好的取值，打开同名的交互状态。
 - [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。

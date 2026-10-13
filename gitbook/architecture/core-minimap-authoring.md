@@ -128,16 +128,16 @@ Core runtime 类型：`MinimapRuntime`。
 - `SetZoomNormalized(float normalized)`: 设置缩放 SSOT，范围 `[0, 1]`。
 - `ApplyWheelZoom(float wheelDelta, Vector2 screenAnchor)`: 鼠标滚轮缩放，内部仍写同一个 normalized zoom。
 - `SetZoomFromSliderPointer(Vector2 screenPosition)`: 缩放条输入，内部仍写同一个 normalized zoom。
-- `JumpCameraTo(GameEngine engine, Vector2 worldCm)`: RTS 点击/拖拽跳转相机。
+- `JumpCameraTo(GameEngine engine, Vector2 worldCm)`: 提交 `CameraPoseRequest`，由 `CameraRuntimeSystem` 写入相机状态。
 - `TryScreenToWorld` / `TryScreenToWorldClamped`: 小地图屏幕点到世界坐标。
 
 小地图没有键盘操作。开关、切模式、旋转由 showcase 自己决定：要显示小地图的 showcase 在自己的代码或配置里设 `Visible`，模式和旋转用小地图上的两个按钮切。
 
-小地图上的滚轮缩放读 `presentation.minimap.actions.zoom` 这个动作（LudotsCoreMod 的 `game.json` 默认写 `Minimap.Zoom`），没写启动就报错。这个动作绑哪个键，由用到小地图的 showcase 在自己的 `default_input.json` 里声明。
+小地图上的滚轮缩放读 `presentation.minimap.actions.zoom` 这个动作（LudotsCoreMod 的 `game.json` 默认写 `Minimap.Zoom`），没写启动就报错。动作定义和 `Default_Gameplay` 上的滚轮绑定在 LudotsCoreMod 的 `default_input.json`，`firesOn` 为 `change`。
 
-点击、拖拽、缩放条和两个切换按钮走 `interaction.context.minimap`。这个状态在 LudotsCoreMod 的 `Input/interaction_context_profiles.json` 里声明，`foreground` 为真，`pointerRouting` 为 `ui`。`graph.minimap.hover` 挂在 `interaction.context.moba.battle`：指针落在小地图区域时打开小地图状态，上层点选图停掉，世界点击不会发出。按下、松开、移动、命令分别是 `graph.minimap.press`、`graph.minimap.release`、`graph.minimap.track`、`graph.minimap.command`。鼠标位置用引擎保留的 `PointerPos`。别的战斗上下文要自己挂 `graph.minimap.hover`。
+点击、拖拽、缩放条和两个切换按钮走 `interaction.context.minimap`。这个状态在 LudotsCoreMod 的 `Input/interaction_context_profiles.json` 里声明，`foreground` 为真，`pointerRouting` 为 `ui`。`presentation.minimap.interactionContextId` 指向它。`MinimapRuntime.Refresh` 把场地、缩放条和两个按钮的屏幕矩形登记出去，指针落在矩形里就打开这个前台状态，上层点选图停掉。按下、松开、移动是 `graph.minimap.press`、`graph.minimap.release`、`graph.minimap.track`。滚轮是同一状态上的 `graph.minimap.zoom`。命令点地是 `graph.minimap.command`，图里用 `MinimapScreenToWorld` 把小地图上的点投成地面；世界指针的地面仍是射线。`Command` 由 `CoreInputMod` 合并进这个状态。只装 LudotsCoreMod 时有滚轮，没有命令图。
 
-滚轮不进图。指针在小地图交互区域时，`InputRuntimeSystem` 调 `MinimapRuntime.TryConsumePointerWheel`，再按既有的 `suppressOnUiWheelCaptured` 压住相机缩放。
+滚轮走 `graph.minimap.zoom`，节点是 `MinimapApplyWheelZoom`。指针落在 `pointerRouting` 为 `ui` 的区域里时，相机的 `Zoom` 仍按 `suppressOnUiWheelCaptured` 被压住。
 
 ## 7. 缩放配置
 
@@ -157,6 +157,7 @@ Core runtime 类型：`MinimapRuntime`。
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0,
+      "interactionContextId": "interaction.context.minimap",
       "actions": {
         "zoom": "Minimap.Zoom"
       }
