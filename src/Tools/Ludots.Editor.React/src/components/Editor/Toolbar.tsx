@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import {
     ArrowDown,
     ArrowUp,
@@ -134,24 +133,35 @@ type NavQueryUiState = {
     message: string;
 };
 
-const panelClass = 'pointer-events-auto rounded-lg border border-slate-700/80 bg-slate-950/90 text-slate-100 shadow-2xl backdrop-blur-md';
-const sectionTitleClass = 'text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500';
-const fieldLabelClass = 'text-[10px] text-slate-400';
-const inputClass = 'mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-sky-500';
-const compactInputClass = 'rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-sky-500';
-const darkButtonClass = 'inline-flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45';
-const iconToggleClass = 'inline-flex h-9 w-9 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800';
+const CATEGORY_LABELS: Record<string, string> = {
+    Height: '高度', Water: '水', Area: '区域', Blocked: '阻挡',
+    Biome: '群系', Vegetation: '植被', Ramp: '坡道', Layers: '图层',
+    Territory: '领地', Entities: '实体', Obstacle: '障碍',
+};
+const MODE_LABELS: Record<string, string> = {
+    Set: '设值', Raise: '抬升', Lower: '降低', Smooth: '平滑', Bucket: '油漆桶',
+};
+const categoryLabelOf = (id: string): string => CATEGORY_LABELS[id] ?? id;
+const modeLabelOf = (id: string): string => MODE_LABELS[id] ?? id;
+
+const panelClass = 'pointer-events-auto rounded-lg border border-studio-elevated bg-studio-bg/95 text-studio-label shadow-2xl backdrop-blur-md';
+const sectionTitleClass = 'text-[10px] font-semibold uppercase tracking-[0.16em] text-studio-muted';
+const fieldLabelClass = 'text-[10px] text-studio-muted';
+const inputClass = 'mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 text-xs text-studio-label outline-none focus:border-studio-blue';
+const compactInputClass = 'rounded border border-studio-fill bg-studio-bg px-2 py-1 text-xs text-studio-label outline-none focus:border-studio-blue';
+const darkButtonClass = 'inline-flex items-center justify-center gap-2 rounded border border-studio-elevated bg-studio-surface px-2 py-1.5 text-xs font-medium text-studio-label transition hover:border-studio-fill hover:bg-studio-elevated disabled:cursor-not-allowed disabled:opacity-45';
+const iconToggleClass = 'inline-flex h-9 w-9 items-center justify-center rounded border border-studio-elevated bg-studio-surface text-studio-muted transition hover:border-studio-fill hover:bg-studio-elevated';
 const idleNavBakeState: NavBakeState = {
     phase: 'idle',
-    title: 'Bake idle',
-    message: 'Run Estimate to preview cost, or Bake to estimate and execute in one pass.',
+    title: '烘焙待命',
+    message: '先「估算」看开销，或「烘焙」一步完成估算与执行。',
     progress: 0,
 };
 
 const idleNavQueryState: NavQueryUiState = {
     phase: 'idle',
-    title: 'Path idle',
-    message: 'Choose a profile/layer and run a C# query. Grid boards auto-create flat baseline tiles; other topologies require Bake.',
+    title: '寻路待命',
+    message: '选档案/层再跑 C# 查询。Grid 板自动建平基线瓦片；其他拓扑需先烘焙。',
 };
 
 function errorMessage(value: unknown): string {
@@ -315,6 +325,7 @@ export const Toolbar: React.FC = () => {
         clearNavDirty,
         setLoading,
         loadingState,
+        setError,
         cameraRef,
         controlsRef,
     } = useEditorStore();
@@ -371,57 +382,57 @@ export const Toolbar: React.FC = () => {
     const bakeBoardName = canvasMapLoaded ? loadedBoardName : null;
     const selectedTargetLabel = `${selectedMapId ?? 'no map'} / ${selectedBoardName ?? 'no board'}`;
     const loadedTargetLabel = canvasHasLocalSession
-        ? (canvasSessionLabel ?? 'local draft')
+        ? (canvasSessionLabel ?? '本地草稿')
         : canvasHasRepoSession
             ? `${loadedMapId} / ${loadedBoardName}${canvasMapLoaded ? '' : ' (different selection)'}`
-            : 'not loaded';
+            : '未装载';
     const selectedNavReady = Boolean(canvasMapLoaded && loadedBoardInfo?.canBake);
     const dirtyChunkCount = React.useMemo(() => {
         return navDirtyChunks.size;
     }, [navDirtyChunks, navDirtyChunks.size]);
-    const navDisabledReason = !selectedMapId ? 'Select a map first.' :
-        !selectedBoardName ? 'Select a board first.' :
-        !canvasMapLoaded ? `Open '${selectedMapId}/${selectedBoardName}' from Map And Board before baking.` :
-        loadedBoardInfo?.reason ?? 'Loaded board is not bakeable.';
+    const navDisabledReason = !selectedMapId ? '先选一张地图。' :
+        !selectedBoardName ? '先选一块板。' :
+        !canvasMapLoaded ? `先从「地图与板」打开 ${selectedMapId}/${selectedBoardName} 再烘焙。` :
+        loadedBoardInfo?.reason ?? '已装载的板不可烘焙。';
     const estimateStatusLabel = navEstimate?.budgetStatusText === 'ok'
-        ? 'Budget OK'
+        ? '开销充裕'
         : navEstimate?.budgetStatusText === 'large'
-            ? 'Budget Large'
-            : 'Budget Rejected';
+            ? '开销大'
+            : '已拒绝';
     const estimateStatusHint = navEstimate?.budgetStatusText === 'large'
-        ? 'This job is above the automatic safe budget. Pressing Bake is the explicit run action; no extra checkbox is required.'
+        ? '超出自动安全开销；点「烘焙」即显式执行，无需额外勾选。'
         : navEstimate?.budgetStatusText === 'reject'
-            ? 'This bake exceeds the configured hard budget and will not run.'
-            : 'This bake is inside the safe auto-run budget.';
+            ? '超出硬阈值，不会执行。'
+            : '在安全自动执行阈值内。';
     const loadedCanvasLabel = canvasMapLoaded
-        ? `${loadedMapId}/${loadedBoardName} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} chunks`
+        ? `${loadedMapId}/${loadedBoardName} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} 区块`
         : canvasHasLocalSession
-            ? `${canvasSessionLabel ?? 'local draft'} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} chunks`
+            ? `${canvasSessionLabel ?? '本地草稿'} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} 区块`
             : canvasHasRepoSession
-                ? `${loadedMapId}/${loadedBoardName} / locked until selected`
-                : 'not loaded';
+                ? `${loadedMapId}/${loadedBoardName} / 锁定至重新选择`
+                : '未装载';
     const boardSessionTone = canvasMapLoaded || canvasHasLocalSession
-        ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
+        ? 'border-studio-blue/60 bg-studio-blue/30 text-studio-blue/10'
         : selectedDiffersFromCanvas
-            ? 'border-amber-800/70 bg-amber-950/25 text-amber-100'
-            : 'border-slate-800 bg-slate-900/60 text-slate-400';
+            ? 'border-studio-yellow/70 bg-studio-bg/25 text-studio-label'
+            : 'border-studio-elevated bg-studio-bg/60 text-studio-muted';
     const boardSessionMessage = canvasHasLocalSession
-        ? 'Local terrain draft. It can be edited and exported; repo save requires opening a board.'
+        ? '本地地形草稿：可编辑可导出；要写仓库需先打开一块板。'
         : canvasMapLoaded
-            ? 'Selected board is open on the canvas.'
+            ? '所选板已在画布上打开。'
             : selectedDiffersFromCanvas
-                ? 'Selected board is only a candidate. Open it before editing, saving, baking, or simulating.'
-                : 'No board is open on the canvas.';
+                ? '所选板还只是候选；编辑/保存/烘焙/模拟前先打开它。'
+                : '画布上没有打开的板。';
     const boardOpenDisabled = !selectedModId || !selectedMapId || !selectedBoardName || !selectedBoardInfo?.canEditTerrain;
     const boardOpenTitle = selectedBoardInfo?.canEditTerrain
-        ? 'Open selected map board from repo via Bridge'
-        : (selectedBoardInfo?.reason ?? 'Select an editable board first.');
+        ? '经 Bridge 从仓库打开所选板'
+        : (selectedBoardInfo?.reason ?? '先选一块可编辑的板。');
     const deleteBoardDisabled = !selectedMapId || !selectedBoardName || selectedBoards.length <= 1 || canvasMapLoaded;
     const deleteBoardTitle = selectedBoards.length <= 1
-        ? 'Cannot delete the last board from a map'
+        ? '一张地图不能删到一块板不剩'
         : canvasMapLoaded
             ? 'Open another board before deleting the loaded board'
-            : 'Delete selected board from MapConfig; terrain data file is kept';
+            : '从 MapConfig 删除所选板；地形数据文件保留';
     const boardPropertyTopology = canvasMapLoaded
         ? boardMetrics.topology
         : (selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? boardMetrics.topology);
@@ -499,7 +510,7 @@ export const Toolbar: React.FC = () => {
         newBoardAllocation.widthMacroTiles <= DefaultEditorEagerFullTerrainFileMacroTilesPerAxis &&
         newBoardAllocation.heightMacroTiles <= DefaultEditorEagerFullTerrainFileMacroTilesPerAxis;
     const newMapCreateWarning = newMapAllocation.exceedsDefaultWorldFootprint
-        ? `This draft is larger than the default ${DefaultWorldWidthMacroTiles}x${DefaultWorldHeightMacroTiles} MacroTile world footprint. It will still open as sparse terrain; empty chunks are allocated only when painted.`
+        ? `草稿大于默认 ${DefaultWorldWidthMacroTiles}x${DefaultWorldHeightMacroTiles} MacroTile 世界幅面；仍会以稀疏地形打开，空区块等涂抹时才分配。`
         : '';
     const newMapCreateDisabledReason = !isPositiveFinite(newMapWidthMetersValue) || !isPositiveFinite(newMapHeightMetersValue)
         ? 'Enter positive map width and height in meters.'
@@ -619,7 +630,7 @@ export const Toolbar: React.FC = () => {
 
     const handleNewMap = () => {
         if (!newMapCanCreate) {
-            alert(newMapCreateDisabledReason);
+            setError(newMapCreateDisabledReason);
             return;
         }
         initMap(newMapAllocation.widthTerrainChunks, newMapAllocation.heightTerrainChunks, {
@@ -632,7 +643,7 @@ export const Toolbar: React.FC = () => {
 
     const handleCreateBoard = async () => {
         if (!newBoardCanCreate) {
-            alert(newBoardCreateDisabledReason);
+            setError(newBoardCreateDisabledReason);
             return;
         }
         const cellSizeCm = Math.max(1, Math.floor(newBoardCellSizeCmValue));
@@ -654,7 +665,7 @@ export const Toolbar: React.FC = () => {
         const originY = Number(newBoardOriginYCm);
         if (newBoardOriginXCm.trim() !== '' || newBoardOriginYCm.trim() !== '') {
             if (!Number.isFinite(originX) || !Number.isFinite(originY)) {
-                alert('Anchor world must be two finite Ludots centimeters, or both empty to keep the cell corner on the Ludots origin.');
+                setError('锚点世界坐标必须是两个有限的 Ludots 厘米值；都留空则保持格角在 Ludots 原点。');
                 return;
             }
             request.anchorWorldXCm = Math.floor(originX);
@@ -664,7 +675,7 @@ export const Toolbar: React.FC = () => {
             await createBoard(request);
             setShowAddBoard(false);
         } catch (err: unknown) {
-            alert(`Create board failed: ${errorMessage(err)}`);
+            setError(`建板失败：${errorMessage(err)}`);
         }
     };
 
@@ -692,7 +703,7 @@ export const Toolbar: React.FC = () => {
         try {
             await updateSelectedBoard(request);
         } catch (err: unknown) {
-            alert(`Update board failed: ${errorMessage(err)}`);
+            setError(`改板失败：${errorMessage(err)}`);
         }
     };
 
@@ -701,28 +712,28 @@ export const Toolbar: React.FC = () => {
         try {
             await deleteSelectedBoard();
         } catch (err: unknown) {
-            alert(`Delete board failed: ${errorMessage(err)}`);
+            setError(`删板失败：${errorMessage(err)}`);
         }
     };
 
     const categories: { id: ToolCategory, icon: React.ReactNode, label: string }[] = [
-        { id: 'Height', icon: <Mountain size={16} />, label: 'Height' },
-        { id: 'Water', icon: <Droplets size={16} />, label: 'Water' },
-        { id: 'Area', icon: <Shapes size={16} />, label: 'Area' },
-        { id: 'Blocked', icon: <Ban size={16} />, label: 'Block' },
-        { id: 'Biome', icon: <MapIcon size={16} />, label: 'Biome' },
-        { id: 'Vegetation', icon: <TreePine size={16} />, label: 'Veg' },
-        { id: 'Ramp', icon: <Type size={16} />, label: 'Ramp' },
-        { id: 'Layers', icon: <Layers size={16} />, label: 'Layers' },
-        { id: 'Entities', icon: <BoxSelect size={16} />, label: 'Ent' },
-        { id: 'Obstacle', icon: <Circle size={16} />, label: 'Obs' },
+        { id: 'Height', icon: <Mountain size={16} />, label: '高度' },
+        { id: 'Water', icon: <Droplets size={16} />, label: '水' },
+        { id: 'Area', icon: <Shapes size={16} />, label: '区域' },
+        { id: 'Blocked', icon: <Ban size={16} />, label: '阻挡' },
+        { id: 'Biome', icon: <MapIcon size={16} />, label: '群系' },
+        { id: 'Vegetation', icon: <TreePine size={16} />, label: '植被' },
+        { id: 'Ramp', icon: <Type size={16} />, label: '坡道' },
+        { id: 'Layers', icon: <Layers size={16} />, label: '图层' },
+        { id: 'Entities', icon: <BoxSelect size={16} />, label: '实体' },
+        { id: 'Obstacle', icon: <Circle size={16} />, label: '障碍' },
     ];
 
     const modes: { id: ToolMode, icon: React.ReactNode, label: string }[] = [
-        { id: 'Set', icon: <div className="h-3.5 w-3.5 rounded-full bg-current" />, label: 'Set' },
-        { id: 'Raise', icon: <ArrowUp size={16} />, label: 'Raise' },
-        { id: 'Lower', icon: <ArrowDown size={16} />, label: 'Lower' },
-        { id: 'Bucket', icon: <PaintBucket size={16} />, label: 'Bucket' },
+        { id: 'Set', icon: <div className="h-3.5 w-3.5 rounded-full bg-current" />, label: '设值' },
+        { id: 'Raise', icon: <ArrowUp size={16} />, label: '抬升' },
+        { id: 'Lower', icon: <ArrowDown size={16} />, label: '降低' },
+        { id: 'Bucket', icon: <PaintBucket size={16} />, label: '油桶' },
     ];
 
     const buildMapBlob = () => {
@@ -737,7 +748,7 @@ export const Toolbar: React.FC = () => {
 
     const handleBakeNavTiles = async () => {
         if (!canvasMapLoaded) {
-            alert(navDisabledReason);
+            setError(navDisabledReason);
             return;
         }
         const ts = formatTimestamp();
@@ -767,9 +778,9 @@ export const Toolbar: React.FC = () => {
 
         try {
             await navigator.clipboard.writeText(cmd);
-            alert('Exported map data and dirty chunks. CLI bake command copied to clipboard.');
+            setError(null);
         } catch {
-            alert(`Exported map data and dirty chunks.\n\nRun from repo root:\n${cmd}`);
+            setError(null);
         }
     };
 
@@ -992,7 +1003,7 @@ export const Toolbar: React.FC = () => {
             setNavEstimate(null);
             setNavBakeState(idleNavBakeState);
         } catch (err: unknown) {
-            alert(`Navigation config save failed: ${errorMessage(err)}`);
+            setError(`导航配置保存失败：${errorMessage(err)}`);
         } finally {
             setLoading(false);
         }
@@ -1005,7 +1016,7 @@ export const Toolbar: React.FC = () => {
             setNavEstimate(null);
             setNavBakeState(idleNavBakeState);
         } catch (err: unknown) {
-            alert(`Navigation config load failed: ${errorMessage(err)}`);
+            setError(`导航配置加载失败：${errorMessage(err)}`);
         } finally {
             setLoading(false);
         }
@@ -1117,7 +1128,7 @@ export const Toolbar: React.FC = () => {
                 message,
                 progress: 100,
             });
-            alert(`Nav estimate failed.\n\nStart Bridge first:\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\nError: ${message}`);
+            setError(`导航估算失败。\n\n先启动 Bridge：\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\n错误：${message}`);
         } finally {
             setLoading(false);
         }
@@ -1125,7 +1136,7 @@ export const Toolbar: React.FC = () => {
 
     const handleBakeNavTilesLocal = async () => {
         if (!selectedNavReady) {
-            alert(navDisabledReason);
+            setError(navDisabledReason);
             return;
         }
         const endpoint = `${bridgeBaseUrl}/api/nav/bake-recast-react`;
@@ -1179,11 +1190,11 @@ export const Toolbar: React.FC = () => {
             const scopeLabel = isIncrementalBake ? `Dirty(${effectiveDirtyCount})${navIncludeNeighbors ? '+N' : ''}` : 'Full';
             setNavBakeState({
                 phase: 'baking',
-                title: estimate.budgetStatusText === 'large' ? 'Baking large budget job' : 'Baking NavTiles',
-                message: `${scopeLabel}: submitted to Bridge. Waiting for baked tiles.`,
+                title: estimate.budgetStatusText === 'large' ? '烘焙大开销任务' : '正在烘焙 NavTiles',
+                message: `${scopeLabel}：已提交 Bridge，等待烘焙瓦片。`,
                 progress: 55,
             });
-            setLoading(true, `Baking NavTiles: ${scopeLabel}...`, 30);
+            setLoading(true, `正在烘焙 NavTiles：${scopeLabel}…`, 30);
             timeoutId = window.setTimeout(() => navAbortRef.current?.abort(), 120000);
             const res = await fetch(endpoint, { method: 'POST', body: form, signal: navAbortRef.current.signal });
             if (!res.ok) {
@@ -1204,7 +1215,7 @@ export const Toolbar: React.FC = () => {
                     setNavBakeState({
                         phase: 'complete',
                         title: 'Nothing to bake',
-                        message: 'No target chunks need baking. Dirty scope is empty.',
+                        message: '没有需要烘焙的目标区块：脏范围为空。',
                         progress: 100,
                     });
                     return;
@@ -1267,7 +1278,7 @@ export const Toolbar: React.FC = () => {
                 message: errorMessage(err),
                 progress: 100,
             });
-            alert(`Local Bridge is not running or the request failed.\n\nStart Bridge first:\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\nError: ${errorMessage(err)}`);
+            setError(`本地 Bridge 没在运行或请求失败。\n\n先启动 Bridge：\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\n错误：${errorMessage(err)}`);
         } finally {
             if (timeoutId !== null) window.clearTimeout(timeoutId);
             navAbortRef.current = null;
@@ -1378,7 +1389,7 @@ export const Toolbar: React.FC = () => {
             const stride = view.getUint8(8);
 
             if (stride !== REACT_TERRAIN_STRIDE && stride !== REACT_TERRAIN_SPARSE_VERSION) {
-                alert(`Invalid map terrain format. Expected ${REACT_TERRAIN_STRIDE} or ${REACT_TERRAIN_SPARSE_VERSION}, got ${stride}. Please recreate map.`);
+                setError(`地图地形格式无效：期望 ${REACT_TERRAIN_STRIDE} 或 ${REACT_TERRAIN_SPARSE_VERSION}，得到 ${stride}。请重建地图。`);
                 return;
             }
 
@@ -1514,9 +1525,9 @@ export const Toolbar: React.FC = () => {
                         max="15"
                         value={brushValue}
                         onChange={(e) => setBrushValue(parseInt(e.target.value))}
-                        className="col-span-2 w-full accent-sky-500"
+                        className="col-span-2 w-full accent-[var(--studio-blue)]"
                     />
-                    <div className="col-span-2 text-[10px] text-slate-500">Area ID is stored on logic terrain and propagated to baked NavTile triangle areas.</div>
+                    <div className="col-span-2 text-[10px] text-studio-muted">Area ID is stored on logic terrain and propagated to baked NavTile triangle areas.</div>
                 </div>
             );
         }
@@ -1529,7 +1540,7 @@ export const Toolbar: React.FC = () => {
                             setBrushValue(1);
                             setMode('Set');
                         }}
-                        className={`rounded border p-2 text-xs font-semibold ${brushValue > 0 ? 'border-red-300 bg-red-700/70 text-red-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                        className={`rounded border p-2 text-xs font-semibold ${brushValue > 0 ? 'border-red-300 bg-studio-red/70 text-red-50' : 'border-studio-elevated bg-studio-bg text-studio-muted'}`}
                     >
                         Block
                     </button>
@@ -1538,11 +1549,11 @@ export const Toolbar: React.FC = () => {
                             setBrushValue(0);
                             setMode('Set');
                         }}
-                        className={`rounded border p-2 text-xs font-semibold ${brushValue === 0 ? 'border-emerald-300 bg-emerald-700/70 text-emerald-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                        className={`rounded border p-2 text-xs font-semibold ${brushValue === 0 ? 'border-studio-blue bg-studio-blue/70 text-studio-label' : 'border-studio-elevated bg-studio-bg text-studio-muted'}`}
                     >
                         Clear
                     </button>
-                    <div className="col-span-2 text-[10px] text-slate-500">Baked navmesh excludes blocked cells.</div>
+                    <div className="col-span-2 text-[10px] text-studio-muted">烘焙的导航网格不含阻挡格。</div>
                 </div>
             );
         }
@@ -1588,7 +1599,7 @@ export const Toolbar: React.FC = () => {
                                 setBrushValue(veg.id);
                                 setMode('Set');
                             }}
-                            className={`rounded border p-2 text-xs font-semibold transition ${brushValue === veg.id ? 'border-emerald-500 bg-emerald-600/25 text-emerald-200' : 'border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800'}`}
+                            className={`rounded border p-2 text-xs font-semibold transition ${brushValue === veg.id ? 'border-studio-blue bg-studio-blue/25 text-studio-blue/20' : 'border-studio-elevated bg-studio-bg text-studio-muted hover:bg-studio-elevated'}`}
                         >
                             {veg.label}
                         </button>
@@ -1601,9 +1612,9 @@ export const Toolbar: React.FC = () => {
             return (
                 <div className="space-y-2">
                     {[
-                        { id: 'Snow', label: 'Snow', color: 'bg-white text-black' },
-                        { id: 'Mud', label: 'Mud', color: 'bg-[#5c4033] text-white' },
-                        { id: 'Ice', label: 'Ice', color: 'bg-cyan-200 text-black' },
+                        { id: 'Snow', label: '雪', color: 'bg-white text-black' },
+                        { id: 'Mud', label: '泥', color: 'bg-[#5c4033] text-white' },
+                        { id: 'Ice', label: '冰', color: 'bg-[#a8e0e8] text-black' },
                     ].map((layer) => (
                         <button
                             key={layer.id}
@@ -1611,13 +1622,13 @@ export const Toolbar: React.FC = () => {
                                 setActiveLayer(layer.id as TerrainLayerId);
                                 setBrushValue(1);
                             }}
-                            className={`flex w-full items-center justify-between rounded border p-2 text-xs font-semibold transition ${activeLayer === layer.id ? 'border-sky-400' : 'border-transparent opacity-75 hover:opacity-100'} ${layer.color}`}
+                            className={`flex w-full items-center justify-between rounded border p-2 text-xs font-semibold transition ${activeLayer === layer.id ? 'border-studio-blue' : 'border-transparent opacity-75 hover:opacity-100'} ${layer.color}`}
                         >
                             <span>{layer.label}</span>
-                            {activeLayer === layer.id ? <span className="rounded bg-black/20 px-1 text-[10px]">Active</span> : null}
+                            {activeLayer === layer.id ? <span className="rounded bg-black/20 px-1 text-[10px]">当前</span> : null}
                         </button>
                     ))}
-                    <div className="text-[10px] text-slate-500">Raise adds the layer; Lower removes it.</div>
+                    <div className="text-[10px] text-studio-muted">抬升加层，降低除层。</div>
                 </div>
             );
         }
@@ -1631,10 +1642,10 @@ export const Toolbar: React.FC = () => {
                         max="255"
                         value={brushValue}
                         onChange={(e) => setBrushValue(parseInt(e.target.value))}
-                        className="w-full accent-sky-500"
+                        className="w-full accent-[var(--studio-blue)]"
                     />
-                    <div className="flex justify-between text-[10px] text-slate-400">
-                        <button onClick={() => setBrushValue(0)} className="hover:text-white">Neutral</button>
+                    <div className="flex justify-between text-[10px] text-studio-muted">
+                        <button onClick={() => setBrushValue(0)} className="hover:text-white">中立</button>
                         <button onClick={() => setBrushValue(1)} className="hover:text-white">F1</button>
                         <button onClick={() => setBrushValue(128)} className="hover:text-white">F128</button>
                         <button onClick={() => setBrushValue(255)} className="hover:text-white">F255</button>
@@ -1650,7 +1661,7 @@ export const Toolbar: React.FC = () => {
                         value={obstacleTemplateId ?? ''}
                         onChange={(e) => setObstacleTemplate(e.target.value.length > 0 ? e.target.value : null)}
                         className={compactInputClass}
-                        title="Obstacle template"
+                        title="障碍物模板"
                     >
                         {templates.map((template: EntityTemplatePayload, i: number) => {
                             const id = String(template?.Id ?? template?.id ?? `template_${i}`);
@@ -1660,26 +1671,26 @@ export const Toolbar: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                         <button
                             onClick={() => setObstacleShape('Circle')}
-                            className={`inline-flex items-center justify-center gap-1 rounded border p-2 text-xs font-semibold ${obstacleShape === 'Circle' ? 'border-orange-300 bg-orange-700/70 text-orange-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                            className={`inline-flex items-center justify-center gap-1 rounded border p-2 text-xs font-semibold ${obstacleShape === 'Circle' ? 'border-studio-yellow bg-studio-yellow/70 text-studio-bg' : 'border-studio-elevated bg-studio-bg text-studio-muted'}`}
                         >
-                            <Circle size={14} /> Circle
+                            <Circle size={14} /> 圆
                         </button>
                         <button
                             onClick={() => setObstacleShape('Box')}
-                            className={`inline-flex items-center justify-center gap-1 rounded border p-2 text-xs font-semibold ${obstacleShape === 'Box' ? 'border-orange-300 bg-orange-700/70 text-orange-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                            className={`inline-flex items-center justify-center gap-1 rounded border p-2 text-xs font-semibold ${obstacleShape === 'Box' ? 'border-studio-yellow bg-studio-yellow/70 text-studio-bg' : 'border-studio-elevated bg-studio-bg text-studio-muted'}`}
                         >
-                            <Square size={14} /> Box
+                            <Square size={14} /> 方
                         </button>
                     </div>
                     {obstacleShape === 'Circle' ? (
-                        numberField('Radius cm', obstacleRadiusCm, setObstacleRadiusCm, { min: '1' })
+                        numberField('半径 cm', obstacleRadiusCm, setObstacleRadiusCm, { min: '1' })
                     ) : (
                         <div className="grid grid-cols-2 gap-2">
-                            {numberField('Half W', obstacleHalfWidthCm, (value) => setObstacleHalfSizeCm(value, obstacleHalfHeightCm), { min: '1' })}
-                            {numberField('Half H', obstacleHalfHeightCm, (value) => setObstacleHalfSizeCm(obstacleHalfWidthCm, value), { min: '1' })}
+                            {numberField('半宽', obstacleHalfWidthCm, (value) => setObstacleHalfSizeCm(value, obstacleHalfHeightCm), { min: '1' })}
+                            {numberField('半高', obstacleHalfHeightCm, (value) => setObstacleHalfSizeCm(obstacleHalfWidthCm, value), { min: '1' })}
                         </div>
                     )}
-                    <div className="text-[10px] text-slate-500">Set places or replaces. Lower erases.</div>
+                    <div className="text-[10px] text-studio-muted">设值即放置或替换，降低擦除。</div>
                 </div>
             );
         }
@@ -1691,36 +1702,36 @@ export const Toolbar: React.FC = () => {
                         value={selectedTemplateId ?? ''}
                         onChange={(e) => selectTemplate(e.target.value.length > 0 ? e.target.value : null)}
                         className={compactInputClass}
-                        title="Template"
+                        title="模板"
                     >
                         {templates.map((template: EntityTemplatePayload, i: number) => {
                             const id = String(template?.Id ?? template?.id ?? `template_${i}`);
                             return <option key={id} value={id}>{id}</option>;
                         })}
                     </select>
-                    <div className="text-[10px] text-slate-500">Set places. Lower erases. Raise selects.</div>
+                    <div className="text-[10px] text-studio-muted">设值放置，降低擦除，抬升选中。</div>
                     {selectedEntityIndex != null && selectedEntityIndex >= 0 && selectedEntityIndex < spawnEntities.length ? (
-                        <div className="space-y-2 rounded border border-slate-700 bg-slate-900/70 p-2">
-                            <div className="text-xs text-slate-300">
-                                Selected: {spawnEntities[selectedEntityIndex].template} @ ({spawnEntities[selectedEntityIndex].position.x},{spawnEntities[selectedEntityIndex].position.y})
+                        <div className="space-y-2 rounded border border-studio-elevated bg-studio-bg/70 p-2">
+                            <div className="text-xs text-studio-secondary">
+                                已选：{spawnEntities[selectedEntityIndex].template} @ ({spawnEntities[selectedEntityIndex].position.x},{spawnEntities[selectedEntityIndex].position.y})
                             </div>
-                            <div className="text-[10px] text-slate-500">Overrides (componentName: JSON)</div>
+                            <div className="text-[10px] text-studio-muted">覆盖（组件名: JSON）</div>
                             {Object.keys(spawnEntities[selectedEntityIndex].overrides ?? {}).length === 0 ? (
-                                <div className="text-[10px] text-slate-500">No overrides.</div>
+                                <div className="text-[10px] text-studio-muted">无覆盖。</div>
                             ) : (
                                 Object.entries(spawnEntities[selectedEntityIndex].overrides ?? {}).map(([key, value]) => (
                                     <div key={key} className="space-y-1">
                                         <div className="flex items-center justify-between">
-                                            <div className="text-[11px] text-slate-200">{key}</div>
+                                            <div className="text-[11px] text-studio-label">{key}</div>
                                             <button
                                                 onClick={() => deleteSelectedEntityOverride(key)}
-                                                className="text-[10px] text-red-300 hover:text-red-200"
+                                                className="text-[10px] text-studio-red hover:brightness-110"
                                             >
-                                                Delete
+                                                删除
                                             </button>
                                         </div>
                                         <textarea
-                                            className="h-20 w-full rounded border border-slate-700 bg-slate-950 p-1 font-mono text-[10px] text-slate-200"
+                                            className="h-20 w-full rounded border border-studio-elevated bg-studio-bg p-1 font-mono text-[10px] text-studio-label"
                                             defaultValue={JSON.stringify(value, null, 2)}
                                             onBlur={(e) => updateSelectedEntityOverridesJson(key, e.target.value)}
                                         />
@@ -1729,7 +1740,7 @@ export const Toolbar: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <div className="text-[10px] text-slate-500">No entity selected.</div>
+                        <div className="text-[10px] text-studio-muted">没有选中实体。</div>
                     )}
                 </div>
             );
@@ -1742,7 +1753,7 @@ export const Toolbar: React.FC = () => {
                 max="15"
                 value={brushValue}
                 onChange={(e) => setBrushValue(parseInt(e.target.value))}
-                className="w-full accent-sky-500"
+                className="w-full accent-[var(--studio-blue)]"
             />
         );
     };
@@ -1751,12 +1762,12 @@ export const Toolbar: React.FC = () => {
         <div className="space-y-2">
             <div className={`rounded border p-3 text-xs ${
                 navBakeState.phase === 'complete'
-                    ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-100'
+                    ? 'border-studio-blue/70 bg-studio-bg/40 text-studio-label'
                     : navBakeState.phase === 'error' || navBakeState.phase === 'blocked'
                         ? 'border-red-700/70 bg-red-950/40 text-red-100'
                         : navBakeState.phase === 'baking' || navBakeState.phase === 'estimating'
-                            ? 'border-sky-700/70 bg-sky-950/40 text-sky-100'
-                            : 'border-slate-800 bg-slate-900/60 text-slate-300'
+                            ? 'border-studio-blue/70 bg-studio-blue/40 text-studio-blue/10'
+                            : 'border-studio-elevated bg-studio-bg/60 text-studio-secondary'
             }`}>
                 <div className="flex items-center justify-between gap-2">
                     <div className="font-semibold tracking-wide">{navBakeState.title}</div>
@@ -1767,10 +1778,10 @@ export const Toolbar: React.FC = () => {
                     <div
                         className={`h-full transition-all duration-200 ${
                             navBakeState.phase === 'complete'
-                                ? 'bg-emerald-400'
+                                ? 'bg-studio-blue'
                                 : navBakeState.phase === 'error' || navBakeState.phase === 'blocked'
                                     ? 'bg-red-400'
-                                    : 'bg-sky-400'
+                                    : 'bg-studio-blue'
                         }`}
                         style={{ width: `${Math.max(0, Math.min(100, navBakeState.progress))}%` }}
                     />
@@ -1779,17 +1790,17 @@ export const Toolbar: React.FC = () => {
             {navEstimate ? (
                 <div className={`rounded border p-3 text-xs ${
                     navEstimate.budgetStatusText === 'ok'
-                        ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-100'
+                        ? 'border-studio-blue/70 bg-studio-bg/40 text-studio-label'
                         : navEstimate.budgetStatusText === 'large'
-                            ? 'border-amber-700/70 bg-amber-950/40 text-amber-100'
+                            ? 'border-studio-yellow/70 bg-studio-bg/40 text-studio-label'
                             : 'border-red-700/70 bg-red-950/40 text-red-100'
                 }`}>
                     <div className="flex items-center justify-between gap-2">
                         <div className="font-semibold tracking-wide">{estimateStatusLabel}</div>
                         <div>{navEstimate.estimatedSecondsLow.toFixed(1)}s - {navEstimate.estimatedSecondsHigh.toFixed(1)}s</div>
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-200">{estimateStatusHint}</div>
-                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-slate-200">
+                    <div className="mt-1 text-[11px] text-studio-label">{estimateStatusHint}</div>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-studio-label">
                         <div>tiles {navEstimate.targetTileCount}/{navEstimate.fullTileCount}</div>
                         <div>ops {navEstimate.bakeOperationCount}</div>
                         <div>layers {navEstimate.layerCount}</div>
@@ -1801,13 +1812,13 @@ export const Toolbar: React.FC = () => {
                         <div>tile {navEstimate.tileWorldWidthCm}x{navEstimate.tileWorldHeightCm}cm</div>
                         <div>{(navEstimate.estimatedTileBytesLow / 1048576).toFixed(1)}-{(navEstimate.estimatedTileBytesHigh / 1048576).toFixed(1)}MB</div>
                     </div>
-                    <div className="mt-2 font-mono text-[10px] text-slate-400">hash {navEstimate.estimateHash.slice(0, 12)}</div>
-                    <div className="font-mono text-[10px] text-slate-500">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
-                    <div className="mt-2 whitespace-pre-line text-slate-300">{formatEstimateBudgetDetail(navEstimate)}</div>
+                    <div className="mt-2 font-mono text-[10px] text-studio-muted">hash {navEstimate.estimateHash.slice(0, 12)}</div>
+                    <div className="font-mono text-[10px] text-studio-muted">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
+                    <div className="mt-2 whitespace-pre-line text-studio-secondary">{formatEstimateBudgetDetail(navEstimate)}</div>
                     {navEstimate.profiles.length > 0 ? (
                         <div className="mt-2 max-h-24 overflow-auto rounded bg-black/20 p-2">
                             {navEstimate.profiles.map((profile) => (
-                                <div key={profile.profileId} className="flex justify-between gap-2 text-slate-300">
+                                <div key={profile.profileId} className="flex justify-between gap-2 text-studio-secondary">
                                     <span>{profile.profileId}</span>
                                     <span>{profile.recastCellSizeCm.toFixed(1)}cm vox / {profile.maxSlopeDeg}deg</span>
                                 </div>
@@ -1825,51 +1836,38 @@ export const Toolbar: React.FC = () => {
     );
 
     return (
-        <div className="pointer-events-none absolute inset-0 z-40 text-slate-100">
+        <div className="pointer-events-none absolute inset-0 z-40 text-studio-label">
             {loadingState.isLoading ? (
-                <div className="pointer-events-auto absolute left-1/2 top-24 z-50 w-80 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
+                <div className="pointer-events-auto absolute left-1/2 top-24 z-50 w-80 -translate-x-1/2 rounded-lg border border-studio-elevated bg-studio-bg/95 p-4 shadow-2xl backdrop-blur">
                     <div className="mb-3 flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full border-4 border-sky-500 border-t-transparent animate-spin" />
+                        <div className="h-8 w-8 rounded-full border-4 border-studio-blue border-t-transparent animate-spin" />
                         <div>
                             <div className="text-sm font-semibold text-white">{loadingState.message}</div>
-                            <div className="text-[10px] text-slate-500">{loadingState.progress}%</div>
+                            <div className="text-[10px] text-studio-muted">{loadingState.progress}%</div>
                         </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div className="h-full bg-sky-500 transition-all duration-100" style={{ width: `${loadingState.progress}%` }} />
+                    <div className="h-2 overflow-hidden rounded-full bg-studio-elevated">
+                        <div className="h-full bg-studio-blue transition-all duration-100" style={{ width: `${loadingState.progress}%` }} />
                     </div>
-                    {loadingState.message.startsWith('Baking NavTiles') ? (
+                    {loadingState.message.startsWith('正在烘焙 NavTiles') ? (
                         <button
                             onClick={() => {
                                 navAbortRef.current?.abort();
                                 navAbortRef.current = null;
                                 setLoading(false);
                             }}
-                            className="mt-4 w-full rounded bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"
+                            className="mt-4 w-full rounded bg-studio-red px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"
                         >
-                            Cancel Bake
+                            取消烘焙
                         </button>
                     ) : null}
                 </div>
             ) : null}
 
             <header className={`${panelClass} absolute left-4 right-4 top-4 flex min-h-16 items-center gap-3 px-3 py-2`}>
-                <div className="mr-1 min-w-36">
-                    <div className="text-sm font-semibold text-white">Ludots Editor</div>
-                    <div className="text-[10px] text-slate-500">Navigation authoring</div>
-                    <div className="pointer-events-auto mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
-                        <Link
-                            to="/"
-                            className="text-[10px] text-amber-300 underline hover:text-amber-200"
-                            title="Open authoring studio"
-                        >
-                            工作室
-                        </Link>
-                    </div>
-                </div>
                 <select
                     value={selectedModId ?? ''}
-                    onChange={(e) => selectMod(e.target.value).catch((err: unknown) => alert(errorMessage(err)))}
+                    onChange={(e) => selectMod(e.target.value).catch((err: unknown) => setError(errorMessage(err)))}
                     className={`${compactInputClass} min-w-36`}
                     title="Mod"
                 >
@@ -1881,11 +1879,11 @@ export const Toolbar: React.FC = () => {
                     value={selectedMapId ?? ''}
                     onChange={(e) => selectMap(e.target.value)}
                     className={`${compactInputClass} min-w-44 flex-1`}
-                    title="Map"
+                    title="地图"
                 >
                     {maps.map((id) => (
                         <option key={id} value={id}>
-                            {id}{mapInfoById.get(id)?.boards?.length ? ` (${mapInfoById.get(id)?.boards.length} boards)` : ''}{mapInfoById.get(id)?.canBake ? ' nav' : ''}
+                            {id}{mapInfoById.get(id)?.boards?.length ? `（${mapInfoById.get(id)?.boards.length} 板）` : ''}{mapInfoById.get(id)?.canBake ? ' 可烘焙' : ''}
                         </option>
                     ))}
                 </select>
@@ -1893,110 +1891,110 @@ export const Toolbar: React.FC = () => {
                     value={selectedBoardName ?? ''}
                     onChange={(e) => selectBoard(e.target.value)}
                     className={`${compactInputClass} min-w-36`}
-                    title={`Board stack: ${boardOptionsLabel}`}
+                    title={`板栈：${boardOptionsLabel}`}
                     disabled={!selectedMapId || selectedBoards.length === 0}
                 >
-                    {selectedBoards.length === 0 ? <option value="">No board</option> : null}
+                    {selectedBoards.length === 0 ? <option value="">无板</option> : null}
                     {selectedBoards.map((board) => (
                         <option key={board.name} value={board.name}>
-                            {board.name} / {board.spatialType ?? 'Unknown'}{board.canBake ? ' / nav' : ''}{board.canEditTerrain ? ' / edit' : ''}
+                            {board.name} / {board.spatialType ?? 'Unknown'}{board.canBake ? ' / 可烘焙' : ''}{board.canEditTerrain ? ' / 可编辑' : ''}
                         </option>
                     ))}
                 </select>
-                <div className={`hidden min-w-60 rounded border px-2 py-1 text-[10px] xl:block ${canvasMapLoaded ? 'border-sky-700/50 bg-sky-950/30 text-sky-200' : 'border-slate-800 bg-slate-900 text-slate-500'}`}>
-                    Canvas: {loadedCanvasLabel}
+                <div className={`hidden min-w-60 rounded border px-2 py-1 text-[10px] xl:block ${canvasMapLoaded ? 'border-studio-blue/50 bg-studio-blue/30 text-studio-blue' : 'border-studio-elevated bg-studio-bg text-studio-muted'}`}>
+                    画布：{loadedCanvasLabel}
                 </div>
                 <button
                     onClick={() => setShowNewMap(true)}
                     className={darkButtonClass}
-                    title="Create a new in-editor map"
+                    title="在编辑器里新建一张图"
                 >
                     <Plus size={14} className="text-yellow-300" />
-                    New
+                    新建
                 </button>
                 <button
-                    onClick={() => loadSelectedMap().catch((err: unknown) => alert(errorMessage(err)))}
+                    onClick={() => loadSelectedMap().catch((err: unknown) => setError(errorMessage(err)))}
                     className={darkButtonClass}
                     title={boardOpenTitle}
                     disabled={boardOpenDisabled}
                 >
-                    <FolderOpen size={14} className="text-sky-300" />
-                    Open
+                    <FolderOpen size={14} className="text-studio-blue" />
+                    打开
                 </button>
                 <button
-                    onClick={() => saveSelectedMap().catch((err: unknown) => alert(errorMessage(err)))}
+                    onClick={() => saveSelectedMap().catch((err: unknown) => setError(errorMessage(err)))}
                     className={darkButtonClass}
-                    title="Save MapConfig and terrain to selected mod via Bridge"
+                    title="经 Bridge 把 MapConfig 与地形存进所选 Mod"
                     disabled={!canvasMapLoaded}
                 >
-                    <Save size={14} className="text-emerald-300" />
-                    Save
+                    <Save size={14} className="text-studio-blue" />
+                    保存
                 </button>
             </header>
 
             <aside className={`${panelClass} absolute bottom-4 right-4 top-[92px] flex w-[360px] flex-col overflow-hidden`}>
-                <div className="border-b border-slate-800 px-3 py-2">
-                    <div className={sectionTitleClass}>Map And Board</div>
-                    <div className="mt-1 truncate text-xs text-slate-300">{selectedMapId ?? 'No map selected'}</div>
+                <div className="border-b border-studio-elevated px-3 py-2">
+                    <div className={sectionTitleClass}>地图与板</div>
+                    <div className="mt-1 truncate text-xs text-studio-secondary">{selectedMapId ?? 'No map selected'}</div>
                 </div>
                 <div className="space-y-4 overflow-auto p-3">
-                    <Minimap embedded className="border-slate-800/90 bg-slate-900/60 shadow-none" />
+                    <Minimap embedded className="border-studio-elevated/90 bg-studio-bg/60 shadow-none" />
 
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className={sectionTitleClass}>Map Properties</div>
-                            <HardDrive size={14} className="text-slate-500" />
+                            <div className={sectionTitleClass}>地图属性</div>
+                            <HardDrive size={14} className="text-studio-muted" />
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Topology</div>
-                                <div className="font-medium text-slate-200">{boardPropertyTopology}</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">拓扑</div>
+                                <div className="font-medium text-studio-label">{boardPropertyTopology}</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Chunks</div>
-                                <div className="font-medium text-slate-200">{boardPropertyChunks}</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">区块</div>
+                                <div className="font-medium text-studio-label">{boardPropertyChunks}</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Grid cell</div>
-                                <div className="font-medium text-slate-200">{boardPropertyCellSizeCm} cm</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">格尺寸</div>
+                                <div className="font-medium text-studio-label">{boardPropertyCellSizeCm} cm</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Chunk size</div>
-                                <div className="font-medium text-slate-200">{boardPropertyChunkSizeCells} cells</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">区块大小</div>
+                                <div className="font-medium text-studio-label">{boardPropertyChunkSizeCells} cells</div>
                             </div>
                         </div>
-                        <div className={`rounded border p-2 text-[11px] ${selectedMapInfo?.canBake ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-200' : 'border-amber-700/60 bg-amber-950/30 text-amber-200'}`}>
+                        <div className={`rounded border p-2 text-[11px] ${selectedMapInfo?.canBake ? 'border-studio-blue/60 bg-studio-bg/30 text-studio-blue/20' : 'border-studio-yellow/60 bg-studio-bg/30 text-studio-yellow'}`}>
                             <div>{selectedBoardName ?? 'No board'} / {selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? 'Unknown'} / {selectedBoardInfo?.reason ?? selectedMapInfo?.reason ?? 'Select a map from the top bar.'}</div>
-                            <div className="mt-1 text-slate-400">Nav dirty chunks: {dirtyChunkCount}</div>
+                            <div className="mt-1 text-studio-muted">导航脏区块：{dirtyChunkCount}</div>
                         </div>
                     </section>
 
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className={sectionTitleClass}>Board Editor</div>
-                            <Settings2 size={14} className="text-slate-500" />
+                            <div className={sectionTitleClass}>板编辑器</div>
+                            <Settings2 size={14} className="text-studio-muted" />
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Grid cell</div>
-                                <div className="font-medium text-slate-200">{boardPropertyCellSizeCm} cm</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">格尺寸</div>
+                                <div className="font-medium text-studio-label">{boardPropertyCellSizeCm} cm</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Hex edge</div>
-                                <div className="font-medium text-slate-200">{boardPropertyHexEdgeLengthCm} cm</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">六角边长</div>
+                                <div className="font-medium text-studio-label">{boardPropertyHexEdgeLengthCm} cm</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Topology</div>
-                                <div className="font-medium text-slate-200">{boardPropertyTopology}</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">拓扑</div>
+                                <div className="font-medium text-studio-label">{boardPropertyTopology}</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Chunks</div>
-                                <div className="font-medium text-slate-200">{boardPropertyChunks}</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                <div className="text-[10px] text-studio-muted">区块</div>
+                                <div className="font-medium text-studio-label">{boardPropertyChunks}</div>
                             </div>
                         </div>
-                        <div className="space-y-2 rounded border border-slate-800 bg-slate-900/45 p-2">
+                        <div className="space-y-2 rounded border border-studio-elevated bg-studio-bg/45 p-2">
                             <label className={fieldLabelClass}>
-                                Grid cell cm
+                                格尺寸 cm
                                 <input
                                     type="number"
                                     min="1"
@@ -2006,7 +2004,7 @@ export const Toolbar: React.FC = () => {
                                 />
                             </label>
                             <label className={fieldLabelClass}>
-                                Hex edge cm
+                                六角边长 cm
                                 <input
                                     type="number"
                                     min="1"
@@ -2019,7 +2017,7 @@ export const Toolbar: React.FC = () => {
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                                 <label className={fieldLabelClass}>
-                                    Anchor world X cm
+                                    锚点世界 X cm
                                     <input
                                         type="number"
                                         value={editBoardOriginXCm}
@@ -2030,7 +2028,7 @@ export const Toolbar: React.FC = () => {
                                     />
                                 </label>
                                 <label className={fieldLabelClass}>
-                                    Anchor world Y cm
+                                    锚点世界 Y cm
                                     <input
                                         type="number"
                                         value={editBoardOriginYCm}
@@ -2044,121 +2042,121 @@ export const Toolbar: React.FC = () => {
                             {boardPropertyTopology === 'HexGrid' ? (
                                 <div className="grid grid-cols-2 gap-2">
                                     <label className={fieldLabelClass}>
-                                        Width (hexes)
+                                        宽（六角）
                                         <input
                                             type="number"
                                             min="1"
                                             value={editBoardWidthHexes}
                                             readOnly
                                             className={inputClass}
-                                            title="Whole hexes that fit in the centimeter rectangle. Change the rectangle or the hex edge; the count is derived."
+                                            title="厘米矩形里容纳的整六角数；改矩形或六角边长，数量随之而来。"
                                         />
                                     </label>
                                     <label className={fieldLabelClass}>
-                                        Height (hexes)
+                                        高（六角）
                                         <input
                                             type="number"
                                             min="1"
                                             value={editBoardHeightHexes}
                                             readOnly
                                             className={inputClass}
-                                            title="Whole hexes that fit in the centimeter rectangle. Change the rectangle or the hex edge; the count is derived."
+                                            title="厘米矩形里容纳的整六角数；改矩形或六角边长，数量随之而来。"
                                         />
                                     </label>
                                 </div>
                             ) : null}
                             {boardSource != null && (boardSource.originXcm != null || boardSource.effectiveWidthCm > 0) ? (
-                                <div className="rounded border border-slate-800 bg-slate-950/70 px-2 py-1 font-mono text-[10px] text-slate-400">
+                                <div className="rounded border border-studio-elevated bg-studio-bg/70 px-2 py-1 font-mono text-[10px] text-studio-muted">
                                     effective {(boardSource.effectiveWidthCm / 100).toLocaleString()}m x {(boardSource.effectiveHeightCm / 100).toLocaleString()}m
                                     {boardSource.originXcm != null ? ' cell corner @ (' + (boardSource.originXcm / 100).toLocaleString() + 'm, ' + ((boardSource.originYcm ?? 0) / 100).toLocaleString() + 'm)' : ''}
                                     {boardSource.widthHexes != null ? ' - ' + boardSource.widthHexes + 'x' + boardSource.heightHexes + ' hexes' : ''}
                                 </div>
                             ) : null}
-                            <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-950/70 p-2 text-[10px] text-slate-400">
+                            <div className="grid grid-cols-2 gap-2 rounded border border-studio-elevated bg-studio-bg/70 p-2 text-[10px] text-studio-muted">
                                 <div>
-                                    <div className="uppercase tracking-wide text-slate-600">Board cells</div>
-                                    <div className="font-mono text-slate-200">{boardScalePreviewWidthCells.toLocaleString()} x {boardScalePreviewHeightCells.toLocaleString()}</div>
+                                    <div className="uppercase tracking-wide text-studio-muted">板格子</div>
+                                    <div className="font-mono text-studio-label">{boardScalePreviewWidthCells.toLocaleString()} x {boardScalePreviewHeightCells.toLocaleString()}</div>
                                 </div>
                                 <div>
-                                    <div className="uppercase tracking-wide text-slate-600">World extent</div>
-                                    <div className="font-mono text-slate-200">{(boardScalePreviewWidthCm / 100).toLocaleString()}m x {(boardScalePreviewHeightCm / 100).toLocaleString()}m</div>
+                                    <div className="uppercase tracking-wide text-studio-muted">世界范围</div>
+                                    <div className="font-mono text-studio-label">{(boardScalePreviewWidthCm / 100).toLocaleString()}m x {(boardScalePreviewHeightCm / 100).toLocaleString()}m</div>
                                 </div>
                                 <div>
-                                    <div className="uppercase tracking-wide text-slate-600">Terrain/NavTile</div>
-                                    <div className="font-mono text-slate-200">{boardPropertyChunkSizeCells} cells / {(boardScalePreviewChunkCm / 100).toLocaleString()}m</div>
+                                    <div className="uppercase tracking-wide text-studio-muted">Terrain/NavTile</div>
+                                    <div className="font-mono text-studio-label">{boardPropertyChunkSizeCells} cells / {(boardScalePreviewChunkCm / 100).toLocaleString()}m</div>
                                 </div>
                                 <div>
-                                    <div className="uppercase tracking-wide text-slate-600">Hex geometry</div>
-                                    <div className="font-mono text-slate-200">{boardPropertyTopology === 'HexGrid' ? `${boardScalePreviewHexEdgeLengthCm}cm edge` : 'not used'}</div>
+                                    <div className="uppercase tracking-wide text-studio-muted">六角几何</div>
+                                    <div className="font-mono text-studio-label">{boardPropertyTopology === 'HexGrid' ? `${boardScalePreviewHexEdgeLengthCm}cm edge` : 'not used'}</div>
                                 </div>
-                                <div className="col-span-2 rounded border border-slate-800 bg-slate-900/60 px-2 py-1 text-slate-500">
+                                <div className="col-span-2 rounded border border-studio-elevated bg-studio-bg/60 px-2 py-1 text-studio-muted">
                                     {boardScaleCellChanged || boardScaleHexChanged
                                         ? 'Scale change: loaded canvas metrics update, Recast tiles are invalidated, dirty chunks need bake.'
-                                        : 'Scale unchanged: Apply only persists changed board toggles.'}
+                                        : '比例未变：应用只落盘开关类改动。'}
                                 </div>
                             </div>
                             <button
                                 onClick={() => handleUpdateBoard()}
                                 className={darkButtonClass}
-                                title={!selectedBoardName ? 'Select a board first.' : boardScaleHasChanges ? 'Persist changed board scale and nav settings through Bridge' : 'No board settings changed.'}
+                                title={!selectedBoardName ? '先选一块板。' : boardScaleHasChanges ? 'Persist changed board scale and nav settings through Bridge' : 'No board settings changed.'}
                                 disabled={!selectedBoardName || !boardScaleHasChanges}
                             >
-                                <Save size={13} className="text-emerald-300" />
-                                Apply Board Settings
+                                <Save size={13} className="text-studio-blue" />
+                                应用板设置
                             </button>
-                            <div className="text-[10px] text-slate-500">
-                                Board edits rewrite MapConfig only. If the open board matches, the canvas scale and nav cache refresh together.
+                            <div className="text-[10px] text-studio-muted">
+                                改板只重写 MapConfig；若与打开的板一致，画布比例与导航缓存会一起刷新。
                             </div>
                         </div>
                     </section>
 
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className={sectionTitleClass}>Board Session</div>
-                            <FolderOpen size={14} className="text-slate-500" />
+                            <div className={sectionTitleClass}>板会话</div>
+                            <FolderOpen size={14} className="text-studio-muted" />
                         </div>
                         <div className={`rounded border p-2 text-[11px] ${boardSessionTone}`}>
                             <div className="grid grid-cols-[64px_1fr] gap-x-2 gap-y-1">
-                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Selected</span>
+                                <span className="text-[10px] uppercase tracking-wide text-studio-muted">已选</span>
                                 <span className="truncate font-mono">{selectedTargetLabel}</span>
-                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Canvas</span>
+                                <span className="text-[10px] uppercase tracking-wide text-studio-muted">画布</span>
                                 <span className="truncate font-mono">{loadedTargetLabel}</span>
                             </div>
                             <div className="mt-2 text-[10px] opacity-90">{boardSessionMessage}</div>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                             <button
-                                onClick={() => loadSelectedMap().catch((err: unknown) => alert(errorMessage(err)))}
+                                onClick={() => loadSelectedMap().catch((err: unknown) => setError(errorMessage(err)))}
                                 className={darkButtonClass}
                                 title={boardOpenTitle}
                                 disabled={boardOpenDisabled}
                             >
-                                <FolderOpen size={13} className="text-sky-300" />
-                                Open Selected
+                                <FolderOpen size={13} className="text-studio-blue" />
+                                打开所选
                             </button>
-                            <div className="rounded border border-slate-800 bg-slate-900/45 px-2 py-1.5 text-[10px] text-slate-500">
-                                Repository save is owned by the top bar Save action.
+                            <div className="rounded border border-studio-elevated bg-studio-bg/45 px-2 py-1.5 text-[10px] text-studio-muted">
+                                仓库保存归顶栏「保存」。
                             </div>
                         </div>
-                        <div className="rounded border border-slate-800 bg-slate-900/45 p-2">
+                        <div className="rounded border border-studio-elevated bg-studio-bg/45 p-2">
                             <div className="mb-2 flex items-center justify-between">
-                                <div className={sectionTitleClass}>Terrain Files</div>
-                                <span className="text-[10px] text-slate-500">not repo save</span>
+                                <div className={sectionTitleClass}>地形文件</div>
+                                <span className="text-[10px] text-studio-muted">不写仓库</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                                <label className={darkButtonClass} title="Import local map_data.bin as a local editor draft. Open a repo board and use top bar Save to write it.">
-                                    <Upload size={13} className="text-sky-300" />
-                                    Import Bin
+                                <label className={darkButtonClass} title="导入本地 map_data.bin 作为编辑草稿；打开仓库板后用顶栏保存落盘。">
+                                    <Upload size={13} className="text-studio-blue" />
+                                    导入 Bin
                                     <input type="file" className="hidden" onChange={handleUpload} />
                                 </label>
                                 <button
                                     onClick={handleDownload}
                                     className={darkButtonClass}
-                                    title="Export current canvas terrain as map_data.bin. This downloads a file and does not save the repo."
+                                    title="导出当前画布地形为 map_data.bin；只下载文件，不写仓库。"
                                     disabled={!canvasHasAnySession}
                                 >
-                                    <Download size={13} className="text-emerald-300" />
-                                    Export Bin
+                                    <Download size={13} className="text-studio-blue" />
+                                    导出 Bin
                                 </button>
                             </div>
                         </div>
@@ -2166,18 +2164,18 @@ export const Toolbar: React.FC = () => {
 
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className={sectionTitleClass}>Board Stack</div>
-                            <Layers size={14} className="text-slate-500" />
+                            <div className={sectionTitleClass}>板栈</div>
+                            <Layers size={14} className="text-studio-muted" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => setShowAddBoard(true)}
                                 className={darkButtonClass}
-                                title="Add a Grid or HexGrid board to the selected map"
+                                title="给所选地图加一块 Grid 或 HexGrid 板"
                                 disabled={!selectedMapId}
                             >
-                                <Plus size={13} className="text-sky-300" />
-                                Add Board
+                                <Plus size={13} className="text-studio-blue" />
+                                加板
                             </button>
                             <button
                                 onClick={handleDeleteSelectedBoard}
@@ -2186,7 +2184,7 @@ export const Toolbar: React.FC = () => {
                                 disabled={deleteBoardDisabled}
                             >
                                 <Trash2 size={13} />
-                                Delete Selected
+                                删除所选板
                             </button>
                         </div>
                         {selectedBoards.length > 0 ? (
@@ -2200,15 +2198,15 @@ export const Toolbar: React.FC = () => {
                                             onClick={() => selectBoard(board.name)}
                                             className={`w-full rounded border p-2 text-left transition ${
                                                 selected
-                                                    ? 'border-sky-600 bg-sky-950/40 text-sky-100'
-                                                    : 'border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-600'
+                                                    ? 'border-studio-blue bg-studio-blue/40 text-studio-blue/10'
+                                                    : 'border-studio-elevated bg-studio-bg/60 text-studio-secondary hover:border-studio-fill'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="truncate text-xs font-semibold">{board.name}</span>
-                                                {loaded ? <span className="rounded bg-sky-600/30 px-1.5 py-0.5 text-[9px] text-sky-100">loaded</span> : null}
+                                                {loaded ? <span className="rounded bg-studio-blue/30 px-1.5 py-0.5 text-[9px] text-studio-blue/10">已装载</span> : null}
                                             </div>
-                                            <div className="mt-1 flex flex-wrap gap-1 text-[9px] text-slate-400">
+                                            <div className="mt-1 flex flex-wrap gap-1 text-[9px] text-studio-muted">
                                                 <span>{board.spatialType ?? 'Unknown'}</span>
                                                 <span>{board.widthChunks}x{board.heightChunks}</span>
                                                 <span>{board.cellSizeCm}cm</span>
@@ -2216,20 +2214,20 @@ export const Toolbar: React.FC = () => {
                                                 <span>{board.canEditTerrain ? 'edit' : 'view'}</span>
                                                 <span>{board.dataFileExists ? 'data' : 'no-data'}</span>
                                             </div>
-                                            <div className="mt-1 truncate text-[9px] text-slate-500">{board.reason}</div>
+                                            <div className="mt-1 truncate text-[9px] text-studio-muted">{board.reason}</div>
                                         </button>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-xs text-slate-500">No boards declared on this map.</div>
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2 text-xs text-studio-muted">这张地图没有声明板。</div>
                         )}
                     </section>
 
                     <section className="hidden">
-                        <div className={sectionTitleClass}>Brush Inspector</div>
+                        <div className={sectionTitleClass}>笔刷检查器</div>
                         {!canvasCanEdit ? (
-                            <div className="rounded border border-amber-800/70 bg-amber-950/25 p-2 text-[10px] text-amber-100">
+                            <div className="rounded border border-studio-yellow/70 bg-studio-bg/25 p-2 text-[10px] text-studio-label">
                                 Open the selected board in Board Session before editing the 3D canvas.
                             </div>
                         ) : null}
@@ -2241,8 +2239,8 @@ export const Toolbar: React.FC = () => {
                                     disabled={!canvasCanEdit}
                                     className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
                                         activeCategory === category.id
-                                            ? 'border-sky-500/70 bg-sky-600/25 text-sky-200'
-                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                            ? 'border-studio-blue/70 bg-studio-blue/25 text-studio-blue'
+                                            : 'border-studio-elevated bg-studio-bg text-studio-muted hover:border-studio-fill hover:bg-studio-elevated'
                                     }`}
                                     title={category.id}
                                 >
@@ -2259,8 +2257,8 @@ export const Toolbar: React.FC = () => {
                                     disabled={!canvasCanEdit}
                                     className={`flex h-10 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
                                         activeMode === mode.id
-                                            ? 'border-violet-500/70 bg-violet-600/25 text-violet-200'
-                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                            ? 'border-studio-blue bg-studio-blue/15 text-studio-blue'
+                                            : 'border-studio-elevated bg-studio-bg text-studio-muted hover:border-studio-fill hover:bg-studio-elevated'
                                     }`}
                                     title={mode.id}
                                 >
@@ -2269,13 +2267,13 @@ export const Toolbar: React.FC = () => {
                                 </button>
                             ))}
                         </div>
-                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                            <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                                <span>{activeCategory} / {activeMode}</span>
+                        <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                            <div className="mb-2 flex items-center justify-between text-xs text-studio-secondary">
+                                <span>{categoryLabelOf(activeCategory)} / {modeLabelOf(activeMode)}</span>
                                 <span>Value {brushValue}</span>
                             </div>
                             <label className={fieldLabelClass}>
-                                Brush Size: {brushSize}
+                                笔刷尺寸：{brushSize}
                                 <input
                                     type="range"
                                     min="1"
@@ -2283,14 +2281,14 @@ export const Toolbar: React.FC = () => {
                                     value={brushSize}
                                     onChange={(e) => setBrushSize(parseInt(e.target.value))}
                                     disabled={!canvasCanEdit}
-                                    className="mt-2 w-full accent-sky-500"
+                                    className="mt-2 w-full accent-[var(--studio-blue)]"
                                 />
                             </label>
                         </div>
                         <fieldset disabled={!canvasCanEdit} className={canvasCanEdit ? '' : 'pointer-events-none'}>
                             {renderBrushValueControls()}
                         </fieldset>
-                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] text-slate-500">
+                        <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2 text-[10px] text-studio-muted">
                             {canvasCanEdit
                                 ? `Middle click pans. Right click rotates. Left click ${activeCategory === 'Entities' ? 'places, erases, or selects' : activeCategory === 'Obstacle' ? 'places or erases' : 'paints'}.`
                                 : 'Canvas editing is locked until the selected board is opened.'}
@@ -2298,26 +2296,26 @@ export const Toolbar: React.FC = () => {
                     </section>
 
                     <section className="hidden">
-                        <div className={sectionTitleClass}>View</div>
+                        <div className={sectionTitleClass}>视图</div>
                         <div className="flex gap-2">
                             <button
                                 onClick={toggleGrid}
-                                className={`${iconToggleClass} ${showGrid ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
-                                title="Toggle Grid"
+                                className={`${iconToggleClass} ${showGrid ? 'border-studio-blue bg-studio-blue/15 text-studio-blue' : ''}`}
+                                title="网格"
                             >
                                 <Grid size={16} />
                             </button>
                             <button
                                 onClick={toggleChunkBorders}
-                                className={`${iconToggleClass} ${showChunkBorders ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
-                                title="Toggle Chunk Borders"
+                                className={`${iconToggleClass} ${showChunkBorders ? 'border-studio-blue bg-studio-blue/15 text-studio-blue' : ''}`}
+                                title="区块边框"
                             >
                                 <BoxSelect size={16} />
                             </button>
                             <button
                                 onClick={toggleNavMesh}
-                                className={`${iconToggleClass} ${showNavMesh ? 'border-emerald-500/70 bg-emerald-600/25 text-emerald-100' : ''}`}
-                                title="Toggle NavMesh Visualization"
+                                className={`${iconToggleClass} ${showNavMesh ? 'border-studio-blue/70 bg-studio-blue/25 text-studio-label' : ''}`}
+                                title="导航网格可视化"
                             >
                                 <Eye size={16} />
                             </button>
@@ -2327,30 +2325,30 @@ export const Toolbar: React.FC = () => {
             </aside>
 
             <aside className={`${panelClass} absolute bottom-4 left-4 top-[92px] flex w-[380px] flex-col overflow-hidden`}>
-                <div className="border-b border-slate-800 px-3 py-2">
+                <div className="border-b border-studio-elevated px-3 py-2">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className={sectionTitleClass}>Navigation SSOT</div>
-                            <div className="mt-1 text-xs text-slate-300">{canvasMapLoaded ? `${bakeMapId} / ${bakeBoardName}` : 'No loaded board'}</div>
+                            <div className={sectionTitleClass}>导航 SSOT</div>
+                            <div className="mt-1 text-xs text-studio-secondary">{canvasMapLoaded ? `${bakeMapId} / ${bakeBoardName}` : '没有已装载的板'}</div>
                         </div>
-                        <Footprints size={18} className="text-orange-300" />
+                        <Footprints size={18} className="text-studio-yellow" />
                     </div>
                 </div>
                 <div className="space-y-4 overflow-auto p-3">
                     <section className="space-y-2">
-                        <div className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/40 p-1">
+                        <div className="grid grid-cols-3 gap-1 rounded border border-studio-elevated bg-studio-bg/40 p-1">
                             {[
-                                { id: 'bake' as const, label: 'Bake', icon: <Footprints size={13} /> },
-                                { id: 'simulation' as const, label: 'Sim', icon: <Route size={13} /> },
-                                { id: 'config' as const, label: 'Config', icon: <Settings2 size={13} /> },
+                                { id: 'bake' as const, label: '烘焙', icon: <Footprints size={13} /> },
+                                { id: 'simulation' as const, label: '模拟', icon: <Route size={13} /> },
+                                { id: 'config' as const, label: '配置', icon: <Settings2 size={13} /> },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setNavPanelTab(tab.id)}
                                     className={`inline-flex items-center justify-center gap-1 rounded px-2 py-1.5 text-xs font-semibold transition ${
                                         navPanelTab === tab.id
-                                            ? 'bg-sky-700 text-white'
-                                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                                            ? 'bg-studio-blue text-white'
+                                            : 'text-studio-muted hover:bg-studio-elevated hover:text-studio-label'
                                     }`}
                                 >
                                     {tab.icon}
@@ -2358,29 +2356,29 @@ export const Toolbar: React.FC = () => {
                                 </button>
                             ))}
                         </div>
-                        <div className="rounded border border-slate-800 bg-slate-900/40 p-2 text-[11px] text-slate-400">
-                            SSOT: this panel owns nav bake, simulation, and navigation config. Map/board plus minimap live in the right panel; brush authoring lives in the bottom rail. Visual overlay is baked Recast NavTile (.ntil) triangles; simulation calls C# Core NavQueryService backed by DotRecast Detour.
+                        <div className="rounded border border-studio-elevated bg-studio-bg/40 p-2 text-[11px] text-studio-muted">
+                            SSOT：这块面板管导航烘焙、模拟与导航配置；地图/板与小地图在右侧面板，笔刷在底栏。可视化叠层是烘焙出的 Recast NavTile（.ntil）三角；模拟走 C# Core NavQueryService（DotRecast Detour）。
                         </div>
                     </section>
 
                     <section className={`space-y-3 ${navPanelTab === 'bake' ? '' : 'hidden'}`}>
-                        <div className={sectionTitleClass}>Bake Controls</div>
+                        <div className={sectionTitleClass}>烘焙控制</div>
                         <div className={`rounded border px-2 py-1.5 text-xs ${
                             canvasMapLoaded
-                                ? 'border-sky-700/50 bg-sky-950/30 text-sky-100'
-                                : 'border-amber-800/70 bg-amber-950/20 text-amber-100'
+                                ? 'border-studio-blue/50 bg-studio-blue/30 text-studio-blue/10'
+                                : 'border-studio-yellow/70 bg-studio-bg/20 text-studio-label'
                         }`}>
                             <div className="grid grid-cols-[72px_1fr] gap-x-2 gap-y-1">
-                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Selected</span>
+                                <span className="text-[10px] uppercase tracking-wide text-studio-muted">已选</span>
                                 <span className="truncate font-mono">{selectedTargetLabel}</span>
-                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Loaded</span>
+                                <span className="text-[10px] uppercase tracking-wide text-studio-muted">已装载</span>
                                 <span className="truncate font-mono">{loadedTargetLabel}</span>
                             </div>
                         </div>
                         {!selectedNavReady ? (
-                            <div className="rounded border border-amber-800/70 bg-amber-950/30 p-2 text-[11px] text-amber-100">
+                            <div className="rounded border border-studio-yellow/70 bg-studio-bg/30 p-2 text-[11px] text-studio-label">
                                 <div>{navDisabledReason}</div>
-                                <div className="mt-1 text-[10px] text-amber-100/75">Board open/save lives in the right Map And Board panel.</div>
+                                <div className="mt-1 text-[10px] text-studio-label/75">板的打开/保存在右侧「地图与板」面板。</div>
                             </div>
                         ) : null}
                         <div className="grid grid-cols-2 gap-2">
@@ -2404,20 +2402,20 @@ export const Toolbar: React.FC = () => {
                             >
                                 <option value="dirtyN">{`Dirty+N (${dirtyChunkCount})`}</option>
                                 <option value="dirty">{`Dirty (${dirtyChunkCount})`}</option>
-                                <option value="full">Full</option>
+                                <option value="full">全量</option>
                             </select>
                             <button
                                 onClick={() => setNavParallel(!navParallel)}
-                                className={`rounded border px-2 py-1 text-xs ${navParallel ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-800 bg-slate-900 text-slate-500'}`}
-                                title={`Parallel: ${navParallel ? 'on' : 'off'}`}
+                                className={`rounded border px-2 py-1 text-xs ${navParallel ? 'border-studio-fill bg-studio-elevated text-studio-label' : 'border-studio-elevated bg-studio-bg text-studio-muted'}`}
+                                title={`并行：${navParallel ? '开' : '关'}`}
                             >
-                                Parallel {navParallel ? 'On' : 'Off'}
+                                并行 {navParallel ? '开' : '关'}
                             </button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={handleEstimateNavTilesLocal}
-                                className="inline-flex items-center justify-center gap-2 rounded bg-sky-700 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-45"
+                                className="inline-flex items-center justify-center gap-2 rounded bg-studio-blue px-3 py-2 text-xs font-semibold text-white hover:bg-studio-blue disabled:cursor-not-allowed disabled:opacity-45"
                                 title={selectedNavReady ? 'Estimate NavTiles via local bridge' : navDisabledReason}
                                 disabled={!selectedNavReady}
                             >
@@ -2425,17 +2423,17 @@ export const Toolbar: React.FC = () => {
                             </button>
                             <button
                                 onClick={handleBakeNavTilesLocal}
-                                className="inline-flex items-center justify-center gap-2 rounded bg-orange-700 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
+                                className="inline-flex items-center justify-center gap-2 rounded bg-studio-yellow px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
                                 title={selectedNavReady ? 'Bake NavTiles via local bridge and load into editor' : navDisabledReason}
                                 disabled={bakeButtonDisabled}
                             >
                                 Bake
                             </button>
                         </div>
-                        <div className="rounded border border-slate-800 bg-slate-900/45 p-2">
+                        <div className="rounded border border-studio-elevated bg-studio-bg/45 p-2">
                             <div className="mb-2 flex items-center justify-between">
-                                <div className={sectionTitleClass}>Nav Artifacts</div>
-                                <span className="text-[10px] text-slate-500">visual/debug</span>
+                                <div className={sectionTitleClass}>导航产物</div>
+                                <span className="text-[10px] text-studio-muted">可视化/调试</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <button
@@ -2444,7 +2442,7 @@ export const Toolbar: React.FC = () => {
                                     title={canvasMapLoaded ? 'Export map_data.bin + dirty list, then copy a CLI bake command. This does not save the repo.' : navDisabledReason}
                                     disabled={!canvasMapLoaded}
                                 >
-                                    <Footprints size={13} className="text-orange-300" />
+                                    <Footprints size={13} className="text-studio-yellow" />
                                     CLI
                                 </button>
                                 <button
@@ -2453,7 +2451,7 @@ export const Toolbar: React.FC = () => {
                                     title={bakedNavTiles.size > 0 ? 'Clear visual/query NavTiles from this editor session. This does not delete repo files.' : 'No NavTiles loaded'}
                                     disabled={bakedNavTiles.size === 0}
                                 >
-                                    Clear Tiles
+                                    清空瓦片
                                 </button>
                             </div>
                         </div>
@@ -2464,36 +2462,36 @@ export const Toolbar: React.FC = () => {
 
                     <section className={`space-y-3 ${navPanelTab === 'bake' ? '' : 'hidden'}`}>
                         <div className="flex items-center justify-between">
-                            <div className={sectionTitleClass}>Bake Params</div>
-                            <SlidersHorizontal size={14} className="text-slate-500" />
+                            <div className={sectionTitleClass}>烘焙参数</div>
+                            <SlidersHorizontal size={14} className="text-studio-muted" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            {numberField('Height Scale', navHeightScale, (value) => setNavHeightScale(value || 0.1), { step: '0.1', min: '0.1' })}
-                            {numberField('Min Up Dot', navMinUpDot, setNavMinUpDot, { step: '0.05', min: '-1', max: '1' })}
-                            {numberField('Cliff', navCliffThreshold, (value) => setNavCliffThreshold(Math.max(0, Math.floor(value || 0))), { step: '1', min: '0' })}
-                            {numberField('Workers', navMaxDegree, (value) => setNavMaxDegree(Math.max(1, Math.floor(value || 1))), { step: '1', min: '1' })}
+                            {numberField('高度缩放', navHeightScale, (value) => setNavHeightScale(value || 0.1), { step: '0.1', min: '0.1' })}
+                            {numberField('最小朝上点积', navMinUpDot, setNavMinUpDot, { step: '0.05', min: '-1', max: '1' })}
+                            {numberField('崖壁', navCliffThreshold, (value) => setNavCliffThreshold(Math.max(0, Math.floor(value || 0))), { step: '1', min: '0' })}
+                            {numberField('并行数', navMaxDegree, (value) => setNavMaxDegree(Math.max(1, Math.floor(value || 1))), { step: '1', min: '1' })}
                             <label className={fieldLabelClass}>
-                                Tile Artifact
+                                瓦片产物
                                 <select
                                     value={String(navTileVersion)}
                                     onChange={(e) => setNavTileVersion(parseInt(e.target.value) || 1)}
                                     className={inputClass}
-                                    title="NavTile artifact format version. This is not the agent profile or agent size."
+                                    title="NavTile 产物格式版本；不是代理档案或代理尺寸。"
                                 >
-                                    <option value="1">Artifact 1</option>
-                                    <option value="2">Artifact 2</option>
+                                    <option value="1">产物 1</option>
+                                    <option value="2">产物 2</option>
                                 </select>
                             </label>
-                            <div className="rounded border border-slate-800 bg-slate-900/50 p-2 text-[10px] text-slate-500">
-                                Artifact version controls the `.ntil` payload contract. Agent size comes from the selected profile radius.
+                            <div className="rounded border border-studio-elevated bg-studio-bg/50 p-2 text-[10px] text-studio-muted">
+                                产物版本决定 `.ntil` 载荷契约；代理尺寸来自所选档案半径。
                             </div>
                         </div>
                     </section>
 
                     <section className={`space-y-3 ${navPanelTab === 'simulation' ? '' : 'hidden'}`}>
                         <div className="flex items-center justify-between">
-                            <div className={sectionTitleClass}>Path Simulation</div>
-                            <div className="max-w-44 text-right text-[10px] leading-tight text-slate-500">
+                            <div className={sectionTitleClass}>寻路模拟</div>
+                            <div className="max-w-44 text-right text-[10px] leading-tight text-studio-muted">
                                 {availableNavPayloads.length} query tile(s) for {navQueryProfileId || 'profile'} / L{navQueryLayer}; {flatBaselinePayloadCount} flat baseline
                             </div>
                         </div>
@@ -2509,7 +2507,7 @@ export const Toolbar: React.FC = () => {
                                     }}
                                     className={inputClass}
                                 >
-                                    {bakeProfiles.length === 0 ? <option value="">No profiles</option> : null}
+                                    {bakeProfiles.length === 0 ? <option value="">没有档案</option> : null}
                                     {bakeProfiles.map((profile: NavBakeProfilePayload, i: number) => {
                                         const id = String(profile?.id ?? profile?.Id ?? `profile_${i}`);
                                         return <option key={id} value={id}>{id}</option>;
@@ -2536,12 +2534,12 @@ export const Toolbar: React.FC = () => {
                                 </select>
                             </label>
                         </div>
-                        <div className="rounded border border-sky-800/60 bg-sky-950/25 p-2 text-[11px] text-sky-100">
+                        <div className="rounded border border-studio-blue/60 bg-studio-blue/25 p-2 text-[11px] text-studio-blue/10">
                             <div className="flex items-center justify-between gap-2">
                                 <span className="font-semibold">Shown and queried: {navQueryProfileId || 'no profile'} / layer {navQueryLayer}</span>
                                 <span>{selectedAgentRadiusCm > 0 ? `${selectedAgentRadiusCm} cm radius` : 'radius unknown'}</span>
                             </div>
-                            <div className="mt-1 text-sky-200/75">
+                            <div className="mt-1 text-studio-blue/75">
                                 Recast erodes the mesh by agent radius/climb/slope
                                 {selectedBakeProfile
                                     ? ` (climb ${Number(selectedBakeProfile.maxClimbCm ?? selectedBakeProfile.MaxClimbCm ?? 0)} cm, slope ${Number(selectedBakeProfile.maxSlopeDeg ?? selectedBakeProfile.MaxSlopeDeg ?? 0)} deg)`
@@ -2550,19 +2548,19 @@ export const Toolbar: React.FC = () => {
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="rounded border border-slate-800 bg-slate-900/70 p-2 text-left text-slate-300">
+                            <div className="rounded border border-studio-elevated bg-studio-bg/70 p-2 text-left text-studio-secondary">
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1 text-xs font-semibold"><MapPin size={13} /> Start</span>
-                                    <span className="font-mono text-[10px] text-slate-400">{navQueryStartCell.col},{navQueryStartCell.row}</span>
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold"><MapPin size={13} /> 起点</span>
+                                    <span className="font-mono text-[10px] text-studio-muted">{navQueryStartCell.col},{navQueryStartCell.row}</span>
                                 </div>
-                                <div className="mt-1 text-[10px] text-slate-500">Left-click the canvas in Sim.</div>
+                                <div className="mt-1 text-[10px] text-studio-muted">模拟中左键画布设起点。</div>
                             </div>
-                            <div className="rounded border border-slate-800 bg-slate-900/70 p-2 text-left text-slate-300">
+                            <div className="rounded border border-studio-elevated bg-studio-bg/70 p-2 text-left text-studio-secondary">
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1 text-xs font-semibold"><Crosshair size={13} /> Goal</span>
-                                    <span className="font-mono text-[10px] text-slate-400">{navQueryGoalCell.col},{navQueryGoalCell.row}</span>
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold"><Crosshair size={13} /> 终点</span>
+                                    <span className="font-mono text-[10px] text-studio-muted">{navQueryGoalCell.col},{navQueryGoalCell.row}</span>
                                 </div>
-                                <div className="mt-1 text-[10px] text-slate-500">Right-click the canvas in Sim.</div>
+                                <div className="mt-1 text-[10px] text-studio-muted">右键设终点。</div>
                             </div>
                         </div>
                         <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -2572,7 +2570,7 @@ export const Toolbar: React.FC = () => {
                             </label>
                             <button
                                 onClick={handleSimulateNavPath}
-                                className="mt-4 inline-flex h-8 items-center justify-center rounded bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-45"
+                                className="mt-4 inline-flex h-8 items-center justify-center rounded bg-studio-blue px-3 text-xs font-semibold text-white hover:bg-studio-blue disabled:cursor-not-allowed disabled:opacity-45"
                                 disabled={!navQueryReady || navQueryState.phase === 'querying'}
                                 title={navQueryReady ? 'Run real C# Core NavQueryService path query' : navQueryDisabledReason}
                             >
@@ -2582,12 +2580,12 @@ export const Toolbar: React.FC = () => {
                         </div>
                         <div className={`rounded border p-3 text-xs ${
                             navQueryState.phase === 'complete'
-                                ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-100'
+                                ? 'border-studio-blue/70 bg-studio-bg/40 text-studio-label'
                                 : navQueryState.phase === 'error'
                                     ? 'border-red-700/70 bg-red-950/40 text-red-100'
                                     : navQueryState.phase === 'querying'
-                                        ? 'border-sky-700/70 bg-sky-950/40 text-sky-100'
-                                        : 'border-slate-800 bg-slate-900/60 text-slate-300'
+                                        ? 'border-studio-blue/70 bg-studio-blue/40 text-studio-blue/10'
+                                        : 'border-studio-elevated bg-studio-bg/60 text-studio-secondary'
                         }`}>
                             <div className="flex items-center justify-between">
                                 <span className="font-semibold">{navQueryState.title}</span>
@@ -2595,7 +2593,7 @@ export const Toolbar: React.FC = () => {
                             </div>
                             <div className="mt-1 whitespace-pre-line text-[11px] opacity-90">{navQueryState.message}</div>
                             {navSimulation ? (
-                                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-200">
+                                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-studio-label">
                                     <div>Status {navSimulation.status}</div>
                                     <div>Points {navSimulation.points?.length ?? 0}</div>
                                     <div>Cost {Number(navSimulation.travelCost ?? 0).toFixed(2)}</div>
@@ -2604,27 +2602,27 @@ export const Toolbar: React.FC = () => {
                                 </div>
                             ) : null}
                             {!navQueryReady && navQueryState.phase === 'idle' ? (
-                                <div className="mt-2 text-[10px] text-slate-500">{navQueryDisabledReason}</div>
+                                <div className="mt-2 text-[10px] text-studio-muted">{navQueryDisabledReason}</div>
                             ) : null}
                         </div>
                     </section>
 
                     <section className={`space-y-3 ${navPanelTab === 'config' ? '' : 'hidden'}`}>
                         <div className="flex items-center justify-between gap-2">
-                            <div className={sectionTitleClass}>Navigation Config</div>
+                            <div className={sectionTitleClass}>导航配置</div>
                             <div className="flex gap-1">
                                 <button
                                     onClick={handleReloadNavigationConfig}
-                                    className="rounded border border-slate-700 bg-slate-900 p-1.5 text-slate-300 hover:bg-slate-800"
-                                    title="Reload navigation config"
+                                    className="rounded border border-studio-elevated bg-studio-bg p-1.5 text-studio-secondary hover:bg-studio-elevated"
+                                    title="重载导航配置"
                                     disabled={!selectedModId}
                                 >
                                     <RefreshCw size={13} />
                                 </button>
                                 <button
                                     onClick={handleSaveNavigationConfig}
-                                    className="rounded bg-emerald-700 p-1.5 text-white hover:bg-emerald-600 disabled:opacity-45"
-                                    title="Save navigation config"
+                                    className="rounded bg-studio-blue p-1.5 text-white hover:bg-studio-blue disabled:opacity-45"
+                                    title="保存导航配置"
                                     disabled={!selectedModId || !navEditorConfig}
                                 >
                                     <Save size={13} />
@@ -2636,18 +2634,18 @@ export const Toolbar: React.FC = () => {
                             <div className="space-y-3 text-xs">
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Agent Profiles</div>
-                                        <button onClick={addAgentProfile} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                        <div className="text-[10px] uppercase tracking-wide text-studio-muted">代理档案</div>
+                                        <button onClick={addAgentProfile} className="rounded border border-studio-elevated bg-studio-bg px-2 py-0.5 text-studio-secondary">+</button>
                                     </div>
-                                    {agentProfiles.length === 0 ? <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-xs text-slate-500">No agent profiles.</div> : null}
+                                    {agentProfiles.length === 0 ? <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2 text-xs text-studio-muted">还没有代理档案。</div> : null}
                                     {agentProfiles.map((profile: NavAgentProfilePayload, i: number) => (
-                                        <div key={`${profile.id ?? i}-agent`} className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
-                                            <input value={textValue(profile.id)} onChange={(e) => updateAgentProfileField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="radiusCm" type="number" value={numericValue(profile.radiusCm, 0)} onChange={(e) => updateAgentProfileField(i, 'radiusCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="heightCm" type="number" value={numericValue(profile.heightCm, 0)} onChange={(e) => updateAgentProfileField(i, 'heightCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="layer" type="number" value={numericValue(profile.layer, 0)} onChange={(e) => updateAgentProfileField(i, 'layer', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="clearanceCm" type="number" value={numericValue(profile.clearanceCm, 0)} onChange={(e) => updateAgentProfileField(i, 'clearanceCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="mass" type="number" step="0.1" value={numericValue(profile.mass, 1)} onChange={(e) => updateAgentProfileField(i, 'mass', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        <div key={`${profile.id ?? i}-agent`} className="grid grid-cols-3 gap-1 rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                            <input value={textValue(profile.id)} onChange={(e) => updateAgentProfileField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="radiusCm" type="number" value={numericValue(profile.radiusCm, 0)} onChange={(e) => updateAgentProfileField(i, 'radiusCm', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="heightCm" type="number" value={numericValue(profile.heightCm, 0)} onChange={(e) => updateAgentProfileField(i, 'heightCm', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="layer" type="number" value={numericValue(profile.layer, 0)} onChange={(e) => updateAgentProfileField(i, 'layer', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="clearanceCm" type="number" value={numericValue(profile.clearanceCm, 0)} onChange={(e) => updateAgentProfileField(i, 'clearanceCm', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="mass" type="number" step="0.1" value={numericValue(profile.mass, 1)} onChange={(e) => updateAgentProfileField(i, 'mass', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
                                         </div>
                                     ))}
                                 </div>
@@ -2660,8 +2658,8 @@ export const Toolbar: React.FC = () => {
                                             onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.mode = e.target.value; })}
                                             className={inputClass}
                                         >
-                                            <option value="offline">offline</option>
-                                            <option value="runtime-incremental">runtime-incremental</option>
+                                            <option value="offline">离线</option>
+                                            <option value="runtime-incremental">运行时增量</option>
                                         </select>
                                     </label>
                                     <label className={fieldLabelClass}>
@@ -2678,7 +2676,7 @@ export const Toolbar: React.FC = () => {
                                 </div>
 
                                 {navEditorConfig.validated ? (
-                                    <div className="grid grid-cols-4 gap-1 text-[10px] text-slate-400">
+                                    <div className="grid grid-cols-4 gap-1 text-[10px] text-studio-muted">
                                         <span>A {numericValue(navEditorConfig.validated.profileCount, 0)}</span>
                                         <span>P {numericValue(navEditorConfig.validated.bakeProfileCount, 0)}</span>
                                         <span>L {numericValue(navEditorConfig.validated.layerCount, 0)}</span>
@@ -2688,46 +2686,46 @@ export const Toolbar: React.FC = () => {
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Bake Profiles</div>
-                                        <button onClick={addBakeProfile} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                        <div className="text-[10px] uppercase tracking-wide text-studio-muted">烘焙档案</div>
+                                        <button onClick={addBakeProfile} className="rounded border border-studio-elevated bg-studio-bg px-2 py-0.5 text-studio-secondary">+</button>
                                     </div>
                                     {bakeProfiles.map((profile: NavBakeProfilePayload, i: number) => (
-                                        <div key={`${profile.id ?? i}-profile`} className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
-                                            <input value={textValue(profile.id)} onChange={(e) => updateBakeProfileField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="maxClimbCm" type="number" value={numericValue(profile.maxClimbCm, 0)} onChange={(e) => updateBakeProfileField(i, 'maxClimbCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="maxSlopeDeg" type="number" step="0.5" value={numericValue(profile.maxSlopeDeg, 0)} onChange={(e) => updateBakeProfileField(i, 'maxSlopeDeg', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        <div key={`${profile.id ?? i}-profile`} className="grid grid-cols-3 gap-1 rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                            <input value={textValue(profile.id)} onChange={(e) => updateBakeProfileField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="maxClimbCm" type="number" value={numericValue(profile.maxClimbCm, 0)} onChange={(e) => updateBakeProfileField(i, 'maxClimbCm', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="maxSlopeDeg" type="number" step="0.5" value={numericValue(profile.maxSlopeDeg, 0)} onChange={(e) => updateBakeProfileField(i, 'maxSlopeDeg', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
                                         </div>
                                     ))}
                                 </div>
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Layers</div>
-                                        <button onClick={addNavLayer} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                        <div className="text-[10px] uppercase tracking-wide text-studio-muted">图层</div>
+                                        <button onClick={addNavLayer} className="rounded border border-studio-elevated bg-studio-bg px-2 py-0.5 text-studio-secondary">+</button>
                                     </div>
                                     {navLayers.map((layer: NavLayerPayload, i: number) => (
-                                        <div key={`${layer.id ?? i}-layer`} className="grid grid-cols-2 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
-                                            <input value={textValue(layer.id)} onChange={(e) => updateNavLayerField(i, 'id', e.target.value, false)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input type="number" value={numericValue(layer.layer, 0)} onChange={(e) => updateNavLayerField(i, 'layer', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        <div key={`${layer.id ?? i}-layer`} className="grid grid-cols-2 gap-1 rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                            <input value={textValue(layer.id)} onChange={(e) => updateNavLayerField(i, 'id', e.target.value, false)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input type="number" value={numericValue(layer.layer, 0)} onChange={(e) => updateNavLayerField(i, 'layer', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
                                         </div>
                                     ))}
                                 </div>
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Areas</div>
-                                        <button onClick={addNavArea} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                        <div className="text-[10px] uppercase tracking-wide text-studio-muted">区域</div>
+                                        <button onClick={addNavArea} className="rounded border border-studio-elevated bg-studio-bg px-2 py-0.5 text-studio-secondary">+</button>
                                     </div>
                                     {navAreas.map((area: NavAreaPayload, i: number) => (
-                                        <div key={`${area.id ?? i}-area`} className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
-                                            <input value={textValue(area.id)} onChange={(e) => updateNavAreaField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="areaId" type="number" value={numericValue(area.areaId, 0)} onChange={(e) => updateNavAreaField(i, 'areaId', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
-                                            <input title="cost" type="number" step="0.05" value={numericValue(area.cost, 1)} onChange={(e) => updateNavAreaField(i, 'cost', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        <div key={`${area.id ?? i}-area`} className="grid grid-cols-3 gap-1 rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                                            <input value={textValue(area.id)} onChange={(e) => updateNavAreaField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="areaId" type="number" value={numericValue(area.areaId, 0)} onChange={(e) => updateNavAreaField(i, 'areaId', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
+                                            <input title="cost" type="number" step="0.05" value={numericValue(area.cost, 1)} onChange={(e) => updateNavAreaField(i, 'cost', e.target.value)} className="rounded border border-studio-elevated bg-studio-bg px-2 py-1 text-[11px]" />
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="grid grid-cols-2 gap-2 rounded border border-studio-elevated bg-studio-bg/60 p-2">
                                     <label className={fieldLabelClass}>
                                         Tick Tiles
                                         <input type="number" value={numericValue(runtimeIncremental.tileBudgetPerFixedTick, 1)} onChange={(e) => updateRuntimeIncrementalField('tileBudgetPerFixedTick', e.target.value)} className={inputClass} />
@@ -2744,14 +2742,14 @@ export const Toolbar: React.FC = () => {
                                         Cliff
                                         <input type="number" value={numericValue(runtimeIncremental.cliffHeightThreshold, 1)} onChange={(e) => updateRuntimeIncrementalField('cliffHeightThreshold', e.target.value)} className={inputClass} />
                                     </label>
-                                    <label className="col-span-2 flex items-center gap-2 text-[10px] text-slate-300">
+                                    <label className="col-span-2 flex items-center gap-2 text-[10px] text-studio-secondary">
                                         <input type="checkbox" checked={!!runtimeIncremental.includeNeighborTiles} onChange={(e) => updateRuntimeIncrementalField('includeNeighborTiles', e.target.checked, false)} />
-                                        <span>Neighbor tiles</span>
+                                        <span>邻接瓦片</span>
                                     </label>
                                 </div>
                             </div>
                         ) : (
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-500">
+                            <div className="rounded border border-studio-elevated bg-studio-bg/60 p-3 text-xs text-studio-muted">
                                 No config loaded.
                             </div>
                         )}
@@ -2762,21 +2760,21 @@ export const Toolbar: React.FC = () => {
             <section className={`${panelClass} absolute bottom-4 left-[408px] right-[392px] flex min-h-[136px] flex-col overflow-hidden px-3 py-3`}>
                 <div className="mb-2 flex items-center justify-between gap-3">
                     <div>
-                        <div className={sectionTitleClass}>Brush Inspector</div>
-                        <div className="mt-1 text-xs text-slate-300">
-                            {navPanelTab === 'simulation' ? 'Simulation pick mode' : `${activeCategory} / ${activeMode}`}
+                        <div className={sectionTitleClass}>笔刷检查器</div>
+                        <div className="mt-1 text-xs text-studio-secondary">
+                            {navPanelTab === 'simulation' ? '模拟拾取模式' : `${categoryLabelOf(activeCategory)} / ${modeLabelOf(activeMode)}`}
                         </div>
                     </div>
                     <div className={`rounded border px-2 py-1 text-[10px] ${
                         navPanelTab === 'simulation'
-                            ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
+                            ? 'border-studio-blue/60 bg-studio-blue/30 text-studio-blue/10'
                             : canvasCanEdit
-                            ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-100'
-                            : 'border-amber-800/70 bg-amber-950/25 text-amber-100'
+                            ? 'border-studio-blue/60 bg-studio-bg/30 text-studio-label'
+                            : 'border-studio-yellow/70 bg-studio-bg/25 text-studio-label'
                     }`}>
                         {navPanelTab === 'simulation'
                             ? 'Left start / right goal'
-                            : canvasCanEdit ? 'Canvas editable' : 'Open selected board before editing'}
+                            : canvasCanEdit ? 'Canvas editable' : '先打开所选板再编辑'}
                     </div>
                 </div>
                 <div className="grid grid-cols-[minmax(260px,1.1fr)_minmax(260px,1fr)_auto] gap-3">
@@ -2789,8 +2787,8 @@ export const Toolbar: React.FC = () => {
                                     disabled={brushInspectorLocked}
                                     className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
                                         activeCategory === category.id
-                                            ? 'border-sky-500/70 bg-sky-600/25 text-sky-200'
-                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                            ? 'border-studio-blue/70 bg-studio-blue/25 text-studio-blue'
+                                            : 'border-studio-elevated bg-studio-bg text-studio-muted hover:border-studio-fill hover:bg-studio-elevated'
                                     }`}
                                     title={category.id}
                                 >
@@ -2807,8 +2805,8 @@ export const Toolbar: React.FC = () => {
                                     disabled={brushInspectorLocked}
                                     className={`flex h-10 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
                                         activeMode === mode.id
-                                            ? 'border-violet-500/70 bg-violet-600/25 text-violet-200'
-                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                            ? 'border-studio-blue bg-studio-blue/15 text-studio-blue'
+                                            : 'border-studio-elevated bg-studio-bg text-studio-muted hover:border-studio-fill hover:bg-studio-elevated'
                                     }`}
                                     title={mode.id}
                                 >
@@ -2820,13 +2818,13 @@ export const Toolbar: React.FC = () => {
                     </div>
 
                     <div className="min-w-0 space-y-2">
-                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                            <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                                <span>Size {brushSize}</span>
+                        <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2">
+                            <div className="mb-2 flex items-center justify-between text-xs text-studio-secondary">
+                                <span>5c3a5bf8 {brushSize}</span>
                                 <span>Value {brushValue}</span>
                             </div>
                             <label className={fieldLabelClass}>
-                                Brush Size
+                                笔刷尺寸
                                 <input
                                     type="range"
                                     min="1"
@@ -2834,7 +2832,7 @@ export const Toolbar: React.FC = () => {
                                     value={brushSize}
                                     onChange={(e) => setBrushSize(parseInt(e.target.value))}
                                     disabled={brushInspectorLocked}
-                                    className="mt-2 w-full accent-sky-500"
+                                    className="mt-2 w-full accent-[var(--studio-blue)]"
                                 />
                             </label>
                         </div>
@@ -2845,49 +2843,49 @@ export const Toolbar: React.FC = () => {
 
                     <div className="flex w-36 flex-col justify-between gap-2">
                         <div>
-                            <div className={sectionTitleClass}>View</div>
+                            <div className={sectionTitleClass}>视图</div>
                             <div className="mt-2 flex gap-2">
                                 <button
                                     onClick={toggleGrid}
-                                    className={`${iconToggleClass} ${showGrid ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
-                                    title="Toggle Grid"
+                                    className={`${iconToggleClass} ${showGrid ? 'border-studio-blue bg-studio-blue/15 text-studio-blue' : ''}`}
+                                    title="网格"
                                 >
                                     <Grid size={16} />
                                 </button>
                                 <button
                                     onClick={toggleChunkBorders}
-                                    className={`${iconToggleClass} ${showChunkBorders ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
-                                    title="Toggle Chunk Borders"
+                                    className={`${iconToggleClass} ${showChunkBorders ? 'border-studio-blue bg-studio-blue/15 text-studio-blue' : ''}`}
+                                    title="区块边框"
                                 >
                                     <BoxSelect size={16} />
                                 </button>
                                 <button
                                     onClick={toggleNavMesh}
-                                    className={`${iconToggleClass} ${showNavMesh ? 'border-emerald-500/70 bg-emerald-600/25 text-emerald-100' : ''}`}
-                                    title="Toggle NavMesh Visualization"
+                                    className={`${iconToggleClass} ${showNavMesh ? 'border-studio-blue/70 bg-studio-blue/25 text-studio-label' : ''}`}
+                                    title="导航网格可视化"
                                 >
                                     <Eye size={16} />
                                 </button>
                             </div>
                         </div>
-                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-500">
+                        <div className="rounded border border-studio-elevated bg-studio-bg/60 p-2 text-[10px] leading-snug text-studio-muted">
                             {navPanelTab === 'simulation'
                                 ? 'Simulation mode: left-click picks start, right-click picks goal. Brush input is suspended.'
                                 : canvasCanEdit
-                                ? `Middle pans. Right rotates. Left ${activeCategory === 'Entities' ? 'places/selects' : activeCategory === 'Obstacle' ? 'places obstacles' : 'paints'}.`
-                                : 'Editing is locked until the selected board is opened.'}
+                                ? `中键平移，右键旋转；左键${activeCategory === 'Entities' ? '放置/选中' : activeCategory === 'Obstacle' ? '放障碍' : '涂抹'}。`
+                                : '打开所选板前锁定编辑。'}
                         </div>
                     </div>
                 </div>
             </section>
 
             {showNewMap ? (
-                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
-                    <div className="max-h-[calc(100vh-48px)] w-[560px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl">
-                        <h3 className="mb-4 text-lg font-semibold text-white">Create New Map</h3>
+                <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+                    <div className="max-h-[calc(100vh-48px)] w-[560px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-studio-elevated bg-studio-bg p-5 shadow-2xl">
+                        <h3 className="mb-4 text-lg font-semibold text-white">新建地图</h3>
                         <div className="space-y-4">
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <label className="block text-sm text-slate-400">
+                                <label className="block text-sm text-studio-muted">
                                     Desired width m
                                     <input
                                         type="text"
@@ -2898,7 +2896,7 @@ export const Toolbar: React.FC = () => {
                                         aria-invalid={!isPositiveFinite(newMapWidthMetersValue)}
                                     />
                                 </label>
-                                <label className="block text-sm text-slate-400">
+                                <label className="block text-sm text-studio-muted">
                                     Desired height m
                                     <input
                                         type="text"
@@ -2911,8 +2909,8 @@ export const Toolbar: React.FC = () => {
                                 </label>
                             </div>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <label className="block text-sm text-slate-400">
-                                    Grid cell cm
+                                <label className="block text-sm text-studio-muted">
+                                    格尺寸 cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -2922,8 +2920,8 @@ export const Toolbar: React.FC = () => {
                                         aria-invalid={!isPositiveFinite(newMapCellSizeCmValue)}
                                     />
                                 </label>
-                                <label className="block text-sm text-slate-400">
-                                    Hex edge cm
+                                <label className="block text-sm text-studio-muted">
+                                    六角边长 cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -2936,7 +2934,7 @@ export const Toolbar: React.FC = () => {
                                     />
                                 </label>
                             </div>
-                            <label className="block text-sm text-slate-400">
+                            <label className="block text-sm text-studio-muted">
                                 Topology
                                 <select
                                     value={newTopology}
@@ -2947,40 +2945,40 @@ export const Toolbar: React.FC = () => {
                                     <option value="HexGrid">HexGrid</option>
                                 </select>
                             </label>
-                            <div className={`rounded border p-2 text-[10px] leading-snug ${newMapAllocation.exceedsDefaultWorldFootprint ? 'border-sky-800/80 bg-sky-950/30 text-sky-100' : 'border-slate-800 bg-slate-900/60 text-slate-500'}`}>
+                            <div className={`rounded border p-2 text-[10px] leading-snug ${newMapAllocation.exceedsDefaultWorldFootprint ? 'border-studio-blue/80 bg-studio-blue/30 text-studio-blue/10' : 'border-studio-elevated bg-studio-bg/60 text-studio-muted'}`}>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Allocated extent</div>
-                                        <div className="font-mono text-slate-200">{formatMeters(newMapAllocation.allocatedWidthMeters)}m x {formatMeters(newMapAllocation.allocatedHeightMeters)}m</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">已分配范围</div>
+                                        <div className="font-mono text-studio-label">{formatMeters(newMapAllocation.allocatedWidthMeters)}m x {formatMeters(newMapAllocation.allocatedHeightMeters)}m</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Terrain/NavTiles</div>
-                                        <div className="font-mono text-slate-200">{newMapAllocation.widthTerrainChunks} x {newMapAllocation.heightTerrainChunks}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">Terrain/NavTiles</div>
+                                        <div className="font-mono text-studio-label">{newMapAllocation.widthTerrainChunks} x {newMapAllocation.heightTerrainChunks}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Grid cells</div>
-                                        <div className="font-mono text-slate-200">{newMapAllocation.allocatedWidthCells.toLocaleString()} x {newMapAllocation.allocatedHeightCells.toLocaleString()}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">格子数</div>
+                                        <div className="font-mono text-studio-label">{newMapAllocation.allocatedWidthCells.toLocaleString()} x {newMapAllocation.allocatedHeightCells.toLocaleString()}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">MacroTiles</div>
-                                        <div className="font-mono text-slate-200">{newMapAllocation.widthMacroTiles} x {newMapAllocation.heightMacroTiles}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">MacroTiles</div>
+                                        <div className="font-mono text-studio-label">{newMapAllocation.widthMacroTiles} x {newMapAllocation.heightMacroTiles}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Sparse resident</div>
-                                        <div className="font-mono text-slate-200">0 / {newMapAllocation.totalTerrainChunks.toLocaleString()}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">稀疏常驻</div>
+                                        <div className="font-mono text-studio-label">0 / {newMapAllocation.totalTerrainChunks.toLocaleString()}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Full file equivalent</div>
-                                        <div className="font-mono text-slate-200">{formatBytes(newMapAllocation.fullTerrainBytes)}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">全文件等价</div>
+                                        <div className="font-mono text-studio-label">{formatBytes(newMapAllocation.fullTerrainBytes)}</div>
                                     </div>
                                 </div>
-                                <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
+                                <div className="mt-2 rounded border border-studio-elevated bg-studio-bg/70 px-2 py-1 text-studio-muted">
                                     {newMapAllocation.snappedToMacroTile
                                         ? 'Local draft allocation snaps upward to whole MacroTiles. Empty terrain chunks are sparse and created only when painted.'
                                         : 'Meters align exactly with MacroTile allocation. Empty terrain chunks are sparse and created only when painted.'}
                                 </div>
                                 {newMapCreateWarning ? (
-                                    <div className="mt-2 rounded border border-sky-700/70 bg-sky-950/50 px-2 py-1 text-sky-100">
+                                    <div className="mt-2 rounded border border-studio-blue/70 bg-studio-blue/50 px-2 py-1 text-studio-blue/10">
                                         {newMapCreateWarning}
                                     </div>
                                 ) : null}
@@ -2988,13 +2986,13 @@ export const Toolbar: React.FC = () => {
                             <div className="flex gap-2 pt-2">
                                 <button
                                     onClick={() => setShowNewMap(false)}
-                                    className="flex-1 rounded bg-slate-800 py-2 font-medium text-slate-300 hover:bg-slate-700"
+                                    className="flex-1 rounded bg-studio-elevated py-2 font-medium text-studio-secondary hover:bg-studio-fill"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleNewMap}
-                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="flex-1 rounded bg-studio-blue py-2 font-medium text-white hover:bg-studio-blue disabled:cursor-not-allowed disabled:opacity-40"
                                     disabled={!newMapCanCreate}
                                     title={newMapCanCreate ? (newMapCreateWarning || 'Create local terrain draft from desired meters and SSOT constants') : newMapCreateDisabledReason}
                                 >
@@ -3007,11 +3005,11 @@ export const Toolbar: React.FC = () => {
             ) : null}
 
             {showAddBoard ? (
-                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
-                    <div className="max-h-[calc(100vh-48px)] w-[560px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl">
-                        <h3 className="mb-4 text-lg font-semibold text-white">Add Board</h3>
+                <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+                    <div className="max-h-[calc(100vh-48px)] w-[560px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-studio-elevated bg-studio-bg p-5 shadow-2xl">
+                        <h3 className="mb-4 text-lg font-semibold text-white">加板</h3>
                         <div className="space-y-4">
-                            <label className="block text-sm text-slate-400">
+                            <label className="block text-sm text-studio-muted">
                                 Name
                                 <input
                                     value={newBoardName}
@@ -3019,7 +3017,7 @@ export const Toolbar: React.FC = () => {
                                     className={inputClass}
                                 />
                             </label>
-                            <label className="block text-sm text-slate-400">
+                            <label className="block text-sm text-studio-muted">
                                 Topology
                                 <select
                                     value={newBoardTopology}
@@ -3031,7 +3029,7 @@ export const Toolbar: React.FC = () => {
                                 </select>
                             </label>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <label className="block text-sm text-slate-400">
+                                <label className="block text-sm text-studio-muted">
                                     Desired width m
                                     <input
                                         type="text"
@@ -3042,7 +3040,7 @@ export const Toolbar: React.FC = () => {
                                         aria-invalid={!isPositiveFinite(newBoardWidthMetersValue)}
                                     />
                                 </label>
-                                <label className="block text-sm text-slate-400">
+                                <label className="block text-sm text-studio-muted">
                                     Desired height m
                                     <input
                                         type="text"
@@ -3055,8 +3053,8 @@ export const Toolbar: React.FC = () => {
                                 </label>
                             </div>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <label className="block text-sm text-slate-400">
-                                    Grid cell cm
+                                <label className="block text-sm text-studio-muted">
+                                    格尺寸 cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -3066,8 +3064,8 @@ export const Toolbar: React.FC = () => {
                                         aria-invalid={!isPositiveFinite(newBoardCellSizeCmValue)}
                                     />
                                 </label>
-                                <label className="block text-sm text-slate-400">
-                                    Hex edge cm
+                                <label className="block text-sm text-studio-muted">
+                                    六角边长 cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -3081,8 +3079,8 @@ export const Toolbar: React.FC = () => {
                                 </label>
                             </div>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <label className="block text-sm text-slate-400">
-                                    Anchor world X cm
+                                <label className="block text-sm text-studio-muted">
+                                    锚点世界 X cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -3090,11 +3088,11 @@ export const Toolbar: React.FC = () => {
                                         onChange={(e) => setNewBoardOriginXCm(e.target.value)}
                                         className={inputClass}
                                         placeholder="0"
-                                        title="Anchor.World X in Ludots centimeters. Leave both empty to put the cell corner on the Ludots origin. The first board is the root and its world anchor must stay (0, 0)."
+                                        title="锚点世界 X（Ludots 厘米）。两项都留空则格角在 Ludots 原点；首板是根，世界锚点必须保持 (0, 0)。"
                                     />
                                 </label>
-                                <label className="block text-sm text-slate-400">
-                                    Anchor world Y cm
+                                <label className="block text-sm text-studio-muted">
+                                    锚点世界 Y cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -3102,52 +3100,52 @@ export const Toolbar: React.FC = () => {
                                         onChange={(e) => setNewBoardOriginYCm(e.target.value)}
                                         className={inputClass}
                                         placeholder="0"
-                                        title="Anchor.World Y in Ludots centimeters. Leave both empty to put the cell corner on the Ludots origin. The first board is the root and its world anchor must stay (0, 0)."
+                                        title="锚点世界 Y（Ludots 厘米）。两项都留空则格角在 Ludots 原点；首板是根，世界锚点必须保持 (0, 0)。"
                                     />
                                 </label>
                             </div>
-                            <div className={`rounded border p-2 text-[10px] leading-snug ${newBoardWithinFullFileBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-sky-800/80 bg-sky-950/30 text-sky-100'}`}>
+                            <div className={`rounded border p-2 text-[10px] leading-snug ${newBoardWithinFullFileBudget ? 'border-studio-elevated bg-studio-bg/60 text-studio-muted' : 'border-studio-blue/80 bg-studio-blue/30 text-studio-blue/10'}`}>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Requested</div>
-                                        <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.requestedWidthMeters)}m x {formatMeters(newBoardAllocation.requestedHeightMeters)}m</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">请求</div>
+                                        <div className="font-mono text-studio-label">{formatMeters(newBoardAllocation.requestedWidthMeters)}m x {formatMeters(newBoardAllocation.requestedHeightMeters)}m</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Allocated extent</div>
-                                        <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.allocatedWidthMeters)}m x {formatMeters(newBoardAllocation.allocatedHeightMeters)}m</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">已分配范围</div>
+                                        <div className="font-mono text-studio-label">{formatMeters(newBoardAllocation.allocatedWidthMeters)}m x {formatMeters(newBoardAllocation.allocatedHeightMeters)}m</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Grid cells</div>
-                                        <div className="font-mono text-slate-200">{newBoardAllocation.allocatedWidthCells.toLocaleString()} x {newBoardAllocation.allocatedHeightCells.toLocaleString()}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">格子数</div>
+                                        <div className="font-mono text-studio-label">{newBoardAllocation.allocatedWidthCells.toLocaleString()} x {newBoardAllocation.allocatedHeightCells.toLocaleString()}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">MacroTiles</div>
-                                        <div className="font-mono text-slate-200">{newBoardAllocation.widthMacroTiles} x {newBoardAllocation.heightMacroTiles}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">MacroTiles</div>
+                                        <div className="font-mono text-studio-label">{newBoardAllocation.widthMacroTiles} x {newBoardAllocation.heightMacroTiles}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Terrain/NavTiles</div>
-                                        <div className="font-mono text-slate-200">{newBoardAllocation.widthTerrainChunks} x {newBoardAllocation.heightTerrainChunks}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">Terrain/NavTiles</div>
+                                        <div className="font-mono text-studio-label">{newBoardAllocation.widthTerrainChunks} x {newBoardAllocation.heightTerrainChunks}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Unit constants</div>
-                                        <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.macroTileMeters)}m / {formatMeters(newBoardAllocation.terrainChunkMeters)}m</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">单位常量</div>
+                                        <div className="font-mono text-studio-label">{formatMeters(newBoardAllocation.macroTileMeters)}m / {formatMeters(newBoardAllocation.terrainChunkMeters)}m</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Full terrain file</div>
-                                        <div className="font-mono text-slate-200">{formatBytes(newBoardAllocation.fullTerrainBytes)}</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">全地形文件</div>
+                                        <div className="font-mono text-studio-label">{formatBytes(newBoardAllocation.fullTerrainBytes)}</div>
                                     </div>
                                     <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Eager file threshold</div>
-                                        <div className="font-mono text-slate-200">{DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} x {DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} MacroTiles</div>
+                                        <div className="uppercase tracking-wide text-studio-muted">立即加载阈值</div>
+                                        <div className="font-mono text-studio-label">{DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} x {DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} MacroTiles</div>
                                     </div>
                                 </div>
-                                <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
+                                <div className="mt-2 rounded border border-studio-elevated bg-studio-bg/70 px-2 py-1 text-studio-muted">
                                     {newBoardAllocation.snappedToMacroTile
                                         ? 'The editor snaps allocation upward to whole MacroTiles. Large boards are created sparse; first save writes only resident terrain chunks.'
                                         : 'Meters align exactly with MacroTile allocation. Large boards are created sparse; first save writes only resident terrain chunks.'}
                                 </div>
                                 {!newBoardWithinFullFileBudget ? (
-                                    <div className="mt-2 rounded border border-sky-700/70 bg-sky-950/50 px-2 py-1 text-sky-100">
+                                    <div className="mt-2 rounded border border-studio-blue/70 bg-studio-blue/50 px-2 py-1 text-studio-blue/10">
                                         {newBoardCreateWarning}
                                     </div>
                                 ) : null}
@@ -3155,13 +3153,13 @@ export const Toolbar: React.FC = () => {
                             <div className="flex gap-2 pt-2">
                                 <button
                                     onClick={() => setShowAddBoard(false)}
-                                    className="flex-1 rounded bg-slate-800 py-2 font-medium text-slate-300 hover:bg-slate-700"
+                                    className="flex-1 rounded bg-studio-elevated py-2 font-medium text-studio-secondary hover:bg-studio-fill"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleCreateBoard}
-                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="flex-1 rounded bg-studio-blue py-2 font-medium text-white hover:bg-studio-blue disabled:cursor-not-allowed disabled:opacity-40"
                                     disabled={!newBoardCanCreate}
                                     title={newBoardCanCreate ? (newBoardCreateWarning || 'Create board from desired meters and SSOT constants') : newBoardCreateDisabledReason}
                                 >

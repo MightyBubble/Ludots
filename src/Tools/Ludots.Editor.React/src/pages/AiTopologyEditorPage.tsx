@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Background,
   Controls,
@@ -26,7 +26,10 @@ import {
   type HfsmTransitionEdgeData,
 } from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
-import { diskSaveStatus, STUDIO_CHROME, STUDIO_THEME } from './authoring-studio/authoringTheme';
+import { diskSaveStatus, STUDIO_THEME } from './authoring-studio/authoringTheme';
+import { readStudioMod, writeStudioMod } from './authoring-studio/useStudioMod';
+import { Button } from '@/components/ui/Button';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 
 type TopologyKind = 'behavior-trees' | 'hfsm';
 
@@ -112,6 +115,13 @@ function emptyHfsm(id: string): HfsmMachine {
 function readTopologySource(): string {
   const params = new URLSearchParams(window.location.search);
   return params.get('source')?.trim() || 'core';
+}
+
+/** 深链的 ?source= 优先；否则沿用工作室记住的 Mod（见 useStudioMod），都没有才落回 core。 */
+function seedTopologySource(): string {
+  const fromUrl = readTopologySource();
+  if (fromUrl !== 'core') return fromUrl;
+  return readStudioMod() ?? 'core';
 }
 
 function uniqueId(prefix: string, existing: Set<string>): string {
@@ -291,13 +301,13 @@ function flowToHfsm(
 export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind }) => {
   const navigate = useNavigate();
   const isBt = kind === 'behavior-trees';
-  const title = isBt ? '行为树拓扑' : '状态机拓扑';
+  const title = isBt ? '行为树' : '状态机';
   const subtitle = isBt
     ? '图画布编辑 AI/behavior_trees.json · 拖线挂子节点 · 双击叶子进函数图'
     : '图画布编辑 AI/hfsm.json · 虚线=层级 · 黄线=转移 · 双击叶子进函数图';
 
   const [sources, setSources] = useState<CatalogSource[]>([]);
-  const [sourceId, setSourceId] = useState(readTopologySource);
+  const [sourceId, setSourceId] = useState(seedTopologySource);
   const [items, setItems] = useState<Array<BtTree | HfsmMachine>>([]);
   const [selectedId, setSelectedId] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('');
@@ -674,86 +684,60 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     : undefined;
 
   return (
-    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
-      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
-        <div className="min-w-40">
-          <div className="text-sm font-semibold text-studio-label">{title}</div>
-          <div className="text-[10px] text-studio-muted">{subtitle}</div>
-        </div>
-        <Link to="/" className="rounded border border-studio-fill px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
-          工作室
-        </Link>
-        <Link to="/gas-graphs" className="rounded border border-studio-blue/40 px-2 py-1 text-xs text-studio-blue hover:bg-studio-blue/10">
-          函数图
-        </Link>
-        <Link
-          to={isBt ? '/fsm-editor' : '/bt-editor'}
-          className="rounded border border-studio-red/40 px-2 py-1 text-xs text-studio-red hover:bg-studio-red/10"
-        >
-          {isBt ? '状态机' : '行为树'}
-        </Link>
-        <label className="flex items-center gap-2 text-xs text-studio-muted">
-          数据源
-          <select
-            className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-            value={sourceId}
-            onChange={(e) => setSourceId(e.target.value)}
+    <WorkspaceLayout
+      title={title}
+      blurb={subtitle}
+      status={status}
+      error={error}
+      actions={
+        <>
+          <Button variant="ghost" size="sm" onClick={() => void loadItems(sourceId)}>
+            重载
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              if (selected) {
+                const flushed = isBt
+                  ? flowToBt(selected.id, (selected as BtTree).root, nodes, edges, selected as BtTree)
+                  : flowToHfsm(selected.id, (selected as HfsmMachine).root, nodes, edges, selected as HfsmMachine);
+                const next = items.map((row) => (row.id === selected.id ? flushed : row));
+                void saveItems(next);
+              } else {
+                void saveItems(items);
+              }
+            }}
           >
-            {sources.map((s) => {
-              const exists = isBt ? s.behaviorTrees.exists : s.hfsm.exists;
-              return (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.id}){exists ? '' : ' · 尚未写出'}
-                </option>
-              );
-            })}
-            {sources.length === 0 ? <option value="core">Core</option> : null}
-          </select>
-        </label>
-        {!isBt ? (
-          <label className="flex items-center gap-2 text-xs text-studio-muted">
-            连线模式
+            保存
+          </Button>
+        </>
+      }
+    >
+      <div className="flex h-full">
+        <aside className="flex w-56 shrink-0 flex-col space-y-2 overflow-auto border-r border-studio-elevated bg-studio-surface p-3">
+          <label className="block text-xs text-studio-muted">
+            Mod
             <select
-              className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-              value={connectMode}
-              onChange={(e) => setConnectMode(e.target.value as 'child' | 'transition')}
+              className="mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
+              value={sourceId}
+              onChange={(e) => {
+                setSourceId(e.target.value);
+                if (e.target.value !== 'core') writeStudioMod(e.target.value);
+              }}
             >
-              <option value="child">层级（Compound→子状态）</option>
-              <option value="transition">转移（状态→状态）</option>
+              {sources.map((s) => {
+                const exists = isBt ? s.behaviorTrees.exists : s.hfsm.exists;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.id}){exists ? '' : ' · 尚未写出'}
+                  </option>
+                );
+              })}
+              {sources.length === 0 ? <option value="core">Core</option> : null}
             </select>
           </label>
-        ) : null}
-        <button
-          type="button"
-          className="rounded border border-studio-fill px-2 py-1 text-xs hover:bg-studio-elevated"
-          onClick={() => void loadItems(sourceId)}
-        >
-          重新加载
-        </button>
-        <button
-          type="button"
-          className="rounded border border-studio-blue/50 px-2 py-1 text-xs text-studio-blue hover:bg-studio-blue/10"
-          onClick={() => {
-            // Flush current canvas into items then save.
-            if (selected) {
-              const flushed = isBt
-                ? flowToBt(selected.id, (selected as BtTree).root, nodes, edges, selected as BtTree)
-                : flowToHfsm(selected.id, (selected as HfsmMachine).root, nodes, edges, selected as HfsmMachine);
-              const next = items.map((row) => (row.id === selected.id ? flushed : row));
-              void saveItems(next);
-            } else {
-              void saveItems(items);
-            }
-          }}
-        >
-          保存
-        </button>
-        {status ? <span className="text-xs text-studio-blue">{status}</span> : null}
-        {error ? <span className="text-xs text-studio-red">{error}</span> : null}
-      </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-12">
-        <aside className="col-span-2 space-y-2 overflow-auto border-r border-studio-elevated p-3">
           <div className="text-[10px] uppercase tracking-wide text-studio-muted">拓扑清单</div>
           {items.map((row) => (
             <button
@@ -790,17 +774,12 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           >
             + 新建拓扑
           </button>
-          <button
-            type="button"
-            disabled={!selected}
-            className={`w-full ${STUDIO_CHROME.btnDanger}`}
-            onClick={removeSelectedTopology}
-          >
+          <Button variant="danger" className="w-full" disabled={!selected} onClick={removeSelectedTopology}>
             删除当前拓扑
-          </button>
+          </Button>
         </aside>
 
-        <main className="relative col-span-7 min-h-0 border-r border-studio-elevated">
+        <main className="relative min-h-0 min-w-0 flex-1">
           {selected ? (
             <>
               <ReactFlow
@@ -862,17 +841,23 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
                 中键平移 · 左键框选 · 右键添加节点 · 从节点下方拖线连接
               </div>
-              <div className="absolute right-3 top-3 z-10 flex gap-2">
-                <button
-                  type="button"
-                  className={STUDIO_CHROME.btnGhost}
-                  onClick={() => setPaletteOpen((v) => !v)}
-                >
+              <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+                {!isBt ? (
+                  <select
+                    className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-xs text-studio-label"
+                    value={connectMode}
+                    onChange={(e) => setConnectMode(e.target.value as 'child' | 'transition')}
+                    aria-label="连线模式"
+                  >
+                    <option value="child">层级（Compound→子状态）</option>
+                    <option value="transition">转移（状态→状态）</option>
+                  </select>
+                ) : null}
+                <Button variant="ghost" onClick={() => setPaletteOpen((v) => !v)}>
                   添加节点
-                </button>
-                <button
-                  type="button"
-                  className={STUDIO_CHROME.btnGhost}
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     if (!selected) return;
                     const flow = isBt ? btToFlow(selected as BtTree) : hfsmToFlow(selected as HfsmMachine);
@@ -882,7 +867,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   }}
                 >
                   自动排版
-                </button>
+                </Button>
               </div>
               {paletteOpen ? (
                 <div className="absolute right-3 top-14 z-20 w-56 rounded border border-studio-fill bg-studio-bg p-2 shadow-xl">
@@ -912,7 +897,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           )}
         </main>
 
-        <aside className="col-span-3 space-y-4 overflow-auto p-4">
+        <aside className="w-80 shrink-0 space-y-4 overflow-auto border-l border-studio-elevated bg-studio-surface p-4">
           <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
           {selectedBtNode ? (
             <div className="space-y-3">
@@ -988,9 +973,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   组合节点：从下方手柄拖线到子节点。子序 = 连线顺序。
                 </div>
               )}
-              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+              <Button variant="danger" onClick={removeSelectedNode}>
                 删除此节点
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -1046,9 +1031,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   打开叶子函数图
                 </button>
               ) : null}
-              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+              <Button variant="danger" onClick={removeSelectedNode}>
                 删除此节点
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -1092,9 +1077,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   onChange={(e) => updateSelectedTransition({ priority: Number.parseInt(e.target.value, 10) || 0 })}
                 />
               </label>
-              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedEdge}>
+              <Button variant="danger" onClick={removeSelectedEdge}>
                 删除此转移
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -1103,6 +1088,6 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           ) : null}
         </aside>
       </div>
-    </div>
+    </WorkspaceLayout>
   );
 };

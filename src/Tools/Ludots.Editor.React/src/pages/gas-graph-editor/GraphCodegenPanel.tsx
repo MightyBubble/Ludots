@@ -49,15 +49,15 @@ export const GraphCodegenPanel: React.FC<Props> = ({
   const [preview, setPreview] = React.useState<CodegenPreviewResult | null>(null);
   const [parity, setParity] = React.useState<CodegenParityResult | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [status, setStatus] = React.useState('Idle');
+  const [status, setStatus] = React.useState('待命');
 
   const runPreview = React.useCallback(async () => {
     if (!modId || !graphId) {
-      setStatus('Select a graph first.');
+      setStatus('先选一张图。');
       return;
     }
     setBusy(true);
-    setStatus('Previewing…');
+    setStatus('预览中…');
     setParity(null);
     try {
       const res = await fetch(
@@ -72,8 +72,8 @@ export const GraphCodegenPanel: React.FC<Props> = ({
       setPreview(payload);
       setStatus(
         payload.eligible
-          ? `Eligible · ${payload.emitMode ?? '?'} · ${payload.instructionCount ?? 0} instructions`
-          : payload.error ?? 'Not eligible',
+          ? `可生成 · ${payload.emitMode ?? '?'} · ${payload.instructionCount ?? 0} 条指令`
+          : payload.error ?? '不满足生成条件',
       );
     } catch (err) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -84,11 +84,11 @@ export const GraphCodegenPanel: React.FC<Props> = ({
 
   const runParity = React.useCallback(async () => {
     if (!modId || !graphId) {
-      setStatus('Select a graph first.');
+      setStatus('先选一张图。');
       return;
     }
     setBusy(true);
-    setStatus('Running parity…');
+    setStatus('对拍中…');
     try {
       const res = await fetch(
         `/api/mods/${encodeURIComponent(modId)}/gas/graphs/${encodeURIComponent(graphId)}/codegen/parity`,
@@ -102,8 +102,8 @@ export const GraphCodegenPanel: React.FC<Props> = ({
       setParity(payload);
       setStatus(
         payload.matches
-          ? `Parity OK · interpret=${payload.interpretReturnInt} codegen=${payload.codegenReturnInt}`
-          : payload.error ?? payload.detail ?? 'Parity mismatch',
+          ? `对拍一致 · 解释=${payload.interpretReturnInt} 生成=${payload.codegenReturnInt}`
+          : payload.error ?? payload.detail ?? '对拍不一致',
       );
     } catch (err) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -114,11 +114,11 @@ export const GraphCodegenPanel: React.FC<Props> = ({
 
   const copySource = React.useCallback(async () => {
     if (!preview?.source) {
-      setStatus('No generated source to copy.');
+      setStatus('还没有可复制的生成源码。');
       return;
     }
     await navigator.clipboard.writeText(preview.source);
-    setStatus('Copied generated C#.');
+    setStatus('已复制生成的 C#。');
   }, [preview]);
 
   const eligible = preview?.eligible === true;
@@ -133,10 +133,10 @@ export const GraphCodegenPanel: React.FC<Props> = ({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 font-semibold uppercase tracking-wide text-studio-blue">
           <span className={`inline-block h-2.5 w-2.5 rounded-full ${lightClass}`} />
-          Codegen
+          代码生成
         </div>
         <span className="rounded border border-studio-fill px-1.5 py-0.5 font-mono text-[10px] text-studio-secondary">
-          backend: {executionBackendLabel}
+          后端：{executionBackendLabel}
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -146,7 +146,7 @@ export const GraphCodegenPanel: React.FC<Props> = ({
           onClick={() => void runPreview()}
           className="rounded bg-studio-blue px-2 py-1 font-semibold text-studio-label hover:brightness-110 disabled:opacity-50"
         >
-          Preview C#
+          预览 C#
         </button>
         <button
           type="button"
@@ -154,7 +154,7 @@ export const GraphCodegenPanel: React.FC<Props> = ({
           onClick={() => void runParity()}
           className="rounded bg-studio-fill px-2 py-1 font-semibold text-studio-label hover:bg-studio-elevated disabled:opacity-50"
         >
-          Parity
+          对拍
         </button>
         <button
           type="button"
@@ -162,7 +162,7 @@ export const GraphCodegenPanel: React.FC<Props> = ({
           onClick={() => void copySource()}
           className="rounded border border-studio-fill px-2 py-1 text-studio-label hover:bg-studio-elevated disabled:opacity-50"
         >
-          Copy
+          复制
         </button>
       </div>
       <div className="text-[10px] text-studio-muted">{status}</div>
@@ -179,12 +179,12 @@ export const GraphCodegenPanel: React.FC<Props> = ({
       {parity ? (
         <div className={`rounded border p-2 font-mono text-[10px] ${parity.matches ? 'border-studio-blue/50 text-studio-blue' : 'border-studio-red/50 text-studio-red'}`}>
           {parity.matches
-            ? `match · return ${parity.codegenReturnInt} · ${parity.codegenStatus}`
-            : parity.detail ?? parity.error ?? 'mismatch'}
+            ? `一致 · 返回 ${parity.codegenReturnInt} · ${parity.codegenStatus}`
+            : parity.detail ?? parity.error ?? '不一致'}
         </div>
       ) : null}
       <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded border border-studio-elevated bg-studio-bg p-2 font-mono text-[10px] text-studio-secondary">
-        {preview?.source || 'Preview to see generated C# for the current graph.'}
+        {preview?.source || '点「预览 C#」查看当前图的生成代码。'}
       </pre>
     </div>
   );

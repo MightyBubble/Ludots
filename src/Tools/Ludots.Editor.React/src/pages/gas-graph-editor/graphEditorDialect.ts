@@ -1,5 +1,17 @@
 export type GraphEditorDialect = 'func' | 'bt' | 'fsm';
 
+export const GRAPH_KIND_LABELS: Record<string, string> = {
+  TriggerGraph: '事件',
+  Effect: '效果',
+  Query: '查询',
+  Score: '评分',
+  Validation: '校验',
+  Derived: '派生',
+  Script: '脚本',
+};
+
+export const graphKindLabel = (kind: string): string => GRAPH_KIND_LABELS[kind] ?? kind;
+
 const BT_SUGARS = new Set([
   'BtSequence',
   'BtSelector',
@@ -20,18 +32,18 @@ export function dialectTitle(dialect: GraphEditorDialect): { title: string; subt
   switch (dialect) {
     case 'bt':
       return {
-        title: 'Ludots Behavior Tree Editor',
-        subtitle: 'Tree topology · Action/Condition → Func Graph · double-click to open',
+        title: '行为树图',
+        subtitle: '拓扑叶子指向的函数图视图，双击拓扑叶子进来。',
       };
     case 'fsm':
       return {
-        title: 'Ludots FSM Editor',
-        subtitle: 'State topology · FsmAction → Func Graph · double-click to open',
+        title: '状态机图',
+        subtitle: '状态动作指向的函数图视图，双击拓扑叶子进来。',
       };
     default:
       return {
-        title: 'Ludots Graph Editor',
-        subtitle: 'Func / Event / Effect / Query · compiler diagnostics · live execution',
+        title: '蓝图',
+        subtitle: '画函数 / 事件 / 效果 / 查询图，保存进 GAS/graphs.json。',
       };
   }
 }

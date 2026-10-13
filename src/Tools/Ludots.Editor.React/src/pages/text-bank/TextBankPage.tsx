@@ -9,6 +9,10 @@ import {
   type TextTokenRow,
 } from './textBankModel';
 import { RichTextArea, RunSpan } from './RichTextArea';
+import { Button } from '@/components/ui/Button';
+import { fieldControlClass } from '@/components/ui/Field';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
+import { readStudioMod, writeStudioMod } from '../authoring-studio/useStudioMod';
 import './textBank.css';
 
 type ModInfo = { id: string; name?: string };
@@ -109,8 +113,10 @@ export function TextBankPage() {
       const clean = list.filter((m) => !!m.id);
       setMods(clean);
       if (clean.length > 0) {
-        // 与对话房同一默认 Mod：叙事展示包自带词条/双语表，首屏有真数据可看。
-        setModId(clean.some((m) => m.id === 'NarrativeShowcaseMod') ? 'NarrativeShowcaseMod' : clean[0]!.id);
+        // 工作室记住的 Mod 优先；首次进编辑器才落回叙事展示包（自带词条/双语表，首屏有真数据）。
+        const remembered = readStudioMod();
+        const fallback = clean.some((m) => m.id === 'NarrativeShowcaseMod') ? 'NarrativeShowcaseMod' : clean[0]!.id;
+        setModId(remembered && clean.some((m) => m.id === remembered) ? remembered : fallback);
       }
     })();
   }, []);
@@ -314,30 +320,58 @@ export function TextBankPage() {
   };
 
   return (
+    <WorkspaceLayout
+      title="文本"
+      blurb="一张表改所有文案：行是词条，列是语言；缺翻译标红，保存过引擎校验。"
+      status={status}
+      error={error}
+      actions={
+        <>
+          {loaded ? (
+            <Button variant="ghost" onClick={() => void loadBank(modId)} disabled={!dirty}>
+              放弃修改
+            </Button>
+          ) : null}
+          <Button variant="primary" onClick={() => void save()} disabled={!loaded}>
+            {dirty ? '校验并保存' : '保存'}
+          </Button>
+        </>
+      }
+    >
     <div className="text-bank-page">
       <div className="text-bank-toolbar">
-        <select value={modId} onChange={(e) => setModId(e.target.value)}>
-          {mods.map((mod) => (
-            <option key={mod.id} value={mod.id}>
-              {mod.name ?? mod.id}
-            </option>
-          ))}
-        </select>
+        <label className="flex items-center gap-2 text-xs text-studio-muted" aria-label="Mod">
+          Mod
+          <select
+            className={fieldControlClass}
+            value={modId}
+            onChange={(e) => {
+              setModId(e.target.value);
+              writeStudioMod(e.target.value);
+            }}
+          >
+            {mods.map((mod) => (
+              <option key={mod.id} value={mod.id}>
+                {mod.name ?? mod.id}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="text-bank-group">
           <input
-            className="text-bank-search"
+            className={`${fieldControlClass} min-w-[220px]`}
             type="text"
             placeholder="搜索词条 id 或任意语言内容…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-          <button type="button" onClick={addToken}>
+          <Button variant="ghost" onClick={addToken}>
             + 加词条
-          </button>
+          </Button>
         </div>
         <div className="text-bank-group">
           <input
-            className="text-bank-new-locale"
+            className={`${fieldControlClass} w-[150px]`}
             type="text"
             placeholder="新语言代码,如 ja-JP"
             value={newLocaleDraft}
@@ -346,19 +380,9 @@ export function TextBankPage() {
               if (e.key === 'Enter') addLocale();
             }}
           />
-          <button type="button" onClick={addLocale}>
+          <Button variant="ghost" onClick={addLocale}>
             + 加语言
-          </button>
-        </div>
-        <div className="text-bank-group text-bank-group-right">
-          {loaded ? (
-            <button type="button" onClick={() => void loadBank(modId)} disabled={!dirty}>
-              放弃修改
-            </button>
-          ) : null}
-          <button type="button" className="text-bank-primary" onClick={() => void save()} disabled={!loaded}>
-            {dirty ? '校验并保存' : '保存'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -420,9 +444,9 @@ export function TextBankPage() {
               有词条的 Mod 才需要语言表；引擎要求每门语言覆盖全部词条，缺了游戏起不来——所以这里和保存门都会拦。
             </p>
             <div className="text-bank-empty-actions">
-              <button type="button" onClick={addToken}>
+              <Button variant="primary" onClick={addToken}>
                 + 加第一条词条
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -520,9 +544,6 @@ export function TextBankPage() {
         )}
       </div>
 
-      <div className="text-bank-status">
-        {error ? <span className="text-bank-status-error">{error}</span> : status}
-      </div>
       {showSaveIssues && issues.length > 0 ? (
         <ul className="text-bank-issues">
           {issues.slice(0, 30).map((issue) => (
@@ -534,5 +555,6 @@ export function TextBankPage() {
         </ul>
       ) : null}
     </div>
+    </WorkspaceLayout>
   );
 }

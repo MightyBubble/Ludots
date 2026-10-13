@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   TEMPLATES,
   SURFACE_META,
@@ -16,9 +15,17 @@ import {
   authoringConfigJson,
   toAuthoringTemplate,
 } from './ui-panel-authoring/authoringConfig';
+import { Button } from '@/components/ui/Button';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 import './ui-panel-authoring/authoring.css';
 
 type WorkspaceMode = 'author' | 'play' | 'config';
+
+const MODES: ReadonlyArray<[WorkspaceMode, string]> = [
+  ['author', '编排'],
+  ['play', '试玩'],
+  ['config', '配置'],
+];
 
 function renderCopy(template: string, vars: PanelVariable[], demo: Record<string, string>) {
   let text = template;
@@ -147,27 +154,13 @@ function downloadJson(filename: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-function exportOrAlert(action: () => void | Promise<void>): void {
-  try {
-    const result = action();
-    if (result && typeof (result as Promise<void>).then === 'function') {
-      void (result as Promise<void>).catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        window.alert(`导出失败（fail-closed）：${message}`);
-      });
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    window.alert(`导出失败（fail-closed）：${message}`);
-  }
-}
-
 export function UiPanelAuthoringPage() {
   const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
   const [surface, setSurface] = useState<SurfaceKind>('reactive');
   const [selectedVar, setSelectedVar] = useState<string | null>('hp');
   const [mode, setMode] = useState<WorkspaceMode>('author');
   const [copied, setCopied] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   const tpl = useMemo(
     () => TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0],
@@ -193,226 +186,212 @@ export function UiPanelAuthoringPage() {
     setSelectedVar(tpl.variables[0]?.id ?? null);
   }, [tpl.id, tpl.surfaceKind, tpl.variables]);
 
+  const runExport = (action: () => void | Promise<void>) => {
+    setExportError('');
+    Promise.resolve()
+      .then(action)
+      .catch((err: unknown) => {
+        setExportError(`导出失败（fail-closed）：${err instanceof Error ? err.message : String(err)}`);
+      });
+  };
+
   return (
-    <div className="upa-root">
-      <header className="upa-hero">
-        <div>
-          <p className="upa-kicker">
-            <Link to="/">← 地图编辑器</Link>
-            <span aria-hidden> · </span>
-            Ludots Editor
-          </p>
-          <h1 className="upa-brand">
-            Panel <span>Authoring</span>
-          </h1>
-          <p className="upa-lede">
-            像编 Shader Graph：一张图、多种类型、右边一个带多引脚的 Panel
-            汇入。引脚就是面板变量；表面只决定怎么画。可导出作者配置，也可切到试玩看玩家视角。
-          </p>
+    <WorkspaceLayout
+      title="面板"
+      blurb="面板模板：一张图多引脚汇入 Panel，四种表面换画法，导出 UI/panel_templates 配置。"
+      status={copied ? '已复制当前模板 JSON' : ''}
+      error={exportError}
+      actions={
+        <div className="flex items-center gap-1" role="tablist" aria-label="工作区">
+          {MODES.map(([id, label]) => (
+            <Button
+              key={id}
+              variant={mode === id ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setMode(id)}
+            >
+              {label}
+            </Button>
+          ))}
         </div>
-        <aside className="upa-contract" aria-label="第一性原则">
-          <h2>和你原型的对应</h2>
-          <ol>
-            <li>PanelNode 多引脚 → 画布右侧 Panel 汇入（作者糖）</li>
-            <li>一张图多出口 → 多条边进不同引脚（Float/Text/…）</li>
-            <li>落盘 → outputs[] / bindings，不是新的 Graph 操作码</li>
-            <li>四种表面只换投影母语，不拆成多张算数图</li>
-          </ol>
-        </aside>
-      </header>
+      }
+      rail={
+        <div className="space-y-3">
+          <div className="text-xs text-studio-muted">模板</div>
+          <ul className="space-y-1">
+            {TEMPLATES.map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  className={`w-full rounded-md border px-2 py-2 text-left ${
+                    t.id === tpl.id
+                      ? 'border-studio-blue bg-studio-blue/10'
+                      : 'border-studio-elevated bg-studio-surface hover:bg-studio-elevated'
+                  }`}
+                  onClick={() => setTemplateId(t.id)}
+                >
+                  <div className="font-mono text-[11px] text-studio-label">{t.id}</div>
+                  <div className="text-xs text-studio-secondary">{t.name}</div>
+                  <div className="mt-0.5 text-[10px] text-studio-muted">{t.blurb}</div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      }
+      inspector={
+        mode === 'author' ? (
+          <div className="space-y-3">
+            <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
+            <div className="text-xs text-studio-muted">引脚 = 变量（点引脚高亮连线）</div>
+            <ul className="space-y-1">
+              {tpl.variables.map((v) => {
+                const b = tpl.bindings[v.id];
+                return (
+                  <li key={v.id}>
+                    <button
+                      type="button"
+                      className={`w-full rounded-md border px-2 py-1.5 text-left text-xs ${
+                        activeVar === v.id
+                          ? 'border-studio-blue bg-studio-blue/10'
+                          : 'border-studio-elevated bg-studio-surface hover:bg-studio-elevated'
+                      }`}
+                      onClick={() => setSelectedVar(v.id)}
+                    >
+                      <span className="font-mono text-[11px] text-studio-label">{v.id}</span>
+                      <span className="ml-2 text-studio-secondary">{v.label}</span>
+                      <span className="block text-[10px] text-studio-muted">
+                        {v.valueKind}
+                        {b ? ` · ← ${b.fromNodeId ?? b.sourceKind}` : ''}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
 
-      <div className="upa-mode-row" role="tablist" aria-label="工作区">
-        {(
-          [
-            ['author', '编排'],
-            ['play', '试玩'],
-            ['config', '配置'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={mode === id}
-            className={`upa-mode ${mode === id ? 'is-active' : ''}`}
-            onClick={() => setMode(id)}
+            <div className="rounded-md border border-studio-elevated bg-studio-bg p-2">
+              <div className="mb-1 text-[10px] text-studio-muted">模板文案 · {'{引脚}'}</div>
+              <pre className="whitespace-pre-wrap font-mono text-[11px] text-studio-secondary">
+                {renderCopy(tpl.copyTemplate, tpl.variables, demo)}
+              </pre>
+            </div>
+
+            {binding ? (
+              <div className="space-y-2 rounded-md border border-studio-elevated bg-studio-bg p-2 text-xs">
+                <div className="text-[10px] text-studio-muted">选中引脚 · {activeVar}</div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-studio-muted">来源种类</span>
+                  <code className="font-mono text-studio-label">{binding.sourceKind}</code>
+                </div>
+                {binding.fromNodeId ? (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-studio-muted">来源节点</span>
+                    <code className="font-mono text-studio-label">{binding.fromNodeId}</code>
+                  </div>
+                ) : null}
+                {binding.graphOutputKey ? (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-studio-muted">出口键</span>
+                    <code className="font-mono text-studio-label">{binding.graphOutputKey}</code>
+                  </div>
+                ) : null}
+                {activeVar === 'lastKill' ? (
+                  <p className="text-[10px] leading-4 text-studio-yellow">
+                    图出口是 Int（文案 token id）。Text 黑板读仍欠；表面再把 token 收成可见字。勿导出
+                    TextToken 类型。
+                  </p>
+                ) : null}
+                {activeVar === 'curState' ? (
+                  <p className="text-[10px] leading-4 text-studio-yellow">
+                    真链路：状态 tag id → ResolveTableRow → TableReadInt(displayToken) → Int。灰态节点只是「还欠玩法纯读
+                    tag id」的意图标注，不是可编译 op。表面 token→文案另接。
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <div className="text-[10px] text-studio-muted">落盘 / {SURFACE_META[surface].label}</div>
+              <pre className="upa-code upa-code-tight">{loweredOutputs(tpl)}</pre>
+              <SurfaceArtifact surface={surface} tpl={tpl} />
+            </div>
+          </div>
+        ) : null
+      }
+    >
+      {mode === 'author' ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <div
+            className="flex shrink-0 flex-wrap items-center gap-2 border-b border-studio-elevated bg-studio-surface px-3 py-2"
+            role="tablist"
+            aria-label="表面语言"
           >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="upa-tpl-row" role="tablist" aria-label="模板">
-        {TEMPLATES.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={t.id === tpl.id}
-            className={`upa-tpl ${t.id === tpl.id ? 'is-active' : ''}`}
-            onClick={() => setTemplateId(t.id)}
-          >
-            <span className="upa-tpl-id">{t.id}</span>
-            <span className="upa-tpl-name">{t.name}</span>
-            <span className="upa-tpl-blurb">{t.blurb}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="upa-surfaces" role="tablist" aria-label="表面语言">
-        {(Object.keys(SURFACE_META) as SurfaceKind[]).map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            role="tab"
-            aria-selected={surface === kind}
-            className={`upa-surface ${surface === kind ? 'is-active' : ''}`}
-            onClick={() => setSurface(kind)}
-          >
-            <strong>{SURFACE_META[kind].label}</strong>
-            <small>{SURFACE_META[kind].native}</small>
-          </button>
-        ))}
-      </div>
-
-      {mode === 'play' ? <PlayerShowcase tpl={tpl} surface={surface} /> : null}
-
-      {mode === 'config' ? (
-        <div className="upa-config-panel">
-          <div className="upa-config-actions">
-            <button
-              type="button"
+            {(Object.keys(SURFACE_META) as SurfaceKind[]).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                role="tab"
+                aria-selected={surface === kind}
+                className={`rounded-md border px-2 py-1 text-xs ${
+                  surface === kind
+                    ? 'border-studio-blue bg-studio-blue/10 text-studio-label'
+                    : 'border-studio-elevated text-studio-secondary hover:bg-studio-elevated'
+                }`}
+                onClick={() => setSurface(kind)}
+              >
+                <strong className="font-semibold">{SURFACE_META[kind].label}</strong>
+                <span className="ml-1 text-[10px] text-studio-muted">{SURFACE_META[kind].native}</span>
+              </button>
+            ))}
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto">
+            <ShaderGraphCanvas tpl={tpl} activeVar={activeVar} onSelectVar={setSelectedVar} />
+          </div>
+        </div>
+      ) : mode === 'play' ? (
+        <div className="h-full overflow-auto p-4">
+          <PlayerShowcase tpl={tpl} surface={surface} />
+        </div>
+      ) : (
+        <div className="h-full space-y-3 overflow-auto p-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() =>
-                exportOrAlert(async () => {
+                runExport(async () => {
                   await copyText(activeConfigJson);
                   setCopied(true);
                   window.setTimeout(() => setCopied(false), 1200);
                 })
               }
             >
-              {copied ? '已复制当前模板' : '复制当前模板 JSON'}
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                exportOrAlert(() => downloadJson(`${tpl.id}.json`, activeConfigJson))
-              }
+              复制当前模板 JSON
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => runExport(() => downloadJson(`${tpl.id}.json`, activeConfigJson))}
             >
               下载当前模板
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                exportOrAlert(() => downloadJson('panel_templates.json', configJson))
-              }
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => runExport(() => downloadJson('panel_templates.json', configJson))}
             >
               下载全部模板
-            </button>
+            </Button>
           </div>
-          <p className="upa-play-footnote">
-            schema <code>ludots.ui.panel_template/v1</code> — variables / bindings / outputs /
+          <p className="text-xs text-studio-muted">
+            schema <code className="font-mono">ludots.ui.panel_template/v1</code> — variables / bindings / outputs /
             surfaceKind；运行时读这份配置，不读画布糖节点。
           </p>
-          <pre className="upa-config-json">{activeConfigJson}</pre>
+          <pre className="upa-code">{activeConfigJson}</pre>
         </div>
-      ) : null}
-
-      {mode === 'author' ? (
-        <div className="upa-stage upa-stage-shader">
-          <section className="upa-col upa-col-graph" aria-labelledby="upa-graph-h">
-            <div className="upa-col-h">
-              <h3 id="upa-graph-h">计算图 · 多引脚 Panel 汇入</h3>
-              <small>一眼看完：像材质输出节点</small>
-            </div>
-            <div className="upa-col-b upa-col-b-canvas">
-              <ShaderGraphCanvas tpl={tpl} activeVar={activeVar} onSelectVar={setSelectedVar} />
-            </div>
-          </section>
-
-          <aside className="upa-side">
-            <section className="upa-col" aria-labelledby="upa-vars-h">
-              <div className="upa-col-h">
-                <h3 id="upa-vars-h">引脚 = 变量</h3>
-                <small>点引脚高亮连线</small>
-              </div>
-              <div className="upa-col-b">
-                <ul className="upa-var-list">
-                  {tpl.variables.map((v) => {
-                    const b = tpl.bindings[v.id];
-                    return (
-                      <li key={v.id}>
-                        <button
-                          type="button"
-                          className={`upa-var ${activeVar === v.id ? 'is-active' : ''}`}
-                          onClick={() => setSelectedVar(v.id)}
-                        >
-                          <span className="upa-var-id">{v.id}</span>
-                          <span className="upa-var-label">{v.label}</span>
-                          <span className="upa-var-meta">
-                            {v.valueKind}
-                            {b ? ` · ← ${b.fromNodeId ?? b.sourceKind}` : ''}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <div className="upa-preview">
-                  <div className="upa-preview-label">模板文案 · {'{引脚}'}</div>
-                  <pre>{renderCopy(tpl.copyTemplate, tpl.variables, demo)}</pre>
-                </div>
-                {binding ? (
-                  <div className="upa-bind-card">
-                    <h4>选中引脚 · {activeVar}</h4>
-                    <dl>
-                      <div>
-                        <dt>sourceKind</dt>
-                        <dd>{binding.sourceKind}</dd>
-                      </div>
-                      {binding.fromNodeId ? (
-                        <div>
-                          <dt>from node</dt>
-                          <dd>{binding.fromNodeId}</dd>
-                        </div>
-                      ) : null}
-                      {binding.graphOutputKey ? (
-                        <div>
-                          <dt>output key</dt>
-                          <dd>{binding.graphOutputKey}</dd>
-                        </div>
-                      ) : null}
-                    </dl>
-                    {activeVar === 'lastKill' ? (
-                      <p className="upa-debt">
-                        图出口是 Int（文案 token id）。Text 黑板读仍欠；表面再把 token 收成可见字。勿导出
-                        TextToken 类型。
-                      </p>
-                    ) : null}
-                    {activeVar === 'curState' ? (
-                      <p className="upa-debt">
-                        真链路：状态 tag id → ResolveTableRow → TableReadInt(displayToken) → Int。灰态节点只是「还欠玩法纯读
-                        tag id」的意图标注，不是可编译 op。表面 token→文案另接。
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="upa-col" aria-labelledby="upa-lower-h">
-              <div className="upa-col-h">
-                <h3 id="upa-lower-h">落盘 / {SURFACE_META[surface].label}</h3>
-                <small>{SURFACE_META[surface].note}</small>
-              </div>
-              <div className="upa-col-b">
-                <pre className="upa-code upa-code-tight">{loweredOutputs(tpl)}</pre>
-                <SurfaceArtifact surface={surface} tpl={tpl} />
-              </div>
-            </section>
-          </aside>
-        </div>
-      ) : null}
-    </div>
+      )}
+    </WorkspaceLayout>
   );
 }
 

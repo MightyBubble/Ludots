@@ -225,6 +225,10 @@ export interface EditorState {
     loadingState: { isLoading: boolean, message: string, progress: number };
     setLoading: (isLoading: boolean, message?: string, progress?: number) => void;
 
+    // 错误走状态栏（EditorLayout footer），不许 window.alert
+    error: string | null;
+    setError: (message: string | null) => void;
+
     // Camera Bridge (Non-reactive refs for performance)
     cameraRef: { current: Camera | null };
     controlsRef: { current: OrbitControls | null };
@@ -304,6 +308,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     navDirtyChunks: new Set(),
     
     loadingState: { isLoading: false, message: '', progress: 0 },
+    error: null,
 
     cameraRef: { current: null },
     controlsRef: { current: null },
@@ -407,7 +412,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         terrain: new TerrainStore(w, h, { initializeChunks: false }),
         boardMetrics: normalizeBoardMetrics(metrics ?? get().boardMetrics),
         canvasSessionKind: 'local',
-        canvasSessionLabel: `New ${w}x${h} terrain`,
+        canvasSessionLabel: `新建 ${w}x${h} 地形`,
         loadedModId: null,
         loadedMapId: null,
         loadedMapInfo: null,
@@ -420,7 +425,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         bakedNavTilesVersion: Date.now(),
         navSimulation: null,
         navSimulationVersion: Date.now(),
-        loadingState: { isLoading: true, message: 'Initializing Map...', progress: 0 }
+        loadingState: { isLoading: true, message: '正在初始化地图…', progress: 0 }
     }),
     loadMap: (data, w, h, metrics, format = REACT_TERRAIN_STRIDE) => {
         const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
@@ -432,7 +437,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             terrain: newTerrain, 
             boardMetrics,
             canvasSessionKind: 'local',
-            canvasSessionLabel: `Local ${w}x${h} terrain`,
+            canvasSessionLabel: `本地 ${w}x${h} 地形`,
             loadedModId: null,
             loadedMapId: null,
             loadedMapInfo: null,
@@ -445,7 +450,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             bakedNavTilesVersion: Date.now(),
             navSimulation: null,
             navSimulationVersion: Date.now(),
-            loadingState: { isLoading: true, message: 'Loading Map...', progress: 0 }
+            loadingState: { isLoading: true, message: '正在加载地图…', progress: 0 }
         });
     },
 
@@ -722,7 +727,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const { bridgeBaseUrl, selectedModId, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, setLoading } = get();
         if (!selectedModId || !selectedMapId || !selectedBoardName) return;
         if (!selectedBoardInfo) throw new Error(`Selected board '${selectedBoardName}' was not found in map '${selectedMapId}'.`);
-        setLoading(true, 'Loading MapConfig...', 10);
+        setLoading(true, '正在加载地图配置…', 10);
         const mapRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}`);
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
         const mapJson = await mapRes.json() as JsonRecord;
@@ -782,7 +787,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             }
         }
 
-        setLoading(true, 'Loading Terrain...', 40);
+        setLoading(true, '正在加载地形…', 40);
         const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`);
         if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
         const buf = await terrRes.arrayBuffer();
@@ -812,7 +817,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             bakedNavTilesVersion: Date.now(),
             navSimulation: null,
             navSimulationVersion: Date.now(),
-            loadingState: { isLoading: true, message: 'Loading Map...', progress: 0 },
+            loadingState: { isLoading: true, message: '正在加载地图…', progress: 0 },
         });
         setLoading(false);
     },
@@ -825,7 +830,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             throw new Error(`Selected board '${selectedMapId}/${selectedBoardName}' is not loaded on the canvas. Click Open before saving.`);
         }
 
-        setLoading(true, 'Saving MapConfig...', 20);
+        setLoading(true, '正在保存地图配置…', 20);
         const mapPayload = JSON.parse(JSON.stringify(mapConfig));
         delete mapPayload.Id;
         delete mapPayload.DefaultCamera;
@@ -872,7 +877,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         });
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
 
-        setLoading(true, 'Saving Terrain...', 60);
+        setLoading(true, '正在保存地形…', 60);
         const terrainBinary = terrain.toReactTerrainBinary();
         const blob = new Blob([terrainBinary.header, terrainBinary.body], { type: 'application/octet-stream' });
 
@@ -1071,6 +1076,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     setLoading: (isLoading, message = '', progress = 0) => set({ 
         loadingState: { isLoading, message, progress } 
     }),
+
+    setError: (message) => set({ error: message }),
 
     registerCamera: (camera, controls) => {
         const { cameraRef, controlsRef } = get();
