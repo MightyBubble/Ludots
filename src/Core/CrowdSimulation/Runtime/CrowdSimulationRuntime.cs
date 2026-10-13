@@ -19,6 +19,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -284,19 +285,31 @@ public sealed partial class CrowdSimulationRuntime
             engine.MapLoader.TemplateRegistry.GetAll(), _configDto!, mapConfig, agentProfiles);
 
         // ── 资产(走 VFS,跨 mod 解析,冲突即 fail-fast)──
-        var surface = NavSurfaceAsset.Read(OpenAsset(engine, "assets/" + runtimeConfig.SurfaceAsset));
+        string surfaceAssetPath = "assets/" + runtimeConfig.SurfaceAsset;
+        var surface = NavSurfaceAsset.Read(OpenAsset(engine, surfaceAssetPath));
+        string heightAssetPath = RequireHeightAssetPath(mapConfig, mapId);
+        var heightAsset = ContinuousHeightmapBinary.Read(OpenAsset(engine, heightAssetPath));
+        BoardConfig solverBoard = NavSolverDeclaration.RequireBoard(
+            mapConfig, NavSolverDeclaration.RequireMap(navmesh, mapConfig.Id));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(
             mapConfig,
             engine.MapLoader.TemplateRegistry.GetAll().Where(t => !string.IsNullOrWhiteSpace(t.Id))
                 .ToDictionary(t => t.Id, StringComparer.Ordinal));
-        var grid = SurfaceGrid.Build(runtimeConfig, surface, mapSurface.Blockers);
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtimeConfig,
+            solverBoard.WidthCm,
+            solverBoard.HeightCm,
+            surface,
+            surfaceAssetPath,
+            heightAsset,
+            heightAssetPath,
+            mapSurface.Blockers);
+        var grid = ingested.Grid;
         _surfaceGrid = grid;
         _jumpCandidates = surface.JumpCandidates;
         _mapSurfaceBlockers = mapSurface.Blockers;
         _mapSurfaceBridges = mapSurface.Bridges;
-        var heights = NavHeightField.FromHeightmap(
-            ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
-            runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
+        var heights = ingested.Heights;
         _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
         _deck = deck;

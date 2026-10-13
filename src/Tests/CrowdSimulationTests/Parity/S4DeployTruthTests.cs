@@ -114,10 +114,23 @@ public class S4DeployTruthTests
         var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
-        var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
+        var map = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "Maps", $"crowd_simulation_{seed}.json")))!;
+        int boardWidthCm = map["Boards"]![0]!["WidthCm"]!.GetValue<int>();
+        int boardHeightCm = map["Boards"]![0]!["HeightCm"]!.GetValue<int>();
+        string heightAssetPath = map["ContinuousHeightmap"]!["Asset"]!.GetValue<string>();
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
-            Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
+            Path.Combine(S1Dir(seed), heightAssetPath["assets/".Length..])));
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtime,
+            boardWidthCm,
+            boardHeightCm,
+            surface,
+            "assets/" + runtime.SurfaceAsset,
+            heightAsset,
+            heightAssetPath,
+            mapSurface.Blockers);
+        var grid = ingested.Grid;
+        var heights = ingested.Heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
