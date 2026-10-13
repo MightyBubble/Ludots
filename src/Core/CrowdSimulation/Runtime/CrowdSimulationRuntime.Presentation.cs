@@ -158,6 +158,7 @@ public sealed partial class CrowdSimulationRuntime
             ToggleBuild = deploy.Actions.ToggleBuild,
             Remove = deploy.Actions.Remove,
             Place = deploy.Actions.Place,
+            Validate = deploy.Actions.Validate,
             ToolOff = deploy.Actions.ToolOff,
             ToolBoom = deploy.Actions.ToolBoom,
             ToolSpawn = deploy.Actions.ToolSpawn,
@@ -174,6 +175,7 @@ public sealed partial class CrowdSimulationRuntime
             Pause = deploy.Actions.Pause,
             SpeedDown = deploy.Actions.SpeedDown,
             SpeedUp = deploy.Actions.SpeedUp,
+            Fuzz = deploy.Actions.Fuzz,
         };
         var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
         for (int i = 0; i < deploy.Structures.Length; i++)

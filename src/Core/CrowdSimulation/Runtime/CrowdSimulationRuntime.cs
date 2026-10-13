@@ -11,6 +11,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
@@ -55,6 +56,110 @@ public sealed partial class CrowdSimulationRuntime
     private TimeSpan? _planTimeout;
 
     private CrowdSimSession? _session;
+    public string DebugValidationLine { get; private set; } = "校验:未跑";
+    public bool DebugValidationFailed { get; private set; }
+    public bool DebugValidationRan { get; private set; }
+    public const string DebugFuzzIdleLine = "模糊:未跑";
+    public const string DebugFuzzNoSessionLine = "模糊:无会话";
+    public string DebugFuzzLine { get; private set; } = DebugFuzzIdleLine;
+    public bool DebugFuzzFailed { get; private set; }
+    public bool DebugFuzzRan { get; private set; }
+    private CrowdFuzzCursor? _debugFuzz;
+    private bool _debugFuzzStepped;
+
+    /// <summary>在 tick 之间跑全部不变量。步进本身不调用。</summary>
+    public void RunDebugValidation()
+    {
+        if (_session == null)
+        {
+            DebugValidationLine = "校验:无会话";
+            DebugValidationFailed = true;
+            DebugValidationRan = true;
+            return;
+        }
+
+        try
+        {
+            // 哈希在本子步积分之前重建。帧间看到的是积分后的位置，先按当前位置重铺再对照。
+            _session.Movement?.RebuildHash();
+            CrowdSimulationValidator.RunAll(_session);
+            DebugValidationLine = $"校验:通过 tick {_session.TickCount}";
+            DebugValidationFailed = false;
+            DebugValidationRan = true;
+        }
+        catch (Exception ex)
+        {
+            DebugValidationLine = "校验:失败 " + ex.Message;
+            DebugValidationFailed = true;
+            DebugValidationRan = true;
+        }
+    }
+
+    /// <summary>调试页按下模糊测试。已经在跑的一轮不重开，避免半路丢掉停摆开关。</summary>
+    public void StartDebugFuzz()
+    {
+        if (_session == null)
+        {
+            DebugFuzzLine = DebugFuzzNoSessionLine;
+            DebugFuzzFailed = true;
+            DebugFuzzRan = true;
+            return;
+        }
+
+        if (_debugFuzz != null && !_debugFuzz.Finished) return;
+        CrowdDebugFuzz? fuzz = _debug?.Fuzz;
+        CrowdDebugTools? tools = _debug?.Tools;
+        if (fuzz == null || tools == null)
+        {
+            DebugFuzzLine = "模糊:未配置";
+            DebugFuzzFailed = true;
+            DebugFuzzRan = true;
+            return;
+        }
+
+        _debugFuzz = new CrowdFuzzCursor(fuzz.ToPlan(tools));
+        PumpDebugFuzz();
+    }
+
+    /// <summary>按调试配置的时间片接着跑。不在 <see cref="Tick"/> 里调用。</summary>
+    public void PumpDebugFuzz()
+    {
+        if (_debugFuzz == null || _debugFuzz.Finished) return;
+        if (_session == null)
+        {
+            _debugFuzz = null;
+            DebugFuzzLine = DebugFuzzNoSessionLine;
+            DebugFuzzFailed = true;
+            DebugFuzzRan = true;
+            return;
+        }
+
+        CrowdDebugFuzz fuzz = _debug?.Fuzz
+            ?? throw new InvalidOperationException("CrowdSimulationDebug.json: 部署演示必须带 fuzz。");
+        _debugFuzz.Advance(_session, TimeSpan.FromMilliseconds(fuzz.SliceMs));
+        _debugFuzzStepped = _debugFuzz.Stepped;
+        CrowdFuzzResult? result = _debugFuzz.Result;
+        DebugFuzzRan = true;
+        if (result == null)
+        {
+            DebugFuzzLine = $"模糊:{_debugFuzz.Completed}/{fuzz.OpCount}";
+            DebugFuzzFailed = false;
+            return;
+        }
+
+        DebugFuzzFailed = !result.Passed;
+        DebugFuzzLine = result.Passed
+            ? $"模糊:通过 seed {result.Seed} 步 {result.Step}"
+            : $"模糊:失败 seed {result.Seed} 步 {result.Step} {result.OpId} {result.Error}";
+    }
+
+    /// <summary>本帧的模糊时间片已经步进过。会话 tick 读一次后清掉，避免同一帧再走一步。</summary>
+    public bool ConsumeDebugFuzzStepped()
+    {
+        bool stepped = _debugFuzzStepped;
+        _debugFuzzStepped = false;
+        return stepped;
+    }
     private CrowdPairRulesSessionGuard? _pairRulesGuard;
     private Entity _sessionEntity;
 
@@ -430,7 +535,6 @@ public sealed partial class CrowdSimulationRuntime
         _session.NavTileCache = cache;
         // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
         _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
-        _session.ValidateEveryNTicks = _debug?.Session?.ValidateEveryNTicks ?? 0;
         _activeMapId = mapId.Value;
 
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
@@ -513,6 +617,11 @@ public sealed partial class CrowdSimulationRuntime
 
     private void Deactivate(GameEngine engine)
     {
+        _debugFuzz = null;
+        _debugFuzzStepped = false;
+        DebugFuzzLine = DebugFuzzIdleLine;
+        DebugFuzzFailed = false;
+        DebugFuzzRan = false;
         _session?.Units.Clear();
         _session?.Units.ReleaseSpawnInitializer();
         _pathService?.Dispose();
@@ -546,14 +655,15 @@ public sealed partial class CrowdSimulationRuntime
         // 先重读玩家代表的 Team。队伍变了就抛。修订号变了就在临时缓冲重算；与现场矩阵不同也抛，不写回。相同则只更新修订号。
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
-        long t0 = _tickWatch.ElapsedTicks;
-        if (session.PlaybackHeld)
+        bool fuzzStepped = ConsumeDebugFuzzStepped();
+        if (!fuzzStepped && session.PlaybackHeld)
         {
             session.FlushDueCommands();
             return;
         }
 
-        if (!session.Step(out _))
+        long t0 = _tickWatch.ElapsedTicks;
+        if (!fuzzStepped && !session.Step(out _))
         {
             if (!_stallLogged)
             {

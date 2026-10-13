@@ -115,6 +115,7 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.Actions.ToggleBuild, "deploy.actions.toggleBuild");
         RequireText(deploy.Actions.Remove, "deploy.actions.remove");
         RequireText(deploy.Actions.Place, "deploy.actions.place");
+        RequireText(deploy.Actions.Validate, "deploy.actions.validate");
         RequireText(deploy.Actions.ToolOff, "deploy.actions.toolOff");
         RequireText(deploy.Actions.ToolBoom, "deploy.actions.toolBoom");
         RequireText(deploy.Actions.ToolSpawn, "deploy.actions.toolSpawn");
@@ -131,6 +132,7 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.Actions.Pause, "deploy.actions.pause");
         RequireText(deploy.Actions.SpeedDown, "deploy.actions.speedDown");
         RequireText(deploy.Actions.SpeedUp, "deploy.actions.speedUp");
+        RequireText(deploy.Actions.Fuzz, "deploy.actions.fuzz");
         RequireText(deploy.BuildActivity, "deploy.buildActivity");
         RequireText(deploy.ObserveActivity, "deploy.observeActivity");
         RequireText(deploy.PlaceOk, "deploy.placeOk");
@@ -247,6 +249,7 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string ToggleBuild { get; set; } = string.Empty;
     [JsonRequired] public string Remove { get; set; } = string.Empty;
     [JsonRequired] public string Place { get; set; } = string.Empty;
+    [JsonRequired] public string Validate { get; set; } = string.Empty;
     [JsonRequired] public string ToolOff { get; set; } = string.Empty;
     [JsonRequired] public string ToolBoom { get; set; } = string.Empty;
     [JsonRequired] public string ToolSpawn { get; set; } = string.Empty;
@@ -263,6 +266,7 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string Pause { get; set; } = string.Empty;
     [JsonRequired] public string SpeedDown { get; set; } = string.Empty;
     [JsonRequired] public string SpeedUp { get; set; } = string.Empty;
+    [JsonRequired] public string Fuzz { get; set; } = string.Empty;
 }
 
 internal sealed class CrowdFogDecalColors

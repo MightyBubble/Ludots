@@ -1,5 +1,6 @@
 using System;
 using Arch.System;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
@@ -79,6 +80,13 @@ internal sealed class S4DeployInputSystem : ISystem<float>
             _demo.EnqueueRemove((int)Math.Floor(xCm), (int)Math.Floor(yCm));
         }
 
+        if (_engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime runtime))
+        {
+            if (actions.PressedThisTick(_bindings.Fuzz)) runtime.StartDebugFuzz();
+            else runtime.PumpDebugFuzz();
+            if (actions.PressedThisTick(_bindings.Validate)) runtime.RunDebugValidation();
+        }
+
         _debugView?.ApplyInput(actions, _engine);
         _demo.Tick();
     }
@@ -90,6 +98,7 @@ internal sealed class CrowdDeployBindings
     public required string ToggleBuild { get; init; }
     public required string Remove { get; init; }
     public required string Place { get; init; }
+    public required string Validate { get; init; }
     public required string ToolOff { get; init; }
     public required string ToolBoom { get; init; }
     public required string ToolSpawn { get; init; }
@@ -106,4 +115,5 @@ internal sealed class CrowdDeployBindings
     public required string Pause { get; init; }
     public required string SpeedDown { get; init; }
     public required string SpeedUp { get; init; }
+    public required string Fuzz { get; init; }
 }

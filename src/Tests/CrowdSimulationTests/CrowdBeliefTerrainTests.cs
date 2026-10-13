@@ -3,6 +3,7 @@ using ArchWorld = Arch.Core.World;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -83,9 +84,16 @@ public class CrowdBeliefTerrainTests
         var seen = world.Session.ResolveNavContext(CrowdBeliefNavs.BeliefStride * 2 + world.Nav.Id);
         Assert.That(seen.Passable[world.BuildingCell], Is.EqualTo(0));
         Assert.That(seen.Cost[world.RoadCell], Is.EqualTo(world.RoadCost));
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateNav(world.Session));
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateStructures(world.Session));
+
+        seen.Cost[world.RoadCell] += Fix64.OneValue;
+        var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateNav(world.Session));
+        Assert.That(ex!.NavId, Is.EqualTo(seen.Id));
+        Assert.That(ex.Message, Does.Contain("链接数").Or.Contain("代价"));
     }
 
-    private sealed class LandWorld : System.IDisposable
+        internal sealed class LandWorld : System.IDisposable
     {
         public CrowdSimulationRuntimeConfig Config { get; }
         public CrowdStructuresStore Store { get; }

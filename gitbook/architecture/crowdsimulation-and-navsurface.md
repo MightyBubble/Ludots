@@ -491,7 +491,19 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 ## 不变量抽查
 
-`ValidateSim` 查两件事：单位没有停在阻挡格上，以及每个已经带着流场的导航组都有领队。地面单位对的是结构仓里那份活阻挡栅格，还有该单位自己那层导航的可通行格；站在桥面上的单位对的是桥面层 `UpPass`。`ValidateNav` 把增量导航和同一份地表重新全量烘焙的结果对一遍，用的是 `CrowdNavRebake.VerifyAgainstFullBake`。两道检查默认关闭。在 `CrowdSimulationDebug.json` 里把 `session.validateEveryNTicks` 写成正整数，会话每走过这么多 tick 跑一次。不写这个字段，或者写 0，步进不扫描，也不分配。
+校验不进 tick。`CrowdSimSession.Step` 不扫描这些不变量。部署演示的输入动作 `deploy.actions.validate` 在会话步进之前调用 `CrowdSimulationValidator.RunAll`，S4 的 `default_input.json` 把这个动作绑在 F8。结果写到调试面板：通过带 tick，失败带异常里的 tick、槽位、实体、格、nav、tile 或组。
+
+`ValidateSim` 查句柄池没有泄漏、句柄能往返到原单位、组计数和玩家序与原型一致、位置在世界内、非跳跃单位不停在阻挡格或不可通行格、有流场的组有领队、流场没有回到池里且导航号就是本组的、指令和领队引用还在。地面单位对的是结构仓里那份活阻挡栅格，还有该单位自己那层导航的可通行格；站在桥面上的单位对的是桥面层 `UpPass`。跳跃单位不查停留。重烘阶段 0 当帧也不查停留。
+
+`ValidateStructures` 核对实体的模板、区域、阻挡和寿命是否互相覆盖，再把阻挡格和区域格与按当前实体全量重标的结果对一遍。`ValidateSpatialHash` 用一份稠密计数排序对照占格序列、槽位、查询环、按环排列的邻居区间和每环邻居数。`ValidateNav` 用新的 tile 缓存把每份真实导航和同一份地表的全量烘焙对字段，包括桥面格、地面和桥面 tile、连通域和 HPA。每个已经建好的认知变体再对它自己的认知场烤一遍。认知变体的跳跃链接只比数量。
+
+随机操作在 `CrowdFuzzRunner`。操作表、每种操作后的推进次数、句柄抽样条数、种子和操作数都由调用方的计划带进来。内建操作是生成、下令、放置、拆除和爆炸。爆炸半径、外圈倍数和冲量从计划读，计划再从场景表或 S4 调试配置的 `tools` 读，不在执行器里写死。放置和拆除之后再对实体栅格和真实导航做全量比较。句柄抽样在执行前记下实体，执行后旧句柄要么仍指向该实体，要么解析为 -1；爆炸会把外圈推开，抽样不要求幸存者的位置不动。失败结果带种子、第几步和错误。`CrowdFuzzCursor` 按时间片接着跑：一片开始前看预算，已经开工的操作会做完。S4 调试页的 `deploy.actions.fuzz` 绑在 F11，时间片长度是 `CrowdSimulationDebug.json` 的 `fuzz.sliceMs`。进度和结果写到调试面板，不进 `CrowdSimSession.Step`。这一帧的时间片如果已经步进，会话 tick 就不再走第二步。
+
+起终点落在同一导航格时，漏斗只留下一个世界点。换成领队路径时把这个点再写一次，领队用一段零长度走到同一点并报到达。更长的路径不改。
+
+回放捕获在 `CrowdSimReplay`。它记下已执行的指令日志、tick、合计校验码，以及 `CrowdSimPartitions.Copy` 的全部分区。分区包括每个稠密字段的 `units.<字段>`、`units.handles`、`groups`、`orders`、`planner`（序号、待回复队列、刷新队列、流场缓存的 LRU 序；这端没有流场 LRU，摘要里这一项是空）、`fog`、`belief`、`structures`、每个已构建导航上下文的 `nav.<id>`，以及已经物化的 `belief.<槽位>`。复制只读已物化的认知变体，不调用会构建变体的 `Get`。这些分区不进 `CrowdSimChecksum.Compute` 的合计。`--repeat` 和无头回放对不上时列出分区名。运行时按校验码环比较的 `RunReplay` 仍走自己的路径。
+
+无头回归是工具 `src/Tools/CrowdSimulationRegress`。场景表在 S4 演示 Mod 的 `assets/CrowdSimulation/regress/catalog.json`。默认场景是 deploy、rebake、areas。deploy 和 rebake 读 1337 种子目录里现成的真值脚本。areas 是修路、泛洪、起火：火场按模板寿命到期后必须离场，道路和泛洪还在。stress 和 50k 基准读同一份 `regress/stress-50k.json`。`--repeat` 比较各轮终点校验码和全部分区。`--fuzz 0` 不跑随机操作。`--budget` 看的是含路径计算的 tick p95。`--fog 0` 跳过迷雾验收，默认跑 UAT-FOG-01..03 和隐藏核对。隐藏判定用 `CrowdPlayerVisibility`，和呈现层同一份；调试叠加层不走这份判定。场景坐标在 `regress/fog-acceptance.json`。Web 的 validateMirror 比较 Worker 镜像摘要；Ludots 没有这条 Worker 镜像，所以没有对应校验。
 
 ## 当前缺口（诚实清单）
 

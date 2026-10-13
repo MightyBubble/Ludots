@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -153,6 +154,91 @@ public sealed class CrowdStructuresStore
 
     /// <summary>实体 id 的放置序视图(索引与认知初始注入按此序遍历)。</summary>
     public IReadOnlyList<int> EntityIds => _ids;
+
+    internal void CopyLiveEntities(List<(int Id, int TplIndex, CrowdStructureFootprint Fp)> destination)
+    {
+        destination.Clear();
+        for (int i = 0; i < _ids.Count; i++)
+        {
+            int id = _ids[i];
+            destination.Add((id, _tpl[id], _footprint[id]));
+        }
+    }
+
+    /// <summary>模板、区域、阻挡、寿命与实体 id 互相覆盖。分层实体不进地面组件。</summary>
+    internal void VerifyComponentContract(int tick)
+    {
+        var templates = _config.Structures.Templates;
+        var live = new HashSet<int>(_ids.Count);
+        for (int i = 0; i < _ids.Count; i++)
+        {
+            int id = _ids[i];
+            if (!live.Add(id))
+            {
+                throw Component(tick, id, $"实体 {id} 在放置序里出现了两次");
+            }
+
+            if (!_tpl.TryGetValue(id, out int tplIndex) || !_footprint.ContainsKey(id))
+            {
+                throw Component(tick, id, $"实体 {id} 缺模板或足迹");
+            }
+
+            if ((uint)tplIndex >= (uint)templates.Count)
+            {
+                throw Component(tick, id, $"实体 {id} 的模板下标 {tplIndex} 越界");
+            }
+
+            var tpl = templates[tplIndex];
+            if (tpl.Layered)
+            {
+                if (_navArea.ContainsKey(id) || _blocker.Contains(id))
+                {
+                    throw Component(tick, id, $"分层实体 {id} 写进了地面区域或阻挡");
+                }
+            }
+            else if (tpl.AreaIndex is { } area)
+            {
+                if (!_navArea.TryGetValue(id, out var row) || row.AreaIndex != area || row.Priority != tpl.Priority)
+                {
+                    throw Component(tick, id, $"实体 {id} 的区域组件与模板 {tpl.Id} 不一致");
+                }
+            }
+            else if (_navArea.ContainsKey(id))
+            {
+                throw Component(tick, id, $"实体 {id} 的模板 {tpl.Id} 没有区域，组件里却有");
+            }
+
+            if (!tpl.Layered && _blocker.Contains(id) != tpl.Blocker)
+            {
+                throw Component(tick, id, $"实体 {id} 的阻挡组件与模板 {tpl.Id} 不一致");
+            }
+
+            if (_lifetime.ContainsKey(id) && tpl.LifetimeSecRaw == null)
+            {
+                throw Component(tick, id, $"实体 {id} 的模板 {tpl.Id} 没有寿命，寿命表里却有");
+            }
+        }
+
+        RejectOrphans(tick, live, _tpl.Keys, "模板");
+        RejectOrphans(tick, live, _footprint.Keys, "足迹");
+        RejectOrphans(tick, live, _navArea.Keys, "区域");
+        RejectOrphans(tick, live, _blocker, "阻挡");
+        RejectOrphans(tick, live, _lifetime.Keys, "寿命");
+    }
+
+    private void RejectOrphans(int tick, HashSet<int> live, IEnumerable<int> keys, string table)
+    {
+        foreach (int id in keys)
+        {
+            if (!live.Contains(id))
+            {
+                throw Component(tick, id, $"{table}表引用了已不在仓里的实体 {id}");
+            }
+        }
+    }
+
+    private static CrowdSimulationInvariantException Component(int tick, int entityId, string detail) =>
+        new($"tick {tick} {detail}", tick, -1, entityId, -1, -1, -1, -1, -1);
 
     public bool TryGetFootprint(int id, out CrowdStructureFootprint fp)
     {
@@ -361,7 +447,8 @@ public sealed class CrowdStructuresStore
             for (int x = rect.X0; x < rect.X1; x++)
             {
                 Area[row + x] = _terrainArea[row + x];
-                Blocked[row + x] = 0;
+                // 先回到建仓时的阻挡，再由仍在场的足迹盖 1。清成 0 会把地形阻挡擦掉，拆除后和全量重标对不上。
+                Blocked[row + x] = _terrainBlocked[row + x];
             }
         }
 

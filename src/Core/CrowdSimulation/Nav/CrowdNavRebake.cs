@@ -495,19 +495,58 @@ public static class CrowdNavRebake
             config.Navmesh.MaxEdgeLenNavCells.ToDouble(), config.Navmesh.MaxVertsPerPoly);
         foreach (var nav in navs.Values)
         {
-            var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceNavCells, freshCache);
-            VerifyContext(nav, full, tick);
+            VerifyAgainstField(nav, store, sources, tick, linksByCountOnly: false, freshCache);
         }
     }
 
-    private static void VerifyContext(NavContext inc, NavContext full, int tick)
+    /// <summary>一份导航与给定地表的全量烘焙逐字段比对。认知变体的跳跃链接只比数量。</summary>
+    public static void VerifyAgainstField(
+        NavContext nav,
+        CrowdStructuresStore field,
+        CrowdRebakeSources sources,
+        int tick,
+        bool linksByCountOnly)
+    {
+        var config = sources.Config;
+        var freshCache = new NavTileCache(config.NavtileCacheCapacity, config.Hpa.NavCellsPerTile,
+            config.Navmesh.MinRegionNavCellArea.ToDouble(), config.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            config.Navmesh.MaxEdgeLenNavCells.ToDouble(), config.Navmesh.MaxVertsPerPoly);
+        VerifyAgainstField(nav, field, sources, tick, linksByCountOnly, freshCache);
+    }
+
+    private static void VerifyAgainstField(
+        NavContext nav,
+        CrowdStructuresStore field,
+        CrowdRebakeSources sources,
+        int tick,
+        bool linksByCountOnly,
+        NavTileCache freshCache)
+    {
+        var full = NavContextBaker.Bake(
+            sources.Config, field.SnapshotSurface(), sources.HeightS, sources.Deck,
+            nav.LayerIndex, nav.ClearanceNavCells, freshCache);
+        VerifyContext(nav, full, tick, linksByCountOnly);
+    }
+
+    private static void VerifyContext(NavContext inc, NavContext full, int tick, bool linksByCountOnly)
     {
         int n2 = inc.NavCellsPerSide * inc.NavCellsPerSide;
+        if (inc.MinCost != full.MinCost)
+        {
+            ThrowMismatch(tick, inc, -1, -1, $"最小代价 {inc.MinCost} ≠ 全量 {full.MinCost}");
+        }
+
         for (int i = 0; i < n2; i++)
         {
             if (inc.Cost[i] != full.Cost[i]) ThrowMismatch(tick, inc, i, -1, $"增量代价与全量不一致 @格 {i}");
+            if (inc.SpeedDivisor[i] != full.SpeedDivisor[i]) ThrowMismatch(tick, inc, i, -1, $"增量速度除数与全量不一致 @格 {i}");
             if (inc.Walk[i] != full.Walk[i]) ThrowMismatch(tick, inc, i, -1, $"增量可走与全量不一致 @格 {i}");
             if (inc.Passable[i] != full.Passable[i]) ThrowMismatch(tick, inc, i, -1, $"增量可通行与全量不一致 @格 {i}");
+            if (inc.UpPass[i] != full.UpPass[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面可通行与全量不一致 @格 {i}");
+            if (inc.Portal[i] != full.Portal[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥头与全量不一致 @格 {i}");
+            if (inc.UpArea[i] != full.UpArea[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面区域与全量不一致 @格 {i}");
+            if (inc.UpCost[i] != full.UpCost[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面代价与全量不一致 @格 {i}");
+            if (inc.UpSpeedDivisor[i] != full.UpSpeedDivisor[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面速度除数与全量不一致 @格 {i}");
         }
 
         VerifyPartition(inc, inc.Comp, full.Comp, tick, "地面连通域");
@@ -539,7 +578,9 @@ public static class CrowdNavRebake
             if (inc.Cells[i] != full.Cells[i]) ThrowMismatch(tick, inc, inc.Cells[i], -1, $"增量格表与全量不一致 @序 {i}");
         }
 
-        VerifyLinks(inc, full.Links, tick);
+        VerifyLinks(inc, full.Links, tick, linksByCountOnly);
+        VerifyTiles(inc, full, tick);
+        VerifyUpperTiles(inc, full, tick);
         VerifyHpa(inc, full.Hpa!, tick);
     }
 
@@ -626,7 +667,7 @@ public static class CrowdNavRebake
         }
     }
 
-    private static void VerifyLinks(NavContext nav, NavLinkSet? full, int tick)
+    private static void VerifyLinks(NavContext nav, NavLinkSet? full, int tick, bool countOnly)
     {
         var inc = nav.Links;
         if (inc == null || full == null)
@@ -636,6 +677,7 @@ public static class CrowdNavRebake
         }
 
         if (inc.Count != full.Count) ThrowMismatch(tick, nav, -1, -1, $"链接数 {inc.Count} ≠ 全量 {full.Count}");
+        if (countOnly) return;
         for (int e = 0; e < inc.Count; e++)
         {
             if (inc.From[e] != full.From[e] || inc.To[e] != full.To[e]
@@ -679,6 +721,127 @@ public static class CrowdNavRebake
                     ThrowMismatch(tick, nav, -1, tile, $"HPA 节点 {i} 的边 {k - a.AdjStart[i]} 与全量不一致");
                 }
             }
+        }
+    }
+
+    private static void VerifyTiles(NavContext inc, NavContext full, int tick)
+    {
+        var left = inc.Tiles;
+        var right = full.Tiles;
+        if (left == null || right == null)
+        {
+            if (left != null || right != null) ThrowMismatch(tick, inc, -1, -1, "地面 tile 表存在性不一致");
+            return;
+        }
+
+        if (left.Length != right.Length)
+        {
+            ThrowMismatch(tick, inc, -1, -1, $"地面 tile 数 {left.Length} ≠ 全量 {right.Length}");
+        }
+
+        for (int i = 0; i < left.Length; i++)
+        {
+            CompareTile(inc, left[i], right[i], tick, i, "地面");
+        }
+    }
+
+    private static void VerifyUpperTiles(NavContext inc, NavContext full, int tick)
+    {
+        var left = inc.UpperTiles;
+        var right = full.UpperTiles;
+        if (left == null || right == null)
+        {
+            if (left != null || right != null) ThrowMismatch(tick, inc, -1, -1, "桥面 tile 表存在性不一致");
+            return;
+        }
+
+        if (left.Count != right.Count)
+        {
+            ThrowMismatch(tick, inc, -1, -1, $"桥面 tile 数 {left.Count} ≠ 全量 {right.Count}");
+        }
+
+        foreach (var kv in left)
+        {
+            if (!right.TryGetValue(kv.Key, out var other))
+            {
+                ThrowMismatch(tick, inc, -1, kv.Key, $"桥面 tile {kv.Key} 全量没有");
+            }
+
+            CompareTile(inc, kv.Value.Entry, other.Entry, tick, kv.Key, "桥面");
+            CompareInts(inc, kv.Value.Portals, kv.Value.Portals.Length, other.Portals, other.Portals.Length, tick, kv.Key, "桥面 portal");
+            CompareFix(inc, kv.Value.PolyCost, kv.Value.PolyCost.Length, other.PolyCost, other.PolyCost.Length, tick, kv.Key, "桥面多边形代价");
+        }
+    }
+
+    private static void CompareTile(NavContext nav, NavTileEntry? inc, NavTileEntry? full, int tick, int tile, string name)
+    {
+        if (inc == null || full == null)
+        {
+            if (inc != null || full != null) ThrowMismatch(tick, nav, -1, tile, $"{name} tile {tile} 存在性不一致");
+            return;
+        }
+
+        if (inc.Count != full.Count || inc.RegionCount != full.RegionCount)
+        {
+            ThrowMismatch(tick, nav, -1, tile, $"{name} tile {tile} 多边形数 {inc.Count}/{inc.RegionCount} ≠ 全量 {full.Count}/{full.RegionCount}");
+        }
+
+        CompareInts(nav, inc.Vx, inc.LiveVertices, full.Vx, full.LiveVertices, tick, tile, $"{name} tile {tile} 顶点 x");
+        CompareInts(nav, inc.Vy, inc.LiveVertices, full.Vy, full.LiveVertices, tick, tile, $"{name} tile {tile} 顶点 y");
+        CompareInts(nav, inc.PolyStart, inc.LivePolyStart, full.PolyStart, full.LivePolyStart, tick, tile, $"{name} tile {tile} 多边形起点");
+        CompareInts(nav, inc.PolyVerts, inc.LivePolyVerts, full.PolyVerts, full.LivePolyVerts, tick, tile, $"{name} tile {tile} 多边形顶点");
+        CompareInts(nav, inc.NeiStart, inc.LiveNeiStart, full.NeiStart, full.LiveNeiStart, tick, tile, $"{name} tile {tile} 邻接起点");
+        CompareInts(nav, inc.Nei, inc.LiveNeighbors, full.Nei, full.LiveNeighbors, tick, tile, $"{name} tile {tile} 邻接");
+        CompareInts(nav, inc.NeiA, inc.LiveNeighbors, full.NeiA, full.LiveNeighbors, tick, tile, $"{name} tile {tile} 邻接边 a");
+        CompareInts(nav, inc.NeiB, inc.LiveNeighbors, full.NeiB, full.LiveNeighbors, tick, tile, $"{name} tile {tile} 邻接边 b");
+        CompareInts(nav, inc.BMinX, inc.LiveBoxes, full.BMinX, full.LiveBoxes, tick, tile, $"{name} tile {tile} 盒 minX");
+        CompareInts(nav, inc.BMinY, inc.LiveBoxes, full.BMinY, full.LiveBoxes, tick, tile, $"{name} tile {tile} 盒 minY");
+        CompareInts(nav, inc.BMaxX, inc.LiveBoxes, full.BMaxX, full.LiveBoxes, tick, tile, $"{name} tile {tile} 盒 maxX");
+        CompareInts(nav, inc.BMaxY, inc.LiveBoxes, full.BMaxY, full.LiveBoxes, tick, tile, $"{name} tile {tile} 盒 maxY");
+        CompareInts(nav, inc.PolyOf, inc.PolyOf.Length, full.PolyOf, full.PolyOf.Length, tick, tile, $"{name} tile {tile} 格多边形");
+        CompareInts(nav, inc.BorderPoly, inc.LiveBorders, full.BorderPoly, full.LiveBorders, tick, tile, $"{name} tile {tile} 边界多边形");
+        CompareBytes(nav, inc.BorderSide, inc.LiveBorders, full.BorderSide, full.LiveBorders, tick, tile, $"{name} tile {tile} 边界侧");
+        CompareInts(nav, inc.BorderLo, inc.LiveBorders, full.BorderLo, full.LiveBorders, tick, tile, $"{name} tile {tile} 边界 lo");
+        CompareInts(nav, inc.BorderHi, inc.LiveBorders, full.BorderHi, full.LiveBorders, tick, tile, $"{name} tile {tile} 边界 hi");
+        CompareBytes(nav, inc.BorderRev, inc.LiveBorders, full.BorderRev, full.LiveBorders, tick, tile, $"{name} tile {tile} 边界反向");
+    }
+
+    private static void CompareInts(NavContext nav, int[] left, int leftCount, int[] right, int rightCount, int tick, int tile, string name)
+    {
+        if (leftCount != rightCount)
+        {
+            ThrowMismatch(tick, nav, -1, tile, $"{name} 长度 {leftCount} ≠ 全量 {rightCount}");
+        }
+
+        for (int i = 0; i < leftCount; i++)
+        {
+            if (left[i] != right[i]) ThrowMismatch(tick, nav, -1, tile, $"{name} [{i}] {left[i]} ≠ 全量 {right[i]}");
+        }
+    }
+
+    private static void CompareBytes(NavContext nav, byte[] left, int leftCount, byte[] right, int rightCount, int tick, int tile, string name)
+    {
+        if (leftCount != rightCount)
+        {
+            ThrowMismatch(tick, nav, -1, tile, $"{name} 长度 {leftCount} ≠ 全量 {rightCount}");
+        }
+
+        for (int i = 0; i < leftCount; i++)
+        {
+            if (left[i] != right[i]) ThrowMismatch(tick, nav, -1, tile, $"{name} [{i}] {left[i]} ≠ 全量 {right[i]}");
+        }
+    }
+
+    private static void CompareFix(NavContext nav, Fix64[] left, int leftCount, Fix64[] right, int rightCount, int tick, int tile, string name)
+    {
+        if (leftCount != rightCount)
+        {
+            ThrowMismatch(tick, nav, -1, tile, $"{name} 长度 {leftCount} ≠ 全量 {rightCount}");
+        }
+
+        for (int i = 0; i < leftCount; i++)
+        {
+            if (left[i] != right[i]) ThrowMismatch(tick, nav, -1, tile, $"{name} [{i}] 与全量不一致");
         }
     }
 
