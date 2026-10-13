@@ -12,7 +12,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 /// 二进制布局（小端）：
 ///   0   4    magic "LNSF"
 ///   4   u16  version = 1（不等于当前版本一律拒绝，无迁移）
-///   6   u16  headerBytes。v1 头写 32。小于 32 拒绝；更大既不拒绝也不跳过额外字节。
+///   6   u16  headerBytes。v1 头必须正好 32。
 ///   8   i32  cellsX        导航格数（X）
 ///   12  i32  cellsY        导航格数（Y；世界正方形由加载侧校验，本格式不强制）
 ///   16  i32  navCellSizeCm    导航格边长（厘米）
@@ -64,9 +64,9 @@ public sealed class NavSurfaceAsset
         }
 
         ushort headerBytes = reader.ReadUInt16();
-        if (headerBytes < HeaderBytes)
+        if (headerBytes != HeaderBytes)
         {
-            throw new InvalidDataException($".navsurface: headerBytes = {headerBytes}，小于 v1 头长 {HeaderBytes}。");
+            throw new InvalidDataException($".navsurface: headerBytes = {headerBytes}，v1 头长必须是 {HeaderBytes}。");
         }
 
         int cellsX = reader.ReadInt32();
