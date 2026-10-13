@@ -52,6 +52,10 @@ public sealed class CrowdSpatialHash
     public CrowdSpatialHash(int worldSizeCm, Fix64 hashCellSizeCm, int capacity, int rings, Fix64 reachCm)
     {
         CellSizeCm = hashCellSizeCm;
+        long cellRaw = hashCellSizeCm.RawValue;
+        _cellSizeInt = cellRaw > 0 && (cellRaw & ((1L << Fix64.FractionalBits) - 1)) == 0
+            ? (int)(cellRaw >> Fix64.FractionalBits)
+            : 0;
         _rings = rings;
         _reachCm = reachCm;
         _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / hashCellSizeCm).ToLong();
@@ -96,10 +100,14 @@ public sealed class CrowdSpatialHash
         return (ox.ToArray(), oy.ToArray(), ringEnd.ToArray());
     }
 
+    private readonly int _cellSizeInt;
+
     private int CellAtCm(Fix64 vCm)
     {
-        // (v / cell).ToLong() 是算术右移,负值向下取整。随后负格钳到 0,所以负坐标的格号仍是 0。
-        int c = (int)(vCm / CellSizeCm).ToLong();
+        // 格长是正整数时走 raw 整数除（向零）。否则走定点除法。负坐标的商再钳到 0，所以负格号仍是 0。
+        int c = _cellSizeInt != 0
+            ? (int)Fix64.DivPositiveInt(vCm, _cellSizeInt).ToLong()
+            : (int)(vCm / CellSizeCm).ToLong();
         return c < 0 ? 0 : c >= _dim ? _dim - 1 : c;
     }
 

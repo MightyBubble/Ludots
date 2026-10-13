@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Schedulers;
 
@@ -361,7 +363,10 @@ public sealed class CrowdMovementKernel
         if (length <= 0) return;
         if (length == 1 || configured == 1)
         {
-            ExecuteRange(phase, 0, length, dt);
+            long serialWorkBefore = Session.Telemetry.ReadParallelWorkTicks();
+            long serialWall0 = Stopwatch.GetTimestamp();
+            ExecuteRange(phase, 0, length, 1, dt);
+            RecordRangeParallel(phase, serialWall0, serialWorkBefore);
             return;
         }
 
@@ -382,45 +387,80 @@ public sealed class CrowdMovementKernel
             _rangeHandles = new JobHandle[workerCount];
         }
 
+        // 分离隔行求解，意图里走流场的单位比已到达的贵。连续切块会把一整段密集下标交给同一个工人。
+        // 按工人号交错取值，密集段被摊开；每个下标仍只进一个区间。
+        bool spread = phase is RangePhaseAvoidSolve or RangePhaseIntent;
         int baseCount = length / workerCount;
         int remainder = length % workerCount;
         int start = 0;
+        long workBefore = Session.Telemetry.ReadParallelWorkTicks();
+        long wall0 = Stopwatch.GetTimestamp();
         for (int w = 0; w < workerCount; w++)
         {
-            int len = baseCount + (w < remainder ? 1 : 0);
             var job = _rangeJobs[w];
             job.Kernel = this;
             job.Phase = phase;
-            job.Start = start;
-            job.End = start + len;
             job.Dt = dt;
+            if (spread)
+            {
+                job.Start = w;
+                job.End = length;
+                job.Step = workerCount;
+            }
+            else
+            {
+                int len = baseCount + (w < remainder ? 1 : 0);
+                job.Start = start;
+                job.End = start + len;
+                job.Step = 1;
+                start += len;
+            }
+
             _rangeHandles[w] = scheduler.Schedule(job);
-            start += len;
         }
 
         scheduler.Flush();
         for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
+        RecordRangeParallel(phase, wall0, workBefore);
     }
 
-    private void ExecuteRange(int phase, int start, int end, Fix64 dt)
+    private void RecordRangeParallel(int phase, long wall0, long workBefore)
     {
+        var telemetry = Session.Telemetry;
+        long wall = Stopwatch.GetTimestamp() - wall0;
+        long work = telemetry.ReadParallelWorkTicks() - workBefore;
+        telemetry.AddParallelWallTicks(wall);
+        switch (phase)
+        {
+            case RangePhaseAvoidGather: telemetry.AddGatherParallel(wall, work); break;
+            case RangePhaseAvoidSolve: telemetry.AddSolveParallel(wall, work); break;
+            case RangePhaseIntent: telemetry.AddIntentParallel(wall, work); break;
+            case RangePhaseMotor: telemetry.AddMotorParallel(wall, work); break;
+        }
+    }
+
+    private void ExecuteRange(int phase, int start, int end, int step, Fix64 dt)
+    {
+        long t0 = Stopwatch.GetTimestamp();
         switch (phase)
         {
             case RangePhaseAvoidGather:
                 CrowdAvoidance.GatherRange(this, start, end);
-                return;
+                break;
             case RangePhaseAvoidSolve:
-                CrowdAvoidance.SolveRange(this, start, end);
-                return;
+                CrowdAvoidance.SolveRange(this, start, end, step);
+                break;
             case RangePhaseIntent:
-                CrowdIntents.WriteRange(this, start, end);
-                return;
+                CrowdIntents.WriteRange(this, start, end, step);
+                break;
             case RangePhaseMotor:
                 CrowdMotor.IntegrateRange(this, start, end, dt);
-                return;
+                break;
             default:
                 throw new InvalidOperationException($"未知的群体并行阶段 {phase}。");
         }
+
+        Session.Telemetry.AddParallelWorkTicks(Stopwatch.GetTimestamp() - t0);
     }
 
     internal const int RangePhaseAvoidGather = 1;
@@ -434,9 +474,10 @@ public sealed class CrowdMovementKernel
         public int Phase;
         public int Start;
         public int End;
+        public int Step;
         public Fix64 Dt;
 
-        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Dt);
+        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Step, Dt);
     }
 
     /// <summary>分离求解的缓冲面(容量按单位上限;Awake 按占格数,构造时定尺寸)。</summary>
@@ -478,6 +519,8 @@ public sealed class CrowdMovementKernel
     /// <summary>Step 只做领队 → 意图 → 马达。分离求解由会话在 Step 之前调用。</summary>
     public void Step(Fix64 dt)
     {
+        var telemetry = Session.Telemetry;
+        long mark = Stopwatch.GetTimestamp();
         var orders = Session.Orders.List;
         Fix64 turnK = Fix64.Min(Fix64.OneValue, dt * LeaderTurnRate);
         Fix64 faceStep = LeaderTurnRate * FaceTurnScale * dt;
@@ -493,8 +536,11 @@ public sealed class CrowdMovementKernel
             }
         }
 
+        telemetry.AddLeaderTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         CrowdIntents.Compute(this, dt);
+        telemetry.AddIntentTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         CrowdMotor.Integrate(this, dt);
+        telemetry.AddMotorTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         Tick++;
     }
 

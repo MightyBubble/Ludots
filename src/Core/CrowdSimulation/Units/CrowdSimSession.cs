@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
@@ -308,47 +309,71 @@ public sealed class CrowdSimSession
     /// </summary>
     public bool Step(out ulong checksum)
     {
-        Commands.Flush(this, ExecCommand);
-        Units.MaterializePending();
-        if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
-        if (Structures != null) CrowdStructureOps.ExpireStructures(this);
-        if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
+        var telemetry = Telemetry;
+        telemetry.BeginPhaseFrame();
+        long mark = Stopwatch.GetTimestamp();
+        try
         {
-            // Flush 可能改了成员,scatter 还没跑;成员数没变就留着上一份直方。
-            if (Units.Count != _stateHistogramMembers) RecountUnitStates();
-            Telemetry.MarkPathWait();
-            checksum = 0;
-            return false;
-        }
-
-        if (Movement != null)
-        {
-            if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
-            Movement.GatherUnits();
-            for (int s = 0; s < SubSteps; s++)
+            Commands.Flush(this, ExecCommand);
+            Units.MaterializePending();
+            telemetry.AddCommandTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
+            if (Structures != null) CrowdStructureOps.ExpireStructures(this);
+            telemetry.AddRebakeTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
             {
-                // 子步序：哈希重建，分离求解（含相位前移），领队，意图，马达。
-                Movement.RebuildHash();
-                Movement.SolveSeparation();
-                Movement.Step(SubStepDt);
+                telemetry.AddPlanTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                // Flush 可能改了成员,scatter 还没跑;成员数没变就留着上一份直方。
+                if (Units.Count != _stateHistogramMembers) RecountUnitStates();
+                Telemetry.MarkPathWait();
+                checksum = 0;
+                return false;
             }
 
-            Movement.ScatterUnits();
-            _stateHistogramMembers = Units.Count;
-        }
+            telemetry.AddPlanTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
 
-        // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
-        if (Fog != null && !TruthNavFrozen)
+            if (Movement != null)
+            {
+                if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
+                Movement.GatherUnits();
+                telemetry.AddGatherTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                for (int s = 0; s < SubSteps; s++)
+                {
+                    // 子步序：哈希重建，分离求解（含相位前移），领队，意图，马达。
+                    Movement.RebuildHash();
+                    telemetry.AddHashTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                    Movement.SolveSeparation();
+                    telemetry.AddSeparationTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                    Movement.Step(SubStepDt);
+                    mark = Stopwatch.GetTimestamp();
+                }
+
+                Movement.ScatterUnits();
+                telemetry.AddScatterTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                _stateHistogramMembers = Units.Count;
+            }
+
+            // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
+            if (Fog != null && !TruthNavFrozen)
+            {
+                Fog.Update(TickCount, this);
+                telemetry.AddFogTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                CrowdBeliefSync.Sync(this);
+                telemetry.AddBeliefTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            }
+
+            TickCount++;
+            Planner?.ProcessRefreshes(TickCount);
+            telemetry.AddRefreshTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            LastDigest = CrowdSimChecksum.Compute(this);
+            checksum = LastDigest.Total;
+            telemetry.AddChecksumTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            return true;
+        }
+        finally
         {
-            Fog.Update(TickCount, this);
-            CrowdBeliefSync.Sync(this);
+            telemetry.CommitPhaseFrame();
         }
-
-        TickCount++;
-        Planner?.ProcessRefreshes(TickCount);
-        LastDigest = CrowdSimChecksum.Compute(this);
-        checksum = LastDigest.Total;
-        return true;
     }
 
     /// <summary>快进到目标 tick(停摆不推进;服务故障时抛错而不是死循环)。</summary>

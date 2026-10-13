@@ -73,7 +73,7 @@ public static class CrowdAvoidance
         }
     }
 
-    internal static void SolveRange(CrowdMovementKernel k, int start, int end)
+    internal static void SolveRange(CrowdMovementKernel k, int start, int end, int step)
     {
         var session = k.Session;
         var pairRules = session.Config.PairRules;
@@ -89,7 +89,7 @@ public static class CrowdAvoidance
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
         var gp = k.GatherPlayer; var gm = k.GatherMoving; var gl = k.GatherLevel; var gg = k.GatherGroup;
         var calm = k.Calm; var awake = k.Awake;
-        for (int a = start; a < end; a++)
+        for (int a = start; a < end; a += step)
         {
             int c = hash2.Active[a];
             int cy = c / dim;
