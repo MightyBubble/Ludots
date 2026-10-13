@@ -8,8 +8,8 @@ Do not use it as an implementation reference.
 Current architecture:
 
 - Entity groups are stored in `EntityCollectionStore`.
-- The default player command group is `EntityCollectionKeys.CommandSource` /
-  `collection.command.source`.
+- The player command group is the `commandSource` role in `Input/collection_keys.json`.
+  The merged value is the collection name.
 - Command authority must resolve actors from explicit entity collections and must fail fast
   when the expected collection or profile is missing.
 - Order payloads must be self-contained, or explicitly refer to an owner / collection key /

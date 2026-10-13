@@ -6683,7 +6683,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "将该单位设为当前唯一选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -6945,7 +6945,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把框内单位设为当前选中并结束框选"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7114,7 +7114,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把闭合圈内单位设为当前选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7305,7 +7305,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按修饰键翻转该单位的选中状态"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7416,7 +7416,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按同类型筛出可见单位并整批选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7631,7 +7631,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "绑定玩家唯一可控角色"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7777,7 +7777,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "启用载具输入映射与命令集"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],
@@ -7893,7 +7893,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "点空地后清空当前全部选中"
         }
       ],
-      "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+      "ludots": "点选/框选：交互图把结果写入 EntityCollectionStore（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
       "todos": [
         "控制组存取仅 InteractionShowcase，未进 Core 正式 API"
       ],

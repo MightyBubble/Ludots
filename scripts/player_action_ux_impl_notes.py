@@ -15,8 +15,8 @@ from typing import Any
 # category → (ludots one-liner, default todos)
 CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
     "select": (
-        "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore"
-        "（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
+        "点选/框选：交互图把结果写入 EntityCollectionStore"
+        "（Input/collection_keys.json 的 commandSource 角色，以及 hover）；加选模式走 Replace/Additive/Toggle。",
         ["控制组存取仅 InteractionShowcase，未进 Core 正式 API"],
     ),
     "basic-order": (

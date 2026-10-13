@@ -61,7 +61,7 @@ Member 是执行对象：
 
 ```text
 玩家右键
-  -> collection.command.source 中的 anchor
+  -> commandSource 集合中的 anchor
   -> FormationCommandMembersSystem 维护的 formation.command.members
   -> graph.formation.command_commit（SubmitCommandIntent，actorOrder 布局）
   -> CommandIntentProfile

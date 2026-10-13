@@ -117,10 +117,10 @@ Flow:
 
 Unknown query ids fail explicitly. The source must not treat an unknown `InstanceKey` as a direct collection key.
 
-The default registered query is:
+The default registered query is the bound `commandSource` value from `Input/collection_keys.json`:
 
-* id: `collection.command.source`
-* collection key: `collection.command.source`
+* id: that bound collection name
+* collection key: the same name
 * source id: `gas.collection-ability-slots`
 * sort: slot, owner count, label
 
