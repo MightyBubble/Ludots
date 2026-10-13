@@ -90,13 +90,18 @@ public sealed class NavTileCache
     public NavTileEntry Acquire(byte[] passable, byte[] area, int navCellsPerSide, int tx, int ty)
     {
         int navCellsPerTile = _navCellsPerTile, ox = tx * navCellsPerTile, oy = ty * navCellsPerTile;
+        long tScan = CrowdRebakeProbe.T();
         for (int i = _lruHead; i >= 0; i = _slots[i].Next)
         {
             if (!SameContent(_slots[i].Key, passable, area, navCellsPerSide, ox, oy, navCellsPerTile)) continue;
             MoveToTail(i);
             Hits++;
+            if (CrowdRebakeProbe.Armed) CrowdRebakeProbe.CacheHits++;
+            CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.CacheScan, tScan);
             return _slots[i].Entry;
         }
+
+        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.CacheScan, tScan);
 
         int slot;
         if (_live == _capacity)
@@ -126,9 +131,12 @@ public sealed class NavTileCache
 
         Misses++;
         Bakes++;
+        if (CrowdRebakeProbe.Armed) CrowdRebakeProbe.CacheMisses++;
         _bakeWatch.Restart();
+        long tBake = CrowdRebakeProbe.T();
         var entry = _slots[slot].Entry;
         BakeInto(entry, key);
+        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.CacheBake, tBake);
         BakeMs += _bakeWatch.Elapsed.TotalMilliseconds;
         entry.Uid = _uid++;
         LinkLast(slot);

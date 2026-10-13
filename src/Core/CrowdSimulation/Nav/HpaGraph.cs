@@ -341,14 +341,24 @@ public sealed class HpaGraph
         }
 
         int rebakeCount = LoadAscending(rebake);
+        long tBake = CrowdRebakeProbe.T();
         for (int i = 0; i < rebakeCount; i++)
         {
+            if (CrowdRebakeProbe.Armed) CrowdRebakeProbe.HpaBakeTiles++;
             int cl = _ascend[i].Key;
             BakeTile(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
         }
 
+        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.HpaBake, tBake);
         int affCount = LoadAscending(aff);
-        for (int i = 0; i < affCount; i++) Blocks[_ascend[i].Key] = BuildBlock(this, nav, _ascend[i].Key);
+        long tBlock = CrowdRebakeProbe.T();
+        for (int i = 0; i < affCount; i++)
+        {
+            if (CrowdRebakeProbe.Armed) CrowdRebakeProbe.HpaBlocks++;
+            Blocks[_ascend[i].Key] = BuildBlock(this, nav, _ascend[i].Key);
+        }
+
+        CrowdRebakeProbe.Acc(ref CrowdRebakeProbe.HpaBlock, tBlock);
         FinishGraph(this, links);
     }
 
