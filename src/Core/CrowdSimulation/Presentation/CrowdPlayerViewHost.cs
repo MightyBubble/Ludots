@@ -849,19 +849,16 @@ internal sealed class CrowdPlayerViewHost
             return;
         }
 
-        if (_engine.TryGetService(CoreServiceKeys.LogicViewRegistry, out LogicViewRegistry? views) &&
-            views != null &&
-            views.TryGetClientPresentCamera(out CameraManager camera))
+        // 座位绑定之后呈现眼不再是 bootstrap 的 ClientPresent。取景必须打到正在画的那台相机。
+        CameraManager camera = ClientLocalSeatAccess.ResolveAuthorityCamera(_engine);
+        camera.ApplyPose(new CameraPoseRequest
         {
-            camera.ApplyPose(new CameraPoseRequest
-            {
-                VirtualCameraId = _config.CameraId,
-                TargetCm = new Vector2(xCm, yCm),
-                DistanceCm = distanceCm,
-                Yaw = yaw,
-                Pitch = pitch,
-            });
-        }
+            VirtualCameraId = _config.CameraId,
+            TargetCm = new Vector2(xCm, yCm),
+            DistanceCm = distanceCm,
+            Yaw = yaw,
+            Pitch = pitch,
+        });
     }
 
     private void ArmMark(CrowdFogCheckScene scene, int player, int xCm, int yCm)
