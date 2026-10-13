@@ -106,12 +106,11 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
-        // 迷雾/认知随运动内核装配:参考端 Fog 在仿真构造期常驻;这里只在运动会话里启用,
-        // 纯部署会话(S4 形状)不建迷雾。LOS 开启需要高度场(装配缺口即报)。
+        // 迷雾随运动内核装配。没有结构仓的部署会话不建迷雾。有迷雾就注入高度表，之后 fogSight 打开视线也能用。
         if (Structures != null)
         {
             Fog = new CrowdFog(Config, Config.PairRules, Structures);
-            if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
+            Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
             Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
         }

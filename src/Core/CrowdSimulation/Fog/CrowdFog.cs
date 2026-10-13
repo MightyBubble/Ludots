@@ -68,7 +68,7 @@ public sealed class CrowdFog
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
     private Fix64[]? _hAvgM, _hMaxM;  // LOS:fog 格均高 / 最高高(米,Fix64)
     private readonly Fix64 _eyeM;   // 眼高(米)
-    private byte[]? _opaque;
+    private readonly byte[] _opaque;
     private bool _opaqueDirty;
     public int Refreshes;           // 诊断:刷新次数
 
@@ -90,6 +90,7 @@ public sealed class CrowdFog
         GroupOf = BuildVisionGroups(pairRules.SharesVisionByPair, pairRules.PlayerCount, out int visionGroupCount);
         VisionGroupCount = visionGroupCount;
         int f2 = FogCellsPerSide * FogCellsPerSide;
+        _opaque = new byte[f2];
         Visible = new byte[VisionGroupCount * f2];
         Explored = new byte[VisionGroupCount * f2];
         Occ = new byte[VisionGroupCount * f2];
@@ -186,7 +187,7 @@ public sealed class CrowdFog
         int Find(int i) => root[i] == i ? i : root[i] = Find(root[i]);
     }
 
-    /// <summary>LOS 高度表(米,Fix64)。未注入而 LOS 开 = 调用方装配缺口。
+    /// <summary>LOS 高度表(米,Fix64)。会话在迷雾装配时注入。
     /// 逐格一次 CmToMPrecise，格内累加，均值一次除法。</summary>
     public void EnsureHeights(NavHeightField heights)
     {
@@ -394,11 +395,11 @@ public sealed class CrowdFog
     /// <summary>含任何阻挡导航格的 fog 格不透明(真值实体变更后重建)。</summary>
     private void BuildOpaque()
     {
-        Array.Clear(_opaque!);
+        Array.Clear(_opaque);
         var blocked = Store.Blocked;
         for (int i = 0; i < NavCellsPerSide * NavCellsPerSide; i++)
         {
-            if (blocked[i] != 0) _opaque![i / NavCellsPerSide / NavCellsPerFogCell * FogCellsPerSide + i % NavCellsPerSide / NavCellsPerFogCell] = 1;
+            if (blocked[i] != 0) _opaque[i / NavCellsPerSide / NavCellsPerFogCell * FogCellsPerSide + i % NavCellsPerSide / NavCellsPerFogCell] = 1;
         }
 
         _opaqueDirty = false;
@@ -420,7 +421,7 @@ public sealed class CrowdFog
             Fix64 f = Fix64.FromInt(s) / Fix64.FromInt(n);
             int c = (int)((Fix64.FromInt(cy) + Fix64.HalfValue + dy * f).ToLong() * FogCellsPerSide + (Fix64.FromInt(cx) + Fix64.HalfValue + dx * f).ToLong());
             if (c == v || c == t) continue;
-            if (_opaque![c] != 0 || _hMaxM![c] > eye + Fix64Math.MulExact(rise, f)) return false;
+            if (_opaque[c] != 0 || _hMaxM![c] > eye + Fix64Math.MulExact(rise, f)) return false;
         }
 
         return true;

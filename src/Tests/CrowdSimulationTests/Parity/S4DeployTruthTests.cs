@@ -111,10 +111,10 @@ public class S4DeployTruthTests
         return v;
     }
 
-    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed)
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, bool lineOfSight = false)
     {
         CrowdTestScheduler.Ensure();
-        var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
+        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight);
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
@@ -152,7 +152,7 @@ public class S4DeployTruthTests
         // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
-        // F02:桥以实体身份进认知仓(不进地面栅格/碰撞;id 续在阻挡物后,与导出端参考 id 序同构)
+        // 桥进入认知仓，不进地面栅格与碰撞。id 按 span 列表顺序续在阻挡物之后。
         if (mapSurface.Bridges.Count > 0)
         {
             int bridgeTpl = session.Structures.TemplateIndexOf("bridge");

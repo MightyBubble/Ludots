@@ -167,7 +167,7 @@ public sealed class RuntimeFogSection
     public required int RevealTicks { get; init; }
     public required int SlotCacheCapacity { get; init; }
     public required int VariantCapacity { get; init; }
-    /// <summary>视线遮挡开关(迷雾格间建筑/高地挡视线的初始态;fogSight 命令运行时可切)。</summary>
+    /// <summary>视线遮挡的初始开关。fogSight 可在运行时改 CrowdFog.Los。高度表在迷雾装配时注入。</summary>
     public required bool LineOfSight { get; init; }
     /// <summary>观察者眼高(厘米)。</summary>
     public required int EyeCm { get; init; }

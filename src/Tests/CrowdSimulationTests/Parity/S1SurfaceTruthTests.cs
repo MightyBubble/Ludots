@@ -149,12 +149,13 @@ public class S1SurfaceTruthTests
     internal static NavSurfaceAsset ReadSurface(string seed)
         => NavSurfaceAsset.Read(File.OpenRead(Path.Combine(SeedDir(seed), "terrain", $"crowd_simulation_{seed}.navsurface")));
 
-    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed)
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight = false)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
+        if (lineOfSight) merged["fog"]!["lineOfSight"] = true;
         var config = CrowdSimulationConfig.Load(merged);
 
         var navmeshJson = TestDefaults.StandardNavmeshJson();

@@ -300,7 +300,7 @@ public sealed class CrowdSimulationConfig
         public required int RevealTicks { get; init; }
         public required int SlotCacheCapacity { get; init; }
         public required int VariantCapacity { get; init; }
-        /// <summary>视线遮挡的初始开关。fogSight 会改 CrowdFog.Los。高度表只在会话装配时 Los 已为真才注入；不透明格数组从未分配。从 false 切到 true 会在 BuildOpaque / Sight 上碰到空引用。</summary>
+        /// <summary>视线遮挡的初始开关。建筑挡住的 fog 格不透明，更高地形挡住视线。fogSight 可在运行时改 CrowdFog.Los。高度表在迷雾装配时注入。</summary>
         public required bool LineOfSight { get; init; }
         /// <summary>观察者眼高，厘米。</summary>
         public required int EyeCm { get; init; }
