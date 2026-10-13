@@ -241,7 +241,7 @@ public class CrowdDebugOverlayGeometryTests
     [Test]
     public void PaletteIndex_OutOfRange_NamesField()
     {
-        var palette = new[] { new CrowdDebugRgba { R = 1, G = 2, B = 3, A = 4 } };
+        var palette = new[] { new CrowdDebugRgba { Red = 1, Green = 2, Blue = 3, Alpha = 4 } };
         var ex = Assert.Throws<InvalidOperationException>(() =>
             CrowdDebugViewColors.At(palette, 3, "CrowdSimulationDebugView.json", "colors.teams"));
         Assert.That(ex!.Message, Does.Contain("CrowdSimulationDebugView.json"));
