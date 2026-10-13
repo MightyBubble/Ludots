@@ -97,7 +97,7 @@ public sealed class HpaGraph
     private readonly HashSet<int> _bakeSeen = new(512);
     private readonly HashSet<int> _bakeUSeen = new(512);
 
-    /// <summary>认知变体克隆(F02):内层数组、簇块和链接表深拷。增量重烘原地复用缓冲,
+    /// <summary>认知变体克隆:内层数组、簇块和链接表深拷。增量重烘原地复用缓冲,
     /// 共享内层会被写穿,所以变体必须独占自己的数组。</summary>
     public HpaGraph CloneForVariant()
     {

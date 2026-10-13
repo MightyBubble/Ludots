@@ -12,8 +12,8 @@ namespace Ludots.Core.CrowdSimulation.Config;
 
 /// <summary>
 /// CrowdSimulation 配置装载入口。
-/// 管线侧负责 config_catalog 合并（DeepObject）；<see cref="Load"/> 按
-/// LU-20 的契约把合并结果、地图、代理体型与固定时钟组装成只读运行时配置——
+/// 管线侧负责 config_catalog 合并（DeepObject）；<see cref="Load"/> 把
+/// 合并结果、地图、代理体型与固定时钟组装成只读运行时配置——
 /// 内核不读文件、不读全局单例。世界距离在组装层用 double 做厘米 ÷ 导航格长，再
 /// <c>Fix64.FromDouble</c> 成交格数；其余长度仍是厘米 Fix64。内核坐标保持厘米。
 /// </summary>
@@ -47,7 +47,7 @@ public sealed class CrowdSimulationConfigLoader
         return CrowdSimulationConfig.Load(merged);
     }
 
-    /// <summary>求解器互斥（LU-19）：两份配置 mapId 相同才冲突。</summary>
+    /// <summary>求解器互斥：两份配置 mapId 相同才冲突。</summary>
     public static void EnsureSolverExclusive(string? massNavigationMapId, string crowdSimulationMapId)
     {
         if (string.Equals(massNavigationMapId, crowdSimulationMapId, StringComparison.Ordinal))
@@ -58,7 +58,7 @@ public sealed class CrowdSimulationConfigLoader
     }
 
     /// <summary>
-    /// LU-20：校验并组装只读运行时配置。输入全部来自 Ludots 已加载的数据。
+    /// 校验并组装只读运行时配置。输入全部来自 Ludots 已加载的数据。
     /// </summary>
     /// <param name="config">catalog 合并后的 CrowdSimulationConfig.json。</param>
     /// <param name="map">地图（Boards / Teams / Players / Entities）。聚焦的地图 id 就是会话地图。</param>

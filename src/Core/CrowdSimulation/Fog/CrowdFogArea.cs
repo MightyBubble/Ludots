@@ -100,10 +100,10 @@ public sealed record CrowdFogShape
 /// <summary>形状 → fog 格(fog/area.js areaCells 移植):rect 保守覆盖(触到的每一格);
 /// circle / poly 按格心在内(行中心线上的半宽 / 偶奇扫描线);比一格还小的形状仍覆盖锚点格
 /// (circle 心 / poly 首顶点)——点击大小的形状不是静默空操作。格升序去重 + 格包围盒。
-/// 求值树与参考端 __L31_FIX64_LOS__ 补丁同一棵、逐 op 对齐:坐标以米入网(FromDouble
+/// 求值顺序与参考端逐 op 对齐:坐标以米入网(FromDouble
 /// 向零截断)后先除以格长归一到格单位(CrowdFix 先归一同手法)——平方与跨度积都落在
 /// ≤ 格数的量级,乘法走 MulExact(精确积)、除法精确商、开方 SqrtPrecise,两端逐位可复现。
-/// 厘米/米域直乘的溢出界只有 ~463 m(L51):千米级圆/多边形在旧树里静默回绕,现以
+/// 厘米/米域直乘的溢出界只有 ~463 m。千米级圆/多边形在该域直乘会静默回绕,以
 /// ±46340 m 输入守卫显式抛错(与参考端同文案)。rect 无乘法:米入网后除以格长再 floor。命令在 tick 内执行,
 /// tick 内一律定点。</summary>
 public static class CrowdFogArea

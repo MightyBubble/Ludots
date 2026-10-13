@@ -5,7 +5,7 @@ using Ludots.Core.Presentation.Terrain;
 namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
-/// 导航分辨率的高度场与坡度（RT-01 的高度栅格派生）。
+/// 导航分辨率的高度场与坡度。
 /// 从 .height 资产（uint16 缩放样本）推导：样本解码用定点整数路径
 /// （offset + raw × num / den），不走浮点 Decode；盒式平均降到导航格、
 /// 中心差分得坡度——与导出器在量化输入上的推导一一对应。

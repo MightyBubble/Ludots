@@ -83,7 +83,7 @@ public static class NavContextBaker
         Array.Fill(comp, -1);
         int compCount = Components(passable, navCellsPerSide, comp);
 
-        // 桥面层(RT-16):桥面格烘焙 + portal 合并进连通域
+        // 桥面层:桥面格烘焙 + portal 合并进连通域
         var upPass = new byte[n2];
         var portal = new byte[n2];
         var upArea = new byte[n2];

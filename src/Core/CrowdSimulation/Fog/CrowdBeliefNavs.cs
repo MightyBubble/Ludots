@@ -10,7 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Fog;
 /// <summary>
 /// 认知变体导航注册表(fog/beliefNav.js 移植):一个认知槽持有 belief 字段(地形 + believed
 /// 实体,独立于真值实体)。变体 nav 号 = 槽号 × BeliefStride + 真 nav 号,按上下文懒建。
-/// C# 实现取全拷贝变体(裁定 ①,2026-10-09):克隆真相上下文的全部逐格数组,tile 条目经
+/// C# 实现取全拷贝变体:克隆真相上下文的全部逐格数组,tile 条目经
 /// NavTileCache 内容键共享(昂贵部分不重烘),只对分歧矩形(单侧已知实体 + 未探索 tile 行段)
 /// 增量重烘——烘焙内容与参考端的 copy-on-write 变体逐位同,内存换机制简单;真机实测后再评 COW。
 /// 参考端的 detach/settle(真相重烘前变体私享 tile)在全拷贝下天然成立,为显式免操作;

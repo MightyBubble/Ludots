@@ -37,7 +37,7 @@ public static class NavMeshAssembler
 {
     // 边界重叠对(stitchPairs):(条目A, sideA, 条目B) → [i, j, lo, hi]×k
     // 键是条目引用(条目不可变且被缓存共享;uid 跨缓存实例会撞号,已踩过——静态 memo 不能只靠 uid)
-    // 记忆化结果是条目的纯函数,多 worker 查询共享;加锁只保线程安全,不影响结果(RT-03)
+    // 记忆化结果是条目的纯函数,多 worker 查询共享;加锁只保线程安全,不影响结果
     private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>
     {
         public bool Equals((NavTileEntry A, int SideA, NavTileEntry B) x, (NavTileEntry A, int SideA, NavTileEntry B) y)

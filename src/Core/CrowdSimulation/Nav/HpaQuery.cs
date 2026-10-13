@@ -13,7 +13,7 @@ public static class HpaQuery
 {
     private const int GoalKey = -2;
 
-    /// <summary>查询暂存(RT-03:每 worker 一份;与烘焙用的图内暂存互不相干)。
+    /// <summary>查询暂存(每 worker 一份;与烘焙用的图内暂存互不相干)。
     /// Relax 是方法而不是局部函数:局部函数会按每次搜索分配一个闭包。</summary>
     public sealed class Scratch
     {

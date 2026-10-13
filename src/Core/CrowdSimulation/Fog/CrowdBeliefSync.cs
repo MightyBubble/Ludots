@@ -116,7 +116,7 @@ public static class CrowdBeliefSync
                 continue;
             }
 
-            // BV-6:计数器没动才跳过(哈希碰撞藏不住变更);tile 集只在乐观迷雾开启时计数
+            // 计数器没动才跳过(哈希碰撞藏不住变更);tile 集只在乐观迷雾开启时计数
             long k = fog.Terrain ? fog.Rev[v] : fog.EntRev[v], ent = fog.EntRev[v];
             if (!truthMoved && b.LastKey[v] == k) continue;
             // 仅探索推进:按 fog.revealTicks 批提交(tick 驱动 → 确定)
@@ -356,7 +356,7 @@ public static class CrowdBeliefSync
             if (used.Contains(e.Slot) || e.Dormant) continue;
             e.Dormant = true;
             b.DormantList.Add(e);
-            sim.Beliefs!.Sleep(e.Slot); // 全拷贝变体:显式免操作(裁定 ①)
+            sim.Beliefs!.Sleep(e.Slot); // 全拷贝变体:显式免操作
         }
 
         while (b.DormantList.Count > fc.SlotCacheCapacity ||

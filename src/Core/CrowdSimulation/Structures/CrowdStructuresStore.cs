@@ -49,7 +49,7 @@ public sealed class CrowdStructuresStore
     public byte[] Area { get; private set; }
     /// <summary>阻挡栅格:被 blocker 足迹覆盖率 ≥ blockCoverage 的格。</summary>
     public byte[] Blocked { get; }
-    /// <summary>地形源区域(F02 乐观层的覆写判据:area == terrainArea 的格才可被假设区域覆写)。</summary>
+    /// <summary>地形源区域(乐观层的覆写判据:area == terrainArea 的格才可被假设区域覆写)。</summary>
     public byte[] TerrainArea => _terrainArea;
     private readonly byte[] _terrainArea;
 
@@ -164,7 +164,7 @@ public sealed class CrowdStructuresStore
 
     public bool TryGetTemplate(int id, out int tplIndex) => _tpl.TryGetValue(id, out tplIndex!);
 
-    /// <summary>认知字段快照(beliefNav.js register 的 belief field,F02):地形源起底 + believed
+    /// <summary>认知字段快照(beliefNav.js register 的 belief field):地形源起底 + believed
     /// 组件表带原 id 入仓,再逐实体足迹格矩形重标。起底必须是地形源而非真相活栅格——
     /// 真相里只有单侧知道的实体(新放建筑)已落在活栅格上,认知侧要靠"地形+believed 重标"
     /// 把它擦掉(参考端从真相栅格起底 + 分歧矩形复位,两者等价:分歧外的格只被共同实体覆盖)。
@@ -211,10 +211,10 @@ public sealed class CrowdStructuresStore
         return store;
     }
 
-    /// <summary>乐观层换区域面(F02 fieldFor:assumedArea 覆写后的视图;belief 仓私有,整体换数组)。</summary>
+    /// <summary>乐观层换区域面(fieldFor:assumedArea 覆写后的视图;belief 仓私有,整体换数组)。</summary>
     public void ReplaceArea(byte[] area) => Area = area;
 
-    /// <summary>地图桥实体入仓(F02):桥以实体身份进认知(可见/残影语义),但不进地面
+    /// <summary>地图桥实体入仓:桥以实体身份进认知(可见/残影语义),但不进地面
     /// 栅格与碰撞——桥面层由 UpperLayerBake 独立烘焙(与 S1–S7 的地面口径零接触)。id 按装载序
     /// 续在阻挡物之后,与导出端"参考 id 序写出"的地图实体序同构。</summary>
     public void InstallMapBridges(int tplIndex, IReadOnlyList<CrowdSimulationBridgeSpan> spans)
