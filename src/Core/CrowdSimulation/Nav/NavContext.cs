@@ -30,7 +30,7 @@ public sealed class NavContext
     /// 增量重烘把新表写进已有缓冲,计数变化不再分配。</summary>
     public required int[] Cells { get; set; }
     public int CellCount { get; set; }
-    /// <summary>逐格连通域编号（-1 = 不可通行）。先 4 连通洪泛；有桥时 portal 把地面域和桥面洪泛块并到同一编号。跳跃链接不参与标号。</summary>
+    /// <summary>地面格连通域编号（-1 = 不可通行）。先 4 连通洪泛；桥头 portal 把同一座桥连上的地面域并成同一编号。跳跃链接不参与标号。</summary>
     public required int[] Comp { get; set; }
     public required int CompCount { get; set; }
     /// <summary>跳跃链接。无跳跃档、没有候选、或过滤后一条链接都没有，三者都是 null。</summary>
@@ -53,11 +53,11 @@ public sealed class NavContext
     public required Fix64 MinCost { get; init; }
     /// <summary>HPA* 抽象图(烘焙末尾随上下文一起构建)。</summary>
     public HpaGraph? Hpa { get; set; }
-    /// <summary>桥面格 → 全局连通域编号(地面域之后顺排;-1 = 无桥面)。</summary>
+    /// <summary>桥面格的连通域编号。按 upPass 的 4 连通分块，编号接在地面连通域之后，格号升序首见。-1 = 该格没有桥面。不相连的桥各有各的号，即使区域相同。</summary>
     public int[]? UpComp { get; set; }
-    /// <summary>连通域总数(地面 + 桥面),可达备忘的键步长。</summary>
+    /// <summary>连通域总数（地面编号用尽之后的下一个号），可达备忘的键步长。</summary>
     public int CompCountTotal { get; set; }
-    /// <summary>合并可达图:跳跃链接出边 + 桥头双层互通边。桥面可达节点按 UpArea 首见编号，不是按桥的连通块。标准配置里每座桥都是区域 deck，所有桥头的地面域接到同一个节点。</summary>
+    /// <summary>合并可达图：跳跃链接出边，加上桥头格上地面域与桥面域的双向边。桥面节点按桥面连通块编号。</summary>
     public Dictionary<int, HashSet<int>>? ReachOut { get; set; }
 
     private readonly Dictionary<long, bool> _reachMemo = new(4096);
@@ -72,7 +72,6 @@ public sealed class NavContext
     internal int[]? UnionParent;
     internal int[]? UnionDense;
     internal byte[]? ErodeRow;
-    internal readonly Dictionary<int, int> AreaCompScratch = new(8);
     internal readonly List<int> TileScratch = new(16);
     internal readonly HashSet<int> TileSeenScratch = new(16);
     internal readonly List<int> ChangedTileList = new(16);
@@ -142,7 +141,6 @@ public sealed class NavContext
     /// 初始烘焙留下的小集合不回收：它们一加边就会再分配。</summary>
     internal void PrefillRebakePools()
     {
-        AreaCompScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSpanReserve);
         TileScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
         TileSeenScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
         ChangedTileList.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);

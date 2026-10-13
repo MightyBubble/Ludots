@@ -49,6 +49,8 @@ public sealed class CrowdStructuresStore
     /// <summary>初始地形区域。乐观层只覆写仍等于这份数组的格。</summary>
     public byte[] TerrainArea => _terrainArea;
     private readonly byte[] _terrainArea;
+    /// <summary>建仓时的阻挡。之后放上的实体不写进这份数组。</summary>
+    private readonly byte[] _terrainBlocked;
 
     private readonly CrowdSimulationRuntimeConfig _config;
     private readonly byte[] _terrainType;
@@ -78,6 +80,7 @@ public sealed class CrowdStructuresStore
         _jumpCandidates = grid.JumpCandidates;
         int n2 = NavCellsPerSide * NavCellsPerSide;
         _terrainArea = (byte[])grid.Area.Clone();
+        _terrainBlocked = (byte[])grid.Blocked.Clone();
         Area = (byte[])grid.Area.Clone();
         Blocked = (byte[])grid.Blocked.Clone();
         Fix64 maxRadius = Fix64.Zero;
@@ -160,7 +163,11 @@ public sealed class CrowdStructuresStore
 
     public bool TryGetTemplate(int id, out int tplIndex) => _tpl.TryGetValue(id, out tplIndex!);
 
-    /// <summary>认知字段快照。起底用的是 SnapshotSurface().Area（活栅格的克隆）。未知建筑的区域色会留在认知仓里，除非该格再被 believed 足迹重标。不跑寿命。</summary>
+    /// <summary>
+    /// 认知场。区域与阻挡从传入的地形源起（建仓时的映射和阻挡，不含此后放上的实体），
+    /// 再按实体 id 序重标 believed 足迹。分层实体留在表里，不涂地面——桥面不走这张栅格。
+    /// 不读构建时的真相活栅格。不跑寿命。
+    /// </summary>
     internal static CrowdStructuresStore BuildBeliefField(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid terrain,
@@ -169,7 +176,7 @@ public sealed class CrowdStructuresStore
     {
         var store = new CrowdStructuresStore(config, terrain);
         store.Area = (byte[])store._terrainArea.Clone();
-        Array.Clear(store.Blocked);
+        Array.Copy(store._terrainBlocked, store.Blocked, store.Blocked.Length);
         int n = entities.Count;
         StableOrder.Ensure(ref ranks, n);
         for (int i = 0; i < n; i++)
@@ -188,8 +195,11 @@ public sealed class CrowdStructuresStore
             store._ids.Add(id);
             store._tpl[id] = tplIndex;
             store._footprint[id] = fp;
-            if (tpl.AreaIndex is { } area) store._navArea[id] = (area, tpl.Priority);
-            if (tpl.Blocker) store._blocker.Add(id);
+            if (!tpl.Layered)
+            {
+                if (tpl.AreaIndex is { } area) store._navArea[id] = (area, tpl.Priority);
+                if (tpl.Blocker) store._blocker.Add(id);
+            }
             if (id >= store._nextId) store._nextId = id + 1;
         }
 
@@ -277,6 +287,17 @@ public sealed class CrowdStructuresStore
     }
 
     public CrowdStructureFootprint FootprintOf(int id) => _footprint[id];
+
+    /// <summary>地形源。区域是建仓时的地形映射，阻挡是建仓时的阻挡，都不含此后放上的实体。</summary>
+    internal SurfaceGrid TerrainSurface() => new()
+    {
+        NavCellsPerSide = NavCellsPerSide,
+        NavCellSizeCm = NavCellSizeCm,
+        TerrainType = _terrainType,
+        Area = _terrainArea,
+        Blocked = _terrainBlocked,
+        JumpCandidates = _jumpCandidates,
+    };
 
     /// <summary>当前派生栅格的只读快照面(全量对拍烘焙用;Area/Blocked 引用本仓活数组)。</summary>
     public SurfaceGrid SnapshotSurface() => new()
