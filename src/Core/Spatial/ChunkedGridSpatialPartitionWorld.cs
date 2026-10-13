@@ -13,6 +13,7 @@ namespace Ludots.Core.Spatial
         private readonly int _chunkSize;
         private readonly int _chunkMask;
         private readonly Dictionary<long, Chunk> _chunks;
+        private readonly RecyclePool _pool = new();
 
         public ChunkedGridSpatialPartitionWorld(int chunkSizeCells = 64, int initialChunkCapacity = 1024)
         {
@@ -36,7 +37,7 @@ namespace Ludots.Core.Spatial
             long key = GetChunkKey(cellX >> _chunkShift, cellY >> _chunkShift);
             if (!_chunks.TryGetValue(key, out var chunk))
             {
-                chunk = new Chunk(_chunkSize);
+                chunk = _pool.TakeChunk(_chunkSize);
                 _chunks[key] = chunk;
             }
 
@@ -51,7 +52,9 @@ namespace Ludots.Core.Spatial
             if (!_chunks.TryGetValue(key, out var chunk)) return;
             int lx = cellX & _chunkMask;
             int ly = cellY & _chunkMask;
-            chunk.Remove(entity, lx, ly);
+            if (!chunk.Remove(entity, lx, ly)) return;
+            _chunks.Remove(key);
+            _pool.ReturnChunk(chunk);
         }
 
         public int Query(in IntRect cellRect, Span<Entity> buffer, out int dropped)
@@ -143,15 +146,57 @@ namespace Ludots.Core.Spatial
 
         private static long GetChunkKey(int chunkX, int chunkY) => ((long)chunkX << 32) | (uint)chunkY;
 
+        // Queries only read cells that still hold entities, so an emptied cell and a
+        // chunk with no occupied cell go back to the pool; otherwise a marching crowd
+        // grows the heap with every cell it has passed through.
+        private sealed class RecyclePool
+        {
+            private CellList?[] _cells = new CellList[64];
+            private int _cellCount;
+            private Chunk?[] _chunks = new Chunk[8];
+            private int _chunkCount;
+
+            public CellList TakeCell()
+            {
+                if (_cellCount == 0) return new CellList();
+                CellList list = _cells[--_cellCount]!;
+                _cells[_cellCount] = null;
+                return list;
+            }
+
+            public void ReturnCell(CellList list)
+            {
+                if (_cellCount == _cells.Length) Array.Resize(ref _cells, _cellCount * 2);
+                _cells[_cellCount++] = list;
+            }
+
+            public Chunk TakeChunk(int size)
+            {
+                if (_chunkCount == 0) return new Chunk(size, this);
+                Chunk chunk = _chunks[--_chunkCount]!;
+                _chunks[_chunkCount] = null;
+                return chunk;
+            }
+
+            public void ReturnChunk(Chunk chunk)
+            {
+                if (_chunkCount == _chunks.Length) Array.Resize(ref _chunks, _chunkCount * 2);
+                _chunks[_chunkCount++] = chunk;
+            }
+        }
+
         private sealed class Chunk
         {
             private readonly int _size;
-            private readonly CellList[] _cells;
+            private readonly CellList?[] _cells;
+            private readonly RecyclePool _pool;
+            private int _occupied;
 
-            public Chunk(int size)
+            public Chunk(int size, RecyclePool pool)
             {
                 _size = size;
                 _cells = new CellList[size * size];
+                _pool = pool;
             }
 
             public void Clear()
@@ -168,20 +213,29 @@ namespace Ludots.Core.Spatial
                 CellList? list = _cells[idx];
                 if (list == null)
                 {
-                    list = new CellList();
+                    list = _pool.TakeCell();
                     _cells[idx] = list;
+                    _occupied++;
                 }
 
                 list.Add(entity);
             }
 
-            public void Remove(Entity entity, int localX, int localY)
+            public bool Remove(Entity entity, int localX, int localY)
             {
                 int idx = (localY * _size) + localX;
-                _cells[idx]?.Remove(entity);
+                CellList? list = _cells[idx];
+                if (list == null) return false;
+                int before = list.Count;
+                list.Remove(entity);
+                if (list.Count != 0 || before == 0) return false;
+                _cells[idx] = null;
+                _pool.ReturnCell(list);
+                _occupied--;
+                return _occupied == 0;
             }
 
-            public IReadOnlyList<Entity> GetCellList(int localX, int localY)
+            public CellList? GetCellList(int localX, int localY)
             {
                 int idx = (localY * _size) + localX;
                 return _cells[idx];

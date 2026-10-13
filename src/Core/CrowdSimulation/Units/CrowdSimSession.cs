@@ -233,10 +233,26 @@ public sealed class CrowdSimSession
     public void AttachGroupNav(CrowdNavGroupSet.Group g) => g.NavId = NavIdFor(g.Player, g.LayerIdx, g.RIdx);
     public IReadOnlyDictionary<int, NavContext> Navs { get; private set; }
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
-    public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }
+    public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; private set; }
 
-    /// <summary>回放会话换装全新烘焙的导航上下文。结构 op 会改写共享上下文，带着已生效的变更从头跑会分歧。</summary>
-    public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
+    /// <summary>回放会话换装全新烘焙的导航上下文。结构 op 会改写共享上下文，带着已生效的变更从头跑会分歧。
+    /// 层半径表也换成新上下文：部署读的是这张表，不是 <see cref="Navs"/> 的查找。</summary>
+    public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs)
+    {
+        Navs = navs;
+        var rebound = new Dictionary<(int Layer, int R), NavContext>(NavByLayerRadius.Count);
+        foreach (var kv in NavByLayerRadius)
+        {
+            if (!navs.TryGetValue(kv.Value.Id, out var nav))
+            {
+                throw new InvalidOperationException($"回放导航缺少层半径上下文 {kv.Value.Id}。");
+            }
+
+            rebound[kv.Key] = nav;
+        }
+
+        NavByLayerRadius = rebound;
+    }
 
     // 下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
     // MemberStamp 用世代标记本条指令的成员槽。
