@@ -222,11 +222,11 @@ public sealed class L76FogGateTests
         Assert.That(scopeAfterShare, Is.EqualTo(groupA + 1));
     }
 
-    /// <summary>认知导航版本和到达集合要对照 L75 基线。L75 还没落地，这行先不测。</summary>
+    /// <summary>认知导航版本和到达集合还没有基线，这行先不测。</summary>
     [Test]
-    public void CognitiveNav_AgainstL75Baseline_WaitsForL75()
+    public void CognitiveNav_AndArrivalSet_WaitForBaseline()
     {
-        Assert.Ignore("认知导航版本和到达集合对照 L75 基线。L75 还没落地，这行先不测。");
+        Assert.Ignore("认知导航版本和到达集合还没有基线，这行先不测。");
     }
 
     private static void AssertCounts(JsonNode before, JsonNode after)
