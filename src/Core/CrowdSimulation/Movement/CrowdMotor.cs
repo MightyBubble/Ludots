@@ -58,8 +58,12 @@ public static class CrowdMotor
         Fix64 capR = frame.CapR;
         bool hasObs = frame.HasObs;
         var colliders = session.Blockers;
+        var navs = session.Navs;
+        var groups = session.Groups.Groups;
         Nav.NavContext? openNav = null;
         byte[]? openGrid = null;
+        int cachedBodyNav = int.MinValue;
+        Nav.NavContext nav = null!;
 
         for (int i = start; i < end; i++)
         {
@@ -102,7 +106,12 @@ public static class CrowdMotor
                 continue;
             }
 
-            var nav = session.Navs[session.Groups.Groups[state.GroupId]!.BodyNavId]; // F02 双句柄:马达物理走真相
+            int bodyNav = groups[state.GroupId]!.BodyNavId;
+            if (bodyNav != cachedBodyNav)
+            {
+                cachedBodyNav = bodyNav;
+                nav = navs[bodyNav];
+            }
             int lv = state.Level;
             byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
             byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 甲板层没有独立亚格 walk 网格:甲板面无亚格障碍,以 UpPass 为口径(与 S2 数据面对齐)
@@ -114,7 +123,7 @@ public static class CrowdMotor
             int cx = CrowdSimulationSpace.NavCellCoord(px, navCellSizeCm), cy = CrowdSimulationSpace.NavCellCoord(py, navCellSizeCm);
             Fix64 spd = k.Speeds[i];
             Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cy * navN + cx];
-            spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
+            if (divHere != Fix64.OneValue) spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
             Fix64 slow2 = spd * spd * stop2;
 
             // 静止单位(闲置/到达/不可达)对轻接触(deadband)不让步,软让步并停稳

@@ -22,9 +22,8 @@ public static class CrowdFlowSample
         int t = flow.Wp[lv * n2 + cell];
         if (t < 0) return l;
         int tc = t % n2;
-        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
-        Fix64 dx = pxCm / navCellCm - (Fix64.FromInt(tc % navCellsPerSide) + Fix64.HalfValue);
-        Fix64 dy = pyCm / navCellCm - (Fix64.FromInt(tc / navCellsPerSide) + Fix64.HalfValue);
+        Fix64 dx = Fix64.DivPositiveInt(pxCm, navCellSizeCm) - (Fix64.FromInt(tc % navCellsPerSide) + Fix64.HalfValue);
+        Fix64 dy = Fix64.DivPositiveInt(pyCm, navCellSizeCm) - (Fix64.FromInt(tc / navCellsPerSide) + Fix64.HalfValue);
         return flow.Len[t] + Fix64Math.Sqrt(dx * dx + dy * dy);
     }
 
@@ -41,7 +40,7 @@ public static class CrowdFlowSample
         dirY = Fix64.Zero;
         if (flow.Len[o + cell] >= Unreachable / 4) return Unreachable;
         Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
-        Fix64 fx = pxCm / navCellCm - Fix64.HalfValue, fy = pyCm / navCellCm - Fix64.HalfValue;
+        Fix64 fx = Fix64.DivPositiveInt(pxCm, navCellSizeCm) - Fix64.HalfValue, fy = Fix64.DivPositiveInt(pyCm, navCellSizeCm) - Fix64.HalfValue;
         int x0 = (int)Fix64.Floor(fx).ToLong(), y0 = (int)Fix64.Floor(fy).ToLong();
         Fix64 tx = fx - Fix64.FromInt(x0), ty = fy - Fix64.FromInt(y0);
         Fix64 sx = Fix64.Zero, sy = Fix64.Zero;

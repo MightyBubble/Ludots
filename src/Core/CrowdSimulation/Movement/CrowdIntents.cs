@@ -67,9 +67,9 @@ public static class CrowdIntents
         }
     }
 
-    internal static void WriteRange(CrowdMovementKernel k, int start, int end)
+    internal static void WriteRange(CrowdMovementKernel k, int start, int end, int step)
     {
-        for (int i = start; i < end; i++) WriteProposal(k, i);
+        for (int i = start; i < end; i += step) WriteProposal(k, i);
     }
 
     private static void WriteProposal(CrowdMovementKernel k, int i)
@@ -172,7 +172,7 @@ public static class CrowdIntents
 
         Fix64 spd = k.Speeds[i];
         Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cell];
-        spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
+        if (divHere != Fix64.OneValue) spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
 
         // 槽位世界坐标 = 领队位置 + 槽位偏移旋进领队系
         Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
@@ -201,7 +201,7 @@ public static class CrowdIntents
                 Fix64 ra = CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, 0);
                 Fix64 rb = CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, tx, ty, sc, 0);
                 if (ra < CrowdFlowSample.Unreachable / 4 && rb < CrowdFlowSample.Unreachable / 4 &&
-                    ra - rb > CrowdFix.Hypot(tx - px, ty - py) / s.Cs * RouteRatio + Fix64.OneValue)
+                    ra - rb > Fix64.DivPositiveInt(CrowdFix.Hypot(tx - px, ty - py), s.NavCellSizeCm) * RouteRatio + Fix64.OneValue)
                 {
                     vis = false;
                 }

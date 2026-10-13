@@ -106,27 +106,31 @@ public static class CrowdSimChecksum
     /// </summary>
     private static long MotionRaw(CrowdSimSession sim, CrowdMovementKernel? movement, int dense, int field)
     {
-        CrowdSimulationKinematics kin;
         if (movement != null)
         {
-            kin = movement.Kins[dense];
-        }
-        else
-        {
-            var entity = sim.Units.EntityAt(dense);
-            if (!sim.World.Has<CrowdSimulationKinematics>(entity)) return 0;
-            kin = sim.World.Get<CrowdSimulationKinematics>(entity);
+            ref var kin = ref movement.Kins[dense];
+            return field switch
+            {
+                0 => kin.Velocity.X.RawValue,
+                1 => kin.Velocity.Y.RawValue,
+                2 => kin.SlotOffsetCm.X.RawValue,
+                3 => kin.SlotOffsetCm.Y.RawValue,
+                4 => kin.Blend.RawValue,
+                _ => kin.StallSeconds.RawValue,
+            };
         }
 
-        Fix64 v = field switch
+        var entity = sim.Units.EntityAt(dense);
+        if (!sim.World.Has<CrowdSimulationKinematics>(entity)) return 0;
+        var component = sim.World.Get<CrowdSimulationKinematics>(entity);
+        return field switch
         {
-            0 => kin.Velocity.X,
-            1 => kin.Velocity.Y,
-            2 => kin.SlotOffsetCm.X,
-            3 => kin.SlotOffsetCm.Y,
-            4 => kin.Blend,
-            _ => kin.StallSeconds,
+            0 => component.Velocity.X.RawValue,
+            1 => component.Velocity.Y.RawValue,
+            2 => component.SlotOffsetCm.X.RawValue,
+            3 => component.SlotOffsetCm.Y.RawValue,
+            4 => component.Blend.RawValue,
+            _ => component.StallSeconds.RawValue,
         };
-        return v.RawValue;
     }
 }
