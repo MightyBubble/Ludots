@@ -12,6 +12,6 @@
 | O6 | 低 | `Cast.AbilityId`（113）死键：定义注册但核心无读取方——内置键表里的暗桩 | src/Core/Gameplay/GAS/Orders/OrderBlackboardKeys.cs:26-87 | 接通消费方或从内置表移除（ord-04 spec 任务） | 待立项 |
 | O7 | — | 输入映射文件缺失时仅日志跳过 | 输入映射已删，按键到下令改由各 mod 的交互状态和下令图声明 | — | 已失效 |
 | O8 | 高 | 施法派发 cycle 的推进入口生产零调用（仅测试）：`one_by_one` 档案退化为永远第一位演员——配置承诺与运行事实背离 | src/Core/Input/Interaction/CastDispatchProfileRegistry.cs:163-176 | 订单接受回执处按 advanceOn 推进轮转游标（input-02 spec 任务） | 待立项 |
-| O9 | 高 | 根默认输入的关键动作（Hotkey1-9、PrimaryClick 等）只绑在 Physics2D_Playground，Default_Gameplay 未绑——默认玩法上下文不可触发，依赖 mod 补充 | assets/Input/default_input.json 两上下文绑定对照 | 补根绑定或"玩法上下文必绑清单"校验（input-05 spec 任务） | 待立项 |
+| O9 | 高 | 根默认输入的关键动作（Hotkey1-9、PrimaryClick 等）只绑在 Physics2D_Playground，相机键位上下文 `Camera.Rig` 未绑，依赖 mod 补充 | assets/Input/default_input.json 两上下文绑定对照 | 补根绑定或"玩法上下文必绑清单"校验（input-05 spec 任务） | 待立项 |
 
 **相关文档**：[backlog 总账](backlog.md) · [卷 7 目录](../README.md)

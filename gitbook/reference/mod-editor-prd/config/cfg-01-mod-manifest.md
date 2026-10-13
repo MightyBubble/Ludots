@@ -15,7 +15,6 @@
   "priority": 220,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "EntityCommandPanelMod": "^1.0.0",
     "BrowserRtsProductionShowcaseMod": "^1.0.0"
   },
@@ -24,7 +23,7 @@
 }
 ```
 
-读法：依赖四个 mod（两个基础加指令面板与生产浏览器），闭包解析把它们全部排在它前面；带一份代码；priority 220 不影响正常启动的顺序。
+读法：依赖三个 mod（核心、指令面板、生产浏览器），闭包解析把它们全部排在它前面；带一份代码；priority 220 不影响正常启动的顺序。
 
 最小合法清单（纯数据 mod 只要前两行）：
 

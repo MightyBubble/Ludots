@@ -133,9 +133,9 @@ Core runtime 类型：`MinimapRuntime`。
 
 小地图没有键盘操作。开关、切模式、旋转由 showcase 自己决定：要显示小地图的 showcase 在自己的代码或配置里设 `Visible`，模式和旋转用小地图上的两个按钮切。
 
-小地图上的滚轮缩放读 `presentation.minimap.actions.zoom` 这个动作（LudotsCoreMod 的 `game.json` 默认写 `Minimap.Zoom`），没写启动就报错。动作定义和 `Default_Gameplay` 上的滚轮绑定在 LudotsCoreMod 的 `default_input.json`，`firesOn` 为 `change`。
+小地图上的滚轮缩放读 `presentation.minimap.actions.zoom` 这个动作（LudotsCoreMod 的 `game.json` 默认写 `Minimap.Zoom`），没写启动就报错。动作定义在 LudotsCoreMod 的 `default_input.json`，`firesOn` 为 `change`，设备绑定在上下文 `Minimap.Device` 上。`interaction.context.minimap` 的 `inputContextId` 指向 `Minimap.Device`，小地图前台状态打开时把这组键位投影上去。
 
-点击、拖拽、缩放条和两个切换按钮走 `interaction.context.minimap`。这个状态在 LudotsCoreMod 的 `Input/interaction_context_profiles.json` 里声明，`foreground` 为真，`pointerRouting` 为 `ui`。`presentation.minimap.interactionContextId` 指向它。`MinimapRuntime.Refresh` 把场地、缩放条和两个按钮的屏幕矩形登记出去，指针落在矩形里就打开这个前台状态，上层点选图停掉。按下、松开、移动是 `graph.minimap.press`、`graph.minimap.release`、`graph.minimap.track`。滚轮是同一状态上的 `graph.minimap.zoom`。命令点地是 `graph.minimap.command`，图里用 `MinimapScreenToWorld` 把小地图上的点投成地面；世界指针的地面仍是射线。`Command` 由 `CoreInputMod` 合并进这个状态。只装 LudotsCoreMod 时有滚轮，没有命令图。
+点击、拖拽、缩放条和两个切换按钮走 `interaction.context.minimap`。这个状态在 LudotsCoreMod 的 `Input/interaction_context_profiles.json` 里声明，`foreground` 为真，`pointerRouting` 为 `ui`。`presentation.minimap.interactionContextId` 指向它。`MinimapRuntime.Refresh` 把场地、缩放条和两个按钮的屏幕矩形登记出去，指针落在矩形里就打开这个前台状态，上层点选图停掉。按下、松开、移动是 `graph.minimap.press`、`graph.minimap.release`、`graph.minimap.track`。滚轮是同一状态上的 `graph.minimap.zoom`。命令点地是 `graph.minimap.command`，图在 LudotsCoreMod，用 `MinimapScreenToWorld` 把小地图上的点投成地面；世界指针的地面仍是射线。这个状态默认不挂命令图。MinimapShowcaseMod、FogVisionDecayShowcaseMod、PresenterBlacksmithShowcaseMod 各自声明 `Command`，并把绑定和 `graph.minimap.command` 合并进来。只装 LudotsCoreMod 时有滚轮，没有命令图。
 
 滚轮走 `graph.minimap.zoom`，节点是 `MinimapApplyWheelZoom`。指针落在 `pointerRouting` 为 `ui` 的区域里时，相机的 `Zoom` 仍按 `suppressOnUiWheelCaptured` 被压住。
 
