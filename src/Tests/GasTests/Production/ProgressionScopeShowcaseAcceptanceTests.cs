@@ -112,7 +112,6 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "CoreInputMod",
                 "EntityCommandPanelMod",
                 "ProgressionScopeShowcaseMod"
             });

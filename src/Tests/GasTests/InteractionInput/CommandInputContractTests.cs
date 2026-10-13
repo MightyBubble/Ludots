@@ -62,12 +62,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 }
             });
 
-            using var gameDoc = JsonDocument.Parse(File.ReadAllText(gamePath));
-            var startupContexts = gameDoc.RootElement.GetProperty("startupInputContexts")
-                .EnumerateArray()
+            string schemePath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "control_schemes.json");
+            using var schemeDoc = JsonDocument.Parse(File.ReadAllText(schemePath));
+            string[] schemeContexts = schemeDoc.RootElement.GetProperty("schemes").EnumerateArray()
+                .Single(scheme => scheme.GetProperty("id").GetString() == "scheme.default")
+                .GetProperty("inputContexts").EnumerateArray()
                 .Select(element => element.GetString())
                 .ToArray();
-            Assert.That(startupContexts, Does.Contain("Rts_Gameplay"));
+            Assert.That(schemeContexts, Does.Contain("Camera.Rig").And.Contain("Rts_Gameplay"));
         }
 
         [Test]

@@ -2,7 +2,9 @@
   "schemes": [
     {
       "id": "scheme.case_e",
-      "inputContexts": []
+      "inputContexts": [
+        "Camera.Rig"
+      ]
     }
   ],
   "allowedSchemes": [

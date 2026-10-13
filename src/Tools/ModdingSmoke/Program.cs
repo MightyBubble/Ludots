@@ -169,7 +169,7 @@ namespace ModdingTest
                 var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
                 var backend = new DummyInputBackend();
                 var inputHandler = new PlayerInputHandler(backend, inputConfig);
-                inputHandler.PushContext("Default_Gameplay");
+                inputHandler.PushContext("Camera.Rig");
                 engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
 
                 engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest

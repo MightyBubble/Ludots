@@ -32,7 +32,6 @@
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Platform\Ludots.Platform.Abstractions\Ludots.Platform.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />

@@ -497,7 +497,6 @@ namespace Ludots.Tests.GAS.Production
                 LauncherResolveResult resolve = launcher.Resolve(new[] { $"preset:{ShowcasePresetId}" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
                 Assert.That(resolve.Plan.RootModIds, Does.Contain("EntityQueryTacticsShowcaseMod"));
                 Assert.That(resolve.Plan.OrderedModIds, Does.Contain("LudotsCoreMod"));
-                Assert.That(resolve.Plan.OrderedModIds, Does.Contain("CoreInputMod"));
                 Assert.That(resolve.Plan.OrderedModIds, Does.Contain("NarrativeFrontendMod"));
                 EnsureShowcaseAssemblyFresh(repoRoot);
                 return resolve.Plan;
@@ -634,10 +633,7 @@ namespace Ludots.Tests.GAS.Production
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -2227,7 +2223,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Gameplay domain: command-source collection, UI acquisition collection, formation collection, EntityCollectionStore, GraphReturnWriter, EntitySetQueryRuntime, RelationshipRuntime, tags, attrs, templates, sorting, extremes, and aggregates.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
-            sb.AppendLine("- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `NarrativeFrontendMod`, `EntityQueryTacticsShowcaseMod`");
+            sb.AppendLine("- Mods: `LudotsCoreMod`, `CameraProfilesMod`, `NarrativeFrontendMod`, `EntityQueryTacticsShowcaseMod`");
             sb.AppendLine("- Input source: production `InputConfigPipelineLoader` + `PlayerInputHandler` with deterministic mouse/keyboard backend.");
             sb.AppendLine("- Clock profile: fixed `1/60s` headless `GameEngine.Tick()`.");
             sb.AppendLine();

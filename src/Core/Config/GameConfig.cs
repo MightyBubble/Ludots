@@ -38,8 +38,6 @@ namespace Ludots.Core.Config
         /// </summary>
         public List<StartupLocalSeatConfig> StartupLocalSeats { get; set; } = new();
 
-        public List<string> StartupInputContexts { get; set; } = new List<string>();
-
         /// <summary>
         /// Where this client writes the active control scheme id. <c>user://</c> expands against
         /// the host-supplied user data root. Blank fails engine startup by this field name.

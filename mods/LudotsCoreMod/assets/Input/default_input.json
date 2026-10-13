@@ -20,12 +20,34 @@
   ],
   "contexts": [
     {
-      "id": "Default_Gameplay",
-      "priority": 0,
+      "id": "Minimap.Device",
+      "priority": 80,
       "bindings": [
         {
           "actionId": "Minimap.Zoom",
           "path": "<Mouse>/ScrollY"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
+      ]
+    },
+    {
+      "id": "Core.Select",
+      "priority": 40,
+      "bindings": [
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
         }
       ]
     }

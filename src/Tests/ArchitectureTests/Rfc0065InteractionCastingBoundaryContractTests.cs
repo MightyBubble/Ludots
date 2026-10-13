@@ -327,7 +327,7 @@ namespace Ludots.Tests.Architecture
             {
                 Path.Combine(repoRoot, "src", "Core", "Input", "Orders"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "Interaction"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems"),
+                Path.Combine(repoRoot, "mods", "Systems"),
                 Path.Combine(repoRoot, "mods", "showcases", "interaction", "InteractionShowcaseMod", "UI"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Runtime"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "UI")

@@ -125,15 +125,6 @@ namespace Ludots.Core.Input.Interaction
             return InputBindingKeyLookup.Resolve(RequireInputConfig(), scheme.InputContexts, scope, actionId, bindingInt);
         }
 
-        /// <summary>
-        /// Key label inside the named contexts. Used when no scheme is active and the caller
-        /// supplies startup contexts.
-        /// </summary>
-        public string ResolveBindingKey(IReadOnlyList<string> contextIds, string scopeName, string actionId, int? bindingInt)
-        {
-            return InputBindingKeyLookup.Resolve(RequireInputConfig(), contextIds, scopeName, actionId, bindingInt);
-        }
-
         private InputConfigRoot RequireInputConfig()
         {
             return _inputConfig ?? throw new InvalidOperationException(
@@ -220,6 +211,32 @@ namespace Ludots.Core.Input.Interaction
         public bool TrySwitchRuntimeOnly(int schemeId)
         {
             return TrySwitchCore(schemeId, out _);
+        }
+
+        /// <summary>
+        /// Pushes the active scheme's input contexts onto a handler created after install.
+        /// Install records the scheme before the host binds a handler, so the push happens
+        /// at bind time. <see cref="PlayerInputHandler.PushContext"/> ignores a context that
+        /// is already on the stack.
+        /// </summary>
+        public void ApplyActiveContexts(PlayerInputHandler handler)
+        {
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
+            if (_activeSchemeId == 0 || !IsInstalled(_activeSchemeId))
+            {
+                throw new InvalidOperationException(
+                    "Control scheme runtime has no active scheme to apply to the input handler.");
+            }
+
+            string[] contexts = _schemes[_activeSchemeId].InputContexts;
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                handler.PushContext(contexts[i]);
+            }
         }
 
         private bool TrySwitchCore(int schemeId, out bool switched)

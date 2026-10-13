@@ -370,7 +370,6 @@ namespace Ludots.Tests.Gas.Graph
                     """
                     {
                       "startupMapId": "trigger_graph_entity_domain_probe",
-                      "startupInputContexts": [],
                       "presentation": {
                         "presenterInstanceCapacity": 16,
                         "gasPresentationEventCapacity": 16,

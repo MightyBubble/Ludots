@@ -29,7 +29,7 @@ namespace Ludots.Tests.GAS.Production;
 /// presenter 观察成员变化高亮 / 06 抬起（BoxSelectEnd）对「可框选单位」候选集做屏幕矩形命中
 /// + 修饰键语义透传事件 key 写 selected 集合（与候选、预览三套集合分离）。
 /// 输入合同：按下=BoxSelectBegin、抬起=BoxSelectEnd（firesOn=release），无 Tap/Drag 判定器。
-/// 键位表 CaseE.Controls（含 PointerPos）由 battle 档案 inputContextId 经座位投影激活；startupInputContexts / scheme.inputContexts 不硬推玩法键。
+/// 键位表 CaseE.Controls（含 PointerPos）由 battle 档案 inputContextId 经座位投影激活；scheme.case_e 只推相机键位，不硬推玩法键。
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -215,8 +215,11 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             baseContext.ContextId == battleProfileId &&
             baseContext.Source == InteractionContextInstanceSource.TemplateSpawn,
             "指挥官 rep 出生即携带战斗 context Instance（模板 initialInteractionContext）");
-        Assert.That(engine.MergedConfig.StartupInputContexts, Does.Not.Contain("CaseE.Controls"),
-            "框选键位必须由实体投影，默认镜头键位可以在启动时启用");
+        ControlSchemeRuntime schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
+            ?? throw new InvalidOperationException("ControlSchemeRuntime service is missing.");
+        Assert.That(schemes.TryGetSchemeActivation(schemes.ActiveSchemeId, out ControlSchemeActivation activation), Is.True);
+        Assert.That(activation.InputContexts, Does.Not.Contain("CaseE.Controls"),
+            "框选键位必须由实体投影，镜头键位跟着控制方案走");
         int caseEControlsId = profiles.InputContextIdRegistry.GetId("CaseE.Controls");
         Assert.That(baseContext.InputContextId, Is.EqualTo(caseEControlsId),
             "battle 档案 inputContextId=CaseE.Controls 应写入挂载实例");
@@ -1082,10 +1085,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (Ludots.Core.Input.Runtime.IInputBackend)backend);

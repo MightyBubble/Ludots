@@ -28,7 +28,6 @@ namespace Ludots.Tests.GasTests.Production
         private static readonly string[] Mods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "MapTriggerNightRaidMod",
         };
 

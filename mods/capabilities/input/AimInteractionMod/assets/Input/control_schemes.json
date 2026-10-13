@@ -3,18 +3,21 @@
     {
       "id": "scheme.aim.kbm",
       "inputContexts": [
+        "Camera.Rig",
         "Aim.Kbm"
       ]
     },
     {
       "id": "scheme.aim.gamepad",
       "inputContexts": [
+        "Camera.Rig",
         "Aim.Gamepad"
       ]
     },
     {
       "id": "scheme.aim.kbm_skills",
       "inputContexts": [
+        "Camera.Rig",
         "Aim.KbmSkills",
         "Aim.PrimaryClick"
       ]
@@ -22,6 +25,7 @@
     {
       "id": "scheme.aim.gamepad_left",
       "inputContexts": [
+        "Camera.Rig",
         "Aim.GamepadLeft"
       ],
       "axisMove": {

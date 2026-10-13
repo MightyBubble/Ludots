@@ -99,17 +99,8 @@ namespace Ludots.Adapter.Raylib
             var syntheticInput = new SyntheticInputDevice();
             IInputBackend inputBackend = new RaylibInputBackend(syntheticInput);
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
-            if (config.StartupInputContexts != null)
-            {
-                foreach (var contextId in config.StartupInputContexts)
-                {
-                    if (!string.IsNullOrWhiteSpace(contextId))
-                    {
-                        inputHandler.PushContext(contextId);
-                    }
-                }
-            }
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
             engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
             engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());

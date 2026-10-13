@@ -2,7 +2,9 @@
   "schemes": [
     {
       "id": "scheme.wasd_move",
-      "inputContexts": [],
+      "inputContexts": [
+        "Camera.Rig"
+      ],
       "axisMove": {
         "actionId": "Move",
         "orderTypeKey": "moveTo",

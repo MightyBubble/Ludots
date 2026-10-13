@@ -511,7 +511,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[RTS] 进入即时战略战场 (War3 / C&C / Protoss / Zerg 综合沙盘)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod" }, "rts_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "EntityCommandPanelMod", "RtsDemoMod" }, "rts_entry", engine =>
             {
                 var world = engine.World;
                 IEntityCommandPanelSource panelSource = ResolveGasPanelSource(engine);

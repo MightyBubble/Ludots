@@ -36,7 +36,6 @@ namespace Ludots.Tests.GasTests.Production
         private const float DeltaTime = 1f / 60f;
         private const float FovDeg = 60f;
 
-        private static readonly string[] Mods = { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"};
 
         [Test]
         public void SessionInfo_DualSeat_ListsEverySeatWithBindingRects()
@@ -317,13 +316,13 @@ namespace Ludots.Tests.GasTests.Production
                 players.Register(8, playerEight);
                 localSeats = new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
-                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.default"),
                 };
             }
             else
             {
-                localSeats = new[] { new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null) };
+                localSeats = new[] { new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default") };
             }
 
             ParticipantBindingResolver.PublishFocused(
@@ -337,10 +336,7 @@ namespace Ludots.Tests.GasTests.Production
             var backend = new IdleInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

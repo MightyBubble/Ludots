@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using CameraAcceptanceMod;
-using CoreInputMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -56,7 +55,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "SharedThreeCProfilesMod",
             "CameraAcceptanceMod"
         };
@@ -1385,10 +1383,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);

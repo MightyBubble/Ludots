@@ -400,7 +400,6 @@ namespace Ludots.Tests.Gas
             var modPaths = new[]
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
                 _modRoot,
             }.ToList();
@@ -433,8 +432,7 @@ namespace Ludots.Tests.Gas
             string? current = TestContext.CurrentContext.TestDirectory;
             while (!string.IsNullOrWhiteSpace(current))
             {
-                if (File.Exists(Path.Combine(current, "mods", "LudotsCoreMod", "mod.json")) &&
-                    File.Exists(Path.Combine(current, "mods", "CoreInputMod", "mod.json")))
+                if (File.Exists(Path.Combine(current, "mods", "LudotsCoreMod", "mod.json")))
                 {
                     return current;
                 }
@@ -442,7 +440,7 @@ namespace Ludots.Tests.Gas
                 current = Directory.GetParent(current)?.FullName;
             }
 
-            throw new DirectoryNotFoundException("Could not locate repo root containing mods/LudotsCoreMod and mods/CoreInputMod.");
+            throw new DirectoryNotFoundException("Could not locate repo root containing mods/LudotsCoreMod.");
         }
 
         private static void CopyDirectory(string sourceDirectory, string destinationDirectory)

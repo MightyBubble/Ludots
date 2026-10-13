@@ -1,7 +1,4 @@
 {
-  "StartupInputContexts": [
-    "Default_Gameplay"
-  ],
   "WindowWidth": 1280,
   "WindowHeight": 720,
   "WindowTitle": "Ludots Engine — Audit Playground",

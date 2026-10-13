@@ -30,7 +30,6 @@ public sealed class FieldEditorPaintAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldEditorPaintMod",
     };
 

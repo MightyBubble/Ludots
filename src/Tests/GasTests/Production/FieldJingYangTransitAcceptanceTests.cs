@@ -37,7 +37,6 @@ public sealed class FieldJingYangTransitAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldJingYangTransitMod",
     };
 

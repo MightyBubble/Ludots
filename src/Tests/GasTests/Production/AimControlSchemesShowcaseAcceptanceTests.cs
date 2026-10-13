@@ -209,10 +209,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                     Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InputConfigRoot inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
                 var input = new PlayerInputHandler(backend, inputConfig);
-                for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-                {
-                    input.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-                }
+                engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(input);
 
                 engine.SetService(CoreServiceKeys.InputHandler, input);
                 engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

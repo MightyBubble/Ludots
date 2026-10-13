@@ -1,8 +1,5 @@
 {
   "startupMapId": "entry",
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ],
   "presentation": {
     "presenterInstanceCapacity": 2048,
     "gasPresentationEventCapacity": 65536,

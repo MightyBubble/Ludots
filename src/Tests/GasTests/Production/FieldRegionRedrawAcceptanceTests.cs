@@ -32,7 +32,6 @@ public sealed class FieldRegionRedrawAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldJingYangTransitMod",
     };
 

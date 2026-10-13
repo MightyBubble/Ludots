@@ -1,6 +1,3 @@
 {
-  "startupMapId": "save_load",
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ]
+  "startupMapId": "save_load"
 }

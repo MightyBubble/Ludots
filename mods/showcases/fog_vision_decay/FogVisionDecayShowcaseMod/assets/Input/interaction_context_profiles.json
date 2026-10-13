@@ -6,7 +6,9 @@
         "Command"
       ],
       "triggers": [
-        { "trigger": "graph.minimap.command" }
+        {
+          "trigger": "graph.minimap.command"
+        }
       ]
     }
   ]

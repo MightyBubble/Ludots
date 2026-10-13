@@ -48,7 +48,6 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "EntityInfoPanelsMod",
             "AimInteractionMod",
@@ -374,10 +373,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -756,18 +752,6 @@ namespace Ludots.Tests.GAS.Production
                 builder.Append(order.Args.Spatial.WorldCm);
             }
 
-            if (engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? lastOrder))
-            {
-                builder.Append(" lastOrder=");
-                builder.Append(lastOrder);
-            }
-
-            if (engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastGroundWorldCm", out object? lastGround))
-            {
-                builder.Append(" lastGround=");
-                builder.Append(lastGround);
-            }
-
             if (engine.TryGetService(CoreServiceKeys.OrderQueue, out OrderQueue orderQueue))
             {
                 builder.Append(" orderQueue=");
@@ -1000,7 +984,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
-            sb.AppendLine($"- T+000: verify launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and load `interaction_showcase_hub` with CoreInputMod and InteractionShowcaseMod.");
+            sb.AppendLine($"- T+000: verify launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and load `interaction_showcase_hub` with InteractionShowcaseMod.");
             sb.AppendLine($"- T+004: production startup has active `{launchScheme}` and resolves `{DefaultIntentId}`.");
             sb.AppendLine("- T+008: publish local `(owner, command source)` with Arcweaver, Vanguard, and Commander.");
             sb.AppendLine($"- T+012: submit ground pointer command target ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) through production input.");

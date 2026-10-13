@@ -1,8 +1,5 @@
 {
   "startupMapId": "aim_control_schemes",
-  "startupInputContexts": [
-    "AimSchemes.Controls"
-  ],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",

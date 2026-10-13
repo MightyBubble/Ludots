@@ -581,7 +581,7 @@ namespace Ludots.Tests.GAS
         {
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"}),
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CommandSourceCoreFixtureMod" }),
                 Path.Combine(FindRepoRoot(), "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
@@ -713,7 +713,7 @@ namespace Ludots.Tests.GAS
             PlayerInputHandler handler = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler missing.");
             Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0.1f),
-                "Wheel outside the minimap stays on camera Zoom. Default_Gameplay scales ScrollY by 0.1.");
+                "Wheel outside the minimap stays on camera Zoom. Camera.Rig scales ScrollY by 0.1.");
 
             backend.MouseWheel = 0f;
             Vector2 slider = new(minimap.ZoomSliderX + (minimap.ZoomSliderWidth * 0.2f), minimap.ZoomSliderY + (minimap.ZoomSliderHeightPx * 0.5f));
@@ -783,17 +783,24 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CoreInputMod_MergesMinimapCommandBinding()
+        public void MinimapCommandOwners_MergeCommandBindingOntoMinimapContext()
         {
-            using GameEngine engine = CreateProfileEngine("LudotsCoreMod", "CoreInputMod", "CommandSourceCoreFixtureMod");
+            AssertOwnerMergesCommand("MinimapShowcaseMod", "FourXDemoMod");
+            AssertOwnerMergesCommand("FogVisionDecayShowcaseMod");
+            AssertOwnerMergesCommand("PresenterBlacksmithShowcaseMod");
+        }
+
+        private static void AssertOwnerMergesCommand(string owner, params string[] extraMods)
+        {
+            var mods = new List<string> { "LudotsCoreMod" };
+            mods.AddRange(extraMods);
+            mods.Add(owner);
+            using GameEngine engine = CreateProfileEngine(mods.ToArray());
             InteractionContextProfileDefinition minimap = RequireProfile(engine, "interaction.context.minimap");
-            Assert.That(minimap.Bindings, Does.Contain("Select.Begin"));
-            Assert.That(minimap.Bindings, Does.Contain("Command"));
-            Assert.That(minimap.Bindings, Does.Contain("Minimap.Zoom"));
-            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.press"));
-            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.command"));
-            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.zoom"));
-            Assert.That(TriggerIds(RequireProfile(engine, "interaction.context.moba.battle")), Does.Not.Contain("graph.minimap.hover"));
+            Assert.That(minimap.Bindings, Does.Contain("Command"), owner);
+            Assert.That(minimap.Bindings, Does.Contain("Minimap.Zoom"), owner);
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.command"), owner);
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.zoom"), owner);
         }
 
         [Test]
@@ -814,7 +821,6 @@ namespace Ludots.Tests.GAS
         {
             using GameEngine engine = CreateProfileEngine(
                 "LudotsCoreMod",
-                "CoreInputMod",
                 "EntityCommandPanelMod",
                 "RtsDemoMod");
             engine.SimulationBudgetMsPerFrame = int.MaxValue;
@@ -914,7 +920,7 @@ namespace Ludots.Tests.GAS
         {
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"}),
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CommandSourceCoreFixtureMod" }),
                 Path.Combine(FindRepoRoot(), "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             // One Tick must finish the fixed step. The default 4ms budget yields inside
@@ -936,10 +942,7 @@ namespace Ludots.Tests.GAS
             backend = new TestInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var handler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(handler);
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
@@ -1013,10 +1016,7 @@ namespace Ludots.Tests.GAS
             var backend = new TestInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var handler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(handler);
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);

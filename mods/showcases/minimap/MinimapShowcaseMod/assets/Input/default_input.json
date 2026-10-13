@@ -1,0 +1,21 @@
+{
+  "actions": [
+    {
+      "id": "Command",
+      "name": "MinimapShowcase_Command",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "MinimapShowcase.Command",
+      "priority": 70,
+      "bindings": [
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        }
+      ]
+    }
+  ]
+}

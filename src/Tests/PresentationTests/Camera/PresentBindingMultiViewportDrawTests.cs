@@ -226,7 +226,6 @@ namespace Ludots.Tests.Presentation
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod" , "CommandSourceCoreFixtureMod"});
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
@@ -243,13 +242,13 @@ namespace Ludots.Tests.Presentation
                 players.Register(8, playerEight);
                 localSeats = new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
-                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.default"),
                 };
             }
             else
             {
-                localSeats = new[] { new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null) };
+                localSeats = new[] { new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default") };
             }
 
             var result = new ParticipantBindingResult(

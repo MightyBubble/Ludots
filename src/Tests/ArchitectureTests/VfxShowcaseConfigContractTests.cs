@@ -80,7 +80,6 @@ namespace Ludots.Tests.Architecture
                 new[]
                 {
                     ModMount("LudotsCoreMod"),
-                    ModMount("CoreInputMod"),
                     ModMount("CapabilityStandardStaticPresenter30kMod", "showcases", "capability_standard"),
                 });
 

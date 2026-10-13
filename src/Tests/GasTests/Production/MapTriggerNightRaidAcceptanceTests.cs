@@ -37,7 +37,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "MapTriggerNightRaidMod",
     };
 

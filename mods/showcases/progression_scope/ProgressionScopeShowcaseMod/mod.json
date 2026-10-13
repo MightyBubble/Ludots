@@ -6,9 +6,12 @@
   "priority": 130,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "EntityCommandPanelMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "progression", "entity-scope"]
+  "tags": [
+    "showcase",
+    "progression",
+    "entity-scope"
+  ]
 }

@@ -296,7 +296,6 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 Path.Combine(repoRoot, "src", "Core", "Input", "Selection"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems"),
                 Path.Combine(repoRoot, "mods", "capabilities", "participant_view", "ParticipantViewCapabilityMod", "Runtime"),
                 Path.Combine(repoRoot, "mods", "capabilities", "participant_view", "ParticipantViewCapabilityMod", "UI")
             };
@@ -599,7 +598,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] directories =
             {
                 Path.Combine(repoRoot, "src", "Core", "Input"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "docs", "architecture", "interaction")
             };
 
@@ -777,7 +775,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] directories =
             {
                 Path.Combine(repoRoot, "src", "Core", "Input"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "docs")
             };
             string[] forbidden =
@@ -1382,7 +1379,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] roots =
             {
                 Path.Combine(repoRoot, "src", "Core"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
             };
             var hits = new List<string>();
             for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)

@@ -4,10 +4,6 @@
   "windowWidth": 1600,
   "windowHeight": 900,
   "targetFps": 0,
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "EntityQueryTactics.Controls"
-  ],
   "commandSource": {
     "targetFilter": {
       "relationFilter": "Friendly"
@@ -20,7 +16,8 @@
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ]
 }

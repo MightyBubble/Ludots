@@ -54,6 +54,14 @@
         {
           "actionId": "ResetCamera",
           "path": "<Keyboard>/f4"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
         }
       ]
     }

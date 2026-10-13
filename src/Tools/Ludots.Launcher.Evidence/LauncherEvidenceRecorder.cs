@@ -242,8 +242,8 @@ public static class LauncherEvidenceRecorder
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
-        PushStartupInputContexts(config, inputHandler);
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
 
@@ -352,8 +352,8 @@ public static class LauncherEvidenceRecorder
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
-        PushStartupInputContexts(config, inputHandler);
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
 
@@ -417,22 +417,6 @@ public static class LauncherEvidenceRecorder
             viewController,
             screenHud,
             heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
-    }
-
-    private static void PushStartupInputContexts(GameConfig config, PlayerInputHandler inputHandler)
-    {
-        if (config.StartupInputContexts == null)
-        {
-            return;
-        }
-
-        foreach (string contextId in config.StartupInputContexts)
-        {
-            if (!string.IsNullOrWhiteSpace(contextId))
-            {
-                inputHandler.PushContext(contextId);
-            }
-        }
     }
 
     private static LauncherRecordingResult RecordRfc0065ShowcaseArtifacts(LauncherRecordingRequest request)

@@ -1,9 +1,5 @@
 {
   "startupMapId": "rts_entry",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "Rts_Gameplay"
-  ],
   "constants": {
     "intValues": {
       "rtsRelationEntityCapacity": 16384
@@ -12,7 +8,8 @@
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ]
 }

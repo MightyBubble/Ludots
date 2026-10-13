@@ -1,0 +1,10 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": [
+        "DialogueAuthorKit.Controls"
+      ]
+    }
+  ]
+}

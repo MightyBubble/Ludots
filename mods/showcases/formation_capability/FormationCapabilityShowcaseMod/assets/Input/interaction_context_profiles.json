@@ -15,7 +15,8 @@
         {
           "trigger": "graph.formation.command_commit"
         }
-      ]
+      ],
+      "inputContextId": "Formation.Controls"
     }
   ]
 }

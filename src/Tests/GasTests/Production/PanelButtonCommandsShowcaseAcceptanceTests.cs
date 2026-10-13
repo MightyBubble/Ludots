@@ -200,10 +200,7 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
             Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, backend);

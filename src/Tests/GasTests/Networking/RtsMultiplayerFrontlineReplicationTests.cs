@@ -62,7 +62,6 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     private static readonly string[] FrontlineMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "EntityCommandPanelMod",
         "RtsDemoMod",
         "RtsShowcaseMod",
@@ -2138,6 +2137,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             {
                 PossessedPlayerId = playerId,
                 PossessedRep = possessedRep,
+                ControlSchemeId = "scheme.default",
             },
         });
         LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(engine);
@@ -2145,7 +2145,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         seats.SetPresentBinding("seat.0", PresentBinding.FullScreen(viewId, new Vector2(1280f, 720f)));
         engine.CurrentMapSession!.LocalSeats = new[]
         {
-            new ResolvedLocalSeatPossession("seat.0", playerId, possessedRep, ControlSchemeId: null),
+            new ResolvedLocalSeatPossession("seat.0", playerId, possessedRep, "scheme.default"),
         };
     }
 

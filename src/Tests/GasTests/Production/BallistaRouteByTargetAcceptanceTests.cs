@@ -311,10 +311,7 @@ namespace Ludots.Tests.GAS
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
@@ -340,11 +337,6 @@ namespace Ludots.Tests.GAS
                 HealthAttr = AttributeRegistry.GetId("Ballista.Health"),
             };
             Assert.That(ctx.HealthAttr, Is.GreaterThan(0), "Ballista.Health registered by fixture");
-            // 诊断：startup contexts + trigger mounts
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                TestContext.Out.WriteLine($"[boot] input context[{i}]: {engine.MergedConfig.StartupInputContexts[i]}");
-            }
             return ctx;
         }
 

@@ -11,6 +11,5 @@
     <ProjectReference Include="..\..\..\EntityCommandPanelMod\EntityCommandPanelMod.csproj">
       <Private>false</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
   </ItemGroup>
 </Project>

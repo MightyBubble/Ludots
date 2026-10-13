@@ -272,7 +272,6 @@ namespace Ludots.Tests.Presentation
             var modPaths = new System.Collections.Generic.List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "fixtures", "animation", "AnimationAcceptanceMod"),
             };
 
@@ -468,7 +467,6 @@ namespace Ludots.Tests.Presentation
             var modPaths = new System.Collections.Generic.List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "fixtures", "animation", "AnimationAcceptanceMod"),
             };
 

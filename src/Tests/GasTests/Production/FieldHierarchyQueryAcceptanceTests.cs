@@ -32,7 +32,6 @@ public sealed class FieldHierarchyQueryAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldHierarchyQueryMod",
     };
 

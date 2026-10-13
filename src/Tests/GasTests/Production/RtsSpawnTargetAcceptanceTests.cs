@@ -32,7 +32,6 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "EntityCommandPanelMod",
             "RtsDemoMod",
         };

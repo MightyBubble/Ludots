@@ -2,11 +2,11 @@
   "schemes": [
     {
       "id": "scheme.dsp.left",
-      "inputContexts": ["DSP.Controls.Left"]
+      "inputContexts": ["Camera.Rig", "DSP.Controls.Left"]
     },
     {
       "id": "scheme.dsp.right",
-      "inputContexts": ["DSP.Controls.Right"]
+      "inputContexts": ["Camera.Rig", "DSP.Controls.Right"]
     }
   ],
   "allowedSchemes": [

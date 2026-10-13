@@ -24,6 +24,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
@@ -58,7 +59,6 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "EntityCommandPanelMod",
         "RtsDemoMod",
         "RtsShowcaseMod",
@@ -92,8 +92,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
     [Description(
         "Feature: Room ready controls are playable from the product launcher\n" +
         "  Given a player starts the networked Frontline showcase from the official preset\n" +
-        "  When the launcher resolves startup input contexts\n" +
-        "  Then the F5 room-ready input context is active alongside Frontline commands without taking WASD from the camera")]
+        "  When the launcher resolves the match and the engine installs scheme.default\n" +
+        "  Then the F5 room-ready input context is on that scheme alongside Frontline commands without taking WASD from the camera")]
     public void GivenNetworkedFrontlinePreset_WhenLauncherResolves_ThenRoomReadyControlsAreActive()
     {
         var launcher = new LauncherService(FindRepoRoot());
@@ -101,21 +101,20 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
             LauncherPlatformIds.Raylib,
             LauncherBuildMode.Never);
+        Assert.That(result.Plan.OrderedModIds, Does.Contain("RtsMultiplayerFrontlineMod"));
 
-        LauncherResolvedSetting startupInputContexts = result.Plan.Diagnostics.Settings
-            .Single(setting => setting.Key == "startupInputContexts");
-        JsonArray contexts = startupInputContexts.EffectiveValue?.AsArray()
-            ?? throw new InvalidOperationException("startupInputContexts did not resolve to a JSON array.");
-        string[] ids = contexts
-            .Select(item => item?.GetValue<string>() ?? string.Empty)
-            .ToArray();
+        using GameEngine engine = CreateStartedEngine();
+        ControlSchemeRuntime schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
+            ?? throw new InvalidOperationException("ControlSchemeRuntime missing.");
+        Assert.That(schemes.SchemeIdRegistry.TryGetId("scheme.default", out int schemeId), Is.True);
+        Assert.That(schemes.TryGetSchemeActivation(schemeId, out ControlSchemeActivation activation), Is.True);
+        string[] ids = activation.InputContexts;
 
-        Assert.That(ids, Does.Contain("Default_Gameplay"));
+        Assert.That(ids, Does.Contain("Camera.Rig"));
         Assert.That(ids, Does.Contain("Frontline.Gameplay"));
         Assert.That(ids, Does.Contain("Frontline.RoomControls"));
         Assert.That(ids, Does.Not.Contain("Rts_Gameplay"));
 
-        using GameEngine engine = CreateStartedEngine();
         InputConfigRoot input = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         InputContextDef frontline = input.Contexts.Single(context => context.Id == "Frontline.Gameplay");
         string[] frontlinePaths = FlattenBindingPaths(frontline.Bindings).ToArray();

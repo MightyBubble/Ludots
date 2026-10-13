@@ -62,7 +62,7 @@ namespace Ludots.Tests.Presentation
 
             var handler = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler missing.");
-            Console.WriteLine($"startupInputContexts: {string.Join(",", engine.MergedConfig.StartupInputContexts)}");
+            Console.WriteLine($"activeScheme={engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ActiveSchemeId}");
             Console.WriteLine($"HasContext(CaseE.Controls) before ticks: {handler.HasContext("CaseE.Controls")}");
             Tick(engine, 20);
             Console.WriteLine($"HasContext(CaseE.Controls) after ticks: {handler.HasContext("CaseE.Controls")}");
@@ -220,10 +220,7 @@ namespace Ludots.Tests.Presentation
             engine.InitializeWithConfigPipeline(RepoModPaths.ResolveExplicit(repoRoot, Mods), Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var handler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(handler);
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -267,7 +264,7 @@ namespace Ludots.Tests.Presentation
             var backend = new TestInputBackend();
             using GameEngine engine = CreateEngine(backend);
             engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
-                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
             Tick(engine, 40);
 
             Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);

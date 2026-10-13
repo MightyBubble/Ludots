@@ -29,7 +29,6 @@ public sealed class FogVisionDecayShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FogVisionDecayShowcaseMod",
     };
 
@@ -130,10 +129,7 @@ public sealed class FogVisionDecayShowcaseAcceptanceTests
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var backend = new TestInputBackend();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

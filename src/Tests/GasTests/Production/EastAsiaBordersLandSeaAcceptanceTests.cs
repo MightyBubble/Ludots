@@ -34,7 +34,6 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         "EastAsiaVisualHeightmapRuntimeEntryMod",
         "FieldEastAsiaCountryMod",
         "EastAsiaNavMeshDebugMod",
-        "CoreInputMod",
         "CameraProfilesMod",
         "SelectionInteractionMod",
         "MassNavigationMod",

@@ -82,7 +82,6 @@ public sealed class GraphFormalTextSubtitleShowcaseAcceptanceTests
             RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "CoreInputMod",
                 "CapabilityStandardGraphFormalTextShowcaseMod"
             }),
             Path.Combine(repoRoot, "assets"),

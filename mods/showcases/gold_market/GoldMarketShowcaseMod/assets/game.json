@@ -1,7 +1,3 @@
 {
-  "startupMapId": "gold_market_showcase",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "GoldMarket.Controls"
-  ]
+  "startupMapId": "gold_market_showcase"
 }

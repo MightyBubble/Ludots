@@ -77,18 +77,8 @@ namespace Ludots.Adapter.Web
             var inputBackend = new WebInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
-            if (config.StartupInputContexts != null)
-            {
-                foreach (var contextId in config.StartupInputContexts)
-                {
-                    if (!string.IsNullOrWhiteSpace(contextId))
-                    {
-                        inputHandler.PushContext(contextId);
-                    }
-                }
-            }
-
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
 
             var viewController = new WebViewController();

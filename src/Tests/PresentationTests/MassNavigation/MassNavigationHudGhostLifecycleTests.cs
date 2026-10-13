@@ -30,7 +30,7 @@ namespace Ludots.Tests.Presentation
     {
         private static readonly string[] Mods =
         {
-            "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod",
+            "LudotsCoreMod", "SelectionInteractionMod",
             "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod"
         };
 
@@ -55,7 +55,7 @@ namespace Ludots.Tests.Presentation
             var emit = RequirePresentationSystem<Ludots.Core.Presentation.Systems.PresenterEmitSystem>(engine);
 
             engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
-                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
             TickWithOverlay(engine, hudProjection, builder, scene, 90);
 
             const int Samples = 60;
@@ -166,7 +166,7 @@ namespace Ludots.Tests.Presentation
             var emit = RequirePresentationSystem<Ludots.Core.Presentation.Systems.PresenterEmitSystem>(engine);
 
             engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
-                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
 
             TickWithOverlay(engine, hudProjection, builder, scene, 90);
 
@@ -218,7 +218,7 @@ namespace Ludots.Tests.Presentation
             using GameEngine engine = CreateEngine(backend, focusOverride);
             WorldHudToScreenSystem hudProjection = CreateHudProjection(engine);
             engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
-                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
 
             Tick(engine, hudProjection, 60);
 
@@ -330,7 +330,7 @@ namespace Ludots.Tests.Presentation
                 screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
 
             engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
-                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
 
             TickWithOverlay(engine, hudProjection, builder, scene, 60);
             int nearScreenTexts = screenHud.TextCount;
@@ -469,7 +469,7 @@ namespace Ludots.Tests.Presentation
                 screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
 
             engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
-                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, null) })));
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
 
             using var renderer = new Ludots.Presentation.Skia.SkiaOverlayRenderer();
             using var surface = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(1280, 720));
@@ -623,10 +623,7 @@ namespace Ludots.Tests.Presentation
             engine.InitializeWithConfigPipeline(RepoModPaths.ResolveExplicit(repoRoot, Mods), Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var handler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(handler);
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

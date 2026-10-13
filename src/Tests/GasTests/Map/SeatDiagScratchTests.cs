@@ -29,7 +29,6 @@ namespace Ludots.Tests.GAS
             var modPaths = new List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),

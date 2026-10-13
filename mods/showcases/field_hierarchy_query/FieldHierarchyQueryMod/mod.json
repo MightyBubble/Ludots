@@ -4,7 +4,6 @@
   "description": "Field hierarchy query: ownership.zones + Fields/hierarchies.json group chain resolve.",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   }
 }

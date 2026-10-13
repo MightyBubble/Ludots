@@ -78,7 +78,6 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] SandboxMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "DiagnosticsOverlayMod",
             "AimInteractionMod",
@@ -1026,10 +1025,7 @@ namespace Ludots.Tests.GAS.Production
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new NullInputBackend(new Vector2(960f, 540f));
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

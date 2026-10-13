@@ -253,7 +253,6 @@ namespace Ludots.Tests.Gas
             var modPaths = new[]
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "navmesh_runtime_gate", "NavGateShowcaseMod"),
             }.ToList();
@@ -269,8 +268,7 @@ namespace Ludots.Tests.Gas
             string? current = TestContext.CurrentContext.TestDirectory;
             while (!string.IsNullOrWhiteSpace(current))
             {
-                if (File.Exists(Path.Combine(current, "mods", "LudotsCoreMod", "mod.json")) &&
-                    File.Exists(Path.Combine(current, "mods", "CoreInputMod", "mod.json")))
+                if (File.Exists(Path.Combine(current, "mods", "LudotsCoreMod", "mod.json")))
                 {
                     return current;
                 }

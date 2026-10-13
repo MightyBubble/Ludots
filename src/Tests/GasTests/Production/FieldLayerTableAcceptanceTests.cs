@@ -29,7 +29,6 @@ public sealed class FieldLayerTableAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldLayerTableMod",
     };
 

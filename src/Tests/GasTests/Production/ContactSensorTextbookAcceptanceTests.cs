@@ -31,7 +31,6 @@ public sealed class ContactSensorTextbookAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "ContactSensorTextbookMod",
     };
 

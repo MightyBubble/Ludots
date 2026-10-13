@@ -5,7 +5,6 @@
   "priority": 210,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "MapTriggerNightRaidMod": "^1.0.0"
   },
   "main": "bin/net9.0/NightRaidShowcaseMod.dll"

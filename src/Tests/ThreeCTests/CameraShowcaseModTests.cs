@@ -25,17 +25,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
     {
         private const int BlendSettleFrames = 20;
         private const string TestInputBackendKey = "Tests.CameraShowcaseMod.InputBackend";
-        private static readonly string[] CoreInputMods =
+        private static readonly string[] CoreMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CommandSourceCoreFixtureMod"
         };
 
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "CameraBootstrapMod",
             "VirtualCameraShotsMod",
@@ -43,15 +41,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
         };
 
         [Test]
-        public void CoreInputMod_DefaultGameplay_ProvidesGenericCommandSourceActions()
+        public void CameraRig_DeclaresPointerPositionAndOmitsOrderActions()
         {
-            using var engine = CreateEngine(CoreInputMods);
+            using var engine = CreateEngine(CoreMods);
 
             var input = engine.GetService(CoreServiceKeys.InputHandler);
             Assert.That(input, Is.Not.Null);
-            Assert.That(input!.HasContext("Default_Gameplay"), Is.True);
-            Assert.That(input.HasAction("Command"), Is.True);
-            Assert.That(input.HasAction("Cancel"), Is.True);
+            Assert.That(input!.HasContext("Camera.Rig"), Is.True);
+            Assert.That(input.HasAction("PointerPos"), Is.True);
+            Assert.That(input.HasAction("Command"), Is.False);
+            Assert.That(input.HasAction("Cancel"), Is.False);
         }
 
         [Test]
@@ -269,10 +268,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);

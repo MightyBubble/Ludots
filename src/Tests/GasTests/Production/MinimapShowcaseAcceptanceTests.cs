@@ -34,7 +34,6 @@ public sealed class MinimapShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FourXDemoMod",
         "MinimapShowcaseMod",
     };

@@ -713,7 +713,6 @@ public sealed class MapLoadLifecycleOrderingTests
                 """
                 {
                   "startupMapId": "lifecycle_ordering",
-                  "startupInputContexts": [],
                   "presentation": {
                     "presenterInstanceCapacity": 16,
                     "gasPresentationEventCapacity": 16,

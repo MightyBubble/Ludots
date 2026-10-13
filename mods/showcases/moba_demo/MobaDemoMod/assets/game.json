@@ -1,5 +1,4 @@
 {
-  "startupInputContexts": ["Default_Gameplay", "Moba_Gameplay"],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",

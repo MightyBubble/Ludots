@@ -31,7 +31,6 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod",
         ShowcaseModId
     };

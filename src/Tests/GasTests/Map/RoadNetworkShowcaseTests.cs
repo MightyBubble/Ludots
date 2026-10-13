@@ -2309,7 +2309,6 @@ namespace Ludots.Tests.GAS
             var modPaths = new List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),
@@ -2362,10 +2361,7 @@ namespace Ludots.Tests.GAS
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -2611,10 +2607,6 @@ namespace Ludots.Tests.GAS
             sb.Append(" | status=");
             sb.Append(engine.GlobalContext.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out object? statusObj) && statusObj is string status
                 ? status
-                : "<none>");
-            sb.Append(" | order=");
-            sb.Append(engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? orderObj) && orderObj is string order
-                ? order
                 : "<none>");
             for (int i = 0; i < instanceIds.Length; i++)
             {

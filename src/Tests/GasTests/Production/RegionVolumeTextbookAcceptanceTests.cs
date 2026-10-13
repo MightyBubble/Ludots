@@ -33,7 +33,6 @@ public sealed class RegionVolumeTextbookAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "RegionVolumeTextbookMod",
     };
 

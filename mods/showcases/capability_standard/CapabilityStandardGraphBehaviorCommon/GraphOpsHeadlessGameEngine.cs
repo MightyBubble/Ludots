@@ -18,7 +18,6 @@ namespace CapabilityStandardGraphBehaviorCommon;
 public static class GraphOpsHeadlessGameEngine
 {
     public const string CoreModId = "LudotsCoreMod";
-    public const string InputModId = "CoreInputMod";
     public const string CameraModId = "CameraProfilesMod";
     public const string GalleryModId = "CapabilityStandardGraphOpsNodeGalleryMod";
 
@@ -33,7 +32,7 @@ public static class GraphOpsHeadlessGameEngine
             throw new ArgumentException("Repository root is required.", nameof(repoRoot));
         }
 
-        var modIds = new List<string> { CoreModId, InputModId, CameraModId };
+        var modIds = new List<string> { CoreModId, CameraModId };
         if (extraModIds != null)
         {
             for (int i = 0; i < extraModIds.Length; i++)
@@ -283,15 +282,8 @@ public static class GraphOpsHeadlessGameEngine
     {
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-        if (engine.MergedConfig?.StartupInputContexts != null)
-        {
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
-        }
-
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
         engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, new NullInputBackend());
         engine.SetService(CoreServiceKeys.UiCaptured, false);

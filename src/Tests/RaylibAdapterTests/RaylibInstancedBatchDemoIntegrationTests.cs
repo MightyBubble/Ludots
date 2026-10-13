@@ -91,7 +91,7 @@ namespace Ludots.Tests.RaylibAdapter
             _ = typeof(InstancedBatchDemoModEntry).Assembly;
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            List<string> modPaths = ResolveModPaths(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "InstancedBatchDemoMod" });
+            List<string> modPaths = ResolveModPaths(repoRoot, new[] { "LudotsCoreMod", "InstancedBatchDemoMod" });
 
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
@@ -160,10 +160,7 @@ namespace Ludots.Tests.RaylibAdapter
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);

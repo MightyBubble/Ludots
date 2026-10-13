@@ -240,6 +240,14 @@
               "path": "<Keyboard>/4"
             }
           ]
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
         }
       ]
     }

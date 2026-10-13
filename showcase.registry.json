@@ -4390,27 +4390,6 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
-      "id": "core_input",
-      "path": "mods/CoreInputMod",
-      "projectPath": "CoreInputMod.csproj",
-      "title": "核心输入",
-      "summary": "核心输入上下文/modal 输入基础 mod，多数游戏配置默认加载。",
-      "tier": "T3",
-      "category": "capability",
-      "binding": null,
-      "preset": null,
-      "docsPath": null,
-      "readmePath": null,
-      "acceptanceTest": null,
-      "artifactDir": null,
-      "screenshot": null,
-      "status": "active",
-      "tags": [
-        "core",
-        "input"
-      ]
-    },
-    {
       "id": "cycle_a",
       "path": "mods/fixtures/cycle_a/CycleAMod",
       "projectPath": "CycleAMod.csproj",

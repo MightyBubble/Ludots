@@ -100,8 +100,7 @@ namespace Ludots.Tests.GAS
             string? current = TestContext.CurrentContext.TestDirectory;
             while (!string.IsNullOrWhiteSpace(current))
             {
-                if (File.Exists(Path.Combine(current, "mods", "LudotsCoreMod", "mod.json")) &&
-                    File.Exists(Path.Combine(current, "mods", "CoreInputMod", "mod.json")))
+                if (File.Exists(Path.Combine(current, "mods", "LudotsCoreMod", "mod.json")))
                 {
                     return current;
                 }

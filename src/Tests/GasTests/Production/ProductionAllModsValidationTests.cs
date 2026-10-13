@@ -57,13 +57,13 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "CapabilityStandardPhysics2DShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "CapabilityStandardPhysics2DShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CameraProfilesMod", "CapabilityStandardPhysics2DShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_CapabilityStandardPhysics2DShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "CapabilityStandardVirtualCameraShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraBootstrapMod", "VirtualCameraShotsMod", "CapabilityStandardVirtualCameraShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CameraBootstrapMod", "VirtualCameraShotsMod", "CapabilityStandardVirtualCameraShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_CapabilityStandardVirtualCameraShowcaseMod");
 
@@ -87,7 +87,6 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "CameraProfilesMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_CameraProfilesMod");
 
@@ -99,25 +98,25 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "CameraAcceptanceMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod" },
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod" },
                     true))
                 .SetName("ProdModSmoke_CameraAcceptanceMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraAcceptanceHotpathEntryMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod", "CameraAcceptanceHotpathEntryMod" },
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod", "CameraAcceptanceHotpathEntryMod" },
                     true))
                 .SetName("ProdModSmoke_CameraAcceptanceHotpathEntryMod");
 
             yield return new TestCaseData(new ModCase(
                     "InteractionShowcaseMod",
-                    new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_InteractionShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "ChampionSkillSandboxMod",
-                    new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "DiagnosticsOverlayMod", "ChampionSkillSandboxMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CameraProfilesMod", "EntityCommandPanelMod", "DiagnosticsOverlayMod", "ChampionSkillSandboxMod" },
                     true))
                 .SetName("ProdModSmoke_ChampionSkillSandboxMod");
 
@@ -135,13 +134,13 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "NarrativeShowcaseMod",
-                    new[] { "LudotsCoreMod", "AimInteractionMod", "CoreInputMod", "CameraProfilesMod", "NarrativeFrontendMod", "EntityInfoPanelsMod", "InteractionShowcaseMod", "NarrativeShowcaseMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CameraProfilesMod", "NarrativeFrontendMod", "EntityInfoPanelsMod", "InteractionShowcaseMod", "NarrativeShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_NarrativeShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "RelationshipShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "NarrativeFrontendMod", "RelationshipShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CameraProfilesMod", "NarrativeFrontendMod", "RelationshipShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_RelationshipShowcaseMod");
 

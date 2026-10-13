@@ -1146,7 +1146,7 @@ namespace Ludots.Tests.Architecture
             var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-stale-plan-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
+            var cameraRoot = Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod");
             var coreRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
             var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
             var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
@@ -1215,21 +1215,21 @@ namespace Ludots.Tests.Architecture
                     {
                       "LaunchGraphPath": "raylib.launch.graph.json",
                       "PlanSelectors": [
-                        "mod:CoreInputMod"
+                        "mod:CameraProfilesMod"
                       ],
                       "PlanRootModIds": [
-                        "CoreInputMod"
+                        "CameraProfilesMod"
                       ],
                       "PlanOrderedModIds": [
                         "LudotsCoreMod",
-                        "CoreInputMod"
+                        "CameraProfilesMod"
                       ],
                       "PlanFingerprint": "stale-plan-fingerprint",
                       "PlanSchemaVersion": 1
                     }
                     """);
 
-                Assert.That(coreInputRoot, Does.Exist);
+                Assert.That(cameraRoot, Does.Exist);
 
                 var ex = Assert.Throws<InvalidOperationException>(
                     () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
@@ -1370,7 +1370,7 @@ namespace Ludots.Tests.Architecture
                         LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardStaticPresenter30kMod",
                     expectedStartupMapId: "capability_standard_static_presenter_30k_showcase",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPresenter30kMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CapabilityStandardStaticPresenter30kMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1398,13 +1398,12 @@ namespace Ludots.Tests.Architecture
                     allowedModIds: new[]
                     {
                         "LudotsCoreMod",
-                        "CoreInputMod",
                         "CameraProfilesMod",
                         "SelectionInteractionMod",
                         "MassNavigationMod",
                         "FormationCapabilityShowcaseMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "SelectionInteractionMod", "MassNavigationMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "CameraProfilesMod", "SelectionInteractionMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1416,11 +1415,10 @@ namespace Ludots.Tests.Architecture
                     allowedModIds: new[]
                     {
                         "LudotsCoreMod",
-                        "CoreInputMod",
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "ParticipantViewCapabilityMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "ParticipantViewCapabilityMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1429,7 +1427,7 @@ namespace Ludots.Tests.Architecture
                         LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardTransportNetworkMod",
                     expectedStartupMapId: "capability_standard_transport_network",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardTransportNetworkMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CapabilityStandardTransportNetworkMod" });
             }
             finally
             {
@@ -1470,7 +1468,6 @@ namespace Ludots.Tests.Architecture
                 Assert.That(plan.OrderedModIds, Is.SubsetOf(new[]
                 {
                     "LudotsCoreMod",
-                    "CoreInputMod",
                     "EntityCommandPanelMod",
                     "ProgressionScopeShowcaseMod"
                 }));
@@ -1654,7 +1651,7 @@ namespace Ludots.Tests.Architecture
             var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-graph-invalid-order-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
+            var cameraRoot = Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod");
             var coreRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
             var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
             var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
@@ -1668,13 +1665,13 @@ namespace Ludots.Tests.Architecture
                       "schemaVersion": 1,
                       "planFingerprint": "invalid-order-fingerprint",
                       "orderedModIds": [
-                        "CoreInputMod",
+                        "CameraProfilesMod",
                         "LudotsCoreMod"
                       ],
                       "plannedMods": [
                         {
-                          "id": "CoreInputMod",
-                          "rootPath": "{{coreInputRoot.Replace("\\", "\\\\")}}"
+                          "id": "CameraProfilesMod",
+                          "rootPath": "{{cameraRoot.Replace("\\", "\\\\")}}"
                         },
                         {
                           "id": "LudotsCoreMod",

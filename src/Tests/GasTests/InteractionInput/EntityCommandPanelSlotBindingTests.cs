@@ -94,14 +94,14 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Resolve_StartupContexts_LabelSkillWithoutInt()
+        public void Resolve_SchemeContexts_LabelSkillWithoutInt()
         {
             var config = new InputConfigRoot();
             config.Actions.Add(new InputActionDef { Id = "SkillQ", Type = InputActionType.Button });
-            config.Contexts.Add(Context("Default_Gameplay", 0, new InputBindingDef { ActionId = "Select.Begin", Path = "<Mouse>/leftButton" }));
+            config.Contexts.Add(Context("Camera.Rig", 0, new InputBindingDef { ActionId = "Select.Begin", Path = "<Mouse>/leftButton" }));
             config.Contexts.Add(Context("Rts_Gameplay", 50, new InputBindingDef { ActionId = "SkillQ", Path = "<Keyboard>/q" }));
             Assert.That(
-                InputBindingKeyLookup.Resolve(config, new[] { "Default_Gameplay", "Rts_Gameplay" }, "startupInputContexts", "SkillQ", null),
+                InputBindingKeyLookup.Resolve(config, new[] { "Camera.Rig", "Rts_Gameplay" }, "control scheme 'scheme.default'", "SkillQ", null),
                 Is.EqualTo("Q"));
         }
 

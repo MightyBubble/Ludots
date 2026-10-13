@@ -2,6 +2,7 @@
   "profiles": [
     {
       "id": "interaction.context.moba.battle",
+      "inputContextId": "Core.Select",
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
@@ -29,6 +30,7 @@
     },
     {
       "id": "interaction.context.minimap",
+      "inputContextId": "Minimap.Device",
       "foreground": true,
       "pointerRouting": "ui",
       "bindings": [

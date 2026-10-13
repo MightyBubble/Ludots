@@ -21,7 +21,6 @@ public sealed class GraphDebugToolTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "MapTriggerNightRaidMod",
     };
 

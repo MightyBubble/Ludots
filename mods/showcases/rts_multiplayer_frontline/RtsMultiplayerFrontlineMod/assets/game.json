@@ -1,4 +1,3 @@
 {
-  "startupMapId": "rts_duel_v1",
-  "startupInputContexts": ["Default_Gameplay", "Frontline.Gameplay", "Frontline.RoomControls"]
+  "startupMapId": "rts_duel_v1"
 }

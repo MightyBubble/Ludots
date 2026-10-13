@@ -1866,8 +1866,7 @@ namespace Ludots.Core.Engine
             var clientLocalSeatInputRuntime = new Client.ClientLocalSeatInputRuntime(
                 GlobalContext,
                 controlSchemeRuntime,
-                inputConfigRoot,
-                MergedConfig.StartupInputContexts);
+                inputConfigRoot);
 
 
             // Interaction mode catalog: simulation-side modes projected onto handler IMC

@@ -228,7 +228,6 @@ public sealed class SaveSystemUatTests
             RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "CoreInputMod",
                 "EntityCommandPanelMod",
                 "RtsDemoMod",
                 "RtsCncTrainingShowcaseMod"
@@ -386,7 +385,7 @@ public sealed class SaveSystemUatTests
         sb.AppendLine();
         sb.AppendLine("## Intent");
         sb.AppendLine("- Player goal: prove the Core save system can persist an existing RTS training showcase state, mutate it, reload it, and continue deterministically.");
-        sb.AppendLine("- Gameplay domain: `rts_cnc_training` via LudotsCoreMod, CoreInputMod, EntityCommandPanelMod, RtsDemoMod, and RtsCncTrainingShowcaseMod.");
+        sb.AppendLine("- Gameplay domain: `rts_cnc_training` via LudotsCoreMod, EntityCommandPanelMod, RtsDemoMod, and RtsCncTrainingShowcaseMod.");
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Load the existing C&C RTS training showcase.");
@@ -448,7 +447,7 @@ public sealed class SaveSystemUatTests
 ## Target
 
 - Showcase: `rts_cnc_training`
-- Existing mod chain: `LudotsCoreMod`, `CoreInputMod`, `EntityCommandPanelMod`, `RtsDemoMod`, `RtsCncTrainingShowcaseMod`
+- Existing mod chain: `LudotsCoreMod`, `EntityCommandPanelMod`, `RtsDemoMod`, `RtsCncTrainingShowcaseMod`
 - Automated evidence: `dotnet test src\Tests\PersistenceTests\PersistenceTests.csproj --filter SaveSystemUatTests`
 
 ## Steps

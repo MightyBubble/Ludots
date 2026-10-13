@@ -687,7 +687,6 @@ namespace Ludots.Tests.Gas.Graph
                     """
                     {
                       "startupMapId": "map_trigger_mount_probe",
-                      "startupInputContexts": [],
                       "presentation": {
                         "presenterInstanceCapacity": 16,
                         "gasPresentationEventCapacity": 16,
