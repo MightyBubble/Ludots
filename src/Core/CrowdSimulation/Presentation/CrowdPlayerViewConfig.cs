@@ -232,6 +232,15 @@ internal sealed class CrowdPlayerViewLabels
     [JsonRequired] public string ClickSpawn { get; init; } = "";
     [JsonRequired] public string SceneOutside { get; init; } = "";
     [JsonRequired] public string SceneBehind { get; init; } = "";
+    [JsonRequired] public string CountPlanning { get; init; } = "";
+    [JsonRequired] public string CountMoving { get; init; } = "";
+    [JsonRequired] public string CountOther { get; init; } = "";
+    [JsonRequired] public string UnitType { get; init; } = "";
+    [JsonRequired] public string Radius { get; init; } = "";
+    [JsonRequired] public string Count { get; init; } = "";
+    [JsonRequired] public string Deploy { get; init; } = "";
+    [JsonRequired] public string Layer { get; init; } = "";
+    [JsonRequired] public string Self { get; init; } = "";
 
     public void Validate(string path)
     {
@@ -255,6 +264,15 @@ internal sealed class CrowdPlayerViewLabels
         CrowdPlayerViewConfig.RequireText(prefix, "clickSpawn", ClickSpawn);
         CrowdPlayerViewConfig.RequireText(prefix, "sceneOutside", SceneOutside);
         CrowdPlayerViewConfig.RequireText(prefix, "sceneBehind", SceneBehind);
+        CrowdPlayerViewConfig.RequireText(prefix, "countPlanning", CountPlanning);
+        CrowdPlayerViewConfig.RequireText(prefix, "countMoving", CountMoving);
+        CrowdPlayerViewConfig.RequireText(prefix, "countOther", CountOther);
+        CrowdPlayerViewConfig.RequireText(prefix, "unitType", UnitType);
+        CrowdPlayerViewConfig.RequireText(prefix, "radius", Radius);
+        CrowdPlayerViewConfig.RequireText(prefix, "count", Count);
+        CrowdPlayerViewConfig.RequireText(prefix, "deploy", Deploy);
+        CrowdPlayerViewConfig.RequireText(prefix, "layer", Layer);
+        CrowdPlayerViewConfig.RequireText(prefix, "self", Self);
     }
 }
 

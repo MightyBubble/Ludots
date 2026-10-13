@@ -161,6 +161,45 @@ public sealed class CrowdPlayerViewTests
         var range = (JsonObject)valid.DeepClone();
         range["colors"]!["plan"]!["red"] = 256;
         Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(range, "player-view"));
+        var missingLabel = (JsonObject)valid.DeepClone();
+        missingLabel["labels"]!.AsObject().Remove("countPlanning");
+        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(missingLabel, "player-view"));
+        var unknownLabel = (JsonObject)valid.DeepClone();
+        unknownLabel["labels"]!.AsObject()["extra"] = "x";
+        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(unknownLabel, "player-view"));
+    }
+
+    [Test]
+    public void StatusCard_LabelsEveryCount()
+    {
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
+        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(ViewJson(), "player-view"));
+        host.Bind(session);
+        var routes = new RouteVisualBuffer();
+        var overlay = new ScreenOverlayBuffer();
+        host.Draw(session, routes, overlay);
+        var texts = new System.Collections.Generic.List<string>();
+        foreach (ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Text)
+            {
+                continue;
+            }
+
+            string? text = overlay.GetString(item.StringId);
+            if (text != null)
+            {
+                texts.Add(text);
+            }
+        }
+
+        Assert.That(texts, Does.Contain("countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
+        Assert.That(texts, Does.Contain("clickSpawn unitType 0 · radius 0 · count 8"));
+        Assert.That(texts, Has.Some.StartsWith("deploy 24 · radius 0-"));
+        Assert.That(texts, Has.Some.Contains(" · layer 0"));
+        Assert.That(texts, Has.Some.Contains("self"));
+        Assert.That(string.Join("\n", texts), Does.Not.Contain("*"));
     }
 
     [Test]
@@ -254,7 +293,8 @@ public sealed class CrowdPlayerViewTests
         {
             "planning", "moving", "arrived", "partial", "idle", "magicOn", "magicOff", "formation", "converge",
             "preserve", "fogOn", "fogOff", "routeOn", "routeOff", "losOn", "losOff", "clickSpawn",
-            "sceneOutside", "sceneBehind",
+            "sceneOutside", "sceneBehind", "countPlanning", "countMoving", "countOther",
+            "unitType", "radius", "count", "deploy", "layer", "self",
         })
         {
             labels[name] = name;

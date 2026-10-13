@@ -90,7 +90,16 @@
     "losOff": "遮挡关",
     "clickSpawn": "点地图生成",
     "sceneOutside": "敌方在视野外",
-    "sceneBehind": "墙后敌方"
+    "sceneBehind": "墙后敌方",
+    "countPlanning": "规划",
+    "countMoving": "行进",
+    "countOther": "其他",
+    "unitType": "兵种",
+    "radius": "半径",
+    "count": "数量",
+    "deploy": "部署",
+    "layer": "层",
+    "self": "本方"
   },
   "colors": {
     "plan": { "red": 150, "green": 42, "blue": 72, "alpha": 180 },

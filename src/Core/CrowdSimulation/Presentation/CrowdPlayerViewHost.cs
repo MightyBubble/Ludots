@@ -641,8 +641,7 @@ internal sealed class CrowdPlayerViewHost
             DrawOrderFeedback(session, routes, viewer, leader, goal, unfinished);
         }
 
-        var card = CrowdCommandStatusCard.Classify(planning, moving, arrived, other);
-        PublishText(latest, card, planning, moving, arrived, other);
+        PublishText(latest, planning, moving, arrived, other);
         DrawChrome(overlay);
     }
 
@@ -1194,7 +1193,7 @@ internal sealed class CrowdPlayerViewHost
             _goal);
     }
 
-    private void PublishText(CrowdOrder? latest, CrowdCommandCardState card, int planning, int moving, int arrived, int other)
+    private void PublishText(CrowdOrder? latest, int planning, int moving, int arrived, int other)
     {
         int shape = latest == null ? -1 : ShapeIndex(latest.ShapeId);
         int mode = latest == null ? -1 : (int)latest.Mode;
@@ -1253,21 +1252,21 @@ internal sealed class CrowdPlayerViewHost
             _sb.Append(_counts[p]);
             if (p == _player)
             {
-                _sb.Append('*');
+                _sb.Append(' ');
+                _sb.Append(_config.Labels.Self);
             }
         }
 
         _teamBar = _sb.ToString();
         _sb.Clear();
-        _sb.Append(CardLabel(card));
-        _sb.Append(' ');
-        _sb.Append(planning);
-        _sb.Append('/');
-        _sb.Append(moving);
-        _sb.Append('/');
-        _sb.Append(arrived);
-        _sb.Append('/');
-        _sb.Append(other);
+        var labels = _config.Labels;
+        AppendLabeled(labels.CountPlanning, planning);
+        AppendSep();
+        AppendLabeled(labels.CountMoving, moving);
+        AppendSep();
+        AppendLabeled(labels.Arrived, arrived);
+        AppendSep();
+        AppendLabeled(labels.CountOther, other);
         _statusLine = _sb.ToString();
 
         _sb.Clear();
@@ -1285,32 +1284,34 @@ internal sealed class CrowdPlayerViewHost
         _modeLine = _sb.ToString();
 
         _sb.Clear();
-        _sb.Append(_config.Labels.ClickSpawn);
+        _sb.Append(labels.ClickSpawn);
         _sb.Append(' ');
-        _sb.Append(_clickUnitType);
-        _sb.Append(' ');
-        _sb.Append(_clickRadius);
-        _sb.Append(' ');
-        _sb.Append(_clickCount);
+        AppendLabeled(labels.UnitType, _clickUnitType);
+        AppendSep();
+        AppendLabeled(labels.Radius, _clickRadius);
+        AppendSep();
+        AppendLabeled(labels.Count, _clickCount);
         _clickLine = _sb.ToString();
 
         _sb.Clear();
-        _sb.Append(_deployCount);
+        AppendLabeled(labels.Deploy, _deployCount);
+        AppendSep();
+        _sb.Append(labels.Radius);
         _sb.Append(' ');
         _sb.Append(_radiusMin);
         _sb.Append('-');
         _sb.Append(_radiusMax);
-        _sb.Append(' ');
-        _sb.Append(_focus);
+        AppendSep();
+        AppendLabeled(labels.Layer, _focus);
         if (_sceneKind == 1)
         {
-            _sb.Append(' ');
-            _sb.Append(_config.Labels.SceneOutside);
+            AppendSep();
+            _sb.Append(labels.SceneOutside);
         }
         else if (_sceneKind == 2)
         {
-            _sb.Append(' ');
-            _sb.Append(_config.Labels.SceneBehind);
+            AppendSep();
+            _sb.Append(labels.SceneBehind);
         }
 
         _deployLine = _sb.ToString();
@@ -1356,14 +1357,19 @@ internal sealed class CrowdPlayerViewHost
         overlay.AddText(textX, textY + (step * 3), _deployLine, _config.FontSize, _text);
     }
 
-    private string CardLabel(CrowdCommandCardState card) => card switch
+    private void AppendSep()
     {
-        CrowdCommandCardState.Planning => _config.Labels.Planning,
-        CrowdCommandCardState.Moving => _config.Labels.Moving,
-        CrowdCommandCardState.Arrived => _config.Labels.Arrived,
-        CrowdCommandCardState.Partial => _config.Labels.Partial,
-        _ => _config.Labels.Idle,
-    };
+        _sb.Append(' ');
+        _sb.Append('\u00B7');
+        _sb.Append(' ');
+    }
+
+    private void AppendLabeled(string label, int value)
+    {
+        _sb.Append(label);
+        _sb.Append(' ');
+        _sb.Append(value);
+    }
 
     private string ModeLabel(int mode) => mode switch
     {
