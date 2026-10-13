@@ -80,6 +80,8 @@ public sealed partial class CrowdSimulationRuntime
 
         try
         {
+            // 哈希在本子步积分之前重建。帧间看到的是积分后的位置，先按当前位置重铺再对照。
+            _session.Movement?.RebuildHash();
             CrowdSimulationValidator.RunAll(_session);
             DebugValidationLine = $"校验:通过 tick {_session.TickCount}";
             DebugValidationFailed = false;

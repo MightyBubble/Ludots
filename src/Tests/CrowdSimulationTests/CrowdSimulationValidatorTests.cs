@@ -285,6 +285,24 @@ public sealed class CrowdSimulationValidatorTests
     }
 
     [Test]
+    public void SpatialHash_AfterIntegrate_MatchesCurrentPositionsOnceRebuilt()
+    {
+        var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        session.BlockOnDueReplies = true;
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
+        session.Advance(2);
+        var movement = session.Movement!;
+        var pos = movement.Positions[0];
+        movement.Positions[0] = new Fix64Vec2(pos.X + movement.Hash.CellSizeCm * Fix64.FromInt(3), pos.Y);
+        var stale = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSpatialHash(session));
+        Assert.That(stale!.Message, Does.Contain("空间哈希与稠密计数排序不一致"));
+        movement.RebuildHash();
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateSpatialHash(session));
+    }
+
+    [Test]
     public void DebugValidation_WithoutSession_ReportsOnThePanel()
     {
         var runtime = new CrowdSimulationRuntime();
