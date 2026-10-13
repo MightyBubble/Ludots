@@ -30,4 +30,13 @@ public static class CrowdSimulationLimits
     /// 热路径上较大缓冲的预留长度：规划暂存、路径点、重烘集合池、轮廓环、阻挡盒表。
     /// </summary>
     public const int HotPathSpanReserve = 256;
+
+    /// <summary>
+    /// 每个仿真 tick 做航向 Atan2 的单位上限。转向符号仍逐移动单位更新。
+    /// 这是抽样预算，不是导航尺度。
+    /// </summary>
+    public const int MotionQualitySamplesPerTick = 256;
+
+    /// <summary>调试视图遥测曲线长度上限。配置超过它就拒绝装载。</summary>
+    public const int MaxTelemetryHistory = 120;
 }

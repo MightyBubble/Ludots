@@ -52,6 +52,7 @@ internal sealed class CrowdDebugViewFrame
     private int[] _beliefCells = Array.Empty<int>();
     private byte[] _beliefGhost = Array.Empty<byte>();
     private CrowdLeader?[]? _seen;
+    private readonly CrowdDebugPanels _panels;
     private string _inspectText = "";
     private string _beliefText = "";
     private int _shownLayer = int.MinValue;
@@ -76,6 +77,8 @@ internal sealed class CrowdDebugViewFrame
     internal int RadiusIndex;
     internal int BeliefGroup;
     internal int ControllingPlayer = -1;
+    internal bool NavPanel;
+    internal bool TelemetryPanel;
     internal bool ViewportLocked;
     internal float CellPx;
 
@@ -96,6 +99,9 @@ internal sealed class CrowdDebugViewFrame
         LayerIndex = config.Inspect.LayerIndex;
         RadiusIndex = config.Inspect.RadiusIndex;
         BeliefGroup = config.BeliefGroup;
+        NavPanel = config.Panels.Nav;
+        TelemetryPanel = config.Panels.Telemetry;
+        _panels = new CrowdDebugPanels(config);
         _flow = new CrowdFlowFieldVisualProjector(_flowSource)
         {
             LimitToRect = true,
@@ -112,6 +118,13 @@ internal sealed class CrowdDebugViewFrame
         Corridor || Blocked || Density || Belief || Flow || NavPolygons || HpaGraph || JumpLinks;
 
     internal static bool ArrowsAllowed(float cellPx, int minPx) => cellPx >= minPx;
+
+    /// <summary>操控方是玩家表序，不是基地数组下标。玩家号 0 和表外号没有表序。</summary>
+    internal static int ControllingIndex(int[] indexByPlayerId, int playerId)
+    {
+        if (playerId < 1 || (uint)playerId >= (uint)indexByPlayerId.Length) return -1;
+        return indexByPlayerId[playerId];
+    }
 
     internal void BindEngine(GameEngine engine) => _engine = engine;
 
@@ -139,6 +152,15 @@ internal sealed class CrowdDebugViewFrame
         if (actions.PressedThisTick(bindings.ToggleObstacles)) Blocked = !Blocked;
         if (actions.PressedThisTick(bindings.ToggleJumpLinks)) JumpLinks = !JumpLinks;
         if (actions.PressedThisTick(bindings.ToggleBelief)) Belief = !Belief;
+        if (actions.PressedThisTick(bindings.ToggleNavPanel)) NavPanel = !NavPanel;
+        if (actions.PressedThisTick(bindings.ToggleTelemetryPanel)) TelemetryPanel = !TelemetryPanel;
+        if (actions.PressedThisTick(bindings.ProbePathFault)
+            && engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? faultRuntime)
+            && faultRuntime != null)
+        {
+            faultRuntime.ProbePathFault();
+        }
+
         if (actions.PressedThisTick(bindings.CycleUnitColor))
             UnitColorMode = (UnitColorMode + 1) % (CrowdSimulationDebugViewConfig.ColorPriority + 1);
         if (!engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out CrowdSimSession? session) || session == null)
@@ -164,6 +186,7 @@ internal sealed class CrowdDebugViewFrame
 
     public void Draw(CrowdSimSession session, ScreenOverlayBuffer overlay)
     {
+        DrawReadouts(session, overlay);
         if (!Visible) return;
         Prepare(session);
         if (!_viewValid) return;
@@ -261,13 +284,26 @@ internal sealed class CrowdDebugViewFrame
         if (!_engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? runtime) || runtime == null)
             return;
         if (!runtime.TryLocalSeatPlayerId(out int playerId)) return;
-        var bases = session.Config.Deploy.Bases;
-        for (int i = 0; i < bases.Count; i++)
+        ControllingPlayer = ControllingIndex(session.Config.PairRules.IndexByPlayerId, playerId);
+    }
+
+    private void DrawReadouts(CrowdSimSession session, ScreenOverlayBuffer overlay)
+    {
+        int width = 0, height = 0;
+        if (TryView(out _, out _, out _, out var view))
         {
-            if (bases[i].PlayerId != playerId) continue;
-            ControllingPlayer = i;
-            return;
+            width = (int)view.Resolution.X;
+            height = (int)view.Resolution.Y;
         }
+
+        PresentationTimingDiagnostics? timing = null;
+        CrowdSimulationRuntime? runtime = null;
+        if (_engine != null)
+        {
+            _engine.TryGetService(CoreServiceKeys.PresentationTimingDiagnostics, out timing);
+            _engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out runtime);
+        }
+        _panels.Draw(session, runtime, timing, width, height, NavPanel, TelemetryPanel, overlay);
     }
 
     private void Measure(int cellCm)

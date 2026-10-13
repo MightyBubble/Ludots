@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -14,6 +15,13 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// </summary>
 public static class CorridorQuery
 {
+    /// <summary>一次走廊查询里 NavMesh 与 HPA* 各自的秒表 tick。桥面 BFS 不计入。</summary>
+    public struct CorridorStageTicks
+    {
+        public long NavMesh;
+        public long Hpa;
+    }
+
     public enum Branch : byte
     {
         None = 0,
@@ -95,11 +103,25 @@ public static class CorridorQuery
         int level,
         Scratch s)
     {
+        var unused = default(CorridorStageTicks);
+        return CorridorTo(nav, config, from, to, mask, level, s, ref unused);
+    }
+
+    public static Result CorridorTo(
+        NavContext nav,
+        CrowdSimulationRuntimeConfig config,
+        int from,
+        int to,
+        byte[] mask,
+        int level,
+        Scratch s,
+        ref CorridorStageTicks stages)
+    {
         if (level != 0)
         {
             int exit = DeckExit(nav, from, mask, s);
             if (exit < 0) return s.Publish(Branch.None, 0, null, 0, null, null, 0, default);
-            var sub = CorridorTo(nav, config, exit, to, mask, 0, s);
+            var sub = CorridorTo(nav, config, exit, to, mask, 0, s, ref stages);
             if (sub.Points == null) return s.Publish(sub.Kind, 0, null, 0, null, null, 0, default);
             s.EnsurePoints(sub.PointCount + 2);
             Array.Copy(s.PointBuf, 0, s.PointBuf, 2, sub.PointCount);
@@ -111,7 +133,9 @@ public static class CorridorQuery
         TilePathQuery.Result? r = null;
         if (nav.Links == null)
         {
+            long navMark = Stopwatch.GetTimestamp();
             r = TilePathQuery.FindTilePath(nav, config, from, to, layers: true, s.Tile);
+            stages.NavMesh += Stopwatch.GetTimestamp() - navMark;
         }
 
         if (r != null)
@@ -122,7 +146,9 @@ public static class CorridorQuery
             return s.Publish(Branch.Tile, r.PointCount, r.Polys, r.PolyCount, null, null, 0, r.Cost);
         }
 
+        long hpaMark = Stopwatch.GetTimestamp();
         var p = HpaQuery.FindPath(nav, from, to, s.Hpa);
+        stages.Hpa += Stopwatch.GetTimestamp() - hpaMark;
         if (p == null) return s.Publish(Branch.None, 0, null, 0, null, null, 0, default);
         for (int i = 0; i < p.TileCount; i++) mask[p.TileIds[i]] = 1;
         int navCellsPerSide = nav.NavCellsPerSide;

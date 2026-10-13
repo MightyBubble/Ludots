@@ -46,6 +46,7 @@ public sealed class NavTileCache
     /// <summary>累计烘焙耗时(遥测,不参与任何状态与摘要)。</summary>
     public double BakeMs { get; private set; }
     public int Count => _live;
+    public int Capacity => _capacity;
 
     /// <summary>测试 / 对拍用:逐条目的内容键与条目。</summary>
     public IEnumerable<(string Key, NavTileEntry Entry)> Entries

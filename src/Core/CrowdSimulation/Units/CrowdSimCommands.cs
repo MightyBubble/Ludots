@@ -125,7 +125,9 @@ public static class CrowdSimCommands
             {
                 int last = units.Count - 1;
                 if (i != last) kernel?.MoveAvoidanceRow(last, i);
-                int groupId = world.Get<CrowdSimulationUnitState>(entity).GroupId;
+                var unitState = world.Get<CrowdSimulationUnitState>(entity);
+                kernel?.ClearMotionSlot(unitState.Slot);
+                int groupId = unitState.GroupId;
                 units.ReleaseDense(i);
                 if (!sim.Groups.TryGet(groupId, out var group))
                 {

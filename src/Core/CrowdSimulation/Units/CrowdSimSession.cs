@@ -372,6 +372,7 @@ public sealed class CrowdSimSession
 
             if (Movement != null)
             {
+                Movement.BeginMotionTick();
                 if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
                 Movement.GatherUnits();
                 telemetry.AddGatherTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
@@ -383,6 +384,7 @@ public sealed class CrowdSimSession
                     Movement.SolveSeparation();
                     telemetry.AddSeparationTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
                     Movement.Step(SubStepDt);
+                    Movement.SampleMotion();
                     mark = Stopwatch.GetTimestamp();
                 }
 
@@ -401,12 +403,20 @@ public sealed class CrowdSimSession
             }
 
             TickCount++;
+            Movement?.PublishMotion();
             Planner?.ProcessRefreshes(TickCount);
             telemetry.AddRefreshTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
             LastDigest = CrowdSimChecksum.Compute(this);
             checksum = LastDigest.Total;
             telemetry.AddChecksumTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
             return true;
+        }
+        catch (Nav.Pathing.PathServiceFaultException) when (!BlockOnDueReplies)
+        {
+            // 现场会话停摆,故障文案留给呈现。阻塞会话仍把异常抛出去。两条路都不在主线程补算。
+            telemetry.MarkPathWait();
+            checksum = 0;
+            return false;
         }
         finally
         {
@@ -452,7 +462,9 @@ public sealed class CrowdSimSession
 
         SpawnSkippedTotal = 0;
         _stateHistogramMembers = 0;
+        Movement?.ClearMotionMemory();
         Telemetry.SetUnitStates(0, 0, 0, 0, 0);
+        Telemetry.SetMotion(0, 0, 0, 0);
     }
 
     /// <summary>

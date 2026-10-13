@@ -43,7 +43,10 @@
     { "id": "CrowdSimulation.S4.CycleBeliefGroup", "name": "CrowdSimulation_S4_CycleBeliefGroup", "type": "Button" },
     { "id": "CrowdSimulation.S4.CycleInspectLayer", "name": "CrowdSimulation_S4_CycleInspectLayer", "type": "Button" },
     { "id": "CrowdSimulation.S4.CycleInspectRadius", "name": "CrowdSimulation_S4_CycleInspectRadius", "type": "Button" },
-    { "id": "CrowdSimulation.S4.Fuzz", "name": "CrowdSimulation_S4_Fuzz", "type": "Button" }
+    { "id": "CrowdSimulation.S4.Fuzz", "name": "CrowdSimulation_S4_Fuzz", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleNavPanel", "name": "CrowdSimulation_S4_ToggleNavPanel", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleTelemetryPanel", "name": "CrowdSimulation_S4_ToggleTelemetryPanel", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ProbePathFault", "name": "CrowdSimulation_S4_ProbePathFault", "type": "Button" }
   ],
   "contexts": [
     {
@@ -89,7 +92,10 @@
         { "actionId": "CrowdSimulation.S4.CycleUnitColor", "path": "<Keyboard>/c" },
         { "actionId": "CrowdSimulation.S4.CycleBeliefGroup", "path": "<Keyboard>/i" },
         { "actionId": "CrowdSimulation.S4.CycleInspectLayer", "path": "<Keyboard>/m" },
-        { "actionId": "CrowdSimulation.S4.CycleInspectRadius", "path": "<Keyboard>/z" }
+        { "actionId": "CrowdSimulation.S4.CycleInspectRadius", "path": "<Keyboard>/z" },
+        { "actionId": "CrowdSimulation.S4.ToggleNavPanel", "path": "<Keyboard>/f9" },
+        { "actionId": "CrowdSimulation.S4.ToggleTelemetryPanel", "path": "<Keyboard>/f10" },
+        { "actionId": "CrowdSimulation.S4.ProbePathFault", "path": "<Keyboard>/f12" }
       ]
     },
     {

@@ -36,6 +36,8 @@ internal sealed class CrowdSimulationDebugViewConfig
     [JsonRequired] public CrowdDebugViewLayers Layers { get; init; } = null!;
     [JsonRequired] public CrowdDebugViewActions Actions { get; init; } = null!;
     [JsonRequired] public CrowdDebugViewPanel Panel { get; init; } = null!;
+    [JsonRequired] public CrowdDebugViewTelemetry Telemetry { get; init; } = null!;
+    [JsonRequired] public CrowdDebugViewPanels Panels { get; init; } = null!;
 
     [JsonIgnore] public string SourcePath { get; private set; } = "";
     [JsonIgnore] public int UnitColorMode { get; private set; }
@@ -100,6 +102,8 @@ internal sealed class CrowdSimulationDebugViewConfig
             throw new InvalidOperationException($"{path}: panel.originXPx 需为 ≥ 0 的整数。");
         if (Panel.OriginYPx < 0)
             throw new InvalidOperationException($"{path}: panel.originYPx 需为 ≥ 0 的整数。");
+        Telemetry.Validate(path);
+        Panels.Validate(path, Panel.FontSize);
     }
 
     internal static void AtLeast(string path, string field, int value, int min)
@@ -170,6 +174,7 @@ internal sealed class CrowdDebugViewColors
     [JsonRequired] public CrowdDebugRgba Leader { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Funnel { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba PanelText { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba Alert { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Teams { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Templates { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Priorities { get; init; } = null!;
@@ -191,6 +196,7 @@ internal sealed class CrowdDebugViewColors
         Leader.Validate(path, "colors.leader");
         Funnel.Validate(path, "colors.funnel");
         PanelText.Validate(path, "colors.panelText");
+        Alert.Validate(path, "colors.alert");
         Palette(path, "colors.teams", Teams);
         Palette(path, "colors.templates", Templates);
         Palette(path, "colors.priorities", Priorities);
@@ -254,6 +260,9 @@ internal sealed class CrowdDebugViewActions
     [JsonRequired] public string CycleBeliefGroup { get; init; } = "";
     [JsonRequired] public string CycleInspectLayer { get; init; } = "";
     [JsonRequired] public string CycleInspectRadius { get; init; } = "";
+    [JsonRequired] public string ToggleNavPanel { get; init; } = "";
+    [JsonRequired] public string ToggleTelemetryPanel { get; init; } = "";
+    [JsonRequired] public string ProbePathFault { get; init; } = "";
 
     public void Validate(string path)
     {
@@ -271,6 +280,9 @@ internal sealed class CrowdDebugViewActions
         Require(path, "actions.cycleBeliefGroup", CycleBeliefGroup);
         Require(path, "actions.cycleInspectLayer", CycleInspectLayer);
         Require(path, "actions.cycleInspectRadius", CycleInspectRadius);
+        Require(path, "actions.toggleNavPanel", ToggleNavPanel);
+        Require(path, "actions.toggleTelemetryPanel", ToggleTelemetryPanel);
+        Require(path, "actions.probePathFault", ProbePathFault);
     }
 
     private static void Require(string path, string field, string value)
@@ -285,4 +297,87 @@ internal sealed class CrowdDebugViewPanel
     [JsonRequired] public int OriginXPx { get; init; }
     [JsonRequired] public int OriginYPx { get; init; }
     [JsonRequired] public int FontSize { get; init; }
+}
+
+internal sealed class CrowdDebugViewTelemetry
+{
+    [JsonRequired] public int SampleMs { get; init; }
+    [JsonRequired] public int History { get; init; }
+    [JsonRequired] public CrowdDebugViewAlerts Alerts { get; init; } = null!;
+
+    public void Validate(string path)
+    {
+        CrowdSimulationDebugViewConfig.AtLeast(path, "telemetry.sampleMs", SampleMs, 1);
+        CrowdSimulationDebugViewConfig.AtLeast(path, "telemetry.history", History, 1);
+        if (History > CrowdSimulationLimits.MaxTelemetryHistory)
+        {
+            throw new InvalidOperationException(
+                $"{path}: telemetry.history 需为 ≤ {CrowdSimulationLimits.MaxTelemetryHistory} 的整数。");
+        }
+
+        Alerts.Validate(path);
+    }
+}
+
+internal sealed class CrowdDebugViewAlerts
+{
+    [JsonRequired] public int LowFps { get; init; }
+    [JsonRequired] public double SimMs { get; init; }
+    [JsonRequired] public double AvoidMs { get; init; }
+    [JsonRequired] public double HeadingDeg { get; init; }
+    [JsonRequired] public double FlipPct { get; init; }
+
+    public void Validate(string path)
+    {
+        CrowdSimulationDebugViewConfig.AtLeast(path, "telemetry.alerts.lowFps", LowFps, 1);
+        Positive(path, "telemetry.alerts.simMs", SimMs, double.PositiveInfinity);
+        Positive(path, "telemetry.alerts.avoidMs", AvoidMs, double.PositiveInfinity);
+        Positive(path, "telemetry.alerts.headingDeg", HeadingDeg, 180d);
+        Positive(path, "telemetry.alerts.flipPct", FlipPct, CrowdSimulationLimits.FullPercent);
+    }
+
+    private static void Positive(string path, string field, double value, double max)
+    {
+        if (!double.IsFinite(value) || value <= 0 || value > max)
+        {
+            throw new InvalidOperationException($"{path}: {field} 需为 > 0 且 ≤ {max} 的有限数。");
+        }
+    }
+}
+
+internal sealed class CrowdDebugViewPanels
+{
+    [JsonRequired] public bool Nav { get; init; }
+    [JsonRequired] public bool Telemetry { get; init; }
+    [JsonRequired] public int NavOriginXPx { get; init; }
+    [JsonRequired] public int NavOriginYPx { get; init; }
+    [JsonRequired] public int TelemetryOriginXPx { get; init; }
+    [JsonRequired] public int TelemetryOriginYPx { get; init; }
+    [JsonRequired] public int FaultOriginXPx { get; init; }
+    [JsonRequired] public int FaultOriginYPx { get; init; }
+    [JsonRequired] public int WidthPx { get; init; }
+    [JsonRequired] public int LinePx { get; init; }
+    [JsonRequired] public int SparkHeightPx { get; init; }
+    [JsonRequired] public int SparkWidthPx { get; init; }
+
+    public void Validate(string path, int fontSize)
+    {
+        NonNegative(path, "panels.navOriginXPx", NavOriginXPx);
+        NonNegative(path, "panels.navOriginYPx", NavOriginYPx);
+        NonNegative(path, "panels.telemetryOriginXPx", TelemetryOriginXPx);
+        NonNegative(path, "panels.telemetryOriginYPx", TelemetryOriginYPx);
+        NonNegative(path, "panels.faultOriginXPx", FaultOriginXPx);
+        NonNegative(path, "panels.faultOriginYPx", FaultOriginYPx);
+        CrowdSimulationDebugViewConfig.AtLeast(path, "panels.widthPx", WidthPx, SparkWidthPx + 1);
+        if (LinePx < fontSize)
+            throw new InvalidOperationException($"{path}: panels.linePx 需为 ≥ panel.fontSize 的整数。");
+        CrowdSimulationDebugViewConfig.AtLeast(path, "panels.sparkHeightPx", SparkHeightPx, 1);
+        CrowdSimulationDebugViewConfig.AtLeast(path, "panels.sparkWidthPx", SparkWidthPx, 1);
+    }
+
+    private static void NonNegative(string path, string field, int value)
+    {
+        if (value < 0)
+            throw new InvalidOperationException($"{path}: {field} 需为 ≥ 0 的整数。");
+    }
 }
