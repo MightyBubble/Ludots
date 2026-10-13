@@ -16,6 +16,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     private readonly S4DeployDemoRuntime _demo;
     private readonly CrowdDeployBindings _bindings;
     private readonly CrowdHudPanel _hud;
+    private CrowdDebugViewFrame? _debugView;
 
     public S4DeployInputSystem(GameEngine engine, S4DeployDemoRuntime demo, CrowdDeployBindings bindings, CrowdHudPanel hud)
     {
@@ -24,6 +25,8 @@ internal sealed class S4DeployInputSystem : ISystem<float>
         _bindings = bindings;
         _hud = hud;
     }
+
+    internal void UseDebugView(CrowdDebugViewFrame frame) => _debugView = frame;
 
     public void Initialize() { }
     public void BeforeUpdate(in float t) { }
@@ -54,6 +57,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
             _demo.EnqueueRemove((int)Math.Floor(xCm), (int)Math.Floor(yCm));
         }
 
+        _debugView?.ApplyInput(actions, _engine);
         _demo.Tick();
     }
 }

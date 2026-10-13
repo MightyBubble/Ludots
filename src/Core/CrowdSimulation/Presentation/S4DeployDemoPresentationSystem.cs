@@ -43,6 +43,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
     private readonly S4DeployNavWireframe _wire = new();
     private readonly HudTextCache _hudText = new();
+    private CrowdDebugViewFrame? _debugView;
     private int _flashReportTick = -1;
     private long _flashStartMs;
 
@@ -63,6 +64,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _presentation = presentation;
         _localSeatScope = localSeatScope;
     }
+
+    internal void UseDebugView(CrowdDebugViewFrame frame) => _debugView = frame;
 
     public void Initialize() { }
     public void BeforeUpdate(in float t) { }
@@ -124,6 +127,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
         // 重烘脏 tile 闪烁:最近一笔报告发布后短暂高亮其受影响 tile 并集
         CurrentFlash(session, navCellVisual);
+
+        _debugView?.Draw(session, _overlay);
 
         // HUD 全部读内核现成状态。
         DrawHud(session, runtime, (previewShown, previewValid));
