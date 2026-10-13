@@ -107,8 +107,8 @@ public sealed class ResidentDetourNavMeshTests
         Array.Sort(ticks);
         long medianBytes = samples[2];
         double medianMs = ticks[2] * 1000.0 / Stopwatch.Frequency;
-        Console.WriteLine($"L75 steady FindPath median bytes/1000={medianBytes} medianMs/1000={medianMs:F3}");
-        TestContext.Out.WriteLine($"L75 steady FindPath median bytes/1000={medianBytes} medianMs/1000={medianMs:F3}");
+        Console.WriteLine($"steady FindPath median bytes/1000={medianBytes} medianMs/1000={medianMs:F3}");
+        TestContext.Out.WriteLine($"steady FindPath median bytes/1000={medianBytes} medianMs/1000={medianMs:F3}");
 
         Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(1));
         Assert.That(medianBytes, Is.LessThan(8L * 1024 * 1024));
@@ -135,18 +135,46 @@ public sealed class ResidentDetourNavMeshTests
                 service.Store, 0, filter, TileSizeCm, TileSizeCm,
                 originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000, 256));
 
-        NavPathResult query = service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000);
-        NavPathResult again = service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000);
+        InvalidOperationException query = Assert.Throws<InvalidOperationException>(() =>
+            service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000))!;
+        Assert.Throws<InvalidOperationException>(() =>
+            service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000));
 
         Assert.That(loaded.TileId, Is.EqualTo(tile.TileId));
         Assert.That(first.Message, Does.Contain("3,4,0"));
         Assert.That(first.Message, Does.Contain(originX.ToString()));
         Assert.That(first.Message, Does.Contain(originZ.ToString()));
         Assert.That(first.Message, Does.Contain("65535"));
-        Assert.That(query.Status, Is.EqualTo(NavPathStatus.InvalidInput));
-        Assert.That(again.Status, Is.EqualTo(NavPathStatus.InvalidInput));
+        Assert.That(query.Message, Does.Contain("65535"));
         Assert.That(service.ResidentMesh, Is.Null);
         Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void AddTileRejected_ThrowsWithTileId_AndDoesNotStickOnNotReady()
+    {
+        const int chunkX = 2;
+        const int chunkY = 3;
+        NavTile tile = CreateFlat(chunkX, chunkY);
+        NavQueryService service = CreateQuery(tile);
+        int originX = chunkX * TileSizeCm;
+        int originZ = chunkY * TileSizeCm;
+        ResidentDetourNavMesh.MaxTilesOverride = 0;
+        try
+        {
+            InvalidOperationException first = Assert.Throws<InvalidOperationException>(() =>
+                service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000))!;
+            Assert.Throws<InvalidOperationException>(() =>
+                service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000));
+
+            Assert.That(first.Message, Does.Contain($"{chunkX},{chunkY},0"));
+            Assert.That(service.ResidentMesh, Is.Null);
+            Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(0));
+        }
+        finally
+        {
+            ResidentDetourNavMesh.MaxTilesOverride = null;
+        }
     }
 
     private static long Measure(NavQueryService service, int count)

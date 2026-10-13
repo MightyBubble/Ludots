@@ -148,6 +148,10 @@ namespace Ludots.Core.Navigation.NavMesh
             return slot.BuildCount;
         }
 
+        // 非 null 时整网重建用这个槽位数，让 AddTile 在没有空槽时拒绝。
+        [ThreadStatic]
+        internal static int? MaxTilesOverride;
+
         private static int CapacityFor(int kept)
         {
             int doubled = kept <= int.MaxValue / 2 ? kept * 2 : kept;
@@ -223,14 +227,7 @@ namespace Ludots.Core.Navigation.NavMesh
                     return null;
                 }
 
-                if (!TryRebuild(originXcm, originZcm, maxPolys, tileWidthCm, tileHeightCm))
-                {
-                    Mesh = null;
-                    Query = null;
-                    Installed.Clear();
-                    MaxTiles = 0;
-                }
-
+                TryRebuild(originXcm, originZcm, maxPolys, tileWidthCm, tileHeightCm);
                 PublishSync(copiedRevision, copied, layer, tileWidthCm, tileHeightCm);
                 return Mesh;
             }
@@ -345,7 +342,8 @@ namespace Ludots.Core.Navigation.NavMesh
                     DtStatus addStatus = mesh.AddTile(data, 0, 0, out long tileRef);
                     if (addStatus.Failed() || tileRef == 0)
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            $"Detour AddTile rejected NavTile {tile.TileId} (status {addStatus.Value}).");
                     }
 
                     Installed[tile.TileId] = new InstalledTile { Tile = tile, Ref = tileRef };
@@ -364,9 +362,9 @@ namespace Ludots.Core.Navigation.NavMesh
                 mesh.RemoveTile(installed.Ref);
             }
 
-            private bool TryRebuild(long originXcm, long originZcm, int maxPolys, int tileWidthCm, int tileHeightCm)
+            private void TryRebuild(long originXcm, long originZcm, int maxPolys, int tileWidthCm, int tileHeightCm)
             {
-                int maxTiles = CapacityFor(Filtered.Count);
+                int maxTiles = MaxTilesOverride ?? CapacityFor(Filtered.Count);
                 var navMesh = new DtNavMesh();
                 DtStatus initStatus = navMesh.Init(new DtNavMeshParams
                 {
@@ -378,7 +376,8 @@ namespace Ludots.Core.Navigation.NavMesh
                 }, DtDetour.DT_VERTS_PER_POLYGON);
                 if (initStatus.Failed())
                 {
-                    return false;
+                    throw new InvalidOperationException(
+                        $"Detour NavMesh.Init rejected the mesh for NavTile {Filtered[0].TileId} (status {initStatus.Value}).");
                 }
 
                 var installed = new Dictionary<NavTileId, InstalledTile>(Filtered.Count);
@@ -389,7 +388,8 @@ namespace Ludots.Core.Navigation.NavMesh
                     DtStatus addStatus = navMesh.AddTile(data, 0, 0, out long tileRef);
                     if (addStatus.Failed() || tileRef == 0)
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            $"Detour AddTile rejected NavTile {tile.TileId} (status {addStatus.Value}).");
                     }
 
                     installed[tile.TileId] = new InstalledTile { Tile = tile, Ref = tileRef };
@@ -407,7 +407,6 @@ namespace Ludots.Core.Navigation.NavMesh
                 BaseOriginXcm = originXcm;
                 BaseOriginZcm = originZcm;
                 BuildCount++;
-                return true;
             }
         }
     }

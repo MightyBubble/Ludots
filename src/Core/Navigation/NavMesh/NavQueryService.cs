@@ -234,11 +234,7 @@ namespace Ludots.Core.Navigation.NavMesh
                     goalZcm,
                     maxPortals);
             }
-            catch (InvalidOperationException)
-            {
-                return new NavPathResult(NavPathStatus.InvalidInput, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-            catch
+            catch (Exception ex) when (ex is not InvalidOperationException)
             {
                 return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
