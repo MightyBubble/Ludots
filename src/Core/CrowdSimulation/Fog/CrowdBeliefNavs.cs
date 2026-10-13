@@ -8,14 +8,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Fog;
 
 /// <summary>
-/// 认知变体导航注册表(fog/beliefNav.js 移植):一个认知槽持有 belief 字段(地形 + believed
-/// 实体,独立于真值实体)。变体 nav 号 = 槽号 × BeliefStride + 真 nav 号,按上下文懒建。
-/// C# 实现取全拷贝变体:克隆真相上下文的全部逐格数组,tile 条目经
-/// NavTileCache 内容键共享(昂贵部分不重烘),只对分歧矩形(单侧已知实体 + 未探索 tile 行段)
-/// 增量重烘——烘焙内容与参考端的 copy-on-write 变体逐位同,内存换机制简单;真机实测后再评 COW。
-/// 参考端的 detach/settle(真相重烘前变体私享 tile)在全拷贝下天然成立,为显式免操作;
-/// sleep(闲置变体丢派生缓冲)同理——容量上限由 retireSlots 逐旧淘汰保证。
-/// 流场缓存键含 nav 号 → 变体的流场自动隔离。</summary>
+/// 一个槽一份认知字段。变体号 = 槽号 × 65536 + 真 nav 号。变体克隆真相的逐格数组；
+/// tile 条目与 HPA 内层共享，只重烘分歧矩形。Sleep 不丢缓冲。流场缓存键含 nav 号。
+/// </summary>
 public sealed class CrowdBeliefNavs
 {
     public const int BeliefStride = 65536;
@@ -97,9 +92,8 @@ public sealed class CrowdBeliefNavs
     }
 
     /// <summary>
-    /// 只读已物化变体。与 <see cref="Get"/> 同持路径服务的导航互斥锁;
-    /// 槽内没有该号时返回 false,不进入 <see cref="Build"/>
-    /// (呈现侧禁止在仿真之外克隆变体、改 tile 缓存)。
+    /// TryGetMaterialized 自己进 RunExclusive。Get 不加锁；规划侧经 ResolveNavContext 在锁内调用它。
+    /// 槽内没有该号时返回 false,不进入 Build。
     /// </summary>
     internal bool TryGetMaterialized(int id, out NavContext nav)
     {
@@ -119,8 +113,7 @@ public sealed class CrowdBeliefNavs
 
     private NavContext Build(Slot b, NavContext truth, int id, int slot)
     {
-        // 参考端 beforeRebake 特例(belief 与真相只差一条未重烘实体)不移植:C# 的结构 op
-        // 在阶段 0 同互斥域内立即重烘真相,不存在"未重烘窗口"
+        // 结构 op 在阶段 0 的同一互斥域里重烘真相，变体构建不再处理未重烘窗口。
         var v = CloneNav(truth, id);
         var field = FieldFor(b, truth.LayerIndex);
         foreach (var r in DivergenceRects(b))
@@ -132,9 +125,7 @@ public sealed class CrowdBeliefNavs
         return v;
     }
 
-    /// <summary>原位揭示(INCREMENTAL REVEAL):组的槽只多了探索,实体认知没变且槽不共享——
-    /// 不开新槽,已建变体只重烘被揭 tile(与乐观假设同内容的 tile 不脏)。返回 变体号 → 真变
-    /// tile 集(ChangedTiles 口径,与参考端 nav.changedTiles 同义)。</summary>
+    /// <summary>原位揭示：不建新槽，已有变体只重烘给出的 tile。返回值是各变体 ChangedTiles。</summary>
     public Dictionary<int, List<int>> Reveal(int slot, List<int> tiles)
     {
         return _sim.Planner!.Service.RunExclusive(() =>
@@ -327,9 +318,8 @@ public sealed class CrowdBeliefNavs
         return mask;
     }
 
-    /// <summary>真相流场对变体是否精确:走廊包围盒与分歧掩码不相交才成立——Dijkstra 只读
-    /// 走廊格,但弦拉线在两格间测视线,线段可出走廊、永不出包围盒(sharesFlow 移植)。
-    /// 这不是纯优化:settled 组保不保留旧流场的判定影响刷新计数,须与参考端同判。</summary>
+    /// <summary>真相流场对变体是否精确:走廊包围盒与分歧掩码不相交才成立。Dijkstra 只读走廊格，
+    /// 弦拉线可以离开走廊，但不能离开包围盒。这不是纯优化:settled 组保不保留旧流场的判定影响刷新计数。</summary>
     public bool SharesFlow(int id, byte[] corridorMask)
     {
         int slot = id / BeliefStride;

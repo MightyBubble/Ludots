@@ -351,9 +351,9 @@ public sealed partial class CrowdSimulationRuntime
 
         _session = new CrowdSimSession(runtimeConfig, engine.World, navs, navByLayerRadius, wiring);
         // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
-        // 阻挡盒索引取仓的 CSR(reach 生长,参考同形;S5 对拍会话不装阻挡盒,不受影响)。
+        // 阻挡盒索引取仓的 CSR（外扩 ReachCm）。S5 对拍会话不装阻挡盒。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
-        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // 桥入认知仓(id 与导出端参考序同构)
+        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // 桥入认知仓，按给出的 span 顺序续号
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
@@ -539,7 +539,7 @@ public sealed partial class CrowdSimulationRuntime
             replay.ReplaceNavs(replayNavs);
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
-            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // 回放仓同构补桥
+            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // 回放仓按同一 span 列表补桥
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, _deck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
             replay.NavTileCache = replayCache;

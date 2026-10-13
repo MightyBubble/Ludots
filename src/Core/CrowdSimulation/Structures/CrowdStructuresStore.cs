@@ -32,10 +32,7 @@ internal readonly struct BeliefRank : IComparable<BeliefRank>
     }
 }
 
-/// <summary>结构实体仓(参考 structures/store.js 移植):组件表(模板 / 足迹 / 区域覆盖 /
-/// 阻挡 / 寿命)为纯数据,id 单调递增,按 id 序遍历保证确定性;区域栅格与阻挡栅格是
-/// 组件的派生态,按变更格矩形重标。地图静态阻挡物以实体身份进仓(与参考 mapGen 同形),
-/// 动态 place/remove 与其共用一套重标路径。分层实体(桥面)暂不开放:见 CrowdStructureOps。</summary>
+/// <summary>结构实体仓。id 只增。区域与阻挡按变更矩形重标。动态 place/remove 与静态阻挡走同一条重标。分层模板的动态放置会拒绝。</summary>
 public sealed class CrowdStructuresStore
 {
     public int NavCellsPerSide { get; }
@@ -49,7 +46,7 @@ public sealed class CrowdStructuresStore
     public byte[] Area { get; private set; }
     /// <summary>阻挡栅格:被 blocker 足迹覆盖率 ≥ blockCoverage 的格。</summary>
     public byte[] Blocked { get; }
-    /// <summary>地形源区域(乐观层的覆写判据:area == terrainArea 的格才可被假设区域覆写)。</summary>
+    /// <summary>初始地形区域。乐观层只覆写仍等于这份数组的格。</summary>
     public byte[] TerrainArea => _terrainArea;
     private readonly byte[] _terrainArea;
 
@@ -65,7 +62,7 @@ public sealed class CrowdStructuresStore
     private readonly List<int> _dueExpiryIds = new();
     private int _nextId = 1;
 
-    /// <summary>阻挡盒 + 逐格 CSR(cellStart/cellItems);blocker 集变化即整体重建(参考 rebuildColliders)。</summary>
+    /// <summary>阻挡盒 + 逐格 CSR。阻挡集变化就整表重建。</summary>
     public CrowdBlockerColliders Colliders { get; private set; }
 
     private readonly int[] _rasterPrio;
@@ -96,8 +93,7 @@ public sealed class CrowdStructuresStore
         _lifetime.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 
-    /// <summary>建仓:静态地图阻挡物按模板 id <c>building</c>(rect 阻挡)入仓获得实体 id。
-    /// 下标随模板表按 id 排序变化,不能再写死 0。初始栅格取 SurfaceGrid 的既算结果。</summary>
+    /// <summary>建仓。静态阻挡用模板 id building 的当前下标。模板表按 id 排序，下标不是常量 0。初始栅格取 SurfaceGrid 的既算结果。</summary>
     public static CrowdStructuresStore Build(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid grid,
@@ -164,11 +160,7 @@ public sealed class CrowdStructuresStore
 
     public bool TryGetTemplate(int id, out int tplIndex) => _tpl.TryGetValue(id, out tplIndex!);
 
-    /// <summary>认知字段快照(beliefNav.js register 的 belief field):地形源起底 + believed
-    /// 组件表带原 id 入仓,再逐实体足迹格矩形重标。起底必须是地形源而非真相活栅格——
-    /// 真相里只有单侧知道的实体(新放建筑)已落在活栅格上,认知侧要靠"地形+believed 重标"
-    /// 把它擦掉(参考端从真相栅格起底 + 分歧矩形复位,两者等价:分歧外的格只被共同实体覆盖)。
-    /// 不跑寿命;碰撞索引重建一次(马达永不读认知仓,只为仓的自洽)。</summary>
+    /// <summary>认知字段快照。起底用的是 SnapshotSurface().Area（活栅格的克隆）。未知建筑的区域色会留在认知仓里，除非该格再被 believed 足迹重标。不跑寿命。</summary>
     internal static CrowdStructuresStore BuildBeliefField(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid terrain,
@@ -211,12 +203,10 @@ public sealed class CrowdStructuresStore
         return store;
     }
 
-    /// <summary>乐观层换区域面(fieldFor:assumedArea 覆写后的视图;belief 仓私有,整体换数组)。</summary>
+    /// <summary>换掉区域数组。调用方要保证这是该仓私有的一份。</summary>
     public void ReplaceArea(byte[] area) => Area = area;
 
-    /// <summary>地图桥实体入仓:桥以实体身份进认知(可见/残影语义),但不进地面
-    /// 栅格与碰撞——桥面层由 UpperLayerBake 独立烘焙(与 S1–S7 的地面口径零接触)。id 按装载序
-    /// 续在阻挡物之后,与导出端"参考 id 序写出"的地图实体序同构。</summary>
+    /// <summary>地图桥实体入仓。桥进入认知，不进地面栅格与碰撞。桥面由 UpperLayerBake 烘焙。按调用方给出的 span 顺序续号。</summary>
     public void InstallMapBridges(int tplIndex, IReadOnlyList<CrowdSimulationBridgeSpan> spans)
     {
         foreach (var span in spans)
@@ -333,8 +323,7 @@ public sealed class CrowdStructuresStore
         return rect;
     }
 
-    /// <summary>格矩形 [x0,y0,x1,y1) 内的区域与阻挡重标(参考 rasterRect):
-    /// 先复位为地形源,再按 id 序让 NavArea 高优先级者覆盖、blocker 足迹按覆盖份额标阻挡。</summary>
+    /// <summary>格矩形内的区域与阻挡重标。同优先级后写胜，必须按 _ids 放置序，不能枚举 _navArea。</summary>
     public (int X0, int Y0, int X1, int Y1) RasterRect((int X0, int Y0, int X1, int Y1) rect)
     {
         int navCellsPerSide = NavCellsPerSide;
@@ -355,8 +344,7 @@ public sealed class CrowdStructuresStore
             }
         }
 
-        // 顺序相关:同优先级实体重叠时后写胜——按放置序(_ids)遍历,与参考端 Map 插入序
-        // 同语义;_navArea 有删除,字典枚举序在删除后会乱,不能直接枚举。
+        // 同优先级后写胜。必须按 _ids 放置序。_navArea 有删除，字典枚举序会乱，不能直接枚举。
         foreach (int id in _ids)
         {
             if (!_navArea.TryGetValue(id, out var navArea)) continue;
@@ -408,8 +396,7 @@ public sealed class CrowdStructuresStore
         return overlap > Fix64.Zero ? overlap / navCellSizeCm : Fix64.Zero;
     }
 
-    /// <summary>阻挡盒 CSR 整体重建(参考 rebuildColliders):注册格矩形按包围盒外扩 reach
-    /// (电机接触查询半径),与参考 cellRectOf(rect, cs, N, reach) 同形。写入仓内已有索引,不换对象。</summary>
+    /// <summary>阻挡盒 CSR 整体重建。注册格是包围盒再外扩 ReachCm。写入仓内已有索引，不换对象。</summary>
     public void RebuildColliders()
     {
         var colliders = Colliders;

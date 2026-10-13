@@ -21,7 +21,6 @@ internal readonly struct StableInt : IComparable<StableInt>
     }
 }
 
-/// <summary>长整型升序键 + 输入序号。</summary>
 internal readonly struct StableLong : IComparable<StableLong>
 {
     public readonly long Key;

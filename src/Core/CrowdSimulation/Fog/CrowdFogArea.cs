@@ -5,7 +5,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Fog;
 
-/// <summary>面命令的区域形状(fog/area.js shapeOf 移植):恰一形状,字段校验。</summary>
+/// <summary>恰一种形状：rect、circle 或 poly。</summary>
 public sealed record CrowdFogShape
 {
     /// <summary>rect [x0, y0, x1, y1](厘米)。</summary>
@@ -33,7 +33,7 @@ public sealed record CrowdFogShape
         }
     }
 
-    /// <summary>从指令 JSON 解析恰一形状(与参考端 shapeOf 同报错口径)。</summary>
+    /// <summary>从指令 JSON 解析恰一形状。</summary>
     public static CrowdFogShape Parse(string type, JsonNode cmd)
     {
         RequireExactlyOne(type, cmd);
@@ -97,15 +97,10 @@ public sealed record CrowdFogShape
     }
 }
 
-/// <summary>形状 → fog 格(fog/area.js areaCells 移植):rect 保守覆盖(触到的每一格);
-/// circle / poly 按格心在内(行中心线上的半宽 / 偶奇扫描线);比一格还小的形状仍覆盖锚点格
-/// (circle 心 / poly 首顶点)——点击大小的形状不是静默空操作。格升序去重 + 格包围盒。
-/// 求值顺序与参考端逐 op 对齐:坐标以米入网(FromDouble
-/// 向零截断)后先除以格长归一到格单位(CrowdFix 先归一同手法)——平方与跨度积都落在
-/// ≤ 格数的量级,乘法走 MulExact(精确积)、除法精确商、开方 SqrtPrecise,两端逐位可复现。
-/// 厘米/米域直乘的溢出界只有 ~463 m。千米级圆/多边形在该域直乘会静默回绕,以
-/// ±46340 m 输入守卫显式抛错(与参考端同文案)。rect 无乘法:米入网后除以格长再 floor。命令在 tick 内执行,
-/// tick 内一律定点。</summary>
+/// <summary>形状 → fog 格。rect 覆盖触到的每一格；circle / poly 用格心。
+/// 空结果回退锚点格（circle 心 / poly 首顶点）。米坐标 FromDouble 后除以格长。
+/// 乘用 MulExact，除用精确商，开方用 SqrtPrecise。circle / poly 超出 ±46340 m 抛错；
+/// rect 不设这个守卫。命令在 tick 内执行。</summary>
 public static class CrowdFogArea
 {
     /// <summary>米域输入守卫:circle 半径/圆心与 poly 顶点超出即拒——Q31.32 平方安全界,
@@ -207,7 +202,7 @@ public static class CrowdFogArea
                     if ((yi > py) != (yj > py))
                     {
                         if (nx == xs.Length) Array.Resize(ref xs, nx * 2);
-                        // 先除后乘(归一):t ∈ (0,1),跨度积回到小值域
+                        // t = (py−yi)/(yj−yi)。端点落在扫描线上时 t 可以是 0。
                         Fix64 t = (py - yi) / (yj - yi);
                         xs[nx++] = pts[i][0] + Fix64Math.MulExact(t, pts[j][0] - pts[i][0]);
                     }

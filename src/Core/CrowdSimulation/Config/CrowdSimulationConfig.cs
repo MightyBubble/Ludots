@@ -247,7 +247,7 @@ public sealed class CrowdSimulationConfig
 
     public sealed class WorldSection
     {
-        /// <summary>世界种子(生成盐;每张地图一个,与参考实现的 world.seed 同值)。</summary>
+        /// <summary>生成盐。地图覆盖里的 world.seed 深合并进来；缺键则为 0。</summary>
         public int Seed { get; init; }
     }
 
@@ -300,9 +300,9 @@ public sealed class CrowdSimulationConfig
         public required int RevealTicks { get; init; }
         public required int SlotCacheCapacity { get; init; }
         public required int VariantCapacity { get; init; }
-        /// <summary>视线遮挡(lineOfSight 同名):建筑与更高地形挡视线;运行时 fogSight 命令可切。</summary>
+        /// <summary>视线遮挡的初始开关。fogSight 会改 CrowdFog.Los。高度表只在会话装配时 Los 已为真才注入；不透明格数组从未分配。从 false 切到 true 会在 BuildOpaque / Sight 上碰到空引用。</summary>
         public required bool LineOfSight { get; init; }
-        /// <summary>观察者眼高(参考端 eyeMeters,厘米域)。</summary>
+        /// <summary>观察者眼高，厘米。</summary>
         public required int EyeCm { get; init; }
     }
 
@@ -323,9 +323,9 @@ public sealed class CrowdSimulationConfig
         public required double SettleRadiusCm { get; init; }
         public required double ClumpSlack { get; init; }
         public required double MinClumpCm { get; init; }
-        /// <summary>与上一任领队朝向的点积上限继承阈值(参考实现 planner.js 内联 0.94)。</summary>
+        /// <summary>与上一任领队朝向的点积：不低于该值则继承朝向；不高于 mirrorFlipDot 则反转。</summary>
         public required double HeadingInheritDot { get; init; }
-        /// <summary>与上一任领队朝向的点积反转阈值(参考实现 planner.js 内联 -0.5)。</summary>
+        /// <summary>与上一任领队朝向的点积：不高于该值则反转。</summary>
         public required double MirrorFlipDot { get; init; }
     }
 
@@ -414,12 +414,11 @@ public sealed class CrowdSimulationConfig
     {
         public required double BlockCoverage { get; init; }
         public required int PortalReachNavCells { get; init; }
-        /// <summary>结构实体模板(参考实现 templates.structures):键是模板 id，place/remove 按 id 引用。运行时按 id 排序，不看对象键顺序。</summary>
+        /// <summary>键是模板 id。placeStructure / removeStructureAt 按 id 引用。运行时按 id 的序数排序，不看对象键顺序。</summary>
         public Dictionary<string, StructureTemplateEntry>? Templates { get; init; }
     }
 
-    /// <summary>结构实体模板条目(参考 config.js validateConfig 的结构规则):
-    /// footprint 必填;blocker 只支持 rect;area 与 priority 同进同出;lifetimeSec &gt; 0。</summary>
+    /// <summary>footprint 必填且为 rect/disc/path；blocker 只允许 rect；area 与 priority 同进同出；lifetimeSec 若写则 &gt; 0。</summary>
     public sealed class StructureTemplateEntry
     {
         public string? Name { get; init; }

@@ -17,7 +17,7 @@ public sealed class CrowdSimulationRuntimeConfig
     /// <summary>导航网格边长（格）。世界正方形，Boards[0].WidthCm / NavCellSizeCm。</summary>
     public required int NavCellsPerSide { get; init; }
     public required int NavCellSizeCm { get; init; }
-    /// <summary>世界种子(生成盐,与参考实现的 world.seed 同值;部署 / 生成的 RNG 流以此为根)。</summary>
+    /// <summary>生成盐，部署和点名生成的 RNG 根。</summary>
     public required int WorldSeed { get; init; }
     public required string SurfaceAsset { get; init; }
 
@@ -114,7 +114,7 @@ public sealed class RuntimeAgentProfile
     public required Fix64 RadiusCm { get; init; }
     /// <summary>个人避让半径（厘米）= 半径 × avoidanceRadiusScale。</summary>
     public required Fix64 PersonalRadiusCm { get; init; }
-    /// <summary>推挤优先级，来自单位模板，不再由半径级份额合成。</summary>
+    /// <summary>推挤优先级来自单位模板。</summary>
     public required Fix64 PushPriority { get; init; }
     /// <summary>该模板的速度（厘米 / 仿真秒）。领队步伐取同组最小，子步数取实际绑定模板的最大。</summary>
     public required Fix64 SpeedCmPerSecond { get; init; }
@@ -346,7 +346,7 @@ public sealed class RuntimeStructuresSection
 {
     public required Fix64 BlockCoverage { get; init; }
     public required int PortalReachNavCells { get; init; }
-    /// <summary>结构实体模板(下标即 place 指令的模板号;areaId 已解析为导航区域下标)。</summary>
+    /// <summary>运行时表按下标排列，placeStructure 写的是模板 id 字符串，仓再用 TemplateIndexOf 换成下标。area 在装载时收成区域下标。</summary>
     public required IReadOnlyList<RuntimeStructureTemplate> Templates { get; init; }
 }
 
@@ -361,7 +361,7 @@ public sealed class RuntimeStructureTemplate
     public required int? AreaIndex { get; init; }
     /// <summary>区域覆盖优先级(area 非空时必有);同级后放置者胜。</summary>
     public required int Priority { get; init; }
-    /// <summary>寿命(仿真秒);null = 永久。到期 tick 换算用参考端原始 double 公式(整数 tick 不容骑线)。</summary>
+    /// <summary>寿命(仿真秒);null = 永久。到期 tick 用配置原始 double 做有理数 ceil，整数 tick 不容骑线。</summary>
     public required Fix64? LifetimeSec { get; init; }
     /// <summary>寿命的配置原始值。到期 tick = placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)。</summary>
     public double? LifetimeSecRaw { get; init; }
@@ -382,7 +382,7 @@ public sealed class RuntimeDeployBase
     public required int PlayerId { get; init; }
     public required int XCm { get; init; }
     public required int YCm { get; init; }
-    /// <summary>该玩家的单位配色(#rrggbb;null = 未配置,呈现层回退默认)。</summary>
+    /// <summary>该玩家的单位配色(#rrggbb)。null 不写入调色板。只要任一基地有颜色，调色板会注册，缺色玩家的槽是零向量，TryGet 仍返回 true，呈现用这个零色。</summary>
     public string? Color { get; init; }
 }
 

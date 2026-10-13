@@ -7,7 +7,7 @@ using Ludots.Core.CrowdSimulation.Units;
 
 namespace Ludots.Core.CrowdSimulation.Fog;
 
-/// <summary>认知槽记账(sim.belief;fog/beliefSync.js 的状态宿)。</summary>
+/// <summary>认知槽记账。</summary>
 public sealed class CrowdBeliefState
 {
     public sealed class Entry
@@ -72,7 +72,7 @@ public sealed class CrowdBeliefState
     };
 }
 
-/// <summary>认知同步(fog/beliefSync.js 移植):每 tick 一次,在迷雾更新之后。每个视野组在
+/// <summary>认知同步:每 tick 一次,在迷雾更新之后。每个视野组在
 /// 它的认知所信的导航上规划:槽 0 = 真相(认知集 == 真值集),其余槽由认知集相同的组共享
 /// (32 位 key 只做桶预筛,归属永远经集合相等确认)。新槽在此注册;玩家集变了的组换导航并
 /// 像重烘一样反应(retarget);没人用的槽休眠,最旧的按容量淘汰。</summary>
@@ -332,7 +332,7 @@ public static class CrowdBeliefSync
         var used = b.UsedSlots;
         used.Clear();
         for (int i = 0; i < b.Slot.Length; i++) used.Add(b.Slot[i]);
-        // 唤醒 = 在用即出表(参考端 filter 无条件移除在用项);表内条目恒为休眠标志位,
+        // 在用槽无条件移出休眠表。表内条目恒为休眠标志位,
         // 加 "!Dormant" 守卫会让在用槽永远唤不醒——休眠表虚涨,淘汰会误杀在用槽。
         // 谓词在认知状态构造时生成一次,捕获的是状态自身,tick 里不再分配委托。
         b.DormantList.RemoveAll(b.AwakeIfUsed);
