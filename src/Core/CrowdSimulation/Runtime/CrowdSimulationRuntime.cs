@@ -78,7 +78,7 @@ public sealed partial class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
-    // 校验码历史(回放对拍用):定长环形,零逐 tick 分配
+    // 校验码历史:定长环形,零逐 tick 分配。回放按 tick 对上环里还在的记录。
     private readonly int[] _hashTicks = new int[4096];
     private readonly ulong[] _hashValues = new ulong[4096];
     private int _hashCount, _hashHead;
@@ -491,7 +491,7 @@ public sealed partial class CrowdSimulationRuntime
         }
     }
 
-    /// <summary>回放:一次性世界重放同一指令日志,逐帧对拍校验码(不进引擎世界,不碰呈现)。</summary>
+    /// <summary>回放:一次性世界重放同一指令日志,按 tick 对上环里还在的校验码(不进引擎世界,不碰呈现)。</summary>
     public void RunReplay()
     {
         var session = _session;
@@ -556,27 +556,37 @@ public sealed partial class CrowdSimulationRuntime
             replay.Commands.Schedule(replay, entries);
             var replayHashes = new List<ulong>(ticks);
             replay.Advance(ticks, replayHashes);
-            CompareReplay(ticks, replayHashes);
+            CompareReplay(replayHashes);
             return;
         }
 
         replay.Commands.Schedule(replay, entries);
         var replayHashes2 = new List<ulong>(ticks);
         replay.Advance(ticks, replayHashes2);
-        CompareReplay(ticks, replayHashes2);
+        CompareReplay(replayHashes2);
     }
 
-    private void CompareReplay(int ticks, List<ulong> replayHashes)
+    private void CompareReplay(List<ulong> replayHashes)
     {
         ReplayDivergenceTick = -1;
-        int common = Math.Min(_hashCount, replayHashes.Count);
-        for (int i = 0; i < common; i++)
+        for (int i = 0; i < _hashCount; i++)
         {
             int w = (_hashHead + i) % _hashTicks.Length;
-            if (_hashValues[w] != replayHashes[i]) { ReplayDivergenceTick = _hashTicks[w]; break; }
+            int tick = _hashTicks[w];
+            int index = tick - 1;
+            if ((uint)index >= (uint)replayHashes.Count)
+            {
+                ReplayDivergenceTick = -2;
+                break;
+            }
+
+            if (_hashValues[w] != replayHashes[index])
+            {
+                ReplayDivergenceTick = tick;
+                break;
+            }
         }
 
-        if (ReplayDivergenceTick < 0 && _hashCount != replayHashes.Count) ReplayDivergenceTick = -2;
         ReplayStatus = ReplayDivergenceTick == -1 ? 1 : 2;
     }
 
