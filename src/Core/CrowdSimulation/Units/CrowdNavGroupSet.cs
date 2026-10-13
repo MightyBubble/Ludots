@@ -32,6 +32,8 @@ public sealed class CrowdNavGroupSet
         public int GoalComp { get; set; } = -2;
         /// <summary>路径答复在途(重发指令途中单位保持当前速度,不刹车)。</summary>
         public bool Planning { get; set; }
+        /// <summary>走廊扩展答复在途。重烘或版本对不上时必须清掉，否则组不再接受新的扩展。</summary>
+        public bool Extending { get; set; }
         /// <summary>槽位视线全员判定(规划器在阵型落定帧置位一次,意图层读后清零)。</summary>
         public bool LosAll { get; set; }
         /// <summary>上一任未完成的领队(重发指令时供反转/朝向继承;答复落帧后清空)。</summary>
@@ -40,7 +42,10 @@ public sealed class CrowdNavGroupSet
         public int StateSeq { get; set; }
     }
 
-    private const int MaxGroups = 4096;
+    internal const int MaxGroups = 4096;
+
+    /// <summary>空组放回流场时走规划器的换场入口。没有规划器时直接还池。</summary>
+    internal Action<Group>? ReleaseFlow { get; set; }
 
     private readonly List<Group?> _groups = new();
     private readonly Stack<int> _free = new();
@@ -79,6 +84,7 @@ public sealed class CrowdNavGroupSet
         g.Goal = -1;
         g.GoalComp = -2;
         g.Planning = false;
+        g.Extending = false;
         g.LosAll = false;
         g.PrevLeader = null;
         g.StateSeq = 0;
@@ -94,10 +100,14 @@ public sealed class CrowdNavGroupSet
         {
             if (_groups[i] is { Count: 0 } empty)
             {
-                if (empty.Flow is { } flow)
+                if (empty.Flow != null)
                 {
-                    flow.OriginPool?.Give(flow);
-                    empty.Flow = null;
+                    if (ReleaseFlow != null) ReleaseFlow(empty);
+                    else
+                    {
+                        empty.Flow.OriginPool?.Give(empty.Flow);
+                        empty.Flow = null;
+                    }
                 }
 
                 _groups[i] = null;

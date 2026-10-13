@@ -144,6 +144,7 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
+        kernel.OnStray = planner.NoteStray;
         BaseStride = kernel.Stride;
         AvoidHz = Config.Avoidance.RateHz;
         // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。盖章前要先绑定雾层和雾场。有迷雾就注入高度表。

@@ -46,8 +46,8 @@ public static class CrowdIntents
         if (k.Proposals.Length < n) k.EnsureCapacity(Math.Max(n, session.Units.Capacity));
 
         // 撞上已到达同伴读的是本轮已提交的更小稠密下标。提案不读邻居到达状态，可以按区间并行；
-        // 提交必须按原下标串行。散兵回调插在单位计算中途，非空时整段保持原序。
-        if (k.OnStray != null || k.RequireParallelWorkerCount() <= 1)
+        // 提交必须按原下标串行。场外记录写在提案上，回调留在提交，避免为了扩展把整段意图改成串行。
+        if (k.RequireParallelWorkerCount() <= 1)
         {
             for (int i = 0; i < n; i++)
             {
@@ -252,8 +252,9 @@ public static class CrowdIntents
                     return;
                 }
 
-                k.OnStray?.Invoke(g.Id, cell);
-                // 场外时朝领队当前位置的方向,速度用本单位巡航速度
+                p.Stray = 1;
+                p.StrayCell = cell;
+                // 场外时朝领队当前位置的方向,速度用本单位巡航速度。扩展答复落地前一直这样走。
                 Fix64 lx = leader.XCm - px, ly = leader.YCm - py;
                 Fix64 ld = CrowdFix.Hypot(lx, ly);
                 if (ld > Fix64.FromFloat(1e-6f))
@@ -315,6 +316,7 @@ public static class CrowdIntents
     private static void CommitProposal(CrowdMovementKernel k, int i)
     {
         ref var p = ref k.Proposals[i];
+        if (p.Stray != 0) k.OnStray?.Invoke(p.State.GroupId, p.StrayCell);
         if ((p.Flags & IntentProposal.NeedsContact) != 0 &&
             CrowdContact.TouchesRestingPeer(k.Hash, k, i, k.MaxScan))
         {
@@ -378,4 +380,6 @@ internal struct IntentProposal
     public Fix64 IntentX;
     public Fix64 IntentY;
     public byte Flags;
+    public byte Stray;
+    public int StrayCell;
 }

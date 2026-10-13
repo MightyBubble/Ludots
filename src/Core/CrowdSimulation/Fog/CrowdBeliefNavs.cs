@@ -65,7 +65,11 @@ public sealed class CrowdBeliefNavs
         });
     }
 
-    public void Drop(int slot) => _sim.Planner!.Service.RunExclusive(() => _slots.Remove(slot));
+    public void Drop(int slot)
+    {
+        _sim.Planner!.OnBeliefSlotDropped(slot);
+        _sim.Planner!.Service.RunExclusive(() => _slots.Remove(slot));
+    }
 
     /// <summary>闲置槽休眠:全拷贝变体没有可廉价丢弃的派生缓冲,显式免操作(容量由淘汰保证)。</summary>
     public void Sleep(int slot)

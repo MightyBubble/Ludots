@@ -19,6 +19,11 @@ internal struct CrowdNavReadout
     public int TileMisses;
     public int TileEvicts;
     public int FlowCapacity;
+    public bool HasFlowCache;
+    public int FlowCount;
+    public int FlowHits;
+    public int FlowMisses;
+    public int FlowEvicts;
     public int ResidentNavs;
     public bool HasPath;
     public long PlanRequests;
@@ -40,6 +45,11 @@ internal struct CrowdNavReadout
         && TileMisses == o.TileMisses
         && TileEvicts == o.TileEvicts
         && FlowCapacity == o.FlowCapacity
+        && HasFlowCache == o.HasFlowCache
+        && FlowCount == o.FlowCount
+        && FlowHits == o.FlowHits
+        && FlowMisses == o.FlowMisses
+        && FlowEvicts == o.FlowEvicts
         && ResidentNavs == o.ResidentNavs
         && HasPath == o.HasPath
         && PlanRequests == o.PlanRequests
@@ -56,7 +66,8 @@ internal struct CrowdNavReadout
     public static CrowdNavReadout From(CrowdSimSession session)
     {
         var cache = session.NavTileCache;
-        var service = session.Planner?.Service;
+        var planner = session.Planner;
+        var service = planner?.Service;
         PathServiceStats stats = default;
         bool hasPath = service != null;
         if (hasPath) stats = service!.CopyStats();
@@ -71,6 +82,11 @@ internal struct CrowdNavReadout
             TileMisses = cache?.Misses ?? 0,
             TileEvicts = cache?.Evictions ?? 0,
             FlowCapacity = session.Config.Flowfield.CacheCapacity,
+            HasFlowCache = planner != null,
+            FlowCount = planner?.FlowCacheCount ?? 0,
+            FlowHits = planner?.FlowCacheHits ?? 0,
+            FlowMisses = planner?.FlowCacheMisses ?? 0,
+            FlowEvicts = planner?.FlowCacheEvicts ?? 0,
             ResidentNavs = resident,
             HasPath = hasPath,
             PlanRequests = hasPath ? stats.Requests : 0,
@@ -93,7 +109,9 @@ internal struct CrowdNavReadout
             : "tile 容量 N/A 在册 N/A 命中率 N/A hit/miss/evict N/A";
         lines[0] = "导航缓存 / 路径服务";
         lines[1] = tile;
-        lines[2] = $"流场容量 {FlowCapacity} 命中率 N/A hit/miss/evict N/A（无结果缓存）";
+        lines[2] = HasFlowCache
+            ? $"流场容量 {FlowCapacity} 在册 {FlowCount} 命中率 {CrowdDebugText.HitRate(FlowHits, FlowMisses)} hit {FlowHits} miss {FlowMisses} evict {FlowEvicts}"
+            : $"流场容量 {FlowCapacity} 命中率 N/A hit/miss/evict N/A（无结果缓存）";
         lines[3] = $"常驻导航 {ResidentNavs}";
         lines[4] = HasPath
             ? $"规划请求 {PlanRequests} 待回 {PendingReplies} 超时 {CrowdDebugText.Ms(PlanTimeoutMs)} ms"
@@ -139,6 +157,9 @@ internal struct CrowdTelemetryReadout
     public double WorldBakeMs;
     public int WorldCacheHits, WorldCacheMisses;
     public bool WorldBakeRecorded;
+    public bool HasExtend;
+    public int ExtendCount;
+    public double ExtendMs;
 
     public readonly bool Same(in CrowdTelemetryReadout o) =>
         CrowdDebugText.Whole(Fps) == CrowdDebugText.Whole(o.Fps)
@@ -166,7 +187,10 @@ internal struct CrowdTelemetryReadout
         && NavCellCm == o.NavCellCm && TileCount == o.TileCount
         && WorldBakeRecorded == o.WorldBakeRecorded
         && CrowdDebugText.Tenth(WorldBakeMs) == CrowdDebugText.Tenth(o.WorldBakeMs)
-        && WorldCacheHits == o.WorldCacheHits && WorldCacheMisses == o.WorldCacheMisses;
+        && WorldCacheHits == o.WorldCacheHits && WorldCacheMisses == o.WorldCacheMisses
+        && HasExtend == o.HasExtend
+        && ExtendCount == o.ExtendCount
+        && CrowdDebugText.Tenth(ExtendMs) == CrowdDebugText.Tenth(o.ExtendMs);
 
     public static CrowdTelemetryReadout From(
         CrowdSimSession session,
@@ -235,6 +259,9 @@ internal struct CrowdTelemetryReadout
             WorldCacheHits = baked ? runtime!.WorldBakeCacheHits : 0,
             WorldCacheMisses = baked ? runtime!.WorldBakeCacheMisses : 0,
             WorldBakeRecorded = baked,
+            HasExtend = session.Planner != null,
+            ExtendCount = session.Planner?.ExtendSubmits ?? 0,
+            ExtendMs = hasPath ? stats.ExtendMs : 0,
         };
     }
 
@@ -257,7 +284,9 @@ internal struct CrowdTelemetryReadout
         lines[7] = HasHeading ? $"航向 {CrowdDebugText.Ms(HeadingDeg)}°" : "航向 N/A";
         lines[8] = HasFlip ? $"反复 {FlipPct}%" : "反复 N/A";
         lines[9] = $"NavMesh {CrowdDebugText.Ms(NavMeshMs)} ms  HPA* {CrowdDebugText.Ms(HpaMs)} ms  流场 {CrowdDebugText.Ms(FlowMs)} ms";
-        lines[10] = "走廊扩展 N/A（端口未做走廊扩展）";
+        lines[10] = HasExtend
+            ? $"走廊扩展 {ExtendCount} 次 {CrowdDebugText.Ms(ExtendMs)} ms"
+            : "走廊扩展 N/A（端口未做走廊扩展）";
         lines[11] = $"规划 {CrowdDebugText.Ms(PlanMs)} ms  烘焙 {CrowdDebugText.Ms(NavBakeMs)} ms  重烘 {CrowdDebugText.Ms(RebakeMs)} ms";
         lines[12] = $"状态 闲 {Idle} 行 {Moving} 达 {Arrived} 不可达 {Unreachable} 跳跃 {Jumping}";
         lines[13] = $"分辨率 {resolution}  nav格 {NavCellCm} cm  tile {TileCount}";
