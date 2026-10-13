@@ -785,7 +785,11 @@ namespace Ludots.Tests.GAS
         [Test]
         public void MinimapCommandOwners_MergeCommandBindingOntoMinimapContext()
         {
-            AssertOwnerMergesCommand("MinimapShowcaseMod", "FourXDemoMod");
+            AssertOwnerMergesCommand(
+                "MinimapShowcaseMod",
+                "FourXDemoMod",
+                "EntityInfoPanelsMod",
+                "EntityCommandPanelMod");
             AssertOwnerMergesCommand("FogVisionDecayShowcaseMod");
             AssertOwnerMergesCommand("PresenterBlacksmithShowcaseMod");
         }

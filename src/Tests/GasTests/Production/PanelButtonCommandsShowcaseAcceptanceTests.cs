@@ -44,7 +44,7 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(ShowcaseMapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         Tick(engine, 8);
 
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),

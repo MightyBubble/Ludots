@@ -50,7 +50,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -59,12 +59,14 @@ namespace Ludots.Tests.GAS
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
             ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
                 [CoreServiceKeys.PlayerEntityLookup.Name] = new PlayerEntityLookup(),
                 [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ControlSchemeRuntime.Name] = schemes,
             };
             TeamEntityLookup focusedTeamLookup = (TeamEntityLookup)globals[CoreServiceKeys.TeamEntityLookup.Name];
             PlayerEntityLookup focusedPlayerLookup = (PlayerEntityLookup)globals[CoreServiceKeys.PlayerEntityLookup.Name];
@@ -120,7 +122,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -141,7 +143,7 @@ namespace Ludots.Tests.GAS
             {
                 StartupLocalSeats =
                 {
-                    new StartupLocalSeatConfig { SeatId = "seat.0", PlayerId = 7 },
+                    new StartupLocalSeatConfig { SeatId = "seat.0", PlayerId = 7, ControlSchemeId = "scheme.default" },
                     new StartupLocalSeatConfig { SeatId = "seat.1", PlayerId = 8, ControlSchemeId = "pad" },
                 },
             };
@@ -151,6 +153,7 @@ namespace Ludots.Tests.GAS
             Assert.That(launch!.LocalSeats.Count, Is.EqualTo(2));
             Assert.That(launch.LocalSeats[0].SeatId, Is.EqualTo("seat.0"));
             Assert.That(launch.LocalSeats[0].PlayerId, Is.EqualTo(7));
+            Assert.That(launch.LocalSeats[0].ControlSchemeId, Is.EqualTo("scheme.default"));
             Assert.That(launch.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
             Assert.That(launch.LocalSeats[1].PlayerId, Is.EqualTo(8));
             Assert.That(launch.LocalSeats[1].ControlSchemeId, Is.EqualTo("pad"));
@@ -830,7 +833,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -939,7 +942,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 8) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 8, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -976,7 +979,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 99) }),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 99, "scheme.seat.first") }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();

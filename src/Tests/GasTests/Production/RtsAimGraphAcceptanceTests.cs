@@ -44,7 +44,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
             string.Join(" | ", engine.TriggerManager.Errors));
@@ -123,7 +123,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -165,7 +165,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -218,7 +218,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);

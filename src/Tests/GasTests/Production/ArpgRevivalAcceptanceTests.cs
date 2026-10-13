@@ -38,7 +38,7 @@ public sealed class ArpgRevivalAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.arpg") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity hero = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
