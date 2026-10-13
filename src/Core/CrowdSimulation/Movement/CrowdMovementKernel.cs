@@ -45,7 +45,8 @@ public sealed class CrowdMovementKernel
     // chunk 查询按原型分块,没有跨 chunk 的连续 Span,查询序也不是稠密序(模板组件集可以不同)。
     // 每个 tick 用下面的查询把列扫进 SoA,子步只碰 SoA,tick 末按槽位映回的下标写回 chunk。
     private readonly QueryDescription _unitColumns = new QueryDescription()
-        .WithAll<CrowdSimulation.Units.CrowdSimulationUnitState, CrowdSimulation.Units.CrowdSimulationKinematics, Ludots.Core.Components.WorldPositionCm, CrowdSimulationAgent, Ludots.Core.Gameplay.Components.PlayerOwner>();
+        .WithAll<CrowdSimulation.Units.CrowdSimulationUnitState, CrowdSimulation.Units.CrowdSimulationKinematics, Ludots.Core.Components.WorldPositionCm, CrowdSimulationAgent, Ludots.Core.Gameplay.Components.PlayerOwner>()
+        .WithNone<Ludots.Core.Presentation.Components.PresentationDestroyPending>();
     public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
     public CrowdSimulation.Units.CrowdSimulationKinematics[] Kins = Array.Empty<CrowdSimulation.Units.CrowdSimulationKinematics>();
     /// <summary>位置(厘米);gather 后由马达子步持续更新,scatter 落回组件。</summary>

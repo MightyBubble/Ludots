@@ -61,6 +61,14 @@ namespace Ludots.Core.Gameplay.Spawning
         public string? InstanceId;
         /// <summary>本请求物化节点的可寻址路径（实例根 + localId 链），仅用于上下文与诊断。</summary>
         public string? AddressablePath;
+        /// <summary>
+        /// 0 = 无逐实例初始化。非 0 是本 RuntimeEntitySpawnSystem 上登记的初始化器。
+        /// 同模板、同 kind、无 JSON 补丁的请求仍走批车道。初始化器只写已创建的 chunk，不另开物化。
+        /// JSON 补丁会把请求赶下批车道，也会把 Fix64 再过一遍文本。
+        /// </summary>
+        public ushort InstanceInitializerKind;
+        /// <summary>交给初始化器的实例下标。含义由登记方定，生成系统不解释。</summary>
+        public int InstanceInitializerIndex;
     }
 
     public struct RuntimeEntitySpawnReceipt
@@ -417,6 +425,49 @@ namespace Ludots.Core.Gameplay.Spawning
             _head = 0;
             _tail = 0;
             _count = 0;
+        }
+
+        /// <summary>
+        /// 把指定通道的回执全部取出写入 <paramref name="destination"/>，其它通道按原顺序留在队列里。
+        /// 数量超过目标长度时不改队列。
+        /// </summary>
+        public int DetachChannel(int channelId, Span<RuntimeEntitySpawnReceipt> destination)
+        {
+            int matched = CountForChannel(channelId);
+            if (matched > destination.Length)
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.ReceiptDetachCapacity: channel={channelId}, matched={matched}, destination={destination.Length}.");
+            }
+
+            if (matched == 0)
+            {
+                return 0;
+            }
+
+            int originalCount = _count;
+            int written = 0;
+            for (int i = 0; i < originalCount; i++)
+            {
+                if (!TryDequeue(out RuntimeEntitySpawnReceipt receipt))
+                {
+                    break;
+                }
+
+                if (receipt.ReceiptChannelId == channelId)
+                {
+                    destination[written++] = receipt;
+                    continue;
+                }
+
+                if (!TryEnqueue(in receipt))
+                {
+                    throw new InvalidOperationException(
+                        "SPAWN.RUNTIME.ERR.ReceiptDetachReorder: receipt queue could not preserve other channels.");
+                }
+            }
+
+            return written;
         }
 
         private void RemoveAt(int index)

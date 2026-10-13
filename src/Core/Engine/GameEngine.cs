@@ -2469,10 +2469,9 @@ namespace Ludots.Core.Engine
                 gasRuntimeCapacity.ProjectileCollisionCandidateCapacity,
                 gasRuntimeCapacity.ProjectileRuntimeEntityCapacity,
                 teamRelationQuery), SystemGroup.EffectProcessing);
-            RegisterSystem(
-                new RuntimeEntitySpawnSystem(
-                    World,
-                    runtimeEntitySpawnQueue,
+            var runtimeEntitySpawnSystem = new RuntimeEntitySpawnSystem(
+                World,
+                runtimeEntitySpawnQueue,
                 MapLoader.TemplateRegistry,
                 MapLoader.EntityTemplateKeys,
                 presentationStableIds,
@@ -2492,8 +2491,9 @@ namespace Ludots.Core.Engine
                 memberOfTypeId: memberOfRelationshipTypeId,
                 ownsTypeId: relationshipTypeRegistry.GetId("Owns"),
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
-                initialInteractionContexts: interactionContextProfileRegistry),
-                SystemGroup.EffectProcessing);
+                initialInteractionContexts: interactionContextProfileRegistry);
+            RegisterSystem(runtimeEntitySpawnSystem, SystemGroup.EffectProcessing);
+            SetService(CoreServiceKeys.RuntimeEntitySpawnSystem, runtimeEntitySpawnSystem);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(
                     World,

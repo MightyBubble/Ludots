@@ -25,10 +25,13 @@ public static class CrowdDeployment
         int navCellsPerSide = cfg.NavCellsPerSide;
         var navCellSizeCm = Fix64.FromInt(cfg.NavCellSizeCm);
 
-        // 单位先清——后续任何异常都不会留下指着已清组的活单位
+        // 单位先清——后续任何异常都不会留下指着已清组的活单位。
+        // 生成请求在本方法返回前排空，同一条 Flush 里更后的指令看得到实体。
         sim.Units.Clear();
         sim.Groups.Reset();
         sim.SetSelectedCount(0);
+        try
+        {
 
         var radiusClasses = DistinctRadiusClasses(cfg);
         int playerCount = cfg.Deploy.Bases.Count;
@@ -97,6 +100,11 @@ public static class CrowdDeployment
         if (skipped > 0) sim.NotifySpawnSkip(skipped, total);
         sim.Groups.ReleaseEmpty();
         return made;
+        }
+        finally
+        {
+            sim.Units.MaterializePending();
+        }
     }
 
     /// <summary>点名生成：在某点周围为某玩家生成 count 个 (t, r) 单位。</summary>
@@ -109,6 +117,8 @@ public static class CrowdDeployment
         var navCellSizeCm = Fix64.FromInt(cfg.NavCellSizeCm);
         int c0 = NearestPassable(nav, CrowdSimulationSpace.CellAtStrict(wx, wy, cfg.NavCellSizeCm, navCellsPerSide));
         if (c0 < 0 || sim.Units.Count >= sim.Units.Capacity) return 0;
+        try
+        {
         var rng = CrowdSimRng.Create((long)cfg.WorldSeed + (long)++sim.SpawnSeq * SaltSpawnAt);
         // player 为 Ludots 玩家号(1..P)。组下标用 PairRules.IndexByPlayerId。
         var g = sim.Groups.Alloc(cfg.PairRules.IndexByPlayerId[player], l, rIdx, nav.Id);
@@ -140,6 +150,11 @@ public static class CrowdDeployment
 
         sim.Groups.ReleaseEmpty();
         return made;
+        }
+        finally
+        {
+            sim.Units.MaterializePending();
+        }
     }
 
     // t = 单位模板下标;其移动类型必须是组的导航层(满容量只影响计数,不留半生成状态)

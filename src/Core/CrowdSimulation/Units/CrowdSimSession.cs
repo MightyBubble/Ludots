@@ -300,6 +300,7 @@ public sealed class CrowdSimSession
     public bool Step(out ulong checksum)
     {
         Commands.Flush(this, ExecCommand);
+        Units.MaterializePending();
         if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
         if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))

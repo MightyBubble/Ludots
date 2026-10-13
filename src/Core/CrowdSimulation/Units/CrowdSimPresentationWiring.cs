@@ -21,6 +21,15 @@ public sealed class CrowdSimPresentationWiring
     public required PresentationStableIdAllocator StableIds { get; init; }
     /// <summary>实体模板注册表(单位模板实例化的数据源;会话激活时已装载 mod 资产)。</summary>
     public required DataRegistry<EntityTemplate> TemplateRegistry { get; init; }
+    /// <summary>模板键注册表。无头/回放用它自建 RuntimeEntitySpawnSystem；引擎接线同样带上，方便回放复制。</summary>
+    public required EntityTemplateKeyRegistry TemplateKeys { get; init; }
+    /// <summary>
+    /// 引擎世界的生成系统。null 时会话在本世界上自建队列和 RuntimeEntitySpawnSystem
+    /// （无头、回放）。自建的是同一个类型，不是另一套物化。
+    /// </summary>
+    public RuntimeEntitySpawnSystem? Spawns { get; init; }
+    public RuntimeEntitySpawnReceiptQueue? SpawnReceipts { get; init; }
+    public int SpawnReceiptChannelId { get; init; }
     /// <summary>[unitType][radiusClass] → (模板 id, 模板键 id)。会话激活时按单位模板的
     /// agentTypeId 与档案半径预解析，并核对模板声明的档案。</summary>
     public required IReadOnlyList<IReadOnlyList<(string TemplateId, int TemplateKeyId)>> TemplatesByUnitTypeRadius { get; init; }
