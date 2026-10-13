@@ -472,14 +472,14 @@
     "nav": false,
     "telemetry": false,
     "navOriginXPx": 16,
-    "navOriginYPx": 210,
-    "telemetryOriginXPx": 980,
-    "telemetryOriginYPx": 210,
+    "navOriginYPx": 196,
+    "telemetryOriginXPx": 16,
+    "telemetryOriginYPx": 356,
     "faultOriginXPx": 16,
-    "faultOriginYPx": 940,
-    "widthPx": 920,
-    "linePx": 22,
-    "sparkHeightPx": 28,
-    "sparkWidthPx": 220
+    "faultOriginYPx": 656,
+    "widthPx": 1248,
+    "linePx": 18,
+    "sparkHeightPx": 16,
+    "sparkWidthPx": 180
   }
 }
