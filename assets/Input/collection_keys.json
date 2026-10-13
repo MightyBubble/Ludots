@@ -1,4 +1,5 @@
 {
   "castRaw": "collection.ui.cast.raw",
-  "hover": "collection.ui.command.hover"
+  "hover": "collection.ui.command.hover",
+  "commandSource": "core.selection"
 }

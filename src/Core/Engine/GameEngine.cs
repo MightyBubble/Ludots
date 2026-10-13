@@ -1066,7 +1066,8 @@ namespace Ludots.Core.Engine
                 customEventCatalog.Schemas,
                 enumCatalog,
                 intIdCollectionStore,
-                graphHandlers);
+                graphHandlers,
+                inputCollectionKeyDeclarations.CommandSource);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1564,7 +1565,11 @@ namespace Ludots.Core.Engine
                     _ => 0,
                 },
                 instancedBatchAssets.GetId,
-                entityCollectionKeyRegistry.Register,
+                key => entityCollectionKeyRegistry.Register(
+                    Ludots.Core.Input.Config.InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+                        key,
+                        inputCollectionKeyDeclarations.CommandSource,
+                        "presenter entity collection key")),
                 interactionContextProfileIds.GetId,
                 presenterCommandKinds,
                 presenterBehaviorKinds,
@@ -2164,7 +2169,10 @@ namespace Ludots.Core.Engine
             var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
             SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
             var virtualCameraRegistry = new VirtualCameraRegistry();
-            new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
+            new VirtualCameraDefinitionLoader(
+                ConfigPipeline,
+                virtualCameraRegistry,
+                inputCollectionKeyDeclarations.CommandSource).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             _gasGraphRuntimeApi.BindVirtualCameras(virtualCameraRegistry, GlobalContext);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);

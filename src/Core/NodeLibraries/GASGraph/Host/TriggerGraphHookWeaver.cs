@@ -132,7 +132,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             BuiltinHandlerRegistry? builtinHandlers = null,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
             GasGraphOpRegistry? opRegistry = null,
-            IReadOnlyDictionary<string, string>? owningMods = null)
+            IReadOnlyDictionary<string, string>? owningMods = null,
+            string? commandSourceCollectionKey = null)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
             if (documents == null) throw new ArgumentNullException(nameof(documents));
@@ -193,7 +194,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 pair.Value.Sort(CompareHookOrder);
                 WeaveTarget(
                     registry, pair.Key, byId[pair.Key], pair.Value,
-                    symbolResolver, eventSchemas, entityCollections, builtinHandlers, cloneOptions, enums, opRegistry);
+                    symbolResolver, eventSchemas, entityCollections, builtinHandlers, cloneOptions, enums, opRegistry,
+                    commandSourceCollectionKey);
             }
         }
 
@@ -433,7 +435,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             BuiltinHandlerRegistry? builtinHandlers,
             JsonSerializerOptions cloneOptions,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
-            GasGraphOpRegistry? opRegistry = null)
+            GasGraphOpRegistry? opRegistry = null,
+            string? commandSourceCollectionKey = null)
         {
             // Group hooks by (resolved node, position): every group is one chain on the
             // anchor, ordered by (priority, compile order) as sorted by the caller.
@@ -558,7 +561,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(merged, eventSchemas, enums, opRegistry);
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(
+                merged, eventSchemas, enums, opRegistry, commandSourceCollectionKey);
             List<GraphDiagnostic> errors = compiled.Diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error).ToList();
             if (errors.Count > 0 || compiled.Package == null)
             {
@@ -568,7 +572,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             GraphProgramPackage package = compiled.Package.Value;
-            GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, symbolResolver, entityCollections, builtinHandlers);
+            GraphProgramSymbolPatcher.Patch(
+                package.Symbols, package.Program, symbolResolver, entityCollections, builtinHandlers, commandSourceCollectionKey);
             GraphProgramSymbolPatcher.PatchInvokeGraphKeys(package.Symbols, package.Program);
 
             int graphId = GraphIdRegistry.GetId(targetGraphId);

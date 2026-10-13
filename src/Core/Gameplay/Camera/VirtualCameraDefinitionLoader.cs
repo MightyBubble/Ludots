@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -13,12 +14,17 @@ namespace Ludots.Core.Gameplay.Camera
     {
         private readonly ConfigPipeline _pipeline;
         private readonly VirtualCameraRegistry _registry;
+        private readonly string? _commandSourceCollectionKey;
         private readonly JsonSerializerOptions _options = CreateOptions();
 
-        public VirtualCameraDefinitionLoader(ConfigPipeline pipeline, VirtualCameraRegistry registry)
+        public VirtualCameraDefinitionLoader(
+            ConfigPipeline pipeline,
+            VirtualCameraRegistry registry,
+            string? commandSourceCollectionKey = null)
         {
             _pipeline = pipeline ?? throw new System.ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new System.ArgumentNullException(nameof(registry));
+            _commandSourceCollectionKey = commandSourceCollectionKey;
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -98,7 +104,10 @@ namespace Ludots.Core.Gameplay.Camera
                         ZoomFactorPerWheel = config.ZoomFactorPerWheel,
                         FollowMode = config.FollowMode,
                         FollowTargetKind = config.FollowTargetKind,
-                        FollowCollectionKey = config.FollowCollectionKey,
+                        FollowCollectionKey = InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+                            config.FollowCollectionKey,
+                            _commandSourceCollectionKey,
+                            $"virtual camera '{config.Id}' followCollectionKey"),
                         FollowActionId = config.FollowActionId,
                         MoveActionId = config.MoveActionId,
                         ZoomActionId = config.ZoomActionId,

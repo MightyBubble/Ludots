@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -18,7 +19,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             GraphInstruction[] program,
             IGraphSymbolResolver symbolResolver,
             EntityCollectionStore? entityCollections = null,
-            BuiltinHandlerRegistry? builtinHandlers = null)
+            BuiltinHandlerRegistry? builtinHandlers = null,
+            string? commandSourceCollectionKey = null)
         {
             if (symbols == null || symbols.Length == 0) return;
             if (program == null || program.Length == 0) return;
@@ -208,8 +210,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                     case GraphNodeOp.WriteCollection:
                         // The collection key resolves in the EntityCollectionStore key space,
-                        // same space QueryFromCollection reads.
-                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        // same space QueryFromCollection reads. The commandSource role token
+                        // is bound from collection_keys.json here; an unbound token fails load.
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm), commandSourceCollectionKey);
                         break;
                     case GraphNodeOp.SetPanelAudience:
                         ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(
@@ -220,18 +223,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Dst = 0;
                         break;
                     case GraphNodeOp.QueryFromCollection:
-                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm), commandSourceCollectionKey);
                         break;
                     case GraphNodeOp.QueryScreenRegionCollection:
                         ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
-                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF)), commandSourceCollectionKey));
                         ins.Imm = ins.Imm >= 0 ? ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)) : 0;
                         break;
                     case GraphNodeOp.BindQueryCollection:
                         ins.Imm = GraphIdRegistry.GetId(ResolveSymbol(symbols, ins.Imm));
                         if (ins.Imm <= 0) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
                         ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
-                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF)), commandSourceCollectionKey));
                         break;
                     case GraphNodeOp.ScreenPointToEntity:
                         if (ins.Imm >= 0)
@@ -240,7 +243,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         }
                         break;
                     case GraphNodeOp.SnapToNearestInCollection:
-                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm), commandSourceCollectionKey);
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
                     case GraphNodeOp.FanOutApplyEffect:
@@ -438,8 +441,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         private static int ResolveBlackboardKey(string key) => OrderBlackboardKeyRegistry.Resolve(key);
 
-        private static int ResolveEntityCollectionKey(EntityCollectionStore? entityCollections, string key)
+        private static int ResolveEntityCollectionKey(
+            EntityCollectionStore? entityCollections,
+            string key,
+            string? commandSourceCollectionKey)
         {
+            key = InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+                key,
+                commandSourceCollectionKey,
+                $"graph collection key '{key}'");
             if (entityCollections == null)
             {
                 throw new InvalidOperationException(

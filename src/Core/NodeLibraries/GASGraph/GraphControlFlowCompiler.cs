@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -268,8 +269,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             Ludots.Core.Scripting.EnumCatalog? enums,
-            GasGraphOpRegistry? opRegistry = null)
-            => CompileCore(document, eventSchemas, enums, opRegistry) with { Document = document };
+            GasGraphOpRegistry? opRegistry = null,
+            string? commandSourceCollectionKey = null)
+            => CompileCore(document, eventSchemas, enums, opRegistry, commandSourceCollectionKey) with { Document = document };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
             GraphControlFlowDocument document)
@@ -282,7 +284,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
             Ludots.Core.Scripting.EnumCatalog? enums,
-            GasGraphOpRegistry? opRegistry = null)
+            GasGraphOpRegistry? opRegistry = null,
+            string? commandSourceCollectionKey = null)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
@@ -303,7 +306,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 BuildDispatchEventSchemas(nodes, graphKind, eventSchemas, graphId, diagnostics);
 
             List<TriggerGraphEntryConfig> triggerGraphEntries = ValidateTriggerGraphEntries(
-                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas);
+                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas, commandSourceCollectionKey);
 
             if (graphKind != GraphKind.TriggerGraph &&
                 !string.IsNullOrWhiteSpace(document.Entry) &&
@@ -663,7 +666,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind graphKind,
             string graphId,
             List<GraphDiagnostic> diagnostics,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            string? commandSourceCollectionKey)
         {
             if (graphKind != GraphKind.TriggerGraph)
             {
@@ -738,7 +742,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,
                     NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
-                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName, commandSourceCollectionKey),
                     ParsedHook = ParseEntryHook(authored[i], graphId, shown, diagnostics)
                 });
             }
@@ -868,7 +872,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string shown,
             List<GraphDiagnostic> diagnostics,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            string eventName)
+            string eventName,
+            string? commandSourceCollectionKey)
         {
             if (filters == null)
             {
@@ -1032,6 +1037,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         {
                             // 配置期符号、运行期 int：int 参数的字符串期望值是符号，编译成
                             // ConfigKey id（幂等，装载/编译顺序无关），派发期 int 比较。
+                            // commandSource 是角色记号，这里绑成 collection_keys 里的集合名；没绑就装载失败。
+                            expected = InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+                                expected,
+                                commandSourceCollectionKey,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}'");
                             (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
                                 new TriggerGraphEntryPayloadFilter(
                                     payloadKey,

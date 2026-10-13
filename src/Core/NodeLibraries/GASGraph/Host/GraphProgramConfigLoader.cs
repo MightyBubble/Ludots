@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -32,6 +33,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         // the weave pass after registration (WeaveHooks) and cleared afterwards.
         private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
         private readonly Dictionary<string, string> _pendingOwningMods = new(StringComparer.OrdinalIgnoreCase);
+        private readonly string? _commandSourceCollectionKey;
 
         public GraphProgramConfigLoader(
             ConfigPipeline pipeline,
@@ -45,7 +47,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
             IntIdCollectionStore? intIdCollections = null,
-            GasGraphOpHandlerTable? operationHandlers = null)
+            GasGraphOpHandlerTable? operationHandlers = null,
+            string? commandSourceCollectionKey = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -59,6 +62,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _builtinHandlers = builtinHandlers;
             _eventSchemas = eventSchemas;
             _enums = enums;
+            _commandSourceCollectionKey = commandSourceCollectionKey;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -153,7 +157,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 try
                 {
                     GraphControlFlowCompileResult compiled =
-                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums, _opRegistry);
+                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums, _opRegistry, _commandSourceCollectionKey);
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -193,7 +197,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < packages.Count; i++)
             {
                 var (name, symbols, program, kind, mapTriggerEntries) = packages[i];
-                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections, _builtinHandlers);
+                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections, _builtinHandlers, _commandSourceCollectionKey);
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
                 if (kind == GraphKind.None)
@@ -243,7 +247,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _builtinHandlers,
                 _enums,
                 _opRegistry,
-                _pendingOwningMods);
+                _pendingOwningMods,
+                _commandSourceCollectionKey);
             _pendingDocuments.Clear();
             _pendingOwningMods.Clear();
         }
@@ -280,7 +285,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 if (GraphOutputDestinationKinds.IsEntityBagDestination(binding.Destination))
                 {
                     resolved[i] = _entityCollections != null && !string.IsNullOrWhiteSpace(binding.CollectionKey)
-                        ? binding.WithResolvedCollectionKeyId(_entityCollections.KeyRegistry.Register(binding.CollectionKey))
+                        ? ResolveCollectionOutput(binding, _entityCollections.KeyRegistry)
                         : binding;
                     continue;
                 }
@@ -294,7 +299,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     }
 
                     resolved[i] = !string.IsNullOrWhiteSpace(binding.CollectionKey)
-                        ? binding.WithResolvedCollectionKeyId(_intIdCollections.KeyRegistry.Register(binding.CollectionKey))
+                        ? ResolveCollectionOutput(binding, _intIdCollections.KeyRegistry)
                         : binding;
                     continue;
                 }
@@ -321,6 +326,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return new GraphOutputSchema(resolved);
+        }
+
+        private GraphOutputBinding ResolveCollectionOutput(GraphOutputBinding binding, StringIntRegistry keys)
+        {
+            string collectionKey = InputCollectionKeyDeclarations.ResolveAuthoredCollectionKey(
+                binding.CollectionKey,
+                _commandSourceCollectionKey,
+                $"graph output '{binding.Id}' collectionKey");
+            return binding.WithResolvedCollection(collectionKey, keys.Register(collectionKey));
         }
     }
 }
