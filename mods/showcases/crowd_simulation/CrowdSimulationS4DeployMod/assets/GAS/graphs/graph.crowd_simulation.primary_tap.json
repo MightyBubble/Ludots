@@ -1,0 +1,29 @@
+[
+  {
+    "id": "graph.crowd_simulation.primary_tap",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_primary_tap",
+        "action": "CrowdSimulation.PrimaryTap",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      { "id": "rep", "op": "LoadEntryPayloadEntity", "payloadKey": "MapTrigger.Rep" },
+      { "id": "deactivate_boxing", "op": "DeactivateContext", "context": "interaction.context.crowd_simulation.boxing" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "rep", "fromPort": "next", "to": "deactivate_boxing" },
+      { "from": "deactivate_boxing", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "rep", "fromPort": "value", "to": "deactivate_boxing", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

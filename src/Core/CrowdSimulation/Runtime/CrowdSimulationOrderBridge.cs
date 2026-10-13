@@ -34,7 +34,7 @@ public static class CrowdSimulationOrderBridge
         {
             var session = runtime.Session
                 ?? throw new InvalidOperationException("crowdSimulationMove: 会话未激活。");
-            Accept(session, batch);
+            Accept(session, batch, runtime.OrderPrefs);
             runtime.NoteLiveCommand();
         });
     }
@@ -44,8 +44,15 @@ public static class CrowdSimulationOrderBridge
     /// 指令排到当前 <see cref="Units.CrowdSimSession.TickCount"/>，由下一拍会话步进执行并记日志。
     /// </summary>
     public static void Accept(Units.CrowdSimSession session, ReadOnlySpan<Order> batch)
+        => Accept(session, batch, null);
+
+    public static void Accept(Units.CrowdSimSession session, ReadOnlySpan<Order> batch, CrowdPlayerOrderPrefs? prefs)
     {
         if (batch.IsEmpty) return;
+        if (prefs != null && string.IsNullOrWhiteSpace(prefs.ShapeId))
+        {
+            throw new InvalidOperationException("crowdSimulationMove: 阵型 id 为空。");
+        }
         ref readonly Order first = ref batch[0];
         int player = first.PlayerId;
         var world = session.World;
@@ -80,7 +87,9 @@ public static class CrowdSimulationOrderBridge
                 Player = player,
                 XCm = (int)ground.X,
                 YCm = (int)ground.Z,
-                ShapeId = PlainClickShapeId,
+                ShapeId = prefs == null ? PlainClickShapeId : prefs.ShapeId,
+                HasAuto = prefs != null,
+                Auto = prefs != null && prefs.MagicBox,
                 Members = members,
             }),
         });

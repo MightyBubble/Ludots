@@ -52,6 +52,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private readonly S4DeployNavWireframe _wire = new();
     private readonly HudTextCache _hudText = new();
     private CrowdDebugViewFrame? _debugView;
+    private CrowdPlayerViewHost? _playerView;
+    internal Func<bool>? SuppressDominantGoal;
     private int _flashReportTick = -1;
     private long _flashStartMs;
     private Vector2[][] _flashLines = Array.Empty<Vector2[]>();
@@ -77,6 +79,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     }
 
     internal void UseDebugView(CrowdDebugViewFrame frame) => _debugView = frame;
+
+    internal void UsePlayerView(CrowdPlayerViewHost host) => _playerView = host;
 
     public void Initialize() { }
     public void BeforeUpdate(in float t) { }
@@ -104,7 +108,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         }
 
         // 路线视图:主力组目标标记(流场贴花由视图投影器写场)
-        if (_demo.ViewMode == 0 && S4DeployDemoViewProjector.DominantGroup(session) is { Goal: >= 0 } group)
+        bool suppressGoal = SuppressDominantGoal != null && SuppressDominantGoal();
+        if (_demo.ViewMode == 0 && !suppressGoal && S4DeployDemoViewProjector.DominantGroup(session) is { Goal: >= 0 } group)
         {
             int navCellsPerSide = session.Config.NavCellsPerSide;
             _routeVisuals.AddMarker(GoalMarker, new Vector2((group.Goal % navCellsPerSide + 0.5f) * navCellVisual, (group.Goal / navCellsPerSide + 0.5f) * navCellVisual), RouteVisualMarkerShape.Diamond, navCellVisual * 1.2f, 1.5f, GoalCyan);
@@ -163,6 +168,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         // 重烘脏 tile 闪烁:最近一笔报告发布后短暂高亮其受影响 tile 并集
         CurrentFlash(session, navCellVisual);
 
+        _playerView?.Draw(session, _routeVisuals, _overlay);
         _debugView?.Draw(session, _overlay);
 
         // HUD 全部读内核现成状态。

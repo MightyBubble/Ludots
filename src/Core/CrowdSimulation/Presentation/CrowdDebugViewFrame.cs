@@ -10,6 +10,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -559,6 +560,12 @@ internal sealed class CrowdDebugViewFrame
                 _ => default,
             };
             if (UnitColorMode == CrowdSimulationDebugViewConfig.ColorOff) continue;
+            var owner = session.Units.EntityAt(unit);
+            if (session.World.Has<PresentationHidden>(owner) && session.World.Get<PresentationHidden>(owner).Hidden)
+            {
+                continue;
+            }
+
             if (overlay.AddRect(sx - mark / 2, sy - mark / 2, mark, mark, color, color))
                 used = overlay.Count;
         }

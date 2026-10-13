@@ -36,6 +36,7 @@
       { "from": "rep_after", "fromPort": "next", "to": "read_stored" },
       { "from": "read_stored", "fromPort": "next", "to": "modifier_switch" },
       { "from": "modifier_switch", "fromPort": "case:1", "to": "op_add" },
+      { "from": "modifier_switch", "fromPort": "case:2", "to": "op_add" },
       { "from": "modifier_switch", "fromPort": "case:3", "to": "op_add" },
       { "from": "modifier_switch", "fromPort": "case:4", "to": "op_subtract" },
       { "from": "modifier_switch", "fromPort": "case:5", "to": "op_subtract" },

@@ -4,6 +4,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Fields;
@@ -84,6 +85,7 @@ public sealed partial class CrowdSimulationRuntime
         }
 
         _deployDemo = null;
+        OrderPrefs = null;
         UnregisterFixed(engine, ref _deployInput, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _deployPresentation);
         _deployPresentationInstalled = false;
@@ -192,6 +194,17 @@ public sealed partial class CrowdSimulationRuntime
 
         var (routes, slot) = RequireVisualServices(engine);
         var demo = new S4DeployDemoRuntime(engine);
+        CrowdPlayerViewHost? playerView = null;
+        CrowdTerrainPaletteProjector? terrain = null;
+        if (_playerView != null)
+        {
+            NavHeightField heights = Heights
+                ?? throw new InvalidOperationException("玩家视图地形需要导航高度场。");
+            playerView = new CrowdPlayerViewHost(engine, _playerView);
+            terrain = new CrowdTerrainPaletteProjector(heights, _playerView);
+            demo.DeployBuilder = playerView.BuildDeploy;
+            OrderPrefs = playerView.Prefs;
+        }
         CrowdDebugTools tools = _debug?.Tools
             ?? throw new InvalidOperationException("部署演示缺少 tools。");
         CrowdDebugRates rates = _debug?.Rates
@@ -201,7 +214,12 @@ public sealed partial class CrowdSimulationRuntime
         demo.UseDebugTools(tools, rates);
         Func<CrowdSimSession?> sessionSource = () =>
             engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null;
-        var demoProjector = new S4DeployDemoViewProjector(demo, sessionSource);
+        if (playerView != null && sessionSource() is { } liveSession)
+        {
+            playerView.Bind(liveSession);
+        }
+
+        var demoProjector = new S4DeployDemoViewProjector(demo, sessionSource, terrain);
         CrowdDebugViewFrame? debugView = _debugView == null ? null : new CrowdDebugViewFrame(_debugView);
         slot.Current = debugView == null
             ? demoProjector
@@ -221,6 +239,13 @@ public sealed partial class CrowdSimulationRuntime
             debugView.BindEngine(engine);
             input.UseDebugView(debugView);
             presented.UseDebugView(debugView);
+        }
+
+        if (playerView != null)
+        {
+            input.UsePlayerView(playerView);
+            presented.UsePlayerView(playerView);
+            presented.SuppressDominantGoal = () => true;
         }
 
         _deployInput = input;

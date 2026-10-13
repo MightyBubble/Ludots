@@ -19,6 +19,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     private readonly CrowdDeployBindings _bindings;
     private readonly CrowdHudPanel _hud;
     private CrowdDebugViewFrame? _debugView;
+    private CrowdPlayerViewHost? _playerView;
 
     public S4DeployInputSystem(GameEngine engine, S4DeployDemoRuntime demo, CrowdDeployBindings bindings, CrowdHudPanel hud)
     {
@@ -30,6 +31,8 @@ internal sealed class S4DeployInputSystem : ISystem<float>
 
     internal void UseDebugView(CrowdDebugViewFrame frame) => _debugView = frame;
 
+    internal void UsePlayerView(CrowdPlayerViewHost host) => _playerView = host;
+
     public void Initialize() { }
     public void BeforeUpdate(in float t) { }
     public void AfterUpdate(in float t) { }
@@ -39,8 +42,10 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     {
         if (!_demo.Active) return;
         var actions = CrowdAuthoritativeInput.Require(_engine);
-        if (_engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out CrowdSimSession? session))
+        CrowdSimSession? session = null;
+        if (_engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out CrowdSimSession? found))
         {
+            session = found;
             _demo.ArmSession(session);
         }
 
@@ -88,6 +93,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
         }
 
         _debugView?.ApplyInput(actions, _engine);
+        _playerView?.ApplyInput(session, actions, picked, xCm, yCm, _demo);
         _demo.Tick();
     }
 }

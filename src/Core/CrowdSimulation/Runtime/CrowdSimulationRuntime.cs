@@ -17,6 +17,7 @@ using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
@@ -44,11 +45,12 @@ namespace Ludots.Core.CrowdSimulation.Runtime;
 /// 会话跑在引擎世界上,单位带呈现投影接线;部署/脚本/回放都是指令流(数据),
 /// 回放另起一次性世界逐帧对拍校验码。
 /// </summary>
-public sealed partial class CrowdSimulationRuntime
+public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
 {
     private CrowdSimulationConfig? _configDto;
     private CrowdSimulationDebugConfig? _debug;
     private CrowdSimulationDebugViewConfig? _debugView;
+    private CrowdPlayerViewConfig? _playerView;
     internal bool HasFormalConfig => _configDto != null;
     private string? _focusedCrowdMapId;
     internal string? FormalConfigMapId => _focusedCrowdMapId;
@@ -188,6 +190,8 @@ public sealed partial class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BlockerFootprint>? _mapSurfaceBlockers;
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
+    private bool _pathReplyPending;
+    private CrowdPlayerOrderPrefs? _orderPrefs;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
     // 分区摘要历史:定长环形。回放按 tick 对上环里还在的记录，再比断面。合计在摘要的 Total 上。
     private readonly int[] _hashTicks = new int[4096];
@@ -263,6 +267,16 @@ public sealed partial class CrowdSimulationRuntime
 
     /// <summary>迷雾观察口径:-1 = 全知，≥ 0 = 只看该视野组。当前没有读取点。</summary>
     public int FogViewGroup { get; set; } = -1;
+
+    public bool HoldAtCurrent => _session != null && (_session.PlaybackHeld || _pathReplyPending);
+
+    internal NavHeightField? Heights => _heights;
+
+    internal CrowdPlayerOrderPrefs? OrderPrefs
+    {
+        get => _orderPrefs;
+        set => _orderPrefs = value;
+    }
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
@@ -373,14 +387,28 @@ public sealed partial class CrowdSimulationRuntime
         if (!catalog.TryGet(CrowdSimulationDebugViewPath, out var viewEntry))
         {
             _debugView = null;
+        }
+        else
+        {
+            _debugView = ConfigMergeProvenance.Wrap(CrowdSimulationDebugViewPath, engine.ConfigConflictReport, tracked =>
+            {
+                var viewMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in viewEntry, tracked)
+                    ?? throw new InvalidOperationException($"{CrowdSimulationDebugViewPath} 存在目录登记但合并为空。");
+                return CrowdSimulationDebugViewConfig.Load(viewMerged, CrowdSimulationDebugViewPath);
+            });
+        }
+
+        if (!catalog.TryGet(CrowdSimulationPlayerViewPath, out var playerViewEntry))
+        {
+            _playerView = null;
             return;
         }
 
-        _debugView = ConfigMergeProvenance.Wrap(CrowdSimulationDebugViewPath, engine.ConfigConflictReport, tracked =>
+        _playerView = ConfigMergeProvenance.Wrap(CrowdSimulationPlayerViewPath, engine.ConfigConflictReport, tracked =>
         {
-            var viewMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in viewEntry, tracked)
-                ?? throw new InvalidOperationException($"{CrowdSimulationDebugViewPath} 存在目录登记但合并为空。");
-            return CrowdSimulationDebugViewConfig.Load(viewMerged, CrowdSimulationDebugViewPath);
+            var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in playerViewEntry, tracked)
+                ?? throw new InvalidOperationException($"{CrowdSimulationPlayerViewPath} 存在目录登记但合并为空。");
+            return CrowdPlayerViewConfig.Load(merged, CrowdSimulationPlayerViewPath);
         });
     }
 
@@ -391,6 +419,7 @@ public sealed partial class CrowdSimulationRuntime
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
     private const string CrowdSimulationDebugViewPath = "CrowdSimulationDebugView.json";
+    private const string CrowdSimulationPlayerViewPath = "CrowdSimulationPlayerView.json";
     private const string SessionTemplateId = "crowd_simulation.session";
     private const string SelectedCollectionKey = CrowdSimPresentationWiring.SelectedCollectionKey;
 
@@ -634,6 +663,8 @@ public sealed partial class CrowdSimulationRuntime
 
         engine.SetService(CoreServiceKeys.CrowdSimulationSession, _session);
         engine.SetService(CoreServiceKeys.CrowdSimulationRuntime, this);
+        _pathReplyPending = false;
+        engine.SetService(CoreServiceKeys.PresentationAlphaHold, this);
         // 演示相机:debug 配置指名一个虚拟相机(数据),经引擎现成的 VirtualCameraRequest 通道切换
         if (_debug?.Session?.CameraId is { } cameraId && !string.IsNullOrWhiteSpace(cameraId))
         {
@@ -672,9 +703,12 @@ public sealed partial class CrowdSimulationRuntime
         ReplayDivergenceSection = "";
         ReplayDiagnosticTick = -1;
         ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
+        _pathReplyPending = false;
+        _orderPrefs = null;
         engine.RemoveService(CoreServiceKeys.CrowdSimulationSession);
         engine.RemoveService(CoreServiceKeys.CrowdSimulationRuntime);
         engine.RemoveService(CoreServiceKeys.TeamColorPalette);
+        engine.RemoveService(CoreServiceKeys.PresentationAlphaHold);
     }
 
     /// <summary>固定步进一次(系统组每个 FixedHz tick 调一次);答复未按生效帧返回时本 tick 停摆。</summary>
@@ -696,6 +730,7 @@ public sealed partial class CrowdSimulationRuntime
         long t0 = _tickWatch.ElapsedTicks;
         if (!fuzzStepped && !session.Step(out _))
         {
+            _pathReplyPending = true;
             if (!_stallLogged)
             {
                 _stallLogged = true;
@@ -711,6 +746,7 @@ public sealed partial class CrowdSimulationRuntime
         session.PublishTelemetryFrame(stalled: false,
             (double)(_tickWatch.ElapsedTicks - t0) / System.Diagnostics.Stopwatch.Frequency * 1000.0);
         _stallLogged = false;
+        _pathReplyPending = false;
         if (_hashCount == _hashDigests.Length)
         {
             _hashDigests[_hashHead] = session.LastDigest;

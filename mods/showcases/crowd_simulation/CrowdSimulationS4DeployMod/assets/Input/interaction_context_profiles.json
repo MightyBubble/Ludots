@@ -18,10 +18,12 @@
       "id": "interaction.context.crowd_simulation.boxing",
       "foreground": true,
       "bindings": [
-        "CrowdSimulation.BoxSelectEnd"
+        "CrowdSimulation.BoxSelectEnd",
+        "CrowdSimulation.PrimaryTap"
       ],
       "triggers": [
-        { "trigger": "graph.crowd_simulation.box_commit" }
+        { "trigger": "graph.crowd_simulation.box_commit" },
+        { "trigger": "graph.crowd_simulation.primary_tap" }
       ]
     }
   ]

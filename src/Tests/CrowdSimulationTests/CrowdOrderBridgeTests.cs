@@ -38,7 +38,22 @@ public sealed class CrowdOrderBridgeTests
         Assert.That(order.XCm, Is.EqualTo(120000));
         Assert.That(order.YCm, Is.EqualTo(800000));
         Assert.That(order.ShapeId, Is.EqualTo(CrowdSimulationOrderBridge.PlainClickShapeId));
+        Assert.That(order.HasAuto, Is.False);
         Assert.That(order.Members, Has.Length.EqualTo(2));
+    }
+
+    [Test]
+    public void Prefs_CopyShapeAndMagicBoxOntoTheScheduledOrder()
+    {
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 2, 1, 0, 0), Is.EqualTo(2));
+        var prefs = new CrowdPlayerOrderPrefs { ShapeId = "box", MagicBox = false };
+        CrowdSimulationOrderBridge.Accept(session, new[] { OrderAt(session, 0), OrderAt(session, 1) }, prefs);
+        Assert.That(session.Step(out _), Is.True);
+        var order = session.Commands.Log[0].Cmd;
+        Assert.That(order.HasAuto, Is.True);
+        Assert.That(order.Auto, Is.False);
+        Assert.That(order.ShapeId, Is.EqualTo("box"));
     }
 
     [Test]
