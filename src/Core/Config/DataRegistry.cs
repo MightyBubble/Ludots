@@ -89,5 +89,10 @@ namespace Ludots.Core.Config
         {
             return _data.ContainsKey(id);
         }
+
+        public void Clear()
+        {
+            _data.Clear();
+        }
     }
 }
