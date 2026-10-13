@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -37,6 +38,8 @@ public sealed class CrowdRebakeReport
     /// <summary>被挤离阻挡的单位数 / 无处安放计数。</summary>
     public int Evicted { get; set; }
     public int Stuck { get; set; }
+    /// <summary>从阶段 0 到报告发布的 Stopwatch 刻度。不进校验码。</summary>
+    public long ElapsedTicks { get; set; }
     /// <summary>受影响导航摘要:逐上下文脏 tile 与类别。</summary>
     public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
     /// <summary>受影响 tile 并集，升序。</summary>
@@ -66,6 +69,7 @@ public sealed class CrowdRebakeJob
     public int Stuck { get; set; }
     /// <summary>反应末的流场刷新队列长快照(阶段 1;报告字段在阶段 2 发布,队列已被每 tick 预算排空)。</summary>
     public int Refreshes { get; set; }
+    public long StartedTimestamp { get; set; }
 }
 
 /// <summary>
@@ -120,7 +124,7 @@ public static class CrowdStructureOps
     {
         var job = sim.RebakeJob;
         if (job == null) return;
-        var slices = sim.Config.Planning.RebakeSlices;
+        var slices = sim.RebakeSliceCount;
         if (!all && sim.TickCount == job.LastTick) return;
         job.LastTick = sim.TickCount;
         int stages = 2;
@@ -177,8 +181,9 @@ public static class CrowdStructureOps
         job.Evicted = 0;
         job.Stuck = 0;
         job.Refreshes = 0;
+        job.StartedTimestamp = Stopwatch.GetTimestamp();
         sim.RebakeJob = job;
-        if (sim.Config.Planning.RebakeSlices > 1) return null;
+        if (sim.RebakeSliceCount > 1) return null;
         FinishRebake(sim);
         return sim.LastRebakeReport;
     }
@@ -249,6 +254,7 @@ public static class CrowdStructureOps
         report.Refreshes = job.Refreshes;
         report.Evicted = job.Evicted;
         report.Stuck = job.Stuck;
+        report.ElapsedTicks = Stopwatch.GetTimestamp() - job.StartedTimestamp;
         report.Bbox = bbox;
         int union = 0;
         var seen = sim.RebakeUnionSeen;

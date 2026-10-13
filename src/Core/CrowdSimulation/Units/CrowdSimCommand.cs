@@ -19,6 +19,11 @@ public enum CrowdSimCommandKind : byte
     FogShare,
     PlaceStructure,
     RemoveStructureAt,
+    Kill,
+    Scatter,
+    Rates,
+    RebakeSlices,
+    ClearCaches,
 }
 
 /// <summary>
@@ -52,6 +57,16 @@ public readonly record struct CrowdSimCommand
     /// <summary>placeStructure 的终点(0 = 无终点,道路条带用)。</summary>
     public int ToXCm { get; init; }
     public int ToYCm { get; init; }
+    /// <summary>kill 的半径(厘米)。</summary>
+    public int RadiusCm { get; init; }
+    /// <summary>kill 的外圈倍数与冲量倍数。边界 FromDouble 一次成形。</summary>
+    public Fix64 RingScale { get; init; }
+    public Fix64 Impulse { get; init; }
+    /// <summary>rates 的 tick 频率与避让频率。避让频率在边界 FromDouble。</summary>
+    public int TickHz { get; init; }
+    public Fix64 AvoidHz { get; init; }
+    /// <summary>rebakeSlices 的切片数。</summary>
+    public int Slices { get; init; }
     /// <summary>fogSight 的 LOS 开关/fogShare 的并组方向(Parse:未给 on 视为 true;
     /// fogShare 的 on=false 拆组在边界拒收,Exec 只见 true)。</summary>
     public bool On { get; init; }
@@ -87,7 +102,12 @@ public readonly record struct CrowdSimCommand
         CrowdSimCommandKind.FogShare => "fogShare",
         CrowdSimCommandKind.PlaceStructure => "placeStructure",
         CrowdSimCommandKind.RemoveStructureAt => "removeStructureAt",
-        _ => kind.ToString(),
+        CrowdSimCommandKind.Kill => "kill",
+        CrowdSimCommandKind.Scatter => "scatter",
+        CrowdSimCommandKind.Rates => "rates",
+        CrowdSimCommandKind.RebakeSlices => "rebakeSlices",
+        CrowdSimCommandKind.ClearCaches => "clearCaches",
+        _ => throw new InvalidOperationException($"未知指令 {kind}。"),
     };
 
     /// <summary>
@@ -197,6 +217,33 @@ public readonly record struct CrowdSimCommand
                     XCm = RequireInt(cmd, type, "xCm"),
                     YCm = RequireInt(cmd, type, "yCm"),
                 };
+            case "kill":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.Kill,
+                    XCm = RequireInt(cmd, type, "xCm"),
+                    YCm = RequireInt(cmd, type, "yCm"),
+                    RadiusCm = RequireInt(cmd, type, "radiusCm"),
+                    RingScale = RequireFix(cmd, type, "ringScale"),
+                    Impulse = RequireFix(cmd, type, "impulse"),
+                };
+            case "scatter":
+                return new CrowdSimCommand { Kind = CrowdSimCommandKind.Scatter };
+            case "rates":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.Rates,
+                    TickHz = RequireInt(cmd, type, "tickHz"),
+                    AvoidHz = RequireFix(cmd, type, "avoidHz"),
+                };
+            case "rebakeSlices":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.RebakeSlices,
+                    Slices = RequireInt(cmd, type, "slices"),
+                };
+            case "clearCaches":
+                return new CrowdSimCommand { Kind = CrowdSimCommandKind.ClearCaches };
             default:
                 throw new InvalidOperationException($"未知指令 {type}。");
         }
@@ -249,6 +296,17 @@ public readonly record struct CrowdSimCommand
         return cmd[field] is JsonValue v && v.TryGetValue<int>(out int value) && v.GetValueKind() == JsonValueKind.Number
             ? value
             : throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为整数。");
+    }
+
+    private static Fix64 RequireFix(JsonNode cmd, string type, string field)
+    {
+        if (cmd[field] is JsonValue value && value.GetValueKind() == JsonValueKind.Number)
+        {
+            if (value.TryGetValue<int>(out int whole)) return Fix64.FromInt(whole);
+            if (value.TryGetValue<double>(out double number)) return Fix64.FromDouble(number);
+        }
+
+        throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为数字。");
     }
 
     private static int OptionalInt(JsonNode cmd, string type, string field, int fallback) =>

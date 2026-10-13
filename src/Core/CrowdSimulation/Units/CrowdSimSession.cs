@@ -58,6 +58,7 @@ public sealed class CrowdSimSession
         SubSteps = Math.Clamp(unclamped, 1, cap);
         if (unclamped > cap) Telemetry.MarkSubStepClamped();
         SubStepDt = simDt / SubSteps;
+        RebakeSliceCount = config.Planning.RebakeSlices;
     }
 
     /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>
@@ -109,6 +110,24 @@ public sealed class CrowdSimSession
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
+    /// <summary>结构变更摊到后续 tick 的切片数。初值是配置,rebakeSlices 指令改它,Reset 恢复配置。</summary>
+    public int RebakeSliceCount { get; set; }
+    /// <summary>创建内核时的避让步长。rates 只改当前步长,Reset 回到这里。</summary>
+    public int BaseStride { get; private set; }
+    /// <summary>当前避让频率。创建内核时取配置,rates 成功后改成指令值。</summary>
+    public Fix64 AvoidHz { get; private set; }
+    /// <summary>为真时 Flush 到点指令,但不推进运动、脚本和 tick。现场 Submit 不受影响。</summary>
+    public bool PlaybackHeld { get; set; }
+    public int ScatterSeq { get; set; }
+
+    internal void SetAvoidHz(Fix64 hz) => AvoidHz = hz;
+
+    /// <summary>执行当前 tick 及以前的到点指令,不推进仿真。</summary>
+    public void FlushDueCommands()
+    {
+        Commands.Flush(this, ExecCommand);
+        Units.MaterializePending();
+    }
 
     private FogLayerRegistry? _visionLayers;
     private FogFieldStore? _visionFields;
@@ -123,6 +142,8 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
+        BaseStride = kernel.Stride;
+        AvoidHz = Config.Avoidance.RateHz;
         // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。盖章前要先绑定雾层和雾场。有迷雾就注入高度表。
         if (Structures != null)
         {
@@ -298,6 +319,7 @@ public sealed class CrowdSimSession
             Refreshes = report.Refreshes,
             Evicted = report.Evicted,
             Stuck = report.Stuck,
+            ElapsedTicks = report.ElapsedTicks,
             Bbox = report.Bbox,
             ContextResults = rows,
             UnionTiles = new List<int>(report.UnionTiles),
@@ -416,6 +438,16 @@ public sealed class CrowdSimSession
         RebakeJob = null;
         TickCount = 0;
         SpawnSeq = 0;
+        ScatterSeq = 0;
+        PlaybackHeld = false;
+        RebakeSliceCount = Config.Planning.RebakeSlices;
+        if (Movement != null)
+        {
+            Movement.Stride = BaseStride;
+            Movement.Phase = 0;
+            AvoidHz = Config.Avoidance.RateHz;
+        }
+
         SpawnSkippedTotal = 0;
         _stateHistogramMembers = 0;
         Telemetry.SetUnitStates(0, 0, 0, 0, 0);

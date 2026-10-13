@@ -1004,6 +1004,25 @@ public sealed class CrowdSimPlanner
         return false;
     }
 
+    /// <summary>已提交给路径服务的流场重建次数。clearCaches 入队后,由 ProcessRefreshes 在预算内提交。</summary>
+    public int FlowRefreshSubmits { get; private set; }
+
+    /// <summary>有流场的组重新排队。旧场留到答复替换,不另建一套跳过等待的缓存。</summary>
+    public int InvalidateFlows()
+    {
+        int queued = 0;
+        var groups = _session.Groups.Groups;
+        for (int i = 0; i < groups.Count; i++)
+        {
+            var group = groups[i];
+            if (group?.Flow == null) continue;
+            RefreshFlow(group);
+            queued++;
+        }
+
+        return queued;
+    }
+
     /// <summary>同走廊流场刷新排队(不在队列才入队;预算在 ProcessRefreshes 扣)。</summary>
     public void RefreshFlow(CrowdNavGroupSet.Group g)
     {
@@ -1032,6 +1051,7 @@ public sealed class CrowdSimPlanner
         var req = new PathQuery(g.NavId, 0, g.Goal, 0) { CorridorMask = g.Flow!.Mask };
         int id = _service.Request(req, tick);
         g.StateSeq++;
+        FlowRefreshSubmits++;
         if (!_refreshPool.TryPop(out var pr)) pr = new PendingRefresh();
         pr.RequestId = id;
         pr.DueTick = tick + _session.Config.Planning.RefreshLatencyTicks;

@@ -530,6 +530,12 @@ public sealed partial class CrowdSimulationRuntime
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
+        if (session.PlaybackHeld)
+        {
+            session.FlushDueCommands();
+            return;
+        }
+
         _demoScript?.ApplyDue(session);
         if (!session.Step(out _))
         {

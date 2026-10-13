@@ -7,7 +7,7 @@ namespace CrowdSimulationTests;
 
 /// <summary>
 /// Separation / Calm 按下标对齐稠密行并活过 GatherUnits。
-/// 退场还没有生产入口。公开移除只能是 Clear,避免再出现不搬运推挤的删除。
+/// 退场只有 ReleaseDense,同时用 MoveAvoidanceRow 搬走分离行。公开移除仍然只有 Clear。
 /// </summary>
 public sealed class CrowdDenseRemovalContractTests
 {
@@ -30,5 +30,11 @@ public sealed class CrowdDenseRemovalContractTests
 
         Assert.That(typeof(CrowdSimSession).GetMethod("RemoveDense"), Is.Null);
         Assert.That(typeof(CrowdMovementKernel).GetMethod("CarryPushOnSwapRemove"), Is.Null);
+        Assert.That(
+            typeof(CrowdSimUnits).GetMethod("ReleaseDense", BindingFlags.Instance | BindingFlags.NonPublic),
+            Is.Not.Null);
+        Assert.That(
+            typeof(CrowdMovementKernel).GetMethod("MoveAvoidanceRow", BindingFlags.Instance | BindingFlags.NonPublic),
+            Is.Not.Null);
     }
 }
