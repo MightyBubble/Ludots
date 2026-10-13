@@ -84,17 +84,6 @@ public readonly struct CrowdStructureFootprint
         }
     }
 
-    /// <summary>path 足迹:点到两端沿线段距离的较小者(厘米);portal 判定用。</summary>
-    public Fix64 EndDistance(Fix64 px, Fix64 py)
-    {
-        Fix64 ax = X1 - X0, ay = Y1 - Y0;
-        Fix64 length = CrowdFix.Hypot(ax, ay);
-        // 同 Covers 的退化阈值(1e-9 米)
-        if (length <= Fix64.FromRaw(430)) return Fix64.Zero;
-        Fix64 t = ((px - X0) * ax + (py - Y0) * ay) / length;
-        return Fix64.Min(t, length - t);
-    }
-
     /// <summary>足迹包围盒外扩 ext 厘米所触的格矩形 [x0, y0, x1, y1),夹到网格内。</summary>
     public (int X0, int Y0, int X1, int Y1) CellRectOf(int navCellSizeCm, int navCellsPerSide, int extCm = 0)
     {
