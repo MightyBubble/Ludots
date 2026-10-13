@@ -338,15 +338,30 @@ public sealed partial class CrowdSimulationRuntime
         var unitTypeTemplates = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
             runtimeConfig, templateRegistry, templateKeys, agentProfiles, CrowdSimulationConfigPath);
 
+        var spawnSystem = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnSystem)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 RuntimeEntitySpawnSystem 服务。");
+        var spawnReceipts = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 RuntimeEntitySpawnReceiptQueue 服务。");
+        var spawnChannels = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 RuntimeEntitySpawnReceiptChannelRegistry 服务。");
+        if (!spawnChannels.TryGetId(CrowdSimUnits.ReceiptChannelName, out int spawnChannelId))
+        {
+            spawnChannelId = spawnChannels.Register(CrowdSimUnits.ReceiptChannelName);
+        }
+
         var wiring = new CrowdSimPresentationWiring
         {
             StableIds = stableIds,
             TemplateRegistry = templateRegistry,
+            TemplateKeys = templateKeys,
             TemplatesByUnitTypeRadius = unitTypeTemplates,
             RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusKey),
             SelectionOwner = _sessionEntity,
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),
             Collections = collections,
+            Spawns = spawnSystem,
+            SpawnReceipts = spawnReceipts,
+            SpawnReceiptChannelId = spawnChannelId,
         };
 
         _session = new CrowdSimSession(runtimeConfig, engine.World, navs, navByLayerRadius, wiring);
@@ -420,6 +435,7 @@ public sealed partial class CrowdSimulationRuntime
     private void Deactivate(GameEngine engine)
     {
         _session?.Units.Clear();
+        _session?.Units.ReleaseSpawnInitializer();
         _pathService?.Dispose();
         _pathService = null;
         if (engine.World.IsAlive(_sessionEntity)) engine.World.Destroy(_sessionEntity);
@@ -508,6 +524,7 @@ public sealed partial class CrowdSimulationRuntime
         {
             StableIds = new PresentationStableIdAllocator(),
             TemplateRegistry = session.Presentation.TemplateRegistry,
+            TemplateKeys = session.Presentation.TemplateKeys,
             TemplatesByUnitTypeRadius = session.Presentation.TemplatesByUnitTypeRadius,
             RadiusMetersBlackboardKeyId = session.Presentation.RadiusMetersBlackboardKeyId,
             SelectionOwner = Entity.Null,
