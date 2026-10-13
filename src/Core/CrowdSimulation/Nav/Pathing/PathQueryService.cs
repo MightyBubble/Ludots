@@ -81,6 +81,15 @@ public sealed class PathQueryService : IDisposable
     public TimeSpan TestDelayPerJob { get; set; } = TimeSpan.Zero;
 
     public int Waits { get; private set; }
+
+    /// <summary>还没取走的请求数。组消失或状态序对不上时也要取走，否则这里会涨。</summary>
+    public int OutstandingReplyCount
+    {
+        get
+        {
+            lock (_gate) return _sentAtMs.Count;
+        }
+    }
     public bool Faulted { get; private set; }
     public string? FaultMessage { get; private set; }
     public int WorkerCount { get { lock (_gate) return _workerTarget; } }

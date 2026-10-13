@@ -795,7 +795,8 @@ public sealed class CrowdSimPlanner
         var g = pr.Group;
         if (!_session.Groups.TryGet(pr.GroupId, out var live) || live != g || g.StateSeq != pr.Seq)
         {
-            return; // 状态序对不上就返回,不取答复。路径服务里的回复没有释放。
+            Recycle(_service.AwaitDue(pr.RequestId));
+            return;
         }
 
         var result = _service.AwaitDue(pr.RequestId);
