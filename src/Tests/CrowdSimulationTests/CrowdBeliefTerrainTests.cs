@@ -11,6 +11,7 @@ using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
@@ -299,10 +300,10 @@ public class CrowdBeliefTerrainTests
             {
                 StableIds = new PresentationStableIdAllocator(),
                 TemplateRegistry = new DataRegistry<EntityTemplate>(pipeline),
+                TemplateKeys = new EntityTemplateKeyRegistry(),
                 TemplatesByUnitTypeRadius = rows,
                 RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
                     Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusKey),
-                SelectionOwner = Arch.Core.Entity.Null,
                 SelectedCollectionKeyId = collections.KeyRegistry.Register("belief-terrain-selected"),
                 Collections = collections,
             };
