@@ -7,8 +7,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
 /// 导航格地表视图：逐格地形类型、导航区域、阻挡。
-/// 区域栅格 = 地形类型经 terrainAreas 映射；区域覆盖实体（道路 / 泛洪 / 火场）与
-/// 分层桥面在后续阶段接入（这里只建静态地图的阻挡栅格）。
+/// 这里只把地形类型映成区域，并按阻挡足迹盖静态阻挡。桥面在 UpperLayerBake，道路 / 泛洪 / 火场的代价变化在重烘分类里。
 /// </summary>
 public sealed class SurfaceGrid
 {

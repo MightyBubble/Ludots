@@ -12,9 +12,10 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 指令规划器(planner.js 的 S5 子集移植):指令 → 逐组(目标格/可达替代/成员/出发簇)→
+/// 指令规划器:指令 → 逐组(目标格/可达替代/成员/出发簇)→
 /// 路径服务请求(固定生效帧)→ 答复落帧时建领队 + 排阵型槽位 + 挂流场。
-/// 重烘焙 / 迷雾认知 / 走廊扩展属于 S7/S5-b,不在此层。领队路径无答复= 全组不可达。
+/// 本层含重烘反应、认知重定向、原位揭示和流场刷新。走廊扩展没有。
+/// 答复未回则本 tick 停摆；领队路径答复不可达时，非跳跃成员标不可达。
 /// </summary>
 public sealed class CrowdSimPlanner
 {
@@ -25,10 +26,10 @@ public sealed class CrowdSimPlanner
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
     private readonly List<PendingPlan> _pending = new();
-    // ApplyDue 的在途过期组暂存(逐 tick 复用,零分配)
+    // 列表逐 tick Clear 后复用。容量不够时这一次仍会分配。
     private readonly List<CrowdNavGroupSet.Group> _staleScratch = new();
     private readonly List<PendingRefresh> _pendingRefreshes = new();
-    /// <summary>待刷新流场的组队列(S7 队伍反应;每 tick 预算 maxRefreshesPerTick)。</summary>
+    /// <summary>待刷新流场的组队列(每 tick 预算 maxRefreshesPerTick)。</summary>
     private readonly List<CrowdNavGroupSet.Group> _refreshQueue = new();
     private StableInt[] _liveRank = Array.Empty<StableInt>();
     private StableInt[] _touchRank = Array.Empty<StableInt>();
@@ -108,11 +109,11 @@ public sealed class CrowdSimPlanner
         public int NavId;
         public int Goal;
         public int RequestId;
-        /// <summary>请求时的导航版本:答复落帧时版本变了 = 陈旧答复,按 裁决。</summary>
+        /// <summary>答复落帧时导航版本或导航号变了，组进入 AfterStalePlan。</summary>
         public int Version;
     }
 
-    /// <summary>流场刷新的到点答复(S7 队伍反应:同走廊在新导航上重建流场,领队与槽位不动)。</summary>
+    /// <summary>流场刷新的到点答复:同走廊在新导航上重建流场,领队与槽位不动。</summary>
     private sealed class PendingRefresh
     {
         public int RequestId;
@@ -180,7 +181,7 @@ public sealed class CrowdSimPlanner
             ? Fix64.FromInt((int)faceWidthCm.ToLong()) * memberCount / total
             : Fix64.Zero;
 
-    /// <summary>为一批指令起规划(plan 移植):组目标/可达替代/成员标记/出发代表格,再发请求。</summary>
+    /// <summary>为一批指令起规划:组目标/可达替代/成员标记/出发代表格,再发请求。</summary>
     public void Plan(IReadOnlyList<CrowdOrder> orders, int tick)
     {
         var session = _session;
@@ -407,10 +408,9 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>答复落帧(applyDue 移植):到点的按请求序应用;有一个没回来,仿真停摆(返回 false)。
-    /// block=true(无头对拍/回放):同步等答复(AwaitDue,超时即故障)——与引擎停摆的语义相同,
-    /// 答复内容与生效帧不变,只是调用线程代替"下一帧重试"等在那里。
-    /// 服务故障(答复永不回)直接抛——不静默停摆。</summary>
+    /// <summary>答复落帧:到点的按请求序应用;有一个没回来,仿真停摆(返回 false)。
+    /// block=true:同步等答复(AwaitDue,超时即故障)。
+    /// 进入时已经故障则抛。非阻塞路径上,Ready 超时只把服务标成故障并返回 false,这次调用停摆,下一次调用才抛。</summary>
     public bool ApplyDue(int tick, bool block)
     {
         if ((_pending.Count > 0 || _pendingRefreshes.Count > 0) && _service.Faulted)
@@ -471,8 +471,7 @@ public sealed class CrowdSimPlanner
         if (rk > 0) _pendingRefreshes.RemoveRange(0, rk);
         if (stale.Count > 0)
         {
-            // 在途期间导航变了(重烘)的规划已按答复应用,现在按现行导航裁决:
-            // 目标被挡或无场 → 重规划;否则刷新流场(它来自旧导航)
+            // 在途期间导航变了的规划已按答复应用。无场或目标被挡则重规划;否则再看连通域和领队剩余线。
             var orders = AfterStalePlan(stale);
             if (orders.Count > 0) Plan(orders, tick);
         }
@@ -524,7 +523,7 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>领队 + 阵型槽位 + 到达足印(finishOrder 移植;质心与朝向继承按落帧时刻的成员位置)。</summary>
+    /// <summary>领队 + 阵型槽位 + 到达足印(质心与朝向继承按落帧时刻的成员位置)。</summary>
     private void FinishOrder(PendingOrder po, Dictionary<int, LiveGroup> live)
     {
         var o = po.Order;
@@ -604,7 +603,7 @@ public sealed class CrowdSimPlanner
             var strictest = session.Groups.Groups[pl.StrictestGroupId]!;
             if (!leaderResult.Reachable || leaderResult.Points == null)
             {
-                // 路径服务无路 → 桶内成员全部不可达,组放弃(清场清目标)
+                // 非跳跃成员标不可达并清掉指令号;跳跃中的单位保持跳跃。组目标清成 -1。
                 foreach (int gid in bucket)
                 {
                     var g = session.Groups.Groups[gid]!;
@@ -732,7 +731,7 @@ public sealed class CrowdSimPlanner
         }
 
         if (blocks.Count > 1) CrowdFormations.LayoutSideBySide(session, blocks);
-        // reachCells:聚拢按触碰判到达只认这个半径;阵型单到达视野上限也用它
+        // reachCells:聚拢按触碰判到达只认这个半径。槽位视线门槛是 max(slotSightNavCells, reachCells),它把门槛抬高。
         if (o.Mode == CrowdOrderMode.Converge)
         {
             o.ReachCells = (int)Fix64.Max(fc.MinClumpNavCells, (fc.ClumpSlack * Fix64Math.Sqrt(area / Fix64.Pi)) / navCellCm).ToLong();
@@ -796,14 +795,14 @@ public sealed class CrowdSimPlanner
         var g = pr.Group;
         if (!_session.Groups.TryGet(pr.GroupId, out var live) || live != g || g.StateSeq != pr.Seq)
         {
-            return; // 被更新请求取代:静默丢弃
+            return; // 状态序对不上就返回,不取答复。路径服务里的回复没有释放。
         }
 
         var result = _service.AwaitDue(pr.RequestId);
         var nav = _session.ResolveNavContext(g.NavId);
         if (g.NavId != pr.NavId || nav.Version != pr.Version)
         {
-            // 答复基于旧导航:丢弃并重新排队刷新(参考 applyExtend 的重排队语义)
+            // 答复基于旧导航:丢弃并重新排队刷新
             Recycle(result);
             RefreshFlow(g);
             return;
@@ -821,7 +820,7 @@ public sealed class CrowdSimPlanner
         _service.ReleaseReply(result);
     }
 
-    /// <summary>队伍反应(reactRebake 移植):对看到本次变更的组逐个判定——目标被挡 → 重规划指令;
+    /// <summary>队伍反应:对看到本次变更的组逐个判定——目标被挡 → 重规划指令;
     /// 行进中且变更落在剩余路线上 → 领队线/成员可达被切断则重规划,否则同走廊刷新流场;
     /// 驻扎组不动槽位。返回需要重规划的指令清单。</summary>
     public List<CrowdOrder> ReactRebake(IReadOnlyList<CrowdNavRebakeContextResult> dirty)
@@ -938,8 +937,7 @@ public sealed class CrowdSimPlanner
         return lost;
     }
 
-    /// <summary>领队剩余路线是否被挡(leaderPathBlocked 移植):沿线四角探边的坏格带;
-    /// 桥面托线由 upPass 覆盖(参考端的 wall 集在 C# 领队无对应物,省略)。</summary>
+    /// <summary>领队剩余路线是否被挡:沿线四角探边的坏格带。桥面托线由 upPass 覆盖。</summary>
     private static bool LeaderPathBlocked(CrowdLeader? leader, NavContext nav, CrowdSimSession session)
     {
         if (leader == null || leader.Done) return false;
@@ -975,7 +973,7 @@ public sealed class CrowdSimPlanner
 
     private static bool LeaderCellBad(byte[] pass, byte[] up, int c) => pass[c] == 0 && up[c] == 0;
 
-    /// <summary>变更是否落在组的剩余路线上(onRemainingRoute 移植):走廊掩码触到脏 tile,
+    /// <summary>变更是否落在组的剩余路线上:走廊掩码触到脏 tile,
     /// 且脏 tile 内存在某成员剩余路线长度可达的格——只用掩码会把身后的变更也算进来。</summary>
     private static bool OnRemainingRoute(
         CrowdSimSession session,
@@ -1011,8 +1009,8 @@ public sealed class CrowdSimPlanner
         if (!_refreshQueue.Contains(g)) _refreshQueue.Add(g);
     }
 
-    /// <summary>每 tick 预算内的流场刷新提交(processRefreshes 移植;生效帧 = tick + refreshLatencyTicks)。
-    /// 参考端还有走廊外单位的 stray 扩展与同目标组共乘——C# 无走廊扩展,共乘属缓存优化,均不在本层。</summary>
+    /// <summary>每 tick 预算内的流场刷新提交(生效帧 = tick + refreshLatencyTicks)。
+    /// 不做走廊扩展,也不做同目标共乘。驻扎组是否沿用真相流场在 Retarget,由 SharesFlow 判定。</summary>
     public void ProcessRefreshes(int tick)
     {
         int n = 0;
@@ -1044,8 +1042,7 @@ public sealed class CrowdSimPlanner
         _pendingRefreshes.Add(pr);
     }
 
-    /// <summary>落帧裁决(afterStalePlan 移植):陈旧答复的组——无场或目标被挡 → 重规划;
-    /// 否则按现行导航刷新流场。返回需要重规划的指令。</summary>
+    /// <summary>陈旧答复的组:无场或目标被挡则重规划;否则再看成员连通域和领队剩余线,切断才重规划,否则刷新流场。</summary>
     private List<CrowdOrder> AfterStalePlan(List<CrowdNavGroupSet.Group> stale)
     {
         var orders = _reactOrders;
@@ -1084,7 +1081,7 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>组代表出发格:取一个地面成员格(近质心),无地面成员时取任意成员的格。</summary>
+    /// <summary>按成员列表顺序,返回第一个地面层单位的格;没有地面成员才用第一个成员的格。</summary>
     private int RepresentativeCell(CrowdSimSession session, List<int> members)
     {
         int fallback = -1;
@@ -1200,8 +1197,7 @@ public sealed class CrowdSimPlanner
         return a > b || (a == b && g.RIdx > m.RIdx);
     }
 
-    /// <summary>原位揭示(revealBelief 移植):槽的已建变体只重烘被揭 tile。C# 流场挂在组上
-    /// (无全局流场缓存),踩脏的组由调用方的 stale 集合刷新——参考端的 flowCache 清理无对应动作。</summary>
+    /// <summary>原位揭示:槽的已建变体只重烘被揭 tile。流场挂在组上,踩脏的组由调用方的 stale 集合刷新。</summary>
     public Dictionary<int, List<int>> RevealBelief(int slot, List<int> tiles) =>
         _session.Beliefs!.Reveal(slot, tiles);
 

@@ -6,7 +6,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
 
-/// <summary>阻挡物盒的逐格 CSR 索引(S5 静态建;S7 起动态仓随结构变更整体重建)。</summary>
+/// <summary>阻挡物盒的逐格 CSR 索引。结构变更时整表重建。</summary>
 public sealed class CrowdBlockerColliders
 {
     private int[] _cellStart;
@@ -30,8 +30,7 @@ public sealed class CrowdBlockerColliders
         _count = colliders.Length;
     }
 
-    /// <summary>结构仓持有的可重填索引。格起点、条目与盒表在装载时按网格留出余量,
-    /// 之后只增少数阻挡盒的重建落在余量内,不再分配。</summary>
+    /// <summary>结构仓持有的可重填索引。盒表预留 HotPathSpanReserve(256),格条目预留 2×格数。超出就 Array.Resize 或新数组。</summary>
     internal static CrowdBlockerColliders CreateReusable(int navCellsPerSide)
     {
         int n2 = navCellsPerSide * navCellsPerSide;
@@ -112,8 +111,7 @@ public sealed class CrowdBlockerColliders
         return BuildFromBoxes(boxes, navCellsPerSide, navCellSizeCm, Fix64.Zero);
     }
 
-    /// <summary>盒表直建(structure store 的 rebuildColliders 移植):注册格矩形按包围盒外扩
-    /// reachCm(0 = S5 静态口径,只登记足迹自身触到的格)。</summary>
+    /// <summary>盒表直建:注册格矩形按包围盒外扩 reachCm。reachCm = 0 只登记足迹碰到的格。</summary>
     public static CrowdBlockerColliders BuildFromBoxes(
         IReadOnlyList<(Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)> boxes, int navCellsPerSide, int navCellSizeCm, Fix64 reachCm)
     {
@@ -181,7 +179,7 @@ public sealed class CrowdBlockerColliders
         }
     }
 
-    /// <summary>把圆盘推出该格登记的每个阻挡盒(resolveColliders 移植);返回 true 并写出修正位置与法线。</summary>
+    /// <summary>把圆盘推出该格登记的每个阻挡盒;返回 true 并写出最后一次接触的位置和法线。</summary>
     public bool Resolve(int cell, Fix64 pxCm, Fix64 pyCm, Fix64 radiusCm,
         out Fix64 outX, out Fix64 outY, out Fix64 normalX, out Fix64 normalY)
     {

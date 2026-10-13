@@ -4,7 +4,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
-/// 导航网格几何原语（形状对齐参考实现 core/space.js，数学走 Ludots 定点体系）。
+/// 导航网格几何原语（数学走 Ludots 定点体系）。
 /// 内核坐标一律厘米（Fix64），与 WorldPositionCm 同一单位制，ECS 边界不做单位换算。
 /// </summary>
 public static class CrowdSimulationSpace

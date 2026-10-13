@@ -3,9 +3,8 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 厘米域 hypot(detHypot 的甲方等价):先按 max(|x|,|y|) 归一再开方——
-/// Fix64(Q31.32)平方的溢出界约 463 m,地图距离以千米计,直接平方必然炸。
-/// 语义与参考实现 detHypot 一致(精确值,不近似),只是中间量换了表达。
+/// 厘米域 hypot:先按 max(|x|,|y|) 归一再开方。
+/// Q31.32 平方约在 463 m 溢出,直接平方会炸。
 /// </summary>
 public static class CrowdFix
 {

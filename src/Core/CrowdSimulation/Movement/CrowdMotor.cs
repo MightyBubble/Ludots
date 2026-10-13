@@ -6,9 +6,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 马达层(motor.js integrateMotor 移植,Fix64 厘米域):把期望速度变成受物理约束的运动——
+/// 马达层(Fix64 厘米域):把期望速度变成受物理约束的运动——
 /// 一阶速度响应、最大转向率、速度上限、墙面滑动。唯一写 x/y/vx/vy 的层。
-/// 参考端 Float32 存储取整(fround)是它的存储层口径;甲方存储是 Fix64 原始值,不二次量化。
+/// 存储是 Fix64 原始值,不二次量化。
 /// 阻挡盒只站在地面层;桥面层(lv=1)不吃地面阻挡。
 /// </summary>
 public static class CrowdMotor
@@ -69,7 +69,7 @@ public static class CrowdMotor
 
             if (state.State == (byte)CrowdUnitState.Jump)
             {
-                // 离网链接 travers:起点→落点直线,不吃墙面/避让
+                // 跳跃:从起点到落点的直线,不吃墙面和避让
                 Fix64 sp = k.Speeds[i] * k.JumpSpeedRatio;
                 Fix64 L = kin.JumpLengthCm;
                 kin.JumpT += sp * dt;
@@ -92,7 +92,7 @@ public static class CrowdMotor
             }
 
             bool rest = state.State != (byte)CrowdUnitState.Moving;
-            // 静态岛休眠(rest && calm && 全零则整步跳过,参考 motor 同款条件):推力/意图/速度
+            // 静态岛休眠(rest && calm && 全零则整步跳过):推力/意图/速度
             // 全零的睡单位不耗马达;新生单位 calm=0 必醒——生成落点压住被挡格时墙面滑出仍是真实位置来源。
             if (rest && k.Calm[i] != 0
                 && kin.Velocity.X == Fix64.Zero && kin.Velocity.Y == Fix64.Zero
@@ -102,15 +102,12 @@ public static class CrowdMotor
                 continue;
             }
 
-            var nav = session.Navs[session.Groups.Groups[state.GroupId]!.BodyNavId]; // 双句柄:马达物理走真相
+            var nav = session.Navs[session.Groups.Groups[state.GroupId]!.BodyNavId]; // 马达读 BodyNavId
             int lv = state.Level;
             byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
-            byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 甲板层没有独立亚格 walk 网格:甲板面无亚格障碍,以 UpPass 为口径(与 S2 数据面对齐)
+            byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 非地面层的亚格 walk 用 UpPass
             Fix64 px = pos.X, py = pos.Y;
-            // 格归属保留 Fix64 除法(单次有理下取整,对真值格号偏差 ≤1 ulp)。
-            // 参考端是 x*inv(预存 f64 倒数);曾试改 Fix64 乘法同形,inv 本身下取整 + 乘积再
-            // 下取整的双重取整反而更偏离参考——S5 实测 p50 0.07cm → 17.3cm(2026-10-09),已回退。
-            // 格边界上与参考的 1 ulp 差属双数值系残余,不可在此框架内消除。
+            // 格号用一次定点除法再下取整。
             int cx = CrowdSimulationSpace.NavCellCoord(px, navCellSizeCm), cy = CrowdSimulationSpace.NavCellCoord(py, navCellSizeCm);
             Fix64 spd = k.Speeds[i];
             Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cy * navN + cx];
@@ -259,7 +256,7 @@ public static class CrowdMotor
         }
     }
 
-    /// <summary>落在被挡格的修正不接收(参考实现的 acceptContact:钳到界内 + 落格可走才存)。</summary>
+    /// <summary>落在被挡格的修正不接收:钳到界内,落格可走才存。</summary>
     private static bool AcceptContact(byte[] pass, int navCellsPerSide, int navCellSizeCm, Fix64 lim, ref Fix64 x, ref Fix64 y)
     {
         Fix64 qx = Fix64.Min(lim, Fix64.Max(Fix64.Zero, x));

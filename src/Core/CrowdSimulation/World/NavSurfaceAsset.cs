@@ -12,7 +12,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 /// 二进制布局（小端）：
 ///   0   4    magic "LNSF"
 ///   4   u16  version = 1（不等于当前版本一律拒绝，无迁移）
-///   6   u16  headerBytes = 32（头部总长度，供前向兼容扩展）
+///   6   u16  headerBytes。v1 头写 32。小于 32 拒绝；更大既不拒绝也不跳过额外字节。
 ///   8   i32  cellsX        导航格数（X）
 ///   12  i32  cellsY        导航格数（Y；世界正方形由加载侧校验，本格式不强制）
 ///   16  i32  navCellSizeCm    导航格边长（厘米）
@@ -24,7 +24,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 ///   ..  ..   格数据：cellsX × cellsY × u8，行优先 index = cy * cellsX + cx；
 ///            cell (0,0) = 地图局部坐标原点角，值 = 地形类型表下标
 ///   ..  ..   跳跃候选：jumpCount × JumpCandidateRecord（16 B）
-/// 长度校验：文件总字节数必须与头字段推导的精确长度一致；多一字节少一字节都拒绝。
+/// 可寻址流在读完结构后要求位置等于长度。不可寻址流不检查尾部多余字节。截断由字段读取发现。
 /// </summary>
 public sealed class NavSurfaceAsset
 {

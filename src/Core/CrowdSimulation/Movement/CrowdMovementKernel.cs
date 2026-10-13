@@ -8,7 +8,7 @@ using Schedulers;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
 
-/// <summary>移动内核的共享上下文(参考实现 kernel 对象移植):稳定引用 + Fix64 参数包,子步间复用。</summary>
+/// <summary>移动内核的共享上下文:稳定引用 + Fix64 参数包,子步间复用。</summary>
 public sealed class CrowdMovementKernel
 {
     public required CrowdSimulation.Units.CrowdSimSession Session { get; init; }
@@ -25,7 +25,7 @@ public sealed class CrowdMovementKernel
     /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时随同一次交换搬走。
     /// </summary>
     public byte[] Calm = Array.Empty<byte>();
-    /// <summary>哈希序聚集缓冲(分离求解的逐格读取面,与参考 sepCtx 同构)。</summary>
+    /// <summary>哈希序聚集缓冲(分离求解的逐格读取面)。</summary>
     public Fix64[] GatherX = Array.Empty<Fix64>();
     public Fix64[] GatherY = Array.Empty<Fix64>();
     public Fix64[] GatherRadius = Array.Empty<Fix64>();
@@ -36,15 +36,13 @@ public sealed class CrowdMovementKernel
     public int[] GatherGroup = Array.Empty<int>();
     /// <summary>逐占格唤醒标记(下标 = 哈希 Active 槽位)。</summary>
     public byte[] Awake = Array.Empty<byte>();
-    /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
-    /// 跨子步累加不回绕)。</summary>
+    /// <summary>逐单位的本 tick 接触计数。每 tick 清零后按子步累加到 ushort。超过 65535 回绕。标准配置 maxNeighbors 24、maxSubSteps 8,够不到。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
     /// <summary>本 tick 接触合计。ScatterUnits 顺带把 ushort 加总,不再另扫一遍。</summary>
     public int ContactSum;
 
     // 子步地址是稠密下标:空间哈希、分离、接触和并行区间都按下标随机读写。
-    // chunk 查询按原型分块,没有跨 chunk 的连续 Span,查询序也不是稠密序
-    // (模板组件集可以不同;无头第二条生成道已经不在,不能再拿“两个原型”当理由)。
+    // chunk 查询按原型分块,没有跨 chunk 的连续 Span,查询序也不是稠密序(模板组件集可以不同)。
     // 每个 tick 用下面的查询把列扫进 SoA,子步只碰 SoA,tick 末按槽位映回的下标写回 chunk。
     private readonly QueryDescription _unitColumns = new QueryDescription()
         .WithAll<CrowdSimulation.Units.CrowdSimulationUnitState, CrowdSimulation.Units.CrowdSimulationKinematics, Ludots.Core.Components.WorldPositionCm, CrowdSimulationAgent, Ludots.Core.Gameplay.Components.PlayerOwner>();
@@ -78,11 +76,11 @@ public sealed class CrowdMovementKernel
     private IndexRangeJob[] _rangeJobs = Array.Empty<IndexRangeJob>();
     private JobHandle[] _rangeHandles = Array.Empty<JobHandle>();
 
-    // ── 避让相位(参考 sepCtx.stride/phase):avoidHz 对子步频率的降频错峰 ──
+    // avoidHz 相对子步频率降频。rateHz 大于步进频率则抛错。
     public required int Stride { get; set; }
     public int Phase { get; set; }
 
-    // ── 参数包(参考实现 p = {...formation, ...movement, slotGain: 1/slotTimeConstant, ...avoidance 局部})──
+    // 参数来自 formation、movement 与 avoidance。slotGain = 1/slotTimeConstantSec。
     public required Fix64 BlendRate { get; init; }
     public required Fix64 BlendCommit { get; init; }
     public required int SlotCheckInterval { get; init; }
@@ -119,7 +117,7 @@ public sealed class CrowdMovementKernel
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 TurnEpsRad { get; init; }
 
-    /// <summary>意图层上报走廊外单位( S5-b 接走廊扩展;S5-a 先由领队转向兜底)。</summary>
+    /// <summary>场外时回调。当前没有走廊扩展;场外转向见意图层。</summary>
     public Action<int, int>? OnStray { get; init; }
 
     public void EnsureCapacity(int unitCapacity)
@@ -462,7 +460,7 @@ public sealed class CrowdMovementKernel
         if (dense < Calm.Length) Calm[dense] = 0;
     }
 
-    /// <summary>分离求解 + 相位前移(参考 tick():哈希重建后、领队之前)。</summary>
+    /// <summary>分离求解,然后相位前移。会话在 Step 之前调用。</summary>
     public void SolveSeparation()
     {
         CrowdAvoidance.Solve(this);
@@ -476,7 +474,7 @@ public sealed class CrowdMovementKernel
         Hash.Build(Positions, Radii, Session.Units.Count);
     }
 
-    /// <summary>一个子步:领队 → 意图 → 马达(避让在 S6 才会插到领队之前)。</summary>
+    /// <summary>Step 只做领队 → 意图 → 马达。分离求解由会话在 Step 之前调用。</summary>
     public void Step(Fix64 dt)
     {
         var orders = Session.Orders.List;
@@ -522,15 +520,14 @@ public sealed class CrowdMovementKernel
         return Math.Max(1, (int)Math.Floor(stepHz / rateHz + 0.5));
     }
 
-    /// <summary>从运行时配置装配内核(参数包 = formation + movement + slotGain=1/slotTimeConstantSec + avoidance 局部;空间哈希按体型上限定尺寸)。
-    /// sep 是无量纲公式值(restDeadband/maxPush 阈值与参考逐字同数);降频 stride 按参考 setRates 四舍五入,rateHz 超过步进频率即报错。</summary>
+    /// <summary>从运行时配置装配内核。降频 stride = max(1, round(stepHz / rateHz)),rateHz 超过步进频率即报错。</summary>
     public static CrowdMovementKernel Create(CrowdSimSession session, CrowdWalls.OpenCellCache? openCache = null)
     {
         var cfg = session.Config;
         var fc = cfg.Formation;
         var mv = cfg.Movement;
         var av = cfg.Avoidance;
-        // 哈希几何按最大个人(避让)半径:参考端 reach = max(personal),格距 = 2×reach/rings;
+        // 哈希格距 = 2 × 最大个人半径 / rings。
         // 两值定点精确传入,不许整数截断
         Fix64 maxRadiusCm = Fix64.Zero;
         foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.PersonalRadiusCm);

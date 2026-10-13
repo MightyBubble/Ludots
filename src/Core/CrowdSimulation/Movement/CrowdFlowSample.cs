@@ -4,9 +4,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 流场连续采样(flowSample.js 移植,Fix64 厘米域):
+/// 流场连续采样(Fix64 厘米域):
 /// routeLength = 从精确位置到终点的绷紧路线长(格)——所有到达阈值共用的长度单位,
-/// 量化量与连续量不混用;不可达 = Fix64.MaxValue(参考实现 Infinity 的哨兵约定,S3-c 沿用)。
+/// 量化量与连续量不混用;不可达 = Fix64.MaxValue,长度单位是格。
 /// 流场数组分层:下标 = 层 × N² + 格(0 地面 / 1 桥面);路点可指另一层(桥头跨层)。
 /// </summary>
 public static class CrowdFlowSample

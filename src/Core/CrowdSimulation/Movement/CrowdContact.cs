@@ -5,7 +5,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 群体到达的接触查询(contact.js 移植):单位是否压到同指令的静止(ARRIVED)单位。
+/// 群体到达的接触查询:单位是否压到同指令的静止(ARRIVED)单位。
 /// 读本子步内建的空间哈希中单位自己的查询环;最多读 maxScan 个候选(与物理趟同上限)。
 /// 输入全部走内核 SoA(gather 已收拢)。
 /// </summary>

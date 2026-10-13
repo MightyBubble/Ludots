@@ -7,10 +7,10 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 移动下令(issueOrder.js 移植,Fix64 厘米域):选中单位(无选中 = 全体本方)按
+/// 移动下令(Fix64 厘米域):选中单位(无选中 = 全体本方)按
 /// (移动类型 × 半径级) 重组进新组、挂同一条新指令;magic box 定落点模式;
 /// PRESERVE 时各层块按(层质心 − 指令质心)平移目标。
-/// 同玩家同成员同目标同参数的重复指令 = 空操作(仍进日志,回放逐位一致)。
+/// 成员、目标格、去重键相同且各组已有目标或在规划中,则返回原模式,不新建指令。本函数不写日志。
 /// </summary>
 public static class CrowdIssueOrder
 {
@@ -75,8 +75,8 @@ public static class CrowdIssueOrder
             int gk = old.LayerIdx * CrowdSimulationLimits.NavContextLayerStride + old.RIdx;
             if (!fresh.TryGetValue(gk, out var g))
             {
-                // 双句柄:新组以真相句柄落底(老组可能持变体号),规划句柄随即挂当前槽。
-                // Group.Player 是玩家表序下标(SpawnAt 传 player-1 同口径)——迷雾视野组按它索引。
+                // 新组以 BodyNavId 落底,AttachGroupNav 再挂规划句柄。
+                // Group.Player 用 PairRules.IndexByPlayerId。SpawnAt 用 player - 1。二者只在玩家号按 1..P 且与表序一致时相等。
                 g = sim.Groups.Alloc(sim.Config.PairRules.IndexByPlayerId[player], old.LayerIdx, old.RIdx, old.BodyNavId);
                 sim.AttachGroupNav(g);
                 fresh[gk] = g;

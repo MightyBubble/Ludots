@@ -7,10 +7,9 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 虚拟领队(leaders.js 移植):(指令 × 移动类型)一个,同层各组共享引用。
-/// 沿漏斗路径以编队步速行进;朝向按 leaderTurnRate 限速,并用前视转向(lookAhead)
-/// 盯住路径前方而非下一路点——漏斗末端的侧向短段不许把整队拖偏(参考实现的事故教训)。
-/// 全部 Fix64 厘米域:detHypot→Fix64Math.Sqrt 同构,detAtan2/detCos/detSin→Fix64Math 同名函数。
+/// 虚拟领队:(指令 × 移动类型)一个,同层各组共享引用。
+/// 沿漏斗路径以编队步速行进;朝向按 leaderTurnRate 限速,并用前视转向盯住路径前方而非下一路点。前视耗尽保持朝向。
+/// 距离用 CrowdFix.Hypot。朝向转角用 Fix64Math.Atan2/Cos/Sin。
 /// </summary>
 public sealed class CrowdLeader
 {

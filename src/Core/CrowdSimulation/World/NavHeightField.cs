@@ -6,9 +6,9 @@ namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
 /// 导航分辨率的高度场与坡度。
-/// 从 .height 资产（uint16 缩放样本）推导：样本解码用定点整数路径
-/// （offset + raw × num / den），不走浮点 Decode；盒式平均降到导航格、
-/// 中心差分得坡度——与导出器在量化输入上的推导一一对应。
+/// 从 .height 资产（uint16 缩放样本）推导：样本先在 double 里做 offset + raw × num / den，再 Fix64.FromDouble。
+/// 不调用 ContinuousHeightSampleScale.Decode（那个返回 float）。盒式平均后中心差分得坡度。
+/// 边界邻格被钳到自身，分母仍是 2×格边长，边缘坡度是单侧差分的一半。
 /// </summary>
 public sealed class NavHeightField
 {

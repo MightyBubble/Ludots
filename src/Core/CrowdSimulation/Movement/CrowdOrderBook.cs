@@ -6,7 +6,7 @@ using Ludots.Core.CrowdSimulation.Units;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
 
-/// <summary>移动指令的落点模式(order.js 的 ORDER_MODE 移植)。</summary>
+/// <summary>移动指令的落点模式。</summary>
 public enum CrowdOrderMode : byte
 {
     /// <summary>拖线摆阵(或显式关 magic box):按线宽/朝向整队。</summary>
@@ -18,7 +18,7 @@ public enum CrowdOrderMode : byte
 }
 
 /// <summary>
-/// magic-box 判定(SC2 式,chooseMode 移植):显式拖线永远整队;点在(加边)包围盒内聚拢;
+/// magic-box 判定:显式拖线永远整队;点在(加边)包围盒内聚拢;
 /// 盒外保持相对位置,除非展开宽度超过上限——那时也整队。
 /// </summary>
 public static class CrowdOrderModeChooser
@@ -47,7 +47,7 @@ public sealed class CrowdOrder
     public int Id { get; set; }
     public int Player { get; set; }
     public CrowdOrderMode Mode { get; set; }
-    /// <summary>阵型 id(配置 formations[].id;未知回退第一项——参考实现同)。</summary>
+    /// <summary>阵型 id。未知 id 由 CrowdFormations.ShapeOf 抛错,不回退。</summary>
     public string ShapeId { get; set; } = "";
     /// <summary>拖线朝向(单位向量,世界系)与线宽(厘米);无拖线时 face=null。</summary>
     public Fix64Vec2? Face { get; set; }
