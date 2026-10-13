@@ -122,7 +122,19 @@ public class ConfigMergeProvenanceTests
             string probe = WriteProbe(
                 root,
                 "Navigation/agent_profiles.json",
-                """[{ "id": "Small", "radiusCm": "not-a-number" }]""");
+                """
+                [{
+                  "id": "Small",
+                  "radiusCm": "not-a-number",
+                  "heightCm": 180,
+                  "clearanceCm": 40,
+                  "draftCm": 0,
+                  "beamCm": 0,
+                  "mass": 1,
+                  "layer": 0,
+                  "navProfileId": "Small"
+                }]
+                """);
             (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, probe));
 
             ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
@@ -186,14 +198,19 @@ public class ConfigMergeProvenanceTests
 
         ConfigProvenanceSnapshot snapshot = ConfigMergeProvenance.Capture(Path.Combine(repoRoot, "assets"), mounts);
         ConfigProvenanceFile navmesh = FindFile(snapshot, "Navigation/navmesh.json");
-        Assert.That(navmesh.Fragments, Does.Contain("Core:Navigation/navmesh.json"));
-        Assert.That(navmesh.Fragments, Does.Contain("LudotsCoreMod:assets/Navigation/navmesh.json"));
-        Assert.That(IndexOf(navmesh.Fragments, "Core:Navigation/navmesh.json"), Is.LessThan(IndexOf(navmesh.Fragments, "LudotsCoreMod:assets/Navigation/navmesh.json")));
-        Assert.That(navmesh.FileWinner, Is.EqualTo("LudotsCoreMod:assets/Navigation/navmesh.json"));
+        const string coreUri = "Core:Navigation/navmesh.json";
+        const string coreModUri = "LudotsCoreMod:assets/Navigation/navmesh.json";
+        const string standardUri = "CrowdSimulationStandardMod:assets/Navigation/navmesh.json";
+        Assert.That(navmesh.Fragments, Does.Contain(coreUri));
+        Assert.That(navmesh.Fragments, Does.Contain(coreModUri));
+        Assert.That(navmesh.Fragments, Does.Contain(standardUri));
+        Assert.That(IndexOf(navmesh.Fragments, coreUri), Is.LessThan(IndexOf(navmesh.Fragments, coreModUri)));
+        Assert.That(IndexOf(navmesh.Fragments, coreModUri), Is.LessThan(IndexOf(navmesh.Fragments, standardUri)));
+        Assert.That(navmesh.FileWinner, Is.EqualTo(standardUri));
 
         string json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.That(json, Does.Contain("\"relativePath\":\"Navigation/navmesh.json\""));
-        Assert.That(json, Does.Contain("\"fileWinner\":\"LudotsCoreMod:assets/Navigation/navmesh.json\""));
+        Assert.That(json, Does.Contain("\"fileWinner\":\"CrowdSimulationStandardMod:assets/Navigation/navmesh.json\""));
         Assert.That(json, Does.Contain("\"fragments\""));
         Assert.That(json, Does.Contain("\"winners\""));
         Assert.That(json, Does.Contain("\"deletions\""));
@@ -450,7 +467,16 @@ public class ConfigMergeProvenanceTests
 
     private static AgentProfileRegistry DefaultProfiles() => new(new[]
     {
-        new AgentProfileConfig { Id = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 }
+        new AgentProfileConfig
+        {
+            Id = "Small",
+            RadiusCm = 30,
+            HeightCm = 180,
+            ClearanceCm = 40,
+            Mass = 1,
+            Layer = 0,
+            NavProfileId = "Small",
+        }
     });
 
     private static string MinimalNavmesh(string maxClimbCmJson) =>
@@ -458,9 +484,9 @@ public class ConfigMergeProvenanceTests
         {
           "mode": "offline",
           "algorithm": "recast",
-          "profiles": [ { "id": "Small", "maxClimbCm": {{maxClimbCmJson}}, "maxSlopeDeg": 45 } ],
+          "profiles": { "Small": { "maxClimbCm": {{maxClimbCmJson}}, "maxSlopeDeg": 45, "agentProfileId": "Small" } },
           "layers": [ { "id": "Ground", "layer": 0 } ],
-          "areas": [ { "id": "Default", "areaId": 0, "cost": 1.0 } ],
+          "areas": { "Default": { "areaId": 0, "slopeFree": false } },
           "runtimeIncremental": {
             "tileBudgetPerFixedTick": 1,
             "includeNeighborTiles": true,
@@ -509,7 +535,8 @@ public class ConfigMergeProvenanceTests
             "draftCm": 0,
             "beamCm": 0,
             "mass": 1,
-            "layer": 0
+            "layer": 0,
+            "navProfileId": "Small"
           }
         ]
         """;

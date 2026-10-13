@@ -66,13 +66,8 @@ public sealed class L76FogBaselineHarness
 
         string dir = Path.Combine(Parity.S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, truthName)))!;
-        var script = new List<CrowdCommand>();
-        foreach (var entry in meta["script"]!.AsArray())
-        {
-            script.Add(new CrowdCommand(entry!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(entry["cmd"]!)));
-        }
-
-        session.Commands.Schedule(session, script);
+        var reference = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
+        reference.ValidateStructure(session);
         var fog = session.Fog!;
         int period = fog.Period;
         int groups = fog.VisionGroupCount;
@@ -80,6 +75,7 @@ public sealed class L76FogBaselineHarness
         var samples = new JsonArray();
         for (int t = 0; t < ticks; t++)
         {
+            reference.ApplyDue(session);
             Step(session, t);
             if (t % period != 0) continue;
             samples.Add(Counts(fog, t));
@@ -217,13 +213,20 @@ public sealed class L76FogBaselineHarness
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(180), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.Commands.Schedule(session, new List<CrowdCommand>
+        var reference = CrowdReferenceScript.Load(new JsonArray
         {
-            new(0, CrowdSimCommand.Parse(JsonNode.Parse(
-                $"{{\"type\":\"spawnAt\",\"player\":1,\"xCm\":480000,\"yCm\":560000,\"count\":{units},\"unitType\":0,\"rIdx\":0}}")!)),
-            new(2, CrowdSimCommand.Parse(JsonNode.Parse(
-                """{"type":"order","player":1,"xCm":1200000,"yCm":800000,"shape":"box"}""")!)),
-        });
+            new JsonObject
+            {
+                ["tick"] = 0,
+                ["cmd"] = JsonNode.Parse(
+                    $"{{\"type\":\"spawnAt\",\"player\":1,\"xCm\":480000,\"yCm\":560000,\"count\":{units},\"unitType\":0,\"rIdx\":0}}"),
+            },
+            new JsonObject
+            {
+                ["tick"] = 2,
+                ["cmd"] = JsonNode.Parse("""{"type":"order","player":1,"xCm":1200000,"yCm":800000,"shape":"box"}"""),
+            },
+        }, session.Units.Capacity);
 
         int ran = 0;
         int guard = 64 * (WarmupTicks + MeasuredTicks) + 64;
@@ -235,6 +238,7 @@ public sealed class L76FogBaselineHarness
             if (guard-- <= 0) throw new InvalidOperationException($"{units} 基准推进停摆过长。");
             long beforeAlloc = 0;
             if (ran >= WarmupTicks) beforeAlloc = GC.GetAllocatedBytesForCurrentThread();
+            reference.ApplyDue(session);
             watch.Restart();
             bool advanced = session.Step(out _);
             watch.Stop();

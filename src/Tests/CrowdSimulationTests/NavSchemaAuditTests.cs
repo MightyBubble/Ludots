@@ -356,8 +356,9 @@ public class NavSchemaAuditTests
             vfs.Mount("Core", tempRoot);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(() =>
                 new AgentProfileConfigLoader(pipeline).Load(catalog))!;
+            Assert.That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
             Assert.That(ex.Message, Does.Contain("templateId"));
             Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.speedCmPerSecond"));
         }

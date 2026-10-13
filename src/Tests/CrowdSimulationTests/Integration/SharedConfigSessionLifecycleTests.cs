@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -155,8 +156,27 @@ public sealed class SharedConfigSessionLifecycleTests
     [Test]
     public void CrowdSolver_WhenConfigMergesNull_Throws()
     {
-        InvalidOperationException ex = FocusProbe("crowd_empty", "crowd-simulation", includeCrowdMod: true);
-        AssertMissingCrowdConfig(ex, "crowd_empty");
+        string repoRoot = FindRepoRoot();
+        string probeModRoot = WriteProbeMod("crowd_empty", "crowd-simulation");
+        try
+        {
+            var mods = new List<string>
+            {
+                Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
+                probeModRoot,
+            };
+            using var engine = Start(mods, repoRoot);
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(() => engine.LoadMap("crowd_empty"))!;
+            Assert.That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
+            AssertMissingCrowdConfig((InvalidOperationException)ex.InnerException!, "crowd_empty");
+            Assert.That(ex.Message, Does.Contain("配置路径:"));
+            Assert.That(ex.Message, Does.Contain("CrowdSimulationConfig.json"));
+        }
+        finally
+        {
+            if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
+        }
     }
 
     [Test]

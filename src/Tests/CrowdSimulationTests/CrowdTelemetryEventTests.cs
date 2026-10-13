@@ -44,17 +44,7 @@ public sealed class CrowdTelemetryEventTests
         Assert.That(session.Telemetry.Rebakes, Is.GreaterThan(rebakes), "重烘报告发布时应 MarkRebake");
 
         long waits = session.Telemetry.PathWaits;
-        session.Commands.Submit(
-            session,
-            new JsonObject
-            {
-                ["type"] = "order",
-                ["player"] = 1,
-                ["xCm"] = 1200000,
-                ["yCm"] = 800000,
-                ["shape"] = "box",
-            },
-            CrowdSimCommands.Exec);
+        session.Commands.Submit(session, MoveOrder(session, 1, 1200000, 800000), CrowdSimCommands.Exec);
         session.Advance(session.Config.Planning.LatencyTicks);
         int membersBefore = session.Units.Count;
         int hist = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
@@ -76,5 +66,22 @@ public sealed class CrowdTelemetryEventTests
         int histAfter = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
             + session.Telemetry.Unreachable + session.Telemetry.Jumping;
         Assert.That(histAfter, Is.EqualTo(session.Units.Count), "等路停摆前 Flush 增加的成员要重数进直方");
+    }
+
+    private static JsonObject MoveOrder(CrowdSimSession session, int player, int xCm, int yCm)
+    {
+        var handles = new uint[session.Units.Count];
+        int count = session.Units.CopyOwnHandles(player, handles);
+        var members = new JsonArray();
+        for (int i = 0; i < count; i++) members.Add((long)handles[i]);
+        return new JsonObject
+        {
+            ["type"] = "order",
+            ["player"] = player,
+            ["xCm"] = xCm,
+            ["yCm"] = yCm,
+            ["shape"] = "box",
+            ["members"] = members,
+        };
     }
 }

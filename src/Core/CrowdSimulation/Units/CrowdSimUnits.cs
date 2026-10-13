@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Arch.Core;
 using Arch.Core.Extensions.Dangerous;
@@ -340,7 +341,8 @@ public sealed class CrowdSimUnits
     /// 批车道按模板把同一签名的实体追加进同一个原型，chunk 序就不再是稠密下标。
     /// Gather/Scatter 仍按稠密下标写 SoA；序一乱，每行都打到不同缓存行。
     /// 只交换这些实体已经占着的行，不新建实体，稠密表和实体 id 都不变。
-    /// 人群单位原型必须正好是这张稠密表。多出来的实体不能静默跳过，否则交换会卷进别人的行。
+    /// 同一签名各自成一个原型：带隐藏模板标签的单位多一个 GameplayTagContainer，不跟普通单位挤在同一原型。
+    /// 每个原型必须正好装着这一签名的稠密单位。多出来的实体不能静默跳过，否则交换会卷进别人的行。
     /// </summary>
     private void OrderChunkRowsByDenseIndex()
     {
@@ -350,8 +352,77 @@ public sealed class CrowdSimUnits
             return;
         }
 
-        Entity first = _dense[0];
-        Archetype archetype = _world.GetArchetype(first);
+        Archetype primary = _world.GetArchetype(_dense[0]);
+        bool uniform = true;
+        for (int i = 1; i < n; i++)
+        {
+            if (!ReferenceEquals(_world.GetArchetype(_dense[i]), primary))
+            {
+                uniform = false;
+                break;
+            }
+        }
+
+        if (uniform)
+        {
+            var desired = new int[n];
+            for (int i = 0; i < n; i++) desired[i] = n - 1 - i;
+            OrderArchetypeRows(primary, desired);
+            return;
+        }
+
+        var groups = new List<Archetype>(4);
+        var members = new List<int[]>(4);
+        var counts = new List<int>(4);
+        for (int dense = 0; dense < n; dense++)
+        {
+            Archetype archetype = _world.GetArchetype(_dense[dense]);
+            int group = -1;
+            for (int g = 0; g < groups.Count; g++)
+            {
+                if (ReferenceEquals(groups[g], archetype))
+                {
+                    group = g;
+                    break;
+                }
+            }
+
+            if (group < 0)
+            {
+                group = groups.Count;
+                groups.Add(archetype);
+                members.Add(new int[n]);
+                counts.Add(0);
+            }
+
+            int written = counts[group];
+            members[group][written] = dense;
+            counts[group] = written + 1;
+        }
+
+        for (int g = 0; g < groups.Count; g++)
+        {
+            int count = counts[g];
+            int[] bucket = members[g];
+            Array.Sort(bucket, 0, count);
+            for (int i = 0; i < count / 2; i++)
+            {
+                (bucket[i], bucket[count - 1 - i]) = (bucket[count - 1 - i], bucket[i]);
+            }
+
+            var desired = new int[count];
+            Array.Copy(bucket, desired, count);
+            OrderArchetypeRows(groups[g], desired);
+        }
+    }
+
+    /// <summary>
+    /// <paramref name="desiredDense"/> 的下标是正向槽位，值是要放进去的稠密下标。
+    /// 查询从最后一块的最后一行往回走，所以这里按稠密下标降序填。
+    /// </summary>
+    private void OrderArchetypeRows(Archetype archetype, int[] desiredDense)
+    {
+        int n = desiredDense.Length;
         if (archetype.EntityCount != n)
         {
             throw new InvalidOperationException(
@@ -407,10 +478,9 @@ public sealed class CrowdSimUnits
             swaps[c] = SwapFor(types[c].Type);
         }
 
-        // 查询从最后一块的最后一行往回走，所以正向槽位 i 上要放稠密下标 n-1-i。
         for (int i = 0; i < n; i++)
         {
-            int desired = n - 1 - i;
+            int desired = desiredDense[i];
             int from = at[_dense[desired].Id];
             if ((uint)from >= (uint)n)
             {

@@ -35,17 +35,7 @@ public sealed class CrowdTelemetryClampEvictPlanTests
         int spawned = CrowdDeployment.SpawnAt(
             session, Fix64.FromInt(480000), Fix64.FromInt(560000), 8, 1, 0, 0);
         Assert.That(spawned, Is.EqualTo(8));
-        session.Commands.Submit(
-            session,
-            new JsonObject
-            {
-                ["type"] = "order",
-                ["player"] = 1,
-                ["xCm"] = 1200000,
-                ["yCm"] = 800000,
-                ["shape"] = "box",
-            },
-            CrowdSimCommands.Exec);
+        session.Commands.Submit(session, MoveOrder(session, 1, 1200000, 800000), CrowdSimCommands.Exec);
         int guard = 0;
         while (session.Telemetry.Plans == 0)
         {
@@ -158,5 +148,22 @@ public sealed class CrowdTelemetryClampEvictPlanTests
         }
 
         return string.Join('\n', parts);
+    }
+
+    private static JsonObject MoveOrder(CrowdSimSession session, int player, int xCm, int yCm)
+    {
+        var handles = new uint[session.Units.Count];
+        int count = session.Units.CopyOwnHandles(player, handles);
+        var members = new JsonArray();
+        for (int i = 0; i < count; i++) members.Add((long)handles[i]);
+        return new JsonObject
+        {
+            ["type"] = "order",
+            ["player"] = player,
+            ["xCm"] = xCm,
+            ["yCm"] = yCm,
+            ["shape"] = "box",
+            ["members"] = members,
+        };
     }
 }
