@@ -77,7 +77,12 @@ public sealed partial class CrowdSimulationRuntime
 
     private void DetachDeploy(GameEngine engine)
     {
-        if (_deployDemo != null) _deployDemo.Active = false;
+        if (_deployDemo != null)
+        {
+            _deployDemo.ReleasePlayback();
+            _deployDemo.Active = false;
+        }
+
         _deployDemo = null;
         UnregisterFixed(engine, ref _deployInput, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _deployPresentation);
@@ -153,6 +158,22 @@ public sealed partial class CrowdSimulationRuntime
             ToggleBuild = deploy.Actions.ToggleBuild,
             Remove = deploy.Actions.Remove,
             Place = deploy.Actions.Place,
+            ToolOff = deploy.Actions.ToolOff,
+            ToolBoom = deploy.Actions.ToolBoom,
+            ToolSpawn = deploy.Actions.ToolSpawn,
+            ToolStructure = deploy.Actions.ToolStructure,
+            ToolDemolish = deploy.Actions.ToolDemolish,
+            Deploy = deploy.Actions.Deploy,
+            Scatter = deploy.Actions.Scatter,
+            Stress = deploy.Actions.Stress,
+            ClearCaches = deploy.Actions.ClearCaches,
+            AvoidDown = deploy.Actions.AvoidDown,
+            AvoidUp = deploy.Actions.AvoidUp,
+            SliceDown = deploy.Actions.SliceDown,
+            SliceUp = deploy.Actions.SliceUp,
+            Pause = deploy.Actions.Pause,
+            SpeedDown = deploy.Actions.SpeedDown,
+            SpeedUp = deploy.Actions.SpeedUp,
         };
         var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
         for (int i = 0; i < deploy.Structures.Length; i++)
@@ -169,8 +190,13 @@ public sealed partial class CrowdSimulationRuntime
 
         var (routes, slot) = RequireVisualServices(engine);
         var demo = new S4DeployDemoRuntime(engine);
+        CrowdDebugTools tools = _debug?.Tools
+            ?? throw new InvalidOperationException("部署演示缺少 tools。");
+        CrowdDebugRates rates = _debug?.Rates
+            ?? throw new InvalidOperationException("部署演示缺少 rates。");
         demo.UseViewLabels(presentation.ViewLabels);
         demo.UseStructures(choices);
+        demo.UseDebugTools(tools, rates);
         Func<CrowdSimSession?> sessionSource = () =>
             engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null;
         var demoProjector = new S4DeployDemoViewProjector(demo, sessionSource);

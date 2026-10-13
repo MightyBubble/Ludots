@@ -44,6 +44,8 @@ public sealed class CrowdTelemetryEventTests
         Assert.That(session.Telemetry.Rebakes, Is.GreaterThan(rebakes), "重烘报告发布时应 MarkRebake");
 
         long waits = session.Telemetry.PathWaits;
+        // 工人取出任务时才读延迟。到期帧是推进 latency 之后的下一步，这两步本身还不会等到点。
+        service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
         session.Commands.Submit(session, MoveOrder(session, 1, 1200000, 800000), CrowdSimCommands.Exec);
         session.Advance(session.Config.Planning.LatencyTicks);
         int membersBefore = session.Units.Count;
@@ -55,7 +57,6 @@ public sealed class CrowdTelemetryEventTests
             new CrowdCommand(session.TickCount, CrowdSimCommand.Parse(
                 JsonNode.Parse("""{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":4,"unitType":0,"rIdx":0}""")!)),
         });
-        service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
         session.BlockOnDueReplies = false;
         Assert.That(session.Step(out _), Is.False, "到期规划在路径延迟下应停摆");
 

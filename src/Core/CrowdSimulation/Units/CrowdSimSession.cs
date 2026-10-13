@@ -58,6 +58,7 @@ public sealed class CrowdSimSession
         SubSteps = Math.Clamp(unclamped, 1, cap);
         if (unclamped > cap) Telemetry.MarkSubStepClamped();
         SubStepDt = simDt / SubSteps;
+        RebakeSliceCount = config.Planning.RebakeSlices;
     }
 
     /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>
@@ -109,6 +110,29 @@ public sealed class CrowdSimSession
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
+    /// <summary>结构变更摊到后续 tick 的切片数。初值是配置,rebakeSlices 指令改它,Reset 恢复配置。</summary>
+    public int RebakeSliceCount { get; set; }
+    /// <summary>创建内核时的避让步长。rates 只改当前步长,Reset 回到这里。</summary>
+    public int BaseStride { get; private set; }
+    /// <summary>当前避让频率。创建内核时取配置,rates 成功后改成指令值。</summary>
+    public Fix64 AvoidHz { get; private set; }
+    /// <summary>为真时冲刷队列里 tick 已到的指令，不推进运动，也不增加 TickCount。现场 Submit 不受影响。</summary>
+    public bool PlaybackHeld { get; set; }
+    /// <summary>
+    /// 冲刷前后调用。返回 true 表示刚排入了新指令，调用方再冲刷一次。
+    /// 演示脚本用它把尚未到点的行放进队列，诊断断面才能和回放对上。
+    /// </summary>
+    internal Func<CrowdSimSession, bool>? StageDeferredCommands { get; set; }
+    public int ScatterSeq { get; set; }
+
+    internal void SetAvoidHz(Fix64 hz) => AvoidHz = hz;
+
+    /// <summary>执行当前 tick 及以前的到点指令,不推进仿真。</summary>
+    public void FlushDueCommands()
+    {
+        Commands.Flush(this, ExecCommand);
+        Units.MaterializePending();
+    }
 
     private FogLayerRegistry? _visionLayers;
     private FogFieldStore? _visionFields;
@@ -123,6 +147,8 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
+        BaseStride = kernel.Stride;
+        AvoidHz = Config.Avoidance.RateHz;
         // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。盖章前要先绑定雾层和雾场。有迷雾就注入高度表。
         if (Structures != null)
         {
@@ -298,6 +324,7 @@ public sealed class CrowdSimSession
             Refreshes = report.Refreshes,
             Evicted = report.Evicted,
             Stuck = report.Stuck,
+            ElapsedTicks = report.ElapsedTicks,
             Bbox = report.Bbox,
             ContextResults = rows,
             UnionTiles = new List<int>(report.UnionTiles),
@@ -307,7 +334,7 @@ public sealed class CrowdSimSession
     public NavContext NavFor(int layer, int r) => NavByLayerRadius[(layer, r)];
 
     /// <summary>
-    /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
+    /// 推进一个 tick:先把已能成形的演示脚本行排进队列 → 冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
     /// → tickCount+1 → 流场刷新排队 → 校验码。TruthNavFrozen 跳过迷雾和认知同步。
@@ -321,8 +348,15 @@ public sealed class CrowdSimSession
         long mark = Stopwatch.GetTimestamp();
         try
         {
+            StageDeferredCommands?.Invoke(this);
             Commands.Flush(this, ExecCommand);
             Units.MaterializePending();
+            while (StageDeferredCommands?.Invoke(this) == true)
+            {
+                Commands.Flush(this, ExecCommand);
+                Units.MaterializePending();
+            }
+
             telemetry.AddCommandTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
             if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
             if (Structures != null) CrowdStructureOps.ExpireStructures(this);
@@ -416,6 +450,16 @@ public sealed class CrowdSimSession
         RebakeJob = null;
         TickCount = 0;
         SpawnSeq = 0;
+        ScatterSeq = 0;
+        PlaybackHeld = false;
+        RebakeSliceCount = Config.Planning.RebakeSlices;
+        if (Movement != null)
+        {
+            Movement.Stride = BaseStride;
+            Movement.Phase = 0;
+            AvoidHz = Config.Avoidance.RateHz;
+        }
+
         SpawnSkippedTotal = 0;
         _stateHistogramMembers = 0;
         Telemetry.SetUnitStates(0, 0, 0, 0, 0);

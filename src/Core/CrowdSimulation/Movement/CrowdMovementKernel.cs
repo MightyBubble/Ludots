@@ -19,12 +19,12 @@ public sealed class CrowdMovementKernel
     public Fix64Vec2[] Intent = Array.Empty<Fix64Vec2>();
     /// <summary>
     /// 避让分离推力(厘米;每子步由分离求解写入,马达读)。
-    /// 按下标对齐稠密行,GatherUnits 不重读。将来若有退场,必须和稠密行同一次交换搬走,并且退场只能有这一个入口。
+    /// 按下标对齐稠密行,GatherUnits 不重读。退场只走 CrowdSimUnits.ReleaseDense,同一次用 MoveAvoidanceRow 把末行换到空位。
     /// </summary>
     public Fix64Vec2[] Separation = Array.Empty<Fix64Vec2>();
     /// <summary>
     /// 静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。
-    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时随同一次交换搬走。
+    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时由 MoveAvoidanceRow 换走。
     /// </summary>
     public byte[] Calm = Array.Empty<byte>();
     /// <summary>哈希序聚集缓冲(分离求解的逐格读取面)。</summary>
@@ -493,6 +493,23 @@ public sealed class CrowdMovementKernel
         if (GatherMoving.Length < unitCapacity) GatherMoving = new byte[unitCapacity];
         if (GatherGroup.Length < unitCapacity) GatherGroup = new int[unitCapacity];
         if (Contacts.Length < unitCapacity) Contacts = new ushort[unitCapacity];
+    }
+
+    /// <summary>稠密表把末行换到空位时,分离与静动标记跟着换。缓冲还没建(长度 0)时没有行可搬。</summary>
+    internal void MoveAvoidanceRow(int fromDense, int toDense)
+    {
+        if (Separation.Length == 0 && Calm.Length == 0) return;
+        if ((uint)fromDense >= (uint)Separation.Length || (uint)toDense >= (uint)Separation.Length
+            || (uint)fromDense >= (uint)Calm.Length || (uint)toDense >= (uint)Calm.Length)
+        {
+            throw new InvalidOperationException(
+                $"避让行 {fromDense}→{toDense} 超出分离缓冲 {Separation.Length}/{Calm.Length}。");
+        }
+
+        Separation[toDense] = Separation[fromDense];
+        Separation[fromDense] = Fix64Vec2.Zero;
+        Calm[toDense] = Calm[fromDense];
+        Calm[fromDense] = 0;
     }
 
     /// <summary>新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>

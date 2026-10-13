@@ -153,6 +153,12 @@ namespace Ludots.Client.Raylib.Input
 
         internal static string ToSyntheticKeyName(KeyboardKey key)
         {
+            // Binding paths use "4". Synthetic captures send that same name.
+            if (key >= KeyboardKey.KEY_ZERO && key <= KeyboardKey.KEY_NINE)
+            {
+                return ((char)('0' + ((int)key - (int)KeyboardKey.KEY_ZERO))).ToString();
+            }
+
             // "KEY_PAGE_UP" -> "PAGEUP" (device names are case/underscore-insensitive)
             string raw = key.ToString();
             const string prefix = "KEY_";

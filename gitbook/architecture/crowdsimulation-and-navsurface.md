@@ -172,7 +172,9 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 `Team` 是这一步读的组件。`MemberOf`（玩家代表 → 队伍代表）是主干的队伍真相。改这条边会抬修订号，`RelationshipRuntime` 随即 `SyncTeam`，把队伍号写进 `Team`。只改 `Team`、不改边，修订号不动，所以每个 tick 都读组件。
 
-调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，聚焦仍建会话和路径服务。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。
+调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，聚焦仍建会话和路径服务。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。`tools` 和 `rates` 可以不写；写了就必须字段齐全、不能有未知键、范围必须合法，代码不补默认。`presentation.kind=deploy` 时这两段都要有，并且 `tools.placeTemplate` 对得上演示模板：方形模板的 `sizeCm` 等于 `rectSizeCm`，圆模板等于 `discRadiusCm`，连线模板等于 `pathWidthCm`。
+
+`kill`、`scatter`、`rates`、`rebakeSlices`、`clearCaches` 和已有的 `spawn` / `spawnAt` / `placeStructure` / `removeStructureAt` 走同一条指令日志。`kill` 从稠密表尾部 `ReleaseDense` 删掉半径内的单位，外圈沿离心方向加上该单位移动类型速度乘 `impulse`。`scatter` 用会话的加盐 `CrowdSimRng` 给每个有单位的出生玩家一条带成员句柄的 box 指令。`clearCaches` 对已有流场调用 `RefreshFlow`，不另建会跳过规划延迟的缓存。`rebakeSlices` 改会话当前切片数，范围是 1 到配置上限，`Reset` 回到配置值。`rates` 的 `tickHz` 必须等于 `FixedHz`，否则拒收且不进日志；`avoidHz` 大于 0 且不超过步进频率时重算 stride 并把相位归零。`FixedHz`、`SimDt`、子步数不变。满容量压测复用 `spawn`，数量是 `sim.maxUnits`。播放暂停是会话的 `PlaybackHeld`：到点指令照常执行，tick 不推进。倍速是 `TimeFlowService` 在 Simulation 域的缩放令牌，不改 `SimDt`。
 
 需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
 
@@ -281,7 +283,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **哈希几何精确化**：格边长与触及距离改定点精确值传入(此前经 int 截断;参考端是浮点 inv=1/cellSize),格归属的向零截断、环数 ceil 语义与参考逐字对齐。默认配置下格距 4800 cm 本就整除,修复对演示场景是潜在正确性(非整除配置才触发),不改变现测轨迹。
 - **定带证据与定位结论**：首个分歧点:tick 11、单位 163、马达静止停车分支——n2 = 1.8916(C#)/1.8904(参考) 对 slow2 = 1.8906,差 5e-4,两侧输入(sep/pos/速度)一致到 1e-6;骑线翻转停车分支,离散事件再放大成位置尾差(与哈希几何修复不同源:那一处是潜在正确性修复,未改变现测轨迹)。输入差来源定性为**参考端 f32 状态存储**(位置量化格 2^-10m;生成位置全精度,首次马达步即落格)。去量化实验(f64 化参考端 units 位置存储与避让聚集/输出缓冲,临时实验已还原)后首个离散分歧不消失——当时据此判"尾差不是 f32 量化噪声单独所致"。该实验未覆盖全部 f32 路径(restX/Y、slot、blend、stall、jump*、motor.js 的显式 fround),不收敛不构成反证,此判撤回;Fix64 每运算舍入约 2^-32 cm,比观测差小约 10 个数量级,排除为主因。带值维持 500/100,不允许再放宽;结论与定案（2026-10-09，行为对拍口径）不变。
 - **接触计数硬门**：真值 bin 每单位追加 u16 接触计数(每 tick 清零、求解行累加、跳过行保持 0,两端同构逐位可比;体积 +289 KB)。实测 600 tick × 241 单位不一致 10/144234 样本(0.007%,全部 ±1 骑线翻转),硬门取双容忍线:不一致样本 ≤ 0.05% 且单样本幅度 ≤ ±1——系统性求解分歧(接触集大面积错)会同时击穿两条。
-- **避让隐藏状态进校验码**：校验码追加分离两轴 + calm 逐单位(mixI64 双词)与相位一词(逐 tick),导出端 canonChecksum 同步(部署会话无运动栈,新字段恒零,词数对齐——注意块序在整型字段之后,与 C# 同序);S4 真值三种子重钉,150 帧逐字全等。**回放口径写明:回放从 tick 0 起新会话**(`CrowdSimSession.Reset` 后逐帧重演,快照恢复不走中间态)。**Stride 写明:只在会话创建时按 rateHz 推导一次,Ludots 端不支持参考端 setRates 的运行时调频。**
+- **避让隐藏状态进校验码**：校验码追加分离两轴 + calm 逐单位(mixI64 双词)与相位一词(逐 tick),导出端 canonChecksum 同步(部署会话无运动栈,新字段恒零,词数对齐——注意块序在整型字段之后,与 C# 同序);S4 真值三种子重钉,150 帧逐字全等。**回放口径写明:回放从 tick 0 起新会话**(`CrowdSimSession.Reset` 后逐帧重演,快照恢复不走中间态)。**Stride 写明:会话创建时按 avoidance.rateHz 推导一次。`rates` 的 tickHz 必须等于 FixedHz,否则拒收、不进日志;avoidHz 在步进频率以内时重算 stride 并把相位归零。FixedHz、SimDt、子步数不变。Reset 回到创建时的 stride。**
 
 ### 校验码分区
 
@@ -300,7 +302,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 - `groups`：按组槽走，空槽记 0。活组记 `OrderId`、`Goal`、`GoalComp`、`Planning`、`StateSeq`、`LosAll`。领队和上一任领队记位置、朝向、路径上的每个路点、当前路点下标、是否走完。流场记 `BuildRevision`（缓冲每成功构建一次加一，池内复用继续累加）、`NavId`、`Goal`、`Reached`，以及目标格上的长度。后面接指令簿（id、玩家、模式、去重键、组链接）和在途规划（到期 tick、组目标、请求号、导航版本、刷新队列的组号）。
 - `jump`：每个单位的 `RestCm`、`JumpToCm`、`JumpT`、`JumpLengthCm`。没有运动内核时读组件；缺组件则这六词为 0。
-- `commands`：未执行条数，再按队列顺序混每条的 tick、种类和载荷字段（坐标、数量、形状串、模板串、区域顶点）。`Flush` 只在执行时写日志。回放输入是已执行日志，再接上尚未到点的队列。
+- `commands`：未执行条数，再按队列顺序混每条的 tick、种类和载荷字段（坐标、数量、形状串、模板串、区域顶点，以及爆炸半径、外圈倍数、冲量、tick 频率、避让频率、切片数）。`Flush` 只在执行时写日志。回放输入是已执行日志，再接上尚未到点的队列。演示脚本在冲刷并物化之后、校验码之前，把已经能成形的行排进这条队列；没有成员的 order 等到该玩家有单位再补句柄，日志里留下的就是这份载荷。
 
 `CrowdSimChecksum.DiffDigest` 同时给出两样。合计的第一处分歧：tick 与 `Section`（position、motion、state、avoidance 的第一个）；没有则为 tick -1、断面名为空。诊断的第一处分歧：`DiagnosticTick` 与掩码；没有则为 tick -1、掩码 0。两样可以落在不同 tick。后段合计接续前段，更早的合计词变了，后面的合计断面会跟着变，函数只报第一个合计断面。共同前缀的合计一致但条数不同时，合计 tick 为 -2，section 为空。
 
@@ -353,7 +355,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **约束**:① 碰撞索引必须跟随仓的活 CSR——放置重建出**新实例**,会话持旧实例则墙内单位永推不出(首个真分歧,tick 31 单位 92 差 43m,`Blockers` 已改为派生属性);② worker 复用的 tile 多边形代价备忘键须钉**条目引用**((navId, tile) 键在重烘换条目后越界,worker 故障);③ 寿命 tick 整数契约走参考端 f64 公式(见上);④ 刷新队列长在阶段 1 末快照(阶段 2 读实时值已被每 tick 预算排空,参考端同点)。
 - **真机**：S4Deploy 冒烟脚本追加建造/拆除/寿命/道路四 op(12000 单位):5 笔重烘报告全字段落日志(含到期拆除与 costOnly=4 的仅代价重烘,缓存命中计数与挤离计数在案);**autoReplay 回放无分歧(status=1, divergenceTick=-1)**——回放会话用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存(共享活会话已被 op 改写的导航上下文必然分歧,首个分歧恰在首个规划落地 tick 43);截图 `raylib-s1337-s7rebake-kernel.png`。
 - **单位删除路径**:本单未触及单位删除路径(evict 是传送不是删除,无 kill 指令),swap-remove 不搬推挤状态的问题**仍挂起**,留待涉及单位删除的单。
-- **演示交互**:S3/S4 是资产 mod（无 main）。视图、HUD、建造预览和交互在 Core 的群体呈现里，由各 mod 的 `CrowdSimulationDebug.json` `presentation` 驱动；会话仍由 `CrowdSimulationRuntime` 在地图聚焦时激活。键鼠读 `AuthoritativeInput` 的 `PressedThisTick`，`Submit` 在会话步进之前。**HUD**(ScreenOverlayBuffer,数据全部读内核现成状态):tick / 单位总数与状态分布(闲/行/达/不可达/跳跃)/ 最近一笔重烘报告(exec→report tick、类别、脏 tile、缓存命中、重规划、挤离、stuck)/ 回放结论 / 按键提示。**V 巡回分层视图**(S3 同一通道):路线 = 主力组(成员最多的带流场组)流场贴花 + 目标标记(GlobalFieldVisualProjectorRegistry)、可走区域遮罩、NavMesh+HPA 线框(路线通道,按(导航,重烘序)缓存——重烘换 tile 后自动重建);**重烘脏 tile 闪烁**(最近报告的受影响 tile 并集轮廓,2.5s 线性淡出,路线通道)。**B 建造 / X 拆除 / 1-2-3 切模板**(building/s7barrier/road,尺寸与演示脚本同值;道路自光标向 +X):足迹红绿预览(光标处无既有结构且包围格无阻挡 = 绿,只读结构仓现成数据)、指令走正式指令流(placeStructure/removeStructureAt,固定步入队并在 PostMovement 的会话步进前消费,回放同构);世界落点 = 冻结快照 `PointerPos` + `ScreenRayProvider` + 高度图射线。**交互与自动回放**:首条现场指令进入会话即调 `CrowdSimulationRuntime.SuppressAutoReplay()`(只拦自动触发,RunReplay/对拍语义不动),HUD 显示"回放已停用(交互模式)";无交互时原行为不变(实测自动回放 status=1)。真机截图 `raylib-s1337-s7demo-{hud,build,rebake}.png`(建造/重烘两帧经 AgentBridge 合成输入与按帧截图编排,`scripts/acceptance/run-crowdsim-s4-f03b-shots.sh`)。
+- **演示交互**:S3/S4 是资产 mod（无 main）。视图、HUD、建造预览和交互在 Core 的群体呈现里，由各 mod 的 `CrowdSimulationDebug.json` `presentation` 驱动；会话仍由 `CrowdSimulationRuntime` 在地图聚焦时激活。键鼠读 `AuthoritativeInput` 的 `PressedThisTick`，`Submit` 在会话步进之前。**HUD**(ScreenOverlayBuffer,数据全部读内核现成状态；字符串只在数值变化时重建):工具 / 步进频率（只读 FixedHz，旁边是调试窗）/ 避让频率 / 暂停或倍速 / 重烘切片 / tick / 单位总数与状态分布(闲/行/达/不可达/跳跃)/ 最近一笔重烘报告(exec→report tick、类别、脏 tile、仅代价、可通行变化、缓存命中、重规划、挤离、stuck、耗时)/ 回放结论 / 按键提示。**V 巡回分层视图**(S3 同一通道):路线 = 主力组(成员最多的带流场组)流场贴花 + 目标标记(GlobalFieldVisualProjectorRegistry)、可走区域遮罩、NavMesh+HPA 线框(路线通道,按(导航,重烘序)缓存——重烘换 tile 后自动重建);**重烘脏 tile 闪烁**(最近报告的受影响 tile 并集轮廓,2.5s 线性淡出,路线通道)。点击工具、部署、散开、满容量、清缓存、避让加减、暂停和倍速的动作名在 `presentation.deploy.actions`，键位在该 mod 的 `Input/default_input.json`。左键按当前工具提交：关闭不提交；爆炸提交 `kill`；生成提交 `spawnAt`（没有本机座位玩家就抛，不改用 1 号玩家）；建筑按所选模板提交 `placeStructure`（方形、圆、向 +X 的道路，或先点起点再点终点的连线）；拆除提交 `removeStructureAt`。X 仍直接拆除光标处最上层实体。B 在建筑和关闭之间切换。足迹预览只读结构仓。世界落点 = 冻结快照 `PointerPos` + `ScreenRayProvider` + 高度图射线。暂停时这组指令仍然入队执行。**交互与自动回放**:首条现场指令进入会话即调 `CrowdSimulationRuntime.SuppressAutoReplay()`(只拦自动触发,RunReplay/对拍语义不动),HUD 显示"回放已停用(交互模式)";无交互时原行为不变(实测自动回放 status=1)。真机截图 `raylib-s1337-s7demo-{hud,build,rebake}.png`(建造/重烘两帧经 AgentBridge 合成输入与按帧截图编排,`scripts/acceptance/run-crowdsim-s4-f03b-shots.sh`)。
 - **待办**:动态分层(桥)的上层增量烘焙;参考端 stray 走廊扩展(Ludots 侧 OnStray 仍空挂)。
 
 ## S7-b 交付：迷雾 / 视野组 / 认知变体内核（本次）

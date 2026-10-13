@@ -483,6 +483,7 @@ public sealed partial class CrowdSimulationRuntime
 
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
+            _session.StageDeferredCommands = _demoScript.StageFormable;
         }
 
         _autoReplayAtTick = _debug?.Session?.AutoReplayAtTick ?? -1;
@@ -546,7 +547,12 @@ public sealed partial class CrowdSimulationRuntime
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
-        _demoScript?.ApplyDue(session);
+        if (session.PlaybackHeld)
+        {
+            session.FlushDueCommands();
+            return;
+        }
+
         if (!session.Step(out _))
         {
             if (!_stallLogged)

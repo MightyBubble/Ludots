@@ -1,7 +1,10 @@
 using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
@@ -22,12 +25,17 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private static readonly Vector4 PlaceGreen = new(0.35f, 0.9f, 0.45f, 0.95f);
     private static readonly Vector4 PlaceRed = new(1f, 0.3f, 0.25f, 0.95f);
     private static readonly Vector4 RemoveOrange = new(1f, 0.62f, 0.15f, 0.95f);
+    private static readonly Vector4 BoomAmber = new(1f, 0.55f, 0.12f, 0.9f);
     private static readonly Vector4 FlashYellow = new(1f, 0.9f, 0.2f, 1f);
 
     private static readonly RouteVisualId GoalMarker = new(1);
     private static readonly RouteVisualId HoverMarker = new(2);
     private static readonly RouteVisualId PreviewOutline = new(3);
     private static readonly RouteVisualId RemoveOutline = new(4);
+    private static readonly RouteVisualId BoomInner = new(5);
+    private static readonly RouteVisualId BoomOuter = new(6);
+    private static readonly RouteVisualId SpawnMarker = new(7);
+    private static readonly RouteVisualId DiscPreview = new(8);
     private static readonly RouteVisualId WireframeId = new(CrowdSimulationLimits.WireframeRouteVisualId);
     private static readonly RouteVisualId FlashBase = new(200);
 
@@ -106,22 +114,46 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             foreach (var (pos, shape, radius, color) in _wire.Markers) _routeVisuals.AddMarker(WireframeId, pos, shape, radius, 1f, color);
         }
 
-        // 建造预览(建造模式):足迹轮廓绿=可放/红=不可放;X 拆除目标高亮
         bool previewValid = false, previewShown = false;
-        if (_demo.BuildMode && ground is { } p && session.Structures is { } store)
+        if (ground is { } p)
         {
-            previewShown = true;
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
-            previewValid = CanPlace(store, _demo.Template, px, py);
-            // 足迹/拆除轮廓线宽 = 0.5 格长（62.5m 格的一半是 31.25m）
-            AddRectOutline(PreviewOutline, FootprintVisual(_demo.Template, px, py), navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
-            int hoverId = store.EntityAt(Fix64.FromInt(px), Fix64.FromInt(py));
-            if (hoverId >= 0)
+            CrowdStructuresStore? store = session.Structures;
+            switch (_demo.Tool)
             {
-                var fp = store.FootprintOf(hoverId).Bbox();
-                AddRectOutline(RemoveOutline, (
-                    WorldUnits.CmToM(fp.MinX.ToInt()), WorldUnits.CmToM(fp.MinY.ToInt()),
-                    WorldUnits.CmToM(fp.MaxX.ToInt()), WorldUnits.CmToM(fp.MaxY.ToInt())), navCellVisual * 0.5f, RemoveOrange);
+                case CrowdClickTool.Boom when _demo.BoomRadiusCm > 0:
+                    previewShown = true;
+                    previewValid = true;
+                    float inner = WorldUnits.CmToM(_demo.BoomRadiusCm);
+                    var at = new Vector2(WorldUnits.CmToM(px), WorldUnits.CmToM(py));
+                    _routeVisuals.AddMarker(BoomInner, at, RouteVisualMarkerShape.Ring, inner, navCellVisual * 0.2f, BoomAmber);
+                    float outer = inner * (float)_demo.BlastRingScale.ToDouble();
+                    if (outer > inner)
+                    {
+                        _routeVisuals.AddMarker(BoomOuter, at, RouteVisualMarkerShape.Ring, outer, navCellVisual * 0.12f, BoomAmber);
+                    }
+
+                    break;
+                case CrowdClickTool.Spawn:
+                    previewShown = true;
+                    previewValid = true;
+                    _routeVisuals.AddMarker(
+                        SpawnMarker,
+                        new Vector2(WorldUnits.CmToM(px), WorldUnits.CmToM(py)),
+                        RouteVisualMarkerShape.Ring,
+                        navCellVisual * 0.8f,
+                        navCellVisual * 0.15f,
+                        PlaceGreen);
+                    break;
+                case CrowdClickTool.Structure when store != null:
+                    previewShown = true;
+                    previewValid = CanPlace(store, _demo.Template, px, py);
+                    DrawPlacementPreview(_demo.Template, px, py, navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
+                    DrawEntityOutline(store, px, py, navCellVisual);
+                    break;
+                case CrowdClickTool.Demolish when store != null:
+                    previewShown = DrawEntityOutline(store, px, py, navCellVisual);
+                    break;
             }
         }
 
@@ -135,8 +167,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     }
 
     /// <summary>放置合法性(演示口径,只读结构仓现成数据):光标处无既有结构,且足迹包围格内
-    /// 无阻挡格(rect/path 轴对齐时包围盒即足迹;近似对演示预览足够,正式语义在指令执行侧)。</summary>
-    private static bool CanPlace(CrowdStructuresStore store, S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
+    /// 无阻挡格(轴对齐包围盒近似足迹;正式语义在指令执行侧)。</summary>
+    private bool CanPlace(CrowdStructuresStore store, S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
     {
         if (store.EntityAt(Fix64.FromInt(xCm), Fix64.FromInt(yCm)) >= 0) return false;
         var (minX, minY, maxX, maxY) = FootprintVisual(tpl, xCm, yCm);
@@ -156,8 +188,19 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         return true;
     }
 
-    /// <summary>足迹包围盒(视觉米)。rect = 中心 ± size/2;道路 = 光标向 +X 的条带(宽 size,长 RoadLength)。</summary>
-    private static (float MinX, float MinY, float MaxX, float MaxY) FootprintVisual(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
+    private bool DrawEntityOutline(CrowdStructuresStore store, int xCm, int yCm, float navCellVisual)
+    {
+        int hoverId = store.EntityAt(Fix64.FromInt(xCm), Fix64.FromInt(yCm));
+        if (hoverId < 0) return false;
+        var fp = store.FootprintOf(hoverId).Bbox();
+        AddRectOutline(RemoveOutline, (
+            WorldUnits.CmToM(fp.MinX.ToInt()), WorldUnits.CmToM(fp.MinY.ToInt()),
+            WorldUnits.CmToM(fp.MaxX.ToInt()), WorldUnits.CmToM(fp.MaxY.ToInt())), navCellVisual * 0.5f, RemoveOrange);
+        return true;
+    }
+
+    /// <summary>足迹包围盒(视觉米)。方形是中心 ± size/2，圆的 size 是半径，道路向 +X，连线用起点到光标。</summary>
+    private (float MinX, float MinY, float MaxX, float MaxY) FootprintVisual(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
     {
         if (tpl.IsRoad)
         {
@@ -168,11 +211,80 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 WorldUnits.CmToM(yCm + tpl.SizeCm / 2));
         }
 
-        float half = WorldUnits.CmToM(tpl.SizeCm) * 0.5f;
+        if (tpl.IsSpan)
+        {
+            int x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
+            int y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
+            int half = tpl.SizeCm / 2;
+            return (
+                WorldUnits.CmToM(Math.Min(x0, xCm) - half),
+                WorldUnits.CmToM(Math.Min(y0, yCm) - half),
+                WorldUnits.CmToM(Math.Max(x0, xCm) + half),
+                WorldUnits.CmToM(Math.Max(y0, yCm) + half));
+        }
+
+        float extent = tpl.IsDisc ? WorldUnits.CmToM(tpl.SizeCm) : WorldUnits.CmToM(tpl.SizeCm) * 0.5f;
         float x = WorldUnits.CmToM(xCm);
         float y = WorldUnits.CmToM(yCm);
-        return (x - half, y - half, x + half, y + half);
+        return (x - extent, y - extent, x + extent, y + extent);
     }
+
+    /// <summary>圆是半径环，条带是两端点之间、宽为 size 的扫掠带。方形仍是轴对齐盒。</summary>
+    private void DrawPlacementPreview(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm, float thick, Vector4 color)
+    {
+        if (tpl.IsDisc)
+        {
+            _routeVisuals.AddMarker(
+                DiscPreview,
+                new Vector2(WorldUnits.CmToM(xCm), WorldUnits.CmToM(yCm)),
+                RouteVisualMarkerShape.Ring,
+                WorldUnits.CmToM(tpl.SizeCm),
+                thick,
+                color);
+            return;
+        }
+
+        if (tpl.IsSpan)
+        {
+            int x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
+            int y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
+            AddBandOutline(PreviewOutline, x0, y0, xCm, yCm, tpl.SizeCm, thick, color);
+            return;
+        }
+
+        if (tpl.IsRoad)
+        {
+            AddBandOutline(PreviewOutline, xCm, yCm, xCm + tpl.RoadLengthCm, yCm, tpl.SizeCm, thick, color);
+            return;
+        }
+
+        AddRectOutline(PreviewOutline, FootprintVisual(tpl, xCm, yCm), thick, color);
+    }
+
+    private void AddBandOutline(RouteVisualId id, int x0Cm, int y0Cm, int x1Cm, int y1Cm, int widthCm, float thick, Vector4 color)
+    {
+        Fix64 x0 = Fix64.FromInt(x0Cm);
+        Fix64 y0 = Fix64.FromInt(y0Cm);
+        Fix64 ax = Fix64.FromInt(x1Cm) - x0;
+        Fix64 ay = Fix64.FromInt(y1Cm) - y0;
+        Fix64 length = CrowdFix.Hypot(ax, ay);
+        Fix64 degenerate = Fix64.FromRaw(430);
+        Fix64 ux = length > degenerate ? ax / length : Fix64.OneValue;
+        Fix64 uy = length > degenerate ? ay / length : Fix64.Zero;
+        Fix64 half = Fix64.FromInt(widthCm) / 2;
+        Fix64 ox = -uy * half;
+        Fix64 oy = ux * half;
+        Span<Vector2> pts = stackalloc Vector2[5];
+        pts[0] = BandCorner(x0 + ox, y0 + oy);
+        pts[1] = BandCorner(x0 + ax + ox, y0 + ay + oy);
+        pts[2] = BandCorner(x0 + ax - ox, y0 + ay - oy);
+        pts[3] = BandCorner(x0 - ox, y0 - oy);
+        pts[4] = pts[0];
+        _routeVisuals.AddPolyline(id, pts, thick, color);
+    }
+
+    private static Vector2 BandCorner(Fix64 xCm, Fix64 yCm) =>
+        new(WorldUnits.CmToM((float)xCm.ToDouble()), WorldUnits.CmToM((float)yCm.ToDouble()));
 
     private void AddRectOutline(RouteVisualId id, (float MinX, float MinY, float MaxX, float MaxY) rect, float thick, Vector4 color)
     {
@@ -256,12 +368,13 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         int top = hud.OriginYPx + 8;
         _overlay.AddRect(hud.OriginXPx, hud.OriginYPx, hud.WidthPx, hud.HeightPx, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         _overlay.AddText(left, top, _presentation.Title, 20, new Vector4(1f, 0.92f, 0.35f, 1f));
-        _overlay.AddText(left, top + 24, _hudText.Status, 16, new Vector4(1f, 1f, 1f, 1f));
-        _overlay.AddText(left, top + 42, _hudText.Rebake, 16, new Vector4(1f, 1f, 1f, 1f));
-        _overlay.AddText(left, top + 60, _hudText.Replay, 16, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
-        _overlay.AddText(left, top + 78, _hudText.Keys, 16, new Vector4(0.75f, 0.9f, 1f, 1f));
-        _overlay.AddText(left, top + 96, _hudText.Telemetry, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
-        if (expanded) _overlay.AddText(left, top + 114, _hudText.TelemetryDetail, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
+        _overlay.AddText(left, top + 24, _hudText.Tools, 16, new Vector4(1f, 0.86f, 0.45f, 1f));
+        _overlay.AddText(left, top + 42, _hudText.Status, 16, new Vector4(1f, 1f, 1f, 1f));
+        _overlay.AddText(left, top + 60, _hudText.Rebake, 16, new Vector4(1f, 1f, 1f, 1f));
+        _overlay.AddText(left, top + 78, _hudText.Replay, 16, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
+        _overlay.AddText(left, top + 96, _hudText.Keys, 16, new Vector4(0.75f, 0.9f, 1f, 1f));
+        _overlay.AddText(left, top + 114, _hudText.Telemetry, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
+        if (expanded) _overlay.AddText(left, top + 132, _hudText.TelemetryDetail, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
     }
 
     /// <summary>可见数、已探索数取本机座位的视野组。没有座位时保持 0，不改用第一组。</summary>
@@ -295,7 +408,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public long SubStepClamped, EvictStuck, Plans, Rebakes, FogRefreshes, Contacts, PathWaits;
         public int FogVisible, FogExplored, FogGhosts;
         public bool HasRebake;
-        public int RebakeExec, RebakeReport, RebakeKind, Tiles, Hits, Misses, Orders, Evicted, Stuck;
+        public int RebakeExec, RebakeReport, RebakeKind, Tiles, Hits, Misses, Orders, Evicted, Stuck, CostOnly, Contexts;
+        public long ElapsedTicks;
         public bool RuntimePresent, Interactive;
         public int ReplayStatus, Divergence;
         public string ReplaySection = string.Empty;
@@ -303,9 +417,14 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public CrowdSimDiagnosticSection ReplayDiagnostic;
         public bool BuildMode, PreviewKnown, PreviewShown, PreviewValid, Pending;
         public int TemplateIndex, ViewMode;
+        public int Tool, SpeedPermille, FixedHz, RebakeSlices;
+        public bool PlaybackHeld, HasSpanAnchor;
+        public long AvoidRaw;
+        public string TickWindow = string.Empty;
         public string TemplateLabel = string.Empty;
         public string ViewLabel = string.Empty;
         public string Status = string.Empty;
+        public string Tools = string.Empty;
         public string Rebake = string.Empty;
         public string Replay = string.Empty;
         public string Keys = string.Empty;
@@ -340,10 +459,17 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 if (expanded && (Contacts != telemetry.Contacts || PathWaits != telemetry.PathWaits
                     || FogVisible != fogVisible || FogExplored != fogExplored || FogGhosts != fogGhosts)) return false;
                 if ((report != null) != HasRebake) return false;
+                if (FixedHz != session.Config.FixedHz || AvoidRaw != session.AvoidHz.RawValue
+                    || RebakeSlices != session.RebakeSliceCount) return false;
                 if (report != null && (
                     RebakeExec != report.ExecTick || RebakeReport != report.ReportTick || RebakeKind != report.Kind
                     || Tiles != report.Tiles || Hits != report.Hits || Misses != report.Misses
-                    || Orders != report.Orders || Evicted != report.Evicted || Stuck != report.Stuck)) return false;
+                    || Orders != report.Orders || Evicted != report.Evicted || Stuck != report.Stuck
+                    || CostOnly != report.CostOnly || Contexts != report.Contexts || ElapsedTicks != report.ElapsedTicks)) return false;
+            }
+            else if (FixedHz != 0 || AvoidRaw != 0 || RebakeSlices != -1)
+            {
+                return false;
             }
 
             if ((runtime != null) != RuntimePresent) return false;
@@ -352,6 +478,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 || ReplayDiagnostic != runtime.ReplayDivergenceDiagnostic
                 || !string.Equals(ReplaySection, runtime.ReplayDivergenceSection, StringComparison.Ordinal))) return false;
             if (Interactive != demo.InteractiveMode || BuildMode != demo.BuildMode) return false;
+            if (Tool != (int)demo.Tool || PlaybackHeld != demo.PlaybackHeld || SpeedPermille != demo.SpeedPermille
+                || HasSpanAnchor != demo.HasSpanAnchor
+                || !string.Equals(TickWindow, demo.TickHzWindow, StringComparison.Ordinal)) return false;
             if (TemplateIndex != demo.TemplateIndex || ViewMode != demo.ViewMode || Pending != pending) return false;
             if (!string.Equals(TemplateLabel, templateLabel, StringComparison.Ordinal)
                 || !string.Equals(ViewLabel, viewLabel, StringComparison.Ordinal)) return false;
@@ -384,6 +513,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 ?? throw new InvalidOperationException("部署演示 HUD 缺少 deploy 文案。");
             if (session == null)
             {
+                FixedHz = 0;
+                AvoidRaw = 0;
+                RebakeSlices = -1;
                 Status = "会话未激活";
                 Rebake = "最近重烘:-";
                 Replay = "-";
@@ -393,6 +525,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             else
             {
                 Tick = session.TickCount;
+                FixedHz = session.Config.FixedHz;
+                AvoidRaw = session.AvoidHz.RawValue;
+                RebakeSlices = session.RebakeSliceCount;
                 Units = session.Units.Count;
                 Selected = LocalSelected(session, runtime);
                 Idle = telemetry!.Idle;
@@ -419,9 +554,14 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     Orders = report.Orders;
                     Evicted = report.Evicted;
                     Stuck = report.Stuck;
+                    CostOnly = report.CostOnly;
+                    Contexts = report.Contexts;
+                    ElapsedTicks = report.ElapsedTicks;
+                    string msText = (ElapsedTicks / (double)Stopwatch.Frequency * 1000d).ToString("0.##", CultureInfo.InvariantCulture);
                     Rebake = $"最近重烘:tick {RebakeExec}→{RebakeReport} {(RebakeKind == CrowdRebakeReport.KindPlace ? "建造" : "拆除")}" +
-                             $" · 脏 tile {Tiles} · 缓存命中 {Hits}/{Hits + Misses}" +
-                             $" · 重规划 {Orders} · 挤离 {Evicted} · 无处安放 {Stuck}";
+                             $" · 脏 tile {Tiles} · 仅代价 {CostOnly} · 可通行 {Contexts - CostOnly}" +
+                             $" · 缓存命中 {Hits}/{Hits + Misses}" +
+                             $" · 重规划 {Orders} · 挤离 {Evicted} · 无处安放 {Stuck} · 耗时 {msText} ms";
                 }
 
                 SubStepClamped = telemetry.SubStepClamped;
@@ -469,6 +609,11 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             }
 
             BuildMode = demo.BuildMode;
+            Tool = (int)demo.Tool;
+            PlaybackHeld = demo.PlaybackHeld;
+            SpeedPermille = demo.SpeedPermille;
+            HasSpanAnchor = demo.HasSpanAnchor;
+            TickWindow = demo.TickHzWindow;
             TemplateIndex = demo.TemplateIndex;
             ViewMode = demo.ViewMode;
             Pending = pending;
@@ -492,8 +637,20 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     .Replace("{placeHint}", placeHint, StringComparison.Ordinal)
                 : deploy.ObserveActivity;
             string pendingText = pending ? deploy.PendingNav : "";
+            string avoid = session == null
+                ? "-"
+                : session.AvoidHz.ToDouble().ToString("0.###", CultureInfo.InvariantCulture);
+            string hz = session == null ? "-" : session.Config.FixedHz.ToString(CultureInfo.InvariantCulture);
+            string slices = session == null ? "-" : session.RebakeSliceCount.ToString(CultureInfo.InvariantCulture);
+            string window = string.IsNullOrEmpty(demo.TickHzWindow) ? "-" : demo.TickHzWindow;
+            string speed = demo.PlaybackHeld
+                ? "暂停"
+                : "×" + (demo.SpeedPermille / 1000d).ToString("0.###", CultureInfo.InvariantCulture);
+            string span = demo.HasSpanAnchor ? " · 连线起点已定" : "";
+            Tools = $"工具 {demo.ToolLabel} · 步进 {hz} Hz（窗 {window}）· 避让 {avoid} Hz · {speed} · 切片 {slices}{span}";
             Keys = presentation.Hud.Keys
                 .Replace("{view}", viewLabel, StringComparison.Ordinal)
+                .Replace("{tool}", demo.ToolLabel, StringComparison.Ordinal)
                 .Replace("{templateIndex}", (TemplateIndex + 1).ToString(), StringComparison.Ordinal)
                 .Replace("{activity}", activity, StringComparison.Ordinal)
                 .Replace("{pending}", pendingText, StringComparison.Ordinal);

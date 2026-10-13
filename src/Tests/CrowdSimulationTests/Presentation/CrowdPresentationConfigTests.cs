@@ -20,21 +20,69 @@ public sealed class CrowdPresentationConfigTests
 
         var s4 = ParseMod("CrowdSimulationS4DeployMod");
         Assert.That(s4.Kind, Is.EqualTo(CrowdPresentationConfig.KindDeploy));
-        Assert.That(s4.Deploy!.Structures, Has.Length.EqualTo(3));
+        Assert.That(s4.Deploy!.Structures, Has.Length.EqualTo(5));
         Assert.That(s4.Deploy.Structures[0].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapePoint));
         Assert.That(s4.Deploy.Structures[0].RoadLengthCm, Is.Null);
         Assert.That(s4.Deploy.Structures[2].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeRoad));
         Assert.That(s4.Deploy.Structures[2].RoadLengthCm, Is.EqualTo(25000));
+        Assert.That(s4.Deploy.Structures[3].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeDisc));
+        Assert.That(s4.Deploy.Structures[3].SizeCm, Is.EqualTo(8000));
+        Assert.That(s4.Deploy.Structures[4].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeSpan));
+        Assert.That(s4.Deploy.Structures[4].SizeCm, Is.EqualTo(3000));
+        Assert.That(s4.Deploy.Actions.ToolBoom, Is.EqualTo("CrowdSimulation.S4.ToolBoom"));
+        Assert.That(s4.Deploy.Actions.Stress, Is.EqualTo("CrowdSimulation.S4.Stress"));
     }
 
     [Test]
     public void DeadKey_IsRejected()
     {
         var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS3PathMod")))!.AsObject();
-        debug["tools"] = new JsonObject { ["spawnCount"] = 20 };
+        debug["clockOverride"] = 1;
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
-        Assert.That(ex!.Message, Does.Contain("tools"));
+        Assert.That(ex!.Message, Does.Contain("clockOverride"));
     }
+
+    [Test]
+    public void Tools_MissingFieldUnknownKeyAndRange_AreRejected()
+    {
+        var missing = MinimalTools();
+        missing.Remove("boomRadiusCm");
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = missing }));
+
+        var unknown = MinimalTools();
+        unknown["blast"] = 1;
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = unknown }));
+
+        var range = MinimalTools();
+        range["ringScale"] = 1;
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = range }));
+        Assert.That(ex!.Message, Does.Contain("ringScale"));
+
+        var rates = new JsonObject
+        {
+            ["tickHzMin"] = 10,
+            ["tickHzMax"] = 60,
+            ["avoidHzMin"] = 0,
+            ["avoidHzMax"] = 30,
+            ["avoidStep"] = 1,
+        };
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["rates"] = rates }));
+    }
+
+    private static JsonObject MinimalTools() => new()
+    {
+        ["boomRadiusCm"] = 12500,
+        ["ringScale"] = 2,
+        ["impulse"] = 4,
+        ["spawnCount"] = 24,
+        ["spawnUnitType"] = 0,
+        ["spawnRadiusClass"] = 0,
+        ["placeTemplate"] = "building",
+        ["rectSizeCm"] = 14000,
+        ["discRadiusCm"] = 8000,
+        ["pathWidthCm"] = 3000,
+        ["speedStepsPermille"] = new JsonArray(500, 1000, 2000, 4000),
+    };
 
     [Test]
     public void EveryDebugFile_LoadsStrictly()

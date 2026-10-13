@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -257,6 +258,55 @@ public sealed class CrowdStateDigestTests
         Assert.That(hostOn.ReplayDivergenceDiagnostic.HasFlag(CrowdSimDiagnosticSection.Commands), Is.False);
         Assert.That(hostOff.ReplayStatus, Is.EqualTo(1));
         Assert.That(hostOff.ReplayDiagnosticTick, Is.EqualTo(-1));
+    }
+
+    [Test]
+    public void DemoScript_FutureRowsStayPending_ReplayDiagnosticsMatch()
+    {
+        var (config, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        session.Structures = null;
+        session.DiagnosticDigest = true;
+        using var service = new PathQueryService(
+            session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        session.BlockOnDueReplies = true;
+        var script = CrowdDemoScript.Load(new JsonArray
+        {
+            new JsonObject
+            {
+                ["tick"] = 0,
+                ["cmd"] = new JsonObject
+                {
+                    ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
+                    ["count"] = 4, ["unitType"] = 0, ["rIdx"] = 0,
+                },
+            },
+            new JsonObject
+            {
+                ["tick"] = 5,
+                ["cmd"] = new JsonObject
+                {
+                    ["type"] = "order", ["player"] = 1, ["xCm"] = 700000, ["yCm"] = 700000, ["shape"] = "box",
+                },
+            },
+        });
+        script.ValidateStructure(session);
+        session.StageDeferredCommands = script.StageFormable;
+        var host = new CrowdSimulationRuntime();
+        Bind(host, session);
+        Set(host, "_planTimeout", TimeSpan.FromSeconds(30));
+        const int Ticks = 8;
+        for (int i = 0; i < Ticks; i++) host.Tick();
+        Assert.That(session.TickCount, Is.EqualTo(Ticks));
+        Assert.That(session.Commands.PendingCount, Is.EqualTo(0));
+        Assert.That(session.Commands.Log, Has.Count.EqualTo(2));
+        host.RunReplay();
+        TestContext.Out.WriteLine(
+            $"demo replay status={host.ReplayStatus} tick={host.ReplayDivergenceTick} section={host.ReplayDivergenceSection} diagTick={host.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(host.ReplayDivergenceDiagnostic)}");
+        Assert.That(host.ReplayStatus, Is.EqualTo(1));
+        Assert.That(host.ReplayDivergenceTick, Is.EqualTo(-1));
+        Assert.That(host.ReplayDiagnosticTick, Is.EqualTo(-1));
+        Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
     }
 
     private static CrowdSimDigestDiff DiffAgainstCurrent(
