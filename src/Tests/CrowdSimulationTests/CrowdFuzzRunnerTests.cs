@@ -61,7 +61,13 @@ public sealed class CrowdFuzzRunnerTests
         var kill = new CrowdFuzzOp { Id = "kill", ProbeHandles = true, Reserved = true };
         var extra = new Dictionary<string, CrowdFuzzOpExecutor>
         {
-            ["kill"] = (sim, _, _) => sim.Units.Clear(),
+            // Clear 只还槽。组计数还指着已经销毁的单位，接着查仿真会报计数不一致。
+            ["kill"] = (sim, _, _) =>
+            {
+                sim.Units.Clear();
+                sim.Groups.Reset();
+                sim.Orders.Clear();
+            },
         };
         var result = CrowdFuzzRunner.Run(session, Plan(seed: 4, opCount: 1, kill), extra);
         Assert.That(result.Passed, Is.True, result.Error);
