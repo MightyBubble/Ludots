@@ -42,7 +42,8 @@
     { "id": "CrowdSimulation.S4.CycleUnitColor", "name": "CrowdSimulation_S4_CycleUnitColor", "type": "Button" },
     { "id": "CrowdSimulation.S4.CycleBeliefGroup", "name": "CrowdSimulation_S4_CycleBeliefGroup", "type": "Button" },
     { "id": "CrowdSimulation.S4.CycleInspectLayer", "name": "CrowdSimulation_S4_CycleInspectLayer", "type": "Button" },
-    { "id": "CrowdSimulation.S4.CycleInspectRadius", "name": "CrowdSimulation_S4_CycleInspectRadius", "type": "Button" }
+    { "id": "CrowdSimulation.S4.CycleInspectRadius", "name": "CrowdSimulation_S4_CycleInspectRadius", "type": "Button" },
+    { "id": "CrowdSimulation.S4.Fuzz", "name": "CrowdSimulation_S4_Fuzz", "type": "Button" }
   ],
   "contexts": [
     {
@@ -56,6 +57,7 @@
         { "actionId": "CrowdSimulation.S4.Template2", "path": "<Keyboard>/2" },
         { "actionId": "CrowdSimulation.S4.Template3", "path": "<Keyboard>/3" },
         { "actionId": "CrowdSimulation.Validate", "path": "<Keyboard>/f8" },
+        { "actionId": "CrowdSimulation.S4.Fuzz", "path": "<Keyboard>/f9" },
         { "actionId": "CrowdSimulation.S4.Template4", "path": "<Keyboard>/4" },
         { "actionId": "CrowdSimulation.S4.Template5", "path": "<Keyboard>/5" },
         { "actionId": "CrowdSimulation.S4.ToolOff", "path": "<Keyboard>/n" },

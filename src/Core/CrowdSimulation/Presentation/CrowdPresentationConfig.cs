@@ -132,6 +132,7 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.Actions.Pause, "deploy.actions.pause");
         RequireText(deploy.Actions.SpeedDown, "deploy.actions.speedDown");
         RequireText(deploy.Actions.SpeedUp, "deploy.actions.speedUp");
+        RequireText(deploy.Actions.Fuzz, "deploy.actions.fuzz");
         RequireText(deploy.BuildActivity, "deploy.buildActivity");
         RequireText(deploy.ObserveActivity, "deploy.observeActivity");
         RequireText(deploy.PlaceOk, "deploy.placeOk");
@@ -265,6 +266,7 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string Pause { get; set; } = string.Empty;
     [JsonRequired] public string SpeedDown { get; set; } = string.Empty;
     [JsonRequired] public string SpeedUp { get; set; } = string.Empty;
+    [JsonRequired] public string Fuzz { get; set; } = string.Empty;
 }
 
 internal sealed class CrowdFogDecalColors

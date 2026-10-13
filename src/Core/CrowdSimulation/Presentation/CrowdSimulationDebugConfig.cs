@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Presentation;
 
@@ -16,6 +18,7 @@ internal sealed class CrowdSimulationDebugConfig
     public CrowdDebugSession? Session { get; init; }
     public CrowdDebugTools? Tools { get; init; }
     public CrowdDebugRates? Rates { get; init; }
+    public CrowdDebugFuzz? Fuzz { get; init; }
     public CrowdPresentationConfig? Presentation { get; init; }
 
     public static CrowdSimulationDebugConfig Load(JsonObject debug)
@@ -51,9 +54,10 @@ internal sealed class CrowdSimulationDebugConfig
 
         if (cfg.Tools != null) ValidateTools(cfg.Tools);
         if (cfg.Rates != null) ValidateRates(cfg.Rates);
-        if (cfg.Presentation?.Kind == CrowdPresentationConfig.KindDeploy && (cfg.Tools == null || cfg.Rates == null))
+        if (cfg.Fuzz != null) ValidateFuzz(cfg.Fuzz);
+        if (cfg.Presentation?.Kind == CrowdPresentationConfig.KindDeploy && (cfg.Tools == null || cfg.Rates == null || cfg.Fuzz == null))
         {
-            throw new InvalidOperationException("CrowdSimulationDebug.json: 部署演示必须带 tools 与 rates。");
+            throw new InvalidOperationException("CrowdSimulationDebug.json: 部署演示必须带 tools、rates 与 fuzz。");
         }
 
         if (cfg.Tools != null && cfg.Presentation?.Deploy != null)
@@ -114,6 +118,37 @@ internal sealed class CrowdSimulationDebugConfig
         {
             throw new InvalidOperationException(
                 $"CrowdSimulationDebug.json: tools.speedStepsPermille 必须包含 {TimeFlowService.DefaultScalePermille}。");
+        }
+    }
+
+    private static void ValidateFuzz(CrowdDebugFuzz fuzz)
+    {
+        if (fuzz.SliceMs < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.sliceMs 必须 ≥ 1。");
+        if (fuzz.OpCount < 0)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.opCount 必须 ≥ 0。");
+        if (fuzz.StepsPerOp < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.stepsPerOp 必须 ≥ 1。");
+        if (fuzz.ProbeHandles < 0)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.probeHandles 必须 ≥ 0。");
+        if (fuzz.SpawnCount < 0)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.spawnCount 必须 ≥ 0。");
+        if (string.IsNullOrWhiteSpace(fuzz.PlaceTemplate))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.placeTemplate 必填。");
+        if (fuzz.PlaceSizeCm < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.placeSizeCm 必须 ≥ 1。");
+        if (string.IsNullOrWhiteSpace(fuzz.OrderShape))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.orderShape 必填。");
+        if (fuzz.OrderMemberCap < 0)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.orderMemberCap 必须 ≥ 0。");
+        if (fuzz.StallGuard < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.stallGuard 必须 ≥ 1。");
+        if (fuzz.Ops == null || fuzz.Ops.Length == 0)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.ops 至少一条。");
+        for (int i = 0; i < fuzz.Ops.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(fuzz.Ops[i].Id))
+                throw new InvalidOperationException($"CrowdSimulationDebug.json: fuzz.ops[{i}].id 必填。");
         }
     }
 
@@ -193,6 +228,64 @@ internal sealed class CrowdDebugTools
     [JsonRequired] public int DiscRadiusCm { get; init; }
     [JsonRequired] public int PathWidthCm { get; init; }
     [JsonRequired] public int[] SpeedStepsPermille { get; init; } = Array.Empty<int>();
+}
+
+internal sealed class CrowdDebugFuzz
+{
+    [JsonRequired] public int SliceMs { get; init; }
+    [JsonRequired] public int OpCount { get; init; }
+    [JsonRequired] public long Seed { get; init; }
+    [JsonRequired] public int StepsPerOp { get; init; }
+    [JsonRequired] public int ProbeHandles { get; init; }
+    [JsonRequired] public int SpawnCount { get; init; }
+    [JsonRequired] public string PlaceTemplate { get; init; } = string.Empty;
+    [JsonRequired] public int PlaceSizeCm { get; init; }
+    [JsonRequired] public string OrderShape { get; init; } = string.Empty;
+    [JsonRequired] public int OrderMemberCap { get; init; }
+    [JsonRequired] public int StallGuard { get; init; }
+    [JsonRequired] public CrowdDebugFuzzOp[] Ops { get; init; } = Array.Empty<CrowdDebugFuzzOp>();
+
+    public CrowdFuzzPlan ToPlan(CrowdDebugTools tools)
+    {
+        var ops = new CrowdFuzzOp[Ops.Length];
+        for (int i = 0; i < Ops.Length; i++)
+        {
+            CrowdDebugFuzzOp row = Ops[i];
+            ops[i] = new CrowdFuzzOp
+            {
+                Id = row.Id,
+                Structure = row.Structure,
+                ProbeHandles = row.ProbeHandles,
+                Reserved = row.Reserved,
+            };
+        }
+
+        return new CrowdFuzzPlan
+        {
+            Seed = Seed,
+            OpCount = OpCount,
+            StepsPerOp = StepsPerOp,
+            ProbeHandleCount = ProbeHandles,
+            SpawnCount = SpawnCount,
+            PlaceTemplate = PlaceTemplate,
+            PlaceSizeCm = PlaceSizeCm,
+            OrderShape = OrderShape,
+            OrderMemberCap = OrderMemberCap,
+            StallGuard = StallGuard,
+            BoomRadiusCm = tools.BoomRadiusCm,
+            RingScale = Fix64.FromDouble(tools.RingScale),
+            Impulse = Fix64.FromDouble(tools.Impulse),
+            Ops = ops,
+        };
+    }
+}
+
+internal sealed class CrowdDebugFuzzOp
+{
+    [JsonRequired] public string Id { get; init; } = string.Empty;
+    [JsonRequired] public bool Structure { get; init; }
+    [JsonRequired] public bool ProbeHandles { get; init; }
+    [JsonRequired] public bool Reserved { get; init; }
 }
 
 internal sealed class CrowdDebugRates

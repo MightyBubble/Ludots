@@ -80,10 +80,11 @@ internal sealed class S4DeployInputSystem : ISystem<float>
             _demo.EnqueueRemove((int)Math.Floor(xCm), (int)Math.Floor(yCm));
         }
 
-        if (actions.PressedThisTick(_bindings.Validate) &&
-            _engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime runtime))
+        if (_engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime runtime))
         {
-            runtime.RunDebugValidation();
+            if (actions.PressedThisTick(_bindings.Fuzz)) runtime.StartDebugFuzz();
+            else runtime.PumpDebugFuzz();
+            if (actions.PressedThisTick(_bindings.Validate)) runtime.RunDebugValidation();
         }
 
         _debugView?.ApplyInput(actions, _engine);
@@ -114,4 +115,5 @@ internal sealed class CrowdDeployBindings
     public required string Pause { get; init; }
     public required string SpeedDown { get; init; }
     public required string SpeedUp { get; init; }
+    public required string Fuzz { get; init; }
 }

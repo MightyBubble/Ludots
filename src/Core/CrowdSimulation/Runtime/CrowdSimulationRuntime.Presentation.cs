@@ -175,6 +175,7 @@ public sealed partial class CrowdSimulationRuntime
             Pause = deploy.Actions.Pause,
             SpeedDown = deploy.Actions.SpeedDown,
             SpeedUp = deploy.Actions.SpeedUp,
+            Fuzz = deploy.Actions.Fuzz,
         };
         var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
         for (int i = 0; i < deploy.Structures.Length; i++)
