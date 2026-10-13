@@ -115,9 +115,9 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
             Entity[] actors = { arcweaver, vanguard, commander };
             Assert.That(
-                collections.TryGet(localPlayer, "collection.command.source", out EntityCollectionHandle sourceHandle),
+                collections.TryGet(localPlayer, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionHandle sourceHandle),
                 Is.True,
-                "Interaction showcase startup must seed collection.command.source directly for command routing.");
+                "Interaction showcase startup must seed command source directly for command routing.");
             Assert.That(CopyCollection(collections, sourceHandle), Is.EquivalentTo(actors));
             PublishHoveredEntity(collections, localPlayer, vanguard);
             Assert.That(Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered), Is.True);
@@ -167,7 +167,8 @@ namespace Ludots.Tests.GAS.Production
                 intentProfileId,
                 dispatchProfileId,
                 schemeId,
-                launchScheme);
+                launchScheme,
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
         }
 
         [Test]
@@ -830,7 +831,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            if (!collections.TryGet(owner, "collection.command.source", out EntityCollectionHandle handle) ||
+            if (!collections.TryGet(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionHandle handle) ||
                 !collections.TryGetView(handle, out EntityCollectionView view))
             {
                 builder.Append(" collection=missing");
@@ -915,7 +916,8 @@ namespace Ludots.Tests.GAS.Production
             int intentProfileId,
             int dispatchProfileId,
             int schemeId,
-            string launchScheme)
+            string launchScheme,
+            string commandSourceKey)
         {
             File.WriteAllText(
                 Path.Combine(artifactDir, "battle-report.md"),
@@ -923,7 +925,7 @@ namespace Ludots.Tests.GAS.Production
                 Encoding.UTF8);
             File.WriteAllText(
                 Path.Combine(artifactDir, "trace.jsonl"),
-                BuildTraceJsonl(localPlayer, actors, hovered, commandSource, orders, dispatchVariants, targetWorldCm, intentProfileId, dispatchProfileId, schemeId, launchScheme),
+                BuildTraceJsonl(localPlayer, actors, hovered, commandSource, orders, dispatchVariants, targetWorldCm, intentProfileId, dispatchProfileId, schemeId, launchScheme, commandSourceKey),
                 Encoding.UTF8);
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid(launchScheme), Encoding.UTF8);
         }
@@ -1000,7 +1002,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("## Timeline");
             sb.AppendLine($"- T+000: verify launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and load `interaction_showcase_hub` with CoreInputMod and InteractionShowcaseMod.");
             sb.AppendLine($"- T+004: production startup has active `{launchScheme}` and resolves `{DefaultIntentId}`.");
-            sb.AppendLine("- T+008: publish local `(owner, collection.command.source)` with Arcweaver, Vanguard, and Commander.");
+            sb.AppendLine("- T+008: publish local `(owner, command source)` with Arcweaver, Vanguard, and Commander.");
             sb.AppendLine($"- T+012: submit ground pointer command target ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) through production input.");
             sb.AppendLine($"- T+016: `dispatch.all_together` fans out {orders.Length.ToString(CultureInfo.InvariantCulture)} moveTo orders in admission batch {orders[0].AdmissionBatchId.ToString(CultureInfo.InvariantCulture)} with order receipts {string.Join(", ", orders.Select(static order => order.OrderId.ToString(CultureInfo.InvariantCulture)))}.");
             sb.AppendLine();
@@ -1057,7 +1059,8 @@ namespace Ludots.Tests.GAS.Production
             int intentProfileId,
             int dispatchProfileId,
             int schemeId,
-            string launchScheme)
+            string launchScheme,
+            string commandSourceKey)
         {
             object[] traces =
             {
@@ -1085,7 +1088,7 @@ namespace Ludots.Tests.GAS.Production
                     at = "show5-show6.collection",
                     phase = "command-source",
                     status = "pass",
-                    key = "collection.command.source",
+                    key = commandSourceKey,
                     owner = localPlayer.Id,
                     rows = commandSource.Select(static e => e.Id).ToArray()
                 },
@@ -1139,7 +1142,7 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 $"    A[\"Load interaction_showcase_hub\"] --> B[\"Startup active {launchScheme}\"]",
                 "    B --> C[\"Default frame resolves intent.command.default\"]",
-                "    C --> D[\"Publish collection.command.source for 3 actors\"]",
+                "    C --> D[\"Publish command source for 3 actors\"]",
                 "    D --> E[\"Right mouse Command captured by PlayerInputHandler\"]",
                 "    E --> F[\"InputRuntimeSystem writes authoritative snapshot + ground override\"]",
                 "    F --> G[\"Battle context trigger graph.interaction.move submits the command intent\"]",

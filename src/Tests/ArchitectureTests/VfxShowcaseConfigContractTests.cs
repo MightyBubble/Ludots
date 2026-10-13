@@ -19,6 +19,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.Architecture
 {
@@ -369,7 +370,7 @@ namespace Ludots.Tests.Architecture
                 registry.Register("collection.ability.aim.hover");
                 registry.Register("collection.ability.aim.affected");
                 registry.Register("collection.entityinfo.explicit");
-                registry.Register("collection.command.source");
+                registry.Register("core.selection");
                 registry.Register("collection.ui.cast.raw");
                 registry.Register(EntityViewKeys.ControlPlaneCommand);
                 registry.Register(EntityViewKeys.CommandDeckFiltered);

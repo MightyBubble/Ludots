@@ -19,6 +19,7 @@ using NUnit.Framework;
 using System.Linq;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.Architecture
 {
@@ -126,7 +127,7 @@ namespace Ludots.Tests.Architecture
                 ?? throw new InvalidOperationException("Core command-source config was not merged.");
 
             Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
-            Assert.That("collection.command.source", Is.EqualTo("collection.command.source"));
+            Assert.That("core.selection", Is.EqualTo("core.selection"));
 
             using var massNavigationEngine = new GameEngine();
             massNavigationEngine.InitializeWithConfigPipeline(
@@ -147,7 +148,7 @@ namespace Ludots.Tests.Architecture
 
             EntityCollectionStore collections = massNavigationEngine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
-            Assert.That(collections.KeyRegistry.GetId("collection.command.source"), Is.GreaterThan(0));
+            Assert.That(collections.KeyRegistry.GetId("core.selection"), Is.GreaterThan(0));
             Assert.That(massNavigationConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
                 massNavigationConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),

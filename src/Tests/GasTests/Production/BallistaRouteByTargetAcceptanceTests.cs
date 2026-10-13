@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Core.Map;
@@ -202,10 +203,11 @@ namespace Ludots.Tests.GAS
                 int contextKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("interaction.context.ballista");
                 runtime.Activate(ballista, contextKeyId, 0);
 
-                int collectionKeyId = store.KeyRegistry.Register("collection.command.source");
+                string commandSourceKey = InputCollectionKeyDeclarations.RequireCommandSourceKey(Engine);
+                int collectionKeyId = store.KeyRegistry.Register(commandSourceKey);
 
                 var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
-                    "collection.command.source",
+                    commandSourceKey,
                     Ludots.Core.EntityCollections.EntityCollectionSourceKind.Explicit,
                     Ludots.Core.EntityCollections.EntityCollectionRoleKind.CommandSource);
                 store.Replace(ballista, collectionKeyId, in descriptor, new[] { ballista }, ballista);

@@ -722,7 +722,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.GreaterThan(0), before);
 
             // aim.release is foreground, so the battle Select.Begin mount is parked for the gesture.
-            // Selection commit writes collection.command.source; that membership event is what rebind hears.
+            // Selection commit writes command source; that membership event is what rebind hears.
             ReplaceCommandSource(engine, FindEntityByName(engine.World, "Vanguard"));
             backend.SetAxis("<Gamepad>/rightStick/x", 0f);
             Tick(engine, 1, frameTimesMs);
@@ -1041,7 +1041,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             Assert.That(
-                collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view),
+                collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView view),
                 Is.True,
                 "command source");
             EntityCollectionDescriptor descriptor = EntityCollectionDescriptor.Create(

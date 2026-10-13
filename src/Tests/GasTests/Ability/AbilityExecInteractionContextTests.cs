@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -675,7 +676,7 @@ namespace Ludots.Tests.GAS
                     Definitions = definitions,
                     ExecSystem = execSystem,
                     ContextSystem = new AbilityExecInteractionContextSystem(world, contextProfiles, definitions, domains),
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
                     AbilityTargetsKeyId = keyRegistry.Register(AbilityTargetsCollectionKey),
                 };
             }

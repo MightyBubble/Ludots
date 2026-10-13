@@ -120,7 +120,7 @@ namespace Ludots.Tests.GAS.Production
             var context = new EntityCommandPanelSourceContext(
                 owner,
                 CollectionGasEntityCommandPanelSource.SourceId,
-                "collection.command.source");
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
             CollectionEvidence collection = AssertAggregationCollection(engine, owner);
             var slots = new EntityCommandPanelSlotView[32];
 
@@ -333,18 +333,18 @@ namespace Ludots.Tests.GAS.Production
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            Assert.That(collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view), Is.True,
+            Assert.That(collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), out EntityCollectionView view), Is.True,
                 "showcase host mod should publish a command-source collection for the local player.");
             Assert.That(view.Count, Is.EqualTo(3), "M6 aggregation showcase should contain Arcweaver, Vanguard, and Commander.");
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
 
             var members = new Entity[4];
-            int copied = collections.CopyEntities(owner, "collection.command.source", members);
+            int copied = collections.CopyEntities(owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine), members);
             Assert.That(copied, Is.EqualTo(3));
 
             return new CollectionEvidence(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                 view.Title,
                 view.Summary,
                 view.Revision,
@@ -593,7 +593,7 @@ namespace Ludots.Tests.GAS.Production
             builder.AppendLine("- Profile registry: Core `aggregation.by_template`/`aggregation.by_ability_id` plus EntityCommandPanelMod `aggregation.by_family` fragment are installed.");
             builder.AppendLine("- Runtime path: `IEntityCommandPanelToolbarProvider.Activate` -> `CollectionGasEntityCommandPanelSource.SetAggregationProfile` -> `EntityCommandPanelSourceDispatch.CopySlots`.");
             builder.AppendLine("- WebUI path: `EntityCommandPanelShowcaseDataPlane` publishes `ludots.showcase.entity_command_panel.state`; CEF app assets are packaged under `assets/entity-command-panel-app`.");
-            builder.AppendLine("- Collection owner: local player entity, `collection.command.source` containing Arcweaver, Vanguard, and Commander.");
+            builder.AppendLine("- Collection owner: local player entity, `command source` containing Arcweaver, Vanguard, and Commander.");
             builder.AppendLine();
             builder.AppendLine("## Results");
             builder.AppendLine("| Profile | Profile id | Slot count | Revision | Labels |");
@@ -762,7 +762,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             sb.AppendLine($"- t+000: verified launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and loaded `interaction_showcase_hub`.");
-            sb.AppendLine("- t+004: showcase host published `collection.command.source` for Arcweaver, Vanguard, and Commander.");
+            sb.AppendLine("- t+004: showcase host published `command source` for Arcweaver, Vanguard, and Commander.");
             sb.AppendLine("- t+005: toolbar provider exposed Template, Family, and Ability profile buttons with Family active.");
             sb.AppendLine("- t+006: WebUI DataPlane snapshot reported ready=true, sourceActorCount=3, and active profile tile counts.");
             foreach (ProfileSnapshot snapshot in snapshots)
@@ -793,7 +793,7 @@ namespace Ludots.Tests.GAS.Production
                 "    A[\"Load EntityCommandPanelShowcaseMod on interaction_showcase_hub\"] --> B[\"EntityCommandPanelMod registers gas.collection-ability-slots source\"]",
                 "    B --> C[\"ConfigPipeline installs Core template/ability profiles\"]",
                 "    C --> D[\"ArrayById fragment installs aggregation.by_family catalog.castFamily\"]",
-                "    D --> E[\"Showcase host publishes collection.command.source for 3 heroes\"]",
+                "    D --> E[\"Showcase host publishes command source for 3 heroes\"]",
                 "    E --> F[\"Aggregation toolbar binds CollectionGasEntityCommandPanelSource\"]",
                 "    F --> G{\"Runtime profile button\"}",
                 "    G -->|Family| H[\"SetAggregationProfile aggregation.by_family\"]",

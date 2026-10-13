@@ -325,13 +325,13 @@ namespace Ludots.Tests.ThreeC
 
             ReplaceCommandSource(collections, selector, light, heavy);
 
-            var target = new EntityCollectionGroupFollowTarget(world, collections, selector, "collection.command.source");
+            var target = new EntityCollectionGroupFollowTarget(world, collections, selector, "core.selection");
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
             ReplaceCommandSource(collections, selector, light);
-            Assert.That(collections.TryGet(selector, "collection.command.source", out EntityCollectionHandle handle), Is.True);
+            Assert.That(collections.TryGet(selector, "core.selection", out EntityCollectionHandle handle), Is.True);
             Assert.That(collections.TryGetEntityAt(handle, 0, out Entity primary), Is.True);
             Assert.That(primary, Is.EqualTo(light));
 
@@ -343,7 +343,7 @@ namespace Ludots.Tests.ThreeC
         private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, params Entity[] entities)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                "core.selection",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,

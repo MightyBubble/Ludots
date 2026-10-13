@@ -74,7 +74,7 @@ namespace Ludots.Tests.GAS.Production
             Entity[] commandSourceBeforeTargets = CopyCollectionOrEmpty(
                 preTickStore,
                 preTickState.Commander,
-                "collection.command.source");
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
             Tick(engine, 6);
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
@@ -114,7 +114,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(state.AbilityId, Is.EqualTo(AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId)));
 
             int abilityTargetsKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
-            int commandSourceKey = store.KeyRegistry.GetId("collection.command.source");
+            int commandSourceKey = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine));
             int rawKey = store.KeyRegistry.GetId("collection.ui.cast.raw");
             int casterMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
             int targetMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
@@ -133,7 +133,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 commandSourceDuringAbility,
                 Is.EqualTo(commandSourceBeforeTargets),
-                "ability-frame target acquisition must not rewrite collection.command.source.");
+                "ability-frame target acquisition must not rewrite command source.");
             AssertPresenterRules(repoRoot);
 
             Assert.That(state.ConfirmInputObserved, Is.False);
@@ -475,7 +475,7 @@ namespace Ludots.Tests.GAS.Production
             builder.AppendLine();
             builder.AppendLine("## Verdict");
             builder.AppendLine("- success: yes");
-            builder.AppendLine("- evidence: ability-owned frame captured raw targets on the local anchor, domain-routed target acquisition to `collection.ability.superweapon.targets`, left `collection.command.source` untouched, confirmed through IMC/authoritative input, and restored default routing after the event gate completed.");
+            builder.AppendLine("- evidence: ability-owned frame captured raw targets on the local anchor, domain-routed target acquisition to `collection.ability.superweapon.targets`, left `command source` untouched, confirmed through IMC/authoritative input, and restored default routing after the event gate completed.");
             return builder.ToString();
         }
 
@@ -565,7 +565,7 @@ namespace Ludots.Tests.GAS.Production
                 "    G --> H[\"GameplayEventBus: Event.Showcase.Superweapon.Confirmed\"]",
                 "    H --> I[\"AbilityExecSystem: EventGate passes, End removes exec\"]",
                 "    I --> J[\"AbilityExecInteractionContextSystem: restore default frame\"]",
-                "    J --> K[\"Default CommitCast writes collection.command.source again\"]",
+                "    J --> K[\"Default CommitCast writes command source again\"]",
                 "    F -- no --> L[\"GateWaiting: frame stays active, no hidden completion fallback\"]"
             }) + Environment.NewLine;
         }

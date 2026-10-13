@@ -399,7 +399,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                    $"slot={TryReadInt("aim.slot")} point={point} " +
                    $"hero={Format(Position(Hero))} near={Format(Position(Near))} stickDummy={Format(Position(StickDummy))} " +
                    $"hover={CollectionCount("aim.hover")} " +
-                   $"actors={CollectionCount("aim.actors")} command={CollectionCount("collection.command.source")} " +
+                   $"actors={CollectionCount("aim.actors")} command={CollectionCount(InputCollectionKeyDeclarations.RequireCommandSourceKey(_engine))} " +
                    $"triggers={TriggerErrors()} exec={DescribeExec()} order={DescribeActiveOrder()} drain={DrainReason()}";
         }
 

@@ -1723,7 +1723,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -1755,7 +1755,7 @@ namespace Ludots.Tests.GAS.Production
                          keyObj is string activeKey &&
                          !string.IsNullOrWhiteSpace(activeKey)
                 ? activeKey
-                : "collection.command.source";
+                : InputCollectionKeyDeclarations.RequireCommandSourceKey(engine);
 
             if (owner == Entity.Null ||
                 !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||

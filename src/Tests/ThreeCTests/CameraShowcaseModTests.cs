@@ -337,7 +337,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity local = GetLocalPlayer(engine);
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: local,
@@ -379,7 +379,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 BlendDurationSeconds = 0f,
                 FollowTargetKindOverride = Ludots.Core.Gameplay.Camera.CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = "collection.command.source",
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true
             });

@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
             store.Replace(
                 collectionOwner,
                 EntityCollectionDescriptor.Create(
-                    "collection.command.source",
+                    "core.selection",
                     EntityCollectionSourceKind.Debug,
                     EntityCollectionRoleKind.CommandSource,
                     collectionOwner,
@@ -150,7 +150,7 @@ namespace Ludots.Tests.GAS
             queries.Register(new EntityCommandPanelCollectionQueryConfig
             {
                 Id = BenchmarkQueryId,
-                CollectionKey = "collection.command.source",
+                CollectionKey = "core.selection",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.OwnerCountThenSlotThenLabel
             });

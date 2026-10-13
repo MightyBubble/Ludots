@@ -172,13 +172,17 @@ namespace Ludots.Tests.Architecture
                     "GameEngine must register input collection keys from the Input/collection_keys.json declaration, not from a C# constant table.");
                 Assert.That(collectionKeysDeclaration, Does.Contain("\"castRaw\""),
                     "The cast-raw capture key must be declared in Input/collection_keys.json.");
+                Assert.That(collectionKeysDeclaration, Does.Contain("\"commandSource\""),
+                    "The command-source collection role must be declared in Input/collection_keys.json.");
+                Assert.That(collectionKeysDeclaration, Does.Contain("\"core.selection\""),
+                    "The base command-source collection name is core.selection; games override the role.");
                 Assert.That(gameEngine, Does.Not.Contain("InteractionContextIds.Default"),
                     "GameEngine must not install any profile programmatically — profiles come only from data (constitution: no steady-state anchor).");
                 Assert.That(contextRuntime, Does.Contain("TryResolveCollection(collections, owner, collectionKey"),
                     "EntityCollectionContextRuntime must resolve the caller-provided collection key, not hard-code command-source authority.");
                 Assert.That(contextRuntime, Does.Contain("collections.TryGet(owner, collectionKey"),
                     "EntityCollectionContextRuntime must read the explicit owner/key pair from EntityCollectionStore.");
-                Assert.That(contextRuntime, Does.Not.Contain("collection.command.source"),
+                Assert.That(contextRuntime, Does.Not.Contain("collection.command" + ".source"),
                     "EntityCollectionContextRuntime must stay collection-generic; command-source is a caller-provided key, not a built-in fallback.");
                 Assert.That(File.Exists(contextBoundWriterPath), Is.False,
                     "Constitution §08: ContextBoundCollectionWriter is retired; the single write point is CollectionApplier.");
@@ -377,8 +381,8 @@ namespace Ludots.Tests.Architecture
             string[] forbidden =
             {
                 "EntityCollectionStore",
-                "\"collection.command.source\"",
-                "\"collection.command.source\"",
+                "\"collection.command" + ".source\"",
+                "\"collection.command" + ".source\"",
                 "EntityCollectionContextRuntime",
                 "InteractionContextStack",
                 "CommandSourceAcquisition",
@@ -610,8 +614,8 @@ namespace Ludots.Tests.Architecture
             string[] forbidden =
             {
                 "Ludots.Core.Input.CommandSources",
-                "\"collection.command.source\"",
-                "\"collection.command.source\"",
+                "\"collection.command" + ".source\"",
+                "\"collection.command" + ".source\"",
                 "Command" + "Source" + "Owner" + "Provider",
                 "CenterOn" + "CommandSource" + "Primary"
             };
@@ -649,13 +653,15 @@ namespace Ludots.Tests.Architecture
             {
                 Assert.That(source, Does.Contain("EntityCollectionStore"),
                     "The interaction showcase must publish through EntityCollectionStore.");
-                Assert.That(source, Does.Contain("\"collection.command.source\""),
-                    "The interaction showcase must target collection.command.source explicitly.");
+                Assert.That(source, Does.Contain("InputCollectionKeyDeclarations.RequireCommandSourceKey"),
+                    "The interaction showcase must read the commandSource role bound from Input/collection_keys.json.");
+                Assert.That(source, Does.Not.Contain("collection.command" + ".source"),
+                    "The interaction showcase must not keep the retired shared collection key.");
                 Assert.That(source, Does.Contain("EntityCollectionRoleKind.CommandSource"),
                     "The interaction showcase descriptor must mark the collection as command-source authority.");
                 Assert.That(source, Does.Contain("EntityCollectionSourceKind.Explicit"),
                     "The showcase command-source descriptor should remain an explicit host-seeded collection.");
-                Assert.That(source, Does.Contain("applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(\"collection.command.source\"), in descriptor, actors, writerDomain: owner)"),
+                Assert.That(source, Does.Contain("applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(InputCollectionKeyDeclarations.RequireCommandSourceKey(engine)), in descriptor, actors, writerDomain: owner)"),
                     "The writer domain must be recorded as the local command-source owner via the single CollectionApplier write point.");
             });
         }

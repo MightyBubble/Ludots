@@ -147,7 +147,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             string.Join(Environment.NewLine, new[]
             {
                 "{\"step\":\"load-map\",\"action\":\"capture\",\"detail\":\"Loaded interaction_showcase_hub with UIRoot enabled.\"}",
-                $"{{\"step\":\"seed-command-source\",\"action\":\"mutate\",\"detail\":\"Bound {commandSourceCount} categorized entities to collection.command.source.\"}}",
+                $"{{\"step\":\"seed-command-source\",\"action\":\"mutate\",\"detail\":\"Bound {commandSourceCount} categorized entities to command source.\"}}",
                 "{\"step\":\"scroll-panel\",\"action\":\"scroll\",\"detail\":\"Scrolled the entity collection panel and advanced the virtual window.\"}",
                 $"{{\"step\":\"export-screenshot\",\"action\":\"capture\",\"detail\":\"Wrote screens/{Path.GetFileName(screenshotPath)}.\"}}",
             }));
@@ -158,7 +158,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             {
                 "flowchart TD",
                 "    A[Load interaction_showcase_hub] --> B[Seed 72 categorized command-source entities]",
-                "    B --> C[Publish collection.command.source]",
+                "    B --> C[Publish command source]",
                 "    C --> D[Mount command roster dock in Interaction showcase UI]",
                 "    D --> E[Verify virtual window total rows > visible rows]",
                 "    E --> F[Scroll collection host]",
@@ -169,7 +169,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            "core.selection",
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,

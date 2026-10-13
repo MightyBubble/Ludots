@@ -9,7 +9,6 @@ using System.Text.RegularExpressions;
 using Ludots.Core.Gameplay.Relationships;
 using Arch.Core;
 using Arch.System;
-using CoreInputMod.Systems;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;

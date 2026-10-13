@@ -72,7 +72,7 @@ namespace Ludots.Tests.Architecture
                 string source = File.ReadAllText(file);
                 Assert.That(source, Does.Not.Contain("EntityCollectionKeys"),
                     $"{Path.GetFileName(file)} must stay collection-generic (constitution §12 v2: intents carry their own actor sets).");
-                Assert.That(source, Does.Not.Contains("collection.command.source"),
+                Assert.That(source, Does.Not.Contains("collection.command" + ".source"),
                     $"{Path.GetFileName(file)} must not reference the legacy command-source key literal.");
             }
 

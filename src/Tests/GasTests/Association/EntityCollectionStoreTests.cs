@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Registry;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -250,10 +251,10 @@ namespace Ludots.Tests.GAS
             var registry = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var store = new EntityCollectionStore(registry);
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                "core.selection",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
-            int keyId = registry.Register("collection.command.source");
+            int keyId = registry.Register("core.selection");
             var events = new List<(int KeyId, Entity Member, bool Added)>();
             bool listen = false;
             store.MembershipNotifyProbe = _ => listen;

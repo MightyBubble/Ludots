@@ -5,6 +5,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests
 {
@@ -13,14 +14,14 @@ namespace Ludots.Tests
         public static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
                 : System.Array.Empty<Entity>();
         }
 
         public static int GetCommandSourceCount(GameEngine engine)
         {
             return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireCommandSourceKey(engine))
                 : 0;
         }
 
@@ -32,7 +33,7 @@ namespace Ludots.Tests
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                        out primary);
         }
 
@@ -44,7 +45,7 @@ namespace Ludots.Tests
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
                        out view);
         }
 

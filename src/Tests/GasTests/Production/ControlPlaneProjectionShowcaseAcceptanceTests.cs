@@ -164,7 +164,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         selected[0] = p1Unit;
         selected[1] = p2Unit;
         var mixedCommandSourceDescriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
             EntityCollectionSourceKind.UiAcquisition,
             EntityCollectionRoleKind.CommandSource,
             contextEntity: state.P1Rep,
@@ -300,7 +300,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         relationships.EnsureLink(foreignRep, foreignUnit, state.OwnsTypeId);
 
         var commandSourceDescriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireCommandSourceKey(engine),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             title: "SHOW-3 referee command-source fixture",

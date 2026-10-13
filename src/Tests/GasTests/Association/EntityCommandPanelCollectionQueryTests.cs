@@ -38,9 +38,9 @@ namespace Ludots.Tests.GAS
                 ?? throw new InvalidOperationException("EntityCommandPanelCollectionQueryConfigRegistry missing.");
 
             Assert.That(sources.TryGet(CollectionSourceId, out _), Is.True);
-            Assert.That(queries.TryGet("collection.command.source", out EntityCommandPanelCollectionQueryConfig config), Is.True);
-            Assert.That(config.Id, Is.EqualTo("collection.command.source"));
-            Assert.That(config.CollectionKey, Is.EqualTo("collection.command.source"));
+            Assert.That(queries.TryGet("core.selection", out EntityCommandPanelCollectionQueryConfig config), Is.True);
+            Assert.That(config.Id, Is.EqualTo("core.selection"));
+            Assert.That(config.CollectionKey, Is.EqualTo("core.selection"));
             Assert.That(config.Sort, Is.EqualTo(EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel));
         }
 
@@ -75,7 +75,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = SharedActionQueryId,
-                CollectionKey = "collection.command.source",
+                CollectionKey = "core.selection",
                 Title = "Shared Q",
                 Filter = new EntityCommandPanelCollectionFilter(
                     EntityCommandPanelCollectionFilterKind.ActionId,
@@ -99,7 +99,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = OwnerCountQueryId,
-                CollectionKey = "collection.command.source",
+                CollectionKey = "core.selection",
                 Title = "Owner Count",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.OwnerCountThenSlotThenLabel
@@ -133,7 +133,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = OwnerCountQueryId,
-                CollectionKey = "collection.command.source",
+                CollectionKey = "core.selection",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.AbilityIdThenSlot
             });
@@ -220,7 +220,7 @@ namespace Ludots.Tests.GAS
             store.Replace(
                 owner,
                 EntityCollectionDescriptor.Create(
-                    "collection.command.source",
+                    "core.selection",
                     EntityCollectionSourceKind.Explicit,
                     EntityCollectionRoleKind.CommandSource,
                     owner,

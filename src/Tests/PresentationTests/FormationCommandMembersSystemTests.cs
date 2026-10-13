@@ -7,13 +7,14 @@ using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Tests.TestCommon;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.Presentation;
 
 [TestFixture]
 public sealed class FormationCommandMembersSystemTests
 {
-    private const string CommandSourceKey = "collection.command.source";
+    private const string CommandSourceKey = "core.selection";
     private const string MembersKey = "formation.command.members";
 
     [Test]
