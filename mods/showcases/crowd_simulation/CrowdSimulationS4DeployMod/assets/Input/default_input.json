@@ -57,7 +57,7 @@
         { "actionId": "CrowdSimulation.S4.Template2", "path": "<Keyboard>/2" },
         { "actionId": "CrowdSimulation.S4.Template3", "path": "<Keyboard>/3" },
         { "actionId": "CrowdSimulation.Validate", "path": "<Keyboard>/f8" },
-        { "actionId": "CrowdSimulation.S4.Fuzz", "path": "<Keyboard>/f9" },
+        { "actionId": "CrowdSimulation.S4.Fuzz", "path": "<Keyboard>/f11" },
         { "actionId": "CrowdSimulation.S4.Template4", "path": "<Keyboard>/4" },
         { "actionId": "CrowdSimulation.S4.Template5", "path": "<Keyboard>/5" },
         { "actionId": "CrowdSimulation.S4.ToolOff", "path": "<Keyboard>/n" },
