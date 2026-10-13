@@ -6,7 +6,7 @@ This page records the current movement split after the navigation-domain unifica
 
 | Layer | Owner | Responsibility |
 |---|---|---|
-| Input | `CoreInputMod` and input order systems | Convert player intent into typed orders |
+| Input | Owning mods' input data and Core order systems | Convert player intent into typed orders |
 | Order runtime | GAS order buffer and submitter | Authoritative active/queued order state |
 | Route planning | `PathServiceRouter`, road/nodegraph/navmesh services | Produce route points or movement plans |
 | Move planning | `Ludots.Core.MovePlanning` | Store waypoints, track current index, emit execution intents |
