@@ -1,20 +1,24 @@
 using System;
-using Ludots.Core.Diagnostics;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Presentation.Skia;
 using Raylib_cs;
 using SkiaSharp;
 using Rl = Raylib_cs.Raylib;
-using Ludots.Raylib.Render;
 
-namespace Ludots.Adapter.Raylib
+namespace Ludots.Raylib.Render
 {
-    internal sealed class RaylibSkiaGpuOverlaySurface : IDisposable
+    /// <summary>
+    /// Skia GPU render-texture 画布表面：把 Raylib RenderTexture2D 包成 GRBackendRenderTarget，
+    /// 供任意 Skia 内容（HUD 批、retained UI 面板）直渲。宿主与 Skia 共享 GL 状态，因此每批
+    /// 渲染前 ResetContext、Flush+Submit 之后宿主才可消费该纹理——两条不变量是跨引擎合同
+    /// （gitbook/architecture/skia-gpu-overlay-adapter-guide.md 接缝 2）。retained 内容配合
+    /// 脏门控复用缓存纹理，见接缝 4。
+    /// </summary>
+    public sealed class RaylibSkiaGpuCanvasSurface : IDisposable
     {
         private const uint GlRgba8 = 0x8058;
 
         private readonly GRGlInterface _glInterface;
         private readonly GRContext _context;
+        private readonly string _purpose;
 
         private RenderTexture2D _target;
         private GRBackendRenderTarget? _renderTarget;
@@ -23,44 +27,23 @@ namespace Ludots.Adapter.Raylib
         private int _height;
         private bool _warnedResizeFailure;
 
-        public RaylibSkiaGpuOverlaySurface()
+        public RaylibSkiaGpuCanvasSurface(string purpose)
         {
-            (_glInterface, _context) = RaylibSkiaGlContext.Create("GPU overlay");
-            Log.Info(in LogChannels.Presentation, "GPU Accelerated: True (Raylib Skia render-texture overlay)");
+            if (string.IsNullOrWhiteSpace(purpose))
+            {
+                throw new ArgumentException("GPU canvas surface purpose is required.", nameof(purpose));
+            }
+
+            _purpose = purpose;
+            (_glInterface, _context) = RaylibSkiaGlContext.Create($"GPU {purpose}");
+            RenderDiagnostics.Info($"GPU Accelerated: True (Raylib Skia render-texture {purpose})");
         }
 
         public bool HasTarget => _target.id != 0;
 
-        public bool TryRender(
-            PresentationOverlayScene scene,
-            SkiaOverlayRenderer renderer,
-            PresentationOverlayLayer layer,
-            int width,
-            int height)
+        public bool TryRender(int width, int height, Action<SKSurface> render)
         {
-            return TryRender(scene, renderer, layer, default, hasRefreshPlan: false, width, height);
-        }
-
-        public bool TryRender(
-            PresentationOverlayScene scene,
-            SkiaOverlayRenderer renderer,
-            PresentationOverlayLayer layer,
-            in PresentationOverlayLanePacer.LaneRefreshPlan refreshPlan,
-            int width,
-            int height)
-        {
-            return TryRender(scene, renderer, layer, refreshPlan, hasRefreshPlan: true, width, height);
-        }
-
-        private bool TryRender(
-            PresentationOverlayScene scene,
-            SkiaOverlayRenderer renderer,
-            PresentationOverlayLayer layer,
-            in PresentationOverlayLanePacer.LaneRefreshPlan refreshPlan,
-            bool hasRefreshPlan,
-            int width,
-            int height)
-        {
+            ArgumentNullException.ThrowIfNull(render);
             if (!EnsureSurface(width, height))
             {
                 return false;
@@ -69,14 +52,7 @@ namespace Ludots.Adapter.Raylib
             _context.ResetContext(GRGlBackendState.All);
             Rl.BeginTextureMode(_target);
             Rl.ClearBackground(Color.BLANK);
-            if (hasRefreshPlan)
-            {
-                renderer.Render(scene, _surface!.Canvas, layer, refreshPlan);
-            }
-            else
-            {
-                renderer.Render(scene, _surface!.Canvas, layer);
-            }
+            render(_surface!);
             _surface!.Flush(submit: true, synchronous: false);
             _context.Submit(synchronous: false);
             Rl.EndTextureMode();
@@ -160,10 +136,12 @@ namespace Ludots.Adapter.Raylib
                     sampleCount: 0,
                     stencilBits: 8,
                     glInfo: new GRGlFramebufferInfo(_target.id, GlRgba8));
+                // GL render texture 的行序是 bottom-left；Skia 必须按 BottomLeft 解释，
+                // 上屏时 DrawTextureRec 的负高度翻转才能把内容摆正（两次取向缺一不可）。
                 _surface = SKSurface.Create(
                     _context,
                     _renderTarget,
-                    GRSurfaceOrigin.TopLeft,
+                    GRSurfaceOrigin.BottomLeft,
                     SKColorType.Rgba8888);
                 if (_surface == null)
                 {
@@ -179,7 +157,7 @@ namespace Ludots.Adapter.Raylib
             {
                 if (!_warnedResizeFailure)
                 {
-                    Log.Warn(in LogChannels.Presentation, $"Skia GPU framebuffer overlay unavailable; raster compositor remains active. Reason: {ex.Message}");
+                    RenderDiagnostics.Warn($"Skia GPU render-texture surface unavailable ({_purpose}). Reason: {ex.Message}");
                     _warnedResizeFailure = true;
                 }
 

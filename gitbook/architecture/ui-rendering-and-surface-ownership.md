@@ -167,7 +167,7 @@ Ludots 同屏混排两类 UI，**职责不重叠**：
 
 **Raylib 叠层顺序（面板开着也要保住世界 HUD）：**
 
-GPU UnderUi HUD（血条/名字等世界批）→ Skia 面板层 → TopMost。铁匠铺左侧操作条挂上后，**不得**因为 `hasUiLayer` 就把世界 HUD 踢回整窗 raster。
+GPU UnderUi HUD（血条/名字等世界批）→ Skia 面板层（GPU render-texture，`IsDirty` 脏门控缓存纹理）→ TopMost。三层全部 GPU 驱动、默认开启；CPU 光栅只作为 `LUDOTS_RAYLIB_DISABLE_SKIA_GPU_*` 环境变量显式配置的回退。铁匠铺左侧操作条挂上后，**不得**因为 `hasUiLayer` 就把世界 HUD 踢回整窗 raster。跨引擎宿主照 [Skia GPU 覆盖层适配指南](skia-gpu-overlay-adapter-guide.md) 执行同一分层合同。
 
 **按写法选构建器：**
 
@@ -204,5 +204,6 @@ GPU UnderUi HUD（血条/名字等世界批）→ Skia 面板层 → TopMost。�
 - WebUI Panel Kit Manifest（WPK-1）：`docs/architecture/webui_panel_kit_manifest.md`
 - 浏览器 UI Runtime：`docs/architecture/browser_ui_runtime.md`
 - 适配器模式与平台抽象：`docs/architecture/adapter_pattern.md`
-- 决策记录：`docs/adr/ADR-0002-unified-ui-runtime-and-authoring-models.md`、`docs/adr/ADR-0003-browser-ui-runtime-contract.md`
+- 决策记录：`docs/adr/ADR-0002-unified-ui-runtime-and-authoring-models.md`、`docs/adr/ADR-0003-browser-ui-runtime-contract.md`、`docs/adr/ADR-0005-skia-gpu-surface-contract.md`
+- Skia GPU 覆盖层跨引擎适配合同：`gitbook/architecture/skia-gpu-overlay-adapter-guide.md`
 - 关键源码：`src/Libraries/Ludots.UI/Surface/`、`src/Libraries/Ludots.UI/UIRoot.cs`、`src/Libraries/Ludots.UI.Skia/`、`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibOverlayCompositor.cs`、`src/Adapters/Web/Ludots.Adapter.Web/Services/WebUiRuntimeBridge.cs`
