@@ -19,6 +19,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Systems;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Parity;
@@ -112,9 +113,16 @@ public class S4DeployTruthTests
     }
 
     internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, bool lineOfSight = false)
+        => BuildSession(seed, lineOfSight, pairRules: null);
+
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, CrowdPairRules pairRules)
+        => BuildSession(seed, lineOfSight: false, pairRules);
+
+    private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules)
     {
         CrowdTestScheduler.Ensure();
-        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight);
+        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight, pairRules);
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
@@ -165,6 +173,7 @@ public class S4DeployTruthTests
 
         session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
         session.NavTileCache = cache;
+        session.BindVision(new FogLayerRegistry(), new FogFieldStore());
         return (runtime, session);
     }
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.CrowdSimulation.Presentation;
 
@@ -17,6 +18,7 @@ internal sealed class CrowdPresentationConfig
     [JsonRequired] public CrowdHudPanel Hud { get; set; } = new();
     public CrowdPathPresentation? Path { get; set; }
     public CrowdDeployPresentation? Deploy { get; set; }
+    public CrowdFogDecalColors? FogDecal { get; set; }
 
     public static CrowdPresentationConfig? ParseOptional(JsonObject debug)
     {
@@ -48,6 +50,7 @@ internal sealed class CrowdPresentationConfig
                 throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.viewLabels[{i}] 必填。");
         }
 
+        if (cfg.FogDecal != null) ValidateFogDecal(cfg.FogDecal);
         if (cfg.Hud == null)
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.hud 必填。");
         if (string.IsNullOrWhiteSpace(cfg.Hud.Keys))
@@ -151,6 +154,25 @@ internal sealed class CrowdPresentationConfig
         }
     }
 
+    private static void ValidateFogDecal(CrowdFogDecalColors colors)
+    {
+        RequireColor(colors.Unseen, "fogDecal.unseen");
+        RequireColor(colors.Explored, "fogDecal.explored");
+        RequireColor(colors.Visible, "fogDecal.visible");
+        RequireColor(colors.Denied, "fogDecal.denied");
+    }
+
+    private static void RequireColor(int[]? rgba, string path)
+    {
+        if (rgba == null || rgba.Length != 4)
+            throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.{path} 需要 4 个 0..255 的整数。");
+        for (int i = 0; i < 4; i++)
+        {
+            if ((uint)rgba[i] > 255)
+                throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.{path}[{i}] 超出 0..255。");
+        }
+    }
+
     private static void RequireText(string? value, string path)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -201,6 +223,23 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string ToggleBuild { get; set; } = string.Empty;
     [JsonRequired] public string Remove { get; set; } = string.Empty;
     [JsonRequired] public string Place { get; set; } = string.Empty;
+}
+
+internal sealed class CrowdFogDecalColors
+{
+    [JsonRequired] public int[] Unseen { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] Explored { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] Visible { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] Denied { get; set; } = Array.Empty<int>();
+
+    public FogDecalPalette ToPalette() => new(
+        Color(Unseen),
+        Color(Explored),
+        Color(Visible),
+        Color(Denied));
+
+    private static FogDecalColor Color(int[] rgba) =>
+        new((byte)rgba[0], (byte)rgba[1], (byte)rgba[2], (byte)rgba[3]);
 }
 
 internal sealed class CrowdStructureTemplateDto

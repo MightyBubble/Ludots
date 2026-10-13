@@ -54,6 +54,26 @@ namespace Ludots.Core.Vision
             return false;
         }
 
+        public bool Remove(int scopeKeyId, FogLayerId layerId)
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                FogField current = _fields[i];
+                if (current.ScopeKeyId != scopeKeyId || current.LayerId != layerId)
+                {
+                    continue;
+                }
+
+                int last = _count - 1;
+                _fields[i] = _fields[last];
+                _fields[last] = null!;
+                _count = last;
+                return true;
+            }
+
+            return false;
+        }
+
         public int CopyFields(Span<FogField> destination)
         {
             if (destination.IsEmpty)

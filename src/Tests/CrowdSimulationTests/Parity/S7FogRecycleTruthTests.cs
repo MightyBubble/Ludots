@@ -113,7 +113,6 @@ public sealed class S7FogRecycleTruthTests
             }
 
             // ── 迷雾 digest:逐位硬门(槽号/槽账钉住淘汰次序) ──
-            int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
             for (int g = 0; g < groups; g++)
             {
                 int tVis = BitConverter.ToInt32(bin, cursor); cursor += 4;
@@ -125,12 +124,8 @@ public sealed class S7FogRecycleTruthTests
                 int tEntRev = BitConverter.ToInt32(bin, cursor); cursor += 4;
                 int tRev = BitConverter.ToInt32(bin, cursor); cursor += 4;
 
-                int vis = 0, exp = 0;
-                for (int c = g * f2, end = (g + 1) * f2; c < end; c++)
-                {
-                    if (fog.Visible[c] != 0) vis++;
-                    if (fog.Explored[c] != 0) exp++;
-                }
+                int vis = fog.VisibleCountOf(g);
+                int exp = fog.ExploredCountOf(g);
 
                 firstDigestMismatch ??= Mismatch(
                     ("visible", vis, tVis), ("explored", exp, tExp), ("belief", fog.Belief[g].Count, tBel),

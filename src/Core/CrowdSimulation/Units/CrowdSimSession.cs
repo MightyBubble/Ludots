@@ -8,6 +8,7 @@ using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
@@ -103,14 +104,28 @@ public sealed class CrowdSimSession
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
 
+    private FogLayerRegistry? _visionLayers;
+    private FogFieldStore? _visionFields;
+
+    public void BindVision(FogLayerRegistry layers, FogFieldStore fields)
+    {
+        _visionLayers = layers ?? throw new ArgumentNullException(nameof(layers));
+        _visionFields = fields ?? throw new ArgumentNullException(nameof(fields));
+    }
+
     public void EnableMovement(CrowdMovementKernel kernel, CrowdSimPlanner planner)
     {
         Movement = kernel;
         Planner = planner;
-        // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。有迷雾就注入高度表。
+        // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。盖章前要先绑定雾层和雾场。有迷雾就注入高度表。
         if (Structures != null)
         {
-            Fog = new CrowdFog(Config, Config.PairRules, Structures);
+            if (_visionLayers == null || _visionFields == null)
+            {
+                throw new InvalidOperationException("迷雾盖章需要先绑定雾层注册表和雾场。");
+            }
+
+            Fog = new CrowdFog(Config, Config.PairRules, Structures, _visionLayers, _visionFields);
             Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
             Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);

@@ -1,11 +1,13 @@
 using System;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -179,11 +181,29 @@ public sealed partial class CrowdSimulationRuntime
             overlay,
             () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null,
             () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null,
-            presentation);
+            presentation,
+            () => ResolveLocalSeatVisionScope(engine));
         engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(_deployInput, SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(_deployPresentation);
         _deployDemo = demo;
         _deployPresentationInstalled = true;
+    }
+
+    private static int ResolveLocalSeatVisionScope(GameEngine engine)
+    {
+        if (!engine.TryGetService(CoreServiceKeys.SeatVisionScope, out ISeatVisionScope? source) || source == null)
+        {
+            return 0;
+        }
+
+        if (!engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) ||
+            seats == null ||
+            !seats.TryGetSoleSeat(out ClientLocalSeat seat))
+        {
+            return 0;
+        }
+
+        return source.TryGetScopeKeyId(seat.SeatId, out int scopeKeyId) ? scopeKeyId : 0;
     }
 
     private (RouteVisualBuffer Routes, CrowdFieldProjectorSlot Slot) RequireVisualServices(GameEngine engine)

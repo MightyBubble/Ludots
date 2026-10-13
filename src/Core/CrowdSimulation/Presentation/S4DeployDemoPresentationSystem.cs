@@ -39,6 +39,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private readonly Func<CrowdSimulationRuntime?> _runtimeSource;
     private readonly Func<CrowdSimSession?> _sessionSource;
     private readonly CrowdPresentationConfig _presentation;
+    private readonly Func<int>? _localSeatScope;
 
     private readonly S4DeployNavWireframe _wire = new();
     private readonly HudTextCache _hudText = new();
@@ -51,7 +52,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         ScreenOverlayBuffer overlay,
         Func<CrowdSimulationRuntime?> runtimeSource,
         Func<CrowdSimSession?> sessionSource,
-        CrowdPresentationConfig presentation)
+        CrowdPresentationConfig presentation,
+        Func<int>? localSeatScope = null)
     {
         _demo = demo;
         _routeVisuals = routeVisuals;
@@ -59,6 +61,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _runtimeSource = runtimeSource;
         _sessionSource = sessionSource;
         _presentation = presentation;
+        _localSeatScope = localSeatScope;
     }
 
     public void Initialize() { }
@@ -256,19 +259,18 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         if (expanded) _overlay.AddText(left, top + 114, _hudText.TelemetryDetail, 16, new Vector4(0.85f, 0.95f, 1f, 1f));
     }
 
-    /// <summary>玩家 1 的迷雾格计数已在刷新时维护,这里只按下标读取。</summary>
-    private static void ReadPlayerFogCounts(CrowdSimSession? session, out int visible, out int explored, out int ghosts)
+    /// <summary>可见数、已探索数取本机座位的视野组。没有座位时保持 0，不改用第一组。</summary>
+    private void ReadPlayerFogCounts(CrowdSimSession? session, out int visible, out int explored, out int ghosts)
     {
         visible = explored = ghosts = 0;
         var fog = session?.Fog;
-        if (fog == null) return;
-        var index = session!.Config.PairRules.IndexByPlayerId;
-        if ((uint)1 >= (uint)index.Length) return;
-        int player = index[1];
-        if ((uint)player >= (uint)fog.GroupOf.Length) return;
-        int group = fog.GroupOf[player];
-        visible = fog.VisibleCount[group];
-        explored = fog.ExploredCount[group];
+        if (fog == null || _localSeatScope == null) return;
+        int scope = _localSeatScope();
+        if (scope <= 0) return;
+        int group = scope - 1;
+        if ((uint)group >= (uint)fog.VisionGroupCount) return;
+        visible = fog.VisibleCountOf(group);
+        explored = fog.ExploredCountOf(group);
         ghosts = fog.GhostCount[group];
     }
 

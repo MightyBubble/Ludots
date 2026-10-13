@@ -10,9 +10,10 @@ public sealed class MultiLayerFogFieldShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        var runtime = new FogShowcaseRuntime(FogShowcaseScenario.Create(
+        var runtime = FogShowcaseRuntime.Load(
+            context,
             FogShowcaseKind.MultiLayer,
-            "MultiLayerFogFieldShowcaseMod"));
+            "MultiLayerFogFieldShowcaseMod");
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

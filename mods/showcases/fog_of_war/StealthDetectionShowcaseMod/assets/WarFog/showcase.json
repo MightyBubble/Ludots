@@ -1,5 +1,54 @@
 {
   "capability": "FOG-7",
   "detectionLayer": "detection",
-  "stealthLevels": [1, 2]
+  "stealthLevels": [
+    1,
+    2
+  ],
+  "layers": [
+    {
+      "id": "ground",
+      "key": "war-fog-ground",
+      "cellSizeCm": 500,
+      "updateHz": 20
+    },
+    {
+      "id": "air",
+      "key": "war-fog-air",
+      "cellSizeCm": 750,
+      "updateHz": 20
+    },
+    {
+      "id": "detection",
+      "key": "war-fog-detection",
+      "cellSizeCm": 500,
+      "updateHz": 20
+    }
+  ],
+  "fogDecal": {
+    "unseen": [
+      0,
+      0,
+      0,
+      232
+    ],
+    "explored": [
+      0,
+      0,
+      0,
+      148
+    ],
+    "visible": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "denied": [
+      64,
+      8,
+      16,
+      214
+    ]
+  }
 }

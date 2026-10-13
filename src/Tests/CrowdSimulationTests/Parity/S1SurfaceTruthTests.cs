@@ -150,6 +150,12 @@ public class S1SurfaceTruthTests
         => NavSurfaceAsset.Read(File.OpenRead(Path.Combine(SeedDir(seed), "terrain", $"crowd_simulation_{seed}.navsurface")));
 
     internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight = false)
+        => LoadRuntime(seed, lineOfSight, pairRules: null);
+
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, CrowdPairRules pairRules)
+        => LoadRuntime(seed, lineOfSight: false, pairRules);
+
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight, CrowdPairRules? pairRules)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
@@ -172,7 +178,7 @@ public class S1SurfaceTruthTests
             TestDefaults.DemoPathing(),
             TestDefaults.DemoTemplates(),
             TestDefaults.FixedHz,
-            TestDefaults.DemoPairRules());
+            pairRules ?? TestDefaults.DemoPairRules());
     }
 
     internal static CrowdSimulationMapSurface LoadMapSurface(string seed)

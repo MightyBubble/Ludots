@@ -106,8 +106,5 @@ public sealed class CrowdFogLineOfSightTests
         => observerY * fog.FogCellsPerSide + observerX + 2;
 
     private static bool Visible(CrowdFog fog, int group, int cell)
-    {
-        int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
-        return fog.Visible[group * f2 + cell] != 0;
-    }
+        => fog.View(group)[cell] == 2;
 }
