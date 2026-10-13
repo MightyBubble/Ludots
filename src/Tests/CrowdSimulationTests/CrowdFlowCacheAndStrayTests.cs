@@ -306,6 +306,76 @@ public sealed class CrowdFlowCacheAndStrayTests
         Assert.That(Dist(without.Session, groupB.Goal), Is.GreaterThan(Dist(with.Session, groupA.Goal) + 4000));
     }
 
+    [Test]
+    public void FlowRevision_FollowsRequestId_OnPlanRefreshExtendAndCacheHit()
+    {
+        using var harness = Open();
+        var session = harness.Session;
+        var group = OrderOne(session, 480000, 560000, 700000, 700000);
+        int seq = ServiceSeq(harness.Service);
+        Assert.That(group.Flow!.BuildRevision, Is.EqualTo(seq));
+        Assert.That(seq, Is.GreaterThan(0));
+
+        var poisoned = group.Flow;
+        poisoned.BuildRevision = 99991;
+        session.Movement!.OnStray = null;
+        harness.Planner.RefreshFlow(group);
+        harness.Planner.ProcessRefreshes(session.TickCount);
+        Assert.That(harness.Planner.FlowRefreshSubmits, Is.EqualTo(1));
+        session.Advance(session.Config.Planning.RefreshLatencyTicks + 1);
+        int afterRefresh = ServiceSeq(harness.Service);
+        Assert.That(group.Flow!.BuildRevision, Is.EqualTo(afterRefresh));
+        Assert.That(group.Flow.BuildRevision, Is.Not.EqualTo(99991));
+
+        int outside = OutsideCell(session, group);
+        Assert.That(outside, Is.GreaterThanOrEqualTo(0));
+        session.Movement.OnStray = harness.Planner.NoteStray;
+        harness.Planner.NoteStray(group.Id, outside);
+        int extends = harness.Planner.ExtendSubmits;
+        harness.Planner.ProcessRefreshes(session.TickCount);
+        Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(extends + 1));
+        session.Movement.OnStray = null;
+        session.Advance(session.Config.Planning.RefreshLatencyTicks + 1);
+        int afterExtend = ServiceSeq(harness.Service);
+        Assert.That(group.Flow!.BuildRevision, Is.EqualTo(afterExtend));
+        Assert.That(group.Flow.BuildRevision, Is.Not.EqualTo(99991));
+        if (ReferenceEquals(group.Flow, poisoned))
+            Assert.That(group.Flow.BuildRevision, Is.Not.EqualTo(99991));
+
+        int tiles = harness.PlannerTiles;
+        var covered = new byte[tiles];
+        for (int i = 0; i < covered.Length; i++) covered[i] = 1;
+        var cached = Field(group.NavId, group.Goal, covered);
+        cached.BuildRevision = 4242;
+        harness.Planner.FlowCache.Admit(cached);
+        int seqBeforeHit = ServiceSeq(harness.Service);
+        harness.Planner.RefreshFlow(group);
+        harness.Planner.ProcessRefreshes(session.TickCount);
+        Assert.That(group.Flow, Is.SameAs(cached));
+        Assert.That(group.Flow.BuildRevision, Is.EqualTo(4242));
+        Assert.That(ServiceSeq(harness.Service), Is.EqualTo(seqBeforeHit));
+    }
+
+    private static int ServiceSeq(PathQueryService service) =>
+        (int)typeof(PathQueryService).GetField("_seq", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(service)!;
+
+    private static int OutsideCell(CrowdSimSession session, CrowdNavGroupSet.Group group)
+    {
+        var nav = session.ResolveNavContext(group.NavId);
+        var mask = group.Flow!.Mask!;
+        int side = nav.NavCellsPerSide;
+        int per = nav.Hpa!.NavCellsPerTile;
+        int tiles = nav.Hpa.NavTilesPerSide;
+        for (int cell = 0; cell < nav.Passable.Length; cell++)
+        {
+            if (nav.Passable[cell] == 0) continue;
+            int tile = NavGridSteps.TileOf(cell, side, per, tiles);
+            if ((uint)tile < (uint)mask.Length && mask[tile] == 0) return cell;
+        }
+
+        return -1;
+    }
+
     private static int CellCenter(int cell, int cm) => cell * cm + cm / 2;
 
     private static void PlaceWall(CrowdSimSession session, int xCm, int yCm, int sizeCm)

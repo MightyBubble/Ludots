@@ -41,6 +41,8 @@ public sealed class CrowdSimPlanner
     private readonly byte[] _maskUnion;
     private readonly byte[] _strayStamp;
     private readonly int[] _strayCell;
+    private readonly int[] _extendByGroup;
+    private readonly int[] _extendDist;
     private readonly Stack<byte[]> _maskCopies;
     private readonly List<PendingRefresh> _maskHold;
     private readonly int[] _retiredIds;
@@ -196,6 +198,8 @@ public sealed class CrowdSimPlanner
         _maskUnion = new byte[tileCount];
         _strayStamp = new byte[CrowdNavGroupSet.MaxGroups];
         _strayCell = new int[CrowdNavGroupSet.MaxGroups];
+        _extendByGroup = new int[CrowdNavGroupSet.MaxGroups];
+        _extendDist = new int[_tilesPerSide + 1];
         _maskCopies = new Stack<byte[]>(pendingSlots);
         for (int i = 0; i < pendingSlots; i++) _maskCopies.Push(new byte[tileCount]);
         _maskHold = new List<PendingRefresh>(pendingSlots);
@@ -1088,6 +1092,20 @@ public sealed class CrowdSimPlanner
     public int FlowRefreshSubmits { get; private set; }
     /// <summary>已提交的走廊扩展次数。</summary>
     public int ExtendSubmits { get; private set; }
+    /// <summary>场外组·tick。同一组同一 tick 只计一次。</summary>
+    internal int StrayGroupTicks { get; private set; }
+    /// <summary>扩展标记还在，或上一次答复还占着槽，本次不另提。</summary>
+    internal int StraySkipInFlight { get; private set; }
+    /// <summary>垫一圈也不会变大，掩码已经包住这次走廊。</summary>
+    internal int StraySkipNoGrowth { get; private set; }
+    /// <summary>走失格所在 tile 已经在当前掩码里，仍因外圈垫厚而提交的次数。</summary>
+    internal int ExtendTileCovered { get; private set; }
+    /// <summary>走失 tile 落在一圈垫层内。</summary>
+    internal int ExtendWithinPad { get; private set; }
+    /// <summary>走失 tile 比一圈垫层更远，这一次重建盖不住它。</summary>
+    internal int ExtendBeyondPad { get; private set; }
+    internal int[] ExtendByGroup => _extendByGroup;
+    internal int[] ExtendDistance => _extendDist;
     public int FlowCacheHits => _cache.Hits;
     public int FlowCacheMisses => _cache.Misses;
     public int FlowCacheEvicts => _cache.Evicts;
@@ -1598,6 +1616,13 @@ public sealed class CrowdSimPlanner
         int count = groups.Count;
         int served = 0;
         int scanned = 0;
+        for (int i = 0; i < count; i++)
+        {
+            var noted = groups[i];
+            if (noted != null && (uint)noted.Id < (uint)_strayStamp.Length && _strayStamp[noted.Id] != 0)
+                StrayGroupTicks++;
+        }
+
         if (count > 0 && budget > 0)
         {
             if (_strayCursor >= count) _strayCursor = 0;
@@ -1619,10 +1644,20 @@ public sealed class CrowdSimPlanner
 
     private bool SubmitExtension(CrowdNavGroupSet.Group g, int cell, int tick)
     {
-        if (g.Planning || g.Extending || g.Flow?.Mask == null || g.Goal < 0) return false;
-        if (_refreshQueue.Contains(g) || HasPending(g)) return false;
+        if (g.Planning || g.Flow?.Mask == null || g.Goal < 0) return false;
+        if (g.Extending || _refreshQueue.Contains(g) || HasPending(g))
+        {
+            StraySkipInFlight++;
+            return false;
+        }
+
         if (!FillServiceMask(g.Flow.Mask)) return false;
-        if (FlowFieldBuilder.MaskSubset(_maskUnion, g.Flow.Mask)) return false;
+        if (FlowFieldBuilder.MaskSubset(_maskUnion, g.Flow.Mask))
+        {
+            StraySkipNoGrowth++;
+            return false;
+        }
+
         var nav = _session.ResolveNavContext(g.NavId);
         int tile = NavGridSteps.TileOf(cell, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, _tilesPerSide);
         if ((uint)tile < (uint)_maskUnion.Length) _maskUnion[tile] = 1;
@@ -1632,8 +1667,37 @@ public sealed class CrowdSimPlanner
             return false;
         }
 
+        var mask = g.Flow.Mask;
+        if ((uint)tile < (uint)mask.Length && mask[tile] != 0) ExtendTileCovered++;
+        else
+        {
+            int dist = TileDistance(mask, tile);
+            int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
+            if (dist <= pad) ExtendWithinPad++;
+            else ExtendBeyondPad++;
+            if ((uint)dist < (uint)_extendDist.Length) _extendDist[dist]++;
+        }
+
         SubmitFlow(g, tick, true);
+        if ((uint)g.Id < (uint)_extendByGroup.Length) _extendByGroup[g.Id]++;
         return true;
+    }
+
+    private int TileDistance(byte[] mask, int tile)
+    {
+        int side = _tilesPerSide;
+        if (side < 1 || (uint)tile >= (uint)mask.Length) return side;
+        int tx = tile % side, ty = tile / side;
+        int best = side;
+        for (int i = 0; i < mask.Length; i++)
+        {
+            if (mask[i] == 0) continue;
+            int d = Math.Max(Math.Abs(i % side - tx), Math.Abs(i / side - ty));
+            if (d < best) best = d;
+            if (best <= 1) break;
+        }
+
+        return best;
     }
 
     private bool HasPending(CrowdNavGroupSet.Group g)
