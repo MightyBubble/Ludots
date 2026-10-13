@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -102,6 +103,8 @@ public sealed class CrowdSimSession
     public int EvictStuck { get; set; }
     /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(对拍不跑,验收必跑)。</summary>
     public bool VerifyIncrementalNav { get; set; }
+    /// <summary>调试节拍。0 表示步进不扫描、不分配。正整数表示每这么多 tick 跑仿真与导航不变量。</summary>
+    public int ValidateEveryNTicks { get; set; }
     /// <summary>每 tick 的仿真秒数(simSecondsPerTickSecond/FixedHz)与子步进。</summary>
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
@@ -372,6 +375,13 @@ public sealed class CrowdSimSession
             LastDigest = CrowdSimChecksum.Compute(this);
             checksum = LastDigest.Total;
             telemetry.AddChecksumTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            int every = ValidateEveryNTicks;
+            if (every > 0 && TickCount % every == 0)
+            {
+                CrowdSimulationValidator.ValidateSim(this);
+                CrowdSimulationValidator.ValidateNav(this);
+            }
+
             return true;
         }
         finally

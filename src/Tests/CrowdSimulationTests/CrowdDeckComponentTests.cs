@@ -71,7 +71,7 @@ public class CrowdDeckComponentTests
             Fix64.Zero);
         var (_, rect) = world.Store.PlaceEntity(building, footprint, -1);
         CrowdNavRebake.RebakeNav(nav, world.Sources, world.Store, rect, world.Cache);
-        CrowdNavRebake.VerifyAgainstFullBake(world.Navs, world.Sources, world.Store);
+        CrowdNavRebake.VerifyAgainstFullBake(world.Navs, world.Sources, world.Store, tick: 0);
 
         Assert.That(nav.Passable[approach], Is.EqualTo(0));
         Assert.That(nav.CanReach(nav.Comp[Cell(0, 4, side)], nav.Comp[far]), Is.False);
@@ -81,7 +81,7 @@ public class CrowdDeckComponentTests
         var removed = world.Store.RemoveEntity(world.Store.EntityIds[^1]);
         Assert.That(removed, Is.Not.Null);
         CrowdNavRebake.RebakeNav(nav, world.Sources, world.Store, removed!.Value.Rect, world.Cache);
-        CrowdNavRebake.VerifyAgainstFullBake(world.Navs, world.Sources, world.Store);
+        CrowdNavRebake.VerifyAgainstFullBake(world.Navs, world.Sources, world.Store, tick: 0);
         Assert.That(nav.CanReach(nav.Comp[approach], nav.Comp[far]), Is.True);
         Assert.That(nav.UpComp![deckA], Is.Not.EqualTo(nav.UpComp[deckB]));
     }

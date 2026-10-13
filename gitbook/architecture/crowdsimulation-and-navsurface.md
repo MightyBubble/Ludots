@@ -487,6 +487,10 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 编辑器：`VisualTerrainEditorDocument.PaintWorld` 只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。没有把导航区域画进 `.navsurface` 的笔刷。原句「无编辑器笔刷」对高度笔刷已不成立；导航区域笔刷仍然没有。
 
+## 不变量抽查
+
+`ValidateSim` 查两件事：单位没有停在阻挡格上，以及每个已经带着流场的导航组都有领队。地面单位对的是结构仓里那份活阻挡栅格，还有该单位自己那层导航的可通行格；站在桥面上的单位对的是桥面层 `UpPass`。`ValidateNav` 把增量导航和同一份地表重新全量烘焙的结果对一遍，用的是 `CrowdNavRebake.VerifyAgainstFullBake`。两道检查默认关闭。在 `CrowdSimulationDebug.json` 里把 `session.validateEveryNTicks` 写成正整数，会话每走过这么多 tick 跑一次。不写这个字段，或者写 0，步进不扫描，也不分配。
+
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。

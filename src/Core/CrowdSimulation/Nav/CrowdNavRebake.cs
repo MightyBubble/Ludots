@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
@@ -480,11 +481,13 @@ public static class CrowdNavRebake
     /// 把增量重烘后的上下文与"同栅格全量烘焙"逐字段比对:代价 / 可走 / 可通行 / 连通域划分 /
     /// 格表 / 链接表 / HPA 扁平视图。任何不一致都抛错——增量维护的等价性基准就是全量烘焙。
     /// 连通域编号按首见格序规范重标后比对(划分一致即可,编号本身不是合同)。
+    /// 不一致抛 <see cref="CrowdSimulationInvariantException"/>，消息带 tick、nav 与 tile。
     /// </summary>
     public static void VerifyAgainstFullBake(
         IReadOnlyDictionary<int, NavContext> navs,
         CrowdRebakeSources sources,
-        CrowdStructuresStore store)
+        CrowdStructuresStore store,
+        int tick)
     {
         var config = sources.Config;
         var freshCache = new NavTileCache(config.NavtileCacheCapacity, config.Hpa.NavCellsPerTile,
@@ -493,66 +496,70 @@ public static class CrowdNavRebake
         foreach (var nav in navs.Values)
         {
             var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceNavCells, freshCache);
-            VerifyContext(nav, full, $"nav {nav.Id}");
+            VerifyContext(nav, full, tick);
         }
     }
 
-    private static void VerifyContext(NavContext inc, NavContext full, string what)
+    private static void VerifyContext(NavContext inc, NavContext full, int tick)
     {
         int n2 = inc.NavCellsPerSide * inc.NavCellsPerSide;
         for (int i = 0; i < n2; i++)
         {
-            if (inc.Cost[i] != full.Cost[i]) throw new InvalidOperationException($"{what}: 增量代价与全量不一致 @格 {i}");
-            if (inc.Walk[i] != full.Walk[i]) throw new InvalidOperationException($"{what}: 增量可走与全量不一致 @格 {i}");
-            if (inc.Passable[i] != full.Passable[i]) throw new InvalidOperationException($"{what}: 增量可通行与全量不一致 @格 {i}");
+            if (inc.Cost[i] != full.Cost[i]) ThrowMismatch(tick, inc, i, -1, $"增量代价与全量不一致 @格 {i}");
+            if (inc.Walk[i] != full.Walk[i]) ThrowMismatch(tick, inc, i, -1, $"增量可走与全量不一致 @格 {i}");
+            if (inc.Passable[i] != full.Passable[i]) ThrowMismatch(tick, inc, i, -1, $"增量可通行与全量不一致 @格 {i}");
         }
 
-        VerifyPartition(inc.Comp, full.Comp, what, "地面连通域");
+        VerifyPartition(inc, inc.Comp, full.Comp, tick, "地面连通域");
+        if (inc.CellCount != full.CellCount)
+        {
+            ThrowMismatch(tick, inc, -1, -1, $"增量格表长度 {inc.CellCount} ≠ 全量 {full.CellCount}");
+        }
+
         if (inc.UpComp == null || full.UpComp == null)
         {
             if (inc.UpComp != null || full.UpComp != null)
             {
-                throw new InvalidOperationException($"{what}: 桥面连通域存在性不一致");
+                ThrowMismatch(tick, inc, -1, -1, "桥面连通域存在性不一致");
             }
         }
         else
         {
-            VerifyPartition(inc.UpComp, full.UpComp, what, "桥面连通域");
+            VerifyPartition(inc, inc.UpComp, full.UpComp, tick, "桥面连通域");
         }
 
         if (inc.CompCountTotal != full.CompCountTotal)
         {
-            throw new InvalidOperationException($"{what}: 连通域总数 {inc.CompCountTotal} ≠ 全量 {full.CompCountTotal}");
+            ThrowMismatch(tick, inc, -1, -1, $"连通域总数 {inc.CompCountTotal} ≠ 全量 {full.CompCountTotal}");
         }
 
-        VerifyReach(inc, full, what);
-        if (inc.CellCount != full.CellCount) throw new InvalidOperationException($"{what}: 增量格表长度 {inc.CellCount} ≠ 全量 {full.CellCount}");
+        VerifyReach(inc, full, tick);
         for (int i = 0; i < inc.CellCount; i++)
         {
-            if (inc.Cells[i] != full.Cells[i]) throw new InvalidOperationException($"{what}: 增量格表与全量不一致 @序 {i}");
+            if (inc.Cells[i] != full.Cells[i]) ThrowMismatch(tick, inc, inc.Cells[i], -1, $"增量格表与全量不一致 @序 {i}");
         }
 
-        VerifyLinks(inc.Links, full.Links, what);
-        VerifyHpa(inc.Hpa!, full.Hpa!, what);
+        VerifyLinks(inc, full.Links, tick);
+        VerifyHpa(inc, full.Hpa!, tick);
     }
 
     /// <summary>桥面编号按同一套 4 连通划分比对；可达图按这个划分下的边集比对，边集相同则 CanReach 相同。</summary>
-    private static void VerifyReach(NavContext inc, NavContext full, string what)
+    private static void VerifyReach(NavContext inc, NavContext full, int tick)
     {
         var mapInc = CanonIds(inc);
         var mapFull = CanonIds(full);
-        var edgesInc = CanonEdges(inc.ReachOut, mapInc, what, "增量");
-        var edgesFull = CanonEdges(full.ReachOut, mapFull, what, "全量");
+        var edgesInc = CanonEdges(inc.ReachOut, mapInc, inc, tick, "增量");
+        var edgesFull = CanonEdges(full.ReachOut, mapFull, inc, tick, "全量");
         if (edgesInc.Count != edgesFull.Count)
         {
-            throw new InvalidOperationException($"{what}: 可达边数 {edgesInc.Count} ≠ 全量 {edgesFull.Count}");
+            ThrowMismatch(tick, inc, -1, -1, $"可达边数 {edgesInc.Count} ≠ 全量 {edgesFull.Count}");
         }
 
         foreach (var kv in edgesInc)
         {
             if (!edgesFull.TryGetValue(kv.Key, out var other) || !kv.Value.SetEquals(other))
             {
-                throw new InvalidOperationException($"{what}: 可达边与全量不一致 @域 {kv.Key}");
+                ThrowMismatch(tick, inc, -1, -1, $"可达边与全量不一致 @域 {kv.Key}");
             }
         }
     }
@@ -577,7 +584,7 @@ public static class CrowdNavRebake
     }
 
     private static Dictionary<int, HashSet<int>> CanonEdges(
-        Dictionary<int, HashSet<int>>? graph, Dictionary<int, int> map, string what, string side)
+        Dictionary<int, HashSet<int>>? graph, Dictionary<int, int> map, NavContext nav, int tick, string side)
     {
         var edges = new Dictionary<int, HashSet<int>>();
         if (graph == null) return edges;
@@ -585,7 +592,7 @@ public static class CrowdNavRebake
         {
             if (!map.TryGetValue(kv.Key, out int from))
             {
-                throw new InvalidOperationException($"{what}: {side}可达边的起点 {kv.Key} 不在连通域里");
+                ThrowMismatch(tick, nav, -1, -1, $"{side}可达边的起点 {kv.Key} 不在连通域里");
             }
 
             if (!edges.TryGetValue(from, out var set)) edges[from] = set = new HashSet<int>();
@@ -593,7 +600,7 @@ public static class CrowdNavRebake
             {
                 if (!map.TryGetValue(next, out int to))
                 {
-                    throw new InvalidOperationException($"{what}: {side}可达边的终点 {next} 不在连通域里");
+                    ThrowMismatch(tick, nav, -1, -1, $"{side}可达边的终点 {next} 不在连通域里");
                 }
 
                 set.Add(to);
@@ -603,7 +610,7 @@ public static class CrowdNavRebake
         return edges;
     }
 
-    private static void VerifyPartition(int[] inc, int[] full, string what, string name)
+    private static void VerifyPartition(NavContext incNav, int[] inc, int[] full, int tick, string name)
     {
         // 划分等价:两套编号按首见格序规范重标后逐格相等
         var mapInc = new Dictionary<int, int>();
@@ -611,53 +618,57 @@ public static class CrowdNavRebake
         for (int i = 0; i < inc.Length; i++)
         {
             int a = inc[i], b = full[i];
-            if ((a < 0) != (b < 0)) throw new InvalidOperationException($"{what}: {name}归属不一致 @格 {i}");
+            if ((a < 0) != (b < 0)) ThrowMismatch(tick, incNav, i, -1, $"{name}归属不一致 @格 {i}");
             if (a < 0) continue;
             if (!mapInc.TryGetValue(a, out int ra)) mapInc[a] = ra = mapInc.Count;
             if (!mapFull.TryGetValue(b, out int rb)) mapFull[b] = rb = mapFull.Count;
-            if (ra != rb) throw new InvalidOperationException($"{what}: {name}划分与全量不一致 @格 {i}");
+            if (ra != rb) ThrowMismatch(tick, incNav, i, -1, $"{name}划分与全量不一致 @格 {i}");
         }
     }
 
-    private static void VerifyLinks(NavLinkSet? inc, NavLinkSet? full, string what)
+    private static void VerifyLinks(NavContext nav, NavLinkSet? full, int tick)
     {
+        var inc = nav.Links;
         if (inc == null || full == null)
         {
-            if (inc != null || full != null) throw new InvalidOperationException($"{what}: 链接表存在性不一致");
+            if (inc != null || full != null) ThrowMismatch(tick, nav, -1, -1, "链接表存在性不一致");
             return;
         }
 
-        if (inc.Count != full.Count) throw new InvalidOperationException($"{what}: 链接数 {inc.Count} ≠ 全量 {full.Count}");
+        if (inc.Count != full.Count) ThrowMismatch(tick, nav, -1, -1, $"链接数 {inc.Count} ≠ 全量 {full.Count}");
         for (int e = 0; e < inc.Count; e++)
         {
             if (inc.From[e] != full.From[e] || inc.To[e] != full.To[e]
                 || inc.Cost[e] != full.Cost[e] || inc.TwoWay[e] != full.TwoWay[e])
             {
-                throw new InvalidOperationException($"{what}: 链接 {e} 与全量不一致");
+                ThrowMismatch(tick, nav, inc.From[e], -1, $"链接 {e} 与全量不一致");
             }
         }
     }
 
-    private static void VerifyHpa(HpaGraph inc, HpaGraph full, string what)
+    private static void VerifyHpa(NavContext nav, HpaGraph full, int tick)
     {
+        var inc = nav.Hpa!;
         if (inc.NodeCount != full.NodeCount || inc.EdgeCount != full.EdgeCount)
         {
-            throw new InvalidOperationException($"{what}: HPA 节点/边数 ({inc.NodeCount},{inc.EdgeCount}) ≠ 全量 ({full.NodeCount},{full.EdgeCount})");
+            ThrowMismatch(tick, nav, -1, -1,
+                $"HPA 节点/边数 ({inc.NodeCount},{inc.EdgeCount}) ≠ 全量 ({full.NodeCount},{full.EdgeCount})");
         }
 
         var a = inc.Flatten();
         var b = full.Flatten();
-        if (a.NodeCell.Length != b.NodeCell.Length) throw new InvalidOperationException($"{what}: HPA 扁平视图节点数不一致");
+        if (a.NodeCell.Length != b.NodeCell.Length) ThrowMismatch(tick, nav, -1, -1, "HPA 扁平视图节点数不一致");
         for (int i = 0; i < a.NodeCell.Length; i++)
         {
-            if (a.NodeCell[i] != b.NodeCell[i] || a.NodeLayer[i] != b.NodeLayer[i] || a.NodeTile[i] != b.NodeTile[i])
+            int tile = a.NodeTile[i];
+            if (a.NodeCell[i] != b.NodeCell[i] || a.NodeLayer[i] != b.NodeLayer[i] || tile != b.NodeTile[i])
             {
-                throw new InvalidOperationException($"{what}: HPA 节点 {i} 与全量不一致");
+                ThrowMismatch(tick, nav, -1, tile, $"HPA 节点 {i} 与全量不一致");
             }
 
             if (a.AdjStart[i + 1] - a.AdjStart[i] != b.AdjStart[i + 1] - b.AdjStart[i])
             {
-                throw new InvalidOperationException($"{what}: HPA 节点 {i} 出边数与全量不一致");
+                ThrowMismatch(tick, nav, -1, tile, $"HPA 节点 {i} 出边数与全量不一致");
             }
 
             for (int k = a.AdjStart[i]; k < a.AdjStart[i + 1]; k++)
@@ -665,9 +676,40 @@ public static class CrowdNavRebake
                 int kb = k - a.AdjStart[i] + b.AdjStart[i];
                 if (a.AdjTo[k] != b.AdjTo[kb] || a.AdjCost[k] != b.AdjCost[kb])
                 {
-                    throw new InvalidOperationException($"{what}: HPA 节点 {i} 的边 {k - a.AdjStart[i]} 与全量不一致");
+                    ThrowMismatch(tick, nav, -1, tile, $"HPA 节点 {i} 的边 {k - a.AdjStart[i]} 与全量不一致");
                 }
             }
         }
+    }
+
+    private static void ThrowMismatch(int tick, NavContext nav, int cell, int tile, string detail)
+    {
+        int cx = -1, cy = -1;
+        if (cell >= 0)
+        {
+            int n = nav.NavCellsPerSide;
+            cx = cell % n;
+            cy = cell / n;
+            if (tile < 0) tile = TileIndex(nav, cell);
+            detail = $"{detail} ({cx},{cy})";
+        }
+
+        throw new CrowdSimulationInvariantException(
+            $"tick {tick} nav {nav.Id} tile {tile}: {detail}",
+            tick, -1, -1, cx, cy, nav.Id, tile, -1);
+    }
+
+    private static int TileIndex(NavContext nav, int cell)
+    {
+        var hpa = nav.Hpa;
+        if (hpa == null || hpa.NavCellsPerTile <= 0) return -1;
+        int n = nav.NavCellsPerSide;
+        int tile = hpa.NavCellsPerTile;
+        int tilesPerSide = hpa.NavTilesPerSide;
+        int tx = cell % n / tile;
+        int ty = cell / n / tile;
+        if (tx >= tilesPerSide) tx = tilesPerSide - 1;
+        if (ty >= tilesPerSide) ty = tilesPerSide - 1;
+        return ty * tilesPerSide + tx;
     }
 }

@@ -414,6 +414,7 @@ public sealed partial class CrowdSimulationRuntime
         _session.NavTileCache = cache;
         // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
         _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
+        _session.ValidateEveryNTicks = _debug?.Session?.ValidateEveryNTicks ?? 0;
         _activeMapId = mapId.Value;
 
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
