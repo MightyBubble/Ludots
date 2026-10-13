@@ -9,7 +9,21 @@
     { "id": "CrowdSimulation.S4.Template3", "name": "CrowdSimulation_S4_Template3", "type": "Button" },
     { "id": "CrowdSimulation.BoxSelectBegin", "name": "CrowdSimulation_BoxSelectBegin", "type": "Button" },
     { "id": "CrowdSimulation.BoxSelectEnd", "name": "CrowdSimulation_BoxSelectEnd", "type": "Button", "firesOn": "release" },
-    { "id": "CrowdSimulation.Command", "name": "CrowdSimulation_Command", "type": "Button" }
+    { "id": "CrowdSimulation.Command", "name": "CrowdSimulation_Command", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleFunnel", "name": "CrowdSimulation_S4_ToggleFunnel", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleCorridor", "name": "CrowdSimulation_S4_ToggleCorridor", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleHpaGraph", "name": "CrowdSimulation_S4_ToggleHpaGraph", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleNavPolygons", "name": "CrowdSimulation_S4_ToggleNavPolygons", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleTileGrid", "name": "CrowdSimulation_S4_ToggleTileGrid", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleFlow", "name": "CrowdSimulation_S4_ToggleFlow", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleDensity", "name": "CrowdSimulation_S4_ToggleDensity", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleObstacles", "name": "CrowdSimulation_S4_ToggleObstacles", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleJumpLinks", "name": "CrowdSimulation_S4_ToggleJumpLinks", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleBelief", "name": "CrowdSimulation_S4_ToggleBelief", "type": "Button" },
+    { "id": "CrowdSimulation.S4.CycleUnitColor", "name": "CrowdSimulation_S4_CycleUnitColor", "type": "Button" },
+    { "id": "CrowdSimulation.S4.CycleBeliefGroup", "name": "CrowdSimulation_S4_CycleBeliefGroup", "type": "Button" },
+    { "id": "CrowdSimulation.S4.CycleInspectLayer", "name": "CrowdSimulation_S4_CycleInspectLayer", "type": "Button" },
+    { "id": "CrowdSimulation.S4.CycleInspectRadius", "name": "CrowdSimulation_S4_CycleInspectRadius", "type": "Button" }
   ],
   "contexts": [
     {
@@ -21,7 +35,21 @@
         { "actionId": "CrowdSimulation.S4.RemoveStructure", "path": "<Keyboard>/x" },
         { "actionId": "CrowdSimulation.S4.Template1", "path": "<Keyboard>/1" },
         { "actionId": "CrowdSimulation.S4.Template2", "path": "<Keyboard>/2" },
-        { "actionId": "CrowdSimulation.S4.Template3", "path": "<Keyboard>/3" }
+        { "actionId": "CrowdSimulation.S4.Template3", "path": "<Keyboard>/3" },
+        { "actionId": "CrowdSimulation.S4.ToggleFunnel", "path": "<Keyboard>/g" },
+        { "actionId": "CrowdSimulation.S4.ToggleCorridor", "path": "<Keyboard>/h" },
+        { "actionId": "CrowdSimulation.S4.ToggleHpaGraph", "path": "<Keyboard>/j" },
+        { "actionId": "CrowdSimulation.S4.ToggleNavPolygons", "path": "<Keyboard>/k" },
+        { "actionId": "CrowdSimulation.S4.ToggleTileGrid", "path": "<Keyboard>/l" },
+        { "actionId": "CrowdSimulation.S4.ToggleFlow", "path": "<Keyboard>/f" },
+        { "actionId": "CrowdSimulation.S4.ToggleDensity", "path": "<Keyboard>/n" },
+        { "actionId": "CrowdSimulation.S4.ToggleObstacles", "path": "<Keyboard>/o" },
+        { "actionId": "CrowdSimulation.S4.ToggleJumpLinks", "path": "<Keyboard>/p" },
+        { "actionId": "CrowdSimulation.S4.ToggleBelief", "path": "<Keyboard>/u" },
+        { "actionId": "CrowdSimulation.S4.CycleUnitColor", "path": "<Keyboard>/y" },
+        { "actionId": "CrowdSimulation.S4.CycleBeliefGroup", "path": "<Keyboard>/i" },
+        { "actionId": "CrowdSimulation.S4.CycleInspectLayer", "path": "<Keyboard>/t" },
+        { "actionId": "CrowdSimulation.S4.CycleInspectRadius", "path": "<Keyboard>/r" }
       ]
     },
     {

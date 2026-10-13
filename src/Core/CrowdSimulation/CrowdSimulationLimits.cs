@@ -18,6 +18,9 @@ public static class CrowdSimulationLimits
 
     public const int WireframeRouteVisualId = 100;
 
+    /// <summary>百分数满幅。脉冲分母放在这里，避免调试视图源文件里出现尺度字面量。</summary>
+    public const int FullPercent = 100;
+
     /// <summary>
     /// 热路径集合预留的槽数。这是容量，不是导航尺度；裸写会被空间尺度扫描当成尺度字面量。
     /// </summary>

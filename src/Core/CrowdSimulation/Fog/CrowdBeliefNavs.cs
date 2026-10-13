@@ -272,6 +272,53 @@ public sealed class CrowdBeliefNavs
         return res;
     }
 
+    /// <summary>未注册槽（含从未建过的槽 0）差集为空。残影 = 认知挡、真相不挡。</summary>
+    public int CopyDivergentCells(int slot, int x0, int y0, int x1, int y1, int step, int[] cells, byte[] ghost)
+    {
+        if (!_slots.TryGetValue(slot, out var belief)) return 0;
+        var truth = _sim.Structures;
+        if (truth == null) return 0;
+        return DiffCells(belief.Field.Area, belief.Field.Blocked, truth.Area, truth.Blocked, belief.Field.NavCellsPerSide, x0, y0, x1, y1, step, cells, ghost);
+    }
+
+    public static int DiffCells(
+        byte[] beliefArea,
+        byte[] beliefBlocked,
+        byte[] truthArea,
+        byte[] truthBlocked,
+        int navCellsPerSide,
+        int x0,
+        int y0,
+        int x1,
+        int y1,
+        int step,
+        int[] cells,
+        byte[] ghost)
+    {
+        if (step < 1) throw new ArgumentOutOfRangeException(nameof(step));
+        if (x0 < 0) x0 = 0;
+        if (y0 < 0) y0 = 0;
+        if (x1 > navCellsPerSide) x1 = navCellsPerSide;
+        if (y1 > navCellsPerSide) y1 = navCellsPerSide;
+        int count = 0;
+        for (int y = y0; y < y1; y += step)
+        {
+            int row = y * navCellsPerSide;
+            for (int x = x0; x < x1; x += step)
+            {
+                int i = row + x;
+                if (beliefArea[i] == truthArea[i] && beliefBlocked[i] == truthBlocked[i]) continue;
+                if (count >= cells.Length || count >= ghost.Length)
+                    throw new InvalidOperationException("CrowdSimulationDebugView.json: maxFieldCells 装不下认知分歧格。");
+                cells[count] = i;
+                ghost[count] = (byte)(beliefBlocked[i] != 0 && truthBlocked[i] == 0 ? 1 : 0);
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     /// <summary>分歧 tile 集(认知视图 / 摘要用)。</summary>
     public List<int> DivergentTiles(int slot)
     {
