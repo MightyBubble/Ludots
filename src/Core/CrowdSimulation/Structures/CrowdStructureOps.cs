@@ -200,7 +200,7 @@ public static class CrowdStructureOps
         if (sim.Planner is { } planner)
         {
             job.Orders = planner.ReactRebake(job.ContextResults);
-            // 刷新队列长在反应末快照(参考端 s0.refreshes 同点);每 tick 预算会在步末排空队列
+            // 刷新队列长在反应末快照;每 tick 预算会在步末排空队列
             job.Refreshes = planner.RefreshQueueCount;
         }
         WakeNear(sim, job.Rect);
