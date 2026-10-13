@@ -18,7 +18,7 @@ public static class TilePathQuery
     // sa, sb, dx, dy(与参考实现 SIDES 同序,邻居展开序即对拍序)
     private static readonly int[,] Sides = { { 2, 3, 0, -1 }, { 0, 1, -1, 0 }, { 1, 0, 1, 0 }, { 3, 2, 0, 1 } };
 
-    /// <summary>查询暂存(RT-03:每 worker 一份,不可重入)。tile 代价备忘是条目的纯函数,跨查询保留。</summary>
+    /// <summary>查询暂存(每 worker 一份,不可重入)。tile 代价备忘是条目的纯函数,跨查询保留。</summary>
     public sealed class Scratch
     {
         public NavMinHeap Heap = new(8192);

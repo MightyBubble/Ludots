@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace Ludots.Core.CrowdSimulation.Nav.Recast;
+namespace Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 /// <summary>
-/// 分水岭分割（buildRegions 移植）:从开阔区"脊线"按距离层级生长区域,
-/// 小区域再合并进同区域码的邻居。区域永不跨导航区域边界。
-/// 注意逐位的顺序语义:pending 扫描序、expand 的 8 次迭代上限、mergeSmall 的稳定排序
-/// 都是结果的一部分,不是实现细节。
+/// 2D 格网分水岭分区：从开阔区脊线按距离层级生长区域，小区域再并进同区域码的邻居。
+/// 区域不跨导航区域码。
+/// pending 扫描序、expand 最多 8 次、mergeSmall 的稳定排序都写入产物，改序会改多边形。
 /// </summary>
 public static class WatershedRegions
 {

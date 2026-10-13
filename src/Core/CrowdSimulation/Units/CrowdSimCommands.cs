@@ -97,7 +97,7 @@ public static class CrowdSimCommands
                 return null;
             case CrowdSimCommandKind.Order:
                 RequirePlayer(sim, cmd.Player);
-                // F02 乐观迷雾开关随下令提交(参考端 issueOrder 的 opts.fogTerrain;随日志回放,
+                // 乐观迷雾开关随下令提交(参考端 issueOrder 的 opts.fogTerrain;随日志回放,
                 // 确定性)。切换即同步认知(与参考端同点:指令内联)。
                 if (cmd.HasFogTerrain)
                 {

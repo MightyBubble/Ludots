@@ -8,7 +8,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 namespace Ludots.Core.CrowdSimulation.Config;
 
 /// <summary>
-/// 模板级装载契约（LU-19 中需要实体模板数据的部分；配置内部的检查在
+/// 模板级装载契约（需要实体模板数据的部分；配置内部的检查在
 /// <see cref="CrowdSimulationConfigValidator"/>）。进入地图时与配置装载一并执行。
 /// </summary>
 public static class CrowdSimulationAuthoringContract

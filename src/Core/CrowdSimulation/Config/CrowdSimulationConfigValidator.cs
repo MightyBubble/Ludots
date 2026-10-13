@@ -5,7 +5,7 @@ using System.Globalization;
 namespace Ludots.Core.CrowdSimulation.Config;
 
 /// <summary>
-/// CrowdSimulationConfig.json 的数值范围与关系校验（LU-19；数值规则与参考实现
+/// CrowdSimulationConfig.json 的数值范围与关系校验（数值规则与参考实现
 /// config/schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）。
 /// 所有错误消息带文件 / 字段路径 / 规则，不写管理痕迹。
 /// </summary>

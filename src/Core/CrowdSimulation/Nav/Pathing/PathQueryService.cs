@@ -41,19 +41,19 @@ public sealed class PathServiceFaultException : InvalidOperationException
 /// 请求在 requestTick 发出,生效帧 = requestTick + latencyTicks;仿真在生效帧取答复,
 /// 没算完就等待(仿真时钟不走,等待次数计数),超过 planTimeoutMs 未返回即故障报错。
 /// 后台 worker 数 1 / 2 / 4 可切换:任务是镜像静态导航状态的纯函数,每个 worker 持有
-/// 自己的搜索缓冲(RT-03),结果与线程时序无关。
+/// 自己的搜索缓冲,结果与线程时序无关。
 /// </summary>
 public sealed class PathQueryService : IDisposable
 {
     private readonly IReadOnlyDictionary<int, NavContext> _navs;
-    /// <summary>认知变体号(≥ BeliefStride)的解析器(F02);null = 纯真相会话(S3 形状)。</summary>
+    /// <summary>认知变体号(≥ BeliefStride)的解析器;null = 纯真相会话(S3 形状)。</summary>
     private readonly Func<int, NavContext>? _variantResolver;
     private readonly CrowdSimulationRuntimeConfig _config;
     private readonly int _latencyTicks;
     private readonly TimeSpan _planTimeout;
 
     private readonly object _gate = new();
-    /// <summary>导航态互斥(RT-05 的 C# 同源实现):worker 计算与仿真侧结构变更重烘共用同一份
+    /// <summary>导航态互斥:worker 计算与仿真侧结构变更重烘共用同一份
     /// 导航上下文,经本锁串行——任何在途计算恰好看见其请求之前生效的全部结构 op,时序不进结果。
     /// (参考端用 worker 私有镜像 + 消息序达到同一契约;C# 单份状态省镜像内存。)</summary>
     private readonly object _navGate = new();
@@ -350,7 +350,7 @@ public sealed class PathQueryService : IDisposable
 
     private PathResult Compute(PathQuery q, FlowPool pool, WorkerBuffers buffers)
     {
-        // F02:变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)
+        // 变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)
         var nav = q.NavContextId < Fog.CrowdBeliefNavs.BeliefStride
             ? _navs[q.NavContextId]
             : _variantResolver!(q.NavContextId);

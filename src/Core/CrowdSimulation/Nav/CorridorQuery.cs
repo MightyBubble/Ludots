@@ -37,7 +37,7 @@ public static class CorridorQuery
         public Fix64 Cost;
     }
 
-    /// <summary>查询暂存(RT-03:每 worker 一份)。</summary>
+    /// <summary>查询暂存(每 worker 一份)。</summary>
     public sealed class Scratch
     {
         public Scratch(int tileCellCount)

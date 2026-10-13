@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation;
 
-namespace Ludots.Core.CrowdSimulation.Nav.Recast;
+namespace Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 /// <summary>
 /// 一次 tile 烘焙的全部临时缓冲与可复用多边形数组。

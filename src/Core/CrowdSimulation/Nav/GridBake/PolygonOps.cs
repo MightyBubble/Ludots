@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 
-namespace Ludots.Core.CrowdSimulation.Nav.Recast;
+namespace Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 /// <summary>
-/// 多边形算子（recast/polys.js 移植）：面积 / 反转 / 洞合并 / 耳切三角化 / 凸合并。
-/// 全部是格角点整数几何。平局次序用输入序号作次键,与稳定排序一致。
+/// 格角点整数多边形：面积、反转、洞合并、耳切、凸合并。
+/// 平局用输入序号作次键，次序与稳定排序一致。
 /// </summary>
 public static class PolygonOps
 {

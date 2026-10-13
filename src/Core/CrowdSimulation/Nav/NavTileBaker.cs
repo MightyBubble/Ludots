@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Ludots.Core.CrowdSimulation.Nav.Recast;
+using Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
@@ -123,8 +123,8 @@ public sealed class NavTileEntry
 }
 
 /// <summary>
-/// bakeTile 移植:tile 自身 navCellsPerTile×navCellsPerTile 窗口上的 2D Recast 管线
-/// (距离场 → 分水岭区域 → 轮廓 → 三角化 → 凸多边形合并)。多边形永不跨导航区域。
+/// 单 tile 的 2D 格网烘焙：距离场 → 分水岭区域 → 格角点轮廓 → 三角化 → 凸多边形。
+/// 多边形不跨导航区域码。产物是整数格角点、cell→poly、两侧共用的 tile 边 portal。
 /// </summary>
 public static class NavTileBaker
 {

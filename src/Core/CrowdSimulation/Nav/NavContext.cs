@@ -6,7 +6,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// 一个导航上下文（移动类型 × 净空）的烘焙产物（RT-03 的 S2 子集）：
+/// 一个导航上下文（移动类型 × 净空）的烘焙产物：
 /// 代价栅格、可走栅格（净空腐蚀后）、升序可走格表、连通域、跳跃链接。
 /// NavMesh 多边形 / HPA* / tile 缓存随 S3 接入。
 /// </summary>
@@ -36,7 +36,7 @@ public sealed class NavContext
     public required int CompCount { get; set; }
     /// <summary>跳跃链接（无跳跃能力的移动类型为 null）。</summary>
     public required NavLinkSet? Links { get; set; }
-    /// <summary>桥面层可走格（RT-16;无桥时全 0）。</summary>
+    /// <summary>桥面层可走格（无桥时全 0）。</summary>
     public required byte[] UpPass { get; init; }
     /// <summary>桥头 portal 格（桥面与地面唯一互通处）。</summary>
     public required byte[] Portal { get; init; }
@@ -82,7 +82,7 @@ public sealed class NavContext
 
     /// <summary>导航版本:cost / passable 增量重烘各 +1;在途规划与流场答复按它判陈旧。</summary>
     public int Version { get; set; }
-    /// <summary>最近一次增量重烘里内容真变的 tile(缓存命中同条目的除外;F02 认知原位揭示
+    /// <summary>最近一次增量重烘里内容真变的 tile(缓存命中同条目的除外;认知原位揭示
     /// 的脏集口径,与参考端 nav.changedTiles 同义)。null = 未重烘过。</summary>
     public List<int>? ChangedTiles { get; set; }
     /// <summary>最近一次增量重烘的类别(0 = 无变化,1 = 仅代价,2 = 可走位翻转)。</summary>

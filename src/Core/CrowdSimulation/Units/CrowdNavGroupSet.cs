@@ -15,10 +15,10 @@ public sealed class CrowdNavGroupSet
         public int Player { get; set; }
         public int LayerIdx { get; set; }
         public int RIdx { get; set; }
-        /// <summary>当前规划句柄(F02 双句柄之"认知"):真相号或认知变体号(槽切换时重挂)。
+        /// <summary>当前规划句柄(双句柄之"认知"):真相号或认知变体号(槽切换时重挂)。
         /// 意图/领队/规划读它;马达物理读 BodyNavId(永远真相)。</summary>
         public int NavId { get; set; }
-        /// <summary>真相句柄(F02 双句柄之"身体"):生成时定,不再变。</summary>
+        /// <summary>真相句柄(双句柄之"身体"):生成时定,不再变。</summary>
         public int BodyNavId { get; set; }
         public int Count { get; set; }
         /// <summary>所属指令 id(0 = 无指令);组不复制指令数据。</summary>

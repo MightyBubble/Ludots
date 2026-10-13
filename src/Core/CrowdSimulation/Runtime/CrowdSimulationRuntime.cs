@@ -52,7 +52,7 @@ public sealed partial class CrowdSimulationRuntime
     private CrowdPairRulesSessionGuard? _pairRulesGuard;
     private Entity _sessionEntity;
 
-    /// <summary>地图桥入认知仓(F02):桥模板按 id 查配置表(缺失 = 配置没有 bridge 模板,
+    /// <summary>地图桥入认知仓:桥模板按 id 查配置表(缺失 = 配置没有 bridge 模板,
     /// 无桥地图自然为空表)。</summary>
     private static void InstallMapBridges(
         Structures.CrowdStructuresStore store,
@@ -106,8 +106,8 @@ public sealed partial class CrowdSimulationRuntime
         public const string UnitRadiusKey = "crowd_simulation.unit.radius_m";
     }
 
-    /// <summary>迷雾观察口径(F02 演示):-1 = 全知 debug 视图(现状默认,玩家视角迷雾用键切换,
-    /// S7 spec 要求两种观察范围并存);≥ 0 = 只看该视野组。渲染底座(W2)读它决定画哪份 View()。</summary>
+    /// <summary>迷雾观察口径:-1 = 全知 debug 视图(默认,玩家视角迷雾用键切换,
+    /// 两种观察范围并存);≥ 0 = 只看该视野组。渲染底座读它决定画哪份 View()。</summary>
     public int FogViewGroup { get; set; } = -1;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
@@ -353,12 +353,12 @@ public sealed partial class CrowdSimulationRuntime
         // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
         // 阻挡盒索引取仓的 CSR(reach 生长,参考同形;S5 对拍会话不装阻挡盒,不受影响)。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
-        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // F02:桥入认知仓(id 与导出端参考序同构)
+        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // 桥入认知仓(id 与导出端参考序同构)
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
         _session.NavTileCache = cache;
-        // DB-03 调试开关:每次结构变更后跑增量 vs 全量一致性检查(debug 配置驱动)
+        // 调试开关:每次结构变更后跑增量 vs 全量一致性检查(debug 配置驱动)
         _session.VerifyIncrementalNav = _debug!.Session?.IncrementalNavVerify == true;
         _activeMapId = mapId.Value;
 
@@ -539,7 +539,7 @@ public sealed partial class CrowdSimulationRuntime
             replay.ReplaceNavs(replayNavs);
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
-            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // F02:回放仓同构补桥
+            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // 回放仓同构补桥
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, _deck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
             replay.NavTileCache = replayCache;

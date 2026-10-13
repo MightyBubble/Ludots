@@ -37,7 +37,7 @@ public sealed class CrowdFog
     /// <summary>每组派生计数:可见格、已探索格、残影(认知有、真相无足迹)。与格子/认知同步增减,不进校验码。</summary>
     public readonly int[] VisibleCount, ExploredCount, GhostCount;
     public readonly uint[] Version, Key, TileKey, Seen, Gone;
-    /// <summary>BV-6 精确变更计数(参考端 Float64 计数器):认知实体集变 / 实体集或 tile 集变。</summary>
+    /// <summary>精确变更计数(参考端 Float64 计数器):认知实体集变 / 实体集或 tile 集变。</summary>
     public readonly long[] EntRev, Rev;
     public long TruthRev;
     public uint TruthKey;
@@ -187,8 +187,7 @@ public sealed class CrowdFog
     }
 
     /// <summary>LOS 高度表(米,Fix64):开启视线遮挡时按需注入;未注入而 LOS 开 = 调用方装配缺口。
-    /// 逐格 cm→米一次 DivPrecise、格内累加(网格和精确)、均值一次除法——与参考端
-    /// __L31_FIX64_LOS__ 补丁的逐 op 求值树同构。</summary>
+    /// 逐格 cm→米一次 DivPrecise、格内累加(网格和精确)、均值一次除法，求值顺序与参考端逐 op 对齐。</summary>
     public void EnsureHeights(NavHeightField heights)
     {
         if (_hAvgM != null) return;
@@ -735,7 +734,7 @@ public sealed class CrowdFog
     /// <summary>不同认知的组数(= 规划侧需要的认知变体槽上限参考)。</summary>
     public int BeliefCount() => Enumerable.Range(0, VisionGroupCount).Select(BeliefKey).Distinct().Count();
 
-    /// <summary>呈现查询面(W2 渲染底座只读):0 = 未探索,1 = 已探索,2 = 可见。</summary>
+    /// <summary>呈现查询面(渲染底座只读):0 = 未探索,1 = 已探索,2 = 可见。</summary>
     public byte[] View(int g)
     {
         int f2 = FogCellsPerSide * FogCellsPerSide, o = g * f2;

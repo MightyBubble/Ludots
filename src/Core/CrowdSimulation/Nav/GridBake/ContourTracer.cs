@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace Ludots.Core.CrowdSimulation.Nav.Recast;
+namespace Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 /// <summary>
-/// 轮廓追踪（buildContours 移植）:沿区域边界走格角点,标签 = 跨过该段的邻域
-/// （0 = 墙,-1 - dir = tile 外该侧）。tile 边界段永不简化成墙、tile 角必保留,
-/// 跨 tile 拼接的边界因此逐位精确。Douglas-Peucker 用整数叉积 + 坐标并列决胜,
-/// 共享边界从两侧简化结果一致。
+/// 沿区域边界走格角点的轮廓。标签是跨过该段的邻域（0 = 墙，-1 - dir = tile 外该侧）。
+/// tile 边界段不简化成墙，tile 角必留。Douglas-Peucker 用整数叉积，并列时比坐标。
+/// 同一条 tile 边从两侧简化得到同一段整数区间，两侧 portal 共用这段。
 /// </summary>
 public static class ContourTracer
 {

@@ -1,10 +1,10 @@
 using System;
 
-namespace Ludots.Core.CrowdSimulation.Nav.Recast;
+namespace Ludots.Core.CrowdSimulation.Nav.GridBake;
 
 /// <summary>
-/// 切比雪夫距离场（computeClearance 移植）:格内到最近阻挡格的距离,
-/// 格边界视为阻挡。作为分水岭分割的距离场输入。
+/// 2D 格网切比雪夫距离场：可走格到最近阻挡格的距离，格边界视为阻挡。
+/// 分水岭分区用它当距离场。
 /// </summary>
 public static class DistanceField
 {

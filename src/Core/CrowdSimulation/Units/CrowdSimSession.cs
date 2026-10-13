@@ -86,7 +86,7 @@ public sealed class CrowdSimSession
     public Nav.CrowdRebakeSources? RebakeSources { get; set; }
     /// <summary>导航 tile 内容键缓存(初始烘焙所用的同一份;增量重烘靠它命中复用)。</summary>
     public Nav.NavTileCache? NavTileCache { get; set; }
-    /// <summary>跨 tick 推进的重烘收尾 job(RT-04 切片;null = 无在途变更)。</summary>
+    /// <summary>跨 tick 推进的重烘收尾 job(null = 无在途变更)。</summary>
     public CrowdRebakeJob? RebakeJob { get; set; }
     internal CrowdRebakeJob? RebakeScratch { get; set; }
     internal CrowdRebakeReport? ReportScratch { get; set; }
@@ -95,7 +95,7 @@ public sealed class CrowdSimSession
     public CrowdRebakeReport? LastRebakeReport { get; set; }
     /// <summary>最近一次挤离中无处安放的单位数(计数,进重烘报告)。</summary>
     public int EvictStuck { get; set; }
-    /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(DB-03;对拍免谈,验收必跑)。</summary>
+    /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(对拍不跑,验收必跑)。</summary>
     public bool VerifyIncrementalNav { get; set; }
     /// <summary>每 tick 的仿真秒数(simSecondsPerTickSecond/FixedHz)与子步进。</summary>
     public Fix64 SimDt { get; }
@@ -106,7 +106,7 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
-        // 迷雾/认知随运动内核装配(F02):参考端 Fog 在仿真构造期常驻;C# 只在运动会话里启用,
+        // 迷雾/认知随运动内核装配:参考端 Fog 在仿真构造期常驻;这里只在运动会话里启用,
         // 纯部署会话(S4 形状)不建迷雾。LOS 开启需要高度场(装配缺口即报)。
         if (Structures != null)
         {
@@ -117,14 +117,12 @@ public sealed class CrowdSimSession
         }
     }
 
-    /// <summary>迷雾状态(F02;null = 无头部署会话/未启用运动)。马达永远走真相,规划经认知槽。</summary>
+    /// <summary>迷雾状态(null = 无头部署会话/未启用运动)。马达永远走真相,规划经认知槽。</summary>
     public CrowdFog? Fog { get; private set; }
-    /// <summary>认知变体导航注册表(F02)。</summary>
     public CrowdBeliefNavs? Beliefs { get; private set; }
-    /// <summary>认知槽记账(F02)。</summary>
     public CrowdBeliefState? Belief { get; private set; }
-    /// <summary>truth 冻结口径(同参考端 __S7_TRUTH_NAV__ 导出补丁):跳过迷雾更新与认知同步,
-    /// 组停在真相槽——旧真值(S5/S7)在迷雾内核落地后原样全等的保证;新场景不置。</summary>
+    /// <summary>truth 冻结:跳过迷雾更新与认知同步,组停在真相槽。
+    /// 旧真值(S5/S7)在迷雾内核落地后仍要逐位相同;新场景不置。</summary>
     public bool TruthNavFrozen { get; set; }
 
     private readonly struct BeliefNavLookup
@@ -314,8 +312,8 @@ public sealed class CrowdSimSession
             _stateHistogramMembers = Units.Count;
         }
 
-        // F02:运动后、tick 计数前——迷雾更新 + 认知同步(与参考端 advance 的挂点逐位同;
-        // truth 冻结口径跳过两者,等价参考端 __S7_TRUTH_NAV__ 导出补丁)
+        // 运动后、tick 计数前做迷雾更新和认知同步(与参考端 advance 的挂点同序;
+        // truth 冻结时跳过两者)
         if (Fog != null && !TruthNavFrozen)
         {
             Fog.Update(TickCount, this);

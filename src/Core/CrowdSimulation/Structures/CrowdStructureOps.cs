@@ -10,7 +10,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Structures;
 
-/// <summary>每次结构变更的重烘焙报告(RT-04 stage 0 数据 + 后续阶段补齐):真值逐字段对拍。</summary>
+/// <summary>每次结构变更的重烘焙报告(阶段 0 数据,后续阶段补齐字段):真值逐字段对拍。</summary>
 public sealed class CrowdRebakeReport
 {
     public const byte KindPlace = 1;
@@ -45,7 +45,7 @@ public sealed class CrowdRebakeReport
     public (Fix64 MinX, Fix64 MinY, Fix64 MaxX, Fix64 MaxY) Bbox { get; set; }
 }
 
-/// <summary>跨 tick 推进的重烘收尾 job(RT-04 切片):阶段 0 = 指令内(镜像同步 + 真相重烘),
+/// <summary>跨 tick 推进的重烘收尾 job:阶段 0 = 指令内(镜像同步 + 真相重烘),
 /// 阶段 1 = 队伍反应 + 唤醒 + 挤离,阶段 2 = 受影响指令重规划 + 报告发布。tick 驱动保证确定性;
 /// 任何新指令或结构变更先把未完 job 收尾。</summary>
 public sealed class CrowdRebakeJob
@@ -70,9 +70,8 @@ public sealed class CrowdRebakeJob
 
 /// <summary>
 /// 结构动态化 op 管线(sim/structureOps.js 移植):放置 / 拆除 / 寿命到期 →
-/// 阶段 0 指令内完成仓变更与真相导航重烘(路径服务与结构变更互斥,RT-05 的指令序契约),
-/// 队伍反应与重规划按 planning.rebakeSlices 摊到后续 tick。参考端此处还有迷雾 belief 同步
-/// (fog.onTruth / syncBeliefs)——迷雾属 F02,未移植,此处为显式留空挂点。
+/// 阶段 0 指令内完成仓变更与真相导航重烘(路径服务与结构变更互斥,op 按指令序生效),
+/// 队伍反应与重规划按 planning.rebakeSlices 摊到后续 tick。
 /// </summary>
 public static class CrowdStructureOps
 {
@@ -87,7 +86,7 @@ public static class CrowdStructureOps
         var fp = CrowdStructureFootprint.Make(template, xCm, yCm, sizeCm, toXCm, toYCm);
         int expire = store.ExpireTickOf(template, sim.TickCount);
         var (id, rect) = store.PlaceEntity(tpl, fp, expire);
-        sim.Fog?.OnTruth(id); // F02:真相实体出现 → 索引/key/truthRev/不透明位
+        sim.Fog?.OnTruth(id); // 真相实体出现 → 索引/key/truthRev/不透明位
         return StructureChanged(sim, rect, CrowdRebakeReport.KindPlace, fp);
     }
 
@@ -104,7 +103,7 @@ public static class CrowdStructureOps
         var store = RequireStore(sim);
         var removed = store.RemoveEntity(id);
         if (removed == null) return null;
-        sim.Fog?.OnTruth(id); // F02:真相实体消失 → 残影语义由认知侧自己维持
+        sim.Fog?.OnTruth(id); // 真相实体消失 → 残影语义由认知侧自己维持
         return StructureChanged(sim, removed.Value.Rect, CrowdRebakeReport.KindRemove, removed.Value.Fp);
     }
 
@@ -115,7 +114,7 @@ public static class CrowdStructureOps
         foreach (int id in store.DueExpiries(sim.TickCount)) RemoveStructure(sim, id);
     }
 
-    /// <summary>RT-04 切片推进(all = 收尾全部阶段)。每逻辑 tick 至多一步:同一 tick 内重入
+    /// <summary>切片推进(all = 收尾全部阶段)。每逻辑 tick 至多一步:同一 tick 内重入
     /// (重试停摆帧)不得二次推进 job,否则管线时序随线程时序漂移。</summary>
     public static void StepRebake(CrowdSimSession sim, bool all)
     {
@@ -140,7 +139,7 @@ public static class CrowdStructureOps
     public static void FinishRebake(CrowdSimSession sim) => StepRebake(sim, all: true);
 
     /// <summary>阶段 0(指令内):仓已变更,做真相导航增量重烘。路径服务侧与这里共用同一份
-    /// 导航态,互斥锁保证在途计算不与重烘交错(RT-05:op 按指令序生效)。</summary>
+    /// 导航态,互斥锁保证在途计算不与重烘交错(op 按指令序生效)。</summary>
     private static CrowdRebakeReport? StructureChanged(
         CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect, byte kind, CrowdStructureFootprint fp)
     {
@@ -149,8 +148,8 @@ public static class CrowdStructureOps
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
         var dirty = planner.Service.RunExclusive(new RebakeCall(sim, rect, cache), RebakeExclusive);
-        // F02:真相重烘完 → 认知分歧重推导(参考端 truthChanged 同点)。参考端的
-        // detach/settle(变体在真相重烘前私享 tile)不需要——C# 变体是全拷贝(裁定 ①),
+        // 真相重烘完 → 认知分歧重推导(参考端 truthChanged 同点)。
+        // detach/settle(变体在真相重烘前私享 tile)不需要:变体是全拷贝,
         // 真相重烘写不到变体自有的数组。
         sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;

@@ -75,7 +75,7 @@ public static class CrowdIssueOrder
             int gk = old.LayerIdx * CrowdSimulationLimits.NavContextLayerStride + old.RIdx;
             if (!fresh.TryGetValue(gk, out var g))
             {
-                // F02 双句柄:新组以真相句柄落底(老组可能持变体号),规划句柄随即挂当前槽。
+                // 双句柄:新组以真相句柄落底(老组可能持变体号),规划句柄随即挂当前槽。
                 // Group.Player 是玩家表序下标(SpawnAt 传 player-1 同口径)——迷雾视野组按它索引。
                 g = sim.Groups.Alloc(sim.Config.PairRules.IndexByPlayerId[player], old.LayerIdx, old.RIdx, old.BodyNavId);
                 sim.AttachGroupNav(g);

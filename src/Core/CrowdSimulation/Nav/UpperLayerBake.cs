@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Nav.GridBake;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -171,7 +172,7 @@ public static class UpperLayerBake
         }
 
         var eroded = new byte[n2];
-        ErodeFull(win, navCellsPerSide, clearanceCells, eroded);
+        ClearanceErosion.Erode(win, navCellsPerSide, clearanceCells, eroded);
         for (int i = 0; i < n2; i++)
         {
             int a = deckAreaIndex[i] - 1;
@@ -269,42 +270,5 @@ public static class UpperLayerBake
         }
 
         return count;
-    }
-
-    private static void ErodeFull(byte[] walk, int navCellsPerSide, int clearance, byte[] output)
-    {
-        // 与 NavContextBaker 同一腐蚀语义(整图)
-        int r = clearance - 1;
-        if (r <= 0)
-        {
-            Array.Copy(walk, output, walk.Length);
-            return;
-        }
-
-        int need = 2 * r + 1;
-        var row = new byte[navCellsPerSide * navCellsPerSide];
-        for (int y = 0; y < navCellsPerSide; y++)
-        {
-            int baseIdx = y * navCellsPerSide, run = 0;
-            for (int c = 0; c < navCellsPerSide; c++)
-            {
-                run = walk[baseIdx + c] != 0 ? run + 1 : 0;
-                int x = c - r;
-                if (x >= 0) row[baseIdx + x] = run >= need ? (byte)1 : (byte)0;
-            }
-        }
-
-        for (int x = 0; x < navCellsPerSide; x++)
-        {
-            int run = 0;
-            for (int yy = 0; yy < navCellsPerSide; yy++)
-            {
-                run = row[yy * navCellsPerSide + x] != 0 ? run + 1 : 0;
-                int y = yy - r;
-                if (y >= 0) output[y * navCellsPerSide + x] = run >= need ? (byte)1 : (byte)0;
-            }
-
-            for (int y = Math.Max(0, navCellsPerSide - r); y < navCellsPerSide; y++) output[y * navCellsPerSide + x] = 0;
-        }
     }
 }

@@ -78,7 +78,7 @@ public sealed class CrowdSimPlanner
     private NavContext _nrNav = null!;
     private byte[] _nrPass = null!;
 
-    /// <summary>路径服务(RT-05:结构变更与在途路径计算共用同一份导航态,经它的互斥锁串行)。</summary>
+    /// <summary>路径服务(结构变更与在途路径计算共用同一份导航态,经它的互斥锁串行)。</summary>
     public PathQueryService Service => _service;
     /// <summary>当前待刷新流场的队列长度(重烘报告字段)。</summary>
     public int RefreshQueueCount => _refreshQueue.Count;
@@ -1102,7 +1102,7 @@ public sealed class CrowdSimPlanner
     private static int CompAtLevel(CrowdSimSession session, CrowdNavGroupSet.Group g, int cell, int level) =>
         session.ResolveNavContext(g.NavId).CompAt(cell, level);
 
-    /// <summary>认知槽变更后的组重定向(retarget 移植,F02):moved 组——目标被挡 → 重规划;
+    /// <summary>认知槽变更后的组重定向(retarget):moved 组——目标被挡 → 重规划;
     /// 行进中 → ReachLost / 领队线被挡裁决;驻扎组 → 流场不属于新导航才刷新(真相流场经
     /// sharesFlow 判定可复用——不是纯优化,刷新计数是对拍面)。stale = 原位揭示踩到真变
     /// tile 的组(只刷新,不重规划)。返回需重规划的指令。</summary>
