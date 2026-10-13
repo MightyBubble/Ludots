@@ -74,6 +74,9 @@
     {
       "id": "Default_Gameplay",
       "bindings": [
+        { "actionId": "ModifierSubtract", "path": "<Keyboard>/leftCtrl", "removed": true },
+        { "actionId": "PrecisionModifier", "path": "<Keyboard>/leftSuper" },
+        { "actionId": "PrecisionModifier", "path": "<Keyboard>/rightSuper" },
         { "actionId": "CrowdSimulation.S4.Place", "path": "<Mouse>/LeftButton", "interactions": [ { "type": "Tap", "parameters": [ { "name": "MaxTravelPixels", "value": 6 } ] } ] },
         { "actionId": "CrowdSimulation.S4.CycleView", "path": "<Keyboard>/v" },
         { "actionId": "CrowdSimulation.S4.ToggleBuild", "path": "<Keyboard>/b" },
