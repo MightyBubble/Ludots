@@ -656,7 +656,10 @@ namespace Ludots.Tests.GAS
         [Test]
         public void MinimapCommandGraph_SubmitsProjectedGround_WhilePointerGroundStaysRaycast()
         {
-            using var engine = CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap);
+            using var engine = CreateMinimapContextEngine(
+                out TestInputBackend backend,
+                out MinimapRuntime minimap,
+                mountMinimapCommand: true);
             var rayProvider = new CountingScreenRayProvider();
             engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
             engine.SetService(CoreServiceKeys.ContinuousHeightmap, CreateFlatHeightmap());
@@ -920,18 +923,34 @@ namespace Ludots.Tests.GAS
         // does not cross FixedDeltaTime (engine clock is 20 Hz), so it never opens the minimap context.
         private static void StepLogic(GameEngine engine) => engine.Tick(Time.FixedDeltaTime);
 
-        private static GameEngine CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap)
+        private const string MinimapCommandContextId = "FogVisionDecayShowcase.Controls";
+
+        private static GameEngine CreateMinimapContextEngine(
+            out TestInputBackend backend,
+            out MinimapRuntime minimap,
+            bool mountMinimapCommand = false)
         {
+            string[] mods = mountMinimapCommand
+                ? new[] { "LudotsCoreMod", "CommandSourceCoreFixtureMod", "FogVisionDecayShowcaseMod" }
+                : new[] { "LudotsCoreMod", "CommandSourceCoreFixtureMod" };
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CommandSourceCoreFixtureMod" }),
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), mods),
                 Path.Combine(FindRepoRoot(), "assets"),
                 Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             // One Tick must finish the fixed step. The default 4ms budget yields inside
             // earlier time-sliced systems, so context mounts never reach action dispatch.
             engine.SimulationBudgetMsPerFrame = int.MaxValue;
             engine.Start();
-            engine.LoadStartupMap();
+            // The command owner's game.json replaces startupMapId. The click still runs on the core entry map.
+            if (mountMinimapCommand)
+            {
+                engine.LoadMap("entry");
+            }
+            else
+            {
+                engine.LoadStartupMap();
+            }
 
             minimap = CreateInputConvergenceMinimap();
             var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
@@ -947,6 +966,16 @@ namespace Ludots.Tests.GAS
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var handler = new PlayerInputHandler(backend, inputConfig);
             engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(handler);
+            if (mountMinimapCommand)
+            {
+                if (!handler.HasContext(MinimapCommandContextId))
+                {
+                    throw new InvalidOperationException(
+                        $"Minimap command owner context '{MinimapCommandContextId}' is not in the loaded input config.");
+                }
+
+                handler.PushContext(MinimapCommandContextId);
+            }
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
