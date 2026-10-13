@@ -49,7 +49,15 @@ public sealed class CrowdRebakeHitchProbeTests
         }
 
         session.VerifyIncrementalNav = false;
-        Drain(session, Place(session));
+        var warmupPlace = Place(session);
+        var store = session.Structures!;
+        int lastId = store.EntityIds.Count == 0 ? -1 : store.EntityIds[^1];
+        string fpText = lastId < 0
+            ? "none"
+            : Describe(store.FootprintOf(lastId));
+        Line($"warmup-place directNull={warmupPlace == null} ids={store.EntityIds.Count} at={store.EntityAt(Fix64.FromInt(XCm), Fix64.FromInt(YCm))} last={lastId} {fpText} job={session.RebakeJob != null}");
+        var warmupReport = Drain(session, warmupPlace);
+        Line($"warmup-drained ids={store.EntityIds.Count} at={store.EntityAt(Fix64.FromInt(XCm), Fix64.FromInt(YCm))} tiles={warmupReport.Tiles} contexts={warmupReport.Contexts} costOnly={warmupReport.CostOnly} hits={warmupReport.Hits} misses={warmupReport.Misses} elapsed={Ms(warmupReport.ElapsedTicks)}");
         Drain(session, Remove(session));
         for (int i = 0; i < 3; i++)
         {
@@ -197,6 +205,9 @@ public sealed class CrowdRebakeHitchProbeTests
         ?? throw new InvalidOperationException("拆除没有命中建筑。");
 
     private static JsonObject Row(int tick, JsonObject cmd) => new() { ["tick"] = tick, ["cmd"] = cmd };
+
+    private static string Describe(CrowdStructureFootprint fp) =>
+        $"shape={fp.Shape} cx={fp.CenterXCm.ToDouble().ToString("0.#", CultureInfo.InvariantCulture)} cy={fp.CenterYCm.ToDouble().ToString("0.#", CultureInfo.InvariantCulture)} hx={fp.Hx.ToDouble().ToString("0.#", CultureInfo.InvariantCulture)} hy={fp.Hy.ToDouble().ToString("0.#", CultureInfo.InvariantCulture)}";
 
     private static string Ms(long ticks) =>
         (ticks * 1000.0 / Stopwatch.Frequency).ToString("0.00", CultureInfo.InvariantCulture);
