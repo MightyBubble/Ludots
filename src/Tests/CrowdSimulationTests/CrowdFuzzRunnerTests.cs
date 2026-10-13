@@ -76,6 +76,30 @@ public sealed class CrowdFuzzRunnerTests
     }
 
     [Test]
+    public void Remove_RestoresTerrainBlockInsideClearedRect()
+    {
+        using var world = CrowdBeliefTerrainTests.LandWorld.Open();
+        int cell = world.Config.NavCellSizeCm;
+        int x = cell / 2;
+        int y = cell / 2;
+        world.Session.Commands.Submit<object?>(world.Session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.PlaceStructure,
+            TemplateId = "building",
+            XCm = x,
+            YCm = y,
+            SizeCm = cell * 4,
+        }, CrowdSimCommands.Exec);
+        world.Session.Commands.Submit<object?>(world.Session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.RemoveStructureAt,
+            XCm = x,
+            YCm = y,
+        }, CrowdSimCommands.Exec);
+        Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateStructures(world.Session));
+    }
+
+    [Test]
     public void Runner_PlaceAndRemove_MatchesStructuresAndNav()
     {
         using var world = CrowdBeliefTerrainTests.LandWorld.Open();

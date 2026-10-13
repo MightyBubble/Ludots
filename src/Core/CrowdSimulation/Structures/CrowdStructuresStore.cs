@@ -447,7 +447,8 @@ public sealed class CrowdStructuresStore
             for (int x = rect.X0; x < rect.X1; x++)
             {
                 Area[row + x] = _terrainArea[row + x];
-                Blocked[row + x] = 0;
+                // 先回到建仓时的阻挡，再由仍在场的足迹盖 1。清成 0 会把地形阻挡擦掉，拆除后和全量重标对不上。
+                Blocked[row + x] = _terrainBlocked[row + x];
             }
         }
 
