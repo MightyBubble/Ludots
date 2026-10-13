@@ -405,6 +405,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.MinimapSetZoomFromPointer or
                 GraphNodeOp.MinimapTogglePreset or
                 GraphNodeOp.MinimapToggleRotate or
+                GraphNodeOp.MinimapApplyWheelZoom or
                 GraphNodeOp.SetTargetPos or
                 GraphNodeOp.LoadAbilityCastRange or
                 GraphNodeOp.LoadSlotAbilityId or
@@ -995,6 +996,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.MinimapSetZoomFromPointer, HandleMinimapSetZoomFromPointer, "MinimapSetZoomFromPointer graph opcode.");
             Register(GraphNodeOp.MinimapTogglePreset, HandleMinimapTogglePreset, "MinimapTogglePreset graph opcode.");
             Register(GraphNodeOp.MinimapToggleRotate, HandleMinimapToggleRotate, "MinimapToggleRotate graph opcode.");
+            Register(GraphNodeOp.MinimapApplyWheelZoom, HandleMinimapApplyWheelZoom, "MinimapApplyWheelZoom graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
             Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
@@ -1913,6 +1915,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleMinimapToggleRotate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.MinimapToggleRotate();
+        }
+
+        private static void HandleMinimapApplyWheelZoom(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.MinimapApplyWheelZoom(s.F[ins.A], s.F[ins.B], s.F[ins.C]);
         }
 
         private static void HandleSetTargetPos(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

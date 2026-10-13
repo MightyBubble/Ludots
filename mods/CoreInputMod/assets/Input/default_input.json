@@ -14,11 +14,6 @@
       "id": "PointerPos",
       "name": "Pointer_Position",
       "type": "Axis2D"
-    },
-    {
-      "id": "Minimap.Zoom",
-      "name": "Minimap_Zoom",
-      "type": "Axis1D"
     }
   ],
   "contexts": [
@@ -46,10 +41,6 @@
         {
           "actionId": "PointerPos",
           "path": "<Mouse>/Pos"
-        },
-        {
-          "actionId": "Minimap.Zoom",
-          "path": "<Mouse>/ScrollY"
         }
       ]
     }

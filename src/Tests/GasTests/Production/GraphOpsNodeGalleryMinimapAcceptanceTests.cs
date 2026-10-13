@@ -68,6 +68,16 @@ public sealed class GraphOpsNodeGalleryMinimapAcceptanceTests
         AssertDetail(runtime, "MinimapToggleRotate");
     }
 
+    [Test]
+    public void MinimapApplyWheelZoomVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("MinimapApplyWheelZoom");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        AssertDetail(runtime, "MinimapApplyWheelZoom");
+    }
+
     private static void AssertDetail(GraphOpsNodeGalleryRuntime runtime, string op)
     {
         foreach (string phrase in runtime.Vignette.AssertDetailContains)

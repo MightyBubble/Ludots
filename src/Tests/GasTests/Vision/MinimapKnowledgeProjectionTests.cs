@@ -235,6 +235,7 @@ public sealed class MinimapKnowledgeProjectionTests
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
             MaxZoomExplicitHalfExtentCm = 5000f,
+            InteractionContextId = "interaction.context.minimap",
             Actions = Ludots.Tests.Presentation.MinimapTestActions.Create(),
         });
     }

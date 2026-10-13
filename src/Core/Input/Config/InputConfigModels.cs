@@ -31,7 +31,7 @@ namespace Ludots.Core.Input.Config
         /// normalizes a blank Button to <see cref="FiresOnPress"/>; every other
         /// type stays blank (the action is not a trigger moment).
         /// <see cref="FiresOnPress"/> and <see cref="FiresOnRelease"/> are Button
-        /// only. <see cref="FiresOnChange"/> is Axis2D only.
+        /// only. <see cref="FiresOnChange"/> is Axis1D and Axis2D.
         /// </summary>
         public string? FiresOn { get; set; }
     }

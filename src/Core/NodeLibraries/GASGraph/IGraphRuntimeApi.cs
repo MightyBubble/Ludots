@@ -965,6 +965,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
         }
 
+        void MinimapApplyWheelZoom(float wheelDelta, float screenX, float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
         void MinimapTogglePreset()
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");

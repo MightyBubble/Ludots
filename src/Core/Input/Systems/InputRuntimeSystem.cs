@@ -4,8 +4,9 @@ using Arch.System;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Attributes;
+using Ludots.Core.Input.Interaction;
+using PointerRegionContextRegistry = Ludots.Core.Input.PointerRegionContextRegistry;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
  
 namespace Ludots.Core.Input.Systems
@@ -50,7 +51,7 @@ namespace Ludots.Core.Input.Systems
             bool uiWheelCaptured = _globals.TryGetValue(CoreServiceKeys.UiWheelCaptured.Name, out var wheelCapturedObj) && wheelCapturedObj is bool wb && wb;
             input.InputBlocked = uiCaptured;
             input.Update(dt);
-            if (uiWheelCaptured || TryConsumeMinimapWheel(input))
+            if (uiWheelCaptured || PointerRegionShadowsCameraWheel(input))
             {
                 SuppressCameraZoom(input);
             }
@@ -95,11 +96,35 @@ namespace Ludots.Core.Input.Systems
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
 
-        private bool TryConsumeMinimapWheel(PlayerInputHandler input)
+        /// <summary>
+        /// A published region whose profile routes the pointer to UI shadows camera zoom
+        /// for this frame. The check reads the rectangles, not "the context is already
+        /// active", so the entering tick suppresses zoom before the context opens.
+        /// </summary>
+        private bool PointerRegionShadowsCameraWheel(PlayerInputHandler input)
         {
-            return _globals.TryGetValue(CoreServiceKeys.MinimapRuntime.Name, out object? runtimeObj) &&
-                runtimeObj is MinimapRuntime runtime &&
-                runtime.TryConsumePointerWheel(input);
+            if (!_globals.TryGetValue(CoreServiceKeys.PointerRegionContextRegistry.Name, out object? registryObj) ||
+                registryObj is not PointerRegionContextRegistry registry)
+            {
+                return false;
+            }
+
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
+            if (!registry.TryHit(pointer, out string contextId))
+            {
+                return false;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out object? profilesObj) ||
+                profilesObj is not InteractionContextProfileRegistry profiles ||
+                !profiles.ProfileIdRegistry.TryGetId(contextId, out int profileId) ||
+                !profiles.TryGetDefinition(profileId, out InteractionContextProfileDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"POINTER_REGION.ERR.UnknownContext: '{contextId}' is not an installed interaction context profile.");
+            }
+
+            return string.Equals(definition.PointerRouting?.Trim(), "ui", StringComparison.Ordinal);
         }
 
         private void CapturePointerButtons(PlayerInputHandler input)

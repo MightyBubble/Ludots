@@ -816,6 +816,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RequireMinimap().SetZoomFromSliderPointer(new Vector2(screenX, screenY));
         }
 
+        public void MinimapApplyWheelZoom(float wheelDelta, float screenX, float screenY)
+        {
+            RequireMinimap().ApplyWheelZoom(wheelDelta, new Vector2(screenX, screenY));
+        }
+
         public void MinimapTogglePreset()
         {
             RequireMinimap().ToggleRtsFollowCameraPreset();

@@ -4583,6 +4583,24 @@
       "showcaseId": "capability_standard_graph_op_MinimapToggleRotate"
     },
     {
+      "op": "MinimapApplyWheelZoom",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMinimapAcceptanceTests.MinimapApplyWheelZoomVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_MinimapApplyWheelZoom"
+    },
+    {
       "op": "SetTargetPos",
       "authorableKinds": [
         "Derived",

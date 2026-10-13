@@ -45,6 +45,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string[] noPorts = Array.Empty<string>();
             string[] portValue = { GraphControlFlowPorts.Value };
             string[] portAB = { GraphControlFlowPorts.A, GraphControlFlowPorts.B };
+            string[] portABC = { GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C };
             string[] portSourceAB = { GraphControlFlowPorts.Source, GraphControlFlowPorts.A, GraphControlFlowPorts.B };
             string[] portSource = { GraphControlFlowPorts.Source };
             string[] portList = { GraphControlFlowPorts.List };
@@ -370,6 +371,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.MinimapSetZoomFromPointer, EffectAndScript, GraphValueType.Void, portAB, scriptPorts: portAB, worldSideEffect: true);
             Add(rows, GraphNodeOp.MinimapTogglePreset, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
             Add(rows, GraphNodeOp.MinimapToggleRotate, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapApplyWheelZoom, EffectAndScript, GraphValueType.Void, portABC, scriptPorts: portABC, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetTargetPos, LinearQueryScript, GraphValueType.Void, portAB, queryPorts: portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.LoadAbilityCastRange, LinearQueryScript, GraphValueType.Float, portSourceValue, queryOut: GraphValueType.Float, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadSlotAbilityId, LinearQueryScript, GraphValueType.Int, portSourceValue, queryOut: GraphValueType.Int, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Int);

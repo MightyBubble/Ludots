@@ -622,6 +622,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>Toggle whether the minimap rotates with the camera.</summary>
         MinimapToggleRotate = 549,
 
+        /// <summary>
+        /// Apply wheel delta F[A] to minimap zoom at screen point (F[B], F[C]).
+        /// A zero delta does not write.
+        /// </summary>
+        MinimapApplyWheelZoom = 550,
+
     }
 
     /// <summary>

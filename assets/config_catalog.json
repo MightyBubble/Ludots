@@ -456,7 +456,10 @@
     "Path": "Input/interaction_context_profiles.json",
     "Policy": "DeepObject",
     "ArrayAppendFields": [
-      "profiles"
+      "bindings",
+      "triggers",
+      "onActivated",
+      "onDeactivated"
     ]
   },
   {

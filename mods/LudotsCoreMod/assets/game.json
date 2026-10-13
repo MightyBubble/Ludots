@@ -58,6 +58,7 @@
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0,
+      "interactionContextId": "interaction.context.minimap",
       "actions": {
         "zoom": "Minimap.Zoom"
       }

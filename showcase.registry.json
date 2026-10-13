@@ -11655,6 +11655,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_QueryMinimapRegion/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_MinimapApplyWheelZoom",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod",
+      "projectPath": "CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod.csproj",
+      "title": "小地图滚轮缩放",
+      "summary": "滚轮增量写到小地图缩放。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "MinimapApplyWheelZoom"
+      ],
+      "binding": "capability_standard_graph_op_MinimapApplyWheelZoom",
+      "preset": "capability_standard_graph_op_MinimapApplyWheelZoom_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/MinimapApplyWheelZoom.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_MinimapApplyWheelZoom",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_MinimapApplyWheelZoom/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_MinimapApplyWheelZoom/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

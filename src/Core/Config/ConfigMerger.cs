@@ -53,8 +53,10 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// DeepObject merge of object fragments, with one named array merged ArrayById on <c>id</c>.
-        /// Later fragments win per field. Nested arrays inside an id replace; nested objects merge.
-        /// Every other array follows <see cref="ConfigCatalogEntry.ArrayAppendFields"/>.
+        /// Later fragments win per field. Nested objects merge. Nested arrays inside an id
+        /// append when their field name is in <paramref name="nestedArrayAppendFields"/>;
+        /// every other nested array replaces. Arrays outside the by-id array follow
+        /// <see cref="ConfigCatalogEntry.ArrayAppendFields"/>.
         /// The catalog has no single policy for an object root plus one by-id array, so callers
         /// keep <see cref="ConfigMergePolicy.DeepObject"/> and compose the two existing merges here.
         /// </summary>
@@ -62,7 +64,8 @@ namespace Ludots.Core.Config
             IReadOnlyList<ConfigFragment> fragments,
             in ConfigCatalogEntry entry,
             string arrayField,
-            ConfigConflictReport report = null)
+            ConfigConflictReport report = null,
+            string[] nestedArrayAppendFields = null)
         {
             if (fragments == null)
             {
@@ -120,7 +123,7 @@ namespace Ludots.Core.Config
                 entry.RelativePath,
                 ConfigMergePolicy.ArrayById,
                 "id",
-                Array.Empty<string>());
+                nestedArrayAppendFields ?? Array.Empty<string>());
             List<MergedConfigEntry> entries = MergeArrayByIdToEntriesCore(arrayFragments, in byIdEntry, report: null);
             var mergedArray = new JsonArray();
             for (int i = 0; i < entries.Count; i++)

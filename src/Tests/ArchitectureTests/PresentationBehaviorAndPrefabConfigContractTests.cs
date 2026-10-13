@@ -1055,6 +1055,7 @@ namespace Ludots.Tests.Architecture
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0,
+      "interactionContextId": "interaction.context.minimap",
       "actions": {
         "zoom": "Minimap.Zoom"
       }
@@ -1143,6 +1144,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.RuntimeEntitySpawnReceiptQueueCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.CameraCulling.HighLodDistanceCm, Is.EqualTo(4000.0f));
             Assert.That(config.Presentation.Minimap.DebugMarkerSampleCapacity, Is.EqualTo(64));
+            Assert.That(config.Presentation.Minimap.InteractionContextId, Is.EqualTo("interaction.context.minimap"));
             config.Presentation.Validate();
         }
 
@@ -1296,6 +1298,7 @@ namespace Ludots.Tests.Architecture
                     MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
                     MinZoomExplicitHalfExtentCm = 750f,
                     MaxZoomExplicitHalfExtentCm = 0f,
+                    InteractionContextId = "interaction.context.minimap",
                     Actions = new MinimapActionsConfig
                     {
                         Zoom = "Minimap.Zoom",

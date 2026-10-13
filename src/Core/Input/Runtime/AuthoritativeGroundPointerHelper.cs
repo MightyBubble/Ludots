@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -35,14 +34,6 @@ namespace Ludots.Core.Input.Runtime
             }
 
             Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
-            // Capture runs before trigger graphs. A pointer already inside the field stores the
-            // minimap world for this frame, so a later command graph does not raycast the chrome.
-            if (TryMinimapFieldWorld(globals, pointer, out WorldCmInt2 minimapWorldCm))
-            {
-                CaptureGround(accumulator, minimapWorldCm);
-                return;
-            }
-
             if (!TryResolveFromScreen(globals, pointer, out WorldCmInt2 worldCm))
             {
                 accumulator.CaptureAction(
@@ -84,25 +75,6 @@ namespace Ludots.Core.Input.Runtime
                 releasedThisFrame: false,
                 boundByActiveContext: false,
                 preserveValueUntilSnapshot: true);
-        }
-
-        private static bool TryMinimapFieldWorld(
-            IReadOnlyDictionary<string, object> globals,
-            Vector2 screenPosition,
-            out WorldCmInt2 worldCm)
-        {
-            worldCm = default;
-            if (!globals.TryGetValue(CoreServiceKeys.MinimapRuntime.Name, out object? runtimeObj) ||
-                runtimeObj is not MinimapRuntime runtime ||
-                !runtime.TryScreenToWorld(screenPosition, out Vector2 world))
-            {
-                return false;
-            }
-
-            worldCm = new WorldCmInt2(
-                (int)MathF.Round(world.X, MidpointRounding.AwayFromZero),
-                (int)MathF.Round(world.Y, MidpointRounding.AwayFromZero));
-            return true;
         }
 
         public static bool TryRead(IInputActionReader input, out WorldCmInt2 worldCm)

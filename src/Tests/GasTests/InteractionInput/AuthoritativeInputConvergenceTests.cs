@@ -32,6 +32,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Engine;
 using Ludots.Platform.Abstractions;
+using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -531,7 +532,52 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputRuntimeSystem_MinimapCommandClickOverridesAuthoritativeGroundPointer()
+        public void InputRuntimeSystem_MinimapEnterAndPressSameTick_JumpsAndDoesNotSelect()
+        {
+            using var engine = CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap);
+            Entity hero = FindNamed(engine.World, "Hero");
+            CommandIntentSubmissionBuffer submissions = engine.GetService(CoreServiceKeys.CommandIntentSubmissions)
+                ?? throw new InvalidOperationException("CommandIntentSubmissions missing.");
+
+            backend.MousePosition = new Vector2(minimap.FieldX - 12f, minimap.FieldY - 12f);
+            StepLogic(engine);
+
+            Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.75f), minimap.FieldY + (minimap.FieldSize * 0.25f));
+            Assert.That(minimap.TryScreenToWorld(click, out Vector2 expectedTarget), Is.True);
+            backend.MousePosition = click;
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            StepLogic(engine);
+
+            Assert.That(ContextActive(engine, hero, "interaction.context.minimap"), Is.True);
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False,
+                "A press that arrives on the same tick the pointer enters the minimap must not open world select.");
+            Assert.That(submissions.Count, Is.EqualTo(0));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedTarget.Y).Within(1f));
+        }
+
+        [Test]
+        public void InputRuntimeSystem_UiCaptured_BlocksMinimap()
+        {
+            using var engine = CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap);
+            Entity hero = FindNamed(engine.World, "Hero");
+            Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.75f), minimap.FieldY + (minimap.FieldSize * 0.25f));
+            backend.MousePosition = click;
+            StepLogic(engine);
+            Assert.That(ContextActive(engine, hero, "interaction.context.minimap"), Is.True);
+            Vector2 cameraBefore = engine.AuthorityCamera().State.TargetCm;
+
+            engine.SetService(CoreServiceKeys.UiCaptured, true);
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            StepLogic(engine);
+
+            Assert.That(ContextActive(engine, hero, "interaction.context.minimap"), Is.False);
+            Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False);
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(cameraBefore));
+        }
+
+        [Test]
+        public void InputRuntimeSystem_MinimapFieldKeepsRaycastGroundPointer()
         {
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
@@ -585,7 +631,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
             engine.SetService(CoreServiceKeys.ContinuousHeightmap, CreateFlatHeightmap());
-            engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100));
+            engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(RaycastWorldBounds, 100));
 
             var input = new AuthoritativeInputAccumulator();
             var snapshot = new FrozenInputActionReader();
@@ -601,10 +647,53 @@ namespace Ludots.Tests.GAS
 
             Assert.That(snapshot.PressedThisFrame("Command"), Is.True, "Minimap command click must still enter the formal command action chain.");
             Assert.That(AuthoritativeGroundPointerHelper.TryRead(snapshot, out var worldCm), Is.True);
-            Assert.That(worldCm.X, Is.EqualTo((int)MathF.Round(expectedWorldCm.X, MidpointRounding.AwayFromZero)));
-            Assert.That(worldCm.Y, Is.EqualTo((int)MathF.Round(expectedWorldCm.Y, MidpointRounding.AwayFromZero)));
-            Assert.That(rayProvider.CallCount, Is.EqualTo(0), "Minimap command click must not fall through to main viewport ground raycast.");
+            Assert.That(worldCm.X, Is.EqualTo(RaycastGroundCm(click.X)));
+            Assert.That(worldCm.Y, Is.EqualTo(RaycastGroundCm(click.Y)));
+            Assert.That(rayProvider.CallCount, Is.GreaterThan(0));
             Assert.That(engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)?.HasOverride, Is.False);
+        }
+
+        [Test]
+        public void MinimapCommandGraph_SubmitsProjectedGround_WhilePointerGroundStaysRaycast()
+        {
+            using var engine = CreateMinimapContextEngine(out TestInputBackend backend, out MinimapRuntime minimap);
+            var rayProvider = new CountingScreenRayProvider();
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
+            engine.SetService(CoreServiceKeys.ContinuousHeightmap, CreateFlatHeightmap());
+            engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(RaycastWorldBounds, 100));
+
+            backend.MousePosition = new Vector2(minimap.FieldX - 12f, minimap.FieldY - 12f);
+            StepLogic(engine);
+
+            Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.80f), minimap.FieldY + (minimap.FieldSize * 0.20f));
+            Assert.That(minimap.TryScreenToWorld(click, out Vector2 expectedWorldCm), Is.True);
+            backend.MousePosition = click;
+            backend.Buttons["<Mouse>/RightButton"] = true;
+            StepLogic(engine);
+
+            CommandIntentSubmissionBuffer submissions = engine.GetService(CoreServiceKeys.CommandIntentSubmissions)
+                ?? throw new InvalidOperationException("CommandIntentSubmissions missing.");
+            var expectedGround = new IntVector2(
+                (int)MathF.Round(expectedWorldCm.X, MidpointRounding.AwayFromZero),
+                (int)MathF.Round(expectedWorldCm.Y, MidpointRounding.AwayFromZero));
+            bool submitted = false;
+            for (int i = 0; i < submissions.Count; i++)
+            {
+                IntVector2 ground = submissions[i].GroundCm;
+                if (ground.X == expectedGround.X && ground.Y == expectedGround.Y)
+                {
+                    submitted = true;
+                }
+            }
+
+            Assert.That(submitted, Is.True, $"Command graph must submit the minimap projection {expectedGround}.");
+
+            IInputActionReader snapshot = engine.GetService(CoreServiceKeys.AuthoritativeInput)
+                ?? throw new InvalidOperationException("AuthoritativeInput missing.");
+            Assert.That(AuthoritativeGroundPointerHelper.TryRead(snapshot, out WorldCmInt2 pointerGround), Is.True);
+            Assert.That(pointerGround.X, Is.EqualTo(RaycastGroundCm(click.X)));
+            Assert.That(pointerGround.Y, Is.EqualTo(RaycastGroundCm(click.Y)));
+            Assert.That(rayProvider.CallCount, Is.GreaterThan(0));
         }
 
         [Test]
@@ -693,6 +782,80 @@ namespace Ludots.Tests.GAS
             Assert.That(ContextActive(engine, hero, "interaction.context.core.selecting"), Is.False);
         }
 
+        [Test]
+        public void CoreInputMod_MergesMinimapCommandBinding()
+        {
+            using GameEngine engine = CreateProfileEngine("LudotsCoreMod", "CoreInputMod");
+            InteractionContextProfileDefinition minimap = RequireProfile(engine, "interaction.context.minimap");
+            Assert.That(minimap.Bindings, Does.Contain("Select.Begin"));
+            Assert.That(minimap.Bindings, Does.Contain("Command"));
+            Assert.That(minimap.Bindings, Does.Contain("Minimap.Zoom"));
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.press"));
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.command"));
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.zoom"));
+            Assert.That(TriggerIds(RequireProfile(engine, "interaction.context.moba.battle")), Does.Not.Contain("graph.minimap.hover"));
+        }
+
+        [Test]
+        public void LudotsCoreMod_MinimapContext_BindsZoomAndOmitsCommand()
+        {
+            using GameEngine engine = CreateProfileEngine("LudotsCoreMod");
+            InteractionContextProfileDefinition minimap = RequireProfile(engine, "interaction.context.minimap");
+            Assert.That(minimap.Bindings, Does.Contain("Select.Begin"));
+            Assert.That(minimap.Bindings, Does.Contain("Minimap.Zoom"));
+            Assert.That(minimap.Bindings, Does.Not.Contain("Command"));
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.press"));
+            Assert.That(TriggerIds(minimap), Does.Contain("graph.minimap.zoom"));
+            Assert.That(TriggerIds(minimap), Does.Not.Contain("graph.minimap.command"));
+        }
+
+        [Test]
+        public void RtsShowcase_MinimapClick_ActivatesMinimapAndDoesNotSelect()
+        {
+            using GameEngine engine = CreateProfileEngine(
+                "LudotsCoreMod",
+                "CoreInputMod",
+                "EntityCommandPanelMod",
+                "RtsDemoMod");
+            engine.SimulationBudgetMsPerFrame = int.MaxValue;
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+            engine.Start();
+            engine.LoadStartupMap();
+
+            Assert.That(TriggerIds(RequireProfile(engine, "interaction.context.rts.battle")), Does.Not.Contain("graph.minimap.hover"));
+
+            // rts_entry has no board, so the shared OneChunk extent cannot refresh the engine runtime.
+            // The visible runtime still declares interaction.context.minimap; no RTS graph mounts hover.
+            var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+                ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+            var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+                ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+            MinimapRuntime minimap = CreateInputConvergenceMinimap();
+            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
+            minimap.Visible = true;
+            minimap.UseRtsFullMapPreset();
+            minimap.Refresh(engine, markerBuffer, screenMarkers);
+
+            TestInputBackend backend = WireGameplayInput(engine);
+            backend.MousePosition = new Vector2(minimap.FieldX - 12f, minimap.FieldY - 12f);
+            StepLogic(engine);
+
+            ClientLocalSeatRegistry seats = engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry)
+                ?? throw new InvalidOperationException("ClientLocalSeatRegistry missing.");
+            ClientLocalSeat seat = seats.Require(seats.SeatIds[0]);
+            Assert.That(seat.HasPossession, Is.True);
+            Entity rep = seat.PossessedRep;
+
+            Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.75f), minimap.FieldY + (minimap.FieldSize * 0.25f));
+            backend.MousePosition = click;
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            StepLogic(engine);
+
+            Assert.That(ContextActive(engine, rep, "interaction.context.minimap"), Is.True);
+            Assert.That(ContextActive(engine, rep, "interaction.context.rts.selecting"), Is.False);
+        }
+
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()
         {
             var backend = new TestInputBackend();
@@ -737,6 +900,7 @@ namespace Ludots.Tests.GAS
                 MinZoomExplicitHalfExtentCm = InputConvergenceMinZoomHalfExtentCm,
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = InputConvergenceMaxZoomHalfExtentCm,
+                InteractionContextId = "interaction.context.minimap",
                 Actions = InputConvergenceMinimapActions,
             });
         }
@@ -803,6 +967,61 @@ namespace Ludots.Tests.GAS
             }
 
             return false;
+        }
+
+        private static GameEngine CreateProfileEngine(params string[] mods)
+        {
+            var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), mods),
+                Path.Combine(FindRepoRoot(), "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
+            return engine;
+        }
+
+        private static InteractionContextProfileDefinition RequireProfile(GameEngine engine, string profileName)
+        {
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
+            if (!profiles.ProfileIdRegistry.TryGetId(profileName, out int profileId) ||
+                !profiles.TryGetDefinition(profileId, out InteractionContextProfileDefinition definition))
+            {
+                throw new InvalidOperationException($"Interaction context '{profileName}' is not installed.");
+            }
+
+            return definition;
+        }
+
+        private static List<string> TriggerIds(InteractionContextProfileDefinition definition)
+        {
+            var ids = new List<string>();
+            if (definition.Triggers == null)
+            {
+                return ids;
+            }
+
+            for (int i = 0; i < definition.Triggers.Count; i++)
+            {
+                ids.Add(definition.Triggers[i].Trigger);
+            }
+
+            return ids;
+        }
+
+        private static TestInputBackend WireGameplayInput(GameEngine engine)
+        {
+            var backend = new TestInputBackend();
+            var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
+            var handler = new PlayerInputHandler(backend, inputConfig);
+            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
+            {
+                handler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
+            }
+
+            engine.SetService(CoreServiceKeys.InputHandler, handler);
+            engine.SetService(CoreServiceKeys.InputBackend, backend);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            return backend;
         }
 
         private static Entity FindNamed(World world, string name)
@@ -943,11 +1162,18 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        private static readonly WorldAabbCm RaycastWorldBounds = new(-400000, -400000, 800000, 800000);
+
+        private static int RaycastGroundCm(float screen)
+        {
+            return (int)MathF.Round(screen * 100f, MidpointRounding.AwayFromZero);
+        }
+
         private static IContinuousHeightmap CreateFlatHeightmap()
         {
             return new ContinuousHeightmapRuntime(
                 ContinuousHeightmapAsset.CreateSingleLayer(
-                    new WorldAabbCm(-100000, -100000, 200000, 200000),
+                    RaycastWorldBounds,
                     sampleColumns: 2,
                     sampleRows: 2,
                     new short[]

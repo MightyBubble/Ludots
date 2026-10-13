@@ -341,6 +341,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckRouteResolver> CommandDeckRouteResolver = new("CommandDeckRouteResolver");
         public static readonly ServiceKey<Ludots.Core.UI.ProductionOverview.ProductionOverviewProfileRegistry> ProductionOverviewProfileRegistry = new("ProductionOverviewProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime> InteractionContextInstances = new("InteractionContextInstances");
+        public static readonly ServiceKey<Ludots.Core.Input.PointerRegionContextRegistry> PointerRegionContextRegistry = new("PointerRegionContextRegistry");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
         public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer> CommandIntentSubmissions = new("CommandIntentSubmissions");

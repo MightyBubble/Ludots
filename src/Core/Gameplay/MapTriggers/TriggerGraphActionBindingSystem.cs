@@ -13,11 +13,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Dispatches TriggerGraph mounts that bind a semantic input action directly.
-    /// Button actions fire on their configured press or release. Axis2D
+    /// Button actions fire on their configured press or release. Axis1D and Axis2D
     /// <c>firesOn: change</c> actions and the reserved PointerMoved action share one
     /// value-change path: each mount samples the watched vector once when it is
-    /// present, then again only when that vector changes. Each dispatch stamps the
-    /// shared InputAction payload and executes the mount.
+    /// present, then again only when that vector changes. Value changes run before
+    /// button edges in the same tick. Each dispatch stamps the shared InputAction
+    /// payload and executes the mount.
     /// </summary>
     public sealed class TriggerGraphActionBindingSystem : Arch.System.ISystem<float>
     {
@@ -126,9 +127,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             IInputActionReader input,
             Entity? possessedRep)
         {
-            // Both edges with a held final state close the old gesture before opening
-            // its successor. Value changes observe the reconciled context after both edges.
-            for (int phase = 0; phase < 4; phase++)
+            // Value changes run before button edges so a region graph can close its
+            // context before a press in the same tick. Among buttons, release-while-down
+            // still precedes press, then release.
+            ReadOnlySpan<int> phases = stackalloc int[] { 3, 0, 1, 2 };
+            for (int phaseIndex = 0; phaseIndex < phases.Length; phaseIndex++)
+            {
+            int phase = phases[phaseIndex];
             foreach (string actionId in _actionSnapshot)
             {
                 if (!_bindings.TryGetMounts(actionId, out var mounts)) continue;
@@ -173,6 +178,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     if (valueChange && !mount.ConsumeActionValueSample(actionValue)) continue;
                     Dispatch(session, mount, actionId, rep, pointer, modifiers, valueChange, actionValue, bindingInt: null);
                 }
+            }
             }
         }
 

@@ -1616,6 +1616,8 @@ namespace Ludots.Core.Engine
                 "MeshAssetRegistry: 'sphere' descriptor missing or invalid after config load");
 
             var worldHudStrings = new WorldHudStringTable(presentationTextCatalog, presentationTextLocaleSelection);
+            var pointerRegionContexts = new Ludots.Core.Input.PointerRegionContextRegistry();
+            SetService(CoreServiceKeys.PointerRegionContextRegistry, pointerRegionContexts);
             var minimapRuntime = new MinimapRuntime(presentationConfig.Minimap);
             var chunkDebugPanelRuntime = new ChunkDebugPanelRuntime();
             var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
@@ -1798,6 +1800,13 @@ namespace Ludots.Core.Engine
                     graphProgramRegistry,
                     inputConfigRoot.Actions.Select(action => action.Id),
                     graphOutputSchemas));
+            string minimapContextId = presentationConfig.Minimap.InteractionContextId;
+            if (!interactionContextProfileRegistry.ProfileIdRegistry.TryGetId(minimapContextId, out int minimapProfileId) ||
+                !interactionContextProfileRegistry.IsInstalled(minimapProfileId))
+            {
+                throw new InvalidOperationException(
+                    $"POINTER_REGION.ERR.UnknownContext: presentation.minimap.interactionContextId '{minimapContextId}' is not an installed interaction context profile.");
+            }
             var interactionContextInstances = new InteractionContextInstanceRuntime(
                 World,
                 interactionContextProfileRegistry,
@@ -2298,6 +2307,14 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
             RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(
+                new Ludots.Core.Input.Systems.PointerRegionContextSystem(
+                    World,
+                    GlobalContext,
+                    pointerRegionContexts,
+                    interactionContextInstances,
+                    interactionContextProfileRegistry),
+                SystemGroup.InputCollection);
             // Context trigger gate — the world-side active context set diff
             // mounts/unmounts profile-declared triggers[] graphs on the context subject and
             // runs the onActivated/onDeactivated lifecycle slot bodies at the mount window
@@ -2520,7 +2537,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(entityLocalClockSystem, SystemGroup.AttributeCalculation);
-            RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(new CameraProfileBindingSystem(World, GlobalContext, virtualCameraRegistry), SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
@@ -2554,6 +2570,9 @@ namespace Ludots.Core.Engine
                     () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime),
                     interactionContextTriggerGate.ReconcileAfterInputAction),
                 SystemGroup.DeferredTriggerCollection);
+            // Sole per-tick writer of CameraManager.State. Action graphs enqueue
+            // CameraPoseRequest; publishing here applies that request in the same fixed step.
+            RegisterSystem(_cameraRuntimeSystem, SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)
             RegisterSystem(

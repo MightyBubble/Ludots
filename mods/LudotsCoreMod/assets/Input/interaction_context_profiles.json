@@ -13,9 +13,6 @@
         },
         {
           "trigger": "graph.core.hover_tick"
-        },
-        {
-          "trigger": "graph.minimap.hover"
         }
       ]
     },
@@ -36,13 +33,14 @@
       "pointerRouting": "ui",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Minimap.Zoom"
       ],
       "triggers": [
         { "trigger": "graph.minimap.press" },
         { "trigger": "graph.minimap.release" },
         { "trigger": "graph.minimap.track" },
-        { "trigger": "graph.minimap.command" }
+        { "trigger": "graph.minimap.zoom" }
       ],
       "onActivated": [
         "graph.minimap.seed"

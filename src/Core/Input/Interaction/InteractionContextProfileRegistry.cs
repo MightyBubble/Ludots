@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
@@ -390,6 +391,77 @@ namespace Ludots.Core.Input.Interaction
                     definition.Triggers[i],
                     ownerLabel);
             }
+
+            RequireMinimapTriggerActionsBound(definition, referenceCatalog);
+        }
+
+        /// <summary>
+        /// A minimap graph mounted without the action in <c>bindings</c> would listen and
+        /// never be declared. Reserved pointer actions are not profile bindings. Other
+        /// trigger families are not under this rule: aim mounts actions the profile leaves
+        /// unbound on purpose.
+        /// </summary>
+        private static void RequireMinimapTriggerActionsBound(
+            InteractionContextProfileDefinition definition,
+            InteractionContextProfileReferenceCatalog referenceCatalog)
+        {
+            const string prefix = "graph.minimap.";
+            for (int i = 0; i < definition.Triggers.Count; i++)
+            {
+                string trigger = definition.Triggers[i].Trigger;
+                if (string.IsNullOrEmpty(trigger) || !trigger.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                int graphId = GraphIdRegistry.GetId(trigger);
+                if (!referenceCatalog.Programs.TryGetRegistration(graphId, out GraphProgramRegistration registration))
+                {
+                    throw new InvalidOperationException(
+                        $"INTERACTION.ERR.ContextTriggerActionUnbound: interaction context profile '{definition.Id}' mounts '{trigger}' but that graph is not registered.");
+                }
+
+                IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
+                for (int e = 0; e < entries.Count; e++)
+                {
+                    if (entries[e].IsHookFragment)
+                    {
+                        continue;
+                    }
+
+                    string actionId = entries[e].ActionId;
+                    if (string.IsNullOrWhiteSpace(actionId) ||
+                        string.Equals(actionId, ReservedInputActionIds.PointerMoved, StringComparison.Ordinal) ||
+                        string.Equals(actionId, ReservedInputActionIds.PointerPos, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (!BindingDeclared(definition.Bindings, actionId))
+                    {
+                        throw new InvalidOperationException(
+                            $"INTERACTION.ERR.ContextTriggerActionUnbound: interaction context profile '{definition.Id}' mounts '{trigger}' on action '{actionId}' but that action is not in bindings.");
+                    }
+                }
+            }
+        }
+
+        private static bool BindingDeclared(List<string>? bindings, string actionId)
+        {
+            if (bindings == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                if (string.Equals(bindings[i], actionId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int ResolveDeclaredId(

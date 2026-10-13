@@ -10,7 +10,24 @@
       "name": "Gameplay_SelectEnd",
       "type": "Button",
       "firesOn": "release"
+    },
+    {
+      "id": "Minimap.Zoom",
+      "name": "Minimap_Zoom",
+      "type": "Axis1D",
+      "firesOn": "change"
     }
   ],
-  "contexts": []
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "priority": 0,
+      "bindings": [
+        {
+          "actionId": "Minimap.Zoom",
+          "path": "<Mouse>/ScrollY"
+        }
+      ]
+    }
+  ]
 }

@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp MinimapApplyWheelZoom player gallery.",
+  "main": "bin/net9.0/CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

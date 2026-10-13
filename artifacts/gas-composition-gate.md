@@ -1,13 +1,13 @@
-# GAS Composition Gate — 小地图指针交互状态
+# GAS Composition Gate — 小地图指针区域与滚轮
 
-- **Task / Issue**: 小地图指针改走前台交互状态；Core 指针采样改名 PointerSample
-- **Date**: 2026-10-12
+- **Task / Issue**: 谁显示小地图谁进入小地图交互状态；滚轮改成该状态上的图
+- **Date**: 2026-10-13
 - **Agent / Author**: cloud agent
 
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: 小地图点击、拖拽、缩放条、切换按钮、命令点地改为交互状态上的图
-- **Date**: 2026-10-12
+- **Task / Issue**: 小地图屏幕区域激活前台交互状态；滚轮缩放改为绑定与图；命令点地仍用显式投影
+- **Date**: 2026-10-13
 - **Agent / Author**: cloud agent
 
 ### 1. Core judgment
@@ -16,44 +16,40 @@
 
 结论: PASS
 
-一句话理由: 行为是六颗原子节点在 `graph.minimap.*` 里连线，上下文 profile 只声明已有的 foreground / pointerRouting / bindings / triggers，没有新的玩法枚举。
+一句话理由: 区域只是屏幕矩形，激活走已有的 `Activate` / `Deactivate`；滚轮是一颗原子节点，上下文 profile 仍只声明已有的 foreground / pointerRouting / bindings / triggers。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 命中哪一块、屏幕点投地面、跳相机、按指针写缩放、切预设、切旋转 | 0 | GraphNodeOp 544–549 |
-| 按下 / 松开 / 移动 / 命令 / 悬停 | 2 | LudotsCoreMod `assets/GAS/graphs/graph.minimap.*.json` |
-| 前台状态与指针归 UI | 2 | 已有 `InteractionContextProfile` 字段 `foreground`、`pointerRouting` |
-| 滚轮缩放 | 2 | `MinimapRuntime.TryConsumePointerWheel`，再走已有 `suppressOnUiWheelCaptured` |
+| 滚轮增量写到小地图缩放 | 0 | GraphNodeOp `MinimapApplyWheelZoom`（550） |
+| 命中区域、屏幕点投地面、跳相机、缩放条、两个切换 | 0 | 已有 GraphNodeOp 544–549 |
+| 按下 / 松开 / 移动 / 命令 / 滚轮 | 2 | `graph.minimap.press` / `release` / `track` / `command` / `zoom` |
+| 前台状态与指针归 UI | 2 | 已有 `foreground`、`pointerRouting` |
+| 屏幕矩形打开哪个交互状态 | 2 | `presentation.minimap.interactionContextId` 加通用指针区域登记 |
 
 ### 3. Reuse list
 
-- Handlers: `GasGraphOpHandlerTable`、`IGraphRuntimeApi` / `GasGraphRuntimeApi`
-- Queues / Systems: `TriggerGraphActionBindingSystem`、`InteractionContextTriggerMountSystem`、`InputRuntimeSystem`、`CommandIntentBufferDrainSystem`
-- Resolvers / Registries: `InteractionContextProfileRegistry`、`MinimapRuntime`、`AuthoritativeGroundPointerHelper`
-- Existing presets / graphs: `ActivateContext`（省略 `parentContext`）、`DeactivateOwnContext`、`JumpIfFalse`、`SubmitCommandIntent`、`QueryFromCollection`
+- Handlers: `GasGraphOpHandlerTable`、`IGraphRuntimeApi` / `GasGraphRuntimeApi`、`MinimapRuntime.ApplyWheelZoom`
+- Queues / Systems: `TriggerGraphActionBindingSystem`、`InteractionContextTriggerMountSystem`、`InteractionContextInstanceRuntime.Activate`、`CameraRuntimeSystem`、`suppressOnUiWheelCaptured`
+- Resolvers / Registries: `InteractionContextProfileRegistry`、`ConfigMerger.MergeDeepObjectArrayById`
+- Existing presets / graphs: `MinimapScreenToWorld`、`SubmitCommandIntent`、`DeactivateOwnContext`
 
 ### 4. New Layer 0 ops (if any)
 
 | Op 名 | 单一职责 | 为何不能组合现有 op |
 |-------|----------|---------------------|
-| QueryMinimapRegion | 屏幕点落在小地图哪一块 | 没有现成节点读小地图命中矩形；区域码是小地图布局，不是通用 UI 查询 |
-| MinimapScreenToWorld | 屏幕点按小地图投到地面厘米 | `ScreenPointToGround` 走相机射线，不读小地图投影 |
-| MinimapJumpCamera | 把 TargetPosCm 交给小地图跳相机 | 没有现成节点写 `MinimapRuntime.JumpCameraTo` |
-| MinimapSetZoomFromPointer | 用屏幕点在缩放条上写缩放 | 没有现成节点写 `SetZoomFromSliderPointer` |
-| MinimapTogglePreset | 全图 / 跟随相机切一次 | 没有现成节点切 `MinimapPreset` |
-| MinimapToggleRotate | 跟不跟相机转切一次 | 没有现成节点翻转 `RotateWithCamera` |
+| MinimapApplyWheelZoom | 把滚轮增量 F[A] 作用到指针 (F[B], F[C]) 处的小地图缩放 | `MinimapSetZoomFromPointer` 吃的是缩放条上的屏幕点，不是轴增量；轴值也不能冒充屏幕点 |
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无。每颗节点一次写入；图用 `JumpIfFalse` 在投地失败时停掉后续跳相机或提交。
+必须原子 rollback 的步骤: 无。滚轮一次写入；投地失败仍由已有 `JumpIfFalse` 停掉后续提交。
 
 ### 6. Config SSOT
 
-行为配置落在: `mods/LudotsCoreMod/assets/GAS/graphs/graph.minimap.*.json` 与 `mods/LudotsCoreMod/assets/Input/interaction_context_profiles.json`
+行为配置落在: `mods/LudotsCoreMod/assets/GAS/graphs/graph.minimap.*.json`（含滚轮图和 `Minimap.Zoom` 绑定）、`mods/CoreInputMod/assets/Input/interaction_context_profiles.json`（把 `Command` 合并进 `interaction.context.minimap`）、`mods/LudotsCoreMod/assets/game.json` 的 `presentation.minimap.interactionContextId`
 
-是否新增 JSON schema: NO — 沿用交互上下文 profile 和 TriggerGraph 文档。滚轮不新加图节点，仍走 `presentation.minimap.actions.zoom`。
+是否新增 JSON schema: NO — 交互上下文 profile、TriggerGraph、以及小地图配置上的一个已有对象字段。指针区域不是新的玩法枚举。
 
 ### 7. Red flag scan
 
@@ -64,4 +60,4 @@
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线。别的战斗上下文挂上 `graph.minimap.hover` 即得到同一套指针行为；不改 Core enum。
+「下一个 Mod 变体」将修改: graph 连线，或 `presentation.minimap.interactionContextId` 指向的已有交互状态。不改 Core enum。

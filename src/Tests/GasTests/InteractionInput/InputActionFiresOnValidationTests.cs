@@ -87,6 +87,20 @@ public sealed class InputActionFiresOnValidationTests
     }
 
     [Test]
+    public void ChangeOnAxis1D_Loads()
+    {
+        var config = Config(new InputActionDef
+        {
+            Id = "Minimap.Zoom",
+            Type = InputActionType.Axis1D,
+            FiresOn = InputActionDef.FiresOnChange,
+        });
+
+        InputConfigPipelineLoader.Validate(config, "Input/default_input.json");
+        Assert.That(config.Actions[0].FiresOn, Is.EqualTo(InputActionDef.FiresOnChange));
+    }
+
+    [Test]
     public void OmittedFiresOn_ButtonBecomesPress_OtherTypesStayBlank()
     {
         const string json = """

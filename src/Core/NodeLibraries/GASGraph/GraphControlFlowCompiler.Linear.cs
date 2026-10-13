@@ -936,6 +936,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.MinimapApplyWheelZoom:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.C, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SetTargetPos:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -2410,6 +2416,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.MinimapApplyWheelZoom:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.C, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 

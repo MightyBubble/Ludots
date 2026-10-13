@@ -1,3 +1,13 @@
 {
-  "profiles": []
+  "profiles": [
+    {
+      "id": "interaction.context.minimap",
+      "bindings": [
+        "Command"
+      ],
+      "triggers": [
+        { "trigger": "graph.minimap.command" }
+      ]
+    }
+  ]
 }

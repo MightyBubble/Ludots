@@ -125,10 +125,10 @@ namespace Ludots.Core.Input.Config
 
                 if (firesOn == InputActionDef.FiresOnChange)
                 {
-                    if (action.Type != InputActionType.Axis2D)
+                    if (action.Type != InputActionType.Axis1D && action.Type != InputActionType.Axis2D)
                     {
                         throw new InvalidOperationException(
-                            $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path} '{action.Id}' firesOn '{InputActionDef.FiresOnChange}' is only valid for {InputActionType.Axis2D} actions (action type is {action.Type}).");
+                            $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path} '{action.Id}' firesOn '{InputActionDef.FiresOnChange}' is only valid for {InputActionType.Axis1D} or {InputActionType.Axis2D} actions (action type is {action.Type}).");
                     }
                 }
                 else if (action.Type != InputActionType.Button)

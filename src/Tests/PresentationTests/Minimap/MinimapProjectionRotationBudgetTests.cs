@@ -186,6 +186,7 @@ namespace Ludots.Tests.Presentation
                 MinZoomExplicitHalfExtentCm = 750f,
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = 50000f,
+                InteractionContextId = "interaction.context.minimap",
                 Actions = MinimapTestActions.Create(),
             });
         }
