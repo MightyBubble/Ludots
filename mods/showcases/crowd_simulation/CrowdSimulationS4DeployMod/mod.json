@@ -1,7 +1,7 @@
 {
   "name": "CrowdSimulationS4DeployMod",
   "version": "0.4.0",
-  "description": "CrowdSimulation S4 部署演示(种子 1337,交互版):进图自动按规范脚本部署 12000 单位并到点自动回放对拍。HUD 上屏工具、步进频率、避让频率、暂停或倍速、重烘切片、tick、单位状态分布、最近一笔重烘报告（脏 tile、仅代价、可通行变化、缓存命中、重规划、耗时）和回放结论。键位在 Input/default_input.json：关闭、爆炸、生成、建筑、拆除、部署、散开、满员、清缓存、避让加减、暂停、倍速，以及 V 切视图、B 在建筑和关闭之间切换、X 拆除光标处、1–5 切模板。左键按当前工具提交指令。方形、圆、向 +X 的道路、两点连线都进 placeStructure。暂停时 tick 不推进，指令仍执行。倍速走 TimeFlow 的 Simulation 缩放。重烘脏 tile 闪烁。进入交互后自动回放停用。脚本含迷雾命令(reveal/obscure/forget/fogTerrain)，单位按认知改道。调试 HUD 按下标读玩家 1 的可见、探索、残影，字符串是 fogCells vis/explored/ghost。没有黑板键，没有认知计数，没有单独的迷雾绘制。",
+  "description": "CrowdSimulation S4 部署演示(种子 1337,交互版):进图按 deploy.initialUnits 部署开局单位，并到点自动回放对拍。HUD 上屏工具、步进频率、避让频率、暂停或倍速、重烘切片、tick、单位状态分布、最近一笔重烘报告（脏 tile、仅代价、可通行变化、缓存命中、重规划、耗时）和回放结论。键位在 Input/default_input.json：关闭、爆炸、生成、建筑、拆除、部署、散开、满员、清缓存、避让加减、暂停、倍速，以及 V 切视图、B 在建筑和关闭之间切换、X 拆除光标处、1–5 切模板。左键按当前工具提交指令。方形、圆、向 +X 的道路、两点连线都进 placeStructure。暂停时 tick 不推进，指令仍执行。倍速走 TimeFlow 的 Simulation 缩放。重烘脏 tile 闪烁。进入交互后自动回放停用。脚本含迷雾命令(reveal/obscure/forget/fogTerrain)，单位按认知改道。调试 HUD 按下标读玩家 1 的可见、探索、残影，字符串是 fogCells vis/explored/ghost。没有黑板键，没有认知计数，没有单独的迷雾绘制。",
 
   "priority": 0,
   "dependencies": {

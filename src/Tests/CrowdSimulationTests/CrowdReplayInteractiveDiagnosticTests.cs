@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
@@ -159,10 +160,13 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
 
     private static CrowdDemoScript LoadS4Script()
     {
-        var doc = JsonNode.Parse(File.ReadAllText(Path.Combine(
-            RepoRoot(),
-            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))!;
-        return CrowdDemoScript.Load(doc["session"]!["script"]!.AsArray());
+        // 会话建在 S1 地形配置上（S1 进图不带单位），开局人数取 S4 自己声明的 deploy.initialUnits，与会话宿主同一条合成。
+        string assets = Path.Combine(RepoRoot(), "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets");
+        var doc = JsonNode.Parse(File.ReadAllText(Path.Combine(assets, "CrowdSimulationDebug.json")))!.AsObject();
+        var s4Config = JsonNode.Parse(File.ReadAllText(Path.Combine(assets, "CrowdSimulationConfig.json")))!.AsObject();
+        int initialUnits = s4Config["deploy"]!["initialUnits"]!.GetValue<int>();
+        CrowdDebugScriptEntry[]? script = CrowdSimulationDebugConfig.Load(doc).Session?.Script;
+        return CrowdDemoScript.Load(CrowdSimulationRuntime.ComposeDemoScript(initialUnits, script));
     }
 
     private static string RepoRoot()

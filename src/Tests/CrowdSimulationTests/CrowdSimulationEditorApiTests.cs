@@ -34,6 +34,7 @@ public class CrowdSimulationEditorApiTests
     {
         string copy = CopyS4();
         string configPath = Path.Combine(copy, "assets", "CrowdSimulationConfig.json");
+        string before = File.ReadAllText(configPath);
         try
         {
             JsonObject snapshot = CrowdSimulationEditorApi.Load(FindRepoRoot(), S4, copy);
@@ -45,7 +46,7 @@ public class CrowdSimulationEditorApiTests
             Assert.That(Text(issue, "path"), Is.EqualTo("sim.maxUnits"));
             Assert.That(Text(issue, "sourceMod"), Is.EqualTo(S4));
             Assert.That(Text(issue, "sourceFile"), Does.Contain("CrowdSimulationConfig.json"));
-            Assert.That(File.Exists(configPath), Is.False);
+            Assert.That(File.ReadAllText(configPath), Is.EqualTo(before));
         }
         finally
         {
@@ -79,6 +80,7 @@ public class CrowdSimulationEditorApiTests
             Assert.That(written, Does.Not.Contain("CrowdSimulationStandardMod"));
             JsonObject file = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(copy, "assets", "CrowdSimulationConfig.json")))!;
             Assert.That(((JsonObject)file["sim"]!)["maxUnits"]!.GetValue<int>(), Is.EqualTo(40000));
+            Assert.That(((JsonObject)file["deploy"]!)["initialUnits"]!.GetValue<int>(), Is.EqualTo(12000));
             Assert.That(File.ReadAllText(standard), Is.EqualTo(before));
 
             JsonObject again = CrowdSimulationEditorApi.Load(repo, S4, copy);
@@ -138,6 +140,8 @@ public class CrowdSimulationEditorApiTests
     {
         string repo = FindRepoRoot();
         string copy = CopyS4();
+        string configPath = Path.Combine(copy, "assets", "CrowdSimulationConfig.json");
+        string before = File.ReadAllText(configPath);
         try
         {
             JsonObject bundle = CrowdSimulationEditorApi.ExportBundle(repo, S4, copy);
@@ -146,7 +150,7 @@ public class CrowdSimulationEditorApiTests
             JsonObject wrong = CrowdSimulationEditorApi.ImportBundle(repo, S4, bundle, write: true, copy);
             Assert.That(Flag(wrong, "ok"), Is.False, wrong.ToJsonString());
             Assert.That(wrong["issues"]!.ToJsonString(), Does.Contain("version"));
-            Assert.That(File.Exists(Path.Combine(copy, "assets", "CrowdSimulationConfig.json")), Is.False);
+            Assert.That(File.ReadAllText(configPath), Is.EqualTo(before));
 
             bundle.Remove("version");
             JsonObject missing = CrowdSimulationEditorApi.ImportBundle(repo, S4, bundle, write: false, copy);

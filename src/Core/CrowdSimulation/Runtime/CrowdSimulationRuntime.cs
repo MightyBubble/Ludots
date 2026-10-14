@@ -300,6 +300,13 @@ public sealed partial class CrowdSimulationRuntime
 
     public bool HandleMapSuspended(GameEngine engine, MapId mapId) => HandleMapUnloaded(engine, mapId);
 
+    /// <summary>引擎销毁前调用：路径服务的工作线程引用会话，不结束会话，整个引擎都回收不了。</summary>
+    public void HandleEngineDisposing(GameEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (_activeMapId != null) HandleMapUnloaded(engine, new MapId(_activeMapId));
+    }
+
     private NavMeshBakeConfig _navmesh;
 
     private NavMeshBakeConfig RequireLoadedNavmesh(GameEngine engine)
@@ -387,6 +394,28 @@ public sealed partial class CrowdSimulationRuntime
     private TimeSpan RequirePlanTimeout()
         => _planTimeout ?? throw new InvalidOperationException(
             "CrowdSimulationConfig.json: 路径服务需要 worker.planTimeoutMs。");
+
+    internal static JsonArray ComposeDemoScript(int initialUnits, CrowdDebugScriptEntry[]? script)
+    {
+        int scriptCount = script?.Length ?? 0;
+        var rows = new JsonArray();
+        if (initialUnits > 0)
+        {
+            rows.Add(new JsonObject
+            {
+                ["tick"] = 0,
+                ["cmd"] = new JsonObject { ["type"] = "spawn", ["count"] = initialUnits },
+            });
+        }
+
+        for (int i = 0; i < scriptCount; i++)
+        {
+            CrowdDebugScriptEntry entry = script![i];
+            rows.Add(new JsonObject { ["tick"] = entry.Tick, ["cmd"] = entry.Cmd.DeepClone() });
+        }
+
+        return rows;
+    }
 
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
@@ -606,19 +635,19 @@ public sealed partial class CrowdSimulationRuntime
 
         if (anyColor) engine.SetService(CoreServiceKeys.TeamColorPalette, new TeamColorPalette(palette));
 
-        // 脚本与自动回放(指令流即数据;脚本与对拍资产同构,演示自己跑一遍规范场景)
+        // 脚本与自动回放都是指令流。开局人数取 deploy.initialUnits，排在调试脚本之前，成为 tick 0 的 spawn。
+        // 对拍和回归自己带指令表，直接建 CrowdSimSession，不经过会话宿主。
         _pendingScript.Clear();
-        if (_debug?.Session?.Script is { Length: > 0 } script)
+        JsonArray rows = ComposeDemoScript(runtimeConfig.Deploy.InitialUnits, _debug?.Session?.Script);
+        if (rows.Count > 0)
         {
-            var rows = new JsonArray();
-            foreach (var entry in script)
-            {
-                rows.Add(new JsonObject { ["tick"] = entry.Tick, ["cmd"] = entry.Cmd.DeepClone() });
-            }
-
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
             _session.StageDeferredCommands = _demoScript.StageFormable;
+        }
+        else
+        {
+            _demoScript = null;
         }
 
         _autoReplayAtTick = _debug?.Session?.AutoReplayAtTick ?? -1;

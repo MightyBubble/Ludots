@@ -3006,6 +3006,13 @@ namespace Ludots.Core.Engine
                 SetCurrentMapSession(session);
                 bool pendingMapLoadStarted = TryStartPendingMapLoad(session, mapConfig, isPush: false, out var loadStatus);
 
+                // 上一张群体地图的单位还在引擎世界上，要等销毁请求才打上 PresentationDestroyPending。
+                // 新板的范围检查会扫到没有这个标记的单位。先挂起，再换板。
+                if (previousFocused != null)
+                {
+                    _crowdSimulationRuntime.HandleMapSuspended(this, previousFocused.MapId);
+                }
+
                 // Apply primary board spatial config to engine-level services
                 var primaryBoard = session.PrimaryBoard;
                 if (primaryBoard != null)
@@ -3036,7 +3043,6 @@ namespace Ludots.Core.Engine
                 if (previousFocused != null)
                 {
                     _massNavigationRuntime.HandleMapSuspended(this, previousFocused.MapId);
-                    _crowdSimulationRuntime.HandleMapSuspended(this, previousFocused.MapId);
                 }
 
                 // Instantiate map triggers + apply decorators
@@ -3190,6 +3196,12 @@ namespace Ludots.Core.Engine
             SetCurrentMapSession(session);
             bool pendingMapLoadStarted = TryStartPendingMapLoad(session, mapConfig, isPush: true, out var loadStatus);
 
+            // 外层群体单位同样要先挂起，再按内层板做范围检查。
+            if (outerSession != null)
+            {
+                _crowdSimulationRuntime.HandleMapSuspended(this, outerSession.MapId);
+            }
+
             var primaryBoard = session.PrimaryBoard;
             if (primaryBoard != null)
             {
@@ -3220,7 +3232,6 @@ namespace Ludots.Core.Engine
             if (outerSession != null)
             {
                 _massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);
-                _crowdSimulationRuntime.HandleMapSuspended(this, outerSession.MapId);
                 var suspendCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
@@ -5137,6 +5148,11 @@ namespace Ludots.Core.Engine
             }
 
             Stop();
+            if (World != null)
+            {
+                _crowdSimulationRuntime.HandleEngineDisposing(this);
+            }
+
             if (TryGetService(CoreServiceKeys.NetworkRuntimePort, out INetworkRuntimePort networkRuntime))
             {
                 networkRuntime.Dispose();
