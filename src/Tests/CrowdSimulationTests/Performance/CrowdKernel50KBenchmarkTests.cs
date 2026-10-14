@@ -8,6 +8,7 @@ using System.Threading;
 using NUnit.Framework;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using CrowdSimulationTests.Parity;
@@ -115,12 +116,67 @@ public sealed class CrowdKernel50KBenchmarkTests
         TestContext.Out.WriteLine($"50k phases p95: {p95Line}");
         TestContext.Out.WriteLine($"50k phases max: {maxLine}");
         TestContext.Out.WriteLine($"50k spike: {spikeLine}");
+
+        var terrainColors = LoadTerrainColors();
+        var terrainOverlay = CrowdTerrainTypeOverlay.Create(session, terrainColors, 211, 47, 47, 230);
+        terrainOverlay.SetEnabled(true);
+        for (int i = 0; i < 8; i++) terrainOverlay.Sync();
+        long steadySyncAlloc = 0;
+        for (int i = 0; i < 50; i++)
+        {
+            long syncBefore = GC.GetAllocatedBytesForCurrentThread();
+            terrainOverlay.Sync();
+            steadySyncAlloc += GC.GetAllocatedBytesForCurrentThread() - syncBefore;
+        }
+        string overlayLoadAtWindow = File.ReadAllText("/proc/loadavg").Trim();
+        double overlayLoad1 = Load1Minute(overlayLoadAtWindow);
+        var overlayLoadWait = Stopwatch.StartNew();
+        while (overlayLoad1 > cores && overlayLoadWait.ElapsedMilliseconds < 180_000)
+        {
+            Thread.Sleep(5000);
+            overlayLoadAtWindow = File.ReadAllText("/proc/loadavg").Trim();
+            overlayLoad1 = Load1Minute(overlayLoadAtWindow);
+        }
+
+        overlayLoadWait.Stop();
+        var overlayElapsed = new double[measuredTicks];
+        long overlaySyncAlloc = 0;
+        int overlayRan = 0;
+        int overlayGuard = 64 * measuredTicks + 64;
+        while (overlayRan < measuredTicks)
+        {
+            if (overlayGuard-- <= 0) throw new InvalidOperationException("地形叠层基准推进停摆过长。");
+            reference.ApplyDue(session);
+            watch.Restart();
+            bool overlayAdvanced = session.Step(out _);
+            if (!overlayAdvanced)
+            {
+                watch.Stop();
+                continue;
+            }
+
+            long syncBefore = GC.GetAllocatedBytesForCurrentThread();
+            terrainOverlay.Sync();
+            overlaySyncAlloc += GC.GetAllocatedBytesForCurrentThread() - syncBefore;
+            watch.Stop();
+            overlayElapsed[overlayRan] = watch.Elapsed.TotalMilliseconds;
+            overlayRan++;
+        }
+
+        Array.Sort(overlayElapsed);
+        double overlayP95 = overlayElapsed[(int)(measuredTicks * 0.95)];
+        TestContext.Out.WriteLine(
+            $"50k terrain overlay: p95={overlayP95:F4}ms steadySyncAlloc={steadySyncAlloc} windowSyncAlloc={overlaySyncAlloc} loadAtWindow={overlayLoadAtWindow} loadWaitMs={overlayLoadWait.ElapsedMilliseconds}");
+        Assert.That(steadySyncAlloc, Is.EqualTo(0), "地形叠层稳态同步分配");
+        Assert.That(overlaySyncAlloc, Is.EqualTo(0), "地形叠层测量窗同步分配");
 #if DEBUG
         Assert.Inconclusive(
-            $"Debug 不测 33 ms 门。avg={avg:F4} p50={p50:F4} p95={p95:F4} max={max:F4}");
+            $"Debug 不测 33 ms 门。avg={avg:F4} p50={p50:F4} p95={p95:F4} max={max:F4} overlayP95={overlayP95:F4}");
 #else
         Assert.That(p95, Is.LessThan(budgetMs),
             $"50k 稳态 P95 {p95:F4} ms,平均 {avg:F4} ms,最大 {max:F4} ms,未低于 {budgetMs:F0} ms");
+        Assert.That(overlayP95, Is.LessThan(budgetMs),
+            $"50k 地形叠层打开时 P95 {overlayP95:F4} ms,未低于 {budgetMs:F0} ms");
 #endif
     }
 
@@ -143,6 +199,17 @@ public sealed class CrowdKernel50KBenchmarkTests
         if (ticks != warmup + measured)
             throw new InvalidOperationException("50k 场景的 ticks 必须等于预热加测量。");
         return new StressScenario(units, warmup, measured, budget, document["script"]!.AsArray());
+    }
+
+    private static CrowdTerrainTypeColorTable LoadTerrainColors()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        string relative = Path.Combine(
+            "mods", "capabilities", "navigation", "CrowdSimulationStandardMod",
+            "assets", "Presentation", "terrain_type_colors.json");
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, relative))) dir = dir.Parent;
+        if (dir == null) throw new InvalidOperationException("找不到地形类型颜色表。");
+        return CrowdTerrainTypeColors.Load(JsonNode.Parse(File.ReadAllText(Path.Combine(dir.FullName, relative)))!.AsObject());
     }
 
     private static void Advance(
