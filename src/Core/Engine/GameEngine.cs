@@ -1880,6 +1880,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindInteractionModeMap(interactionModeMap);
             gasGraphApi.BindInteractionPrefCatalog(interactionPrefCatalog);
             gasGraphApi.BindAbilityDefinitions(abilityDefinitions);
+            gasGraphApi.BindEffectTemplateRegistry(effectTemplateRegistry);
 
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
@@ -4100,7 +4101,8 @@ namespace Ludots.Core.Engine
                 EntityTriggerGraphMounts,
                 GetService(CoreServiceKeys.CustomEventNameRegistry),
                 GetService(CoreServiceKeys.AbilityDefinitionRegistry),
-                TriggerManager.EventSchemas));
+                TriggerManager.EventSchemas,
+                GetService(CoreServiceKeys.EffectTemplateRegistry)));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

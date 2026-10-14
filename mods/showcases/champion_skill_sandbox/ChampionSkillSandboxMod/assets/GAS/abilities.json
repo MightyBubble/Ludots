@@ -44,8 +44,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 440,
@@ -94,6 +93,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+    },
     "targeting": {
       "castRangeCm": 760,
       "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
@@ -141,6 +143,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+    },
     "targeting": {
       "castRangeCm": 840,
       "impactEffect": "Effect.Champion.Ezreal.MysticShot"
@@ -188,6 +193,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+    },
     "targeting": {
       "castRangeCm": 2200,
       "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
@@ -280,8 +288,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 320,
@@ -374,8 +381,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 0,
@@ -421,8 +427,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 720,
@@ -468,8 +473,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 720,
@@ -515,8 +519,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 720,
@@ -565,6 +568,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "targetQuery.halfWidth"
+    },
     "targeting": {
       "castRangeCm": 920,
       "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
@@ -609,8 +615,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 640,
@@ -656,8 +661,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 0,
@@ -706,6 +710,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+    },
     "targeting": {
       "castRangeCm": 880,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
@@ -750,8 +757,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 0,
@@ -800,6 +806,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.cone"
     ],
+    "effectFields": {
+      "graph.aim.shape.cone": "targetQuery.halfAngle"
+    },
     "targeting": {
       "castRangeCm": 300,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
@@ -847,6 +856,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.circle"
     ],
+    "effectFields": {
+      "graph.aim.shape.circle": "targetQuery.radius"
+    },
     "targeting": {
       "castRangeCm": 520,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
@@ -982,8 +994,11 @@
     "triggerGraphs": [
       "graph.aim.pick.hostile",
       "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.cone"
+      "graph.aim.shape.circle"
     ],
+    "effectFields": {
+      "graph.aim.shape.circle": "targetQuery.radius"
+    },
     "targeting": {
       "castRangeCm": 180,
       "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
@@ -1031,6 +1046,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+    },
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
@@ -1078,6 +1096,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+    },
     "targeting": {
       "castRangeCm": 1400,
       "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
@@ -1169,8 +1190,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 760,
@@ -1216,8 +1236,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.circle"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 760,
@@ -1271,6 +1290,9 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.circle"
     ],
+    "effectFields": {
+      "graph.aim.shape.circle": "unitCreation.placementRadiusCm"
+    },
     "targeting": {
       "castRangeCm": 700,
       "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
@@ -1319,8 +1341,7 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground",
-      "graph.aim.shape.line"
+      "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
       "castRangeCm": 1050,

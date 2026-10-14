@@ -408,6 +408,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.MinimapApplyWheelZoom or
                 GraphNodeOp.SetTargetPos or
                 GraphNodeOp.LoadAbilityCastRange or
+                GraphNodeOp.LoadAbilityEffectFloat or
                 GraphNodeOp.LoadSlotAbilityId or
                 GraphNodeOp.Fail or
                 GraphNodeOp.IsContextActive
@@ -999,6 +1000,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.MinimapApplyWheelZoom, HandleMinimapApplyWheelZoom, "MinimapApplyWheelZoom graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
+            Register(GraphNodeOp.LoadAbilityEffectFloat, HandleLoadAbilityEffectFloat, "LoadAbilityEffectFloat graph opcode.");
             Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
             Register(GraphNodeOp.IsContextActive, HandleIsContextActive, "IsContextActive graph opcode.");
             Register(GraphNodeOp.Fail, HandleFail, "Fail graph opcode.");
@@ -1931,6 +1933,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleLoadAbilityCastRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.F[ins.Dst] = s.Api.LoadAbilityCastRange(s.E[ins.A], s.I[ins.B]);
+        }
+
+        private static void HandleLoadAbilityEffectFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.LoadAbilityEffectFloat(s.E[ins.A], s.I[ins.B], s.CurrentGraphId);
         }
 
         private static void HandleLoadSlotAbilityId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

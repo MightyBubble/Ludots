@@ -179,8 +179,8 @@
       },
       {
         "paramKey": "groundOverlay.width",
-        "source": "constant",
-        "constantValue": 0.9
+        "source": "ownerBlackboardFloat",
+        "sourceId": "aim.shape.param"
       },
       {
         "paramKey": "groundOverlay.border.r",
@@ -399,7 +399,7 @@
       {
         "paramKey": "groundOverlay.radius",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.range_cm"
+        "sourceId": "aim.shape.param"
       }
     ],
     "behaviors": [
@@ -436,7 +436,11 @@
         0,
         0.04,
         0
-      ]
+      ],
+      "worldPosition": {
+        "x": "aim.point.x_cm",
+        "y": "aim.point.y_cm"
+      }
     }
   },
   {
@@ -491,8 +495,8 @@
       },
       {
         "paramKey": "groundOverlay.angle",
-        "source": "constant",
-        "constantValue": 80
+        "source": "ownerBlackboardFloat",
+        "sourceId": "aim.shape.param"
       },
       {
         "paramKey": "groundOverlay.rotation",

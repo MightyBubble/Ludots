@@ -1,0 +1,44 @@
+[
+  {
+    "id": "showcase.graph_op.LoadAbilityEffectFloat",
+    "kind": "Effect",
+    "entry": "slot",
+    "nodes": [
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "radius",
+        "op": "LoadAbilityEffectFloat"
+      },
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      { "from": "slot", "fromPort": "next", "to": "radius" },
+      { "from": "radius", "fromPort": "next", "to": "drain" },
+      { "from": "drain", "fromPort": "next", "to": "explicit" },
+      { "from": "explicit", "fromPort": "next", "to": "hit" }
+    ],
+    "valueEdges": [
+      { "from": "explicit", "fromPort": "value", "to": "radius", "toPort": "source" },
+      { "from": "slot", "fromPort": "value", "to": "radius", "toPort": "value" },
+      { "from": "drain", "fromPort": "value", "to": "hit", "toPort": "value" },
+      { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" }
+    ]
+  }
+]

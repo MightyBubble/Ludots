@@ -948,6 +948,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadAbilityCastRange:
+                case GraphNodeOp.LoadAbilityEffectFloat:
                 case GraphNodeOp.LoadSlotAbilityId:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -2441,6 +2442,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadAbilityCastRange:
+                case GraphNodeOp.LoadAbilityEffectFloat:
                 case GraphNodeOp.LoadSlotAbilityId:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,

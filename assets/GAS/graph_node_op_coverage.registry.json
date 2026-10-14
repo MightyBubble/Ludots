@@ -4733,6 +4733,28 @@
         "InteractionContextInstanceTests.IsContextActive_FailsClosedWhenDeadOrUnknownAndReadsTheMountedSet"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadAbilityEffectFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadAbilityEffectFloat",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPrefAcceptanceTests.LoadAbilityEffectFloatVignette_QuotesTheAuthoredRadius"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

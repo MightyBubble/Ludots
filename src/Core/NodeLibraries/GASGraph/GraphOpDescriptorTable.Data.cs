@@ -374,6 +374,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.MinimapApplyWheelZoom, EffectAndScript, GraphValueType.Void, portABC, scriptPorts: portABC, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetTargetPos, LinearQueryScript, GraphValueType.Void, portAB, queryPorts: portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.LoadAbilityCastRange, LinearQueryScript, GraphValueType.Float, portSourceValue, queryOut: GraphValueType.Float, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Float);
+            Add(rows, GraphNodeOp.LoadAbilityEffectFloat, LinearQueryScript, GraphValueType.Float, portSourceValue, queryOut: GraphValueType.Float, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadSlotAbilityId, LinearQueryScript, GraphValueType.Int, portSourceValue, queryOut: GraphValueType.Int, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.IsContextActive, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.Fail, LinearQueryScript, GraphValueType.Void, linearPorts: noPorts, queryPorts: noPorts, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);

@@ -133,9 +133,8 @@
       },
       {
         "id": "act_click_line",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.line",
-        "parentContext": "interaction.context.aim.click"
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.line"
       },
       {
         "id": "re_click_circle",
@@ -143,9 +142,8 @@
       },
       {
         "id": "act_click_circle",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.circle",
-        "parentContext": "interaction.context.aim.click"
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.circle"
       },
       {
         "id": "re_click_cone",
@@ -153,9 +151,8 @@
       },
       {
         "id": "act_click_cone",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.cone",
-        "parentContext": "interaction.context.aim.click"
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.cone"
       },
       {
         "id": "re_click_unit",
@@ -173,9 +170,8 @@
       },
       {
         "id": "act_release_line",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.line",
-        "parentContext": "interaction.context.aim.release"
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.line"
       },
       {
         "id": "re_release_circle",
@@ -183,9 +179,8 @@
       },
       {
         "id": "act_release_circle",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.circle",
-        "parentContext": "interaction.context.aim.release"
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.circle"
       },
       {
         "id": "re_release_cone",
@@ -193,9 +188,8 @@
       },
       {
         "id": "act_release_cone",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.cone",
-        "parentContext": "interaction.context.aim.release"
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.cone"
       },
       {
         "id": "re_release_unit",
@@ -610,34 +604,16 @@
         "toPort": "condition"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_click_line",
-        "toPort": "source"
-      },
-      {
         "from": "is_shape_circle",
         "fromPort": "value",
         "to": "re_click_circle",
         "toPort": "condition"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_click_circle",
-        "toPort": "source"
-      },
-      {
         "from": "is_shape_cone",
         "fromPort": "value",
         "to": "re_click_cone",
         "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_click_cone",
-        "toPort": "source"
       },
       {
         "from": "is_shape_unit",
@@ -658,34 +634,16 @@
         "toPort": "condition"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_release_line",
-        "toPort": "source"
-      },
-      {
         "from": "is_shape_circle",
         "fromPort": "value",
         "to": "re_release_circle",
         "toPort": "condition"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_release_circle",
-        "toPort": "source"
-      },
-      {
         "from": "is_shape_cone",
         "fromPort": "value",
         "to": "re_release_cone",
         "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_release_cone",
-        "toPort": "source"
       },
       {
         "from": "is_shape_unit",

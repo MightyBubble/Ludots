@@ -107,6 +107,18 @@ namespace Ludots.Core.Gameplay.GAS
     {
         /// <summary>Ordered TriggerGraph names owned by this ability definition.</summary>
         public List<string> TriggerGraphs;
+
+        /// <summary>
+        /// Graph id to a named float on <see cref="AbilityTargetingConfig.ImpactEffectTemplateId"/>.
+        /// LoadAbilityEffectFloat reads the entry for the graph that is running.
+        /// </summary>
+        public Dictionary<string, string> TriggerGraphEffectFields;
+
+        /// <summary>
+        /// Graph id to a positive literal, used when the impact effect has no spatial float to share.
+        /// The same graph cannot declare both a field name and a literal.
+        /// </summary>
+        public Dictionary<string, float> TriggerGraphEffectLiterals;
         // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;

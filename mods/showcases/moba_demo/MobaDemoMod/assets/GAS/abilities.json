@@ -145,6 +145,9 @@
       "graph.aim.rule.unit_only",
       "graph.aim.shape.cone"
     ],
+    "effectFields": {
+      "graph.aim.shape.cone": "targetQuery.halfAngle"
+    },
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Damage.E"
@@ -204,6 +207,9 @@
       "graph.aim.rule.unit_only",
       "graph.aim.shape.circle"
     ],
+    "effectFields": {
+      "graph.aim.shape.circle": "targetQuery.radius"
+    },
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Search.BlizzardZone"
