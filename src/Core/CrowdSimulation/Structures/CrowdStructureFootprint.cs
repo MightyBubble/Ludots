@@ -67,8 +67,11 @@ public readonly struct CrowdStructureFootprint
             case CrowdStructureShape.Rect:
                 return Fix64.Abs(px - CenterXCm) <= Hx && Fix64.Abs(py - CenterYCm) <= Hy;
             case CrowdStructureShape.Disc:
-                Fix64 dx = px - CenterXCm, dy = py - CenterYCm;
-                return dx * dx + dy * dy <= RadiusCm * RadiusCm;
+                // Q31.32 的平方大约在 46340 厘米溢出，斜向远处会比成圆内。
+                Int128 ddx = (Int128)px.RawValue - CenterXCm.RawValue;
+                Int128 ddy = (Int128)py.RawValue - CenterYCm.RawValue;
+                Int128 radiusRaw = RadiusCm.RawValue;
+                return ddx * ddx + ddy * ddy <= radiusRaw * radiusRaw;
             default:
                 Fix64 ax = X1 - X0, ay = Y1 - Y0;
                 Fix64 length = CrowdFix.Hypot(ax, ay);

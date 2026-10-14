@@ -346,6 +346,10 @@ public sealed class RuntimeStructuresSection
 {
     public required Fix64 BlockCoverage { get; init; }
     public required int PortalReachNavCells { get; init; }
+    /// <summary>与 TerrainTypeIds 等长。真表示该地形可以落桥端点。</summary>
+    public required bool[] AnchorTerrain { get; init; }
+    /// <summary>与 TerrainTypeIds 等长。真表示该地形可以被桥跨越。</summary>
+    public required bool[] SpanTerrain { get; init; }
     /// <summary>运行时表按下标排列，placeStructure 写的是模板 id 字符串，仓再用 TemplateIndexOf 换成下标。area 在装载时收成区域下标。</summary>
     public required IReadOnlyList<RuntimeStructureTemplate> Templates { get; init; }
 }

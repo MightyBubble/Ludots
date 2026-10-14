@@ -366,6 +366,8 @@ public sealed class CrowdSimulationConfigLoader
             {
                 BlockCoverage = Fix64.FromDouble(config.Structures.BlockCoverage),
                 PortalReachNavCells = config.Structures.PortalReachNavCells,
+                AnchorTerrain = ResolveTerrainMask(config.Structures.AnchorTerrain, bound.TerrainTypeIds, "structures.anchorTerrain"),
+                SpanTerrain = ResolveTerrainMask(config.Structures.SpanTerrain, bound.TerrainTypeIds, "structures.spanTerrain"),
                 Templates = BuildStructureTemplates(config, bound.AreaIndexById),
             },
             Deploy = new RuntimeDeploySection
@@ -402,6 +404,42 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         return result;
+    }
+
+    /// <summary>地形 id 收成与地图地形表等长的掩码。未知、空串、重复在装载即报错。</summary>
+    private static bool[] ResolveTerrainMask(string[] ids, IReadOnlyList<string> terrainTypeIds, string path)
+    {
+        var mask = new bool[terrainTypeIds.Count];
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < ids.Length; i++)
+        {
+            string id = ids[i];
+            if (string.IsNullOrWhiteSpace(id) || !seen.Add(id))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: {path}[{i}] 为空或重复。");
+            }
+
+            int index = -1;
+            for (int t = 0; t < terrainTypeIds.Count; t++)
+            {
+                if (terrainTypeIds[t] == id)
+                {
+                    index = t;
+                    break;
+                }
+            }
+
+            if (index < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: {path} 未知地形类型 \"{id}\"。");
+            }
+
+            mask[index] = true;
+        }
+
+        return mask;
     }
 
     /// <summary>结构模板表装载:模板 area id 解析为 navmesh areas 下标。未知区域在装载即报错。表按 id 排序。</summary>

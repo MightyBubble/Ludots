@@ -99,6 +99,8 @@ public static class CrowdSimulationConfigValidator
         Rule("sim.simSecondsPerTickSecond", config.Sim.SimSecondsPerTickSecond, gt: 0);
         Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
         Rule("structures.portalReachNavCells", config.Structures.PortalReachNavCells, intRequired: true, min: 1);
+        ValidateTerrainIds("structures.anchorTerrain", config.Structures.AnchorTerrain);
+        ValidateTerrainIds("structures.spanTerrain", config.Structures.SpanTerrain);
         ValidateStructureTemplates(config);
         Rule("deploy.initialUnits", config.Deploy.InitialUnits, intRequired: true, min: 0);
         Rule("deploy.centersPerGroup", config.Deploy.CentersPerGroup, intRequired: true, min: 1);
@@ -168,6 +170,11 @@ public static class CrowdSimulationConfigValidator
                 throw Invalid($"{path}", "blocker 只支持 rect 占地");
             }
 
+            if (t.Layered && t.Footprint != "path")
+            {
+                throw Invalid($"{path}", "分层实体的足迹需为 path");
+            }
+
             if ((t.Area == null) != (t.Priority == null))
             {
                 throw Invalid($"{path}", "area 与 priority 需同时给出");
@@ -186,6 +193,29 @@ public static class CrowdSimulationConfigValidator
             if (t.LifetimeSec is { } life && !(life > 0))
             {
                 throw Invalid($"{path}.lifetimeSec", "需 > 0");
+            }
+        }
+    }
+
+    private static void ValidateTerrainIds(string path, string[]? ids)
+    {
+        if (ids == null || ids.Length == 0)
+        {
+            throw Invalid(path, "需为非空的地形类型 id 数组");
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < ids.Length; i++)
+        {
+            string id = ids[i];
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw Invalid($"{path}[{i}]", "需为非空字符串");
+            }
+
+            if (!seen.Add(id))
+            {
+                throw Invalid($"{path}", $"地形类型 \"{id}\" 重复");
             }
         }
     }

@@ -86,9 +86,12 @@ public class S7RebakeSmokeTests
     public void LayeredTemplatePlace_IsRejected()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        Assert.Throws<InvalidOperationException>(() =>
-            Ludots.Core.CrowdSimulation.Structures.CrowdStructureOps.PlaceStructure(
-                session, "bridge", Fix64Cm(500000), Fix64Cm(500000), Fix64Cm(400), Fix64Cm(600000), Fix64Cm(500000)));
+        int before = session.Structures!.EntityIds.Count;
+        var report = Ludots.Core.CrowdSimulation.Structures.CrowdStructureOps.PlaceStructure(
+            session, "bridge", Fix64Cm(500000), Fix64Cm(500000), Fix64Cm(400), Fix64Cm(600000), Fix64Cm(500000));
+        Assert.That(report, Is.Null);
+        Assert.That(session.LastPlacementReject, Is.EqualTo(Ludots.Core.CrowdSimulation.Structures.CrowdPlacementReject.AnchorTerrain));
+        Assert.That(session.Structures.EntityIds.Count, Is.EqualTo(before));
     }
 
     private static System.Text.Json.Nodes.JsonNode Cmd(string json) =>

@@ -12,8 +12,8 @@ public sealed class DeckSurface
 {
     public required byte[] AreaIndex { get; init; }
     public required byte[] PortalFlag { get; init; }
-    /// <summary>含桥面格的 tile 编号,按首次写入序。</summary>
-    public required int[] TileOrder { get; init; }
+    /// <summary>含桥面格的 tile 编号。全量栅格按首次写入序；增量重画只保证集合覆盖每个仍有桥面的 tile。</summary>
+    public required int[] TileOrder { get; set; }
 
     public static DeckSurface Empty(int cellsPerSide) => new()
     {
@@ -49,47 +49,19 @@ public static class UpperLayerBake
         {
             int areaIndex = AreaIndexOf(config, bridge.AreaId);
             var span = bridge.Span;
-            // 路径包围盒(含宽度)扫格,厘米整数域
-            int halfWCm = span.WidthCm / 2;
-            int minX = Math.Max(0, FloorDiv(Math.Min(span.X0Cm, span.X1Cm) - halfWCm, navCellSizeCm));
-            int minY = Math.Max(0, FloorDiv(Math.Min(span.Y0Cm, span.Y1Cm) - halfWCm, navCellSizeCm));
-            int maxX = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(span.X0Cm, span.X1Cm) + halfWCm, navCellSizeCm));
-            int maxY = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(span.Y0Cm, span.Y1Cm) + halfWCm, navCellSizeCm));
-
-            var x0 = CrowdReferenceMeters.CmToMRaw(span.X0Cm); var y0 = CrowdReferenceMeters.CmToMRaw(span.Y0Cm);
-            var ax = CrowdReferenceMeters.CmToMRaw(span.X1Cm) - x0; var ay = CrowdReferenceMeters.CmToMRaw(span.Y1Cm) - y0;
-            // 本方法只栅格化桥。非轴对齐跨度走 VectorLength。轴对齐时故意不用 sqrt，避免端点格吃掉 1e-6 容差。
-            Fix64 len, ux, uy;
-            if (ay == Fix64.Zero && ax != Fix64.Zero) { len = Fix64.Abs(ax); ux = ax > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue; uy = Fix64.Zero; }
-            else if (ax == Fix64.Zero && ay != Fix64.Zero) { len = Fix64.Abs(ay); ux = Fix64.Zero; uy = ay > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue; }
-            else
+            var spanGeom = DeckSpanGeometry.FromCentimeters(
+                span.X0Cm, span.Y0Cm, span.X1Cm, span.Y1Cm, span.WidthCm,
+                navCellsPerSide, navCellSizeCm, portalReachM);
+            for (int y = spanGeom.MinY; y <= spanGeom.MaxY; y++)
             {
-                len = Fix64Math.VectorLength(ax, ay);
-                ux = len > Fix64.Zero ? ax / len : Fix64.OneValue;
-                uy = len > Fix64.Zero ? ay / len : Fix64.Zero;
-            }
-            var halfW = CrowdReferenceMeters.HalfWidthM(span.WidthCm);
-            var eps = Fix64.FromDouble(1e-6);
-            var navCellSizeM = CrowdReferenceMeters.CmToMRaw(navCellSizeCm);
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
+                for (int x = spanGeom.MinX; x <= spanGeom.MaxX; x++)
                 {
-                    var px = (Fix64.FromInt(x) + Fix64.HalfValue) * navCellSizeM;
-                    var py = (Fix64.FromInt(y) + Fix64.HalfValue) * navCellSizeM;
-                    var dx = px - x0; var dy = py - y0;
-                    var t = dx * ux + dy * uy;
-                    // 沿段参数 t 允许超出端点 1e-6 米；横距严格小于半宽。
-                    if (t < -eps || t > len + eps) continue;
-                    var cross = dx * uy - dy * ux;
-                    if (Fix64.Abs(cross) >= halfW) continue;
+                    if (!spanGeom.Hit(x, y, out Fix64 endDist)) continue;
 
                     int cell = y * navCellsPerSide + x;
-                    // 桥头:沿段到较近端点的距离小于 PortalReachNavCells 格换算的米长
-                    var endDist = t < len - t ? t : len - t;
-                    deckAreaIndex[cell] = (byte)(areaIndex + 1); // 同格后放者胜( bridges 顺序即实体顺序)
-                    if (endDist < portalReachM) portalFlag[cell] = 1;
+                    // 同格后放者胜（bridges 顺序即实体顺序）。portal 只置位，后写的非桥头不把它清掉。
+                    deckAreaIndex[cell] = (byte)(areaIndex + 1);
+                    if (spanGeom.IsPortal(endDist)) portalFlag[cell] = 1;
                     int tileId = (y / tileSize) * (navCellsPerSide / tileSize) + x / tileSize;
                     if (!tileSeen[tileId]) { tileSeen[tileId] = true; tileOrder.Add(tileId); }
                 }
@@ -98,11 +70,6 @@ public static class UpperLayerBake
 
         return new DeckSurface { AreaIndex = deckAreaIndex, PortalFlag = portalFlag, TileOrder = tileOrder.ToArray() };
 
-        static int FloorDiv(int value, int divisor)
-        {
-            int q = value / divisor;
-            return value < 0 && value % divisor != 0 ? q - 1 : q;
-        }
         static int AreaIndexOf(CrowdSimulationRuntimeConfig config, string areaId)
         {
             for (int i = 0; i < config.NavAreas.Count; i++)
@@ -269,5 +236,116 @@ public static class UpperLayerBake
         }
 
         return count;
+    }
+}
+
+/// <summary>
+/// 桥 span 的米制栅格。轴对齐跨度不用 sqrt，避免端点格吃掉 1e-6 米容差。
+/// 全量烘焙和放置判定共用这一份，端点格用朝负无穷取整。
+/// </summary>
+internal readonly struct DeckSpanGeometry
+{
+    public int MinX { get; init; }
+    public int MinY { get; init; }
+    public int MaxX { get; init; }
+    public int MaxY { get; init; }
+    public Fix64 OriginX { get; init; }
+    public Fix64 OriginY { get; init; }
+    public Fix64 Length { get; init; }
+    public Fix64 Ux { get; init; }
+    public Fix64 Uy { get; init; }
+    public Fix64 HalfWidth { get; init; }
+    public Fix64 Epsilon { get; init; }
+    public Fix64 CellSizeM { get; init; }
+    public Fix64 PortalReachM { get; init; }
+    public int EndX0 { get; init; }
+    public int EndY0 { get; init; }
+    public int EndX1 { get; init; }
+    public int EndY1 { get; init; }
+
+    public static DeckSpanGeometry FromCentimeters(
+        int x0Cm, int y0Cm, int x1Cm, int y1Cm, int widthCm,
+        int navCellsPerSide, int navCellSizeCm, Fix64 portalReachM)
+    {
+        int halfWCm = widthCm / 2;
+        var originX = CrowdReferenceMeters.CmToMRaw(x0Cm);
+        var originY = CrowdReferenceMeters.CmToMRaw(y0Cm);
+        var ax = CrowdReferenceMeters.CmToMRaw(x1Cm) - originX;
+        var ay = CrowdReferenceMeters.CmToMRaw(y1Cm) - originY;
+        Fix64 length, ux, uy;
+        if (ay == Fix64.Zero && ax != Fix64.Zero)
+        {
+            length = Fix64.Abs(ax);
+            ux = ax > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
+            uy = Fix64.Zero;
+        }
+        else if (ax == Fix64.Zero && ay != Fix64.Zero)
+        {
+            length = Fix64.Abs(ay);
+            ux = Fix64.Zero;
+            uy = ay > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
+        }
+        else
+        {
+            length = Fix64Math.VectorLength(ax, ay);
+            ux = length > Fix64.Zero ? ax / length : Fix64.OneValue;
+            uy = length > Fix64.Zero ? ay / length : Fix64.Zero;
+        }
+
+        return new DeckSpanGeometry
+        {
+            MinX = Math.Max(0, FloorDiv(Math.Min(x0Cm, x1Cm) - halfWCm, navCellSizeCm)),
+            MinY = Math.Max(0, FloorDiv(Math.Min(y0Cm, y1Cm) - halfWCm, navCellSizeCm)),
+            MaxX = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(x0Cm, x1Cm) + halfWCm, navCellSizeCm)),
+            MaxY = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(y0Cm, y1Cm) + halfWCm, navCellSizeCm)),
+            OriginX = originX,
+            OriginY = originY,
+            Length = length,
+            Ux = ux,
+            Uy = uy,
+            HalfWidth = CrowdReferenceMeters.HalfWidthM(widthCm),
+            Epsilon = Fix64.FromDouble(1e-6),
+            CellSizeM = CrowdReferenceMeters.CmToMRaw(navCellSizeCm),
+            PortalReachM = portalReachM,
+            EndX0 = FloorDiv(x0Cm, navCellSizeCm),
+            EndY0 = FloorDiv(y0Cm, navCellSizeCm),
+            EndX1 = FloorDiv(x1Cm, navCellSizeCm),
+            EndY1 = FloorDiv(y1Cm, navCellSizeCm),
+        };
+    }
+
+    public bool Hit(int x, int y, out Fix64 endDist)
+    {
+        var px = (Fix64.FromInt(x) + Fix64.HalfValue) * CellSizeM;
+        var py = (Fix64.FromInt(y) + Fix64.HalfValue) * CellSizeM;
+        var dx = px - OriginX;
+        var dy = py - OriginY;
+        var t = dx * Ux + dy * Uy;
+        if (t < -Epsilon || t > Length + Epsilon)
+        {
+            endDist = Fix64.Zero;
+            return false;
+        }
+
+        var cross = dx * Uy - dy * Ux;
+        if (Fix64.Abs(cross) >= HalfWidth)
+        {
+            endDist = Fix64.Zero;
+            return false;
+        }
+
+        endDist = t < Length - t ? t : Length - t;
+        return true;
+    }
+
+    public bool IsPortal(Fix64 endDist) => endDist < PortalReachM;
+
+    public bool IsAnchorCell(int x, int y) =>
+        (x == EndX0 && y == EndY0) || (x == EndX1 && y == EndY1);
+
+    internal static int FloorDiv(int value, int divisor)
+    {
+        int q = value / divisor;
+        return value < 0 && value % divisor != 0 ? q - 1 : q;
     }
 }

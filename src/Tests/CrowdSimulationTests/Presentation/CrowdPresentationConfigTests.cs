@@ -25,7 +25,7 @@ public sealed class CrowdPresentationConfigTests
         var s4Debug = CrowdSimulationDebugConfig.Load(JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject());
         Assert.That(s4Debug.Fuzz!.SliceMs, Is.EqualTo(8));
         Assert.That(s4Debug.Fuzz.ToPlan(s4Debug.Tools!).BoomRadiusCm, Is.EqualTo(s4Debug.Tools!.BoomRadiusCm));
-        Assert.That(s4.Deploy!.Structures, Has.Length.EqualTo(5));
+        Assert.That(s4.Deploy!.Structures, Has.Length.EqualTo(6));
         Assert.That(s4.Deploy.Structures[0].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapePoint));
         Assert.That(s4.Deploy.Structures[0].RoadLengthCm, Is.Null);
         Assert.That(s4.Deploy.Structures[2].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeRoad));
@@ -34,6 +34,9 @@ public sealed class CrowdPresentationConfigTests
         Assert.That(s4.Deploy.Structures[3].SizeCm, Is.EqualTo(8000));
         Assert.That(s4.Deploy.Structures[4].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeSpan));
         Assert.That(s4.Deploy.Structures[4].SizeCm, Is.EqualTo(3000));
+        Assert.That(s4.Deploy.Structures[5].Id, Is.EqualTo("bridge"));
+        Assert.That(s4.Deploy.Structures[5].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeSpan));
+        Assert.That(s4.Deploy.Structures[5].SizeCm, Is.EqualTo(3000));
         Assert.That(s4.Deploy.Actions.ToolBoom, Is.EqualTo("CrowdSimulation.S4.ToolBoom"));
         Assert.That(s4.Deploy.Actions.Stress, Is.EqualTo("CrowdSimulation.S4.Stress"));
     }

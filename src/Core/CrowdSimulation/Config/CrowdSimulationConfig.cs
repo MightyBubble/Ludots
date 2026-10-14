@@ -429,6 +429,10 @@ public sealed class CrowdSimulationConfig
     {
         public required double BlockCoverage { get; init; }
         public required int PortalReachNavCells { get; init; }
+        /// <summary>桥两端锚点格允许的地形类型 id。装载时收成与地图地形表等长的掩码。</summary>
+        public required string[] AnchorTerrain { get; init; }
+        /// <summary>桥跨越段允许的地形类型 id。端点格不算跨越段。</summary>
+        public required string[] SpanTerrain { get; init; }
         /// <summary>键是模板 id。placeStructure / removeStructureAt 按 id 引用。运行时按 id 的序数排序，不看对象键顺序。</summary>
         public Dictionary<string, StructureTemplateEntry>? Templates { get; init; }
     }

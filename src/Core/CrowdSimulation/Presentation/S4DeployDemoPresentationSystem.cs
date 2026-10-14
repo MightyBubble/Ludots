@@ -30,12 +30,10 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
     private static readonly RouteVisualId GoalMarker = new(1);
     private static readonly RouteVisualId HoverMarker = new(2);
-    private static readonly RouteVisualId PreviewOutline = new(3);
     private static readonly RouteVisualId RemoveOutline = new(4);
     private static readonly RouteVisualId BoomInner = new(5);
     private static readonly RouteVisualId BoomOuter = new(6);
     private static readonly RouteVisualId SpawnMarker = new(7);
-    private static readonly RouteVisualId DiscPreview = new(8);
     private static readonly RouteVisualId WireframeId = new(CrowdSimulationLimits.WireframeRouteVisualId);
     private static readonly RouteVisualId FlashBase = new(200);
 
@@ -59,6 +57,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private Vector2[][] _flashLines = Array.Empty<Vector2[]>();
     private int _flashLineCount;
     private int _flashLineReport = int.MinValue;
+    private int[] _previewCells = Array.Empty<int>();
+    private byte[] _previewFlags = Array.Empty<byte>();
+    private Vector2[][] _previewQuads = Array.Empty<Vector2[]>();
+    private bool _placeColorsReady;
+    private Vector4 _placeLegal;
+    private Vector4 _placeIllegal;
+    private Vector4 _placeAnchor;
+    private Vector4 _placePortal;
+    private static readonly RouteVisualId PreviewCellBase = new(4096);
 
     internal S4DeployDemoPresentationSystem(
         S4DeployDemoRuntime demo,
@@ -123,6 +130,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         }
 
         bool previewValid = false, previewShown = false;
+        var previewReason = CrowdPlacementReject.None;
         if (ground is { } p)
         {
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
@@ -155,8 +163,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     break;
                 case CrowdClickTool.Structure when store != null:
                     previewShown = true;
-                    previewValid = CanPlace(store, _demo.Template, px, py);
-                    DrawPlacementPreview(_demo.Template, px, py, navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
+                    previewReason = JudgePreview(session, store, _demo.Template, px, py, out int painted);
+                    previewValid = previewReason == CrowdPlacementReject.None;
+                    DrawPlacementCells(store, painted, navCellVisual * 0.5f);
                     DrawEntityOutline(store, px, py, navCellVisual);
                     break;
                 case CrowdClickTool.Demolish when store != null:
@@ -172,29 +181,86 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _debugView?.Draw(session, _overlay);
 
         // HUD 全部读内核现成状态。
-        DrawHud(session, runtime, (previewShown, previewValid));
+        DrawHud(session, runtime, (previewShown, previewValid, previewReason));
     }
 
-    /// <summary>放置合法性(演示口径,只读结构仓现成数据):光标处无既有结构,且足迹包围格内
-    /// 无阻挡格(轴对齐包围盒近似足迹;正式语义在指令执行侧)。</summary>
-    private bool CanPlace(CrowdStructuresStore store, S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
+    /// <summary>预览足迹与 <see cref="S4DeployDemoRuntime"/> 提交的 placeStructure 同一形状。</summary>
+    private CrowdPlacementReject JudgePreview(
+        CrowdSimSession session,
+        CrowdStructuresStore store,
+        S4DeployDemoRuntime.StructureChoice tpl,
+        int xCm,
+        int yCm,
+        out int count)
     {
-        if (store.EntityAt(Fix64.FromInt(xCm), Fix64.FromInt(yCm)) >= 0) return false;
-        var (minX, minY, maxX, maxY) = FootprintVisual(tpl, xCm, yCm);
-        int navCellsPerSide = store.NavCellsPerSide, navCellSizeCm = store.NavCellSizeCm;
-        float cmPerMeter = WorldUnits.CmPerMeter;
-        int cx0 = Math.Clamp((int)Math.Floor(minX * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1), cy0 = Math.Clamp((int)Math.Floor(minY * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1);
-        int cx1 = Math.Clamp((int)Math.Floor(maxX * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1), cy1 = Math.Clamp((int)Math.Floor(maxY * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1);
-        for (int cy = cy0; cy <= cy1; cy++)
+        int index = store.TemplateIndexOf(tpl.Id);
+        if (index < 0) throw new InvalidOperationException($"未知结构模板 \"{tpl.Id}\"。");
+        var template = session.Config.Structures.Templates[index];
+        int x0 = xCm, y0 = yCm, x1 = 0, y1 = 0;
+        if (tpl.IsSpan)
         {
-            int row = cy * navCellsPerSide;
-            for (int cx = cx0; cx <= cx1; cx++)
-            {
-                if (store.Blocked[row + cx] != 0) return false;
-            }
+            x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
+            y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
+            x1 = xCm;
+            y1 = yCm;
+        }
+        else if (tpl.IsRoad)
+        {
+            x1 = xCm + tpl.RoadLengthCm;
+            y1 = yCm;
         }
 
-        return true;
+        var footprint = CrowdStructureFootprint.Make(
+            template, Fix64.FromInt(x0), Fix64.FromInt(y0), Fix64.FromInt(tpl.SizeCm), Fix64.FromInt(x1), Fix64.FromInt(y1));
+        return CrowdStructurePlacement.Judge(store, template, footprint, ref _previewCells, ref _previewFlags, out count);
+    }
+
+    private void DrawPlacementCells(CrowdStructuresStore store, int count, float thick)
+    {
+        EnsurePlaceColors();
+        if (_previewQuads.Length < count)
+        {
+            var grown = new Vector2[count][];
+            Array.Copy(_previewQuads, grown, _previewQuads.Length);
+            _previewQuads = grown;
+        }
+
+        float cell = WorldUnits.CmToM(store.NavCellSizeCm);
+        int side = store.NavCellsPerSide;
+        for (int i = 0; i < count; i++)
+        {
+            var pts = _previewQuads[i] ??= new Vector2[5];
+            int index = _previewCells[i];
+            int x = index % side;
+            int y = index / side;
+            float x0 = x * cell;
+            float y0 = y * cell;
+            pts[0] = new Vector2(x0, y0);
+            pts[1] = new Vector2(x0 + cell, y0);
+            pts[2] = new Vector2(x0 + cell, y0 + cell);
+            pts[3] = new Vector2(x0, y0 + cell);
+            pts[4] = pts[0];
+            byte flag = _previewFlags[i];
+            Vector4 color = (flag & CrowdStructurePlacement.FlagIllegal) != 0
+                ? _placeIllegal
+                : (flag & CrowdStructurePlacement.FlagAnchor) != 0
+                    ? _placeAnchor
+                    : (flag & CrowdStructurePlacement.FlagPortal) != 0
+                        ? _placePortal
+                        : _placeLegal;
+            _routeVisuals.AddPolylineShared(new RouteVisualId(PreviewCellBase.Value + i), pts, thick, color);
+        }
+    }
+
+    private void EnsurePlaceColors()
+    {
+        if (_placeColorsReady) return;
+        var deploy = _presentation.Deploy ?? throw new InvalidOperationException("部署演示缺少 deploy 配色。");
+        _placeLegal = CrowdPresentationConfig.Rgba(deploy.PlaceLegal, "deploy.placeLegal");
+        _placeIllegal = CrowdPresentationConfig.Rgba(deploy.PlaceIllegal, "deploy.placeIllegal");
+        _placeAnchor = CrowdPresentationConfig.Rgba(deploy.PlaceAnchor, "deploy.placeAnchor");
+        _placePortal = CrowdPresentationConfig.Rgba(deploy.PlacePortal, "deploy.placePortal");
+        _placeColorsReady = true;
     }
 
     private bool DrawEntityOutline(CrowdStructuresStore store, int xCm, int yCm, float navCellVisual)
@@ -207,93 +273,6 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             WorldUnits.CmToM(fp.MaxX.ToInt()), WorldUnits.CmToM(fp.MaxY.ToInt())), navCellVisual * 0.5f, RemoveOrange);
         return true;
     }
-
-    /// <summary>足迹包围盒(视觉米)。方形是中心 ± size/2，圆的 size 是半径，道路向 +X，连线用起点到光标。</summary>
-    private (float MinX, float MinY, float MaxX, float MaxY) FootprintVisual(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
-    {
-        if (tpl.IsRoad)
-        {
-            return (
-                WorldUnits.CmToM(xCm),
-                WorldUnits.CmToM(yCm - tpl.SizeCm / 2),
-                WorldUnits.CmToM(xCm + tpl.RoadLengthCm),
-                WorldUnits.CmToM(yCm + tpl.SizeCm / 2));
-        }
-
-        if (tpl.IsSpan)
-        {
-            int x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
-            int y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
-            int half = tpl.SizeCm / 2;
-            return (
-                WorldUnits.CmToM(Math.Min(x0, xCm) - half),
-                WorldUnits.CmToM(Math.Min(y0, yCm) - half),
-                WorldUnits.CmToM(Math.Max(x0, xCm) + half),
-                WorldUnits.CmToM(Math.Max(y0, yCm) + half));
-        }
-
-        float extent = tpl.IsDisc ? WorldUnits.CmToM(tpl.SizeCm) : WorldUnits.CmToM(tpl.SizeCm) * 0.5f;
-        float x = WorldUnits.CmToM(xCm);
-        float y = WorldUnits.CmToM(yCm);
-        return (x - extent, y - extent, x + extent, y + extent);
-    }
-
-    /// <summary>圆是半径环，条带是两端点之间、宽为 size 的扫掠带。方形仍是轴对齐盒。</summary>
-    private void DrawPlacementPreview(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm, float thick, Vector4 color)
-    {
-        if (tpl.IsDisc)
-        {
-            _routeVisuals.AddMarker(
-                DiscPreview,
-                new Vector2(WorldUnits.CmToM(xCm), WorldUnits.CmToM(yCm)),
-                RouteVisualMarkerShape.Ring,
-                WorldUnits.CmToM(tpl.SizeCm),
-                thick,
-                color);
-            return;
-        }
-
-        if (tpl.IsSpan)
-        {
-            int x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
-            int y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
-            AddBandOutline(PreviewOutline, x0, y0, xCm, yCm, tpl.SizeCm, thick, color);
-            return;
-        }
-
-        if (tpl.IsRoad)
-        {
-            AddBandOutline(PreviewOutline, xCm, yCm, xCm + tpl.RoadLengthCm, yCm, tpl.SizeCm, thick, color);
-            return;
-        }
-
-        AddRectOutline(PreviewOutline, FootprintVisual(tpl, xCm, yCm), thick, color);
-    }
-
-    private void AddBandOutline(RouteVisualId id, int x0Cm, int y0Cm, int x1Cm, int y1Cm, int widthCm, float thick, Vector4 color)
-    {
-        Fix64 x0 = Fix64.FromInt(x0Cm);
-        Fix64 y0 = Fix64.FromInt(y0Cm);
-        Fix64 ax = Fix64.FromInt(x1Cm) - x0;
-        Fix64 ay = Fix64.FromInt(y1Cm) - y0;
-        Fix64 length = CrowdFix.Hypot(ax, ay);
-        Fix64 degenerate = Fix64.FromRaw(430);
-        Fix64 ux = length > degenerate ? ax / length : Fix64.OneValue;
-        Fix64 uy = length > degenerate ? ay / length : Fix64.Zero;
-        Fix64 half = Fix64.FromInt(widthCm) / 2;
-        Fix64 ox = -uy * half;
-        Fix64 oy = ux * half;
-        Span<Vector2> pts = stackalloc Vector2[5];
-        pts[0] = BandCorner(x0 + ox, y0 + oy);
-        pts[1] = BandCorner(x0 + ax + ox, y0 + ay + oy);
-        pts[2] = BandCorner(x0 + ax - ox, y0 + ay - oy);
-        pts[3] = BandCorner(x0 - ox, y0 - oy);
-        pts[4] = pts[0];
-        _routeVisuals.AddPolyline(id, pts, thick, color);
-    }
-
-    private static Vector2 BandCorner(Fix64 xCm, Fix64 yCm) =>
-        new(WorldUnits.CmToM((float)xCm.ToDouble()), WorldUnits.CmToM((float)yCm.ToDouble()));
 
     private void AddRectOutline(RouteVisualId id, (float MinX, float MinY, float MaxX, float MaxY) rect, float thick, Vector4 color)
     {
@@ -376,7 +355,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         return !session.TryGetMaterializedNav(group.NavId, out _);
     }
 
-    internal void DrawHud(CrowdSimSession? session, CrowdSimulationRuntime? runtime, (bool Shown, bool Valid)? preview)
+    internal void DrawHud(CrowdSimSession? session, CrowdSimulationRuntime? runtime, (bool Shown, bool Valid, CrowdPlacementReject Reason)? preview)
     {
         var telemetry = session?.Telemetry;
         var report = session?.LastRebakeReport;
@@ -458,6 +437,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public int ReplayDiagnosticTick = -1;
         public CrowdSimDiagnosticSection ReplayDiagnostic;
         public bool BuildMode, PreviewKnown, PreviewShown, PreviewValid, Pending;
+        public CrowdPlacementReject PreviewReason;
         public int TemplateIndex, ViewMode;
         public int Tool, SpeedPermille, FixedHz, RebakeSlices;
         public bool PlaybackHeld, HasSpanAnchor;
@@ -485,7 +465,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             CrowdRebakeReport? report,
             CrowdSimulationRuntime? runtime,
             S4DeployDemoRuntime demo,
-            (bool Shown, bool Valid)? preview,
+            (bool Shown, bool Valid, CrowdPlacementReject Reason)? preview,
             bool pending,
             string templateLabel,
             string viewLabel,
@@ -542,7 +522,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 || !string.Equals(ViewLabel, viewLabel, StringComparison.Ordinal)) return false;
             bool previewKnown = preview.HasValue;
             if (PreviewKnown != previewKnown) return false;
-            if (previewKnown && (PreviewShown != preview!.Value.Shown || PreviewValid != preview.Value.Valid)) return false;
+            if (previewKnown && (PreviewShown != preview!.Value.Shown || PreviewValid != preview.Value.Valid || PreviewReason != preview.Value.Reason)) return false;
             return true;
         }
 
@@ -553,7 +533,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             CrowdRebakeReport? report,
             CrowdSimulationRuntime? runtime,
             S4DeployDemoRuntime demo,
-            (bool Shown, bool Valid)? preview,
+            (bool Shown, bool Valid, CrowdPlacementReject Reason)? preview,
             bool pending,
             string templateLabel,
             string viewLabel,
@@ -680,6 +660,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             {
                 PreviewShown = preview.Value.Shown;
                 PreviewValid = preview.Value.Valid;
+                PreviewReason = preview.Value.Reason;
             }
 
             if (runtime == null)
@@ -704,7 +685,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             string placeHint = preview == null
                 ? ""
                 : preview.Value.Shown
-                    ? (preview.Value.Valid ? deploy.PlaceOk : deploy.PlaceBlocked)
+                    ? PlaceHint(deploy, preview.Value.Reason)
                     : deploy.PlaceOffMap;
             string activity = BuildMode
                 ? deploy.BuildActivity
@@ -730,6 +711,27 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 .Replace("{activity}", activity, StringComparison.Ordinal)
                 .Replace("{pending}", pendingText, StringComparison.Ordinal);
         }
+    }
+
+    private static string PlaceHint(CrowdDeployPresentation deploy, CrowdPlacementReject reason) => reason switch
+    {
+        CrowdPlacementReject.None => deploy.PlaceOk,
+        CrowdPlacementReject.OutOfBounds => Hint(deploy.PlaceOutOfBounds, "placeOutOfBounds"),
+        CrowdPlacementReject.OverlapsStructure => Hint(deploy.PlaceOverlapsStructure, "placeOverlapsStructure"),
+        CrowdPlacementReject.OverlapsBlocked => Hint(deploy.PlaceOverlapsBlocked, "placeOverlapsBlocked"),
+        CrowdPlacementReject.SpanTerrain => Hint(deploy.PlaceSpanTerrain, "placeSpanTerrain"),
+        CrowdPlacementReject.AnchorTerrain => Hint(deploy.PlaceAnchorTerrain, "placeAnchorTerrain"),
+        _ => throw new InvalidOperationException($"未知放置拒绝原因 {reason}。"),
+    };
+
+    private static string Hint(string text, string key)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.deploy.{key} 必填。");
+        }
+
+        return text;
     }
 
     private static string FormatReplayAgreement(CrowdSimulationRuntime runtime)

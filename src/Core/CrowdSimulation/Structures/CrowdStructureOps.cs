@@ -89,6 +89,9 @@ public static class CrowdStructureOps
         if (tpl < 0) throw new InvalidOperationException($"未知结构模板 \"{templateId}\"。");
         var template = sim.Config.Structures.Templates[tpl];
         var fp = CrowdStructureFootprint.Make(template, xCm, yCm, sizeCm, toXCm, toYCm);
+        var reject = store.JudgePlacement(template, fp);
+        sim.LastPlacementReject = reject;
+        if (reject != CrowdPlacementReject.None) return null;
         int expire = store.ExpireTickOf(template, sim.TickCount);
         var (id, rect) = store.PlaceEntity(tpl, fp, expire);
         sim.Fog?.OnTruth(id); // 真相实体出现 → 索引/key/truthRev/不透明位
@@ -157,7 +160,7 @@ public static class CrowdStructureOps
         List<CrowdNavRebakeContextResult> dirty = sim.Planner is { } planner
             ? planner.Service.RunExclusive(call, RebakeExclusive)
             : RebakeExclusive(call);
-        // 真相重烘完调用 TruthChanged。全拷贝变体的数组不跟真相重烘一起改。
+        // 地面变更不改认知变体的数组。桥面变更已在锁内重烘过。
         sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;
         foreach (var r in dirty)
@@ -208,7 +211,14 @@ public static class CrowdStructureOps
     {
         var navs = call.Sim.Navs as Dictionary<int, NavContext>
             ?? throw new InvalidOperationException("导航表必须是 Dictionary，重烘按具体枚举器遍历。");
-        var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Rect, call.Cache);
+        var store = call.Sim.Structures!;
+        var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, store, call.Rect, call.Cache);
+        // 桥面变更时，已物化的变体在这把锁里按各自的场重烘。RebakeContexts 会换掉重烘结果缓冲。
+        if (store.LastMutationTouchedDeck)
+        {
+            call.Sim.Beliefs?.RebakeMaterialized(call.Rect, call.Cache);
+        }
+
         if (call.Sim.VerifyIncrementalNav)
         {
             CrowdNavRebake.VerifyAgainstFullBake(

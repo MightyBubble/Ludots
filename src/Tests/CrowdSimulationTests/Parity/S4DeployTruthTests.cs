@@ -254,6 +254,7 @@ public class S4DeployTruthTests
         // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
+        session.Structures.UseDeck(deck);
         // 桥进入认知仓，不进地面栅格与碰撞。id 按 span 列表顺序续在阻挡物之后。
         if (mapSurface.Bridges.Count > 0)
         {

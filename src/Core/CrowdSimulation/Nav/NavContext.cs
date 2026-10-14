@@ -72,6 +72,8 @@ public sealed class NavContext
     internal int[]? UnionParent;
     internal int[]? UnionDense;
     internal byte[]? ErodeRow;
+    internal byte[]? DeckWin;
+    internal byte[]? DeckEroded;
     internal readonly List<int> TileScratch = new(16);
     internal readonly HashSet<int> TileSeenScratch = new(16);
     internal readonly List<int> ChangedTileList = new(16);

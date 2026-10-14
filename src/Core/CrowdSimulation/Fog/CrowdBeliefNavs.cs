@@ -79,6 +79,21 @@ public sealed class CrowdBeliefNavs
     /// <summary>真相实体集变了:所有槽的分歧重推导(epoch 失效掩码)。</summary>
     public void TruthChanged() => Epoch++;
 
+    /// <summary>
+    /// 桥面变更后重烘已经物化的变体。调用方须持有导航锁。
+    /// 走 RebakeNav，不走 RebakeContexts：后者会换掉重烘结果缓冲。
+    /// </summary>
+    internal void RebakeMaterialized((int X0, int Y0, int X1, int Y1) rect, NavTileCache cache)
+    {
+        foreach (var slot in _slots.Values)
+        {
+            foreach (var nav in slot.Navs.Values)
+            {
+                CrowdNavRebake.RebakeNav(nav, _sim.RebakeSources!, FieldFor(slot, nav.LayerIndex), rect, cache);
+            }
+        }
+    }
+
     /// <summary>nav 号解析:&lt; Stride = 真相;否则取/懒建该槽变体。</summary>
     public NavContext Get(int id)
     {
