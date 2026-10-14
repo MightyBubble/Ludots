@@ -494,7 +494,19 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 烘焙函数是 `Ludots.Tool` 的 `CrowdNavSurfaceAuthoring.Bake`。它核对地图边长、`.height` 的包围盒和采样、群体配置里实际用到的 `profiles.cellSizeCm`。不读板的 `Grid.CellSizeCm`。地编网格按群体格边长读入，步长和格数必须和由此推出的导航格一致。对不上就报错。格上的 `HeightLevel`、`WaterHeightLevel`、`Water`、`Ramp`、`Blocked` 对这块地表没有含义，出现非零值就报哪一格、哪个字段，不丢掉。高度只认 `.height`。阻挡物仍是地图实体。群体运行时不读逻辑地形，也不读 `logicTerrainAsset`。
 
-跳跃候选是 `Bake` 的显式参数。命令和编辑器桥传空列表，不生成，也不从旧文件抄。目标里已有的跳跃候选更多时拒绝覆盖，所以对着仓库里那三份烘会失败。`--overwrite` 只跳过「文件已存在」，不跳过条数检查。生成规则在 Web 的 `linkBake.js`，这边还没接上。
+跳跃候选由 `CrowdNavSurfaceAuthoring.Bake` 生成。参数在 `Navigation/navmesh.json` 的 `maps.<mapId>.jumpLinkBake`，和 `terrainAreas` 同一层。地图没写这一节，烘焙结果里的候选是空的。写了这一节，命令 `nav bake-crowd-navsurface` 和编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface` 都按它生成。
+
+`maxGapCm` 是间隙最长多少厘米，`linkSpacingCm` 是去重桶的边长，单位也是厘米。烘焙时除以本图群体 `profiles.cellSizeCm` 得到格数；除不尽就抛错，报文带地图 id 和字段名。S1 格边长 6250 cm，`maxGapCm` 37500 是 6 格，`linkSpacingCm` 31250 是 5 格。`endpointMaxSlopeDeg` 是落脚点坡度上限（度），正切用机动档案 `maxSlopeDeg` 的同一式子 `Fix64Math.Tan(deg * Fix64.Deg2Rad)`。`endpointTerrain` 是可以起跳和落地的地形 id，`gapTerrain` 是间隙里必须出现的硬断地形 id，二者都要在本图 `terrainAreas` 的 `terrainId` 里。缺字段、未知地形 id、空数组、非正数在装载 `navmesh.json` 时抛错。这些字段都必填。
+
+谁能跳仍看机动档案 `profiles.<id>.jump`。落差在 `upCm` 以内的候选双向，超过 `upCm` 且不超过 `downCm` 的单向，再高的丢掉。`rangeNavCells` 是格距上限，`cost` 是链接代价。候选上没有单位。没有手摆链接。链接过滤只读 `.navsurface` 里的候选和这份 `jump`。`jumpLinkBake` 留在导航配置上，群体模拟步进不读它。
+
+桥面格不能当起跳点或落点。掩码来自地图上的 `CrowdSimulationBridgeSpan`，栅格复用运行时的 `UpperLayerBake.RasterizeDecks`。岸上延伸已经写在桥实体端点里，长度是 `structures.portalReachNavCells − 1` 格，对应 Web 的 `portalCells − 1`。
+
+地图写了 `jumpLinkBake` 却没有 `ContinuousHeightmap.asset` 时，烘焙报错。高度和坡度用 `NavHeightField.FromHeightmap`。
+
+和 Web 浮点导出的 `.navsurface` 比，格对的集合和顺序相同。落差是 Fix64 厘米四舍五入到整厘米，和浮点导出相差不超过 1 厘米。
+
+目标文件里的跳跃候选比这次烘焙多时，写入函数拒绝覆盖，报文写明两边的条数。`--overwrite` 只跳过「文件已存在」，不跳过条数检查。
 
 `VisualTerrainEditorDocument.PaintWorld` 仍只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 仍写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。
 
