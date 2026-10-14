@@ -120,7 +120,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
     }
 
     [Test]
-    public void FewerJumpCandidates_RefusesExistingTarget()
+    public void Rebake_ReplacesExistingTarget_EvenWithFewerJumpCandidates()
     {
         string path = Path.Combine(Path.GetTempPath(), "ludots-jump-" + Guid.NewGuid().ToString("N") + ".navsurface");
         try
@@ -146,24 +146,12 @@ public sealed class CrowdNavSurfaceAuthoringTests
                     },
                 ],
             };
-            using (FileStream created = File.Create(path))
-            {
-                NavSurfaceAsset.Write(existing, created);
-            }
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(path, baked));
-            Assert.That(ex!.Message, Does.Contain("1"));
-            Assert.That(ex.Message, Does.Contain("0"));
-            using (FileStream check = File.OpenRead(path))
-            {
-                Assert.That(NavSurfaceAsset.Read(check).JumpCandidates, Has.Length.EqualTo(1));
-            }
+            CrowdNavSurfaceAuthoring.WriteNavSurface(path, existing);
 
-            CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(path, existing);
-            using (FileStream replaced = File.OpenRead(path))
-            {
-                Assert.That(NavSurfaceAsset.Read(replaced).JumpCandidates, Has.Length.EqualTo(1));
-            }
+            CrowdNavSurfaceAuthoring.WriteNavSurface(path, baked);
+
+            using FileStream replaced = File.OpenRead(path);
+            Assert.That(NavSurfaceAsset.Read(replaced).JumpCandidates, Is.Empty);
         }
         finally
         {
