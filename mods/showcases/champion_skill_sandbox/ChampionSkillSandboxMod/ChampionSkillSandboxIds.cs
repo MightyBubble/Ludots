@@ -1,5 +1,4 @@
 using System;
-using EntityCommandPanelMod.UI;
 
 namespace ChampionSkillSandboxMod
 {
@@ -28,9 +27,6 @@ namespace ChampionSkillSandboxMod
         public const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         public const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         public const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
-        public const string ResetCameraRequestKey = "ChampionSkillSandbox.Camera.ResetRequested";
-        public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
-        public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
         public const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
         public const string RosterKeyChannel = "ChampionSkillSandbox.Collection.ActiveKey";
         public const string EzrealAlphaName = "Ezreal Alpha";
@@ -67,13 +63,6 @@ namespace ChampionSkillSandboxMod
             return string.Equals(mapId, StressMapId, StringComparison.Ordinal);
         }
 
-        public static bool IsCameraFollowMode(string? buttonId)
-        {
-            return string.Equals(buttonId, FreeCameraToolbarButtonId, StringComparison.Ordinal) ||
-                   string.Equals(buttonId, FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
-                   string.Equals(buttonId, FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal);
-        }
-
         public static bool IsSelectionViewButton(string? buttonId)
         {
             return string.Equals(buttonId, PlayerSelectionToolbarButtonId, StringComparison.Ordinal) ||
@@ -106,11 +95,6 @@ namespace ChampionSkillSandboxMod
             }
 
             return "P1 Live";
-        }
-
-        public static string ResolveDefaultShowcaseThemeId()
-        {
-            return EntityCommandPanelShowcaseTheme.ClassicId;
         }
     }
 }

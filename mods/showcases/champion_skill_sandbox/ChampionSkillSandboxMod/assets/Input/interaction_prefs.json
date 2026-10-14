@@ -1,0 +1,53 @@
+{
+  "keys": [
+    {
+      "id": "pref.camera.follow",
+      "values": [
+        "camera.follow.free",
+        "camera.follow.selection",
+        "camera.follow.group"
+      ]
+    },
+    {
+      "id": "pref.panel.theme",
+      "values": [
+        "EntityCommandPanel.Showcase.Classic",
+        "EntityCommandPanel.Showcase.Dota2",
+        "EntityCommandPanel.Showcase.LoL",
+        "EntityCommandPanel.Showcase.SC2"
+      ]
+    },
+    {
+      "id": "pref.selection.view",
+      "values": [
+        "ChampionSkillSandbox.Selection.Player.Live",
+        "ChampionSkillSandbox.Selection.Player.Formation",
+        "ChampionSkillSandbox.Selection.AI.Targets",
+        "ChampionSkillSandbox.Selection.AI.Formation",
+        "ChampionSkillSandbox.Selection.Command.Snapshot"
+      ]
+    },
+    {
+      "id": "pref.hud.bars",
+      "values": ["on", "off"]
+    },
+    {
+      "id": "pref.hud.text",
+      "values": ["on", "off"]
+    },
+    {
+      "id": "pref.hud.float",
+      "values": ["on", "off"]
+    }
+  ],
+  "defaults": {
+    "prefs": [
+      { "key": "pref.camera.follow", "value": "camera.follow.free" },
+      { "key": "pref.panel.theme", "value": "EntityCommandPanel.Showcase.Classic" },
+      { "key": "pref.selection.view", "value": "ChampionSkillSandbox.Selection.Player.Live" },
+      { "key": "pref.hud.bars", "value": "on" },
+      { "key": "pref.hud.text", "value": "on" },
+      { "key": "pref.hud.float", "value": "on" }
+    ]
+  }
+}

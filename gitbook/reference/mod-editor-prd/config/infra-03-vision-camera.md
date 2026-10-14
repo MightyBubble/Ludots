@@ -60,6 +60,8 @@
 
 触发图里切镜头用节点 `ActivateVirtualCamera`，`camera` 写预设 id。切过去会替换当前的镜头栈；预设要跟随集合时，跟的是跑这张图的玩家代表实体上的那个集合。视角模式（战术、跟随、观察）就是每个模式一个交互状态，状态的 `onActivated` 图里调这个节点。
 
+触发图把镜头拉回当前地图写好的默认机位，用节点 `ApplyMapDefaultCamera`。它不写 `camera`，读这张地图 `DefaultCamera` 的机位 id 和姿态，替换镜头栈，混合时长为 0。地图没写 `DefaultCamera.VirtualCameraId`，或点名的预设不存在，运行时失败。
+
 ## 5. 异常处理
 
 | 异常情形 | 系统响应 |
@@ -71,6 +73,8 @@
 | edgePanMarginPx ≤ 0 | 启动失败 |
 | `ActivateVirtualCamera` 没写 `camera` | 图编译失败，指明图和节点 |
 | `ActivateVirtualCamera` 点名的预设不存在 | 图运行时报 `VirtualCameraUnknown`，点名预设 id |
+| `ApplyMapDefaultCamera` 时地图没有 `DefaultCamera.VirtualCameraId` | 图运行时报 `MapDefaultCameraMissing` |
+| `ApplyMapDefaultCamera` 点名的预设不存在 | 图运行时报 `VirtualCameraUnknown`，点名预设 id |
 
 ## 6. 实例
 

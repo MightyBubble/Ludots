@@ -1,0 +1,1449 @@
+[
+  {
+    "id": "graph.champion.toolbar",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Champion.Camera.Free",
+        "action": "Champion.Camera.Free",
+        "start": "free_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Camera.Follow",
+        "action": "Champion.Camera.Follow",
+        "start": "fol_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Camera.Group",
+        "action": "Champion.Camera.Group",
+        "start": "grp_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Camera.Stress.Free",
+        "action": "Champion.Camera.Stress.Free",
+        "start": "sfree_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Camera.Stress.Follow",
+        "action": "Champion.Camera.Stress.Follow",
+        "start": "sfol_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Camera.Stress.Group",
+        "action": "Champion.Camera.Stress.Group",
+        "start": "sgrp_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "ResetCamera",
+        "action": "ResetCamera",
+        "start": "reset_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Theme.Dota2",
+        "action": "Champion.Theme.Dota2",
+        "start": "dota_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Theme.LoL",
+        "action": "Champion.Theme.LoL",
+        "start": "lol_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Theme.SC2",
+        "action": "Champion.Theme.SC2",
+        "start": "sc2_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.View.P1",
+        "action": "Champion.View.P1",
+        "start": "p1_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.View.P1F",
+        "action": "Champion.View.P1F",
+        "start": "p1f_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.View.AI",
+        "action": "Champion.View.AI",
+        "start": "ai_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.View.AIF",
+        "action": "Champion.View.AIF",
+        "start": "aif_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.View.CMD",
+        "action": "Champion.View.CMD",
+        "start": "cmd_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.Hud.Bars",
+        "action": "Champion.Stress.Hud.Bars",
+        "start": "bars_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.Hud.Text",
+        "action": "Champion.Stress.Hud.Text",
+        "start": "text_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.Hud.Float",
+        "action": "Champion.Stress.Hud.Float",
+        "start": "float_rep",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.TeamA.Dec",
+        "action": "Champion.Stress.TeamA.Dec",
+        "start": "adec_read",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.TeamA.Inc",
+        "action": "Champion.Stress.TeamA.Inc",
+        "start": "ainc_read",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.TeamB.Dec",
+        "action": "Champion.Stress.TeamB.Dec",
+        "start": "bdec_read",
+        "refire": "restart",
+        "budget": "single-slice"
+      },
+      {
+        "label": "Champion.Stress.TeamB.Inc",
+        "action": "Champion.Stress.TeamB.Inc",
+        "start": "binc_read",
+        "refire": "restart",
+        "budget": "single-slice"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "free_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "free_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.free"
+      },
+      {
+        "id": "free_tail",
+        "op": "ActivateVirtualCamera",
+        "camera": "ChampionSkillSandbox.Camera.Sandbox.Free"
+      },
+      {
+        "id": "fol_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "fol_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.selection"
+      },
+      {
+        "id": "fol_tail",
+        "op": "ActivateVirtualCamera",
+        "camera": "ChampionSkillSandbox.Camera.Sandbox.Selection"
+      },
+      {
+        "id": "grp_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "grp_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.group"
+      },
+      {
+        "id": "grp_tail",
+        "op": "ActivateVirtualCamera",
+        "camera": "ChampionSkillSandbox.Camera.Sandbox.Group"
+      },
+      {
+        "id": "sfree_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "sfree_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.free"
+      },
+      {
+        "id": "sfree_tail",
+        "op": "ActivateVirtualCamera",
+        "camera": "ChampionSkillSandbox.Camera.Stress.Free"
+      },
+      {
+        "id": "sfol_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "sfol_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.selection"
+      },
+      {
+        "id": "sfol_tail",
+        "op": "ActivateVirtualCamera",
+        "camera": "ChampionSkillSandbox.Camera.Stress.Selection"
+      },
+      {
+        "id": "sgrp_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "sgrp_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.group"
+      },
+      {
+        "id": "sgrp_tail",
+        "op": "ActivateVirtualCamera",
+        "camera": "ChampionSkillSandbox.Camera.Stress.Group"
+      },
+      {
+        "id": "reset_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "reset_set",
+        "op": "SetPref",
+        "key": "pref.camera.follow",
+        "value": "camera.follow.free"
+      },
+      {
+        "id": "reset_tail",
+        "op": "ApplyMapDefaultCamera"
+      },
+      {
+        "id": "dota_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "dota_set",
+        "op": "SetPref",
+        "key": "pref.panel.theme",
+        "value": "EntityCommandPanel.Showcase.Dota2"
+      },
+      {
+        "id": "lol_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "lol_set",
+        "op": "SetPref",
+        "key": "pref.panel.theme",
+        "value": "EntityCommandPanel.Showcase.LoL"
+      },
+      {
+        "id": "sc2_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "sc2_set",
+        "op": "SetPref",
+        "key": "pref.panel.theme",
+        "value": "EntityCommandPanel.Showcase.SC2"
+      },
+      {
+        "id": "p1_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "p1_set",
+        "op": "SetPref",
+        "key": "pref.selection.view",
+        "value": "ChampionSkillSandbox.Selection.Player.Live"
+      },
+      {
+        "id": "p1f_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "p1f_set",
+        "op": "SetPref",
+        "key": "pref.selection.view",
+        "value": "ChampionSkillSandbox.Selection.Player.Formation"
+      },
+      {
+        "id": "ai_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ai_set",
+        "op": "SetPref",
+        "key": "pref.selection.view",
+        "value": "ChampionSkillSandbox.Selection.AI.Targets"
+      },
+      {
+        "id": "aif_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "aif_set",
+        "op": "SetPref",
+        "key": "pref.selection.view",
+        "value": "ChampionSkillSandbox.Selection.AI.Formation"
+      },
+      {
+        "id": "cmd_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "cmd_set",
+        "op": "SetPref",
+        "key": "pref.selection.view",
+        "value": "ChampionSkillSandbox.Selection.Command.Snapshot"
+      },
+      {
+        "id": "bars_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "bars_slot",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "bars_check",
+        "op": "IsPref",
+        "key": "pref.hud.bars",
+        "value": "on"
+      },
+      {
+        "id": "bars_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "bars_off",
+        "op": "SetPref",
+        "key": "pref.hud.bars",
+        "value": "off"
+      },
+      {
+        "id": "bars_on",
+        "op": "SetPref",
+        "key": "pref.hud.bars",
+        "value": "on"
+      },
+      {
+        "id": "text_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "text_slot",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "text_check",
+        "op": "IsPref",
+        "key": "pref.hud.text",
+        "value": "on"
+      },
+      {
+        "id": "text_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "text_off",
+        "op": "SetPref",
+        "key": "pref.hud.text",
+        "value": "off"
+      },
+      {
+        "id": "text_on",
+        "op": "SetPref",
+        "key": "pref.hud.text",
+        "value": "on"
+      },
+      {
+        "id": "float_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "float_slot",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "float_check",
+        "op": "IsPref",
+        "key": "pref.hud.float",
+        "value": "on"
+      },
+      {
+        "id": "float_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "float_off",
+        "op": "SetPref",
+        "key": "pref.hud.float",
+        "value": "off"
+      },
+      {
+        "id": "float_on",
+        "op": "SetPref",
+        "key": "pref.hud.float",
+        "value": "on"
+      },
+      {
+        "id": "adec_read",
+        "op": "ReadMapVarInt",
+        "var": "stress.teamA.desired"
+      },
+      {
+        "id": "adec_delta",
+        "op": "ConstInt",
+        "intValue": -8
+      },
+      {
+        "id": "adec_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "adec_floor",
+        "op": "ConstInt",
+        "intValue": 8
+      },
+      {
+        "id": "adec_cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "adec_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "adec_lo",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamA.desired"
+      },
+      {
+        "id": "adec_hi",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamA.desired"
+      },
+      {
+        "id": "ainc_read",
+        "op": "ReadMapVarInt",
+        "var": "stress.teamA.desired"
+      },
+      {
+        "id": "ainc_delta",
+        "op": "ConstInt",
+        "intValue": 8
+      },
+      {
+        "id": "ainc_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "ainc_floor",
+        "op": "ConstInt",
+        "intValue": 8
+      },
+      {
+        "id": "ainc_cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "ainc_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "ainc_lo",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamA.desired"
+      },
+      {
+        "id": "ainc_hi",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamA.desired"
+      },
+      {
+        "id": "bdec_read",
+        "op": "ReadMapVarInt",
+        "var": "stress.teamB.desired"
+      },
+      {
+        "id": "bdec_delta",
+        "op": "ConstInt",
+        "intValue": -8
+      },
+      {
+        "id": "bdec_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "bdec_floor",
+        "op": "ConstInt",
+        "intValue": 8
+      },
+      {
+        "id": "bdec_cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "bdec_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "bdec_lo",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamB.desired"
+      },
+      {
+        "id": "bdec_hi",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamB.desired"
+      },
+      {
+        "id": "binc_read",
+        "op": "ReadMapVarInt",
+        "var": "stress.teamB.desired"
+      },
+      {
+        "id": "binc_delta",
+        "op": "ConstInt",
+        "intValue": 8
+      },
+      {
+        "id": "binc_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "binc_floor",
+        "op": "ConstInt",
+        "intValue": 8
+      },
+      {
+        "id": "binc_cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "binc_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "binc_lo",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamB.desired"
+      },
+      {
+        "id": "binc_hi",
+        "op": "WriteMapVarInt",
+        "var": "stress.teamB.desired"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "free_rep",
+        "fromPort": "next",
+        "to": "free_set"
+      },
+      {
+        "from": "free_set",
+        "fromPort": "next",
+        "to": "free_tail"
+      },
+      {
+        "from": "free_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "fol_rep",
+        "fromPort": "next",
+        "to": "fol_set"
+      },
+      {
+        "from": "fol_set",
+        "fromPort": "next",
+        "to": "fol_tail"
+      },
+      {
+        "from": "fol_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "grp_rep",
+        "fromPort": "next",
+        "to": "grp_set"
+      },
+      {
+        "from": "grp_set",
+        "fromPort": "next",
+        "to": "grp_tail"
+      },
+      {
+        "from": "grp_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "sfree_rep",
+        "fromPort": "next",
+        "to": "sfree_set"
+      },
+      {
+        "from": "sfree_set",
+        "fromPort": "next",
+        "to": "sfree_tail"
+      },
+      {
+        "from": "sfree_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "sfol_rep",
+        "fromPort": "next",
+        "to": "sfol_set"
+      },
+      {
+        "from": "sfol_set",
+        "fromPort": "next",
+        "to": "sfol_tail"
+      },
+      {
+        "from": "sfol_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "sgrp_rep",
+        "fromPort": "next",
+        "to": "sgrp_set"
+      },
+      {
+        "from": "sgrp_set",
+        "fromPort": "next",
+        "to": "sgrp_tail"
+      },
+      {
+        "from": "sgrp_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "reset_rep",
+        "fromPort": "next",
+        "to": "reset_set"
+      },
+      {
+        "from": "reset_set",
+        "fromPort": "next",
+        "to": "reset_tail"
+      },
+      {
+        "from": "reset_tail",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "dota_rep",
+        "fromPort": "next",
+        "to": "dota_set"
+      },
+      {
+        "from": "dota_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "lol_rep",
+        "fromPort": "next",
+        "to": "lol_set"
+      },
+      {
+        "from": "lol_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "sc2_rep",
+        "fromPort": "next",
+        "to": "sc2_set"
+      },
+      {
+        "from": "sc2_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "p1_rep",
+        "fromPort": "next",
+        "to": "p1_set"
+      },
+      {
+        "from": "p1_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "p1f_rep",
+        "fromPort": "next",
+        "to": "p1f_set"
+      },
+      {
+        "from": "p1f_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "ai_rep",
+        "fromPort": "next",
+        "to": "ai_set"
+      },
+      {
+        "from": "ai_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "aif_rep",
+        "fromPort": "next",
+        "to": "aif_set"
+      },
+      {
+        "from": "aif_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "cmd_rep",
+        "fromPort": "next",
+        "to": "cmd_set"
+      },
+      {
+        "from": "cmd_set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "bars_rep",
+        "fromPort": "next",
+        "to": "bars_slot"
+      },
+      {
+        "from": "bars_slot",
+        "fromPort": "next",
+        "to": "bars_check"
+      },
+      {
+        "from": "bars_check",
+        "fromPort": "next",
+        "to": "bars_jump"
+      },
+      {
+        "from": "bars_jump",
+        "fromPort": "true",
+        "to": "bars_off"
+      },
+      {
+        "from": "bars_jump",
+        "fromPort": "false",
+        "to": "bars_on"
+      },
+      {
+        "from": "bars_off",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "bars_on",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "text_rep",
+        "fromPort": "next",
+        "to": "text_slot"
+      },
+      {
+        "from": "text_slot",
+        "fromPort": "next",
+        "to": "text_check"
+      },
+      {
+        "from": "text_check",
+        "fromPort": "next",
+        "to": "text_jump"
+      },
+      {
+        "from": "text_jump",
+        "fromPort": "true",
+        "to": "text_off"
+      },
+      {
+        "from": "text_jump",
+        "fromPort": "false",
+        "to": "text_on"
+      },
+      {
+        "from": "text_off",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "text_on",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "float_rep",
+        "fromPort": "next",
+        "to": "float_slot"
+      },
+      {
+        "from": "float_slot",
+        "fromPort": "next",
+        "to": "float_check"
+      },
+      {
+        "from": "float_check",
+        "fromPort": "next",
+        "to": "float_jump"
+      },
+      {
+        "from": "float_jump",
+        "fromPort": "true",
+        "to": "float_off"
+      },
+      {
+        "from": "float_jump",
+        "fromPort": "false",
+        "to": "float_on"
+      },
+      {
+        "from": "float_off",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "float_on",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "adec_read",
+        "fromPort": "next",
+        "to": "adec_delta"
+      },
+      {
+        "from": "adec_delta",
+        "fromPort": "next",
+        "to": "adec_add"
+      },
+      {
+        "from": "adec_add",
+        "fromPort": "next",
+        "to": "adec_floor"
+      },
+      {
+        "from": "adec_floor",
+        "fromPort": "next",
+        "to": "adec_cmp"
+      },
+      {
+        "from": "adec_cmp",
+        "fromPort": "next",
+        "to": "adec_jump"
+      },
+      {
+        "from": "adec_jump",
+        "fromPort": "true",
+        "to": "adec_lo"
+      },
+      {
+        "from": "adec_jump",
+        "fromPort": "false",
+        "to": "adec_hi"
+      },
+      {
+        "from": "adec_lo",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "adec_hi",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "ainc_read",
+        "fromPort": "next",
+        "to": "ainc_delta"
+      },
+      {
+        "from": "ainc_delta",
+        "fromPort": "next",
+        "to": "ainc_add"
+      },
+      {
+        "from": "ainc_add",
+        "fromPort": "next",
+        "to": "ainc_floor"
+      },
+      {
+        "from": "ainc_floor",
+        "fromPort": "next",
+        "to": "ainc_cmp"
+      },
+      {
+        "from": "ainc_cmp",
+        "fromPort": "next",
+        "to": "ainc_jump"
+      },
+      {
+        "from": "ainc_jump",
+        "fromPort": "true",
+        "to": "ainc_lo"
+      },
+      {
+        "from": "ainc_jump",
+        "fromPort": "false",
+        "to": "ainc_hi"
+      },
+      {
+        "from": "ainc_lo",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "ainc_hi",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "bdec_read",
+        "fromPort": "next",
+        "to": "bdec_delta"
+      },
+      {
+        "from": "bdec_delta",
+        "fromPort": "next",
+        "to": "bdec_add"
+      },
+      {
+        "from": "bdec_add",
+        "fromPort": "next",
+        "to": "bdec_floor"
+      },
+      {
+        "from": "bdec_floor",
+        "fromPort": "next",
+        "to": "bdec_cmp"
+      },
+      {
+        "from": "bdec_cmp",
+        "fromPort": "next",
+        "to": "bdec_jump"
+      },
+      {
+        "from": "bdec_jump",
+        "fromPort": "true",
+        "to": "bdec_lo"
+      },
+      {
+        "from": "bdec_jump",
+        "fromPort": "false",
+        "to": "bdec_hi"
+      },
+      {
+        "from": "bdec_lo",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "bdec_hi",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "binc_read",
+        "fromPort": "next",
+        "to": "binc_delta"
+      },
+      {
+        "from": "binc_delta",
+        "fromPort": "next",
+        "to": "binc_add"
+      },
+      {
+        "from": "binc_add",
+        "fromPort": "next",
+        "to": "binc_floor"
+      },
+      {
+        "from": "binc_floor",
+        "fromPort": "next",
+        "to": "binc_cmp"
+      },
+      {
+        "from": "binc_cmp",
+        "fromPort": "next",
+        "to": "binc_jump"
+      },
+      {
+        "from": "binc_jump",
+        "fromPort": "true",
+        "to": "binc_lo"
+      },
+      {
+        "from": "binc_jump",
+        "fromPort": "false",
+        "to": "binc_hi"
+      },
+      {
+        "from": "binc_lo",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "binc_hi",
+        "fromPort": "next",
+        "to": "c1"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "free_rep",
+        "fromPort": "value",
+        "to": "free_set",
+        "toPort": "source"
+      },
+      {
+        "from": "fol_rep",
+        "fromPort": "value",
+        "to": "fol_set",
+        "toPort": "source"
+      },
+      {
+        "from": "grp_rep",
+        "fromPort": "value",
+        "to": "grp_set",
+        "toPort": "source"
+      },
+      {
+        "from": "sfree_rep",
+        "fromPort": "value",
+        "to": "sfree_set",
+        "toPort": "source"
+      },
+      {
+        "from": "sfol_rep",
+        "fromPort": "value",
+        "to": "sfol_set",
+        "toPort": "source"
+      },
+      {
+        "from": "sgrp_rep",
+        "fromPort": "value",
+        "to": "sgrp_set",
+        "toPort": "source"
+      },
+      {
+        "from": "reset_rep",
+        "fromPort": "value",
+        "to": "reset_set",
+        "toPort": "source"
+      },
+      {
+        "from": "dota_rep",
+        "fromPort": "value",
+        "to": "dota_set",
+        "toPort": "source"
+      },
+      {
+        "from": "lol_rep",
+        "fromPort": "value",
+        "to": "lol_set",
+        "toPort": "source"
+      },
+      {
+        "from": "sc2_rep",
+        "fromPort": "value",
+        "to": "sc2_set",
+        "toPort": "source"
+      },
+      {
+        "from": "p1_rep",
+        "fromPort": "value",
+        "to": "p1_set",
+        "toPort": "source"
+      },
+      {
+        "from": "p1f_rep",
+        "fromPort": "value",
+        "to": "p1f_set",
+        "toPort": "source"
+      },
+      {
+        "from": "ai_rep",
+        "fromPort": "value",
+        "to": "ai_set",
+        "toPort": "source"
+      },
+      {
+        "from": "aif_rep",
+        "fromPort": "value",
+        "to": "aif_set",
+        "toPort": "source"
+      },
+      {
+        "from": "cmd_rep",
+        "fromPort": "value",
+        "to": "cmd_set",
+        "toPort": "source"
+      },
+      {
+        "from": "bars_rep",
+        "fromPort": "value",
+        "to": "bars_check",
+        "toPort": "source"
+      },
+      {
+        "from": "bars_rep",
+        "fromPort": "value",
+        "to": "bars_check",
+        "toPort": "target"
+      },
+      {
+        "from": "bars_slot",
+        "fromPort": "value",
+        "to": "bars_check",
+        "toPort": "value"
+      },
+      {
+        "from": "bars_check",
+        "fromPort": "value",
+        "to": "bars_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "bars_rep",
+        "fromPort": "value",
+        "to": "bars_off",
+        "toPort": "source"
+      },
+      {
+        "from": "bars_rep",
+        "fromPort": "value",
+        "to": "bars_on",
+        "toPort": "source"
+      },
+      {
+        "from": "text_rep",
+        "fromPort": "value",
+        "to": "text_check",
+        "toPort": "source"
+      },
+      {
+        "from": "text_rep",
+        "fromPort": "value",
+        "to": "text_check",
+        "toPort": "target"
+      },
+      {
+        "from": "text_slot",
+        "fromPort": "value",
+        "to": "text_check",
+        "toPort": "value"
+      },
+      {
+        "from": "text_check",
+        "fromPort": "value",
+        "to": "text_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "text_rep",
+        "fromPort": "value",
+        "to": "text_off",
+        "toPort": "source"
+      },
+      {
+        "from": "text_rep",
+        "fromPort": "value",
+        "to": "text_on",
+        "toPort": "source"
+      },
+      {
+        "from": "float_rep",
+        "fromPort": "value",
+        "to": "float_check",
+        "toPort": "source"
+      },
+      {
+        "from": "float_rep",
+        "fromPort": "value",
+        "to": "float_check",
+        "toPort": "target"
+      },
+      {
+        "from": "float_slot",
+        "fromPort": "value",
+        "to": "float_check",
+        "toPort": "value"
+      },
+      {
+        "from": "float_check",
+        "fromPort": "value",
+        "to": "float_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "float_rep",
+        "fromPort": "value",
+        "to": "float_off",
+        "toPort": "source"
+      },
+      {
+        "from": "float_rep",
+        "fromPort": "value",
+        "to": "float_on",
+        "toPort": "source"
+      },
+      {
+        "from": "adec_read",
+        "fromPort": "value",
+        "to": "adec_add",
+        "toPort": "a"
+      },
+      {
+        "from": "adec_delta",
+        "fromPort": "value",
+        "to": "adec_add",
+        "toPort": "b"
+      },
+      {
+        "from": "adec_add",
+        "fromPort": "value",
+        "to": "adec_cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "adec_floor",
+        "fromPort": "value",
+        "to": "adec_cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "adec_cmp",
+        "fromPort": "value",
+        "to": "adec_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "adec_floor",
+        "fromPort": "value",
+        "to": "adec_lo",
+        "toPort": "value"
+      },
+      {
+        "from": "adec_add",
+        "fromPort": "value",
+        "to": "adec_hi",
+        "toPort": "value"
+      },
+      {
+        "from": "ainc_read",
+        "fromPort": "value",
+        "to": "ainc_add",
+        "toPort": "a"
+      },
+      {
+        "from": "ainc_delta",
+        "fromPort": "value",
+        "to": "ainc_add",
+        "toPort": "b"
+      },
+      {
+        "from": "ainc_add",
+        "fromPort": "value",
+        "to": "ainc_cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "ainc_floor",
+        "fromPort": "value",
+        "to": "ainc_cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "ainc_cmp",
+        "fromPort": "value",
+        "to": "ainc_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "ainc_floor",
+        "fromPort": "value",
+        "to": "ainc_lo",
+        "toPort": "value"
+      },
+      {
+        "from": "ainc_add",
+        "fromPort": "value",
+        "to": "ainc_hi",
+        "toPort": "value"
+      },
+      {
+        "from": "bdec_read",
+        "fromPort": "value",
+        "to": "bdec_add",
+        "toPort": "a"
+      },
+      {
+        "from": "bdec_delta",
+        "fromPort": "value",
+        "to": "bdec_add",
+        "toPort": "b"
+      },
+      {
+        "from": "bdec_add",
+        "fromPort": "value",
+        "to": "bdec_cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "bdec_floor",
+        "fromPort": "value",
+        "to": "bdec_cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "bdec_cmp",
+        "fromPort": "value",
+        "to": "bdec_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "bdec_floor",
+        "fromPort": "value",
+        "to": "bdec_lo",
+        "toPort": "value"
+      },
+      {
+        "from": "bdec_add",
+        "fromPort": "value",
+        "to": "bdec_hi",
+        "toPort": "value"
+      },
+      {
+        "from": "binc_read",
+        "fromPort": "value",
+        "to": "binc_add",
+        "toPort": "a"
+      },
+      {
+        "from": "binc_delta",
+        "fromPort": "value",
+        "to": "binc_add",
+        "toPort": "b"
+      },
+      {
+        "from": "binc_add",
+        "fromPort": "value",
+        "to": "binc_cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "binc_floor",
+        "fromPort": "value",
+        "to": "binc_cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "binc_cmp",
+        "fromPort": "value",
+        "to": "binc_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "binc_floor",
+        "fromPort": "value",
+        "to": "binc_lo",
+        "toPort": "value"
+      },
+      {
+        "from": "binc_add",
+        "fromPort": "value",
+        "to": "binc_hi",
+        "toPort": "value"
+      }
+    ]
+  }
+]

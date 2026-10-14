@@ -1707,13 +1707,7 @@ namespace EntityCommandPanelMod.UI
 
         private string ResolveShowcaseThemeId()
         {
-            if (_engine.GlobalContext.TryGetValue(EntityCommandPanelShowcaseTheme.ContextKey, out object? themeObj) &&
-                themeObj is string themeId)
-            {
-                return EntityCommandPanelShowcaseTheme.Normalize(themeId, EntityCommandPanelShowcaseTheme.ClassicId);
-            }
-
-            return EntityCommandPanelShowcaseTheme.ClassicId;
+            return EntityCommandPanelShowcaseTheme.ReadActive(_engine);
         }
 
         private static string NormalizeColor(string? value, string fallback)

@@ -375,6 +375,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SubmitEngageBatch or
                 GraphNodeOp.SubmitResponseChainOrder or
                 GraphNodeOp.ActivateVirtualCamera or
+                GraphNodeOp.ApplyMapDefaultCamera or
                 GraphNodeOp.BindQueryCollection or
                 GraphNodeOp.ReadCalendarEnabled or
                 GraphNodeOp.ReadCalendarDayIndex or
@@ -1009,6 +1010,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
             Register(GraphNodeOp.SubmitResponseChainOrder, HandleSubmitResponseChainOrder, "SubmitResponseChainOrder graph opcode.");
             Register(GraphNodeOp.ActivateVirtualCamera, HandleActivateVirtualCamera, "ActivateVirtualCamera graph opcode.");
+            Register(GraphNodeOp.ApplyMapDefaultCamera, HandleApplyMapDefaultCamera, "ApplyMapDefaultCamera graph opcode.");
             Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
             Register(GraphNodeOp.QueryFilterSelectable, HandleQueryFilterSelectable, "QueryFilterSelectable graph opcode.");
@@ -2038,6 +2040,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleActivateVirtualCamera(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.ActivateVirtualCamera(s.Caster, ins.Imm);
+        }
+
+        private static void HandleApplyMapDefaultCamera(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ApplyMapDefaultCamera(s.Caster);
         }
 
         private static void HandleSubmitEngageBatch(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

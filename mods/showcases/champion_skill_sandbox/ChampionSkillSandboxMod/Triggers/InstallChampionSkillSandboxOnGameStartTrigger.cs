@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using ChampionSkillSandboxMod.Runtime;
 using ChampionSkillSandboxMod.Systems;
-using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
@@ -43,10 +42,6 @@ namespace ChampionSkillSandboxMod.Triggers
             }
 
             engine.GlobalContext[InstalledKey] = true;
-            var stressControl = new ChampionSkillStressControlState();
-            var stressTelemetry = new ChampionSkillStressTelemetry();
-            engine.GlobalContext[ChampionSkillStressControlState.GlobalKey] = stressControl;
-            engine.GlobalContext[ChampionSkillStressTelemetry.GlobalKey] = stressTelemetry;
             engine.InsertSystemBeforeRequired<Physics2DSimulationSystem>(
                 new ChampionSkillPhysicsAuthoringSystem(engine),
                 SystemGroup.InputCollection);
@@ -61,21 +56,18 @@ namespace ChampionSkillSandboxMod.Triggers
                 if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue spawnQueue)
                 {
                     engine.RegisterSystem(
-                        new ChampionSkillStressSpawnSystem(engine, spawnQueue, stressControl, stressTelemetry),
+                        new ChampionSkillStressSpawnSystem(engine, spawnQueue),
                         SystemGroup.InputCollection);
                     engine.RegisterSystem(
-                        new ChampionSkillStressCombatSystem(engine, orders, stressTelemetry),
+                        new ChampionSkillStressCombatSystem(engine, orders),
                         SystemGroup.InputCollection);
                 }
             }
 
-            EntityCommandPanelToolbarComposer.Require(engine).RegisterTail(
-                ChampionSkillSandboxToolbarTail.ToolbarId,
-                new ChampionSkillSandboxToolbarTail(engine));
             engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 
-            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime and toolbar registered.");
+            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime registered.");
             return Task.CompletedTask;
         }
     }

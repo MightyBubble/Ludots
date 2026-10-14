@@ -90,6 +90,16 @@ namespace Ludots.Core.Input.Interaction
 
         public bool IsContextValued(int keyId) => _contextValuedKeys.Contains(keyId);
 
+        public IReadOnlyList<int> AllowedValueIds(int keyId)
+        {
+            if (!_allowedByKey.TryGetValue(keyId, out int[]? allowed))
+            {
+                throw new InvalidOperationException($"InteractionPref key id {keyId} is not declared.");
+            }
+
+            return allowed;
+        }
+
         public bool Allows(int keyId, int valueId)
         {
             if (!_allowedByKey.TryGetValue(keyId, out int[]? allowed))

@@ -21,7 +21,6 @@ namespace EntityCommandPanelMod.Runtime
         private readonly GameEngine _engine;
         private readonly object _gate = new();
         private readonly List<Contributor> _contributors = new();
-        private readonly Dictionary<string, IEntityCommandPanelToolbarTail> _tails = new(StringComparer.Ordinal);
         private EntityCommandPanelToolbarCatalog? _catalog;
         private EntityCommandPanelDataToolbarProvider? _data;
 
@@ -64,42 +63,7 @@ namespace EntityCommandPanelMod.Runtime
                 }
 
                 _catalog = catalog;
-                _data ??= new EntityCommandPanelDataToolbarProvider(_engine, catalog, CommandPanelId, TailFor);
-                foreach (string toolbarId in _tails.Keys)
-                {
-                    if (!catalog.ContainsToolbar(toolbarId))
-                    {
-                        throw new InvalidOperationException(
-                            $"'{EntityCommandPanelToolbarCatalog.RelativePath}' toolbar '{toolbarId}' is not declared, so its tail cannot bind.");
-                    }
-                }
-            }
-        }
-
-        public void RegisterTail(string toolbarId, IEntityCommandPanelToolbarTail tail)
-        {
-            if (string.IsNullOrWhiteSpace(toolbarId))
-            {
-                throw new ArgumentException("Toolbar id is required.", nameof(toolbarId));
-            }
-
-            ArgumentNullException.ThrowIfNull(tail);
-            EnsureCatalog();
-            lock (_gate)
-            {
-                if (!_catalog!.ContainsToolbar(toolbarId))
-                {
-                    throw new InvalidOperationException(
-                        $"'{EntityCommandPanelToolbarCatalog.RelativePath}' toolbar '{toolbarId}' is not declared, so its tail cannot bind.");
-                }
-
-                if (_tails.ContainsKey(toolbarId))
-                {
-                    throw new InvalidOperationException(
-                        $"'{EntityCommandPanelToolbarCatalog.RelativePath}' toolbar '{toolbarId}' already has a tail.");
-                }
-
-                _tails.Add(toolbarId, tail);
+                _data ??= new EntityCommandPanelDataToolbarProvider(_engine, catalog, CommandPanelId);
             }
         }
 
@@ -232,14 +196,6 @@ namespace EntityCommandPanelMod.Runtime
             return Resolve()
                 ?? throw new InvalidOperationException(
                     $"'{EntityCommandPanelToolbarCatalog.RelativePath}' panel '{CommandPanelId}' has no toolbar.");
-        }
-
-        private IEntityCommandPanelToolbarTail? TailFor(string toolbarId)
-        {
-            lock (_gate)
-            {
-                return _tails.TryGetValue(toolbarId, out IEntityCommandPanelToolbarTail? tail) ? tail : null;
-            }
         }
 
         private void EnsureCatalog()
