@@ -73,7 +73,6 @@ namespace EntityCommandPanelMod.Runtime
 
             var toolbars = new ToolbarDeclaration[merged.Count];
             var toolbarIds = new HashSet<string>(StringComparer.Ordinal);
-            var buttonIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < merged.Count; i++)
             {
                 toolbars[i] = ParseToolbar(engine, merged[i], prefs, profiles, actionIds, panels);
@@ -81,18 +80,66 @@ namespace EntityCommandPanelMod.Runtime
                 {
                     throw Error($"toolbar '{toolbars[i].Id}' is declared more than once.");
                 }
+            }
 
-                for (int b = 0; b < toolbars[i].Buttons.Length; b++)
+            // Activate resolves a button id on the one visible toolbar. The same id may
+            // therefore appear on two toolbars only when those two cannot be visible together.
+            for (int i = 0; i < toolbars.Length; i++)
+            {
+                for (int j = i + 1; j < toolbars.Length; j++)
                 {
-                    string buttonId = toolbars[i].Buttons[b].Id;
-                    if (!buttonIds.Add(buttonId))
+                    if (CanBeVisibleTogether(toolbars[i], toolbars[j]))
                     {
-                        throw Error($"button '{buttonId}' is declared more than once.");
+                        RejectSharedButtonIds(toolbars[i], toolbars[j]);
                     }
                 }
             }
 
             return new EntityCommandPanelToolbarCatalog(panels, toolbars);
+        }
+
+        private static bool CanBeVisibleTogether(ToolbarDeclaration left, ToolbarDeclaration right)
+        {
+            if (!string.Equals(left.Panel, right.Panel, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (left.Maps.Length == 0 || right.Maps.Length == 0)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < left.Maps.Length; i++)
+            {
+                for (int j = 0; j < right.Maps.Length; j++)
+                {
+                    if (string.Equals(left.Maps[i], right.Maps[j], StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static void RejectSharedButtonIds(ToolbarDeclaration left, ToolbarDeclaration right)
+        {
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < left.Buttons.Length; i++)
+            {
+                ids.Add(left.Buttons[i].Id);
+            }
+
+            for (int i = 0; i < right.Buttons.Length; i++)
+            {
+                if (ids.Contains(right.Buttons[i].Id))
+                {
+                    throw Error(
+                        $"button '{right.Buttons[i].Id}' is declared on both '{left.Id}' and '{right.Id}', which can be visible together.");
+                }
+            }
         }
 
         public bool ContainsPanel(string panelId)

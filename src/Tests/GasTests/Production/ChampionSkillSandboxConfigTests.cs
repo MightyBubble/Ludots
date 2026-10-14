@@ -386,7 +386,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[9].Active, Is.True);
             Assert.That(buttons[7].Active, Is.False);
@@ -395,7 +395,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(toolbar.Subtitle, Does.Contain("Theme SC2"));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[7].Active, Is.True);
             Assert.That(buttons[9].Active, Is.False);
@@ -403,7 +403,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(toolbar.Subtitle, Does.Contain("Theme Dota2"));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.LolId);
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[8].Active, Is.True);
             Assert.That(buttons[7].Active, Is.False);
@@ -421,7 +421,7 @@ namespace Ludots.Tests.GAS.Production
             engine.World.Add(garenAlpha, new CameraFollowWeight { Value = 3f });
 
             toolbar.Activate(FollowSelectionToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[3].Active, Is.False);
             Assert.That(buttons[4].Active, Is.True);
@@ -430,7 +430,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm.HasValue, Is.True);
 
             toolbar.Activate(FollowSelectionGroupToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[5].Active, Is.True);
             engine.AuthorityCamera().Update(DeltaTime);
@@ -443,7 +443,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm!.Value.Y, Is.EqualTo(expectedGroup.Y).Within(0.01f));
 
             toolbar.Activate(FreeCameraToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[3].Active, Is.True);
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
@@ -566,6 +566,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 toolbar.Activate(StressTeamAIncreaseToolbarButtonId);
                 toolbar.Activate(StressTeamBIncreaseToolbarButtonId);
+                TickUntilNextFixedTick(engine);
             }
 
             TickUntil(engine, () =>
@@ -582,7 +583,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("RenderDebugState missing.");
             Assert.That(debug.DrawWorldHudBars, Is.True);
             toolbar.Activate(StressHudBarToggleToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             Assert.That(debug.DrawWorldHudBars, Is.False);
             Assert.That(debug.DrawWorldHudText, Is.True);
             Assert.That(debug.DrawCombatText, Is.True);
@@ -592,7 +593,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(toolbar.Subtitle, Does.Contain("HUD -TF"));
 
             toolbar.Activate(AiTargetToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[14].Active, Is.False);
             Assert.That(buttons[16].Active, Is.True);
@@ -691,12 +692,12 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2);
 
             toolbar.Activate(PlayerSelectionToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
             Assert.That(ReadEntityName(engine.World, Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
 
             toolbar.Activate(PlayerFormationToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             string[] playerFormation = ReadViewedSelectionNames(engine);
             Assert.That(playerFormation.Length, Is.GreaterThanOrEqualTo(48));
             Assert.That(playerFormation, Does.Contain("StressWarriorA"));
@@ -705,7 +706,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () =>
             {
                 toolbar.Activate(AiTargetToolbarButtonId);
-                Tick(engine, 2);
+                TickUntilNextFixedTick(engine);
                 return ReadViewedSelectionNames(engine).Length > 0;
             }, maxFrames: 120);
             string[] aiTargets = ReadViewedSelectionNames(engine);
@@ -713,7 +714,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(aiTargets.Any(name => name.EndsWith("A", StringComparison.Ordinal)), Is.True, "AI target selection should point at opposing team members.");
 
             toolbar.Activate(AiFormationToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             string[] aiFormation = ReadViewedSelectionNames(engine);
             Assert.That(aiFormation.Length, Is.GreaterThanOrEqualTo(48));
             Assert.That(aiFormation, Does.Contain("StressWarriorB"));
@@ -744,7 +745,7 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 4);
 
             toolbar.Activate(CommandSnapshotToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressLaserMageA" }));
         }
 

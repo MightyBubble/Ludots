@@ -594,7 +594,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.LolId);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "001_lol_ezreal", EntityCommandPanelShowcaseTheme.LolId);
             timeline.Add("[T+001] Theme=LoL | Ezreal Alpha selected | bottom bar restyled into Summoner-Rift-style release panel");
 
@@ -602,7 +602,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(IndicatorModeId);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "002_dota2_geomancer", EntityCommandPanelShowcaseTheme.Dota2Id);
             timeline.Add("[T+002] Theme=Dota2 | Geomancer Alpha selected | ornate six-slot console showcase captured under indicator cast mode");
 
@@ -610,7 +610,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(PressReleaseModeId);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "003_sc2_spell_engineer", EntityCommandPanelShowcaseTheme.Sc2Id);
             timeline.Add("[T+003] Theme=SC2 | Spell Engineer Alpha selected | command-card showcase captured under press-release cast mode");
 
