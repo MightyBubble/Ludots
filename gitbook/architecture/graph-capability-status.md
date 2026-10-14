@@ -207,7 +207,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后只剩数据：再加一个取值和一个交互状态，规则图不用改 |
 | 12 | 指示器在按下后的下一拍才出现 | **已改**：按下那一拍，技能引用的形状 presenter 已经挂上；线形状仍是 `aim.range` 和 `aim.line` |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
-| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：新演员的槽位、落点、射程、目标、朝向和摇杆清零写在 `graph.aim.prepare_actor`，槽位写成 0。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 也调用它。四个重绑图在替换 `aim.actors` 之前调用 `graph.aim.read_held_slot`：没有旧演员时返回 0，多于一个演员时 `Fail`（`AimActorsNotSingular`），恰好一个时读出 `aim.slot`。`prepare_actor` 之后、刷新手势之前，把这个数写回新演员的 `aim.slot`。刷新手势派 `Aim.Shape.Bind`，不重入替换前还开着的那张形状图 |
+| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：新演员的槽位、落点、射程、目标、朝向和摇杆清零写在 `graph.aim.prepare_actor`，槽位写成 0。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 也调用它。四个重绑图在替换 `aim.actors` 之前调用 `graph.aim.read_held_slot`：没有旧演员，或那个演员没有整数黑板时返回 0，多于一个演员时 `Fail`（`AimActorsNotSingular`），恰好一个且有黑板时读出 `aim.slot`。`prepare_actor` 之后、刷新手势之前，把这个数写回新演员的 `aim.slot`。刷新手势派 `Aim.Shape.Bind`，不重入替换前还开着的那张形状图 |
 | 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
 
 **待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
