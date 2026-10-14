@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Arch.Core;
+using Arch.Relationships;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -9,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -74,6 +76,39 @@ namespace Ludots.Tests.GAS
             Assert.That(instance.Target, Is.EqualTo(target));
             Assert.That(instance.TypeId, Is.EqualTo(socialBondTypeId));
             Assert.That(instance.Revision, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DestroyingSource_DropsInverseOnSurvivorAndValidatesSave()
+        {
+            using World world = World.Create();
+            RelationshipReverseIndex index = CreateIndexedRuntime(world, out RelationshipRuntime runtime, out int typeId);
+            Entity source = world.Create();
+            Entity target = world.Create();
+            runtime.EnsureLink(source, target, typeId);
+
+            world.Destroy(source);
+
+            Assert.That(world.IsAlive(target), Is.True);
+            Assert.DoesNotThrow(() => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+            Assert.That(index.Compact(), Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test]
+        public void DestroyingTarget_DropsForwardEdgeOnSurvivorAndValidatesSave()
+        {
+            using World world = World.Create();
+            RelationshipReverseIndex index = CreateIndexedRuntime(world, out RelationshipRuntime runtime, out int typeId);
+            Entity source = world.Create();
+            Entity target = world.Create();
+            runtime.EnsureLink(source, target, typeId);
+
+            world.Destroy(target);
+
+            Assert.That(world.IsAlive(source), Is.True);
+            Assert.That(world.Has<Relationship<RelationshipEdgeSet>>(source), Is.False);
+            Assert.DoesNotThrow(() => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+            Assert.That(index.Compact(), Is.GreaterThanOrEqualTo(1));
         }
 
         [Test]
@@ -392,6 +427,25 @@ namespace Ludots.Tests.GAS
             int Iterations,
             double ElapsedMs,
             long AllocatedBytes);
+
+        private static RelationshipReverseIndex CreateIndexedRuntime(
+            World world,
+            out RelationshipRuntime runtime,
+            out int typeId)
+        {
+            var types = new RelationshipTypeRegistry();
+            var index = new RelationshipReverseIndex(world);
+            runtime = new RelationshipRuntime(
+                world,
+                types,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(),
+                index);
+            typeId = types.Register("Tests.Relationship.DestroyCleanup");
+            return index;
+        }
 
         private static RelationshipRuntime CreateRuntime(World world, out RelationshipTypeRegistry types)
         {

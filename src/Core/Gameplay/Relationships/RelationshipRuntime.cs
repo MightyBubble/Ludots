@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.Relationships
         private int _identityOwnsTypeId = -1;
         private int _identityMemberOfTypeId = -1;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
+        private Entity _destroyingEndpoint;
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
         public RelationshipRuntime(
@@ -47,6 +48,152 @@ namespace Ludots.Core.Gameplay.Relationships
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
             _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
+            _world.SubscribeEntityDestroyed(OnEndpointDestroyed);
+        }
+
+        private void OnEndpointDestroyed(in Entity entity)
+        {
+            // The callback runs before the entity leaves its archetype. Its own relationship
+            // components disappear with it. Survivors still hold the inverse key or the forward
+            // edge, and save validation rejects that dead handle. Edit the survivor only.
+            // The reverse index keeps dead rows until Compact; incoming queries already skip them.
+            Entity previous = _destroyingEndpoint;
+            _destroyingEndpoint = entity;
+            try
+            {
+                ReleaseOutgoing(entity);
+                ReleaseIncoming(entity);
+            }
+            finally
+            {
+                _destroyingEndpoint = previous;
+            }
+        }
+
+        private void ReleaseOutgoing(Entity source)
+        {
+            ref Relationship<RelationshipEdgeSet> relationships =
+                ref _world.TryGetRef<Relationship<RelationshipEdgeSet>>(source, out bool exists);
+            if (!exists || relationships == null || relationships.Count == 0)
+            {
+                return;
+            }
+
+            var edges = new List<(Entity Target, int TypeId)>();
+            foreach ((Entity target, RelationshipEdgeSet set) in relationships)
+            {
+                for (int i = 0; i < set.Count; i++)
+                {
+                    if (set.TryGetAt(i, out int typeId, out _))
+                    {
+                        edges.Add((target, typeId));
+                    }
+                }
+            }
+
+            for (int i = 0; i < edges.Count; i++)
+            {
+                Entity target = edges[i].Target;
+                int typeId = edges[i].TypeId;
+                RemoveMaterializedRelationshipEntity(source, target, typeId);
+                DropInverse(target, source);
+            }
+        }
+
+        private void ReleaseIncoming(Entity target)
+        {
+            ref Relationship<InRelationship> incoming =
+                ref _world.TryGetRef<Relationship<InRelationship>>(target, out bool exists);
+            if (!exists || incoming == null || incoming.Count == 0)
+            {
+                return;
+            }
+
+            var sources = new List<Entity>(incoming.Count);
+            foreach ((Entity source, InRelationship _) in incoming)
+            {
+                sources.Add(source);
+            }
+
+            for (int i = 0; i < sources.Count; i++)
+            {
+                ReleaseForwardEdges(sources[i], target);
+            }
+        }
+
+        private void ReleaseForwardEdges(Entity source, Entity target)
+        {
+            if (!IsAliveInRuntimeWorld(source) || source == target ||
+                !TryGetEdgeSet(source, target, out RelationshipEdgeSet set) || set.Count == 0)
+            {
+                return;
+            }
+
+            var typeIds = new List<int>(set.Count);
+            for (int i = 0; i < set.Count; i++)
+            {
+                if (set.TryGetAt(i, out int typeId, out _))
+                {
+                    typeIds.Add(typeId);
+                }
+            }
+
+            for (int i = 0; i < typeIds.Count; i++)
+            {
+                int typeId = typeIds[i];
+                if (!set.Remove(typeId))
+                {
+                    continue;
+                }
+
+                RemoveMaterializedRelationshipEntity(source, target, typeId);
+            }
+
+            if (!IsAliveInRuntimeWorld(source))
+            {
+                return;
+            }
+
+            ref Relationship<RelationshipEdgeSet> relationships =
+                ref _world.TryGetRef<Relationship<RelationshipEdgeSet>>(source, out bool stillExists);
+            if (!stillExists || relationships == null)
+            {
+                return;
+            }
+
+            if (set.Count == 0)
+            {
+                relationships.Remove(target);
+                if (relationships.Count == 0)
+                {
+                    _world.Remove<Relationship<RelationshipEdgeSet>>(source);
+                }
+            }
+            else
+            {
+                _world.SetRelationship(source, target, set);
+            }
+        }
+
+        private void DropInverse(Entity holder, Entity key)
+        {
+            if (!IsAliveInRuntimeWorld(holder))
+            {
+                return;
+            }
+
+            ref Relationship<InRelationship> incoming =
+                ref _world.TryGetRef<Relationship<InRelationship>>(holder, out bool exists);
+            if (!exists || incoming == null)
+            {
+                return;
+            }
+
+            incoming.Remove(key);
+            if (incoming.Count == 0 && holder != _destroyingEndpoint)
+            {
+                _world.Remove<Relationship<InRelationship>>(holder);
+            }
         }
 
         public void BindParticipantIdentityProjection(OwnershipResolver ownership, int ownsTypeId, int memberOfTypeId)
