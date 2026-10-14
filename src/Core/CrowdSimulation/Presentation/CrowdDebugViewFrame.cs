@@ -74,7 +74,6 @@ internal sealed class CrowdDebugViewFrame
     internal bool Blocked;
     internal bool JumpLinks;
     internal bool Belief;
-    internal bool TerrainTypes;
     internal int UnitColorMode;
     internal int LayerIndex;
     internal int RadiusIndex;
@@ -98,7 +97,6 @@ internal sealed class CrowdDebugViewFrame
         Blocked = config.Overlays.Blocked;
         JumpLinks = config.Overlays.JumpLinks;
         Belief = config.Overlays.Belief;
-        TerrainTypes = config.Overlays.TerrainTypes;
         UnitColorMode = config.UnitColorMode;
         LayerIndex = config.Inspect.LayerIndex;
         RadiusIndex = config.Inspect.RadiusIndex;
@@ -117,6 +115,12 @@ internal sealed class CrowdDebugViewFrame
         Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || JumpLinks || Belief
         || TerrainTypes
         || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff;
+
+    /// <summary>开关在输入系统。帧只读叠层，用来占贴花槽和写检视行。</summary>
+    internal bool TerrainTypes =>
+        _engine != null
+        && _engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? runtime)
+        && runtime?.TerrainTypeOverlay is { Enabled: true };
 
     /// <summary>宿主只有一个流场或可走贴花槽。调试场层打开时占住它，不再叠演示流场。地形类型叠层占用同一槽。</summary>
     internal bool OwnsDecal =>
@@ -157,15 +161,6 @@ internal sealed class CrowdDebugViewFrame
         if (actions.PressedThisTick(bindings.ToggleObstacles)) Blocked = !Blocked;
         if (actions.PressedThisTick(bindings.ToggleJumpLinks)) JumpLinks = !JumpLinks;
         if (actions.PressedThisTick(bindings.ToggleBelief)) Belief = !Belief;
-        if (actions.PressedThisTick(bindings.ToggleTerrainTypes))
-        {
-            TerrainTypes = !TerrainTypes;
-            if (engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? terrainRuntime)
-                && terrainRuntime?.TerrainTypeOverlay is { } terrainOverlay)
-            {
-                terrainOverlay.SetEnabled(TerrainTypes);
-            }
-        }
         if (actions.PressedThisTick(bindings.ToggleNavPanel)) NavPanel = !NavPanel;
         if (actions.PressedThisTick(bindings.ToggleTelemetryPanel)) TelemetryPanel = !TelemetryPanel;
         if (actions.PressedThisTick(bindings.ProbePathFault)

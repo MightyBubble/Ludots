@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Modding;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -12,10 +14,6 @@ namespace CrowdSimulationTests.Presentation;
 
 public sealed class CrowdTerrainTypeOverlayTests
 {
-    private const int BlockedR = 211;
-    private const int BlockedG = 47;
-    private const int BlockedB = 47;
-    private const int BlockedA = 230;
     private const int PlaceXCm = 503125;
     private const int PlaceYCm = 565625;
     private const int PlaceSizeCm = 14000;
@@ -25,7 +23,12 @@ public sealed class CrowdTerrainTypeOverlayTests
     {
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
         var table = LoadColors();
-        var overlay = CrowdTerrainTypeOverlay.Create(session, table, BlockedR, BlockedG, BlockedB, BlockedA);
+        CrowdTerrainTypeOverlaySettings settings = LoadOverlaySettings();
+        int blockedR = settings.Blocked.Red;
+        int blockedG = settings.Blocked.Green;
+        int blockedB = settings.Blocked.Blue;
+        int blockedA = settings.Blocked.Alpha;
+        var overlay = CrowdTerrainTypeOverlay.Create(session, table, blockedR, blockedG, blockedB, blockedA);
         var surface = session.Structures!.SnapshotSurface();
         var ids = session.Config.TerrainTypeIds;
         int side = overlay.Width;
@@ -42,10 +45,10 @@ public sealed class CrowdTerrainTypeOverlayTests
             seenTypes[terrain] = true;
             if (blocked != 0) blockedCells++;
             var color = table.Colors[ids[terrain]];
-            byte r = blocked != 0 ? (byte)BlockedR : (byte)color.Red;
-            byte g = blocked != 0 ? (byte)BlockedG : (byte)color.Green;
-            byte b = blocked != 0 ? (byte)BlockedB : (byte)color.Blue;
-            byte a = blocked != 0 ? (byte)BlockedA : (byte)color.Alpha;
+            byte r = blocked != 0 ? (byte)blockedR : (byte)color.Red;
+            byte g = blocked != 0 ? (byte)blockedG : (byte)color.Green;
+            byte b = blocked != 0 ? (byte)blockedB : (byte)color.Blue;
+            byte a = blocked != 0 ? (byte)blockedA : (byte)color.Alpha;
             AssertPixel(overlay.Rgba, cell, r, g, b, a);
         }
 
@@ -126,10 +129,10 @@ public sealed class CrowdTerrainTypeOverlayTests
                     byte terrain = surface.TerrainType[cell];
                     byte blocked = surface.Blocked[cell];
                     var color = table.Colors[ids[terrain]];
-                    byte r = blocked != 0 ? (byte)BlockedR : (byte)color.Red;
-                    byte g = blocked != 0 ? (byte)BlockedG : (byte)color.Green;
-                    byte b = blocked != 0 ? (byte)BlockedB : (byte)color.Blue;
-                    byte a = blocked != 0 ? (byte)BlockedA : (byte)color.Alpha;
+                    byte r = blocked != 0 ? (byte)blockedR : (byte)color.Red;
+                    byte g = blocked != 0 ? (byte)blockedG : (byte)color.Green;
+                    byte b = blocked != 0 ? (byte)blockedB : (byte)color.Blue;
+                    byte a = blocked != 0 ? (byte)blockedA : (byte)color.Alpha;
                     AssertPixel(overlay.Rgba, cell, r, g, b, a);
                 }
             }
@@ -155,6 +158,92 @@ public sealed class CrowdTerrainTypeOverlayTests
         if (rgba[pixel] == r && rgba[pixel + 1] == g && rgba[pixel + 2] == b && rgba[pixel + 3] == a) return;
         Assert.Fail($"格 {cell} 像素 {rgba[pixel]},{rgba[pixel + 1]},{rgba[pixel + 2]},{rgba[pixel + 3]}，期望 {r},{g},{b},{a}");
     }
+
+    [Test]
+    public void ShippedSettings_DefaultOff_ActionAndBlockedColor()
+    {
+        CrowdTerrainTypeOverlaySettings settings = LoadOverlaySettings();
+        Assert.That(settings.Enabled, Is.False);
+        Assert.That(settings.Action, Is.EqualTo("CrowdSimulation.ToggleTerrainTypes"));
+        Assert.That(settings.Blocked.Red, Is.EqualTo(211));
+        Assert.That(settings.Blocked.Green, Is.EqualTo(47));
+        Assert.That(settings.Blocked.Blue, Is.EqualTo(47));
+        Assert.That(settings.Blocked.Alpha, Is.EqualTo(230));
+
+        string root = FindRepoRoot();
+        var catalog = JsonNode.Parse(File.ReadAllText(Path.Combine(
+            root, "mods", "capabilities", "navigation", "CrowdSimulationMod", "assets", "config_catalog.json")))!.AsArray();
+        JsonNode? entry = null;
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            if (catalog[i]?["Path"]?.GetValue<string>() == CrowdTerrainTypeOverlaySettings.RelativePath)
+            {
+                entry = catalog[i];
+            }
+        }
+
+        Assert.That(entry, Is.Not.Null);
+        Assert.That(entry!["Policy"]!.GetValue<string>(), Is.EqualTo("DeepObject"));
+
+        string input = File.ReadAllText(Path.Combine(
+            root, "mods", "capabilities", "navigation", "CrowdSimulationMod", "assets", "Input", "default_input.json"));
+        Assert.That(input, Does.Contain("\"id\": \"CrowdSimulation.ToggleTerrainTypes\""));
+        Assert.That(input, Does.Contain("\"path\": \"<Keyboard>/leftBracket\""));
+
+        string s4Input = File.ReadAllText(Path.Combine(
+            root, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "Input", "default_input.json"));
+        Assert.That(s4Input, Does.Not.Contain("ToggleTerrainTypes"));
+        Assert.That(s4Input, Does.Not.Contain("leftBracket"));
+
+        string s1 = Path.Combine(root, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod", "assets");
+        Assert.That(File.Exists(Path.Combine(s1, "CrowdSimulationDebugView.json")), Is.False);
+        Assert.That(File.Exists(Path.Combine(s1, "config_catalog.json")), Is.False);
+        Assert.That(File.Exists(Path.Combine(s1, "Input", "default_input.json")), Is.False);
+    }
+
+    [Test]
+    public void MissingAction_NamesTheFile()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdTerrainTypeOverlaySettings.Load(Parse("""
+            { "enabled": false, "blocked": { "red": 1, "green": 2, "blue": 3, "alpha": 4 } }
+            """)));
+        Assert.That(ex!.Message, Does.Contain(CrowdTerrainTypeOverlaySettings.RelativePath));
+        Assert.That(ex.Message, Does.Contain("action").IgnoreCase);
+    }
+
+    [Test]
+    public void UnknownKey_IsRejected()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdTerrainTypeOverlaySettings.Load(Parse("""
+            {
+              "enabled": false,
+              "action": "CrowdSimulation.ToggleTerrainTypes",
+              "blocked": { "red": 1, "green": 2, "blue": 3, "alpha": 4 },
+              "palette": true
+            }
+            """)));
+        Assert.That(ex!.Message, Does.Contain("palette").IgnoreCase);
+    }
+
+    [Test]
+    public void MissingCatalogEntry_NamesTheFile()
+    {
+        var pipeline = new ConfigPipeline(new VirtualFileSystem(), null!);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdTerrainTypeOverlaySettings.LoadMerged(pipeline, new ConfigCatalog(), new ConfigConflictReport()));
+        Assert.That(ex!.Message, Does.Contain(CrowdTerrainTypeOverlaySettings.RelativePath));
+    }
+
+    private static CrowdTerrainTypeOverlaySettings LoadOverlaySettings()
+    {
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "mods", "capabilities", "navigation", "CrowdSimulationMod",
+            "assets", "Presentation", "crowd_terrain_type_overlay.json");
+        return CrowdTerrainTypeOverlaySettings.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+    }
+
+    private static JsonObject Parse(string json) => (JsonObject)JsonNode.Parse(json)!;
 
     private static CrowdTerrainTypeColorTable LoadColors()
     {

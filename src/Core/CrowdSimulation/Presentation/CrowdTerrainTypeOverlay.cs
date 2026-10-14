@@ -299,7 +299,7 @@ public sealed class CrowdTerrainTypeOverlay
 }
 
 /// <summary>
-/// 部署演示以外的地图没有调试视图帧。地形类型开关仍读同一条动作。
+/// 地形类型开关只读能力 Mod 的动作。调试视图帧只读叠层是否打开，避免同一按键再切一次。
 /// </summary>
 internal sealed class CrowdTerrainOverlayInputSystem : ISystem<float>
 {

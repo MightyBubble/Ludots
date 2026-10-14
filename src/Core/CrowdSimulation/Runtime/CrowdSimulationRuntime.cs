@@ -489,6 +489,14 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         TerrainTypeColors = runtimeConfig.TerrainTypeIds.Count == 0
             ? null
             : BindTerrainTypeColors(engine, runtimeConfig);
+        CrowdTerrainTypeOverlaySettings terrainOverlaySettings = CrowdTerrainTypeOverlaySettings.LoadMerged(
+            engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        _terrainOverlayAction = terrainOverlaySettings.Action;
+        if (terrainOverlaySettings.Enabled && TerrainTypeColors == null)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdTerrainTypeOverlaySettings.RelativePath}: enabled 为 true，但地图 \"{mapId.Value}\" 没有地形类型。");
+        }
 
         SolverAgentExclusivity.RejectMassNavigationAgent(engine.World, mapId);
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
@@ -631,12 +639,12 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _session.NavTileCache = cache;
         // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
         _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
-        if (_debugView != null && TerrainTypeColors != null)
+        if (TerrainTypeColors != null)
         {
-            CrowdDebugRgba blocked = _debugView.Colors.TerrainBlocked;
+            CrowdTerrainTypeColor blocked = terrainOverlaySettings.Blocked;
             TerrainTypeOverlay = CrowdTerrainTypeOverlay.Create(
                 _session, TerrainTypeColors, blocked.Red, blocked.Green, blocked.Blue, blocked.Alpha);
-            TerrainTypeOverlay.SetEnabled(_debugView.Overlays.TerrainTypes);
+            TerrainTypeOverlay.SetEnabled(terrainOverlaySettings.Enabled);
         }
 
         _activeMapId = mapId.Value;
@@ -737,6 +745,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         DebugFuzzFailed = false;
         DebugFuzzRan = false;
         ReleaseTerrainOverlayInput(engine);
+        _terrainOverlayAction = null;
         _session?.Units.Clear();
         _session?.Units.ReleaseSpawnInitializer();
         _pathService?.Dispose();

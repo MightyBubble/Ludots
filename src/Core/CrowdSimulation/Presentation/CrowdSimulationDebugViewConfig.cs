@@ -131,7 +131,6 @@ internal sealed class CrowdDebugViewOverlays
     [JsonRequired] public bool Blocked { get; init; }
     [JsonRequired] public bool JumpLinks { get; init; }
     [JsonRequired] public bool Belief { get; init; }
-    [JsonRequired] public bool TerrainTypes { get; init; }
 }
 
 internal sealed class CrowdDebugRgba
@@ -176,7 +175,6 @@ internal sealed class CrowdDebugViewColors
     [JsonRequired] public CrowdDebugRgba Funnel { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba PanelText { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Alert { get; init; } = null!;
-    [JsonRequired] public CrowdDebugRgba TerrainBlocked { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Teams { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Templates { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Priorities { get; init; } = null!;
@@ -199,7 +197,6 @@ internal sealed class CrowdDebugViewColors
         Funnel.Validate(path, "colors.funnel");
         PanelText.Validate(path, "colors.panelText");
         Alert.Validate(path, "colors.alert");
-        TerrainBlocked.Validate(path, "colors.terrainBlocked");
         Palette(path, "colors.teams", Teams);
         Palette(path, "colors.templates", Templates);
         Palette(path, "colors.priorities", Priorities);
@@ -259,7 +256,6 @@ internal sealed class CrowdDebugViewActions
     [JsonRequired] public string ToggleObstacles { get; init; } = "";
     [JsonRequired] public string ToggleJumpLinks { get; init; } = "";
     [JsonRequired] public string ToggleBelief { get; init; } = "";
-    [JsonRequired] public string ToggleTerrainTypes { get; init; } = "";
     [JsonRequired] public string CycleUnitColor { get; init; } = "";
     [JsonRequired] public string CycleBeliefGroup { get; init; } = "";
     [JsonRequired] public string CycleInspectLayer { get; init; } = "";
@@ -280,7 +276,6 @@ internal sealed class CrowdDebugViewActions
         Require(path, "actions.toggleObstacles", ToggleObstacles);
         Require(path, "actions.toggleJumpLinks", ToggleJumpLinks);
         Require(path, "actions.toggleBelief", ToggleBelief);
-        Require(path, "actions.toggleTerrainTypes", ToggleTerrainTypes);
         Require(path, "actions.cycleUnitColor", CycleUnitColor);
         Require(path, "actions.cycleBeliefGroup", CycleBeliefGroup);
         Require(path, "actions.cycleInspectLayer", CycleInspectLayer);

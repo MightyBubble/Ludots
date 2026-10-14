@@ -25,8 +25,7 @@
     "density": false,
     "jumpLinks": false,
     "belief": false,
-    "blocked": false,
-    "terrainTypes": false
+    "blocked": false
   },
   "colors": {
     "nav": {
@@ -124,12 +123,6 @@
       "green": 72,
       "blue": 56,
       "alpha": 255
-    },
-    "terrainBlocked": {
-      "red": 211,
-      "green": 47,
-      "blue": 47,
-      "alpha": 230
     },
     "teams": [
       {
@@ -451,7 +444,6 @@
     "toggleObstacles": "CrowdSimulation.S4.ToggleObstacles",
     "toggleJumpLinks": "CrowdSimulation.S4.ToggleJumpLinks",
     "toggleBelief": "CrowdSimulation.S4.ToggleBelief",
-    "toggleTerrainTypes": "CrowdSimulation.S4.ToggleTerrainTypes",
     "cycleUnitColor": "CrowdSimulation.S4.CycleUnitColor",
     "cycleBeliefGroup": "CrowdSimulation.S4.CycleBeliefGroup",
     "cycleInspectLayer": "CrowdSimulation.S4.CycleInspectLayer",

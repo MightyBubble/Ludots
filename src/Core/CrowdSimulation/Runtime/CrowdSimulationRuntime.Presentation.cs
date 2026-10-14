@@ -31,6 +31,7 @@ public sealed partial class CrowdSimulationRuntime
     private ISystem<float>? _deployInput;
     private ISystem<float>? _deployPresentation;
     private ISystem<float>? _terrainOverlayInput;
+    private string? _terrainOverlayAction;
 
     internal void BindProjectorSlot(GlobalFieldVisualProjectorRegistry registry)
     {
@@ -243,7 +244,6 @@ public sealed partial class CrowdSimulationRuntime
             debugView.BindEngine(engine);
             input.UseDebugView(debugView);
             presented.UseDebugView(debugView);
-            TerrainTypeOverlay?.SetEnabled(debugView.TerrainTypes);
         }
 
         if (playerView != null)
@@ -263,8 +263,13 @@ public sealed partial class CrowdSimulationRuntime
 
     private void InstallTerrainOverlayInput(GameEngine engine)
     {
-        if (_terrainOverlayInput != null || _deployInput != null || _debugView == null || TerrainTypeOverlay == null) return;
-        var system = new CrowdTerrainOverlayInputSystem(engine, _debugView.Actions.ToggleTerrainTypes);
+        if (_terrainOverlayInput != null || TerrainTypeOverlay == null) return;
+        if (string.IsNullOrEmpty(_terrainOverlayAction))
+        {
+            throw new InvalidOperationException($"{CrowdTerrainTypeOverlaySettings.RelativePath}: action 为空。");
+        }
+
+        var system = new CrowdTerrainOverlayInputSystem(engine, _terrainOverlayAction);
         engine.RegisterSystem(system, SystemGroup.PostMovement);
         _terrainOverlayInput = system;
     }

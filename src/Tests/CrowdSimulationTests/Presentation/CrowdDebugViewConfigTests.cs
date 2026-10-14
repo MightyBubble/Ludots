@@ -16,12 +16,6 @@ public class CrowdDebugViewConfigTests
         var cfg = CrowdSimulationDebugViewConfig.Load(node, path);
         Assert.That(cfg.ArrowMinScreenPx, Is.EqualTo(10));
         Assert.That(cfg.Overlays.Funnel, Is.False);
-        Assert.That(cfg.Overlays.TerrainTypes, Is.False);
-        Assert.That(cfg.Actions.ToggleTerrainTypes, Is.EqualTo("CrowdSimulation.S4.ToggleTerrainTypes"));
-        Assert.That(cfg.Colors.TerrainBlocked.Red, Is.EqualTo(211));
-        Assert.That(cfg.Colors.TerrainBlocked.Green, Is.EqualTo(47));
-        Assert.That(cfg.Colors.TerrainBlocked.Blue, Is.EqualTo(47));
-        Assert.That(cfg.Colors.TerrainBlocked.Alpha, Is.EqualTo(230));
         Assert.That(cfg.UnitColorMode, Is.EqualTo(CrowdSimulationDebugViewConfig.ColorOff));
         Assert.That(cfg.Layers.Flow, Is.Not.EqualTo(cfg.Layers.Paper));
     }
