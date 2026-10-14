@@ -204,6 +204,15 @@
       "placeOk": "(此处可放)",
       "placeBlocked": "(此处不可放)",
       "placeOffMap": "(光标不在地图上)",
+      "placeOutOfBounds": "(越界)",
+      "placeOverlapsStructure": "(压到已有结构)",
+      "placeOverlapsBlocked": "(压到阻挡格)",
+      "placeSpanTerrain": "(跨越段地形不可放)",
+      "placeAnchorTerrain": "(桥端不可锚)",
+      "placeLegal": [89, 230, 115, 242],
+      "placeIllegal": [255, 77, 64, 242],
+      "placeAnchor": [255, 214, 64, 242],
+      "placePortal": [64, 196, 255, 242],
       "pendingNav": " · 导航变体未就绪",
       "structures": [
         {

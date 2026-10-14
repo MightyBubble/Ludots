@@ -33,13 +33,16 @@ internal readonly struct BeliefRank : IComparable<BeliefRank>
     }
 }
 
-/// <summary>结构实体仓。id 只增。区域与阻挡按变更矩形重标。动态 place/remove 与静态阻挡走同一条重标。分层模板的动态放置会拒绝。</summary>
+/// <summary>结构实体仓。id 只增。区域与阻挡按变更矩形重标。动态 place/remove 与静态阻挡走同一条重标。放置合法性在 <see cref="CrowdStructurePlacement"/>。</summary>
 public sealed class CrowdStructuresStore
 {
     public int NavCellsPerSide { get; }
     public int NavCellSizeCm { get; }
     public int NavCellsPerTile { get; }
     public Fix64 BlockCoverage { get; }
+    internal int PortalReachNavCells => _config.Structures.PortalReachNavCells;
+    internal bool[] AnchorTerrain => _config.Structures.AnchorTerrain;
+    internal bool[] SpanTerrain => _config.Structures.SpanTerrain;
     /// <summary>阻挡盒的电机查询半径(最大个人半径,厘米)。</summary>
     public Fix64 ReachCm { get; }
 
@@ -69,6 +72,8 @@ public sealed class CrowdStructuresStore
     public CrowdBlockerColliders Colliders { get; private set; }
 
     private readonly int[] _rasterPrio;
+    private int[] _judgeCells = Array.Empty<int>();
+    private byte[] _judgeFlags = Array.Empty<byte>();
 
     private CrowdStructuresStore(CrowdSimulationRuntimeConfig config, SurfaceGrid grid)
     {
@@ -320,16 +325,18 @@ public sealed class CrowdStructuresStore
         var tpl = _config.Structures.Templates[tplIndex];
         if (tpl.Layered)
         {
-            throw new InvalidOperationException(
-                $"结构模板 {tpl.Id} 为分层实体(桥面):动态上层烘焙未随本阶段开放,放置被拒绝。");
+            throw new InvalidOperationException("结构仓没有桥面层。");
         }
 
         int id = _nextId++;
         _ids.Add(id);
         _tpl[id] = tplIndex;
         _footprint[id] = fp;
-        if (tpl.AreaIndex is { } area) _navArea[id] = (area, tpl.Priority);
-        if (tpl.Blocker) _blocker.Add(id);
+        if (!tpl.Layered)
+        {
+            if (tpl.AreaIndex is { } area) _navArea[id] = (area, tpl.Priority);
+            if (tpl.Blocker) _blocker.Add(id);
+        }
         if (expireTick >= 0) _lifetime[id] = expireTick;
         return Commit(id, fp);
     }
@@ -373,6 +380,39 @@ public sealed class CrowdStructuresStore
     }
 
     public CrowdStructureFootprint FootprintOf(int id) => _footprint[id];
+
+    internal int LiveCount => _ids.Count;
+
+    internal int LiveId(int index) => _ids[index];
+
+    internal RuntimeStructureTemplate LiveTemplate(int id) => _config.Structures.Templates[_tpl[id]];
+
+    internal byte TerrainIndex(int cell) => _terrainType[cell];
+
+    internal CrowdPlacementReject JudgePlacement(RuntimeStructureTemplate template, CrowdStructureFootprint footprint) =>
+        CrowdStructurePlacement.Judge(this, template, footprint, ref _judgeCells, ref _judgeFlags, out _);
+
+    /// <summary>地面模板写进这一格：区域看格心，阻挡看覆盖份额。</summary>
+    internal bool GroundCellHit(RuntimeStructureTemplate tpl, CrowdStructureFootprint fp, int x, int y)
+    {
+        if (tpl.Layered) return false;
+        bool hit = false;
+        var cell = Fix64.FromInt(NavCellSizeCm);
+        if (tpl.AreaIndex != null)
+        {
+            var cx = (Fix64.FromInt(x) + Fix64.HalfValue) * cell;
+            var cy = (Fix64.FromInt(y) + Fix64.HalfValue) * cell;
+            hit = fp.Covers(cx, cy);
+        }
+
+        if (tpl.Blocker)
+        {
+            var (bx0, by0, bx1, by1) = fp.Bbox();
+            if (CoverShare(bx0, bx1, x, cell) * CoverShare(by0, by1, y, cell) >= BlockCoverage) hit = true;
+        }
+
+        return hit;
+    }
 
     /// <summary>地形源。区域是建仓时的地形映射，阻挡是建仓时的阻挡，都不含此后放上的实体。</summary>
     internal SurfaceGrid TerrainSurface() => new()

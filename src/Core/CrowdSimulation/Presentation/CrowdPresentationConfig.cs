@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -138,7 +139,16 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.PlaceOk, "deploy.placeOk");
         RequireText(deploy.PlaceBlocked, "deploy.placeBlocked");
         RequireText(deploy.PlaceOffMap, "deploy.placeOffMap");
+        RequireText(deploy.PlaceOutOfBounds, "deploy.placeOutOfBounds");
+        RequireText(deploy.PlaceOverlapsStructure, "deploy.placeOverlapsStructure");
+        RequireText(deploy.PlaceOverlapsBlocked, "deploy.placeOverlapsBlocked");
+        RequireText(deploy.PlaceSpanTerrain, "deploy.placeSpanTerrain");
+        RequireText(deploy.PlaceAnchorTerrain, "deploy.placeAnchorTerrain");
         RequireText(deploy.PendingNav, "deploy.pendingNav");
+        RequireColor(deploy.PlaceLegal, "deploy.placeLegal");
+        RequireColor(deploy.PlaceIllegal, "deploy.placeIllegal");
+        RequireColor(deploy.PlaceAnchor, "deploy.placeAnchor");
+        RequireColor(deploy.PlacePortal, "deploy.placePortal");
     }
 
     private static void ValidateStructure(CrowdStructureTemplateDto row, int index)
@@ -186,6 +196,12 @@ internal sealed class CrowdPresentationConfig
         RequireColor(colors.Explored, "fogDecal.explored");
         RequireColor(colors.Visible, "fogDecal.visible");
         RequireColor(colors.Denied, "fogDecal.denied");
+    }
+
+    internal static Vector4 Rgba(int[]? rgba, string path)
+    {
+        RequireColor(rgba, path);
+        return new Vector4(rgba![0] / 255f, rgba[1] / 255f, rgba[2] / 255f, rgba[3] / 255f);
     }
 
     private static void RequireColor(int[]? rgba, string path)
@@ -239,6 +255,15 @@ internal sealed class CrowdDeployPresentation
     [JsonRequired] public string PlaceOk { get; set; } = string.Empty;
     [JsonRequired] public string PlaceBlocked { get; set; } = string.Empty;
     [JsonRequired] public string PlaceOffMap { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceOutOfBounds { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceOverlapsStructure { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceOverlapsBlocked { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceSpanTerrain { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceAnchorTerrain { get; set; } = string.Empty;
+    [JsonRequired] public int[] PlaceLegal { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] PlaceIllegal { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] PlaceAnchor { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] PlacePortal { get; set; } = Array.Empty<int>();
     [JsonRequired] public string PendingNav { get; set; } = string.Empty;
     [JsonRequired] public CrowdStructureTemplateDto[] Structures { get; set; } = Array.Empty<CrowdStructureTemplateDto>();
 }

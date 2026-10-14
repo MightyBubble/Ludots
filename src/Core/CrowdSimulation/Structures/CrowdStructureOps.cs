@@ -89,6 +89,9 @@ public static class CrowdStructureOps
         if (tpl < 0) throw new InvalidOperationException($"未知结构模板 \"{templateId}\"。");
         var template = sim.Config.Structures.Templates[tpl];
         var fp = CrowdStructureFootprint.Make(template, xCm, yCm, sizeCm, toXCm, toYCm);
+        var reject = store.JudgePlacement(template, fp);
+        sim.LastPlacementReject = reject;
+        if (reject != CrowdPlacementReject.None) return null;
         int expire = store.ExpireTickOf(template, sim.TickCount);
         var (id, rect) = store.PlaceEntity(tpl, fp, expire);
         sim.Fog?.OnTruth(id); // 真相实体出现 → 索引/key/truthRev/不透明位
