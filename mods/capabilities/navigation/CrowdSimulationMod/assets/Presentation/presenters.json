@@ -511,6 +511,30 @@
     "id": "crowd_simulation.unit.infantry.r100",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -566,6 +590,30 @@
   {
     "id": "crowd_simulation.unit.infantry.r200",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -623,6 +671,30 @@
     "id": "crowd_simulation.unit.infantry.r300",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -678,6 +750,30 @@
   {
     "id": "crowd_simulation.unit.infantry.r400",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -735,6 +831,30 @@
     "id": "crowd_simulation.unit.navy.r100",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -790,6 +910,30 @@
   {
     "id": "crowd_simulation.unit.navy.r200",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -847,6 +991,30 @@
     "id": "crowd_simulation.unit.navy.r300",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -902,6 +1070,30 @@
   {
     "id": "crowd_simulation.unit.navy.r400",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -959,6 +1151,30 @@
     "id": "crowd_simulation.unit.mountaineer.r100",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1014,6 +1230,30 @@
   {
     "id": "crowd_simulation.unit.mountaineer.r200",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -1071,6 +1311,30 @@
     "id": "crowd_simulation.unit.mountaineer.r300",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1127,6 +1391,30 @@
     "id": "crowd_simulation.unit.mountaineer.r400",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1182,6 +1470,30 @@
   {
     "id": "crowd_simulation.unit.amphibious.r100",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -1245,6 +1557,30 @@
     "id": "crowd_simulation.unit.amphibious.r200",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1306,6 +1642,30 @@
   {
     "id": "crowd_simulation.unit.amphibious.r300",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -1369,6 +1729,30 @@
     "id": "crowd_simulation.unit.amphibious.r400",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1430,6 +1814,30 @@
   {
     "id": "crowd_simulation.unit.jumper.r100",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",
@@ -1516,6 +1924,30 @@
     "id": "crowd_simulation.unit.jumper.r200",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1601,6 +2033,30 @@
     "id": "crowd_simulation.unit.jumper.r300",
     "behaviors": [
       {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
@@ -1685,6 +2141,30 @@
   {
     "id": "crowd_simulation.unit.jumper.r400",
     "behaviors": [
+      {
+        "slot": "outline",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.45,
+            1,
+            2.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.09,
+            0.07,
+            0.08,
+            1
+          ]
+        }
+      },
       {
         "slot": "body",
         "kind": "AssetBinding",

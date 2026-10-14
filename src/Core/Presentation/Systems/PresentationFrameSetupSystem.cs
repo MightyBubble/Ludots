@@ -27,6 +27,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly World _world;
         private readonly RealtimePacemaker? _pacemaker;
         private readonly Func<IPresentationInterpolationSource?>? _externalInterpolationSource;
+        private readonly Func<IPresentationAlphaHold?>? _alphaHold;
         private Entity _stateEntity;
         private bool _initialized;
         
@@ -41,11 +42,13 @@ namespace Ludots.Core.Presentation.Systems
         public PresentationFrameSetupSystem(
             World world,
             IPacemaker pacemaker,
-            Func<IPresentationInterpolationSource?>? externalInterpolationSource = null)
+            Func<IPresentationInterpolationSource?>? externalInterpolationSource = null,
+            Func<IPresentationAlphaHold?>? alphaHold = null)
         {
             _world = world;
             _pacemaker = pacemaker as RealtimePacemaker;
             _externalInterpolationSource = externalInterpolationSource;
+            _alphaHold = alphaHold;
         }
         
         public void Initialize()
@@ -74,6 +77,11 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     throw new InvalidOperationException(
                         $"Presentation interpolation source returned invalid alpha {alpha}.");
+                }
+
+                if (_alphaHold?.Invoke() is { HoldAtCurrent: true })
+                {
+                    alpha = 1f;
                 }
             }
             

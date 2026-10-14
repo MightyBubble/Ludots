@@ -51,7 +51,7 @@ namespace Ludots.Core.Input.Config
 
                 Validate(fragmentConfig, fragments[i].SourceUri);
                 MergeActions(fragmentConfig.Actions, actions, actionOrder, fragments[i].SourceUri);
-                MergeContexts(fragmentConfig.Contexts, contexts, contextOrder);
+                MergeContexts(fragmentConfig.Contexts, contexts, contextOrder, fragments[i].SourceUri);
             }
 
             var result = new InputConfigRoot();
@@ -135,7 +135,7 @@ namespace Ludots.Core.Input.Config
             }
         }
 
-        private static void MergeContexts(List<InputContextDef> incoming, Dictionary<string, InputContextDef> byId, List<string> order)
+        private static void MergeContexts(List<InputContextDef> incoming, Dictionary<string, InputContextDef> byId, List<string> order, string source)
         {
             if (incoming == null) return;
             for (int i = 0; i < incoming.Count; i++)
@@ -146,6 +146,7 @@ namespace Ludots.Core.Input.Config
 
                 if (!byId.TryGetValue(c.Id, out var existing))
                 {
+                    DropRemovedBindings(c, source);
                     byId[c.Id] = c;
                     order.Add(c.Id);
                     continue;
@@ -153,11 +154,27 @@ namespace Ludots.Core.Input.Config
 
                 if (!string.IsNullOrWhiteSpace(c.Name)) existing.Name = c.Name;
                 existing.Priority = c.Priority;
-                existing.Bindings = MergeBindings(existing.Bindings, c.Bindings);
+                existing.Bindings = MergeBindings(existing.Bindings, c.Bindings, c.Id, source);
             }
         }
 
-        private static List<InputBindingDef> MergeBindings(List<InputBindingDef> existing, List<InputBindingDef> incoming)
+        private static void DropRemovedBindings(InputContextDef context, string source)
+        {
+            List<InputBindingDef> bindings = context.Bindings;
+            if (bindings == null || bindings.Count == 0) return;
+
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                InputBindingDef binding = bindings[i];
+                if (binding != null && binding.Removed)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_BINDING_REMOVE_ABSENT: input config '{source}' cannot remove context '{context.Id}' binding {DescribeBinding(binding)} because that context has no such binding yet.");
+                }
+            }
+        }
+
+        private static List<InputBindingDef> MergeBindings(List<InputBindingDef> existing, List<InputBindingDef> incoming, string contextId, string source)
         {
             existing ??= new List<InputBindingDef>();
             if (incoming == null || incoming.Count == 0) return existing;
@@ -178,6 +195,20 @@ namespace Ludots.Core.Input.Config
             {
                 var b = incoming[i];
                 if (b == null) continue;
+                if (b.Removed)
+                {
+                    RequireRemovalKey(b, contextId, source);
+                    var removeKey = GetBindingKey(b);
+                    if (!map.Remove(removeKey))
+                    {
+                        throw new InvalidOperationException(
+                            $"LUDOTS_INPUT_BINDING_REMOVE_ABSENT: input config '{source}' cannot remove context '{contextId}' binding {DescribeBinding(b)} because it is not present.");
+                    }
+
+                    order.Remove(removeKey);
+                    continue;
+                }
+
                 var key = GetBindingKey(b);
                 if (!map.ContainsKey(key)) order.Add(key);
                 map[key] = b;
@@ -216,6 +247,26 @@ namespace Ludots.Core.Input.Config
                 segments[i] = p == null ? "" : GetBindingKey(p);
             }
             return string.Join(",", segments);
+        }
+
+        private static void RequireRemovalKey(InputBindingDef binding, string contextId, string source)
+        {
+            bool composite = !string.IsNullOrWhiteSpace(binding.CompositeType);
+            if (string.IsNullOrWhiteSpace(binding.ActionId) || (!composite && string.IsNullOrWhiteSpace(binding.Path)))
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_BINDING_REMOVE_KEY: input config '{source}' context '{contextId}' removal needs actionId and path (or a composite).");
+            }
+        }
+
+        private static string DescribeBinding(InputBindingDef binding)
+        {
+            if (!string.IsNullOrWhiteSpace(binding.CompositeType))
+            {
+                return $"action '{binding.ActionId}' composite '{binding.CompositeType}'";
+            }
+
+            return $"action '{binding.ActionId}' path '{binding.Path}'";
         }
     }
 }

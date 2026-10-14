@@ -96,6 +96,7 @@ namespace Ludots.Core.Gameplay.Camera
                         EnableZoom = enableZoom,
                         ZoomCmPerWheel = config.ZoomCmPerWheel,
                         ZoomFactorPerWheel = config.ZoomFactorPerWheel,
+                        ZoomTowardsPointer = config.ZoomTowardsPointer,
                         FollowMode = config.FollowMode,
                         FollowTargetKind = config.FollowTargetKind,
                         FollowCollectionKey = config.FollowCollectionKey,
@@ -481,6 +482,7 @@ namespace Ludots.Core.Gameplay.Camera
             public bool? EnableZoom { get; set; }
             public float ZoomCmPerWheel { get; set; } = 2000f;
             public float ZoomFactorPerWheel { get; set; }
+            public bool ZoomTowardsPointer { get; set; }
             public CameraFollowMode FollowMode { get; set; } = CameraFollowMode.None;
             public CameraFollowTargetKind FollowTargetKind { get; set; } = CameraFollowTargetKind.None;
             public string FollowCollectionKey { get; set; } = string.Empty;

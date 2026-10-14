@@ -60,6 +60,16 @@ public sealed class S4DeployDemoRuntime
     /// <summary>本帧光标地面厘米。由输入系统写入，呈现只读。</summary>
     public (double X, double Y)? HoverCm { get; set; }
 
+    /// <summary>点选生成覆盖 tools 的数量、模板和半径级。空则仍用 tools。</summary>
+    internal int? ClickSpawnCount { get; set; }
+    internal int? ClickSpawnUnitType { get; set; }
+    internal int? ClickSpawnRadiusClass { get; set; }
+
+    /// <summary>玩家视图安装后，部署键按层过滤提交 Spawn 或 SpawnAt。未安装时仍是 tools 的全量 Spawn。</summary>
+    internal Action<CrowdSimSession, Action<CrowdSimCommand>>? DeployBuilder { get; set; }
+
+    internal void EnqueueCommand(CrowdSimCommand cmd) => Enqueue(() => SubmitInteractive(cmd));
+
     /// <summary>视图模式:0 路线(主力组流场贴花+目标标记) · 1 可走区域 · 2 NavMesh+HPA 线框。</summary>
     public bool Active { get; set; } = true;
     public int ViewMode { get; private set; }
@@ -184,7 +194,15 @@ public sealed class S4DeployDemoRuntime
     public void EnqueueRemove(int xCm, int yCm) => Enqueue(() =>
         SubmitInteractive(new CrowdSimCommand { Kind = CrowdSimCommandKind.RemoveStructureAt, XCm = xCm, YCm = yCm }));
     public void EnqueueDeploy() => Enqueue(() =>
-        SubmitInteractive(new CrowdSimCommand { Kind = CrowdSimCommandKind.Spawn, Count = RequireTools().SpawnCount }));
+    {
+        if (DeployBuilder != null && TrySession(out CrowdSimSession session))
+        {
+            DeployBuilder(session, SubmitInteractive);
+            return;
+        }
+
+        SubmitInteractive(new CrowdSimCommand { Kind = CrowdSimCommandKind.Spawn, Count = RequireTools().SpawnCount });
+    });
     public void EnqueueScatter() => Enqueue(() =>
         SubmitInteractive(new CrowdSimCommand { Kind = CrowdSimCommandKind.Scatter }));
     public void EnqueueStress() => Enqueue(() =>
@@ -293,9 +311,9 @@ public sealed class S4DeployDemoRuntime
             Player = RequireSeatPlayer(),
             XCm = xCm,
             YCm = yCm,
-            Count = tools.SpawnCount,
-            UnitType = tools.SpawnUnitType,
-            RIdx = tools.SpawnRadiusClass,
+            Count = ClickSpawnCount ?? tools.SpawnCount,
+            UnitType = ClickSpawnUnitType ?? tools.SpawnUnitType,
+            RIdx = ClickSpawnRadiusClass ?? tools.SpawnRadiusClass,
         });
     }
 

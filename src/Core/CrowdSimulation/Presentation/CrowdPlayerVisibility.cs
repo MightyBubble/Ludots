@@ -37,6 +37,16 @@ public static class CrowdPlayerVisibility
         return fog.Belief[viewerGroup].ContainsKey(structureId);
     }
 
+    public static bool PointShown(CrowdSimSession session, int viewerGroup, int xCm, int yCm, bool hideFog)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        if (!hideFog) return true;
+        var fog = session.Fog;
+        if (fog == null) return true;
+        if (!TryFogCell(fog, new Fix64Vec2(xCm, yCm), out int cell)) return false;
+        return fog.CellVisibilityOf(viewerGroup, cell) == CellVisibility.Visible;
+    }
+
     private static Fix64Vec2 Position(CrowdSimSession session, int dense)
     {
         if (session.Movement != null) return session.Movement.Positions[dense];

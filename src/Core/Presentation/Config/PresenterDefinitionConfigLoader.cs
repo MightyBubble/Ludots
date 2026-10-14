@@ -4209,6 +4209,7 @@ namespace Ludots.Core.Presentation.Config
                 ["screenRect"] = 18,
                 ["preview"] = 19,
                 ["contextState"] = 20,
+                ["outline"] = 21,
             };
 
             public static int Register(string key)
