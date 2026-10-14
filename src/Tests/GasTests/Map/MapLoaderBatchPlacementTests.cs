@@ -799,9 +799,10 @@ namespace GasTests
                 CreateClassificationTemplate(),
                 new MapEntity { MapId = new MapId(MapId) },
                 null!,
+                null!,
             };
             bool result = (bool)method.Invoke(null, args)!;
-            request = args[4];
+            request = args[5];
             return result;
         }
 
