@@ -2,7 +2,7 @@
 
 一个英雄、三具假人，把同一套瞄准图放在四套设备方案里跑。本目录没有 C# 工程。
 
-施法手感不是方案上的字段。进图时 `interaction_prefs.json` 把 `pref.aim.cast_mode` 种成 `interaction.context.aim.smart`。F1 / F2 / F3 调 `graph.aim.set_cast_mode`，四套方案共用这张图。
+施法手感不是方案上的字段。进图时 `interaction_prefs.json` 把 `pref.aim.cast_mode` 种成 `interaction.context.aim.smart`。F1 / F2 / F3 / F4 调 `graph.aim.set_cast_mode`，四套方案共用这张图。
 
 ## 四套方案差在哪
 
@@ -17,7 +17,7 @@
 
 `scheme.aim.kbm_skills` 与 `scheme.aim.gamepad_left` 写在瞄准能力 mod 里，因为换装的是通用键位，不是这一场的英雄。
 
-F1 `interaction.context.aim.smart`（按下就提交），F2 `interaction.context.aim.release`（按住转向，松开下令），F3 `interaction.context.aim.click`（先打开指示器，再确认）。范围圈和指示线跟着点击 / 松开两个状态的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
+F1 `interaction.context.aim.smart`（按下就提交），F2 `interaction.context.aim.release`（按住转向，松开下令），F3 `interaction.context.aim.click`（先打开指示器，再确认），F4 `interaction.context.aim.target_first`（用代表身上 `aim.current_target` 的第 0 个活着的成员立刻提交）。没有这个成员就关掉该状态并报 `AimTargetFirstNoTarget`，不打开瞄准。只对地面的技能看到落点无效就不提交，也不改用光标。范围圈和指示线跟着点击 / 松开两个状态的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
 
 ## 怎么启动
 

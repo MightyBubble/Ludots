@@ -204,7 +204,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | **已改**：按下图只 `ActivateContextFromPref`（542），取值就是手势状态 id。即时施放是 `interaction.context.aim.smart`，`onActivated` 提交后 `DeactivateOwnContext`。加一种方式是新 profile 加进键 `pref.aim.cast_mode` 的取值，规则图不用改 |
 | 9 | 指示器只有一种形状 | 切片 R 之后形状跟着规则图开的目标状态走：每种形状一个共用目标 context + 一条 presenter 规则，技能引用对应规则图 |
 | 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | **已改**：入口写 `budget: "single-slice"` 后，装载按切片同一套计步算最长路径，超过 64 步就报图名、入口、步数和预算；瞄准的输入入口都标了，指针和摇杆追踪把采样留在宿主，其余放进调用图 |
-| 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后只剩数据：再加一个取值和一个交互状态，规则图不用改 |
+| 11 | 没有「先选目标再放」（WoW 式） | **已改**：`pref.aim.cast_mode` 增加取值 `interaction.context.aim.target_first`。这个状态的 `onActivated`（`graph.aim.target_first`）读代表身上角色 `target`（集合 `aim.current_target`）的第 0 个成员。成员活着就写进瞄准演员的 `aim.target`，把 `aim.point.valid` 和 `aim.stick.valid` 写成 0，派 `Aim.Rule.Resolve`，再 `DeactivateOwnContext`。没有活着的成员就先关掉自己的状态，再 `Fail`，消息 `AimTargetFirstNoTarget`，不打开点击或松开瞄准。地面规则看到落点无效就不提交。规则图没有改 |
 | 12 | 指示器在按下后的下一拍才出现 | **已改**：按下那一拍 `aim.range` 和 `aim.line` 已经挂在瞄准演员上 |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
 | 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：槽位、落点、射程、目标、朝向和摇杆清零只写在 `graph.aim.prepare_actor`。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 和每个游戏的重绑路径也调用它 |
@@ -214,7 +214,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **`CoreInputMod` 收尾已改。** 目录、依赖和 `Default_Gameplay` 都已删掉。根资产的相机键位上下文叫 `Camera.Rig`，`scheme.default` 的 `inputContexts` 就是它；原先跟默认玩法一起激活的 mod，在自己的方案里写上 `Camera.Rig`。`startupInputContexts` 已删：宿主绑上输入处理器时，`ControlSchemeRuntime.ApplyActiveContexts` 把当前方案的上下文推上去。小地图指针仍走 `interaction.context.minimap`（LudotsCoreMod，`foreground`，`pointerRouting` 为 `ui`）。`presentation.minimap.interactionContextId` 指向它。按下、松开、移动是 `graph.minimap.press` / `release` / `track`。滚轮是 `graph.minimap.zoom`：动作 `Minimap.Zoom` 绑在 `Minimap.Device` 上，这个状态的 `inputContextId` 指向它，前台状态打开时投影这组键。世界点选绑在 `Core.Select`，`interaction.context.moba.battle` 的 `inputContextId` 指向它。命令点地仍是 `graph.minimap.command`，图在 LudotsCoreMod，但这个状态默认不挂它。`Command` 由 MinimapShowcaseMod、FogVisionDecayShowcaseMod、PresenterBlacksmithShowcaseMod 各自声明，并合并进这个状态。只装 LudotsCoreMod 时有滚轮，没有命令图。`Command` / `Cancel` 由使用它们的 mod 在自己的输入数据里声明。`PointerPos` 的声明和 `<Mouse>/Pos` 绑在 `Camera.Rig`。指针落在 `pointerRouting` 为 `ui` 的区域里时，相机 `Zoom` 仍按 `suppressOnUiWheelCaptured` 被压住。跳相机只提交 `CameraPoseRequest`。`MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions` 已删。集合键 **已改**：共享图、相机和 presenter 写成 `role:命令角色名`，例如 `role:commandSource`。`Input/collection_keys.json` 把角色名映射到集合名。引擎根文件不声明 `commandSource`，由实际开局声明。同一个角色两处值不一样，装载失败；值相同可以重复。没声明的角色在用到它的图、presenter 或相机上失败，报出角色和来源 mod。字面集合名不加 `role:` 前缀。本机输入开局在地图已有交互状态或吃输入的触发、却没有带 `controlSchemeId` 和附身代表的本地座位时，加载直接失败，错误写出地图名和游戏名；权威服务器和加载时没有输入处理器的无头开局不要座位。
 
-**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条已改。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
 ### 3.4 不要当成这轮图能力去合
 
