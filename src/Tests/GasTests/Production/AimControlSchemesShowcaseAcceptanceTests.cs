@@ -518,10 +518,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             PressSlot(AimSurface.KeyboardCursor, 0);
             Assert.That(CastCount(), Is.EqualTo(0), Diag("missing target submit"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("missing target exec"));
-            Assert.That(AimGestureOpen(), Is.False, Diag("missing target gesture"));
+            Assert.That(Contexts(), Does.Contain("interaction.context.aim.click"), Diag("missing target opens click aim"));
             Assert.That(Contexts(), Does.Not.Contain("interaction.context.aim.target_first"), Diag("missing target context"));
-            Assert.That(TriggerErrors(), Does.Contain("AimTargetFirstNoTarget"), Diag("missing target feedback"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("missing target"));
             Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("missing target keeps the mode"));
+            AdvanceTick();
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("missing target indicator"));
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("missing target still not cast"));
             ReleaseSlot(AimSurface.KeyboardCursor, 0);
         }
 

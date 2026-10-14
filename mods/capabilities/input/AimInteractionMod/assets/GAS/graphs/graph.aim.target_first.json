@@ -62,9 +62,14 @@
         "op": "DeactivateOwnContext"
       },
       {
-        "id": "fail_miss",
-        "op": "Fail",
-        "message": "AimTargetFirstNoTarget"
+        "id": "act_click",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.click",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "halt_miss",
+        "op": "HaltReturnInt"
       },
       {
         "id": "write_target",
@@ -196,7 +201,12 @@
       {
         "from": "deact_miss",
         "fromPort": "next",
-        "to": "fail_miss"
+        "to": "act_click"
+      },
+      {
+        "from": "act_click",
+        "fromPort": "next",
+        "to": "halt_miss"
       },
       {
         "from": "tjump",
@@ -334,6 +344,18 @@
         "fromPort": "value",
         "to": "tjump",
         "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_click",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_miss",
+        "toPort": "value"
       },
       {
         "from": "member",

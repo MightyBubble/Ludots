@@ -204,7 +204,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | **已改**：按下图只 `ActivateContextFromPref`（542），取值就是手势状态 id。即时施放是 `interaction.context.aim.smart`，`onActivated` 提交后 `DeactivateOwnContext`。加一种方式是新 profile 加进键 `pref.aim.cast_mode` 的取值，规则图不用改 |
 | 9 | 指示器只有一种形状 | 切片 R 之后形状跟着规则图开的目标状态走：每种形状一个共用目标 context + 一条 presenter 规则，技能引用对应规则图 |
 | 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | **已改**：入口写 `budget: "single-slice"` 后，装载按切片同一套计步算最长路径，超过 64 步就报图名、入口、步数和预算；瞄准的输入入口都标了，指针和摇杆追踪把采样留在宿主，其余放进调用图 |
-| 11 | 没有「先选目标再放」（WoW 式） | **已改**：`pref.aim.cast_mode` 增加取值 `interaction.context.aim.target_first`。这个状态的 `onActivated`（`graph.aim.target_first`）读代表身上角色 `target`（集合 `aim.current_target`）的第 0 个成员。成员活着就写进瞄准演员的 `aim.target`，把 `aim.point.valid` 和 `aim.stick.valid` 写成 0，派 `Aim.Rule.Resolve`，再 `DeactivateOwnContext`。没有活着的成员就先关掉自己的状态，再 `Fail`，消息 `AimTargetFirstNoTarget`，不打开点击或松开瞄准。地面规则看到落点无效就不提交。规则图没有改 |
+| 11 | 没有「先选目标再放」（WoW 式） | **已改**：`pref.aim.cast_mode` 增加取值 `interaction.context.aim.target_first`。这个状态的 `onActivated`（`graph.aim.target_first`）读代表身上角色 `target`（集合 `aim.current_target`）的第 0 个成员。成员活着就写进瞄准演员的 `aim.target`，把 `aim.point.valid` 和 `aim.stick.valid` 写成 0，派 `Aim.Rule.Resolve`，再 `DeactivateOwnContext`。没有活着的成员就先关掉自己的状态，再打开 `interaction.context.aim.click`（父状态 `interaction.context.aim.cast`），指示器跟着这个点击状态出现，不按光标直接提交。地面规则看到落点无效就不提交，也不打开瞄准。规则图没有改 |
 | 12 | 指示器在按下后的下一拍才出现 | **已改**：按下那一拍 `aim.range` 和 `aim.line` 已经挂在瞄准演员上 |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
 | 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：槽位、落点、射程、目标、朝向和摇杆清零只写在 `graph.aim.prepare_actor`。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 和每个游戏的重绑路径也调用它 |
