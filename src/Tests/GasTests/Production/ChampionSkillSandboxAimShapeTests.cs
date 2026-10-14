@@ -43,15 +43,23 @@ namespace Ludots.Tests.GAS.Production
                 {
                     Assert.That(CountAimPresenter(engine, "aim.range"), Is.EqualTo(1), ShapeDiag(engine, "line range"));
                     Assert.That(CountAimPresenter(engine, "aim.line"), Is.EqualTo(1), ShapeDiag(engine, "line"));
-                    Assert.That(
-                        ReadAimPresenterFloat(engine, "aim.line", WellKnownPresenterParamKeys.OverlayWidth),
-                        Is.EqualTo(70f).Within(0.01f),
-                        ShapeDiag(engine, "line width"));
+                    AssertLineMeters(engine, lengthMeters: 8.4f, widthMeters: 0.7f, rangeMeters: 8.4f);
                     Assert.That(CountAimPresenter(engine, "aim.circle"), Is.EqualTo(0), ShapeDiag(engine, "line excludes circle"));
                     Assert.That(CountAimPresenter(engine, "aim.cone"), Is.EqualTo(0), ShapeDiag(engine, "line excludes cone"));
                     Assert.That(CountAimPresenter(engine, "aim.target"), Is.EqualTo(0), ShapeDiag(engine, "line excludes unit ring"));
                 },
-                () => LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs));
+                () => LeftClickWorld(engine, backend, new Vector2(400f, 400f), frameTimesMs));
+
+            SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
+            Cycle(
+                engine,
+                backend,
+                frameTimesMs,
+                "<Keyboard>/r",
+                "interaction.context.aim.shape.line",
+                () => SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs),
+                () => AssertLineMeters(engine, lengthMeters: 200f, widthMeters: 1.2f, rangeMeters: 22f),
+                () => LeftClickWorld(engine, backend, new Vector2(400f, 400f), frameTimesMs));
 
             SelectNamedEntity(engine, backend, "Jayce Hammer", frameTimesMs);
             Vector2 hammer = ReadPosition(engine.World, "Jayce Hammer");
@@ -72,7 +80,7 @@ namespace Ludots.Tests.GAS.Production
                     Assert.That(CountAimPresenter(engine, "aim.target"), Is.EqualTo(0), ShapeDiag(engine, "circle excludes unit ring"));
                     Assert.That(
                         ReadAimPresenterFloat(engine, "aim.circle", WellKnownPresenterParamKeys.OverlayRadius),
-                        Is.EqualTo(170f).Within(0.01f),
+                        Is.EqualTo(1.7f).Within(0.02f),
                         ShapeDiag(engine, "circle radius"));
                     AssertAimCircleAt(engine, circlePoint);
                 },
@@ -90,15 +98,20 @@ namespace Ludots.Tests.GAS.Production
                 {
                     Assert.That(CountAimPresenter(engine, "aim.cone"), Is.EqualTo(1), ShapeDiag(engine, "cone"));
                     Assert.That(
+                        ReadAimPresenterFloat(engine, "aim.cone", WellKnownPresenterParamKeys.OverlayRadius),
+                        Is.EqualTo(3f).Within(0.02f),
+                        ShapeDiag(engine, "cone radius"));
+                    Assert.That(
                         ReadAimPresenterFloat(engine, "aim.cone", WellKnownPresenterParamKeys.OverlayAngle),
                         Is.EqualTo(40f).Within(0.01f),
                         ShapeDiag(engine, "cone angle"));
+                    AssertConeMeters(engine, radiusMeters: 3f, halfAngleDegrees: 40f);
                     Assert.That(CountAimPresenter(engine, "aim.range"), Is.EqualTo(0), ShapeDiag(engine, "cone excludes range"));
                     Assert.That(CountAimPresenter(engine, "aim.line"), Is.EqualTo(0), ShapeDiag(engine, "cone excludes line"));
                     Assert.That(CountAimPresenter(engine, "aim.circle"), Is.EqualTo(0), ShapeDiag(engine, "cone excludes circle"));
                     Assert.That(CountAimPresenter(engine, "aim.target"), Is.EqualTo(0), ShapeDiag(engine, "cone excludes unit ring"));
                 },
-                () => LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy C"), frameTimesMs));
+                () => LeftClickWorld(engine, backend, new Vector2(400f, 400f), frameTimesMs));
 
             SelectNamedEntity(engine, backend, "Garen Alpha", frameTimesMs);
             Cycle(
@@ -116,7 +129,7 @@ namespace Ludots.Tests.GAS.Production
                     Assert.That(CountAimPresenter(engine, "aim.circle"), Is.EqualTo(0), ShapeDiag(engine, "unit excludes circle"));
                     Assert.That(CountAimPresenter(engine, "aim.cone"), Is.EqualTo(0), ShapeDiag(engine, "unit excludes cone"));
                 },
-                () => LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs));
+                () => LeftClickWorld(engine, backend, new Vector2(400f, 400f), frameTimesMs));
         }
 
         [Test]
@@ -242,7 +255,7 @@ namespace Ludots.Tests.GAS.Production
             Vector3 center = default;
             foreach (ref readonly GroundOverlayItem item in overlays.GetSpan())
             {
-                if (item.Shape != GroundOverlayShape.Circle || item.Radius < 50f)
+                if (item.Shape != GroundOverlayShape.Circle)
                 {
                     continue;
                 }
@@ -262,6 +275,74 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(found, Is.True, ShapeDiag(engine, "circle overlay"));
             Assert.That(center.X, Is.EqualTo(logicCm.X / 100f).Within(0.05f), ShapeDiag(engine, "circle x"));
             Assert.That(center.Z, Is.EqualTo(logicCm.Y / 100f).Within(0.05f), ShapeDiag(engine, "circle z"));
+            GroundOverlayItem circle = RequireOverlay(
+                engine,
+                GroundOverlayShape.Circle,
+                item => AmberFill(item.FillColor));
+            Assert.That(circle.Radius, Is.EqualTo(1.7f).Within(0.02f), ShapeDiag(engine, "circle overlay radius"));
+        }
+
+        private static void AssertLineMeters(GameEngine engine, float lengthMeters, float widthMeters, float rangeMeters)
+        {
+            Assert.That(
+                ReadAimPresenterFloat(engine, "aim.line", WellKnownPresenterParamKeys.OverlayLength),
+                Is.EqualTo(lengthMeters).Within(0.02f),
+                ShapeDiag(engine, "line length"));
+            Assert.That(
+                ReadAimPresenterFloat(engine, "aim.line", WellKnownPresenterParamKeys.OverlayWidth),
+                Is.EqualTo(widthMeters).Within(0.02f),
+                ShapeDiag(engine, "line width"));
+            Assert.That(
+                ReadAimPresenterFloat(engine, "aim.range", WellKnownPresenterParamKeys.OverlayRadius),
+                Is.EqualTo(rangeMeters).Within(0.02f),
+                ShapeDiag(engine, "range radius"));
+            GroundOverlayItem line = RequireOverlay(engine, GroundOverlayShape.Line, _ => true);
+            Assert.That(line.Length, Is.EqualTo(lengthMeters).Within(0.02f), ShapeDiag(engine, "line overlay length"));
+            Assert.That(line.Width, Is.EqualTo(widthMeters).Within(0.02f), ShapeDiag(engine, "line overlay width"));
+            GroundOverlayItem ring = RequireOverlay(
+                engine,
+                GroundOverlayShape.Circle,
+                item => RangeFill(item.FillColor));
+            Assert.That(ring.Radius, Is.EqualTo(rangeMeters).Within(0.02f), ShapeDiag(engine, "range overlay radius"));
+        }
+
+        private static void AssertConeMeters(GameEngine engine, float radiusMeters, float halfAngleDegrees)
+        {
+            GroundOverlayItem cone = RequireOverlay(engine, GroundOverlayShape.Cone, _ => true);
+            Assert.That(cone.Radius, Is.EqualTo(radiusMeters).Within(0.02f), ShapeDiag(engine, "cone overlay radius"));
+            Assert.That(cone.Angle, Is.EqualTo(halfAngleDegrees * MathF.PI / 180f).Within(0.02f), ShapeDiag(engine, "cone overlay angle"));
+        }
+
+        private static GroundOverlayItem RequireOverlay(
+            GameEngine engine,
+            GroundOverlayShape shape,
+            Func<GroundOverlayItem, bool> match)
+        {
+            GroundOverlayBuffer overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            foreach (ref readonly GroundOverlayItem item in overlays.GetSpan())
+            {
+                if (item.Shape == shape && match(item))
+                {
+                    return item;
+                }
+            }
+
+            throw new InvalidOperationException(ShapeDiag(engine, "missing overlay " + shape));
+        }
+
+        private static bool AmberFill(Vector4 color)
+        {
+            return MathF.Abs(color.X - 0.92f) <= 0.05f &&
+                   MathF.Abs(color.Y - 0.62f) <= 0.05f &&
+                   MathF.Abs(color.Z - 0.18f) <= 0.05f;
+        }
+
+        private static bool RangeFill(Vector4 color)
+        {
+            return MathF.Abs(color.X - 0.28f) <= 0.05f &&
+                   MathF.Abs(color.Y - 0.52f) <= 0.05f &&
+                   MathF.Abs(color.Z - 0.88f) <= 0.05f;
         }
 
         private static string ShapeDiag(GameEngine engine, string step)

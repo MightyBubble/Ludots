@@ -62,5 +62,45 @@ namespace Ludots.Tests.Presentation
             Assert.That(instances.ResolveFloat(widePresenter, WellKnownPresenterParamKeys.OverlayAngle), Is.EqualTo(40f));
             Assert.That(instances.ResolveFloat(narrowPresenter, WellKnownPresenterParamKeys.OverlayAngle), Is.EqualTo(55f));
         }
+
+        [Test]
+        public void LogicCm_ConvertsBlackboardCentimetersToVisualMeters()
+        {
+            using var world = World.Create();
+            int key = OrderBlackboardKeyRegistry.Resolve("aim.shape.length");
+            var length = default(BlackboardFloatBuffer);
+            length.Set(key, 840f);
+            Entity owner = world.Create(length);
+
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            int defId = definitions.Register("aim.line", new PresenterDefinition
+            {
+                Bindings =
+                [
+                    new PresenterParamBinding
+                    {
+                        ParamKey = WellKnownPresenterParamKeys.OverlayLength,
+                        Value = ValueRef.FromOwnerBlackboardFloat(key, ValueUnit.LogicCm),
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            PresenterDefinition definition = definitions.Get(defId);
+            Entity presenter = instances.Create(
+                defId, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 803, Entity.Null, definition);
+            world.Add(presenter, new PresenterBootstrapPending());
+
+            using var system = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer());
+            system.Update(0.016f);
+
+            Assert.That(instances.ResolveFloat(presenter, WellKnownPresenterParamKeys.OverlayLength), Is.EqualTo(8.4f).Within(0.001f));
+        }
     }
 }

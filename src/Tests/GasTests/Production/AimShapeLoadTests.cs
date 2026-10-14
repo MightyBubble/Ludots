@@ -125,7 +125,38 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(triggers, Is.Not.Empty);
         }
 
+        [Test]
+        public void ShapeGraph_ReadKeyNotDeclared_FailsAtMount()
+        {
+            AbilityDefinition definition = AbilityLiteral(range: 300f, literal: 90f, key: "width");
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
+                Mount(definition, Effects(radius: 300, halfAngle: 40), withOp: true));
+
+            Assert.That(ex!.Message, Does.Contain(FieldKey));
+            Assert.That(ex.Message, Does.Contain("does not declare"));
+        }
+
+        [Test]
+        public void ShapeGraph_ExtraDeclaredKey_FailsAtMount()
+        {
+            AbilityDefinition definition = Ability(range: 300f, field: EffectTemplateNamedFloat.TargetQueryHalfAngle);
+            definition.TriggerGraphEffectLiterals = new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal)
+            {
+                [ShapeGraph] = new Dictionary<string, float>(StringComparer.Ordinal)
+                {
+                    ["width"] = 90f,
+                },
+            };
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
+                Mount(definition, Effects(radius: 300, halfAngle: 40), withOp: true));
+
+            Assert.That(ex!.Message, Does.Contain("width"));
+            Assert.That(ex.Message, Does.Contain("does not read"));
+        }
+
         private const string ShapeGraph = "graph.aim.shape.cone";
+        private const string FieldKey = "angle";
 
         private static List<Trigger> Mount(AbilityDefinition definition, EffectTemplateRegistry effects, bool withOp)
         {
@@ -136,7 +167,7 @@ namespace Ludots.Tests.GAS.Production
             GraphInstruction[] program = withOp
                 ? new[]
                 {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.LoadAbilityEffectFloat },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.LoadAbilityEffectFloat, Imm = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }
                 : new[]
@@ -148,7 +179,7 @@ namespace Ludots.Tests.GAS.Production
                 program,
                 GraphKind.TriggerGraph,
                 GraphInstructionSourceMap.Empty,
-                null,
+                withOp ? new[] { FieldKey } : null,
                 new[] { new TriggerGraphEntry("press", "EntityAliveCountChanged", 0, false) });
             return TriggerGraphMounting.BuildAbilityMountTriggers(
                 programs,
@@ -158,7 +189,7 @@ namespace Ludots.Tests.GAS.Production
                 effects);
         }
 
-        private static AbilityDefinition AbilityLiteral(float range, float literal)
+        private static AbilityDefinition AbilityLiteral(float range, float literal, string key = FieldKey)
         {
             return new AbilityDefinition
             {
@@ -169,14 +200,17 @@ namespace Ludots.Tests.GAS.Production
                     CastRangeCm = range,
                     ImpactEffectTemplateId = 3,
                 },
-                TriggerGraphEffectLiterals = new Dictionary<string, float>(StringComparer.Ordinal)
+                TriggerGraphEffectLiterals = new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal)
                 {
-                    [ShapeGraph] = literal,
+                    [ShapeGraph] = new Dictionary<string, float>(StringComparer.Ordinal)
+                    {
+                        [key] = literal,
+                    },
                 },
             };
         }
 
-        private static AbilityDefinition Ability(float range, string? field)
+        private static AbilityDefinition Ability(float range, string? field, string key = FieldKey)
         {
             var definition = new AbilityDefinition
             {
@@ -190,9 +224,12 @@ namespace Ludots.Tests.GAS.Production
             };
             if (field != null)
             {
-                definition.TriggerGraphEffectFields = new Dictionary<string, string>(StringComparer.Ordinal)
+                definition.TriggerGraphEffectFields = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal)
                 {
-                    [ShapeGraph] = field,
+                    [ShapeGraph] = new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        [key] = field,
+                    },
                 };
             }
 
