@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
@@ -223,10 +224,8 @@ public sealed class CrowdDebugCommandTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         Submit(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.RebakeSlices, Slices = 1 });
         var nav = FirstNav(session);
-        int cell = FirstPassable(nav);
+        var (x, y) = LegalCluster(session, nav);
         int size = session.Config.NavCellSizeCm;
-        int x = cell % nav.NavCellsPerSide * size + size / 2;
-        int y = cell / nav.NavCellsPerSide * size + size / 2;
 
         AssertWalkChanged(session, nav, Place("building", x, y, 14000));
         AssertWalkChanged(session, nav, Place("flood", x + size * 6, y, 8000));
@@ -438,7 +437,8 @@ public sealed class CrowdDebugCommandTests
             if (nav.Cost[i].RawValue != cost[i]) costChanged = true;
         }
 
-        Assert.That(passableChanged || costChanged, Is.True, place.TemplateId);
+        Assert.That(passableChanged || costChanged, Is.True,
+            $"{place.TemplateId} @ {place.XCm},{place.YCm}→{place.ToXCm},{place.ToYCm} reject={session.LastPlacementReject}");
         if (place.TemplateId == "building") Assert.That(report.Contexts, Is.GreaterThan(report.CostOnly));
         else Assert.That(report.CostOnly, Is.GreaterThan(0));
     }
@@ -466,14 +466,96 @@ public sealed class CrowdDebugCommandTests
         throw new InvalidOperationException("会话没有导航。");
     }
 
-    private static int FirstPassable(NavContext nav)
+    private static (int X, int Y) LegalCluster(CrowdSimSession session, NavContext nav)
     {
-        for (int i = 0; i < nav.Passable.Length; i++)
+        var store = session.Structures ?? throw new InvalidOperationException("没有结构仓。");
+        int cell = session.Config.NavCellSizeCm;
+        int side = nav.NavCellsPerSide;
+        var building = TemplateOf(session, "building");
+        var flood = TemplateOf(session, "flood");
+        var road = TemplateOf(session, "road");
+        var cells = System.Array.Empty<int>();
+        var flags = System.Array.Empty<byte>();
+        for (int gy = 0; gy < side; gy++)
         {
-            if (nav.Passable[i] != 0) return i;
+            for (int gx = 0; gx < side; gx++)
+            {
+                if (nav.Passable[gy * side + gx] == 0) continue;
+                int x = gx * cell + cell / 2;
+                int y = gy * cell + cell / 2;
+                if (!Accepts(store, building, x, y, 14000, 0, 0, ref cells, ref flags, out _)) continue;
+                if (!Accepts(store, flood, x + cell * 6, y, 8000, 0, 0, ref cells, ref flags, out int floodCount)) continue;
+                if (!ShiftsCost(session, nav, flood, cells, floodCount)) continue;
+                if (!Accepts(store, road, x, y + cell * 6, 3000, x + cell * 4, y + cell * 8, ref cells, ref flags, out int roadCount)) continue;
+                if (!ShiftsCost(session, nav, road, cells, roadCount)) continue;
+                if (HitsPlanned(store, building, flood, x, y, cell, side, cells, roadCount)) continue;
+                return (x, y);
+            }
         }
 
-        throw new InvalidOperationException("没有可走格。");
+        throw new InvalidOperationException("没有能同时放下建筑、泛洪和道路的点。");
+    }
+
+    private static RuntimeStructureTemplate TemplateOf(CrowdSimSession session, string id)
+    {
+        int index = session.Structures!.TemplateIndexOf(id);
+        if (index < 0) throw new InvalidOperationException($"没有结构模板 {id}。");
+        return session.Config.Structures.Templates[index];
+    }
+
+    private static bool Accepts(
+        CrowdStructuresStore store,
+        RuntimeStructureTemplate template,
+        int x,
+        int y,
+        int size,
+        int toX,
+        int toY,
+        ref int[] cells,
+        ref byte[] flags,
+        out int count)
+    {
+        var footprint = CrowdStructureFootprint.Make(
+            template, Fix64.FromInt(x), Fix64.FromInt(y), Fix64.FromInt(size), Fix64.FromInt(toX), Fix64.FromInt(toY));
+        bool legal = CrowdStructurePlacement.Judge(store, template, footprint, ref cells, ref flags, out count) == CrowdPlacementReject.None;
+        return legal && count > 0;
+    }
+
+    private static bool ShiftsCost(CrowdSimSession session, NavContext nav, RuntimeStructureTemplate template, int[] cells, int count)
+    {
+        if (template.AreaIndex is not int area) return false;
+        var row = session.Config.AgentTypes[nav.LayerIndex].CostByArea;
+        if ((uint)area >= (uint)row.Length) return false;
+        var want = row[area];
+        for (int i = 0; i < count; i++)
+        {
+            if (nav.Cost[cells[i]] != want) return true;
+        }
+
+        return false;
+    }
+
+    private static bool HitsPlanned(
+        CrowdStructuresStore store,
+        RuntimeStructureTemplate building,
+        RuntimeStructureTemplate flood,
+        int x,
+        int y,
+        int cell,
+        int side,
+        int[] painted,
+        int count)
+    {
+        var box = CrowdStructureFootprint.Make(building, Fix64.FromInt(x), Fix64.FromInt(y), Fix64.FromInt(14000), Fix64.Zero, Fix64.Zero);
+        var disc = CrowdStructureFootprint.Make(flood, Fix64.FromInt(x + cell * 6), Fix64.FromInt(y), Fix64.FromInt(8000), Fix64.Zero, Fix64.Zero);
+        for (int i = 0; i < count; i++)
+        {
+            int cx = painted[i] % side;
+            int cy = painted[i] / side;
+            if (store.GroundCellHit(building, box, cx, cy) || store.GroundCellHit(flood, disc, cx, cy)) return true;
+        }
+
+        return false;
     }
 
     private static CrowdNavGroupSet.Group GroupWithFlow(CrowdSimSession session)
