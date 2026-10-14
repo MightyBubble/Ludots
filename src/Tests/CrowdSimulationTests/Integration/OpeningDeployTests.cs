@@ -45,6 +45,17 @@ public sealed class OpeningDeployTests
         Assert.That(none[0]!["cmd"]!["type"]!.GetValue<string>(), Is.Not.EqualTo("spawn"));
     }
 
+    [TestCase("CrowdSimulationS1Terrain1337Mod")]
+    [TestCase("CrowdSimulationS1Terrain7Mod")]
+    [TestCase("CrowdSimulationS1Terrain2024Mod")]
+    [TestCase("CrowdSimulationS3PathMod")]
+    public void MapOnlyStages_OpenWithoutUnits(string modId)
+    {
+        JsonObject snapshot = CrowdSimulationEditorApi.Load(FindRepoRoot(), modId);
+        Assert.That(snapshot["ok"]!.GetValue<bool>(), Is.True, snapshot.ToJsonString());
+        Assert.That(snapshot["scenario"]!["deploy"]!["initialUnits"]!.GetValue<int>(), Is.EqualTo(0));
+    }
+
     [Test]
     public void ProductionSession_OpeningCountMatchesInitialUnits()
         => AssertOpeningCount(4);

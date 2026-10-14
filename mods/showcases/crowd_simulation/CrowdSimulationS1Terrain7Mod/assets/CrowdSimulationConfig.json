@@ -3,6 +3,7 @@
     "seed": 7
   },
   "deploy": {
+    "initialUnits": 0,
     "bases": [
       {
         "playerId": 1,
