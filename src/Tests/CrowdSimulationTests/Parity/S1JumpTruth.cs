@@ -3,7 +3,10 @@ using Ludots.Core.CrowdSimulation.World;
 
 namespace CrowdSimulationTests.Parity;
 
-/// <summary>Web 端烘焙的跳跃候选快照，只作行为对拍参照；入库 .navsurface 由 Ludots 烘焙。</summary>
+/// <summary>
+/// Web 端烘焙的跳跃候选快照，只作行为对拍参照；入库 .navsurface 由 Ludots 烘焙。
+/// 每行依次是 fromX、fromY、toX、toY、dropCm、lengthCells。
+/// </summary>
 internal static class S1JumpTruth
 {
     public const string FileName = "s1-jump-truth.json";

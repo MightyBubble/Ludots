@@ -4,7 +4,6 @@
   "seed": 7,
   "navCellsPerSide": 256,
   "navCellSizeCm": 6250,
-  "fields": ["fromX", "fromY", "toX", "toY", "dropCm", "lengthCells"],
   "jumpCandidates": [
     [185, 0, 191, 0, 162, 6.0],
     [184, 2, 184, 4, 420, 2.0],
