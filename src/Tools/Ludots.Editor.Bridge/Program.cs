@@ -6246,6 +6246,11 @@ static class EditorRepo
 
         }
 
+        if (source.ContinuousHeightmap != null)
+        {
+            target.ContinuousHeightmap = source.ContinuousHeightmap;
+        }
+
         if (source.TriggerTypes != null)
         {
             foreach (var tt in source.TriggerTypes)
