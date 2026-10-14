@@ -410,6 +410,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             {
                 "graph.aim.pick.friendly",
                 "graph.aim.rule.unit_only",
+                "graph.aim.shape.line",
             }));
 
             RelationshipTypeRegistry types = _engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
