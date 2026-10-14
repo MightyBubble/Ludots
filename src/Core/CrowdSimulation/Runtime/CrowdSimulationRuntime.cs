@@ -300,6 +300,13 @@ public sealed partial class CrowdSimulationRuntime
 
     public bool HandleMapSuspended(GameEngine engine, MapId mapId) => HandleMapUnloaded(engine, mapId);
 
+    /// <summary>引擎销毁前调用：路径服务的工作线程引用会话，不结束会话，整个引擎都回收不了。</summary>
+    public void HandleEngineDisposing(GameEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (_activeMapId != null) HandleMapUnloaded(engine, new MapId(_activeMapId));
+    }
+
     private NavMeshBakeConfig _navmesh;
 
     private NavMeshBakeConfig RequireLoadedNavmesh(GameEngine engine)

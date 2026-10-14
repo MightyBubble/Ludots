@@ -5148,6 +5148,11 @@ namespace Ludots.Core.Engine
             }
 
             Stop();
+            if (World != null)
+            {
+                _crowdSimulationRuntime.HandleEngineDisposing(this);
+            }
+
             if (TryGetService(CoreServiceKeys.NetworkRuntimePort, out INetworkRuntimePort networkRuntime))
             {
                 networkRuntime.Dispose();

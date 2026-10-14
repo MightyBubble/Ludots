@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -64,46 +65,49 @@ public sealed class OpeningDeployTests
     public void ProductionSession_ZeroInitialUnitsSpawnsNothing()
         => AssertOpeningCount(0);
 
-    private static void AssertOpeningCount(int initialUnits)
+    [Test]
+    public void EngineDispose_ReleasesCrowdSession()
     {
-        string repo = FindRepoRoot();
-        string probe = Path.Combine(Path.GetTempPath(), "Ludots_OpeningDeployProbe_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(probe, "assets"));
+        WeakReference session = RunAndDisposeEngine();
+        for (int i = 0; i < 10 && session.IsAlive; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(session.IsAlive, Is.False, "引擎销毁后群体会话仍被引用（路径服务工作线程没有停）。");
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference RunAndDisposeEngine()
+    {
+        string probe = CreateProbeMod(4);
         try
         {
-            File.WriteAllText(Path.Combine(probe, "mod.json"),
-                """{"name":"LudotsOpeningDeployProbeMod","version":"1.0.0","priority":0,"dependencies":{"CrowdSimulationS4DeployMod":"^0.4.0"}}""");
-            File.WriteAllText(Path.Combine(probe, "assets", "CrowdSimulationConfig.json"),
-                $$"""
-                {
-                  "deploy": { "initialUnits": {{initialUnits}} }
-                }
-                """);
-            using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string>
-            {
-                Path.Combine(repo, "mods", "LudotsCoreMod"),
-                Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
-                Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
-                Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-                Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod"),
-                probe,
-            }, Path.Combine(repo, "assets"));
-            engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
-            engine.SetService(CoreServiceKeys.ViewController, new StubView());
-            engine.Start();
-            engine.LoadMap("crowd_simulation_s1337");
+            using var engine = StartS4Engine(probe);
+            CrowdSimSession session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
+                ?? throw new InvalidOperationException("没有群体会话。");
+            TickUntilFirstStep(engine, session);
+            return new WeakReference(session);
+        }
+        finally
+        {
+            Directory.Delete(probe, recursive: true);
+        }
+    }
+
+    private static void AssertOpeningCount(int initialUnits)
+    {
+        string probe = CreateProbeMod(initialUnits);
+        try
+        {
+            using var engine = StartS4Engine(probe);
             CrowdSimSession session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
                 ?? throw new InvalidOperationException("没有群体会话。");
             Assert.That(session.Config.Deploy.InitialUnits, Is.EqualTo(initialUnits));
 
-            int guard = 0;
-            while (session.TickCount < 1 && guard++ < 180)
-            {
-                engine.Tick(1f / 30f);
-            }
+            TickUntilFirstStep(engine, session);
 
-            Assert.That(session.TickCount, Is.GreaterThan(0));
             Assert.That(session.Units.Count, Is.EqualTo(initialUnits));
             int spawns = 0;
             foreach (var entry in session.Commands.Log)
@@ -119,8 +123,54 @@ public sealed class OpeningDeployTests
         }
         finally
         {
-            if (Directory.Exists(probe)) Directory.Delete(probe, recursive: true);
+            Directory.Delete(probe, recursive: true);
         }
+    }
+
+    private static string CreateProbeMod(int initialUnits)
+    {
+        string probe = Path.Combine(Path.GetTempPath(), "Ludots_OpeningDeployProbe_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(probe, "assets"));
+        File.WriteAllText(Path.Combine(probe, "mod.json"),
+            """{"name":"LudotsOpeningDeployProbeMod","version":"1.0.0","priority":0,"dependencies":{"CrowdSimulationS4DeployMod":"^0.4.0"}}""");
+        File.WriteAllText(Path.Combine(probe, "assets", "CrowdSimulationConfig.json"),
+            $$"""
+            {
+              "deploy": { "initialUnits": {{initialUnits}} }
+            }
+            """);
+        return probe;
+    }
+
+    private static GameEngine StartS4Engine(string probe)
+    {
+        string repo = FindRepoRoot();
+        var engine = new GameEngine();
+        engine.InitializeWithConfigPipeline(new List<string>
+        {
+            Path.Combine(repo, "mods", "LudotsCoreMod"),
+            Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
+            Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
+            Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
+            Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod"),
+            probe,
+        }, Path.Combine(repo, "assets"));
+        engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
+        engine.SetService(CoreServiceKeys.ViewController, new StubView());
+        engine.Start();
+        engine.LoadMap("crowd_simulation_s1337");
+        return engine;
+    }
+
+    private static void TickUntilFirstStep(GameEngine engine, CrowdSimSession session)
+    {
+        int guard = 0;
+        while (session.TickCount < 1 && guard++ < 180)
+        {
+            engine.Tick(1f / 30f);
+        }
+
+        Assert.That(session.TickCount, Is.GreaterThan(0));
     }
 
     private sealed class StubView : Ludots.Core.Presentation.Camera.IViewController
