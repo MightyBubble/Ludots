@@ -55,6 +55,13 @@ namespace Ludots.Core.Input.Interaction
         public uint Revision { get; private set; }
 
         /// <summary>
+        /// Invoked after the active scheme id changes, with the previous id (0 when none was
+        /// active) and the new id. A same-id call does not invoke it. The host assigns this
+        /// after <see cref="Install"/> so the install-time activation stays silent.
+        /// </summary>
+        public Action<int, int>? SchemeChanged { get; set; }
+
+        /// <summary>
         /// The active scheme's axis move declaration with the order type key pre-resolved at
         /// <see cref="Install"/>. Returns false when no scheme is active or the active scheme
         /// declares no axis move: the current scheme has no axis movement.
@@ -271,9 +278,11 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
+            int previousSchemeId = _activeSchemeId;
             _activeSchemeId = schemeId;
             Revision++;
             switched = true;
+            SchemeChanged?.Invoke(previousSchemeId, schemeId);
             return true;
         }
 

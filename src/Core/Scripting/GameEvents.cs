@@ -201,6 +201,15 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey ContextDeactivated = new EventKey("ContextDeactivated");
 
+        /// <summary>
+        /// Map-scoped: a seat's active control scheme changed.
+        /// Payload: SeatId, Rep (the possessed representative), OldSchemeId, NewSchemeId.
+        /// Scheme ids in the payload are ConfigKey ids of the scheme name; OldSchemeId is 0
+        /// when no scheme was active. SourceEntity is stamped with the representative so an
+        /// entity-domain mount matches that seat.
+        /// </summary>
+        public static readonly EventKey ControlSchemeChanged = new EventKey("ControlSchemeChanged");
+
         public static bool IsMapScoped(string eventName)
         {
             return eventName == MapLoaded.Value ||
@@ -225,7 +234,8 @@ namespace Ludots.Core.Scripting
                 eventName == ResponseChainPromptClosed.Value ||
                 eventName == EntityCollectionMembershipChanged.Value ||
                 eventName == ContextActivated.Value ||
-                eventName == ContextDeactivated.Value;
+                eventName == ContextDeactivated.Value ||
+                eventName == ControlSchemeChanged.Value;
         }
     }
 }
