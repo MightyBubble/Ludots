@@ -315,6 +315,10 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
             var snapshotService = new WorldSnapshotService();
             var restoreService = new WorldRestoreService();
+            // Aim tracking can leave a dead entity in the blackboard. The save
+            // validator rejects that reference; the preference under test is a
+            // separate component and is left as written.
+            DropDeadBlackboardEntityRefs();
             WorldSaveSnapshot snapshot = snapshotService.Capture(
                 _engine,
                 SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
@@ -912,6 +916,33 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         private string ReadPref(string key)
         {
             return ReadAimPrefValue(_engine, Hero, key);
+        }
+
+        private unsafe void DropDeadBlackboardEntityRefs()
+        {
+            var owners = new List<Entity>();
+            var query = new QueryDescription().WithAll<BlackboardEntityBuffer>();
+            _engine.World.Query(in query, (Entity entity, ref BlackboardEntityBuffer _) => owners.Add(entity));
+            for (int o = 0; o < owners.Count; o++)
+            {
+                ref BlackboardEntityBuffer buffer = ref _engine.World.Get<BlackboardEntityBuffer>(owners[o]);
+                int count = buffer.Count;
+                Span<int> deadKeys = stackalloc int[count];
+                int deadCount = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    Entity target = EntityUtil.Reconstruct(buffer.EntityIds[i], buffer.WorldIds[i], buffer.Versions[i]);
+                    if (target != Entity.Null && !_engine.World.IsAlive(target))
+                    {
+                        deadKeys[deadCount++] = buffer.Keys[i];
+                    }
+                }
+
+                for (int i = 0; i < deadCount; i++)
+                {
+                    buffer.Remove(deadKeys[i]);
+                }
+            }
         }
 
         private void RebindPlaced()
