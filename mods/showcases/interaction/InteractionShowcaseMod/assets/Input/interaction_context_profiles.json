@@ -15,7 +15,8 @@
         "InteractionModeAction",
         "Aim.CastMode.Smart",
         "Aim.CastMode.AimClick",
-        "Aim.CastMode.AimRelease"
+        "Aim.CastMode.AimRelease",
+        "Aim.CastMode.TargetFirst"
       ],
       "triggers": [
         {

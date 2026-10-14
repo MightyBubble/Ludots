@@ -1,0 +1,448 @@
+[
+  {
+    "id": "graph.aim.target_first",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "lifecycle",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt_dead",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "targets",
+        "op": "QueryFromCollection",
+        "collectionKey": "role:target"
+      },
+      {
+        "id": "tmember",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "talive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "tjump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "deact_miss",
+        "op": "DeactivateOwnContext"
+      },
+      {
+        "id": "fail_miss",
+        "op": "Fail",
+        "message": "AimTargetFirstNoTarget"
+      },
+      {
+        "id": "write_target",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "write_point",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "write_stick",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "write_handled",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "load_ability",
+        "op": "LoadSlotAbilityId"
+      },
+      {
+        "id": "load_mod",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.press_modifiers"
+      },
+      {
+        "id": "dispatch",
+        "op": "DispatchMapEvent",
+        "event": "Aim.Rule.Resolve"
+      },
+      {
+        "id": "read_handled",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.rule.handled"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "eq_handled",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "handled_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "fail",
+        "op": "Fail",
+        "message": "AimRuleUnhandled"
+      },
+      {
+        "id": "deact",
+        "op": "DeactivateOwnContext"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt_dead"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "targets"
+      },
+      {
+        "from": "targets",
+        "fromPort": "next",
+        "to": "tmember"
+      },
+      {
+        "from": "tmember",
+        "fromPort": "next",
+        "to": "talive"
+      },
+      {
+        "from": "talive",
+        "fromPort": "next",
+        "to": "tjump"
+      },
+      {
+        "from": "tjump",
+        "fromPort": "false",
+        "to": "deact_miss"
+      },
+      {
+        "from": "deact_miss",
+        "fromPort": "next",
+        "to": "fail_miss"
+      },
+      {
+        "from": "tjump",
+        "fromPort": "true",
+        "to": "write_target"
+      },
+      {
+        "from": "write_target",
+        "fromPort": "next",
+        "to": "write_point"
+      },
+      {
+        "from": "write_point",
+        "fromPort": "next",
+        "to": "write_stick"
+      },
+      {
+        "from": "write_stick",
+        "fromPort": "next",
+        "to": "write_handled"
+      },
+      {
+        "from": "write_handled",
+        "fromPort": "next",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_ability"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "next",
+        "to": "load_mod"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "next",
+        "to": "dispatch"
+      },
+      {
+        "from": "dispatch",
+        "fromPort": "next",
+        "to": "read_handled"
+      },
+      {
+        "from": "read_handled",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "eq_handled"
+      },
+      {
+        "from": "eq_handled",
+        "fromPort": "next",
+        "to": "handled_jump"
+      },
+      {
+        "from": "handled_jump",
+        "fromPort": "true",
+        "to": "deact"
+      },
+      {
+        "from": "deact",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "handled_jump",
+        "fromPort": "false",
+        "to": "fail"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_dead",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "targets",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "tmember",
+        "toPort": "value"
+      },
+      {
+        "from": "tmember",
+        "fromPort": "value",
+        "to": "talive",
+        "toPort": "source"
+      },
+      {
+        "from": "talive",
+        "fromPort": "value",
+        "to": "tjump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_target",
+        "toPort": "source"
+      },
+      {
+        "from": "tmember",
+        "fromPort": "value",
+        "to": "write_target",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_point",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_point",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_stick",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_stick",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_handled",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_ability",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_ability",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_mod",
+        "toPort": "source"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "value",
+        "to": "dispatch",
+        "toPort": "ability"
+      },
+      {
+        "from": "load_mod",
+        "fromPort": "value",
+        "to": "dispatch",
+        "toPort": "modifiers"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_handled",
+        "toPort": "source"
+      },
+      {
+        "from": "read_handled",
+        "fromPort": "value",
+        "to": "eq_handled",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "eq_handled",
+        "toPort": "b"
+      },
+      {
+        "from": "eq_handled",
+        "fromPort": "value",
+        "to": "handled_jump",
+        "toPort": "condition"
+      }
+    ]
+  }
+]

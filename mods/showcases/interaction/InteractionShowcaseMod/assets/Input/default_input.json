@@ -158,7 +158,7 @@
           "path": "<Keyboard>/leftShift"
         },
         {
-          "actionId": "Aim.CastMode.Smart",
+          "actionId": "Aim.CastMode.TargetFirst",
           "path": "<Keyboard>/f1"
         },
         {
