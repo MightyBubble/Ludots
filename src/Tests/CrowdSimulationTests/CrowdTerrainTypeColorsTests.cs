@@ -13,7 +13,7 @@ public class CrowdTerrainTypeColorsTests
             { "colors": { "water": { "red": 1, "green": 2, "blue": 3, "alpha": 4 } } }
             """));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => table.RequireExact(["water", "land"], "crowd_simulation_s1337"));
+        var ex = Assert.Throws<InvalidOperationException>(() => table.RequireCovers(["water", "land"], "crowd_simulation_s1337"));
 
         Assert.That(ex!.Message, Does.Contain("land"));
         Assert.That(ex.Message, Does.Contain("crowd_simulation_s1337"));
@@ -21,7 +21,7 @@ public class CrowdTerrainTypeColorsTests
     }
 
     [Test]
-    public void ExtraTerrainId_NamesIt()
+    public void ColorUnusedByThisMap_IsAllowed()
     {
         CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.Load(Parse("""
             {
@@ -32,10 +32,7 @@ public class CrowdTerrainTypeColorsTests
             }
             """));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => table.RequireExact(["water"], "crowd_simulation_s1337"));
-
-        Assert.That(ex!.Message, Does.Contain("lava"));
-        Assert.That(ex.Message, Does.Contain("terrainAreas"));
+        Assert.DoesNotThrow(() => table.RequireCovers(["water"], "crowd_simulation_s1337"));
     }
 
     [Test]

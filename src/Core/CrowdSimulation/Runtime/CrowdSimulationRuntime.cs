@@ -714,7 +714,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
     {
         CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.LoadMerged(
             engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
-        table.RequireExact(runtime.TerrainTypeIds, runtime.MapId);
+        table.RequireCovers(runtime.TerrainTypeIds, runtime.MapId);
         return table;
     }
 

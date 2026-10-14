@@ -339,7 +339,7 @@ public static class CrowdNavSurfaceAuthoring
 
         CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.LoadMerged(
             binding.Pipeline, binding.Catalog, binding.Report);
-        table.RequireExact(terrainIds, mapId);
+        table.RequireCovers(terrainIds, mapId);
         var rows = new CrowdTerrainTypeColorRow[terrainIds.Count];
         for (int i = 0; i < terrainIds.Count; i++)
         {

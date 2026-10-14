@@ -71,7 +71,8 @@ public sealed class CrowdTerrainTypeColorTable
 
     public IReadOnlyDictionary<string, CrowdTerrainTypeColor> Colors { get; }
 
-    public void RequireExact(IReadOnlyList<string> terrainIds, string mapId)
+    /// <summary>颜色表是多张地图共用的合并结果，只要求本图每个地形类型都有颜色。</summary>
+    public void RequireCovers(IReadOnlyList<string> terrainIds, string mapId)
     {
         ArgumentNullException.ThrowIfNull(terrainIds);
         if (string.IsNullOrWhiteSpace(mapId))
@@ -93,15 +94,6 @@ public sealed class CrowdTerrainTypeColorTable
             {
                 throw new InvalidOperationException(
                     $"{CrowdTerrainTypeColors.RelativePath}: 地图 \"{mapId}\" 的 terrainId \"{id}\" 没有颜色。");
-            }
-        }
-
-        foreach (string key in Colors.Keys)
-        {
-            if (!expected.Contains(key))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdTerrainTypeColors.RelativePath}: 颜色 \"{key}\" 不在地图 \"{mapId}\" 的 terrainAreas 里。");
             }
         }
     }
