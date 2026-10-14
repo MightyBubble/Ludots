@@ -939,7 +939,9 @@ namespace Ludots.Tests.GAS
                 applier.BindInputInteraction(
                     new Ludots.Core.Input.Interaction.FilterProfileRegistry(filterProfileIds, world, tagOps),
                     domains,
-                    keyRegistry.Register("collection.ui.cast.raw"));
+                    InputCollectionKeyDeclarations.ForResolvedRoles(
+                        keyRegistry,
+                        new Dictionary<string, string> { ["castRaw"] = "collection.ui.cast.raw" }));
                 return new Harness
                 {
                     Changes = changes,

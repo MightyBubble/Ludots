@@ -522,7 +522,9 @@ namespace Ludots.Tests.GAS
                         world,
                         tagOps),
                     query,
-                    keyRegistry.Register("collection.ui.cast.raw"));
+                    InputCollectionKeyDeclarations.ForResolvedRoles(
+                        keyRegistry,
+                        new Dictionary<string, string> { ["castRaw"] = "collection.ui.cast.raw" }));
                 return new Harness
                 {
                     Relationships = relationships,

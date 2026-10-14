@@ -189,6 +189,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `allowedSchemes` 里同一个 id 出现两次 | 追加合并只往后接，不去重 | **已改**：校验读到重复 id 直接失败 |
 | Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | **已改**：类型、命名空间和服务绑定改成 `GraphPointerSampleRuntime` / `IGraphPointerSampleRuntime`（`Ludots.Core.Input.PointerSample`，`BindPointerSample`）。`ScreenPointToGround` 这些操作名本来就不含 aim，保持不动。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 不归这条线 |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
+| 引擎根 `Input/collection_keys.json` 给 `castRaw` 和 `hover` 配了默认集合 | 开局自己没写这两个角色，也会拿到引擎给的集合名 | **已改**：根文件删除。`config_catalog.json` 仍登记 `Input/collection_keys.json`，一个片段都没有时角色表是空的。`hover` 写在 LudotsCoreMod 的 `Input/collection_keys.json`，因为 `graph.core.hover_tick` 写这个集合；图、presenter 和读取处用 `role:hover`。`castRaw` 由调用 `CommitCast` 的开局声明，超级武器展示写成 `collection.ui.cast.raw`；没声明时提交报 `RoleUnbound`。两处值不同报 `RoleConflict` |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**
 

@@ -835,7 +835,7 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.ui.command.hover",
+                InputCollectionKeyDeclarations.RequireRole(engine, "hover"),
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 contextEntity: owner,
@@ -860,7 +860,7 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.ui.command.hover",
+                InputCollectionKeyDeclarations.RequireRole(engine, "hover"),
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 contextEntity: viewer,

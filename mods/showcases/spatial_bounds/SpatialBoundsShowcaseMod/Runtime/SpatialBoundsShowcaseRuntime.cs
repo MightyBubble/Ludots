@@ -427,7 +427,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       "collection.ui.command.hover",
+                       InputCollectionKeyDeclarations.RequireRole(engine, "hover"),
                        out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)
