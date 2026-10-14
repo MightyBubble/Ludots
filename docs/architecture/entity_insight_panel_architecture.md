@@ -53,4 +53,4 @@ Current reference documents:
 
 - `docs/architecture/entity_collection_query_infrastructure.md`
 - `docs/architecture/webui_dataplane_architecture.md`
-- `docs/audits/rfc_0065_pr581_workflow_closeout.md`
+- `gitbook/architecture/graph-capability-status.md` section 3.3.2 for aim, control schemes, and the retired input names. The RFC-0065 closeout audit keeps its decision text.

@@ -12,15 +12,8 @@
 
 ## Ludots 映射
 
-```
-InputOrderMapping:
-  actionId: "SkillQ"
-  trigger: PressedThisFrame
-  orderTypeKey: "castAbility"
-  targetType: Direction
-  isSkillMapping: true
-  heldPolicy: StartEnd
-```
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ## 实现方案
 
@@ -53,7 +46,7 @@ AbilityDefinition:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| HeldPolicy.StartEnd | ✅ 已有 | InputOrderMapping 生成 .Start/.End order 对 |
+| 按下与松开 | 交互状态 | 按下激活 `pref.aim.cast_mode` 指向的手势状态，松开确认走 `graph.aim.release_confirm` |
 | EffectClip + GrantedTags | ✅ 已有 | 蓄力效果 + 标签授予 |
 | Movement system tag 检查 | ⚠️ **需确认** | Movement system 需检查 `slow_50` tag 并应用减速 |
 | Graph ops (Load/WriteSelfAttribute) | ✅ 已有 | 每 tick 累积 charge_amount |

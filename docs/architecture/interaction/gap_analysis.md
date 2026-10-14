@@ -11,7 +11,7 @@
 
 | 项目 | 当前结论 | 证据 |
 |------|----------|------|
-| `ContextScored Acquisition 不存在` | 已关闭。`ContextScored` 已进入 `CastModeType` 与 `InputOrderMappingSystem` | `src/Core/Input/Orders/InputOrderMapping.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs` |
+| `ContextScored Acquisition 不存在` | 已关闭。context group 的 root 槽由 `CommandIntentBufferDrainSystem` 交给 `ContextScoredOrderResolver` | `src/Core/Input/Orders/ContextScoredOrderResolver.cs`、`src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs` |
 | `ContextGroup -> ability dispatch` | 已关闭。真实运行时为 registry + loader + resolver 链路 | `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`、`src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`、`src/Core/Input/Orders/ContextScoredOrderResolver.cs` |
 | `AbilityActivationRequireTags 不存在` | 已关闭。当前仓库使用 `AbilityActivationBlockTags.RequiredAll` / `BlockedAny` | `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`、`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` |
 | `Form-based ability routing 不存在` | 已关闭。当前分支已有 form-set registry + loader + routing system，并通过分层 effective slot 解析接入输入/执行/indicator/context 路径 | `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`、`src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`、`src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`、`src/Core/Gameplay/GAS/Components/AbilityStateBuffer.cs` |
@@ -30,7 +30,7 @@
 - `ContextGroupRegistry` 保存 `groupId -> ContextGroupDefinition` 与 `rootAbilityId -> groupId`
 - `ContextGroupConfigLoader` 从 `GAS/context_groups.json` 编译候选
 - `ContextScoredOrderResolver` 解析 concrete slot + concrete target
-- `InputOrderMappingSystem` 在 `CastModeType.ContextScored` 分支提交最终 order
+- `CommandIntentBufferDrainSystem` 在槽是 context group root 时调用 `ContextScoredOrderResolver`，再提交最终 order
 
 这让 ContextScored 保持在输入解析层闭环，而不把评分路由硬编码进 `AbilityDefinition`。
 
@@ -61,7 +61,7 @@
 
 - `src/Core/Input/Orders/ContextScoredOrderResolver.cs`
 - `src/Core/Gameplay/GAS/Systems/OrderBufferSystem.cs`
-- `src/Tests/GasTests/InputOrderAbilityAuditTests.cs`
+- `src/Tests/GasTests/Ability/InputOrderAbilityAuditTests.cs`
 
 因此未来如果某个 family 真的需要 ability-side numeric gate，应沿用这条 primitive，而不是新起一套 condition runtime。
 
@@ -76,7 +76,7 @@
 
 对应证据：
 
-- `src/Tests/GasTests/InputOrderAbilityAuditTests.cs`
+- `src/Tests/GasTests/Ability/InputOrderAbilityAuditTests.cs`
 - `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
 - `artifacts/acceptance/interaction-showcase/path.mmd`
 
@@ -113,7 +113,7 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 | 项目 | 优先级 | 原因 | 应复用的现有基础 |
 |------|--------|------|------------------|
 | Response target mutability / richer response-window UI | P1-P2 | 当前 showcase 只证明基础路径 | `ResponseChain`、presentation pipeline |
-| Companion focus / actor routing 细化 | P2 | shared command-source fan-out 已有，但 companion 专用工作流未闭环 | `InputOrderMappingSystem`、`CommandSourceAcquisitionSystem`、现有 order pipeline |
+| Companion focus / actor routing 细化 | P2 | shared command-source fan-out 已有，但 companion 专用工作流未闭环 | `CommandIntentBufferDrainSystem`、`role:commandSource`、现有 order pipeline |
 | Generic environment scan / displacement collision / nav blocker | P2 | showcase 未证明整族场景 | `ContextGroup`、`RuntimeEntitySpawnQueue`、effect / handler pipeline |
 | Minimap click adapter | P3 | 需要 adapter 侧世界坐标转换 | 现有 `OrderArgs.Spatial` |
 

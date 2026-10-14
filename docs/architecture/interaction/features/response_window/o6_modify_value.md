@@ -21,7 +21,7 @@
 
 - **Trigger**: 无（Phase Listener 自动触发）
 - **TargetType**: `None`
-- **InteractionMode**: 不适用
+- **手势**: 偏好 `pref.aim.cast_mode`
 
 ```json5
 // 配置路径: mods/<yourMod>/Effects/<armor_effect_id>.json

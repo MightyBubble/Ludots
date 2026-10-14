@@ -8,8 +8,9 @@ but implementation must use command actors and entity collections.
 
 Current references:
 
-- `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`
-- `docs/audits/rfc_0065_pr581_workflow_closeout.md`
+- `gitbook/architecture/graph-capability-status.md` section 3.3.2
 - `mods/showcases/interaction/InteractionShowcaseMod/`
+
+RFC-0065 and the closeout audit keep their decision text. They are not the current input contract.
 
 Do not reintroduce retired response queues or selected-provider fallback.

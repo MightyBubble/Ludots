@@ -10,15 +10,8 @@
 
 ## Ludots 映射
 
-```
-InputOrderMapping:
-  actionId: "SkillW"
-  trigger: PressedThisFrame
-  orderTypeKey: "castAbility"
-  targetType: Position
-  // 唯一差别: Range 不做限制, 或 Range=Global
-  // 小地图点击: 需要 InputOrderMappingSystem 支持 minimap click → world position 转换
-```
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 OrderSubmitter 将点击位置写入 `SpatialBlackboardKey`。
 
@@ -27,7 +20,7 @@ OrderSubmitter 将点击位置写入 `SpatialBlackboardKey`。
 与 D1 圆形AoE 相同, 唯一差异在于:
 
 1. **Range 限制**: OrderTypeConfig 不设置 range 限制, 或设置为全图范围
-2. **小地图支持**: InputOrderMappingSystem 需要支持 minimap click → world position 转换
+2. **小地图**: 指针走 `interaction.context.minimap`，世界点来自 `GraphPointerSampleRuntime`
 
 ```
 AbilityExecSpec:

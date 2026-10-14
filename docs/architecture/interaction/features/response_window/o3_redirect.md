@@ -21,7 +21,7 @@
 
 - **Trigger**: 无（被动触发）
 - **TargetType**: `Entity`（需选择新目标）或 `None`（自动重定向）
-- **InteractionMode**: 不适用
+- **手势**: 偏好 `pref.aim.cast_mode`
 
 ```json5
 // 配置路径: mods/<yourMod>/ResponseChainListeners/<redirect_id>.json

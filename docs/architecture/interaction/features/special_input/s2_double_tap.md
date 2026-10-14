@@ -19,20 +19,10 @@
 
 - **Trigger**: `DoubleTap`（已废弃，需 P2 重新实现）
 - **TargetType**: 根据技能需求（`None` / `Direction`）
-- **InteractionMode**: `Explicit`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/sprint.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "sprint",
-  "trigger": "DoubleTap",                         // ❌ 已废弃，需 P2 实现
-  "orderTypeKey": "castAbility",
-  "targetType": "None",
-  "isSkillMapping": true,
-  "doubleTapWindowTicks": 15                      // 双击窗口时间
-}
-```
+目标规则图是 `graph.aim.rule.none`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 **当前状态**：`InputTriggerType.DoubleTap` 已废弃，需要在 command-source/input profile 层实现双击检测。
 
@@ -79,7 +69,7 @@ Effect 模板示例：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | CommandSourceAcquisitionSystem | `src/Core/Input/CommandSources/CommandSourceAcquisitionSystem.cs` | ❌ P2 — 需新增双击检测逻辑 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 

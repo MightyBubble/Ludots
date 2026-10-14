@@ -56,7 +56,9 @@ energy_resource:
 
 > 以下配置使用 Ludots 标准 EffectTemplate + PhaseListener Graph + Attribute 转换格式。
 
-```json5
+目标规则图是 `graph.aim.rule.none`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
+```
 // === Effect Templates (mods/<yourMod>/Effects/absorb_convert_effects.json) ===
 [
   {
@@ -105,29 +107,6 @@ energy_resource:
 //   SendEvent               "damage_absorbed"                      // 触发 VFX/音效
 
 // === AbilityExecSpec: 吸收护盾（Hold 模式）===
-// 使用 HeldPolicy=StartEnd，Down 施加 Buff，Up 移除 Buff
-{
-  "id": "Ability.Absorb.Shield",
-  "exec": {
-    "totalTicks": 0,
-    "items": [
-      // block.Start: 施加吸收 Buff
-      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.Absorb.ShieldBuff" }
-    ]
-  }
-  // block.End 由 Ability 的 HeldPolicy=StartEnd 自动触发 Effect 移除
-}
-
-// === InputOrderMapping ===
-{
-  "actionId": "ability_Block",
-  "trigger": "Held",
-  "heldPolicy": "StartEnd",
-  "orderTypeKey": "castAbility",
-  "targetType": "None",
-  "isSkillMapping": true,
-  "castModeOverride": "SmartCast"
-}
 
 // === Attribute 定义 ===
 // Energy 属性（P1 需求）：

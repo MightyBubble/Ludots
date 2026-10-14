@@ -12,23 +12,12 @@
 
 ## 交互层设计
 
-- **Trigger**: `Held`，配合 `HeldPolicy = StartEnd`（Down 触发 block.Start，Up 触发 block.End）
+- **Trigger**: 按下进入手势状态，松开走 `graph.aim.release_confirm`
 - **TargetType**: `None`
-- **InteractionMode**: `SmartCast`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/hold_block.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_Block",
-  "trigger": "Held",
-  "heldPolicy": "StartEnd",          // Down→block.Start；Up→block.End
-  "orderTypeKey": "castAbility",
-  "targetType": "None",
-  "isSkillMapping": true,
-  "castModeOverride": "SmartCast"
-}
-```
+目标规则图是 `graph.aim.rule.none`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ---
 
@@ -104,7 +93,7 @@ Effect 模板示例：
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 | BlackboardFloatBuffer | `src/Core/Gameplay/GAS/Components/BlackboardFloatBuffer.cs` | ✅ 已有 |
 | GraphOps | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| Held + HeldPolicy=StartEnd | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 按下与松开 | 交互状态 | 按下激活 `pref.aim.cast_mode` 指向的手势状态，松开确认走 `graph.aim.release_confirm` |
 | GrantedTags 生命周期管理 | `src/Core/Gameplay/GAS/Systems/EffectTagSystem.cs` | ✅ 已有 |
 | GuardStamina 属性 | `src/Core/Gameplay/GAS/Components/AttributeSet.cs` | ❌ P1 — 需在 AttributeSet 中注册 GuardStamina 属性 |
 | 破盾检测系统 | `src/Core/Gameplay/GAS/Systems/GuardBreakSystem.cs` | ❌ P1 — 需新增：监听 GuardStamina≤0 → 强制移除 BlockingBuff + 施加 guardbreak Tag |

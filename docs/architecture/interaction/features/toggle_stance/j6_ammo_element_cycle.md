@@ -30,7 +30,7 @@ Down → cycle ammo_type Attribute:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | targetType: None |
+| `graph.aim.rule.none` | AimInteractionMod | 无目标 |
 | Attribute system | ✅ 已有 | ammo_type Attribute 读写 |
 | Phase Graph | ✅ 已有 | 条件分支选择 EffectTemplate |
 | AbilityExecSpec | ✅ 已有 | 技能执行时读 Attribute |

@@ -32,7 +32,7 @@ Invoker QWE:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | targetType: None |
+| `graph.aim.rule.none` | AimInteractionMod | 无目标 |
 | Attribute system | ✅ 已有 | element_0/1/2 Attribute 读写 |
 | Phase Graph | ✅ 已有 | 查表逻辑 + 条件分支 |
 | GameplayTagContainer | ✅ 已有 | element count tags |

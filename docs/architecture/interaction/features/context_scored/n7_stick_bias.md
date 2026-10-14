@@ -60,7 +60,7 @@ score += (distance / 800) * 30  // 0-30 bonus for farther targets
 - Enemy — target filter
 
 **Attributes**:
-- input_direction_x, input_direction_y — written by `InputOrderMappingSystem` every frame
+- 内建打分用的是 `HoveredBiasScore`。摇杆方向不是属性。
 
 **Effects**:
 - Directional lunge: Displacement + damage on arrival
@@ -68,12 +68,8 @@ score += (distance / 800) * 30  // 0-30 bonus for farther targets
 ## 5. Integration Points
 
 **Input Layer**:
-- `InputOrderMappingSystem.Update()` continuously writes stick input to caster blackboard:
-  ```csharp
-  blackboard.WriteFloat(INPUT_DIR_X, stickInput.X);
-  blackboard.WriteFloat(INPUT_DIR_Y, stickInput.Y);
-  ```
-- `ContextScoredResolver` reads input direction from blackboard during scoring
+- 槽号经 `SubmitCast` 进入 `CommandIntentBufferDrainSystem`，再由 `ContextScoredOrderResolver` 打分
+- 摇杆采样在控制方案的轴上。要按摇杆方向偏置，写在候选的 score graph 里，不在排干系统里写方向黑板
 
 **Score Graph**:
 - Graph ops: LoadBlackboardFloat, CalcDirection, DotProduct

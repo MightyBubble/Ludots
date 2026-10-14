@@ -15,19 +15,12 @@
 ## Ludots 映射
 
 ### Direction (E1-E7):
-```
-InputOrderMapping:
-  targetType: Direction
-  // InputOrderMappingSystem 计算 caster→cursor 方向写入 OrderArgs.Spatial
-```
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ### Vector (E8):
-```
-InputOrderMapping:
-  targetType: Vector
-  // Targeting input slots: origin point → direction point
-  // Two clicks: origin stored in Spatial[0], endpoint in Spatial[1]
-```
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 已有: `OrderTargetType.Direction`, `OrderTargetType.Vector`, vector aiming state machine
 
@@ -125,10 +118,9 @@ Phase Graph:
 
 ### E8: 矢量目标
 
-```
-InputOrderMapping:
-  targetType: Vector
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
 
+```
 AbilityExecSpec:
   Item[0]: EffectSignal → vector_damage
     → Phase Graph:

@@ -12,11 +12,10 @@ Entity 监听 entity_death EventTag，Chain 挂载复活 Effect 或由 TriggerMa
 
 ## 2 Ludots 实现
 
-### InputOrderMapping 配置
+### 输入
 
-```jsonc
-// 无 InputOrderMapping — 由 ResponseChainListener 监听 entity_death EventTag 驱动
-```
+这条不走玩家输入。技能不引用瞄准规则图，也不占用控制方案上的技能键。
+
 
 ### AbilityExecSpec 配置
 

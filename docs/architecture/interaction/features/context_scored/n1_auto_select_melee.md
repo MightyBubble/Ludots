@@ -64,7 +64,7 @@ Player presses attack button, system automatically selects the optimal nearby me
 ## 5. Integration Points
 
 **Input Layer**:
-- `InputOrderMappingSystem.HandleContextScored()` invokes `ContextScoredResolver.TryResolve()`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 
 **GAS Layer**:
 - `AbilityExecSystem` receives resolved (ability, target) pair

@@ -21,7 +21,7 @@ Chain/追加效果允许 Phase Listener 在效果结算的 OnApply 阶段调用 
 
 - **Trigger**: 无（Phase Listener 自动触发）
 - **TargetType**: `None`
-- **InteractionMode**: 不适用
+- **手势**: 偏好 `pref.aim.cast_mode`
 
 ```json5
 // 配置路径: mods/<yourMod>/Effects/<refraction_effect_id>.json

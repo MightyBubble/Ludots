@@ -16,20 +16,10 @@
 
 - **Trigger**: `PressedThisFrame`（反制技能本身的快捷键）
 - **TargetType**: `None`（陷阱目标锁定在触发者，不需额外选择）
-- **InteractionMode**: `SmartCast`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/trap_counter.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_trap",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "None",
-  "isSkillMapping": true,
-  "castModeOverride": null
-}
-```
+目标规则图是 `graph.aim.rule.none`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ---
 
