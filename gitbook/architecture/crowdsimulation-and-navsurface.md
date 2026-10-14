@@ -512,3 +512,4 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 - 多张地图共用标准参数 Mod 的一份 CrowdSimulationConfig。地图自己的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。聚焦哪张图，就为哪张图建会话。动态分层桥仍然没有：桥面层由会话激活时从地图桥实体生成，结构模板 `layered` 为真时拒绝放置。
 - Raylib 宿主内的地形类型着色 / 阻挡格叠加层还没有 presenter（当前宿主画面是高程着色的高度图地形）；阻挡物还没有呈现网格。
 - Web 侧对拍基线的定点数学适配未开工（Fix64 语义在 Ludots 侧，Web 需跟进同一套）。
+- 引擎销毁后还有约 165 MB 收不回来。`GameEngine.Dispose` 已经先结束群体会话，路径服务的工作线程不再引用会话。剩下的引用来自 `ModLoadContext`：`Unload` 之后运行时对它仍持有强句柄，它的 `_sharedAssemblyResolver` 指向 `ModLoader`，`ModLoader` 经 `EngineSystemRegistrar` 指向 `GameEngine`，引擎里又有这个上下文程序集里的类型实例，所以上下文卸载不掉，整个引擎外壳跟着留下。只在 `Unload` 前清掉解析委托、程序集缓存和依赖解析器，没有效果。同一进程里连续起引擎就会累积（测试进程、编辑器里反复重建）。这是 Mod 加载层的问题，不在群体模拟里修。复现：同一进程里起 S4 引擎、进图、走一帧、销毁，重复 5 次，每次强制回收后托管堆每轮涨约 165 MB；用 `dotnet-dump` 的 `gcroot` 查剩下的 `GameEngine`，能看到上面这条引用链。
