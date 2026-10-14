@@ -273,29 +273,12 @@ public static class CrowdNavSurfaceAuthoring
         return new CrowdAuthoringTerrainFile(asset.Replace('\\', '/'), full, binding.Runtime.NavCellSizeCm);
     }
 
-    public static void WritePreservingJumpCandidates(string targetPath, NavSurfaceAsset asset)
+    public static void WriteNavSurface(string targetPath, NavSurfaceAsset asset)
     {
         ArgumentNullException.ThrowIfNull(asset);
         if (string.IsNullOrWhiteSpace(targetPath))
         {
             throw new InvalidOperationException("输出路径为空。");
-        }
-
-        if (File.Exists(targetPath))
-        {
-            NavSurfaceAsset existing;
-            using (FileStream input = File.OpenRead(targetPath))
-            {
-                existing = NavSurfaceAsset.Read(input);
-            }
-
-            int existingCount = existing.JumpCandidates.Length;
-            int bakedCount = asset.JumpCandidates.Length;
-            if (bakedCount < existingCount)
-            {
-                throw new InvalidOperationException(
-                    $"目标 {targetPath} 已有 {existingCount} 条跳跃候选，本次烘焙只有 {bakedCount} 条，拒绝覆盖。");
-            }
         }
 
         string? directory = Path.GetDirectoryName(Path.GetFullPath(targetPath));

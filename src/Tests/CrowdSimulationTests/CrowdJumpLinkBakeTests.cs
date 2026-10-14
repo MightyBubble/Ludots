@@ -7,6 +7,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Tool;
+using CrowdSimulationTests.Parity;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -15,7 +16,7 @@ namespace CrowdSimulationTests;
 public sealed class CrowdJumpLinkBakeTests
 {
     [Test]
-    public void S1Seeds_MatchStoredJumpCandidates()
+    public void S1Seeds_StoredSurfaceIsLudotsBake_AndJumpsMatchWebBehaviour()
     {
         string repo = RepoRoot();
         (string Name, string ModId, int Seed)[] seeds =
@@ -40,21 +41,27 @@ public sealed class CrowdJumpLinkBakeTests
 
                 string modAssets = Path.Combine(repo, "mods", "showcases", "crowd_simulation", modId, "assets");
                 string surfacePath = Path.Combine(modAssets, "terrain", mapId + ".navsurface");
-                NavSurfaceAsset fixture;
+                NavSurfaceAsset stored;
                 using (FileStream input = File.OpenRead(surfacePath))
                 {
-                    fixture = NavSurfaceAsset.Read(input);
+                    stored = NavSurfaceAsset.Read(input);
                 }
 
                 string logicTerrain = ctx.Config.Maps[mapId].LogicTerrainAsset;
                 LogicTerrainField terrain = ReactGridTerrainBinary.Read(
                     Path.Combine(modAssets, logicTerrain),
-                    fixture.NavCellSizeCm);
+                    stored.NavCellSizeCm);
                 NavSurfaceAsset baked = CrowdNavSurfaceAuthoring.BakeAuthored(repo, modId, mapId, terrain);
+                if (!SameSurface(baked, stored))
+                {
+                    failures.AppendLine($"seed={seed} 入库的 {mapId}.navsurface 不是当前 Ludots 烘焙结果，重跑 Ludots.Tool nav bake-crowd-navsurface。");
+                }
 
-                string pairs = ComparePairs(name, baked.JumpCandidates, fixture.JumpCandidates, out int dropMax, out int dropDiffs);
+                NavSurfaceJumpCandidate[] web = S1JumpTruth.Read(modAssets);
+
+                string pairs = ComparePairs(name, baked.JumpCandidates, web, out int dropMax, out int dropDiffs);
                 TestContext.Out.WriteLine(
-                    $"seed={seed} baked={baked.JumpCandidates.Length} stored={fixture.JumpCandidates.Length} dropMaxCm={dropMax} dropDiffs={dropDiffs} shortestHeightCm={shortestCm.ToString(CultureInfo.InvariantCulture)}");
+                    $"seed={seed} baked={baked.JumpCandidates.Length} web={web.Length} dropMaxCm={dropMax} dropDiffs={dropDiffs} shortestHeightCm={shortestCm.ToString(CultureInfo.InvariantCulture)}");
                 if (pairs.Length > 0)
                 {
                     failures.AppendLine(pairs);
@@ -72,7 +79,7 @@ public sealed class CrowdJumpLinkBakeTests
                         continue;
                     }
 
-                    string links = CompareLinks(name, profile, baked.JumpCandidates, fixture.JumpCandidates);
+                    string links = CompareLinks(name, profile, baked.JumpCandidates, web);
                     TestContext.Out.WriteLine($"seed={seed} profile={profile.Id} {links.Split('\n')[0]}");
                     if (links.Contains("不一致", StringComparison.Ordinal))
                     {
@@ -219,55 +226,55 @@ public sealed class CrowdJumpLinkBakeTests
     private static string ComparePairs(
         string seed,
         NavSurfaceJumpCandidate[] baked,
-        NavSurfaceJumpCandidate[] stored,
+        NavSurfaceJumpCandidate[] web,
         out int dropMax,
         out int dropDiffs)
     {
         dropMax = 0;
         dropDiffs = 0;
-        var storedAt = new Dictionary<(ushort X, ushort Y, ushort ToX, ushort ToY), int>();
-        for (int i = 0; i < stored.Length; i++)
+        var webAt = new Dictionary<(ushort X, ushort Y, ushort ToX, ushort ToY), int>();
+        for (int i = 0; i < web.Length; i++)
         {
-            NavSurfaceJumpCandidate jump = stored[i];
-            storedAt[(jump.FromX, jump.FromY, jump.ToX, jump.ToY)] = i;
+            NavSurfaceJumpCandidate jump = web[i];
+            webAt[(jump.FromX, jump.FromY, jump.ToX, jump.ToY)] = i;
         }
 
         var seen = new HashSet<(ushort, ushort, ushort, ushort)>();
         var report = new StringBuilder();
         int orderBreak = -1;
-        int limit = Math.Min(baked.Length, stored.Length);
+        int limit = Math.Min(baked.Length, web.Length);
         for (int i = 0; i < limit; i++)
         {
-            if (orderBreak < 0 && !SameEnds(baked[i], stored[i]))
+            if (orderBreak < 0 && !SameEnds(baked[i], web[i]))
             {
                 orderBreak = i;
             }
         }
 
-        if (baked.Length != stored.Length || orderBreak >= 0)
+        if (baked.Length != web.Length || orderBreak >= 0)
         {
-            report.AppendLine($"seed={seed} 格对不一致：烘焙 {baked.Length} 条，入库 {stored.Length} 条，顺序首差下标 {orderBreak}。");
+            report.AppendLine($"seed={seed} 格对不一致：烘焙 {baked.Length} 条，Web {web.Length} 条，顺序首差下标 {orderBreak}。");
         }
 
         for (int i = 0; i < baked.Length; i++)
         {
             NavSurfaceJumpCandidate jump = baked[i];
             var key = (jump.FromX, jump.FromY, jump.ToX, jump.ToY);
-            if (!storedAt.TryGetValue(key, out int at))
+            if (!webAt.TryGetValue(key, out int at))
             {
                 report.AppendLine($"seed={seed} 只在烘焙里：({jump.FromX},{jump.FromY})→({jump.ToX},{jump.ToY}) len={jump.LengthCells} drop={jump.DropCm}");
                 continue;
             }
 
             seen.Add(key);
-            NavSurfaceJumpCandidate fixture = stored[at];
-            if (jump.LengthCells != fixture.LengthCells)
+            NavSurfaceJumpCandidate reference = web[at];
+            if (jump.LengthCells != reference.LengthCells)
             {
                 report.AppendLine(
-                    $"seed={seed} 格距不一致 ({jump.FromX},{jump.FromY})→({jump.ToX},{jump.ToY}) 烘焙 {jump.LengthCells} 入库 {fixture.LengthCells}");
+                    $"seed={seed} 格距不一致 ({jump.FromX},{jump.FromY})→({jump.ToX},{jump.ToY}) 烘焙 {jump.LengthCells} Web {reference.LengthCells}");
             }
 
-            int diff = Math.Abs(jump.DropCm - fixture.DropCm);
+            int diff = Math.Abs(jump.DropCm - reference.DropCm);
             if (diff != 0)
             {
                 dropDiffs++;
@@ -278,22 +285,22 @@ public sealed class CrowdJumpLinkBakeTests
             }
         }
 
-        for (int i = 0; i < stored.Length; i++)
+        for (int i = 0; i < web.Length; i++)
         {
-            NavSurfaceJumpCandidate jump = stored[i];
+            NavSurfaceJumpCandidate jump = web[i];
             var key = (jump.FromX, jump.FromY, jump.ToX, jump.ToY);
             if (!seen.Contains(key) && !ContainsEnd(baked, jump))
             {
-                report.AppendLine($"seed={seed} 只在入库里：({jump.FromX},{jump.FromY})→({jump.ToX},{jump.ToY}) len={jump.LengthCells} drop={jump.DropCm}");
+                report.AppendLine($"seed={seed} 只在Web里：({jump.FromX},{jump.FromY})→({jump.ToX},{jump.ToY}) len={jump.LengthCells} drop={jump.DropCm}");
             }
         }
 
-        if (orderBreak >= 0 && baked.Length == stored.Length && report.ToString().IndexOf("只在", StringComparison.Ordinal) < 0)
+        if (orderBreak >= 0 && baked.Length == web.Length && report.ToString().IndexOf("只在", StringComparison.Ordinal) < 0)
         {
             NavSurfaceJumpCandidate b = baked[orderBreak];
-            NavSurfaceJumpCandidate s = stored[orderBreak];
+            NavSurfaceJumpCandidate s = web[orderBreak];
             report.AppendLine(
-                $"seed={seed} 顺序在下标 {orderBreak} 分叉：烘焙 ({b.FromX},{b.FromY})→({b.ToX},{b.ToY})，入库 ({s.FromX},{s.FromY})→({s.ToX},{s.ToY})。集合相同则根因在桶的插入序。");
+                $"seed={seed} 顺序在下标 {orderBreak} 分叉：烘焙 ({b.FromX},{b.FromY})→({b.ToX},{b.ToY})，Web ({s.FromX},{s.FromY})→({s.ToX},{s.ToY})。集合相同则根因在桶的插入序。");
         }
 
         return report.ToString();
@@ -303,13 +310,13 @@ public sealed class CrowdJumpLinkBakeTests
         string seed,
         NavMeshAgentProfileConfig profile,
         NavSurfaceJumpCandidate[] baked,
-        NavSurfaceJumpCandidate[] stored)
+        NavSurfaceJumpCandidate[] web)
     {
         NavMeshJumpConfig jump = profile.Jump;
         LinkRow[] bakedLinks = Keep(baked, jump);
-        LinkRow[] storedLinks = Keep(stored, jump);
+        LinkRow[] webLinks = Keep(web, jump);
         int bakedKept = bakedLinks.Length;
-        int storedKept = storedLinks.Length;
+        int webKept = webLinks.Length;
         int twoWay = 0;
         for (int i = 0; i < bakedLinks.Length; i++)
         {
@@ -319,13 +326,13 @@ public sealed class CrowdJumpLinkBakeTests
             }
         }
 
-        var head = $"kept={bakedKept}/{storedKept} filteredBaked={baked.Length - bakedKept} filteredStored={stored.Length - storedKept} twoWay={twoWay}";
-        if (bakedLinks.Length == storedLinks.Length)
+        var head = $"kept={bakedKept}/{webKept} filteredBaked={baked.Length - bakedKept} filteredWeb={web.Length - webKept} twoWay={twoWay}";
+        if (bakedLinks.Length == webLinks.Length)
         {
             bool same = true;
             for (int i = 0; i < bakedLinks.Length && same; i++)
             {
-                same = bakedLinks[i].Equals(storedLinks[i]);
+                same = bakedLinks[i].Equals(webLinks[i]);
             }
 
             if (same)
@@ -336,19 +343,19 @@ public sealed class CrowdJumpLinkBakeTests
 
         var report = new StringBuilder();
         report.AppendLine($"seed={seed} profile={profile.Id} 链接不一致 {head}");
-        int n = Math.Min(bakedLinks.Length, storedLinks.Length);
+        int n = Math.Min(bakedLinks.Length, webLinks.Length);
         for (int i = 0; i < n; i++)
         {
-            if (!bakedLinks[i].Equals(storedLinks[i]))
+            if (!bakedLinks[i].Equals(webLinks[i]))
             {
-                report.AppendLine($"  下标 {i} 烘焙 {bakedLinks[i]} 入库 {storedLinks[i]}");
-                report.AppendLine($"  根因：{Cause(profile, baked, stored, bakedLinks[i])}");
+                report.AppendLine($"  下标 {i} 烘焙 {bakedLinks[i]} Web {webLinks[i]}");
+                report.AppendLine($"  根因：{Cause(profile, baked, web, bakedLinks[i])}");
             }
         }
 
-        if (bakedLinks.Length != storedLinks.Length)
+        if (bakedLinks.Length != webLinks.Length)
         {
-            report.AppendLine($"  条数 {bakedLinks.Length} ≠ {storedLinks.Length}。rangeNavCells={jump.RangeNavCells} downCm={jump.DownCm} upCm={jump.UpCm}。");
+            report.AppendLine($"  条数 {bakedLinks.Length} ≠ {webLinks.Length}。rangeNavCells={jump.RangeNavCells} downCm={jump.DownCm} upCm={jump.UpCm}。");
         }
 
         return report.ToString();
@@ -357,11 +364,11 @@ public sealed class CrowdJumpLinkBakeTests
     private static string Cause(
         NavMeshAgentProfileConfig profile,
         NavSurfaceJumpCandidate[] baked,
-        NavSurfaceJumpCandidate[] stored,
+        NavSurfaceJumpCandidate[] web,
         LinkRow row)
     {
         NavSurfaceJumpCandidate? b = Find(baked, row);
-        NavSurfaceJumpCandidate? s = Find(stored, row);
+        NavSurfaceJumpCandidate? s = Find(web, row);
         if (b == null || s == null)
         {
             return "一侧没有这条格对，链接差是格对差带出来的。";
@@ -417,6 +424,28 @@ public sealed class CrowdJumpLinkBakeTests
         }
 
         return null;
+    }
+
+    private static bool SameSurface(NavSurfaceAsset a, NavSurfaceAsset b)
+    {
+        if (a.NavCellsX != b.NavCellsX || a.NavCellsY != b.NavCellsY || a.NavCellSizeCm != b.NavCellSizeCm
+            || !a.TerrainTypeIds.SequenceEqual(b.TerrainTypeIds) || !a.TerrainCells.SequenceEqual(b.TerrainCells)
+            || a.JumpCandidates.Length != b.JumpCandidates.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.JumpCandidates.Length; i++)
+        {
+            NavSurfaceJumpCandidate x = a.JumpCandidates[i];
+            NavSurfaceJumpCandidate y = b.JumpCandidates[i];
+            if (!SameEnds(x, y) || x.DropCm != y.DropCm || x.LengthCells != y.LengthCells)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool SameEnds(NavSurfaceJumpCandidate a, NavSurfaceJumpCandidate b)

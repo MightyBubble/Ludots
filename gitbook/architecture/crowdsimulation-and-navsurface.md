@@ -194,9 +194,9 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S1 交付：地形与障碍物（本次）
 
-- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
-- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用群体 `profiles.cellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 仍是 Web 导出的对拍夹具。
-- **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
+- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。`.navsurface` 只有最初一版来自这个工具，现在由 Ludots 烘焙，导出工具只再用来产出对拍真值。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
+- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用群体 `profiles.cellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 由 `nav bake-crowd-navsurface` 从地编网格烤出。
+- **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥清单与 Web 导出做 FNV-1a 逐格对拍，全相等，摘要里跳跃候选那一段用 Web 快照 `parity/s1-jump-truth.json` 填；Ludots 烤的跳跃候选和这份快照按行为对拍；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
 
 ## S2 交付：每种单位能去哪里（本次）
@@ -490,7 +490,7 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是 `maps.<mapId>.logicTerrainAsset` 指向的 React 网格，每格 `AreaId` 就是 `terrainAreas` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。板不设 `DataFile`，`Grid.CellSizeCm` 保持地图原来的值；S1 是 100。导航格由地图边长除以群体 `profiles.cellSizeCm` 得到，S1 是 256×256、格边 6250 cm。编辑器合并地图时保留 `DefaultCamera`，后到的片段覆盖先到的，和运行时 `MapManager` 同一条规则。打开后相机用这份位姿。拾取平面的宽高就是地图的米制宽高。大图远景一格只有一两个像素，两次鼠标事件之间会跨过好几格；拖动刷地形时从上一格逐格走到当前格，每步只走一行或一列，方格和六边形都不漏格。油漆桶和放实体、放阻挡物仍只在鼠标落点生效。打开 `solver` 为 `crowd-simulation` 的地图并选中 Area 工具时，调色板和地面叠层用 `Presentation/terrain_type_colors.json` 里按 `terrainId` 的颜色。文件在 `CrowdSimulationStandardMod`，目录项在 `CrowdSimulationMod`。颜色表是多张地图共用的合并结果：这张图 `terrainAreas` 里的每个 `terrainId` 都必须有颜色，缺一个就在进图时报错；别的地图才用到的颜色可以留在表里。编辑器经 `GET /api/mods/{modId}/maps/{mapId}/crowd-terrain-colors` 读合并结果，前端不写死色值。游戏内按类型着色还没接，会话上已经留下同一份表。三维网格本身仍按高度和生物群落上色。出生点颜色仍在 `deploy.bases[].color`。别的地图仍用原来的 Default / Road / Forest 调色板，也不显示烘焙动作。
 
-工具栏「烘焙 CrowdSimulation 地表」把当前逻辑地形交给编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface`。输出路径没有默认值，空着时按钮不可用。运行时仍从 `ContinuousHeightmap.asset` 把 `.height` 换成 `.navsurface` 来读。目标文件里的跳跃候选比这次烘焙多时，写入函数拒绝覆盖，报文写明目标里有几条、这次有几条。`--overwrite` 不绕过这条。失败报文带格坐标和字段，编辑器原样显示。命令行是同一份函数：`nav bake-crowd-navsurface --mapId <地图 id> --modId <Mod 名> --out <路径>`。已有 `.navsurface` 转成地编资产用 `nav import-navsurface-react --in <.navsurface> --out <map_data.bin>`。
+工具栏「烘焙 CrowdSimulation 地表」把当前逻辑地形交给编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface`。输出路径没有默认值，空着时按钮不可用。运行时仍从 `ContinuousHeightmap.asset` 把 `.height` 换成 `.navsurface` 来读。烘焙结果直接覆盖目标文件；命令行要加 `--overwrite` 才覆盖已有文件。失败报文带格坐标和字段，编辑器原样显示。命令行是同一份函数：`nav bake-crowd-navsurface --mapId <地图 id> --modId <Mod 名> --out <路径>`。已有 `.navsurface` 转成地编资产用 `nav import-navsurface-react --in <.navsurface> --out <map_data.bin>`。
 
 烘焙函数是 `Ludots.Tool` 的 `CrowdNavSurfaceAuthoring.Bake`。它核对地图边长、`.height` 的包围盒和采样、群体配置里实际用到的 `profiles.cellSizeCm`。不读板的 `Grid.CellSizeCm`。地编网格按群体格边长读入，步长和格数必须和由此推出的导航格一致。对不上就报错。格上的 `HeightLevel`、`WaterHeightLevel`、`Water`、`Ramp`、`Blocked` 对这块地表没有含义，出现非零值就报哪一格、哪个字段，不丢掉。高度只认 `.height`。阻挡物仍是地图实体。群体运行时不读逻辑地形，也不读 `logicTerrainAsset`。
 
@@ -504,9 +504,7 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 地图写了 `jumpLinkBake` 却没有 `ContinuousHeightmap.asset` 时，烘焙报错。高度和坡度用 `NavHeightField.FromHeightmap`。
 
-和 Web 浮点导出的 `.navsurface` 比，格对的集合和顺序相同。落差是 Fix64 厘米四舍五入到整厘米，和浮点导出相差不超过 1 厘米。
-
-目标文件里的跳跃候选比这次烘焙多时，写入函数拒绝覆盖，报文写明两边的条数。`--overwrite` 只跳过「文件已存在」，不跳过条数检查。
+仓库里三张 S1 图的 `.navsurface` 就是这条命令烤的。Web 浮点版的候选留在各种子的 `CrowdSimulation/parity/s1-jump-truth.json`，只作对拍参照：格对的集合和顺序相同，带 `jump` 的档案过滤出的链接和单双向相同，落差是 Fix64 厘米四舍五入到整厘米，和 Web 相差不超过 1 厘米。`CrowdJumpLinkBakeTests` 同时要求入库文件和现烤结果逐字节一致，改了地编网格、`.height` 或 `jumpLinkBake` 就要重烤再提交。
 
 `VisualTerrainEditorDocument.PaintWorld` 仍只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 仍写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。
 
