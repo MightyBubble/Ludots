@@ -26,5 +26,9 @@
   {
     "Path": "Presentation/terrain_type_colors.json",
     "Policy": "DeepObject"
+  },
+  {
+    "Path": "Presentation/crowd_terrain_type_overlay.json",
+    "Policy": "DeepObject"
   }
 ]

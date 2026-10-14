@@ -62,6 +62,7 @@ internal sealed class CrowdDebugViewFrame
     private int _shownGroup = int.MinValue;
     private int _shownDiff = int.MinValue;
     private int _shownGhost = int.MinValue;
+    private int _shownTerrain = int.MinValue;
 
     internal bool Funnel;
     internal bool Corridor;
@@ -112,11 +113,18 @@ internal sealed class CrowdDebugViewFrame
 
     internal bool Visible =>
         Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || JumpLinks || Belief
+        || TerrainTypes
         || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff;
 
-    /// <summary>宿主只有一个流场或可走贴花槽。调试场层打开时占住它，不再叠演示流场。</summary>
+    /// <summary>开关在输入系统。帧只读叠层，用来占贴花槽和写检视行。</summary>
+    internal bool TerrainTypes =>
+        _engine != null
+        && _engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? runtime)
+        && runtime?.TerrainTypeOverlay is { Enabled: true };
+
+    /// <summary>宿主只有一个流场或可走贴花槽。调试场层打开时占住它，不再叠演示流场。地形类型叠层占用同一槽。</summary>
     internal bool OwnsDecal =>
-        Corridor || Blocked || Density || Belief || Flow || NavPolygons || HpaGraph || JumpLinks;
+        Corridor || Blocked || Density || Belief || Flow || NavPolygons || HpaGraph || JumpLinks || TerrainTypes;
 
     internal static bool ArrowsAllowed(float cellPx, int minPx) => cellPx >= minPx;
 
@@ -581,7 +589,7 @@ internal sealed class CrowdDebugViewFrame
 
     private void EmitPanel(CrowdSimSession session, ScreenOverlayBuffer overlay, ref int used, int budget)
     {
-        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid || Density || Blocked;
+        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid || Density || Blocked || TerrainTypes;
         if (!nav && !Belief && UnitColorMode == CrowdSimulationDebugViewConfig.ColorOff) return;
         if (used >= budget) return;
         var color = _config.Colors.PanelText.ToVector4();
@@ -589,14 +597,17 @@ internal sealed class CrowdDebugViewFrame
         int y = _config.Panel.OriginYPx;
         if (nav || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff)
         {
-            if (_shownLayer != LayerIndex || _shownRadius != RadiusIndex || _shownColor != UnitColorMode)
+            int terrainFlag = TerrainTypes ? 1 : 0;
+            if (_shownLayer != LayerIndex || _shownRadius != RadiusIndex || _shownColor != UnitColorMode || _shownTerrain != terrainFlag)
             {
                 _shownLayer = LayerIndex;
                 _shownRadius = RadiusIndex;
                 _shownColor = UnitColorMode;
+                _shownTerrain = terrainFlag;
                 _inspectText = UnitColorMode == CrowdSimulationDebugViewConfig.ColorOff
                     ? $"检视 移动 {LayerIndex} 半径 {RadiusIndex}"
                     : $"检视 移动 {LayerIndex} 半径 {RadiusIndex} 着色 {ColorLabel(UnitColorMode)}";
+                if (TerrainTypes) _inspectText += " 地形类型";
             }
 
             if (overlay.AddText(_config.Panel.OriginXPx, y, _inspectText, font, color))

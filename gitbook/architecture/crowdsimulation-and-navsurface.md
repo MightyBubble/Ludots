@@ -223,7 +223,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **对拍**：拓扑(节点格 / 邻接目标 / 边数 / 网格多边形结构)逐位 FNV 全等;代价数组按带宽比较。`S3GraphTruthTests` 断言最大代价差 < 1e-3。
 - **审计**：每阶段交付后跑交叉对抗审计。本轮 A 链(导航烘焙)12 片 + B 链(S0–S2)6 片全绿,唯一实质发现是 tile 缓存少了参考实现的 bakeMs 遥测(已补)与单线程归属契约没写清(已写)。
 - **目视**：探针 `--s3` 视图叠加了 tile 网格与入口节点。
-- **验收（真机）**：Raylib 宿主经 launcher 预设启动，地图、阻挡物实体与高度图地形（含高程着色）真实渲染，见 `artifacts/acceptance/crowdsimulation-s1/raylib-s1337-live.png`。地形类型着色叠加层在宿主内尚无 presenter，由探针视图承担。
+- **验收（真机）**：Raylib 宿主经 launcher 预设启动，地图、阻挡物实体与高度图地形（含高程着色）真实渲染，见 `artifacts/acceptance/crowdsimulation-s1/raylib-s1337-live.png`。地形类型叠层打开后的画面见 `artifacts/acceptance/crowdsimulation-s1/raylib-s1337-terrain-types.png`。开关和数据来源写在下面「现在的范围」。
 - **顺手的基建修复**：`ContinuousHeightSampleScale.Decode` 的 int32 溢出（大缩放比例资产会触发，10k 资产因恒等比例从未踩到）改为先 widening 再乘。
 
 ## S3-c 交付：两点之间的路线（本次）
@@ -488,7 +488,7 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
 
-CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是 `maps.<mapId>.logicTerrainAsset` 指向的 React 网格，每格 `AreaId` 就是 `terrainAreas` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。板不设 `DataFile`，`Grid.CellSizeCm` 保持地图原来的值；S1 是 100。导航格由地图边长除以群体 `profiles.cellSizeCm` 得到，S1 是 256×256、格边 6250 cm。编辑器合并地图时保留 `DefaultCamera`，后到的片段覆盖先到的，和运行时 `MapManager` 同一条规则。打开后相机用这份位姿。拾取平面的宽高就是地图的米制宽高。大图远景一格只有一两个像素，两次鼠标事件之间会跨过好几格；拖动刷地形时从上一格逐格走到当前格，每步只走一行或一列，方格和六边形都不漏格。油漆桶和放实体、放阻挡物仍只在鼠标落点生效。打开 `solver` 为 `crowd-simulation` 的地图并选中 Area 工具时，调色板和地面叠层用 `Presentation/terrain_type_colors.json` 里按 `terrainId` 的颜色。文件在 `CrowdSimulationStandardMod`，目录项在 `CrowdSimulationMod`。颜色表是多张地图共用的合并结果：这张图 `terrainAreas` 里的每个 `terrainId` 都必须有颜色，缺一个就在进图时报错；别的地图才用到的颜色可以留在表里。编辑器经 `GET /api/mods/{modId}/maps/{mapId}/crowd-terrain-colors` 读合并结果，前端不写死色值。游戏内按类型着色还没接，会话上已经留下同一份表。三维网格本身仍按高度和生物群落上色。出生点颜色仍在 `deploy.bases[].color`。别的地图仍用原来的 Default / Road / Forest 调色板，也不显示烘焙动作。
+CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是 `maps.<mapId>.logicTerrainAsset` 指向的 React 网格，每格 `AreaId` 就是 `terrainAreas` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。板不设 `DataFile`，`Grid.CellSizeCm` 保持地图原来的值；S1 是 100。导航格由地图边长除以群体 `profiles.cellSizeCm` 得到，S1 是 256×256、格边 6250 cm。编辑器合并地图时保留 `DefaultCamera`，后到的片段覆盖先到的，和运行时 `MapManager` 同一条规则。打开后相机用这份位姿。拾取平面的宽高就是地图的米制宽高。大图远景一格只有一两个像素，两次鼠标事件之间会跨过好几格；拖动刷地形时从上一格逐格走到当前格，每步只走一行或一列，方格和六边形都不漏格。油漆桶和放实体、放阻挡物仍只在鼠标落点生效。打开 `solver` 为 `crowd-simulation` 的地图并选中 Area 工具时，调色板和地面叠层用 `Presentation/terrain_type_colors.json` 里按 `terrainId` 的颜色。文件在 `CrowdSimulationStandardMod`，目录项在 `CrowdSimulationMod`。颜色表是多张地图共用的合并结果：这张图 `terrainAreas` 里的每个 `terrainId` 都必须有颜色，缺一个就在进图时报错；别的地图才用到的颜色可以留在表里。编辑器经 `GET /api/mods/{modId}/maps/{mapId}/crowd-terrain-colors` 读合并结果，前端不写死色值。游戏内叠层是 `CrowdTerrainTypeOverlay`。会话激活时按导航格铺一张 RGBA，每格一个像素，格值是 `terrainAreas` 下标，颜色查这份表。结构仓活阻挡栅格上不为 0 的格用 `Presentation/crowd_terrain_type_overlay.json` 的 `blocked`。文件在 `CrowdSimulationMod`，`config_catalog.json` 里按 DeepObject 登记。`enabled` 默认 false。动作 `CrowdSimulation.ToggleTerrainTypes` 和键位 `<Keyboard>/leftBracket`（`[`）写在同一 Mod 的 `Input/default_input.json`，只这一处。根目录 `config_catalog.json` 已经按 `ArrayAppendFields` 合并 `Input/default_input.json` 的 `actions` 和 `contexts`，这份片段不再单独登记。三张 S1 种子和 S4 进图都装 `CrowdTerrainOverlayInputSystem`，按 `[` 切换。S4 的 `CrowdSimulationDebug.json` 按键说明仍写 `[ 地形类型`。调试视图帧只读叠层是否打开，打开时占贴花槽，检视行末尾加上「 地形类型」。文件或必填键缺失时，群体地图激活直接报错。Raylib 在高度图绘制前调用 `SetNavWalkabilityOverlayExternal`，混合强度 1，透明度只由颜色的 alpha 决定。这一层占着唯一贴花槽时，流场和迷雾不改绑，也不清这张外部纹理。放置、拆除、重烘之后，各真导航的 `Version` 增加 1 时只重写该次 `ChangedTiles`；同一帧里同一导航重烘超过一次，整张重画，避免只看见最后一次的 tile 列表。缓冲在激活时建好。稳态同步不分配。打开这一层时，50k 门仍看优化构建 P95 < 33 ms；那一窗计的是 `session.Step` 加上这次同步，同步本身的分配单独计。`CrowdSimulationMapProbe` 的地形类型底色改读这份表，晕渲仍压在底色上。三维网格本身仍按高度和生物群落上色。出生点颜色仍在 `deploy.bases[].color`。别的地图仍用原来的 Default / Road / Forest 调色板，也不显示烘焙动作。
 
 工具栏「烘焙 CrowdSimulation 地表」把当前逻辑地形交给编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface`。输出路径没有默认值，空着时按钮不可用。运行时仍从 `ContinuousHeightmap.asset` 把 `.height` 换成 `.navsurface` 来读。烘焙结果直接覆盖目标文件；命令行要加 `--overwrite` 才覆盖已有文件。失败报文带格坐标和字段，编辑器原样显示。命令行是同一份函数：`nav bake-crowd-navsurface --mapId <地图 id> --modId <Mod 名> --out <路径>`。已有 `.navsurface` 转成地编资产用 `nav import-navsurface-react --in <.navsurface> --out <map_data.bin>`。
 
@@ -528,9 +528,6 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
 - 多张地图共用标准参数 Mod 的一份 CrowdSimulationConfig。地图自己的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。聚焦哪张图，就为哪张图建会话。桥的锚点地形和跨越地形在这份配置的 `structures.anchorTerrain` 和 `structures.spanTerrain`。
-- Raylib 宿主内的地形类型着色 / 阻挡格叠加层还没有 presenter（当前宿主画面是高程着色的高度图地形）。按 `terrainId` 的颜色已经在 `Presentation/terrain_type_colors.json`，编辑器 Area 工具在用，游戏内还没画。阻挡物还没有呈现网格。
-  - 数据都在会话上：`CrowdSimulationRuntime.TerrainTypeColors` 是本图校验过的颜色表，`.navsurface` 格值是 `terrainAreas` 下标，活阻挡栅格在结构仓。缺颜色在进图时已经报错，presenter 不再兜底。
-  - 画法：Core 呈现层按导航格生成一张 RGBA 格图（每格一个像素，格值查颜色表，阻挡格单独着色），Raylib 经 `RaylibContinuousHeightmapRenderer.SetNavWalkabilityOverlayExternal` 贴到高度图上，不新开渲染器。开关挂在 S4 调试视图配置里，和其他调试层一样默认关。结构放置、拆除、重烘之后只重写变了的 tile 对应的像素。
-  - 验收：s1337 在 Raylib 宿主里打开这一层截图，和编辑器 Area 叠层、`CrowdSimulationMapProbe` 地形类型视图并排对照，同一位置颜色一致；放一个阻挡结构，叠层当帧变色。打开这一层时 50k 基准仍在 33 ms 内、每帧零分配。
+- 阻挡物还没有呈现网格。地形类型和阻挡格已经能叠在高度图上，见「现在的范围」。
 - Web 侧对拍基线的定点数学适配未开工（Fix64 语义在 Ludots 侧，Web 需跟进同一套）。
 - 引擎销毁后还有约 165 MB 收不回来。`GameEngine.Dispose` 已经先结束群体会话，路径服务的工作线程不再引用会话。剩下的引用来自 `ModLoadContext`：`Unload` 之后运行时对它仍持有强句柄，它的 `_sharedAssemblyResolver` 指向 `ModLoader`，`ModLoader` 经 `EngineSystemRegistrar` 指向 `GameEngine`，引擎里又有这个上下文程序集里的类型实例，所以上下文卸载不掉，整个引擎外壳跟着留下。只在 `Unload` 前清掉解析委托、程序集缓存和依赖解析器，没有效果。同一进程里连续起引擎就会累积（测试进程、编辑器里反复重建）。这是 Mod 加载层的问题，不在群体模拟里修。复现：同一进程里起 S4 引擎、进图、走一帧、销毁，重复 5 次，每次强制回收后托管堆每轮涨约 165 MB；用 `dotnet-dump` 的 `gcroot` 查剩下的 `GameEngine`，能看到上面这条引用链。

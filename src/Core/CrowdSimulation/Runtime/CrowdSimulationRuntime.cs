@@ -52,6 +52,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
     private CrowdSimulationDebugViewConfig? _debugView;
     private CrowdPlayerViewConfig? _playerView;
     public CrowdTerrainTypeColorTable? TerrainTypeColors { get; private set; }
+    public CrowdTerrainTypeOverlay? TerrainTypeOverlay { get; private set; }
     internal bool HasFormalConfig => _configDto != null;
     private string? _focusedCrowdMapId;
     internal string? FormalConfigMapId => _focusedCrowdMapId;
@@ -299,6 +300,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         string? presentationKind = PresentationKindName;
         if (presentationKind == CrowdPresentationConfig.KindPath) InstallPathPresentation(engine, mapConfig);
         if (presentationKind == CrowdPresentationConfig.KindDeploy) InstallDeployPresentation(engine);
+        InstallTerrainOverlayInput(engine);
         return true;
     }
 
@@ -487,6 +489,14 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         TerrainTypeColors = runtimeConfig.TerrainTypeIds.Count == 0
             ? null
             : BindTerrainTypeColors(engine, runtimeConfig);
+        CrowdTerrainTypeOverlaySettings terrainOverlaySettings = CrowdTerrainTypeOverlaySettings.LoadMerged(
+            engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        _terrainOverlayAction = terrainOverlaySettings.Action;
+        if (terrainOverlaySettings.Enabled && TerrainTypeColors == null)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdTerrainTypeOverlaySettings.RelativePath}: enabled 为 true，但地图 \"{mapId.Value}\" 没有地形类型。");
+        }
 
         SolverAgentExclusivity.RejectMassNavigationAgent(engine.World, mapId);
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
@@ -629,6 +639,14 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _session.NavTileCache = cache;
         // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
         _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
+        if (TerrainTypeColors != null)
+        {
+            CrowdTerrainTypeColor blocked = terrainOverlaySettings.Blocked;
+            TerrainTypeOverlay = CrowdTerrainTypeOverlay.Create(
+                _session, TerrainTypeColors, blocked.Red, blocked.Green, blocked.Blue, blocked.Alpha);
+            TerrainTypeOverlay.SetEnabled(terrainOverlaySettings.Enabled);
+        }
+
         _activeMapId = mapId.Value;
 
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
@@ -726,6 +744,8 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         DebugFuzzLine = DebugFuzzIdleLine;
         DebugFuzzFailed = false;
         DebugFuzzRan = false;
+        ReleaseTerrainOverlayInput(engine);
+        _terrainOverlayAction = null;
         _session?.Units.Clear();
         _session?.Units.ReleaseSpawnInitializer();
         _pathService?.Dispose();
@@ -734,6 +754,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _sessionEntity = Entity.Null;
         _session = null;
         TerrainTypeColors = null;
+        TerrainTypeOverlay = null;
         _pairRulesGuard = null;
         _activeMapId = null;
         _hashCount = 0;

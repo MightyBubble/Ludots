@@ -20,6 +20,8 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
+using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation;
@@ -592,6 +594,7 @@ namespace Ludots.Adapter.Raylib
                 var presentFrames = new List<ViewportDrawFrame>(4);
                 int frameIndex = 0;
                 string? navWalkabilityOverlayMapId = null;
+                var terrainTypeOverlay = new RaylibTerrainTypeOverlayBinding();
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
@@ -852,6 +855,11 @@ namespace Ludots.Adapter.Raylib
                             continuousHeightmapRenderer,
                             renderDebug.DrawNavWalkabilityTexture,
                             ref navWalkabilityOverlayMapId);
+                        terrainTypeOverlay.Apply(
+                            continuousHeightmapRenderer,
+                            engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? crowdRuntime)
+                                ? crowdRuntime?.TerrainTypeOverlay
+                                : null);
                         Color frameClearColor = skyEnvironment.IsActive
                             ? skyEnvironment.ResolveClearColor()
                             : (activeMapRequestsDeepBackground
@@ -1181,7 +1189,8 @@ namespace Ludots.Adapter.Raylib
                                 fieldRenderPresenter.DrawFogKind = seatScopeResolved && !fogOwnsDecal;
                                 long fieldRenderStart = Stopwatch.GetTimestamp();
                                 fieldRenderPresenter.Draw(globalFieldVisualBuffer);
-                                if (hasDecal &&
+                                // 地形类型叠层已在本帧绘制前占住贴花槽。场贴花不再改绑，也不清外部纹理。
+                                if (!terrainTypeOverlay.Bound && hasDecal &&
                                     fieldRenderPresenter.TryGetStagedTexture(decalField.Id, out Texture2D decalTexture))
                                 {
                                     var bounds = decalField.BoundsCells;
@@ -1197,7 +1206,7 @@ namespace Ludots.Adapter.Raylib
                                             (bounds.Y + bounds.Height) * cs),
                                         fogOwnsDecal ? 1f : Ludots.Raylib.Render.RaylibContinuousHeightmapRenderer.DefaultNavWalkabilityBlendStrength);
                                 }
-                                else
+                                else if (!terrainTypeOverlay.Bound)
                                 {
                                     continuousHeightmapRenderer.ClearNavWalkabilityOverlayExternal();
                                     continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = false;

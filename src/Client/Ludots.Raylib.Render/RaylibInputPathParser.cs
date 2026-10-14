@@ -68,6 +68,8 @@ namespace Ludots.Raylib.Render
                 "APOSTROPHE" => KeyboardKey.KEY_APOSTROPHE,
                 "PAUSE" => KeyboardKey.KEY_PAUSE,
                 "PRINTSCREEN" => KeyboardKey.KEY_PRINT_SCREEN,
+                "LEFTBRACKET" => KeyboardKey.KEY_LEFT_BRACKET,
+                "RIGHTBRACKET" => KeyboardKey.KEY_RIGHT_BRACKET,
                 _ => null
             };
         }
