@@ -200,14 +200,6 @@ function readCrowdTerrainAreas(navigationConfig: JsonRecord | null, mapId: strin
     return { active: true, areas, error: null };
 }
 
-function crowdNavSurfacePathFromMap(mapConfig: JsonRecord | null): string {
-    const height = jsonRecord(mapConfig?.ContinuousHeightmap) ?? jsonRecord(mapConfig?.continuousHeightmap);
-    const asset = String(height?.Asset ?? height?.asset ?? '').replace(/\\/g, '/');
-    if (!asset.toLowerCase().endsWith('.height')) return '';
-    const stripped = asset.replace(/^assets\//i, '');
-    return `${stripped.slice(0, stripped.length - '.height'.length)}.navsurface`;
-}
-
 function textValue(value: unknown, fallback = ''): string {
     return value == null ? fallback : String(value);
 }
@@ -332,6 +324,7 @@ export const Toolbar: React.FC = () => {
         terrain, loadMap, initMap,
         bridgeBaseUrl,
         mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, boardMetrics, mapConfig,
+        terrainTypeColors, terrainTypeColorError, setTerrainTypeColors,
         refreshMods, selectMod, selectMap, selectBoard, loadSelectedMap, saveSelectedMap,
         createBoard, updateSelectedBoard, deleteSelectedBoard,
         loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
@@ -410,10 +403,42 @@ export const Toolbar: React.FC = () => {
         [navigationConfig, loadedMapId],
     );
     React.useEffect(() => {
-        setCrowdNavSurfacePath(crowdNavSurfacePathFromMap(mapConfig));
+        setCrowdNavSurfacePath('');
         setCrowdBakeMessage(null);
         setCrowdBakeOk(null);
-    }, [loadedMapId, mapConfig]);
+    }, [loadedMapId]);
+    React.useEffect(() => {
+        if (!crowdPalette.active || !loadedModId || !loadedMapId) {
+            setTerrainTypeColors(null, null);
+            return;
+        }
+        const controller = new AbortController();
+        const endpoint = `${bridgeBaseUrl}/api/mods/${encodeURIComponent(loadedModId)}/maps/${encodeURIComponent(loadedMapId)}/crowd-terrain-colors`;
+        void fetch(endpoint, { signal: controller.signal })
+            .then(async (res) => {
+                const json = await res.json() as JsonRecord;
+                if (!res.ok || json.ok === false) {
+                    throw new Error(String(json.error ?? `Bridge error ${res.status}`));
+                }
+                const rows = Array.isArray(json.colors) ? json.colors : [];
+                setTerrainTypeColors(rows.map((row) => {
+                    const record = jsonRecord(row) ?? {};
+                    return {
+                        terrainId: String(record.terrainId ?? ''),
+                        index: Number(record.index ?? 0),
+                        red: Number(record.red ?? 0),
+                        green: Number(record.green ?? 0),
+                        blue: Number(record.blue ?? 0),
+                        alpha: Number(record.alpha ?? 0),
+                    };
+                }), null);
+            })
+            .catch((err: unknown) => {
+                if (controller.signal.aborted) return;
+                setTerrainTypeColors(null, errorMessage(err));
+            });
+        return () => controller.abort();
+    }, [crowdPalette.active, loadedModId, loadedMapId, bridgeBaseUrl, setTerrainTypeColors]);
 
     const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
     const selectedBoards = selectedMapInfo?.boards ?? [];
@@ -1579,9 +1604,11 @@ export const Toolbar: React.FC = () => {
             if (crowdPalette.active) {
                 return (
                     <div className="grid grid-cols-2 gap-2">
-                        {crowdPalette.error ? (
-                            <div className="col-span-2 rounded border border-red-800/70 bg-red-950/40 p-2 text-xs text-red-100">{crowdPalette.error}</div>
-                        ) : crowdPalette.areas.map((area) => (
+                        {crowdPalette.error || terrainTypeColorError ? (
+                            <div className="col-span-2 rounded border border-red-800/70 bg-red-950/40 p-2 text-xs text-red-100">{crowdPalette.error ?? terrainTypeColorError}</div>
+                        ) : crowdPalette.areas.map((area) => {
+                            const color = terrainTypeColors?.find((entry) => entry.terrainId === area.terrainId);
+                            return (
                             <button
                                 key={area.terrainId}
                                 data-terrain-id={area.terrainId}
@@ -1589,12 +1616,14 @@ export const Toolbar: React.FC = () => {
                                     setBrushValue(area.index);
                                     setMode('Set');
                                 }}
-                                className={`rounded border p-2 text-left text-xs font-semibold transition ${brushValue === area.index ? 'border-white bg-slate-700 text-white shadow-md' : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-500'}`}
+                                style={color ? { backgroundColor: `rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha / 255})` } : undefined}
+                                className={`rounded border p-2 text-left text-xs font-semibold transition ${brushValue === area.index ? 'border-white text-white shadow-md' : 'border-slate-700 text-slate-100 hover:border-slate-500'}`}
                             >
                                 {area.index} {area.terrainId}
                             </button>
-                        ))}
-                        <div className="col-span-2 text-[10px] text-slate-500">下标写入逻辑地形 AreaId，与 maps.{loadedMapId}.terrainAreas 同序。配置里没有按地形类型分开的颜色。</div>
+                            );
+                        })}
+                        <div className="col-span-2 text-[10px] text-slate-500">下标写入逻辑地形 AreaId，与 maps.{loadedMapId}.terrainAreas 同序。颜色来自 Presentation/terrain_type_colors.json。</div>
                     </div>
                 );
             }
@@ -2969,7 +2998,7 @@ export const Toolbar: React.FC = () => {
                                     type="button"
                                     data-crowd-navsurface-bake
                                     onClick={() => { void handleBakeCrowdNavSurface(); }}
-                                    disabled={!canvasMapLoaded}
+                                    disabled={!canvasMapLoaded || crowdNavSurfacePath.trim().length === 0}
                                     className={darkButtonClass}
                                 >
                                     烘焙 CrowdSimulation 地表

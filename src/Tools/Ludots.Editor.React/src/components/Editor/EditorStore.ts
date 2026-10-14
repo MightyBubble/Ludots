@@ -9,6 +9,7 @@ import {
     normalizeBoardMetrics,
     normalizeSpatialTopology,
     normalizeTopology,
+    orbitFrameLimits,
     worldCmToCell,
 } from '../../Core/Map/TopologyMetrics';
 import type { Camera, PerspectiveCamera } from 'three';
@@ -116,8 +117,20 @@ export interface NavSimulationState {
     warning?: string | null;
 }
 
+export interface TerrainTypeColor {
+    terrainId: string;
+    index: number;
+    red: number;
+    green: number;
+    blue: number;
+    alpha: number;
+}
+
 export interface EditorState {
     terrain: TerrainStore;
+    terrainTypeColors: TerrainTypeColor[] | null;
+    terrainTypeColorError: string | null;
+    setTerrainTypeColors: (colors: TerrainTypeColor[] | null, error: string | null) => void;
     boardMetrics: BoardMetrics;
 
     bridgeBaseUrl: string;
@@ -246,6 +259,9 @@ export interface EditorState {
 
 export const useEditorStore = create<EditorState>((set, get) => ({
     terrain: new TerrainStore(8, 8), // Default 8x8 chunks
+    terrainTypeColors: null,
+    terrainTypeColorError: null,
+    setTerrainTypeColors: (colors, error) => set({ terrainTypeColors: colors, terrainTypeColorError: error }),
     boardMetrics: DEFAULT_BOARD_METRICS,
 
     bridgeBaseUrl: bridgeBaseFromEnv(),
@@ -727,7 +743,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
         const mapJson = await mapRes.json() as JsonRecord;
         const mapCfg = asRecord(mapJson.map);
-        const boardMetrics = resolveBoardMetricsFromMapConfig(mapCfg, selectedMapInfo, selectedBoardName, selectedBoardInfo);
+        setLoading(true, 'Loading Terrain...', 40);
+        const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`);
+        if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
+        let boardMetrics = resolveBoardMetricsFromMapConfig(mapCfg, selectedMapInfo, selectedBoardName, selectedBoardInfo);
+        const authoringCellCm = Number(terrRes.headers.get('X-Ludots-Authoring-Cell-Cm'));
+        if (Number.isFinite(authoringCellCm) && authoringCellCm > 0) {
+            boardMetrics = { ...boardMetrics, cellSizeCm: authoringCellCm };
+        }
         const entities = Array.isArray(mapCfg?.Entities) ? mapCfg.Entities : (Array.isArray(mapCfg?.entities) ? mapCfg.entities : []);
         const spawnEntities = arrayOfRecords(entities).map((e) => {
             const template = String(e.Template ?? e.template ?? '');
@@ -751,40 +774,38 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         set({ mapConfig: mapCfg, boardMetrics, spawnEntities, selectedEntityIndex: null, entitiesVersion: Date.now() });
 
-        // Apply DefaultCamera from map config to editor camera
         const defCam = asRecord(mapCfg?.DefaultCamera) ?? asRecord(mapCfg?.defaultCamera);
-        if (defCam) {
-            const cam = get().cameraRef.current;
-            const controls = get().controlsRef.current;
-            if (cam && controls) {
+        const cam = get().cameraRef.current;
+        const controls = get().controlsRef.current;
+        if (cam && controls) {
+            const extent = boardExtentMeters(mapCfg, selectedBoardName);
+            const distCm = Number(defCam?.DistanceCm ?? defCam?.distanceCm ?? 0);
+            const limits = orbitFrameLimits(extent.widthM, extent.heightM, distCm * 0.01);
+            controls.maxDistance = Math.max(controls.maxDistance, limits.maxDistance);
+            const perspective = cam as PerspectiveCamera;
+            if (perspective.far < limits.far) {
+                perspective.far = limits.far;
+                perspective.near = limits.near;
+            }
+            if (defCam) {
                 const yaw = Number(defCam.Yaw ?? defCam.yaw ?? 180) * Math.PI / 180;
                 const pitch = Number(defCam.Pitch ?? defCam.pitch ?? 45) * Math.PI / 180;
-                const distCm = Number(defCam.DistanceCm ?? defCam.distanceCm ?? 14142);
                 const fov = Number(defCam.FovYDeg ?? defCam.fovYDeg ?? 60);
                 const txCm = Number(defCam.TargetXCm ?? defCam.targetXCm ?? 0);
                 const tyCm = Number(defCam.TargetYCm ?? defCam.targetYCm ?? 0);
-
-                const distM = distCm * 0.01;
+                const distM = (Number.isFinite(distCm) && distCm > 0 ? distCm : 14142) * 0.01;
                 const hDist = distM * Math.cos(pitch);
                 const vDist = distM * Math.sin(pitch);
                 const targetX = txCm * 0.01;
                 const targetZ = tyCm * 0.01;
-
-                const camX = targetX + hDist * Math.sin(yaw);
-                const camY = vDist;
-                const camZ = targetZ - hDist * Math.cos(yaw);
-
-                cam.position.set(camX, camY, camZ);
-                (cam as PerspectiveCamera).fov = fov;
-                (cam as PerspectiveCamera).updateProjectionMatrix();
+                perspective.position.set(targetX + hDist * Math.sin(yaw), vDist, targetZ - hDist * Math.cos(yaw));
+                perspective.fov = fov;
                 controls.target.set(targetX, 0, targetZ);
-                controls.update();
             }
+            perspective.updateProjectionMatrix();
+            controls.update();
         }
 
-        setLoading(true, 'Loading Terrain...', 40);
-        const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`);
-        if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
         const buf = await terrRes.arrayBuffer();
         const view = new DataView(buf);
         const w = view.getInt32(0, true);
@@ -1160,6 +1181,17 @@ function normalizeMapInfo(raw: JsonRecord | null | undefined): MapInfo {
         hasBoards: Boolean(raw?.hasBoards ?? raw?.HasBoards ?? false),
         boardName: stringOrNull(raw?.boardName ?? raw?.BoardName),
         boards: mergedBoards,
+    };
+}
+
+function boardExtentMeters(mapCfg: JsonRecord | null, boardName: string): { widthM: number; heightM: number } {
+    const boards = arrayOfRecords(Array.isArray(mapCfg?.Boards) ? mapCfg.Boards : (Array.isArray(mapCfg?.boards) ? mapCfg.boards : []));
+    const board = boards.find((entry) => String(entry.Name ?? entry.name ?? '') === boardName);
+    const widthCm = Number(board?.WidthCm ?? board?.widthCm ?? 0);
+    const heightCm = Number(board?.HeightCm ?? board?.heightCm ?? 0);
+    return {
+        widthM: Number.isFinite(widthCm) ? widthCm / 100 : 0,
+        heightM: Number.isFinite(heightCm) ? heightCm / 100 : 0,
     };
 }
 
