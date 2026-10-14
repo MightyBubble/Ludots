@@ -11,6 +11,7 @@ import {
     orbitFrameLimits,
     worldPointToCell,
 } from '../../Core/Map/TopologyMetrics';
+import { walkStrokeCells } from '../../Core/Map/StrokeCells';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 const FULL_RENDER_CHUNK_LIMIT = 64;
@@ -1743,6 +1744,8 @@ export const HexRenderer: React.FC = () => {
                 } else if (activeCategory === 'Obstacle') {
                     if (activeMode === 'Set' || activeMode === 'Raise') placeObstacleAt(cell.c, cell.r);
                     else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
+                } else if (lastDragCellRef.current && activeMode !== 'Bucket') {
+                    walkStrokeCells(lastDragCellRef.current, cell, applyBrush);
                 } else {
                     applyBrush(cell.c, cell.r);
                 }
