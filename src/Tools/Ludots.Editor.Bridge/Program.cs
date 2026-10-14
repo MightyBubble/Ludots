@@ -6343,6 +6343,11 @@ static class EditorRepo
             target.ContinuousHeightmap = source.ContinuousHeightmap;
         }
 
+        if (source.DefaultCamera != null)
+        {
+            target.DefaultCamera = source.DefaultCamera;
+        }
+
         if (source.TriggerTypes != null)
         {
             foreach (var tt in source.TriggerTypes)
