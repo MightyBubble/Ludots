@@ -23,7 +23,7 @@
 
 ### 3. Reuse list
 
-- Handlers: `IsPref`（540）、`SetPref`（541）
+- Handlers: `IsPref`（540，槽位 -1 只读玩家级）、`SetPref`（541）
 - Queues / Systems: `TriggerManager` 地图事件表；上下文触发器门闩挂上 `interaction.context.aim.cast` 时补发还没人听的那一次
 - Resolvers / Registries: `ConfigKeyRegistry`（方案名的载荷 int）、`ControlSchemeRuntime.SchemeIdRegistry`、`InteractionPrefCatalog`
 - Existing presets / graphs: `graph.aim.set_cast_mode` 在写完施法方式后把 origin 写成 `player`

@@ -23,7 +23,7 @@
       {
         "id": "slot_kbm",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": -1
       },
       {
         "id": "check_kbm",

@@ -70,6 +70,20 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         [Test]
+        public void IsPref_NegativeSlot_ReadsThePlayerPrefWithoutAnAbility()
+        {
+            using var world = World.Create();
+            Fixture fixture = Fixture.Create(world);
+            Entity rep = fixture.Unit(defaultMode: Smart, pinAbility: fixture.AbilityId, pinMode: Aim, withSlot: false);
+
+            Run matched = CompileAndRun(IsPrefDoc("Effect", Smart, slot: -1), world, fixture.Api, "check", rep, rep);
+            Assert.That(matched.Bools[matched.FeaturedDst], Is.EqualTo(1), "a negative slot reads the player pair");
+
+            Run pinned = CompileAndRun(IsPrefDoc("Effect", Aim, slot: -1), world, fixture.Api, "check", rep, rep);
+            Assert.That(pinned.Bools[pinned.FeaturedDst], Is.EqualTo(0), "a negative slot does not consult the ability pin");
+        }
+
+        [Test]
         public void IsPref_EmptySlot_FailsNamingActorAndSlot()
         {
             using var world = World.Create();
@@ -164,7 +178,7 @@ namespace Ludots.Tests.GasTests.Graph
             Assert.That(error.Message, Does.Contain(AbilityName));
         }
 
-        private static GraphControlFlowDocument IsPrefDoc(string kind, string mode)
+        private static GraphControlFlowDocument IsPrefDoc(string kind, string mode, int slot = 0)
         {
             var doc = new GraphControlFlowDocument
             {
@@ -173,7 +187,7 @@ namespace Ludots.Tests.GasTests.Graph
                 Entry = "slot",
                 Nodes =
                 {
-                    new GraphControlFlowNode { Id = "slot", Op = "ConstInt", IntValue = 0 },
+                    new GraphControlFlowNode { Id = "slot", Op = "ConstInt", IntValue = slot },
                     new GraphControlFlowNode { Id = "who", Op = "LoadCaster" },
                     new GraphControlFlowNode { Id = "check", Op = "IsPref", Key = Key, Value = mode },
                 },

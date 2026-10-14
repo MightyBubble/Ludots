@@ -1202,7 +1202,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
         {
             Ludots.Core.Input.Interaction.InteractionPref pref = RequirePref(rep, actor, nameof(IsPref));
-            int abilityId = RequireSlotAbility(actor, slot, nameof(IsPref));
+            // Negative slot: player-level pair only. The representative may be an anchor with no ability bar.
+            int abilityId = slot < 0 ? 0 : RequireSlotAbility(actor, slot, nameof(IsPref));
             (int keyRegistryId, int valueRegistryId) = ResolveAllowedPref(keyId, valueId, nameof(IsPref));
             int resolved = pref.ResolvePref(abilityId, keyRegistryId);
             if (resolved == 0)

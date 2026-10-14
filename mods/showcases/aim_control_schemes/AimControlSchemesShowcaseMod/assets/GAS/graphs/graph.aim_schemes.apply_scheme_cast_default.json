@@ -56,7 +56,7 @@
       {
         "id": "slot_kbm",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": -1
       },
       {
         "id": "check_kbm",
@@ -81,7 +81,7 @@
       {
         "id": "slot_pad",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": -1
       },
       {
         "id": "check_pad",
@@ -106,7 +106,7 @@
       {
         "id": "slot_skills",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": -1
       },
       {
         "id": "check_skills",
@@ -131,7 +131,7 @@
       {
         "id": "slot_left",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": -1
       },
       {
         "id": "check_left",
