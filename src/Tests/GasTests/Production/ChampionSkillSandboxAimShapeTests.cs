@@ -31,13 +31,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(CountAimPresenter(engine, "aim.target"), Is.EqualTo(0));
 
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
-            SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             Cycle(
                 engine,
                 backend,
                 frameTimesMs,
                 "<Keyboard>/q",
                 "interaction.context.aim.shape.line",
+                () => SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs),
                 () =>
                 {
                     Assert.That(CountAimPresenter(engine, "aim.range"), Is.EqualTo(1), ShapeDiag(engine, "line range"));
@@ -48,13 +48,14 @@ namespace Ludots.Tests.GAS.Production
                 },
                 () => LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs));
 
-            SetMouseWorld(engine, backend, ReadPosition(engine.World, "Ezreal Alpha") + new Vector2(200f, 0f), frameTimesMs);
+            SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
             Cycle(
                 engine,
                 backend,
                 frameTimesMs,
                 "<Keyboard>/e",
                 "interaction.context.aim.shape.circle",
+                () => SetMouseWorld(engine, backend, ReadPosition(engine.World, "Ezreal Alpha") + new Vector2(200f, 0f), frameTimesMs),
                 () =>
                 {
                     Assert.That(CountAimPresenter(engine, "aim.circle"), Is.EqualTo(1), ShapeDiag(engine, "circle"));
@@ -70,13 +71,13 @@ namespace Ludots.Tests.GAS.Production
                     frameTimesMs));
 
             SelectNamedEntity(engine, backend, "Jayce Hammer", frameTimesMs);
-            SetMouseEntity(engine, backend, "Target Dummy C", frameTimesMs);
             Cycle(
                 engine,
                 backend,
                 frameTimesMs,
                 "<Keyboard>/e",
                 "interaction.context.aim.shape.cone",
+                () => SetMouseEntity(engine, backend, "Target Dummy C", frameTimesMs),
                 () =>
                 {
                     Assert.That(CountAimPresenter(engine, "aim.cone"), Is.EqualTo(1), ShapeDiag(engine, "cone"));
@@ -88,13 +89,13 @@ namespace Ludots.Tests.GAS.Production
                 () => LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy C"), frameTimesMs));
 
             SelectNamedEntity(engine, backend, "Garen Alpha", frameTimesMs);
-            SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             Cycle(
                 engine,
                 backend,
                 frameTimesMs,
                 "<Keyboard>/r",
                 "interaction.context.aim.shape.unit",
+                () => SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs),
                 () =>
                 {
                     Assert.That(CountAimPresenter(engine, "aim.target"), Is.EqualTo(1), ShapeDiag(engine, "unit ring"));
@@ -112,9 +113,11 @@ namespace Ludots.Tests.GAS.Production
             List<double> frameTimesMs,
             string key,
             string shapeContext,
+            Action aim,
             Action assertShown,
             Action confirm)
         {
+            aim();
             PressAimKey(engine, backend, frameTimesMs, key);
             Assert.That(DescribeActiveInteractionContexts(engine), Does.Contain(shapeContext), ShapeDiag(engine, "press context"));
             assertShown();
@@ -123,6 +126,7 @@ namespace Ludots.Tests.GAS.Production
             AssertAimShapesHidden(engine, "cancel");
             ReleaseButton(engine, backend, key, frameTimesMs);
 
+            aim();
             PressAimKey(engine, backend, frameTimesMs, key);
             Assert.That(DescribeActiveInteractionContexts(engine), Does.Contain(shapeContext), ShapeDiag(engine, "confirm press context"));
             assertShown();
