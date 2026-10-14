@@ -3,6 +3,7 @@
     "seed": 2024
   },
   "deploy": {
+    "initialUnits": 0,
     "bases": [
       {
         "playerId": 1,

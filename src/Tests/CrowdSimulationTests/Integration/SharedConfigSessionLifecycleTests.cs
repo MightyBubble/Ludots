@@ -66,6 +66,8 @@ public sealed class SharedConfigSessionLifecycleTests
         {
             File.WriteAllText(Path.Combine(probeModRoot, "mod.json"),
                 """{"name":"LudotsPlainHoldMod","version":"1.0.0","priority":0,"dependencies":{"LudotsCoreMod":"^1.0.0"}}""");
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationConfig.json"),
+                """{ "deploy": { "initialUnits": 4 } }""");
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "Maps", "plain_hold.json"), """
 {
   "Id": "plain_hold",
@@ -85,6 +87,7 @@ public sealed class SharedConfigSessionLifecycleTests
             using var engine = Start(mods, repoRoot);
             engine.LoadMap(crowdMap);
             CrowdSimSession session = RequireSession(engine);
+            Assert.That(session.Config.Deploy.InitialUnits, Is.EqualTo(4));
             int guard = 0;
             while (session.TickCount == 0 && guard++ < 180)
             {
@@ -92,6 +95,7 @@ public sealed class SharedConfigSessionLifecycleTests
             }
 
             Assert.That(session.TickCount, Is.GreaterThan(0));
+            Assert.That(session.Units.Count, Is.EqualTo(4));
             int frozen = session.TickCount;
             engine.LoadMap("plain_hold");
             Assert.That(engine.GetService(CoreServiceKeys.CrowdSimulationSession), Is.Null);
@@ -114,36 +118,51 @@ public sealed class SharedConfigSessionLifecycleTests
         const string mapA = "crowd_simulation_s1337";
         const string mapB = "crowd_simulation_s7";
         string repoRoot = FindRepoRoot();
-        using var engine = Start(new List<string>
+        string probeModRoot = Path.Combine(Path.GetTempPath(), "Ludots_LifecycleUnits_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(probeModRoot, "assets"));
+        try
         {
-            Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-            Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
-            Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain7Mod"),
-        }, repoRoot);
+            File.WriteAllText(Path.Combine(probeModRoot, "mod.json"),
+                """{"name":"LudotsLifecycleUnitsMod","version":"1.0.0","priority":0,"dependencies":{"CrowdSimulationS1Terrain7Mod":"^0.1.0","CrowdSimulationS1Terrain1337Mod":"^0.1.0"}}""");
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationConfig.json"),
+                """{ "deploy": { "initialUnits": 4 } }""");
+            using var engine = Start(new List<string>
+            {
+                Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
+                Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
+                Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain7Mod"),
+                probeModRoot,
+            }, repoRoot);
 
-        engine.LoadMap(mapA);
-        CrowdSimSession sessionA = RequireSession(engine);
-        int guard = 0;
-        while (sessionA.TickCount == 0 && guard++ < 180)
-        {
-            engine.Tick(1f / 30f);
+            engine.LoadMap(mapA);
+            CrowdSimSession sessionA = RequireSession(engine);
+            Assert.That(sessionA.Config.Deploy.InitialUnits, Is.EqualTo(4));
+            int guard = 0;
+            while (sessionA.TickCount == 0 && guard++ < 180)
+            {
+                engine.Tick(1f / 30f);
+            }
+
+            Assert.That(sessionA.TickCount, Is.GreaterThan(0));
+            int frozen = sessionA.TickCount;
+            engine.LoadMap(mapB);
+            CrowdSimSession sessionB = RequireSession(engine);
+            Assert.That(sessionB, Is.Not.SameAs(sessionA));
+            Assert.That(sessionB.Config.MapId, Is.EqualTo(mapB));
+            Assert.That(sessionB.Planner, Is.Not.Null);
+            for (int i = 0; i < 30; i++)
+            {
+                engine.Tick(1f / 30f);
+            }
+
+            Assert.That(sessionA.TickCount, Is.EqualTo(frozen));
         }
-
-        Assert.That(sessionA.TickCount, Is.GreaterThan(0));
-        int frozen = sessionA.TickCount;
-        engine.LoadMap(mapB);
-        CrowdSimSession sessionB = RequireSession(engine);
-        Assert.That(sessionB, Is.Not.SameAs(sessionA));
-        Assert.That(sessionB.Config.MapId, Is.EqualTo(mapB));
-        Assert.That(sessionB.Planner, Is.Not.Null);
-        for (int i = 0; i < 30; i++)
+        finally
         {
-            engine.Tick(1f / 30f);
+            if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
         }
-
-        Assert.That(sessionA.TickCount, Is.EqualTo(frozen));
     }
 
     [Test]
