@@ -14,7 +14,7 @@ public sealed class RetiredInputNameGuardTests
         "CoreInputCollectionKeys",
     };
 
-    private static readonly string[] Roots = { "mods", "src", "gitbook" };
+    private static readonly string[] Roots = { "mods", "src", "gitbook", "docs/architecture", "docs/diagrams" };
 
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -32,10 +32,11 @@ public sealed class RetiredInputNameGuardTests
         ".xml",
         ".ps1",
         ".sh",
+        ".svg",
     };
 
     [Test]
-    public void ModsSrcAndGitbook_DoNotContainRetiredInputNames()
+    public void ModsSrcGitbookAndCurrentDocs_DoNotContainRetiredInputNames()
     {
         string repoRoot = FindRepoRoot();
         var hits = new List<string>();
@@ -89,7 +90,7 @@ public sealed class RetiredInputNameGuardTests
         Assert.That(
             hits,
             Is.Empty,
-            "Retired input names must stay out of mods, src, and gitbook:\n" + string.Join("\n", hits));
+            "Retired input names must stay out of mods, src, gitbook, docs/architecture, and docs/diagrams:\n" + string.Join("\n", hits));
     }
 
     private static string FindRepoRoot()
