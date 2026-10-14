@@ -1937,7 +1937,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleLoadAbilityEffectFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.F[ins.Dst] = s.Api.LoadAbilityEffectFloat(s.E[ins.A], s.I[ins.B], s.CurrentGraphId);
+            s.F[ins.Dst] = s.Api.LoadAbilityEffectFloat(
+                s.E[ins.A],
+                s.I[ins.B],
+                s.CurrentGraphId,
+                RequireProgramSymbol(ref s, in ins, nameof(GraphNodeOp.LoadAbilityEffectFloat)));
+        }
+
+        private static string RequireProgramSymbol(ref GraphExecutionState s, in GraphInstruction ins, string opName)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    $"{opName} requires a registered program so Symbols[Imm] can supply the key.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length ||
+                string.IsNullOrWhiteSpace(registration.Symbols[ins.Imm]))
+            {
+                throw new InvalidOperationException(
+                    $"{opName} Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            return registration.Symbols[ins.Imm];
         }
 
         private static void HandleLoadSlotAbilityId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

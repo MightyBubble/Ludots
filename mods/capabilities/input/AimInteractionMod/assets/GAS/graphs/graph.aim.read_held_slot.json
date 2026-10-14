@@ -1,0 +1,221 @@
+[
+  {
+    "id": "graph.aim.read_held_slot",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "read",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "eq0",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump0",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "eq1",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump1",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "fail",
+        "op": "Fail",
+        "message": "AimActorsNotSingular"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "read",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "cnt"
+      },
+      {
+        "from": "cnt",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "eq0"
+      },
+      {
+        "from": "eq0",
+        "fromPort": "next",
+        "to": "jump0"
+      },
+      {
+        "from": "jump0",
+        "fromPort": "true",
+        "to": "halt0"
+      },
+      {
+        "from": "jump0",
+        "fromPort": "false",
+        "to": "eq1"
+      },
+      {
+        "from": "eq1",
+        "fromPort": "next",
+        "to": "jump1"
+      },
+      {
+        "from": "jump1",
+        "fromPort": "true",
+        "to": "idx0"
+      },
+      {
+        "from": "jump1",
+        "fromPort": "false",
+        "to": "fail"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "read"
+      },
+      {
+        "from": "read",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "cnt",
+        "fromPort": "value",
+        "to": "eq0",
+        "toPort": "a"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "eq0",
+        "toPort": "b"
+      },
+      {
+        "from": "eq0",
+        "fromPort": "value",
+        "to": "jump0",
+        "toPort": "condition"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      },
+      {
+        "from": "cnt",
+        "fromPort": "value",
+        "to": "eq1",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "eq1",
+        "toPort": "b"
+      },
+      {
+        "from": "eq1",
+        "fromPort": "value",
+        "to": "jump1",
+        "toPort": "condition"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read",
+        "toPort": "source"
+      },
+      {
+        "from": "read",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

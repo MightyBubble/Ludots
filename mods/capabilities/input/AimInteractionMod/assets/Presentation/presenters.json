@@ -82,7 +82,8 @@
       {
         "paramKey": "groundOverlay.radius",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.range_cm"
+        "sourceId": "aim.range_cm",
+        "unit": "logicCm"
       }
     ],
     "behaviors": [
@@ -170,7 +171,8 @@
       {
         "paramKey": "groundOverlay.length",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.range_cm"
+        "sourceId": "aim.shape.length",
+        "unit": "logicCm"
       },
       {
         "paramKey": "groundOverlay.rotation",
@@ -180,7 +182,8 @@
       {
         "paramKey": "groundOverlay.width",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.shape.param"
+        "sourceId": "aim.shape.width",
+        "unit": "logicCm"
       },
       {
         "paramKey": "groundOverlay.border.r",
@@ -399,7 +402,8 @@
       {
         "paramKey": "groundOverlay.radius",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.shape.param"
+        "sourceId": "aim.shape.radius",
+        "unit": "logicCm"
       }
     ],
     "behaviors": [
@@ -491,12 +495,13 @@
       {
         "paramKey": "groundOverlay.radius",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.range_cm"
+        "sourceId": "aim.shape.radius",
+        "unit": "logicCm"
       },
       {
         "paramKey": "groundOverlay.angle",
         "source": "ownerBlackboardFloat",
-        "sourceId": "aim.shape.param"
+        "sourceId": "aim.shape.angle"
       },
       {
         "paramKey": "groundOverlay.rotation",

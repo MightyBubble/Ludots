@@ -629,11 +629,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         MinimapApplyWheelZoom = 550,
 
         /// <summary>
-        /// F[Dst] = the named float on the impact effect of the ability on actor A at slot I[B].
-        /// The running graph id selects the field from that ability's effectFields.
-        /// A missing declaration, an unknown field, or a value that is absent or not greater than 0 fails closed.
+        /// F[Dst] = one float on the impact effect of the ability on actor A at slot I[B].
+        /// Symbols[Imm] is the key. The running graph id and that key select the entry in effectFields.
+        /// A missing key, an unknown field, or a value that is absent or not greater than 0 fails closed.
+        /// 551 is ApplyMapDefaultCamera.
         /// </summary>
-        LoadAbilityEffectFloat = 551,
+        LoadAbilityEffectFloat = 552,
 
     }
 

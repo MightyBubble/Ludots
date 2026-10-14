@@ -43,7 +43,9 @@
       "impactEffect": "Effect.GraphOps.NamedRadius"
     },
     "effectFields": {
-      "showcase.graph_op.LoadAbilityEffectFloat": "targetQuery.radius"
+      "showcase.graph_op.LoadAbilityEffectFloat": {
+        "radius": "targetQuery.radius"
+      }
     }
   }
 ]

@@ -11,7 +11,8 @@
       },
       {
         "id": "radius",
-        "op": "LoadAbilityEffectFloat"
+        "op": "LoadAbilityEffectFloat",
+        "key": "radius"
       },
       {
         "id": "drain",

@@ -1053,7 +1053,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] BindingFields =
         {
-            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional",
+            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional", "unit",
         };
 
         private static readonly string[] ParamDefaultFields =
@@ -2348,13 +2348,21 @@ namespace Ludots.Core.Presentation.Config
             RejectRemovedBindingFields(node, context);
             string source = node["source"]?.GetValue<string>();
             bool optional = node["optional"]?.GetValue<bool>() ?? false;
+            ValueUnit unit = ParseValueUnit(node["unit"], context);
+            if (unit != ValueUnit.None && source != "ownerBlackboardFloat")
+            {
+                throw new InvalidOperationException(
+                    $"{context} unit '{node["unit"]}' is only valid when source is ownerBlackboardFloat.");
+            }
+
             ValueRef value = source switch
             {
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
                 "graph" => ValueRef.FromGraph(ResolveGraphProgramId(node["sourceId"], context)),
                 "ownerBlackboardFloat" => ValueRef.FromOwnerBlackboardFloat(
-                    ResolveBlackboardKeyId(node["sourceId"], context)),
+                    ResolveBlackboardKeyId(node["sourceId"], context),
+                    unit),
                 "pointerScreenX" => ValueRef.FromPointerScreenX(),
                 "pointerScreenY" => ValueRef.FromPointerScreenY(),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Presenter binding entityColor.sourceId")),
@@ -2368,6 +2376,27 @@ namespace Ludots.Core.Presentation.Config
             };
             value.Optional = optional;
             return value;
+        }
+
+        private static ValueUnit ParseValueUnit(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                return ValueUnit.None;
+            }
+
+            if (node is not JsonValue value || !value.TryGetValue<string>(out string? unit) || string.IsNullOrWhiteSpace(unit))
+            {
+                throw new InvalidOperationException($"{context} unit must be a non-empty string.");
+            }
+
+            if (string.Equals(unit, "logicCm", StringComparison.Ordinal))
+            {
+                return ValueUnit.LogicCm;
+            }
+
+            throw new InvalidOperationException(
+                $"{context} unit '{unit}' is unknown. Known units: logicCm.");
         }
 
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)

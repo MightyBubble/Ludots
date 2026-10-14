@@ -16,7 +16,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,
@@ -40,7 +43,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,
@@ -64,7 +70,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,
@@ -88,7 +97,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,
@@ -112,7 +124,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,
@@ -136,7 +151,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,
@@ -160,7 +178,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 90
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
     },
     "targeting": {
       "castRangeCm": 800,

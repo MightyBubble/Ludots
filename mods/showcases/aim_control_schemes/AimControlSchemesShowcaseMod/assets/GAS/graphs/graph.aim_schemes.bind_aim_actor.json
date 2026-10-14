@@ -87,13 +87,23 @@
         "id": "refresh",
         "op": "InvokeGraph",
         "functionName": "graph.aim.refresh_gesture"
+      },
+      {
+        "id": "held",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.read_held_slot"
+      },
+      {
+        "id": "put_slot",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.slot"
       }
     ],
     "controlEdges": [
       {
         "from": "rep",
         "fromPort": "next",
-        "to": "all"
+        "to": "held"
       },
       {
         "from": "all",
@@ -158,12 +168,22 @@
       {
         "from": "prep",
         "fromPort": "next",
-        "to": "pick"
+        "to": "put_slot"
       },
       {
         "from": "refresh",
         "fromPort": "next",
         "to": "c1"
+      },
+      {
+        "from": "held",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "put_slot",
+        "fromPort": "next",
+        "to": "pick"
       }
     ],
     "valueEdges": [
@@ -208,6 +228,18 @@
         "fromPort": "value",
         "to": "halt0",
         "toPort": "value"
+      },
+      {
+        "from": "held",
+        "fromPort": "value",
+        "to": "put_slot",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "put_slot",
+        "toPort": "source"
       }
     ]
   }

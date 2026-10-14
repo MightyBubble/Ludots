@@ -332,24 +332,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
             EffectTemplateRegistry? effectTemplates,
             string ownerLabel)
         {
-            bool readsEffectFloat = ProgramContains(registration.Program, GraphNodeOp.LoadAbilityEffectFloat);
-            string? declaredField = null;
-            float literal = 0f;
-            bool hasField = definition.TriggerGraphEffectFields != null &&
-                definition.TriggerGraphEffectFields.TryGetValue(graph, out declaredField) &&
-                !string.IsNullOrEmpty(declaredField);
-            bool hasLiteral = definition.TriggerGraphEffectLiterals != null &&
-                definition.TriggerGraphEffectLiterals.TryGetValue(graph, out literal);
+            var readKeys = new List<string>();
+            CollectEffectFieldKeys(registration, graph, readKeys);
+            var declaredKeys = new List<string>();
+            definition.CopyEffectFieldKeys(graph, declaredKeys);
             string abilityLabel = AbilityLabel(abilityId);
-            if (hasField && hasLiteral)
+            if (readKeys.Count == 0)
             {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' effectFields names graph '{graph}' as both an effect field and a literal.");
-            }
-
-            if (!readsEffectFloat)
-            {
-                if (hasField || hasLiteral)
+                if (declaredKeys.Count > 0)
                 {
                     throw new InvalidOperationException(
                         $"{ownerLabel} ability '{abilityLabel}' effectFields names graph '{graph}', which does not read an effect float.");
@@ -358,24 +348,53 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            if (!hasField && !hasLiteral)
-            {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads an effect float but effectFields does not name that graph.");
-            }
-
             if (!definition.HasTargeting || definition.Targeting.CastRangeCm <= 0f)
             {
                 throw new InvalidOperationException(
                     $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads an effect float but targeting.castRangeCm must be > 0.");
             }
 
-            if (hasLiteral)
+            for (int i = 0; i < readKeys.Count; i++)
+            {
+                RequireOneEffectField(definition, readKeys[i], graph, abilityLabel, effectTemplates, ownerLabel);
+            }
+
+            for (int i = 0; i < declaredKeys.Count; i++)
+            {
+                if (!ContainsKey(readKeys, declaredKeys[i]))
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields declares key '{declaredKeys[i]}', which that graph does not read.");
+                }
+            }
+        }
+
+        private static void RequireOneEffectField(
+            AbilityDefinition definition,
+            string key,
+            string graph,
+            string abilityLabel,
+            EffectTemplateRegistry? effectTemplates,
+            string ownerLabel)
+        {
+            if (definition.EffectFieldKeyConflicts(graph, key))
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' effectFields['{graph}']['{key}'] is both an effect field and a literal.");
+            }
+
+            if (!definition.TryReadEffectField(graph, key, out bool isLiteral, out string field, out float literal))
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field key '{key}' but effectFields does not declare it.");
+            }
+
+            if (isLiteral)
             {
                 if (!(literal > 0f))
                 {
                     throw new InvalidOperationException(
-                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields literal must be greater than 0.");
+                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields['{key}'] literal must be greater than 0.");
                 }
 
                 return;
@@ -384,16 +403,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (effectTemplates == null)
             {
                 throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads an effect float but EffectTemplateRegistry is not available.");
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field key '{key}' but EffectTemplateRegistry is not available.");
             }
-
-            if (string.IsNullOrEmpty(declaredField))
-            {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads an effect float but effectFields does not name that graph.");
-            }
-
-            string field = declaredField;
 
             int effectId = definition.Targeting.ImpactEffectTemplateId;
             if (effectId <= 0 || !effectTemplates.TryGet(effectId, out EffectTemplateData template))
@@ -413,17 +424,42 @@ namespace Ludots.Core.Gameplay.MapTriggers
             catch (InvalidOperationException ex)
             {
                 throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' {ex.Message}",
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' key '{key}' {ex.Message}",
                     ex);
             }
         }
 
-        private static bool ProgramContains(GraphInstruction[] program, GraphNodeOp op)
+        private static void CollectEffectFieldKeys(GraphProgramRegistration registration, string graph, List<string> keys)
         {
-            ushort code = (ushort)op;
+            ushort code = (ushort)GraphNodeOp.LoadAbilityEffectFloat;
+            GraphInstruction[] program = registration.Program;
+            string[] symbols = registration.Symbols;
             for (int i = 0; i < program.Length; i++)
             {
-                if (program[i].Op == code)
+                if (program[i].Op != code)
+                {
+                    continue;
+                }
+
+                int index = program[i].Imm;
+                if ((uint)index >= (uint)symbols.Length || string.IsNullOrWhiteSpace(symbols[index]))
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{graph}' LoadAbilityEffectFloat at pc={i} has no key symbol.");
+                }
+
+                if (!ContainsKey(keys, symbols[index]))
+                {
+                    keys.Add(symbols[index]);
+                }
+            }
+        }
+
+        private static bool ContainsKey(List<string> keys, string key)
+        {
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (string.Equals(keys[i], key, StringComparison.Ordinal))
                 {
                     return true;
                 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
@@ -109,16 +110,96 @@ namespace Ludots.Core.Gameplay.GAS
         public List<string> TriggerGraphs;
 
         /// <summary>
-        /// Graph id to a named float on <see cref="AbilityTargetingConfig.ImpactEffectTemplateId"/>.
-        /// LoadAbilityEffectFloat reads the entry for the graph that is running.
+        /// Graph id to effectFields keys, each naming a float on
+        /// <see cref="AbilityTargetingConfig.ImpactEffectTemplateId"/>.
+        /// LoadAbilityEffectFloat reads the key carried by the running instruction.
         /// </summary>
-        public Dictionary<string, string> TriggerGraphEffectFields;
+        public Dictionary<string, Dictionary<string, string>> TriggerGraphEffectFields;
 
         /// <summary>
-        /// Graph id to a positive literal, used when the impact effect has no spatial float to share.
-        /// The same graph cannot declare both a field name and a literal.
+        /// Graph id to effectFields keys whose value is a positive literal.
+        /// Used when the impact effect has no spatial float for that key.
+        /// One key cannot be both a field name and a literal.
         /// </summary>
-        public Dictionary<string, float> TriggerGraphEffectLiterals;
+        public Dictionary<string, Dictionary<string, float>> TriggerGraphEffectLiterals;
+
+        public bool TryReadEffectField(string graph, string key, out bool isLiteral, out string field, out float literal)
+        {
+            field = string.Empty;
+            literal = 0f;
+            isLiteral = false;
+            bool hasField = TriggerGraphEffectFields != null &&
+                TriggerGraphEffectFields.TryGetValue(graph, out Dictionary<string, string> fields) &&
+                fields != null &&
+                fields.TryGetValue(key, out field) &&
+                !string.IsNullOrEmpty(field);
+            bool hasLiteral = TriggerGraphEffectLiterals != null &&
+                TriggerGraphEffectLiterals.TryGetValue(graph, out Dictionary<string, float> literals) &&
+                literals != null &&
+                literals.TryGetValue(key, out literal);
+            if (hasField && hasLiteral)
+            {
+                return false;
+            }
+
+            if (hasLiteral)
+            {
+                isLiteral = true;
+                return true;
+            }
+
+            return hasField;
+        }
+
+        public bool EffectFieldKeyConflicts(string graph, string key)
+        {
+            bool hasField = TriggerGraphEffectFields != null &&
+                TriggerGraphEffectFields.TryGetValue(graph, out Dictionary<string, string> fields) &&
+                fields != null &&
+                fields.ContainsKey(key);
+            bool hasLiteral = TriggerGraphEffectLiterals != null &&
+                TriggerGraphEffectLiterals.TryGetValue(graph, out Dictionary<string, float> literals) &&
+                literals != null &&
+                literals.ContainsKey(key);
+            return hasField && hasLiteral;
+        }
+
+        public void CopyEffectFieldKeys(string graph, List<string> into)
+        {
+            if (TriggerGraphEffectFields != null &&
+                TriggerGraphEffectFields.TryGetValue(graph, out Dictionary<string, string> fields) &&
+                fields != null)
+            {
+                foreach (string key in fields.Keys)
+                {
+                    AddEffectFieldKey(into, key);
+                }
+            }
+
+            if (TriggerGraphEffectLiterals != null &&
+                TriggerGraphEffectLiterals.TryGetValue(graph, out Dictionary<string, float> literals) &&
+                literals != null)
+            {
+                foreach (string key in literals.Keys)
+                {
+                    AddEffectFieldKey(into, key);
+                }
+            }
+        }
+
+        private static void AddEffectFieldKey(List<string> into, string key)
+        {
+            for (int i = 0; i < into.Count; i++)
+            {
+                if (string.Equals(into[i], key, StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+
+            into.Add(key);
+        }
+
         // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;

@@ -948,8 +948,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadAbilityCastRange:
-                case GraphNodeOp.LoadAbilityEffectFloat:
                 case GraphNodeOp.LoadSlotAbilityId:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadAbilityEffectFloat:
+                    RequireNonEmpty(node.Key, "key", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -2441,8 +2446,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
-                case GraphNodeOp.LoadAbilityCastRange:
                 case GraphNodeOp.LoadAbilityEffectFloat:
+                    instruction.Imm = RequireSymbol(node.Key, "key", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadAbilityCastRange:
                 case GraphNodeOp.LoadSlotAbilityId:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,

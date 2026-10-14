@@ -159,6 +159,26 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
                 graphId = GraphIdRegistry.Register(graphName);
             }
 
+            if (ctx.Programs == null)
+            {
+                throw new InvalidOperationException(
+                    "Gallery LoadAbilityEffectFloat requires the featured program registry.");
+            }
+
+            if (!ctx.Programs.TryGetRegistration(graphId, out _))
+            {
+                GraphProgramPackage package = ctx.Compiled.Package
+                    ?? throw new InvalidOperationException(
+                        "Gallery LoadAbilityEffectFloat compiled without a program package.");
+                ctx.Programs.Register(
+                    graphId,
+                    package.Program,
+                    ctx.Kind,
+                    GraphInstructionSourceMap.Empty,
+                    package.Symbols,
+                    package.TriggerGraphEntries);
+            }
+
             ctx.FeaturedGraphId = graphId;
         }
     }

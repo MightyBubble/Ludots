@@ -294,7 +294,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (obj["effectFields"] is JsonObject effectFields)
             {
-                CompileEffectFields(effectFields, id, path, out Dictionary<string, string>? fields, out Dictionary<string, float>? literals);
+                CompileEffectFields(
+                    effectFields,
+                    id,
+                    path,
+                    out Dictionary<string, Dictionary<string, string>>? fields,
+                    out Dictionary<string, Dictionary<string, float>>? literals);
                 def.TriggerGraphEffectFields = fields;
                 def.TriggerGraphEffectLiterals = literals;
             }
@@ -311,8 +316,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             JsonObject fields,
             string id,
             string path,
-            out Dictionary<string, string>? fieldMap,
-            out Dictionary<string, float>? literalMap)
+            out Dictionary<string, Dictionary<string, string>>? fieldMap,
+            out Dictionary<string, Dictionary<string, float>>? literalMap)
         {
             fieldMap = null;
             literalMap = null;
@@ -325,40 +330,69 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         $"Ability '{id}' in '{path}' field 'effectFields' keys must be trimmed non-empty graph ids.");
                 }
 
-                if (kvp.Value is not JsonValue value)
+                if (kvp.Value is not JsonObject keys || keys.Count == 0)
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' effectFields['{graph}'] must be an effect field name or a number greater than 0.");
+                        $"Ability '{id}' in '{path}' effectFields['{graph}'] must be an object of keys. " +
+                        "Each key is an effect field name or a number greater than 0.");
                 }
 
-                if (value.TryGetValue<string>(out string? field))
+                foreach (KeyValuePair<string, JsonNode?> entry in keys)
                 {
-                    if (string.IsNullOrWhiteSpace(field) || !string.Equals(field, field.Trim(), StringComparison.Ordinal))
+                    string key = entry.Key;
+                    if (string.IsNullOrWhiteSpace(key) || !string.Equals(key, key.Trim(), StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
-                            $"Ability '{id}' in '{path}' effectFields['{graph}'] must be a trimmed field name.");
+                            $"Ability '{id}' in '{path}' effectFields['{graph}'] keys must be trimmed non-empty strings.");
                     }
 
-                    if (!EffectTemplateNamedFloat.IsKnown(field))
+                    if (entry.Value is not JsonValue value)
                     {
                         throw new InvalidOperationException(
-                            $"Ability '{id}' in '{path}' effectFields['{graph}'] names unknown field '{field}'. " +
-                            $"Known fields: {string.Join(", ", EffectTemplateNamedFloat.KnownFields)}.");
+                            $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] must be an effect field name or a number greater than 0.");
                     }
 
-                    fieldMap ??= new Dictionary<string, string>(StringComparer.Ordinal);
-                    fieldMap.Add(graph, field);
-                    continue;
-                }
+                    if (value.TryGetValue<string>(out string? field))
+                    {
+                        if (string.IsNullOrWhiteSpace(field) || !string.Equals(field, field.Trim(), StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] must be a trimmed field name.");
+                        }
 
-                if (!TryGetJsonNumber(value, out double number) || !(number > 0d) || double.IsInfinity(number))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' effectFields['{graph}'] must be an effect field name or a number greater than 0.");
-                }
+                        if (!EffectTemplateNamedFloat.IsKnown(field))
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] names unknown field '{field}'. " +
+                                $"Known fields: {string.Join(", ", EffectTemplateNamedFloat.KnownFields)}.");
+                        }
 
-                literalMap ??= new Dictionary<string, float>(StringComparer.Ordinal);
-                literalMap.Add(graph, (float)number);
+                        fieldMap ??= new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+                        if (!fieldMap.TryGetValue(graph, out Dictionary<string, string>? graphFields))
+                        {
+                            graphFields = new Dictionary<string, string>(StringComparer.Ordinal);
+                            fieldMap.Add(graph, graphFields);
+                        }
+
+                        graphFields.Add(key, field);
+                        continue;
+                    }
+
+                    if (!TryGetJsonNumber(value, out double number) || !(number > 0d) || double.IsInfinity(number))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] must be an effect field name or a number greater than 0.");
+                    }
+
+                    literalMap ??= new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
+                    if (!literalMap.TryGetValue(graph, out Dictionary<string, float>? graphLiterals))
+                    {
+                        graphLiterals = new Dictionary<string, float>(StringComparer.Ordinal);
+                        literalMap.Add(graph, graphLiterals);
+                    }
+
+                    graphLiterals.Add(key, (float)number);
+                }
             }
         }
 

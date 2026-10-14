@@ -8,6 +8,12 @@
         "event": "Aim.Rule.Press",
         "start": "rep",
         "refire": "restart"
+      },
+      {
+        "label": "bind",
+        "event": "Aim.Shape.Bind",
+        "start": "rep",
+        "refire": "restart"
       }
     ],
     "nodes": [

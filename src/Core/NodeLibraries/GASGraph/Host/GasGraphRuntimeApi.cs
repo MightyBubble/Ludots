@@ -1443,12 +1443,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <inheritdoc />
-        public float LoadAbilityEffectFloat(Entity actor, int slot, int currentGraphId)
+        public float LoadAbilityEffectFloat(Entity actor, int slot, int currentGraphId, string fieldKey)
         {
             if (_world == null || !_world.IsAlive(actor))
             {
                 throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.LoadAbilityEffectFloatActorDead: actor {actor} is not alive.");
+            }
+
+            if (string.IsNullOrWhiteSpace(fieldKey))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: LoadAbilityEffectFloat requires a non-empty key.");
             }
 
             if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
@@ -1474,34 +1480,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             string abilityName = AbilityIdRegistry.GetName(slotState.AbilityId);
-            float literal = 0f;
-            string? field = null;
-            bool hasLiteral = definition.TriggerGraphEffectLiterals != null &&
-                definition.TriggerGraphEffectLiterals.TryGetValue(graphName, out literal);
-            bool hasField = definition.TriggerGraphEffectFields != null &&
-                definition.TriggerGraphEffectFields.TryGetValue(graphName, out field) &&
-                !string.IsNullOrEmpty(field);
-            if (hasLiteral && hasField)
+            if (definition.EffectFieldKeyConflicts(graphName, fieldKey))
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' effectFields names graph '{graphName}' as both an effect field and a literal.");
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' effectFields['{graphName}']['{fieldKey}'] is both an effect field and a literal.");
             }
 
-            if (hasLiteral)
+            if (!definition.TryReadEffectField(graphName, fieldKey, out bool isLiteral, out string field, out float literal))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' does not declare effectFields['{graphName}']['{fieldKey}'].");
+            }
+
+            if (isLiteral)
             {
                 if (!(literal > 0f))
                 {
                     throw new InvalidOperationException(
-                        $"GAS.EFFECT.ERR.NamedFloatAbsent: ability '{abilityName}' graph '{graphName}' effectFields literal is not greater than 0.");
+                        $"GAS.EFFECT.ERR.NamedFloatAbsent: ability '{abilityName}' graph '{graphName}' key '{fieldKey}' effectFields literal is not greater than 0.");
                 }
 
                 return literal;
-            }
-
-            if (!hasField)
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' does not declare effectFields for graph '{graphName}'.");
             }
 
             if (!definition.HasTargeting || definition.Targeting.ImpactEffectTemplateId <= 0)
@@ -1523,7 +1522,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             string effectName = EffectTemplateIdRegistry.GetName(effectId);
             return EffectTemplateNamedFloat.Require(
                 in template,
-                field ?? string.Empty,
+                field,
                 string.IsNullOrEmpty(effectName) ? effectId.ToString() : effectName);
         }
 

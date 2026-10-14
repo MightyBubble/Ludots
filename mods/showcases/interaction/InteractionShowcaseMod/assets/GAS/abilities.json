@@ -32,7 +32,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 70
+      "graph.aim.shape.line": {
+        "length": 900,
+        "width": 70
+      }
     },
     "targeting": {
       "castRangeCm": 900,
@@ -103,7 +106,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "targetQuery.halfWidth"
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 760,
@@ -271,7 +277,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "targetQuery.halfWidth"
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 780,
@@ -316,7 +325,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": 85
+      "graph.aim.shape.line": {
+        "length": 480,
+        "width": 85
+      }
     },
     "targeting": {
       "castRangeCm": 480,
@@ -387,7 +399,10 @@
       "graph.aim.shape.cone"
     ],
     "effectFields": {
-      "graph.aim.shape.cone": "targetQuery.halfAngle"
+      "graph.aim.shape.cone": {
+        "radius": "targetQuery.radius",
+        "angle": "targetQuery.halfAngle"
+      }
     },
     "targeting": {
       "castRangeCm": 360,
@@ -658,7 +673,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "targetQuery.halfWidth"
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 720,
@@ -820,7 +838,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "targetQuery.halfWidth"
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 820,

@@ -94,7 +94,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+      "graph.aim.shape.line": {
+        "length": "projectile.range",
+        "width": "projectile.collisionHalfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 760,
@@ -144,7 +147,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+      "graph.aim.shape.line": {
+        "length": "projectile.range",
+        "width": "projectile.collisionHalfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 840,
@@ -194,7 +200,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+      "graph.aim.shape.line": {
+        "length": "projectile.range",
+        "width": "projectile.collisionHalfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 2200,
@@ -569,7 +578,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "targetQuery.halfWidth"
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 920,
@@ -711,7 +723,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+      "graph.aim.shape.line": {
+        "length": "projectile.range",
+        "width": "projectile.collisionHalfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 880,
@@ -807,7 +822,10 @@
       "graph.aim.shape.cone"
     ],
     "effectFields": {
-      "graph.aim.shape.cone": "targetQuery.halfAngle"
+      "graph.aim.shape.cone": {
+        "radius": "targetQuery.radius",
+        "angle": "targetQuery.halfAngle"
+      }
     },
     "targeting": {
       "castRangeCm": 300,
@@ -857,7 +875,9 @@
       "graph.aim.shape.circle"
     ],
     "effectFields": {
-      "graph.aim.shape.circle": "targetQuery.radius"
+      "graph.aim.shape.circle": {
+        "radius": "targetQuery.radius"
+      }
     },
     "targeting": {
       "castRangeCm": 520,
@@ -997,7 +1017,9 @@
       "graph.aim.shape.circle"
     ],
     "effectFields": {
-      "graph.aim.shape.circle": "targetQuery.radius"
+      "graph.aim.shape.circle": {
+        "radius": "targetQuery.radius"
+      }
     },
     "targeting": {
       "castRangeCm": 180,
@@ -1047,7 +1069,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+      "graph.aim.shape.line": {
+        "length": "projectile.range",
+        "width": "projectile.collisionHalfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 1200,
@@ -1097,7 +1122,10 @@
       "graph.aim.shape.line"
     ],
     "effectFields": {
-      "graph.aim.shape.line": "projectile.collisionHalfWidth"
+      "graph.aim.shape.line": {
+        "length": "projectile.range",
+        "width": "projectile.collisionHalfWidth"
+      }
     },
     "targeting": {
       "castRangeCm": 1400,
@@ -1291,7 +1319,9 @@
       "graph.aim.shape.circle"
     ],
     "effectFields": {
-      "graph.aim.shape.circle": "unitCreation.placementRadiusCm"
+      "graph.aim.shape.circle": {
+        "radius": "unitCreation.placementRadiusCm"
+      }
     },
     "targeting": {
       "castRangeCm": 700,

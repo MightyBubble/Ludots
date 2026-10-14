@@ -90,26 +90,6 @@
         "op": "HaltReturnInt"
       },
       {
-        "id": "is_shape_line",
-        "op": "IsContextActive",
-        "context": "interaction.context.aim.shape.line"
-      },
-      {
-        "id": "is_shape_circle",
-        "op": "IsContextActive",
-        "context": "interaction.context.aim.shape.circle"
-      },
-      {
-        "id": "is_shape_cone",
-        "op": "IsContextActive",
-        "context": "interaction.context.aim.shape.cone"
-      },
-      {
-        "id": "is_shape_unit",
-        "op": "IsContextActive",
-        "context": "interaction.context.aim.shape.unit"
-      },
-      {
         "id": "re_click",
         "op": "IsContextActive",
         "context": "interaction.context.aim.click"
@@ -128,85 +108,25 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "re_click_line",
-        "op": "JumpIfFalse"
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
       },
       {
-        "id": "act_click_line",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.shape.line"
+        "id": "load_ability",
+        "op": "LoadSlotAbilityId"
       },
       {
-        "id": "re_click_circle",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_click_circle",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.shape.circle"
-      },
-      {
-        "id": "re_click_cone",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_click_cone",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.shape.cone"
-      },
-      {
-        "id": "re_click_unit",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_click_unit",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.unit",
-        "parentContext": "interaction.context.aim.click"
-      },
-      {
-        "id": "re_release_line",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_release_line",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.shape.line"
-      },
-      {
-        "id": "re_release_circle",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_release_circle",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.shape.circle"
-      },
-      {
-        "id": "re_release_cone",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_release_cone",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.shape.cone"
-      },
-      {
-        "id": "re_release_unit",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_release_unit",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.shape.unit",
-        "parentContext": "interaction.context.aim.release"
+        "id": "dispatch",
+        "op": "DispatchMapEvent",
+        "event": "Aim.Shape.Bind"
       }
     ],
     "controlEdges": [
       {
         "from": "rep",
         "fromPort": "next",
-        "to": "is_shape_line"
+        "to": "q"
       },
       {
         "from": "q",
@@ -294,26 +214,6 @@
         "to": "halt"
       },
       {
-        "from": "is_shape_line",
-        "fromPort": "next",
-        "to": "is_shape_circle"
-      },
-      {
-        "from": "is_shape_circle",
-        "fromPort": "next",
-        "to": "is_shape_cone"
-      },
-      {
-        "from": "is_shape_cone",
-        "fromPort": "next",
-        "to": "is_shape_unit"
-      },
-      {
-        "from": "is_shape_unit",
-        "fromPort": "next",
-        "to": "q"
-      },
-      {
         "from": "re_click",
         "fromPort": "next",
         "to": "re_click_jump"
@@ -336,131 +236,26 @@
       {
         "from": "re_click_jump",
         "fromPort": "true",
-        "to": "re_click_line"
-      },
-      {
-        "from": "re_click_line",
-        "fromPort": "true",
-        "to": "act_click_line"
-      },
-      {
-        "from": "act_click_line",
-        "fromPort": "next",
-        "to": "c1"
-      },
-      {
-        "from": "re_click_line",
-        "fromPort": "false",
-        "to": "re_click_circle"
-      },
-      {
-        "from": "re_click_circle",
-        "fromPort": "true",
-        "to": "act_click_circle"
-      },
-      {
-        "from": "act_click_circle",
-        "fromPort": "next",
-        "to": "c1"
-      },
-      {
-        "from": "re_click_circle",
-        "fromPort": "false",
-        "to": "re_click_cone"
-      },
-      {
-        "from": "re_click_cone",
-        "fromPort": "true",
-        "to": "act_click_cone"
-      },
-      {
-        "from": "act_click_cone",
-        "fromPort": "next",
-        "to": "c1"
-      },
-      {
-        "from": "re_click_cone",
-        "fromPort": "false",
-        "to": "re_click_unit"
-      },
-      {
-        "from": "re_click_unit",
-        "fromPort": "true",
-        "to": "act_click_unit"
-      },
-      {
-        "from": "act_click_unit",
-        "fromPort": "next",
-        "to": "c1"
-      },
-      {
-        "from": "re_click_unit",
-        "fromPort": "false",
-        "to": "c1"
+        "to": "read_slot"
       },
       {
         "from": "re_release_jump",
         "fromPort": "true",
-        "to": "re_release_line"
+        "to": "read_slot"
       },
       {
-        "from": "re_release_line",
-        "fromPort": "true",
-        "to": "act_release_line"
-      },
-      {
-        "from": "act_release_line",
+        "from": "read_slot",
         "fromPort": "next",
-        "to": "c1"
+        "to": "load_ability"
       },
       {
-        "from": "re_release_line",
-        "fromPort": "false",
-        "to": "re_release_circle"
-      },
-      {
-        "from": "re_release_circle",
-        "fromPort": "true",
-        "to": "act_release_circle"
-      },
-      {
-        "from": "act_release_circle",
+        "from": "load_ability",
         "fromPort": "next",
-        "to": "c1"
+        "to": "dispatch"
       },
       {
-        "from": "re_release_circle",
-        "fromPort": "false",
-        "to": "re_release_cone"
-      },
-      {
-        "from": "re_release_cone",
-        "fromPort": "true",
-        "to": "act_release_cone"
-      },
-      {
-        "from": "act_release_cone",
+        "from": "dispatch",
         "fromPort": "next",
-        "to": "c1"
-      },
-      {
-        "from": "re_release_cone",
-        "fromPort": "false",
-        "to": "re_release_unit"
-      },
-      {
-        "from": "re_release_unit",
-        "fromPort": "true",
-        "to": "act_release_unit"
-      },
-      {
-        "from": "act_release_unit",
-        "fromPort": "next",
-        "to": "c1"
-      },
-      {
-        "from": "re_release_unit",
-        "fromPort": "false",
         "to": "c1"
       }
     ],
@@ -552,30 +347,6 @@
       {
         "from": "rep",
         "fromPort": "value",
-        "to": "is_shape_line",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_shape_circle",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_shape_cone",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_shape_unit",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
         "to": "re_click",
         "toPort": "source"
       },
@@ -598,64 +369,28 @@
         "toPort": "condition"
       },
       {
-        "from": "is_shape_line",
+        "from": "member",
         "fromPort": "value",
-        "to": "re_click_line",
-        "toPort": "condition"
-      },
-      {
-        "from": "is_shape_circle",
-        "fromPort": "value",
-        "to": "re_click_circle",
-        "toPort": "condition"
-      },
-      {
-        "from": "is_shape_cone",
-        "fromPort": "value",
-        "to": "re_click_cone",
-        "toPort": "condition"
-      },
-      {
-        "from": "is_shape_unit",
-        "fromPort": "value",
-        "to": "re_click_unit",
-        "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_click_unit",
+        "to": "read_slot",
         "toPort": "source"
       },
       {
-        "from": "is_shape_line",
+        "from": "read_slot",
         "fromPort": "value",
-        "to": "re_release_line",
-        "toPort": "condition"
+        "to": "load_ability",
+        "toPort": "value"
       },
       {
-        "from": "is_shape_circle",
+        "from": "member",
         "fromPort": "value",
-        "to": "re_release_circle",
-        "toPort": "condition"
-      },
-      {
-        "from": "is_shape_cone",
-        "fromPort": "value",
-        "to": "re_release_cone",
-        "toPort": "condition"
-      },
-      {
-        "from": "is_shape_unit",
-        "fromPort": "value",
-        "to": "re_release_unit",
-        "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_release_unit",
+        "to": "load_ability",
         "toPort": "source"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "value",
+        "to": "dispatch",
+        "toPort": "ability"
       }
     ]
   }

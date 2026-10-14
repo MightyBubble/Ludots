@@ -8,6 +8,12 @@
         "event": "Aim.Rule.Press",
         "start": "rep",
         "refire": "restart"
+      },
+      {
+        "label": "bind",
+        "event": "Aim.Shape.Bind",
+        "start": "rep",
+        "refire": "restart"
       }
     ],
     "nodes": [
@@ -35,13 +41,24 @@
         "blackboardKey": "aim.slot"
       },
       {
-        "id": "load_param",
-        "op": "LoadAbilityEffectFloat"
+        "id": "load_radius",
+        "op": "LoadAbilityEffectFloat",
+        "key": "radius"
       },
       {
-        "id": "write_param",
+        "id": "write_radius",
         "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.shape.param"
+        "blackboardKey": "aim.shape.radius"
+      },
+      {
+        "id": "load_angle",
+        "op": "LoadAbilityEffectFloat",
+        "key": "angle"
+      },
+      {
+        "id": "write_angle",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.shape.angle"
       },
       {
         "id": "is_click",
@@ -105,21 +122,6 @@
         "to": "read_slot"
       },
       {
-        "from": "read_slot",
-        "fromPort": "next",
-        "to": "load_param"
-      },
-      {
-        "from": "load_param",
-        "fromPort": "next",
-        "to": "write_param"
-      },
-      {
-        "from": "write_param",
-        "fromPort": "next",
-        "to": "is_click"
-      },
-      {
         "from": "is_click",
         "fromPort": "next",
         "to": "click_jump"
@@ -163,6 +165,31 @@
         "from": "c1",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_radius"
+      },
+      {
+        "from": "load_radius",
+        "fromPort": "next",
+        "to": "write_radius"
+      },
+      {
+        "from": "write_radius",
+        "fromPort": "next",
+        "to": "load_angle"
+      },
+      {
+        "from": "load_angle",
+        "fromPort": "next",
+        "to": "write_angle"
+      },
+      {
+        "from": "write_angle",
+        "fromPort": "next",
+        "to": "is_click"
       }
     ],
     "valueEdges": [
@@ -183,30 +210,6 @@
         "fromPort": "value",
         "to": "read_slot",
         "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "load_param",
-        "toPort": "source"
-      },
-      {
-        "from": "read_slot",
-        "fromPort": "value",
-        "to": "load_param",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "write_param",
-        "toPort": "source"
-      },
-      {
-        "from": "load_param",
-        "fromPort": "value",
-        "to": "write_param",
-        "toPort": "value"
       },
       {
         "from": "rep",
@@ -248,6 +251,54 @@
         "from": "c1",
         "fromPort": "value",
         "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_radius",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_radius",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_radius",
+        "toPort": "source"
+      },
+      {
+        "from": "load_radius",
+        "fromPort": "value",
+        "to": "write_radius",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_angle",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_angle",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_angle",
+        "toPort": "source"
+      },
+      {
+        "from": "load_angle",
+        "fromPort": "value",
+        "to": "write_angle",
         "toPort": "value"
       }
     ]

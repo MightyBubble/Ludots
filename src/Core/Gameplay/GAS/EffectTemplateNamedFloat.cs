@@ -14,6 +14,7 @@ namespace Ludots.Core.Gameplay.GAS
         public const string TargetQueryHalfAngle = "targetQuery.halfAngle";
         public const string TargetQueryHalfWidth = "targetQuery.halfWidth";
         public const string TargetQueryLength = "targetQuery.length";
+        public const string ProjectileRange = "projectile.range";
         public const string ProjectileCollisionHalfWidth = "projectile.collisionHalfWidth";
         public const string UnitCreationPlacementRadiusCm = "unitCreation.placementRadiusCm";
 
@@ -26,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS
             TargetQueryHalfAngle,
             TargetQueryHalfWidth,
             TargetQueryLength,
+            ProjectileRange,
             ProjectileCollisionHalfWidth,
             UnitCreationPlacementRadiusCm,
         };
@@ -70,6 +72,7 @@ namespace Ludots.Core.Gameplay.GAS
                 TargetQueryHalfAngle => Spatial(in template, static spatial => spatial.HalfAngleDeg),
                 TargetQueryHalfWidth => Spatial(in template, static spatial => spatial.HalfWidthCm),
                 TargetQueryLength => Spatial(in template, static spatial => spatial.LengthCm),
+                ProjectileRange => template.Projectile.Range,
                 ProjectileCollisionHalfWidth => template.Projectile.CollisionHalfWidthCm,
                 UnitCreationPlacementRadiusCm => template.UnitCreation.PlacementRadiusCm,
                 _ => 0,

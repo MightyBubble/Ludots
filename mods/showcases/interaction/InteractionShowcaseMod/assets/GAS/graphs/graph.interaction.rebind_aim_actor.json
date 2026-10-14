@@ -155,13 +155,23 @@
         "id": "r_refresh",
         "op": "InvokeGraph",
         "functionName": "graph.aim.refresh_gesture"
+      },
+      {
+        "id": "r_held",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.read_held_slot"
+      },
+      {
+        "id": "r_put",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.slot"
       }
     ],
     "controlEdges": [
       {
         "from": "r_rep",
         "fromPort": "next",
-        "to": "r_c0"
+        "to": "r_held"
       },
       {
         "from": "r_c0",
@@ -331,6 +341,16 @@
       {
         "from": "r_prep",
         "fromPort": "next",
+        "to": "r_put"
+      },
+      {
+        "from": "r_held",
+        "fromPort": "next",
+        "to": "r_c0"
+      },
+      {
+        "from": "r_put",
+        "fromPort": "next",
         "to": "r_pick"
       }
     ],
@@ -448,6 +468,18 @@
         "fromPort": "value",
         "to": "r_alive_jump",
         "toPort": "condition"
+      },
+      {
+        "from": "r_held",
+        "fromPort": "value",
+        "to": "r_put",
+        "toPort": "value"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "value",
+        "to": "r_put",
+        "toPort": "source"
       }
     ]
   }
