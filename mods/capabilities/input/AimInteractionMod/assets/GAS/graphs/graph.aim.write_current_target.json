@@ -292,5 +292,160 @@
         "toPort": "value"
       }
     ]
+  },
+  {
+    "id": "graph.aim.current_target_hit",
+    "kind": "Query",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "minX",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.current_target.rect.min_x"
+      },
+      {
+        "id": "minY",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.current_target.rect.min_y"
+      },
+      {
+        "id": "maxX",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.current_target.rect.max_x"
+      },
+      {
+        "id": "maxY",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.current_target.rect.max_y"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "visible",
+        "op": "QueryFilterKnowledgeVisible"
+      },
+      {
+        "id": "selectable",
+        "op": "QueryFilterSelectable"
+      },
+      {
+        "id": "region",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "minX"
+      },
+      {
+        "from": "minX",
+        "fromPort": "next",
+        "to": "minY"
+      },
+      {
+        "from": "minY",
+        "fromPort": "next",
+        "to": "maxX"
+      },
+      {
+        "from": "maxX",
+        "fromPort": "next",
+        "to": "maxY"
+      },
+      {
+        "from": "maxY",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "visible"
+      },
+      {
+        "from": "visible",
+        "fromPort": "next",
+        "to": "selectable"
+      },
+      {
+        "from": "selectable",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "minX",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "minY",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "maxX",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "maxY",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "visible",
+        "toPort": "source"
+      },
+      {
+        "from": "minX",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "minY",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "maxX",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "c"
+      },
+      {
+        "from": "maxY",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "max"
+      }
+    ]
   }
 ]
