@@ -96,6 +96,13 @@ namespace Ludots.Core.Persistence
                 {
                     for (int i = 0; i < refs.Count; i++)
                     {
+                        Entity target = EntityUtil.Reconstruct(refs.EntityIds[i], refs.WorldIds[i], refs.Versions[i]);
+                        if (target == Entity.Null)
+                        {
+                            // Entity.Null keeps WorldId 0. Stamping it makes the sentinel fail the alive check.
+                            continue;
+                        }
+
                         refs.WorldIds[i] = worldId;
                     }
                 }

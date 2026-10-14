@@ -11661,6 +11661,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_MinimapApplyWheelZoom/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ConstNullEntity",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstNullEntityEntryMod",
+      "projectPath": "CapabilityStandardGraphOpConstNullEntityEntryMod.csproj",
+      "title": "直接写下空实体",
+      "summary": "图自己落下空句柄，不再拿越界下标去读名单。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ConstNullEntity"
+      ],
+      "binding": "capability_standard_graph_op_ConstNullEntity",
+      "preset": "capability_standard_graph_op_ConstNullEntity_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ConstNullEntity.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConstNullEntity",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ConstNullEntity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ConstNullEntity/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

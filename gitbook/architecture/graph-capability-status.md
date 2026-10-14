@@ -199,7 +199,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 3 | 选中变化后重绑瞄准演员：`Select.End` 归 `core.selecting`，战斗上下文里的图收不到，只能往能力图里织钩子 | **已改**：集合成员增删发 `EntityCollectionMembershipChanged`，载荷是集合 key、成员、所有者。绑演员图的 `filters.payload` 写 `role:commandSource`。装载时 `Input/collection_keys.json` 把角色 `commandSource` 换成这一局的集合名；这个角色没声明，编译这条过滤器就失败。没有图订阅这个事件时不分配 |
 | 4 | 原先 `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 已落地。目录策略仍是 DeepObject：管线没有「对象根加一条按 id 合并的数组」这一档，加载器把现成的 DeepObject 和 ArrayById 拼在一起。`schemes` / `profiles` 按 `id` 字段级合并，后加载的字段赢，`inputContexts` 和 `rules` 整段替换。`allowedSchemes` 用 `ArrayAppendFields` 追加，重复 id 在校验里失败关闭。和根资产、能力 mod 相同的副本已从游戏 mod 删掉 |
 | 5 | 原先地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 已落地。进图读的就是 `game.json` 的 `startupLocalSeats[].controlSchemeId`（写进 `MapLaunchContext.LocalSeats`）。SHOW-6 改成「启动方案必须显式声明」，空了报这个字段名。交互展示座位是 `scheme.aim.kbm`。启动座位缺 `controlSchemeId` 或只写空白，加载直接失败 |
-| 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | DEC-15 修订已定：方案只是键位档案，不带偏好。Core 在切方案时发通用事件（新旧方案 id），能力 mod 的图收到后用 `SetPref` 写施法方式 |
+| 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | **已改**：方案仍只是键位档案。座位方案一切换，Core 发地图事件 `ControlSchemeChanged`（座位 id、代表、旧方案配置键、新方案配置键；没有旧方案时旧键为 0）。代表同时记在 `MapTrigger.SourceEntity`。玩家有没有亲手选过施法方式记在 `pref.aim.cast_mode_origin`（`scheme` / `player`），种在 `InteractionPref` 里，和 `cast_mode` 一起进存档。声明该方案的 mod 用图按新方案 id 过滤；`IsPref` 槽位写 -1，只读玩家级 origin，代表身上没有技能也不失败。origin 是 `player` 就停，否则 `SetPref` 写 `pref.aim.cast_mode`。过滤器里的方案 id 装载时必须已安装，否则失败。`aim_control_schemes` 的 `scheme.aim.gamepad` 默认 `interaction.context.aim.release`，另外三套默认 `interaction.context.aim.smart`。冠军和 MOBA 的 `scheme.aim.kbm` 默认 smart。切换时监听还没挂上，就等这张图挂上再发同一次事件 |
 | 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | **已改**：绑定的 `intValue` 随按下和松开写进快照和回放，`graph.aim.press` 与 `graph.aim.release_confirm` 各留一个入口并从 `MapTrigger.BindingInt` 读槽号，方案展示用 `t` / `y` 绑第 5、6 槽 |
 | 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | **已改**：按下图只 `ActivateContextFromPref`（542），取值就是手势状态 id。即时施放是 `interaction.context.aim.smart`，`onActivated` 提交后 `DeactivateOwnContext`。加一种方式是新 profile 加进键 `pref.aim.cast_mode` 的取值，规则图不用改 |
 | 9 | 指示器只有一种形状 | 切片 R 之后形状跟着规则图开的目标状态走：每种形状一个共用目标 context + 一条 presenter 规则，技能引用对应规则图 |
@@ -214,7 +214,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **`CoreInputMod` 收尾已改。** 目录、依赖和 `Default_Gameplay` 都已删掉。根资产的相机键位上下文叫 `Camera.Rig`，`scheme.default` 的 `inputContexts` 就是它；原先跟默认玩法一起激活的 mod，在自己的方案里写上 `Camera.Rig`。`startupInputContexts` 已删：宿主绑上输入处理器时，`ControlSchemeRuntime.ApplyActiveContexts` 把当前方案的上下文推上去。小地图指针仍走 `interaction.context.minimap`（LudotsCoreMod，`foreground`，`pointerRouting` 为 `ui`）。`presentation.minimap.interactionContextId` 指向它。按下、松开、移动是 `graph.minimap.press` / `release` / `track`。滚轮是 `graph.minimap.zoom`：动作 `Minimap.Zoom` 绑在 `Minimap.Device` 上，这个状态的 `inputContextId` 指向它，前台状态打开时投影这组键。世界点选绑在 `Core.Select`，`interaction.context.moba.battle` 的 `inputContextId` 指向它。命令点地仍是 `graph.minimap.command`，图在 LudotsCoreMod，但这个状态默认不挂它。`Command` 由 MinimapShowcaseMod、FogVisionDecayShowcaseMod、PresenterBlacksmithShowcaseMod 各自声明，并合并进这个状态。只装 LudotsCoreMod 时有滚轮，没有命令图。`Command` / `Cancel` 由使用它们的 mod 在自己的输入数据里声明。`PointerPos` 的声明和 `<Mouse>/Pos` 绑在 `Camera.Rig`。指针落在 `pointerRouting` 为 `ui` 的区域里时，相机 `Zoom` 仍按 `suppressOnUiWheelCaptured` 被压住。跳相机只提交 `CameraPoseRequest`。`MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions` 已删。集合键 **已改**：共享图、相机和 presenter 写成 `role:命令角色名`，例如 `role:commandSource`。`Input/collection_keys.json` 把角色名映射到集合名。引擎根文件不声明 `commandSource`，由实际开局声明。同一个角色两处值不一样，装载失败；值相同可以重复。没声明的角色在用到它的图、presenter 或相机上失败，报出角色和来源 mod。字面集合名不加 `role:` 前缀。本机输入开局在地图已有交互状态或吃输入的触发、却没有带 `controlSchemeId` 和附身代表的本地座位时，加载直接失败，错误写出地图名和游戏名；权威服务器和加载时没有输入处理器的无头开局不要座位。
 
-**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 6、7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
 ### 3.4 不要当成这轮图能力去合
 
@@ -230,6 +230,8 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 脚本方言拓宽时的自审正本：`artifacts/gas-composition-gate.md`。后开的活不许覆盖它。  
 这次图基建收口自己的自审：`artifacts/gas-composition-gate-pr969-graph-closeout.md`。
 打分短剧自己的自审：`artifacts/gas-composition-gate-graph-score-showcase.md`。
+方案默认施法自己的自审：`artifacts/gas-composition-gate-scheme-cast-default.md`。
+空实体常量自己的自审：`artifacts/gas-composition-gate-const-null-entity.md`。
 
 ---
 

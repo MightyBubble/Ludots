@@ -61,6 +61,11 @@ namespace Ludots.Core.Scripting
         public const string MemberEntity = "MapTrigger.MemberEntity";            // Entity
         public const string OwnerEntity = "MapTrigger.OwnerEntity";              // Entity
         public const string ContextKeyId = "MapTrigger.ContextKeyId";            // int (ConfigKey id of the interaction context profile)
+        public const string SeatId = "MapTrigger.SeatId";                        // string
+        // Control-scheme ids on ControlSchemeChanged. ConfigKey of the scheme name, same
+        // symbol-to-int compile path as ContextKeyId. OldSchemeId is 0 when no scheme was active.
+        public const string OldSchemeId = "MapTrigger.OldSchemeId";              // int (ConfigKey id)
+        public const string NewSchemeId = "MapTrigger.NewSchemeId";              // int (ConfigKey id)
 
         /// <summary>
         /// Whether a string is one of the constants above (reflection-built once); the

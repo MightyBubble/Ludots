@@ -1847,6 +1847,7 @@ namespace Ludots.Core.Engine
                 () => GetService(CoreServiceKeys.InputHandler),
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            ControlSchemeChangedMapping.Validate(graphProgramRegistry, controlSchemeRuntime);
 
             // Preference keys are mod data. Context profiles are already installed, so a
             // context-valued key can require each allowed value to be a profile id.
@@ -1867,6 +1868,27 @@ namespace Ludots.Core.Engine
                 GlobalContext,
                 controlSchemeRuntime,
                 inputConfigRoot);
+            controlSchemeRuntime.SchemeChanged = (previousId, schemeId) =>
+            {
+                Client.ClientLocalSeatRegistry? seats = GetService(CoreServiceKeys.ClientLocalSeatRegistry);
+                if (seats == null || seats.Count != 1)
+                {
+                    return;
+                }
+
+                PublishControlSchemeChanged(seats.Require(seats.SeatIds[0]), previousId, schemeId);
+            };
+            clientLocalSeatInputRuntime.SeatSchemeChanged = (seatId, previousId, schemeId) =>
+            {
+                Client.ClientLocalSeatRegistry? seats = GetService(CoreServiceKeys.ClientLocalSeatRegistry);
+                if (seats == null)
+                {
+                    return;
+                }
+
+                PublishControlSchemeChanged(seats.Require(seatId), previousId, schemeId);
+            };
+            TriggerManager.MapTriggerTableChanged = FlushPendingControlSchemeChanges;
 
 
             // Interaction mode catalog: simulation-side modes projected onto handler IMC
@@ -2589,6 +2611,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
             RegisterSystem(new GraphOutputValueCleanupSystem(World, graphOutputValueStore), SystemGroup.Cleanup);
+            RegisterSystem(new BlackboardEntityRefLifetimeSystem(World), SystemGroup.Cleanup);
             RegisterSystem(new PanelRealtimeRefreshSystem(panelHost), SystemGroup.Cleanup);
             RegisterSystem(new OrderAdmissionEntityIntakeEndSystem(orderAdmissionResults), SystemGroup.Cleanup);
 

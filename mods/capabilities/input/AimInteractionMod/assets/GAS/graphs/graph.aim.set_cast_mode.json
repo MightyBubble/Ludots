@@ -37,6 +37,12 @@
         "value": "interaction.context.aim.smart"
       },
       {
+        "id": "origin_smart",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
         "id": "rep_click",
         "op": "LoadCaster"
       },
@@ -47,6 +53,12 @@
         "value": "interaction.context.aim.click"
       },
       {
+        "id": "origin_click",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
         "id": "rep_release",
         "op": "LoadCaster"
       },
@@ -55,6 +67,12 @@
         "op": "SetPref",
         "key": "pref.aim.cast_mode",
         "value": "interaction.context.aim.release"
+      },
+      {
+        "id": "origin_release",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
       },
       {
         "id": "c1",
@@ -75,6 +93,11 @@
       {
         "from": "set_smart",
         "fromPort": "next",
+        "to": "origin_smart"
+      },
+      {
+        "from": "origin_smart",
+        "fromPort": "next",
         "to": "c1"
       },
       {
@@ -85,6 +108,11 @@
       {
         "from": "set_click",
         "fromPort": "next",
+        "to": "origin_click"
+      },
+      {
+        "from": "origin_click",
+        "fromPort": "next",
         "to": "c1"
       },
       {
@@ -94,6 +122,11 @@
       },
       {
         "from": "set_release",
+        "fromPort": "next",
+        "to": "origin_release"
+      },
+      {
+        "from": "origin_release",
         "fromPort": "next",
         "to": "c1"
       },
@@ -111,15 +144,33 @@
         "toPort": "source"
       },
       {
+        "from": "rep_smart",
+        "fromPort": "value",
+        "to": "origin_smart",
+        "toPort": "source"
+      },
+      {
         "from": "rep_click",
         "fromPort": "value",
         "to": "set_click",
         "toPort": "source"
       },
       {
+        "from": "rep_click",
+        "fromPort": "value",
+        "to": "origin_click",
+        "toPort": "source"
+      },
+      {
         "from": "rep_release",
         "fromPort": "value",
         "to": "set_release",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_release",
+        "fromPort": "value",
+        "to": "origin_release",
         "toPort": "source"
       },
       {

@@ -8,6 +8,14 @@
         "interaction.context.aim.release",
         "interaction.context.aim.smart"
       ]
+    },
+    {
+      "id": "pref.aim.cast_mode_origin",
+      "contextValued": false,
+      "values": [
+        "scheme",
+        "player"
+      ]
     }
   ],
   "defaults": {
@@ -15,6 +23,10 @@
       {
         "key": "pref.aim.cast_mode",
         "value": "interaction.context.aim.smart"
+      },
+      {
+        "key": "pref.aim.cast_mode_origin",
+        "value": "scheme"
       }
     ]
   }

@@ -3898,6 +3898,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstNullEntity_raylib",
+      "name": "Graph Op ConstNullEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstNullEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

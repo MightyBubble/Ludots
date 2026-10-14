@@ -292,7 +292,8 @@ namespace Ludots.Tests.GAS
             That(state.E[3], Is.EqualTo(e1));
             That(state.B[0], Is.EqualTo(1));
 
-            // Out of bounds
+            // Out of bounds. Poison the destination so a skipped store cannot look like a zero entity.
+            eRegs[4] = e0;
             iRegs[0] = 99;
             program.Clear();
             program.Add((ushort)GraphNodeOp.TargetListGet, dst: 4, a: 0, flags: 1);
@@ -300,6 +301,7 @@ namespace Ludots.Tests.GAS
             state.TargetList = targetList; // re-attach (ref struct)
             GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
             That(state.B[1], Is.EqualTo(0));
+            That(state.E[4], Is.EqualTo(Entity.Null), $"oob entity {state.E[4].Id}:{state.E[4].WorldId}:{state.E[4].Version}");
 
             world.Dispose();
         }

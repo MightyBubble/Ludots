@@ -202,6 +202,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ConstBool or
                 GraphNodeOp.ConstInt or
                 GraphNodeOp.ConstFloat or
+                GraphNodeOp.ConstNullEntity or
                 GraphNodeOp.LoadCaster or
                 GraphNodeOp.LoadExplicitTarget or
                 GraphNodeOp.Jump or
@@ -830,6 +831,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ConstBool, HandleConstBool, "ConstBool graph opcode.");
             Register(GraphNodeOp.ConstInt, HandleConstInt, "ConstInt graph opcode.");
             Register(GraphNodeOp.ConstFloat, HandleConstFloat, "ConstFloat graph opcode.");
+            Register(GraphNodeOp.ConstNullEntity, HandleConstNullEntity, "ConstNullEntity graph opcode.");
             Register(GraphNodeOp.LoadCaster, HandleLoadCaster, "LoadCaster graph opcode.");
             Register(GraphNodeOp.LoadExplicitTarget, HandleLoadExplicitTarget, "LoadExplicitTarget graph opcode.");
             Register(GraphNodeOp.Jump, HandleJump, "Jump graph opcode.");
@@ -1078,6 +1080,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleConstFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.F[ins.Dst] = ins.ImmF;
+        }
+
+        private static void HandleConstNullEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.E[ins.Dst] = Entity.Null;
         }
 
         private static void HandleConstText(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2482,7 +2489,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
             else
             {
-                s.E[ins.Dst] = default;
+                // Empty handle is Entity.Null. A zero id is a dead reference and fails save validation.
+                s.E[ins.Dst] = Entity.Null;
                 s.B[ins.Flags] = 0;
             }
         }

@@ -102,9 +102,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// True when the rep's resolved preference for <paramref name="keyId"/> equals
-        /// <paramref name="valueId"/>, using the ability at <paramref name="slot"/> on
-        /// <paramref name="actor"/>. An ability pair wins, else the player pair.
-        /// A resolved value of 0 fails closed. An empty slot fails closed.
+        /// <paramref name="valueId"/>. A negative <paramref name="slot"/> reads the player
+        /// pair and does not require an ability on <paramref name="actor"/>. A non-negative
+        /// slot uses the ability at that slot on the actor: an ability pair wins, else the
+        /// player pair. A resolved value of 0 fails closed. An empty non-negative slot fails closed.
         /// </summary>
         bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
         {

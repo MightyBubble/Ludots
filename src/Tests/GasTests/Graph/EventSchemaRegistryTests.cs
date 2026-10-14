@@ -44,6 +44,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(GameEvents.IsMapScoped(GameEvents.EntityCollectionMembershipChanged.Value), Is.True);
             Assert.That(GameEvents.IsMapScoped(GameEvents.ContextActivated.Value), Is.True);
             Assert.That(GameEvents.IsMapScoped(GameEvents.ContextDeactivated.Value), Is.True);
+            Assert.That(GameEvents.IsMapScoped(GameEvents.ControlSchemeChanged.Value), Is.True);
 
             Assert.That(registry.TryGet(GameEvents.EntityCollectionMembershipChanged.Value, out EventSchema membership), Is.True);
             Assert.That(membership.Scope, Is.EqualTo(EventScope.Map));
@@ -59,6 +60,16 @@ namespace Ludots.Tests.Gas.Graph
             {
                 MapTriggerEventPayloadKeys.SourceEntity,
                 MapTriggerEventPayloadKeys.ContextKeyId,
+            }));
+
+            Assert.That(registry.TryGet(GameEvents.ControlSchemeChanged.Value, out EventSchema schemeChanged), Is.True);
+            Assert.That(schemeChanged.Scope, Is.EqualTo(EventScope.Map));
+            Assert.That(schemeChanged.Params.Select(p => (p.Name, p.Type, p.PayloadKey)).ToArray(), Is.EqualTo(new[]
+            {
+                ("seatId", EventParamType.String, MapTriggerEventPayloadKeys.SeatId),
+                ("rep", EventParamType.Entity, MapTriggerEventPayloadKeys.Rep),
+                ("oldSchemeId", EventParamType.Int, MapTriggerEventPayloadKeys.OldSchemeId),
+                ("newSchemeId", EventParamType.Int, MapTriggerEventPayloadKeys.NewSchemeId),
             }));
 
             var ctx = new ScriptContext();
@@ -89,6 +100,7 @@ namespace Ludots.Tests.Gas.Graph
                 GameEvents.EntityCollectionMembershipChanged.Value,
                 GameEvents.ContextActivated.Value,
                 GameEvents.ContextDeactivated.Value,
+                GameEvents.ControlSchemeChanged.Value,
             };
 
             foreach (string eventName in payloadBearing)

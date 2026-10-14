@@ -218,7 +218,14 @@ namespace Ludots.Core.Scripting
             _mapEventTriggers[mapId] = new Dictionary<EventKey, List<Trigger>>();
             RegisterIntoMapList(mapId, triggers, list);
             Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
+            MapTriggerTableChanged?.Invoke(mapId);
         }
+
+        /// <summary>
+        /// Fired after a map's trigger table is registered or appended. Producers that
+        /// held an event because the table had no subscriber yet deliver it here.
+        /// </summary>
+        internal Action<MapId>? MapTriggerTableChanged { get; set; }
 
         /// <summary>
         /// True when the map already owns an initial trigger registration (runtime append
@@ -246,6 +253,7 @@ namespace Ludots.Core.Scripting
 
             RegisterIntoMapList(mapId, triggers, list);
             Log.Info(in LogChannels.Engine, $"Appended {triggers.Count} triggers to map '{mapId}'.");
+            MapTriggerTableChanged?.Invoke(mapId);
         }
 
         /// <summary>
