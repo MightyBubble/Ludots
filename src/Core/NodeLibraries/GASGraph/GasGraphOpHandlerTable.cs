@@ -1717,7 +1717,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 // Global dispatch: the origin map rides the context as transport
                 // metadata; an unmapped caster only means no origin stamp, not an error.
-                s.Api.FireGlobalEventPayload(ins.Imm, mapId, s.InvokeArgs);
+                s.Api.BeginDispatchSubmitCount();
+                try
+                {
+                    s.Api.FireGlobalEventPayload(ins.Imm, mapId, s.InvokeArgs);
+                }
+                finally
+                {
+                    s.I[ins.Dst] = s.Api.EndDispatchSubmitCount();
+                }
+
                 s.InvokeArgs?.Clear();
                 return;
             }
@@ -1748,7 +1757,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 selfSource = s.Caster;
             }
 
-            s.Api.FireMapEventPayload(ins.Imm, mapId, selfSource, s.InvokeArgs, abilityId);
+            s.Api.BeginDispatchSubmitCount();
+            try
+            {
+                s.Api.FireMapEventPayload(ins.Imm, mapId, selfSource, s.InvokeArgs, abilityId);
+            }
+            finally
+            {
+                s.I[ins.Dst] = s.Api.EndDispatchSubmitCount();
+            }
+
             s.InvokeArgs?.Clear();
         }
 

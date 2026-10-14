@@ -345,7 +345,7 @@ OPTIONAL_TARGET_BOUNDARY = {
     "LoadEntityFacing": "源实体死了，或者身上没有 `FacingDirection`，节点直接失败，不会写成 0 度。读出的度数是组件弧度乘 180/π，和 `PointToDirection`、`StickToDirection` 同一套，不折进 0–360。",
     "LoadSlotAbilityId": "源实体死了，或者这个槽没有装技能，节点直接失败，不会写成 0。读的是槽上解析出来的技能编号，顺序是临时授予、物品授予、形态、底槽。它不打开技能定义。",
     "IsContextActive": "`source` 可以不接，不接就读跑这张图的人。人死了，或者情境名没装上，节点直接失败。情境装了但当前没挂上，读数是 0。基座挂载和派生实例都算挂着。",
-    "DispatchMapEvent": "可以另接一个 int 口 `ability`。接上之后这次派发带上技能编号，只叫醒这张技能自己挂的触发图，并把跑这张图的人写成事件来源。事件参数里不能再有名叫 ability 的参数。global 不能接这个口。技能编号小于等于 0 直接失败。",
+    "DispatchMapEvent": "可以另接一个 int 口 `ability`。接上之后这次派发带上技能编号，只叫醒这张技能自己挂的触发图，并把跑这张图的人写成事件来源。事件参数里不能再有名叫 ability 的参数。global 不能接这个口。技能编号小于等于 0 直接失败。返回的整数是这次同步派发里，监听方调用 `SubmitCast` 和 `SubmitCommandIntent` 并且成功入队的次数。嵌套的 `DispatchMapEvent` 各自计数，外层不含内层。`SubmitEngage` 以及这次派发之外的提交不计。",
 }
 
 

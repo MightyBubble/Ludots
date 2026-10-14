@@ -48,6 +48,14 @@
         {
           "actionId": "Aim.CastMode.AimClick",
           "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "Aim.CastMode.TargetFirst",
+          "path": "<Keyboard>/f4"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
         }
       ]
     }

@@ -260,7 +260,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         StoreArgFloat = 452,
         /// <summary>E[A] → InvokeArgs staging (Imm: arg key symbol id).</summary>
         StoreArgEntity = 453,
-        /// <summary>Assemble a ScriptContext from the InvokeArgs staging per the event schema (Imm: event name symbol id) and fire it map-scoped; Flags 0 = map domain, 1 = self domain.</summary>
+        /// <summary>
+        /// Assemble a ScriptContext from the InvokeArgs staging per the event schema (Imm: event name symbol id) and fire it.
+        /// Flags: <see cref="DispatchMapEventFlags"/>. I[Dst] is how many SubmitCast and SubmitCommandIntent calls listeners completed during this synchronous dispatch.
+        /// A nested DispatchMapEvent keeps its own count, so those calls are not included here. Engage submits are not included. The count is not world state.
+        /// </summary>
         DispatchMapEvent = 454,
         /// <summary>
         /// AwaitCallback: register a named callback handle (Imm: callbackType symbol id),

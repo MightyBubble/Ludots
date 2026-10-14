@@ -4,11 +4,15 @@
       "id": "interaction.context.aim_schemes.battle",
       "commandIntentId": "intent.aim_schemes.command",
       "bindings": [
-        "Aim.Primary"
+        "Aim.Primary",
+        "Select.End"
       ],
       "triggers": [
         {
           "trigger": "graph.aim_schemes.command"
+        },
+        {
+          "trigger": "graph.aim.write_current_target"
         },
         {
           "trigger": "graph.aim_schemes.bind_aim_actor"

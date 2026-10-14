@@ -2246,11 +2246,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     program[emitIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.DispatchMapEvent,
+                        Dst = outputRegisters[nodeIndex],
                         Imm = Intern(symbolToIndex, symbols, schema.EventName),
                         Flags = dispatchFlags,
                         A = abilityRegister,
                     };
                     SetSource(sources, emitIndex, graphId, node, nameof(GraphNodeOp.DispatchMapEvent), GraphControlFlowPorts.Enter);
+                    if (outputTypes[nodeIndex] == GraphValueType.Int)
+                    {
+                        definedInts[outputRegisters[nodeIndex]] = true;
+                    }
 
                     if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
                     {
