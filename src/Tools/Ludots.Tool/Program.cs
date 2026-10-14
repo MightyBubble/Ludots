@@ -1566,28 +1566,9 @@ namespace {modId}
                 }
 
                 string repoRoot = FindAssetsRoot();
-                MapConfig map = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
-                NavMeshBakeConfig navmesh = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId).Config;
-                NavMapNavBoardsConfig mapNav = NavSolverDeclaration.RequireMap(navmesh, mapId);
-                BoardConfig board = NavSolverDeclaration.RequireBoard(map, mapNav);
-                if (string.IsNullOrWhiteSpace(board.DataFile))
-                {
-                    throw new InvalidOperationException($"Maps/{mapId}.json: 板 \"{board.Name}\" 的 DataFile 为空。");
-                }
-
-                if (board.GridCellSizeCm <= 0)
-                {
-                    throw new InvalidOperationException($"Maps/{mapId}.json: 板 \"{board.Name}\" 的格边长 {board.GridCellSizeCm} cm 无效。");
-                }
-
-                string modRoot = ToolMapConfigResolver.ResolveModRoot(repoRoot, modId);
-                string dataPath = CrowdNavSurfaceAuthoring.ResolveModAssetPath(modRoot, board.DataFile);
-                if (!File.Exists(dataPath))
-                {
-                    throw new InvalidOperationException($"地编资产不存在：{dataPath}");
-                }
-
-                LogicTerrainField terrain = ReactGridTerrainBinary.Read(dataPath, board.GridCellSizeCm);
+                CrowdNavSurfaceAuthoring.CrowdAuthoringTerrainFile authored =
+                    CrowdNavSurfaceAuthoring.RequireAuthoringTerrain(repoRoot, modId, mapId);
+                LogicTerrainField terrain = ReactGridTerrainBinary.Read(authored.FullPath, authored.CellSizeCm);
                 NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthored(
                     repoRoot,
                     modId,
@@ -1595,11 +1576,7 @@ namespace {modId}
                     terrain,
                     Array.Empty<NavSurfaceJumpCandidate>());
                 string fullOut = Path.GetFullPath(outFile);
-                Directory.CreateDirectory(Path.GetDirectoryName(fullOut)!);
-                using (FileStream output = File.Create(fullOut))
-                {
-                    NavSurfaceAsset.Write(asset, output);
-                }
+                CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(fullOut, asset);
 
                 Console.WriteLine(
                     $"Wrote {fullOut} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");

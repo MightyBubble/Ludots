@@ -1145,7 +1145,7 @@ app.MapPut("/api/mods/{modId}/navigation-config", async (string modId, HttpReque
     }
 });
 
-app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string mapId, string? boardName) =>
+app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string mapId, string? boardName, HttpResponse response) =>
 {
     string repoRoot = FindAssetsRoot();
     try
@@ -1154,9 +1154,10 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
         var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
         if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
         var board = EditorRepo.ResolveRequiredBoardByName(mapR.Map, boardName);
+        if (string.IsNullOrWhiteSpace(board.DataFile))
+            return EditorRepo.ReadAuthoringLogicTerrain(repoRoot, modId, mapId, board.Name, response);
+
         var dataFile = board.DataFile;
-        if (string.IsNullOrWhiteSpace(dataFile))
-            return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
 
         if (!EditorRepo.TryResolveDataFile(ctx, dataFile, out var fullPath, out var checkedPaths))
         {
@@ -1224,10 +1225,10 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
         return Results.BadRequest(new { ok = false, error = ex.Message });
     }
 
-    var dataFile = board.DataFile;
-    if (string.IsNullOrWhiteSpace(dataFile))
-        return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
+    if (string.IsNullOrWhiteSpace(board.DataFile))
+        return await EditorRepo.WriteAuthoringLogicTerrain(repoRoot, modId, mapId, req);
 
+    var dataFile = board.DataFile;
     string outFile = EditorRepo.ResolveWritableDataFilePath(ctx, dataFile);
     Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
 
@@ -1307,9 +1308,9 @@ app.MapPost("/api/mods/{modId}/maps/{mapId}/crowd-navsurface", async (string mod
             return Results.BadRequest(new { ok = false, error = $"Board SpatialType '{board.SpatialType}' 不是网格，不能烘焙 CrowdSimulation 地表。" });
         }
 
-        int cellSizeCm = EditorRepo.RequireGridCellSizeCm(board);
+        var authored = CrowdNavSurfaceAuthoring.RequireAuthoringTerrain(repoRoot, modId, mapId);
         await using var terrainStream = terrainFile.OpenReadStream();
-        var terrain = ReactGridTerrainBinary.Read(terrainFile.FileName, terrainStream, cellSizeCm);
+        var terrain = ReactGridTerrainBinary.Read(terrainFile.FileName, terrainStream, authored.CellSizeCm);
         NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthored(
             repoRoot,
             modId,
@@ -1318,11 +1319,7 @@ app.MapPost("/api/mods/{modId}/maps/{mapId}/crowd-navsurface", async (string mod
             Array.Empty<NavSurfaceJumpCandidate>());
         string modRoot = ctx.ModsById[ctx.TargetModId].RootPath;
         string outFile = CrowdNavSurfaceAuthoring.ResolveNavSurfaceOutputPath(modRoot, output);
-        Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-        await using (var outputStream = File.Create(outFile))
-        {
-            NavSurfaceAsset.Write(asset, outputStream);
-        }
+        CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(outFile, asset);
 
         return Results.Ok(new
         {
@@ -1333,6 +1330,20 @@ app.MapPost("/api/mods/{modId}/maps/{mapId}/crowd-navsurface", async (string mod
             terrainCount = asset.TerrainTypeIds.Length,
             jumpCount = asset.JumpCandidates.Length,
         });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapGet("/api/mods/{modId}/maps/{mapId}/crowd-terrain-colors", (string modId, string mapId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var colors = CrowdNavSurfaceAuthoring.LoadMapTerrainColors(repoRoot, modId, mapId);
+        return Results.Ok(new { ok = true, colors });
     }
     catch (Exception ex)
     {
@@ -4737,6 +4748,19 @@ static class EditorRepo
         public required string TargetModId { get; init; }
         public required Dictionary<string, ModInfo> ModsById { get; init; }
         public required List<string> LoadOrder { get; init; }
+        private readonly Dictionary<string, string?> _authoringLogicTerrain = new(StringComparer.Ordinal);
+
+        public bool TryAuthoringLogicTerrain(string mapId, out string relativePath)
+        {
+            if (!_authoringLogicTerrain.TryGetValue(mapId, out string? cached))
+            {
+                cached = ScanAuthoringLogicTerrain(this, mapId);
+                _authoringLogicTerrain[mapId] = cached;
+            }
+
+            relativePath = cached ?? string.Empty;
+            return !string.IsNullOrEmpty(relativePath);
+        }
     }
 
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
@@ -4996,9 +5020,12 @@ static class EditorRepo
             string.Equals(spatialType, "HexGrid", StringComparison.Ordinal);
         bool hasDataFile = !string.IsNullOrWhiteSpace(board.DataFile);
         bool dataFileExists = hasDataFile && TryResolveDataFile(ctx, board.DataFile, out _, out _);
+        bool authoringFileExists = ctx.TryAuthoringLogicTerrain(mapId, out string authoringRelative) &&
+            TryResolveDataFile(ctx, authoringRelative, out _, out _);
         bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         bool canUseVirtualEmptyTerrain = topologyError == null && !dataFileExists && CanServeVirtualEmptyTerrain(mapId, board);
-        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain);
+        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable &&
+            ((hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain)) || authoringFileExists);
         bool canBake = canEditTerrain && BoardHasNavDeclaration(ctx, mapId, board.Name);
         string reason =
             topologyError != null ? topologyError :
@@ -5007,6 +5034,7 @@ static class EditorRepo
             !canBake ? "Board has no nav declaration in navmesh.json maps." :
             !supportedTerrainTopology ? $"Board SpatialType '{board.SpatialType}' is not terrain-editable." :
             !chunkSizeEditable ? $"React terrain editor requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; map uses {chunkSizeCells}." :
+            authoringFileExists ? "Authoring logic terrain is ready." :
             !hasDataFile ? "Board DataFile is empty." :
             !dataFileExists ? "Board DataFile could not be resolved." :
             "Not bakeable.";
@@ -5702,6 +5730,70 @@ static class EditorRepo
 
         throw new InvalidOperationException(
             $"Map board '{board.Name}' has unsupported SpatialType '{board.SpatialType}'. Expected exact value Grid, HexGrid, or NodeGraph.");
+    }
+
+    public static IResult ReadAuthoringLogicTerrain(string repoRoot, string modId, string mapId, string boardName, HttpResponse response)
+    {
+        var authored = CrowdNavSurfaceAuthoring.RequireAuthoringTerrain(repoRoot, modId, mapId);
+        using var validation = File.OpenRead(authored.FullPath);
+        _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(authored.FullPath, validation, authored.CellSizeCm);
+        response.Headers["X-Ludots-Authoring-Cell-Cm"] = authored.CellSizeCm.ToString(CultureInfo.InvariantCulture);
+        return Results.File(
+            File.ReadAllBytes(authored.FullPath),
+            "application/octet-stream",
+            fileDownloadName: $"{mapId}_{boardName}_map_data.bin");
+    }
+
+    public static async Task<IResult> WriteAuthoringLogicTerrain(string repoRoot, string modId, string mapId, HttpRequest req)
+    {
+        var authored = CrowdNavSurfaceAuthoring.RequireAuthoringTerrain(repoRoot, modId, mapId);
+        string tempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.bin");
+        try
+        {
+            await using (var fs = File.Create(tempPath))
+            {
+                await req.Body.CopyToAsync(fs);
+            }
+
+            await using var validation = File.OpenRead(tempPath);
+            _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(tempPath, validation, authored.CellSizeCm);
+            string? directory = Path.GetDirectoryName(authored.FullPath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.Copy(tempPath, authored.FullPath, overwrite: true);
+            return Results.Ok(new { ok = true, path = authored.FullPath });
+        }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+        }
+    }
+
+    private static string? ScanAuthoringLogicTerrain(ModContext ctx, string mapId)
+    {
+        string? found = null;
+        void Consider(string path)
+        {
+            if (!File.Exists(path)) return;
+            if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject root) return;
+            if (root["maps"] is not JsonObject maps) return;
+            if (maps[mapId] is not JsonObject map || !map.ContainsKey("logicTerrainAsset")) return;
+            found = map["logicTerrainAsset"] is JsonValue value && value.TryGetValue<string>(out string? text)
+                ? text
+                : string.Empty;
+        }
+
+        Consider(Path.Combine(ctx.RepoRoot, "assets", "Navigation", "navmesh.json"));
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            var mod = ctx.ModsById[ctx.LoadOrder[i]];
+            Consider(Path.Combine(mod.RootPath, "assets", "Navigation", "navmesh.json"));
+        }
+
+        return string.IsNullOrWhiteSpace(found) ? null : found.Trim();
     }
 
     public static int RequireGridCellSizeCm(Ludots.Core.Map.Board.BoardConfig board)

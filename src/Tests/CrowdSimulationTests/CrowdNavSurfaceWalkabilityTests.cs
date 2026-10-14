@@ -44,7 +44,8 @@ public class CrowdNavSurfaceWalkabilityTests
         JsonNode map = JsonNode.Parse(File.ReadAllText(mapPath))!;
         JsonNode board = map["Boards"]![0]!;
         int cellSizeCm = board["Grid"]!["CellSizeCm"]!.GetValue<int>();
-        Assert.That(cellSizeCm, Is.EqualTo(runtime.NavCellSizeCm));
+        Assert.That(cellSizeCm, Is.EqualTo(100));
+        Assert.That(board["DataFile"], Is.Null);
         string heightAsset = map["ContinuousHeightmap"]!["Asset"]!.GetValue<string>();
         ContinuousHeightmapAsset heightmap;
         using (FileStream heightStream = File.OpenRead(Path.Combine(seedDir, heightAsset["assets/".Length..])))
@@ -53,7 +54,7 @@ public class CrowdNavSurfaceWalkabilityTests
         }
 
         string binPath = Path.Combine(seedDir, "terrain", $"crowd_simulation_{seed}.map_data.bin");
-        var terrain = (SparseGridLogicTerrainField)ReactGridTerrainBinary.Read(binPath, cellSizeCm);
+        var terrain = (SparseGridLogicTerrainField)ReactGridTerrainBinary.Read(binPath, runtime.NavCellSizeCm);
         int col = cell % side;
         int row = cell / side;
         LogicTerrainCell painted = terrain.GetCell(col, row);
@@ -64,7 +65,6 @@ public class CrowdNavSurfaceWalkabilityTests
             $"Maps/crowd_simulation_{seed}.json",
             board["WidthCm"]!.GetValue<int>(),
             board["HeightCm"]!.GetValue<int>(),
-            cellSizeCm,
             heightAsset.Replace('\\', '/'),
             heightmap.Bounds.Width,
             heightmap.Bounds.Height,

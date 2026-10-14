@@ -338,7 +338,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         mapObj,
                         $"NavMeshBakeConfig.maps.{mapEntry.Key}",
                         new[] { "solver" },
-                        new[] { "boards", "terrainAreas", "navProfiles", "navAreas" });
+                        new[] { "boards", "terrainAreas", "navProfiles", "navAreas", "logicTerrainAsset" });
                     string solver = RequireString(mapObj, "solver", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
                     if (!NavSolverDeclaration.IsKnown(solver))
                     {
@@ -353,6 +353,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                     if (mapObj.ContainsKey("terrainAreas"))
                     {
                         ValidateTerrainAreasArray(mapObj, mapEntry.Key);
+                    }
+
+                    if (mapObj.ContainsKey("logicTerrainAsset"))
+                    {
+                        string asset = RequireString(
+                            mapObj,
+                            "logicTerrainAsset",
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                        RequireModRelativeAsset(asset, $"NavMeshBakeConfig.maps.{mapEntry.Key}.logicTerrainAsset");
                     }
 
                     bool bindsAgents = mapObj.ContainsKey("navProfiles") || mapObj.ContainsKey("terrainAreas");
@@ -871,6 +880,26 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         throw new InvalidOperationException(
                             $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}]（{terrainId}）references unknown area '{areaId}'.");
                     }
+                }
+            }
+        }
+
+        internal static void RequireModRelativeAsset(string asset, string path)
+        {
+            string trimmed = asset.Replace('\\', '/');
+            if (Path.IsPathRooted(asset) ||
+                trimmed.StartsWith("/", StringComparison.Ordinal) ||
+                trimmed.Contains(':', StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{path} 必须是 Mod assets 下的相对路径，不能是绝对路径：{asset}");
+            }
+
+            string[] segments = trimmed.Split('/');
+            for (int i = 0; i < segments.Length; i++)
+            {
+                if (segments[i] == "..")
+                {
+                    throw new InvalidOperationException($"{path} 不能包含 ..：{asset}");
                 }
             }
         }

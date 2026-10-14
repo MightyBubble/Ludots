@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Tool;
 using NUnit.Framework;
@@ -99,14 +100,66 @@ public sealed class CrowdNavSurfaceAuthoringTests
     }
 
     [Test]
-    public void MapCellSizeMismatch_NamesBothSources()
+    public void TerrainStep_MustMatchCrowdCell()
     {
         var ex = Assert.Throws<InvalidOperationException>(() => Bake(Grid(2, 100), TwoTypes, Sources(crowdCellCm: 50)));
 
         Assert.That(ex!.Message, Does.Contain("Maps/synthetic.json"));
-        Assert.That(ex.Message, Does.Contain("格边长 100 cm"));
+        Assert.That(ex.Message, Does.Contain("步长 100×100 cm"));
         Assert.That(ex.Message, Does.Contain("Navigation/navmesh.json"));
         Assert.That(ex.Message, Does.Contain("50 cm"));
+    }
+
+    [Test]
+    public void LogicTerrainAsset_RejectsParentSegment()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            NavMeshBakeConfigLoader.RequireModRelativeAsset("../terrain/x.bin", "Navigation/navmesh.json: maps.m.logicTerrainAsset"));
+
+        Assert.That(ex!.Message, Does.Contain(".."));
+    }
+
+    [Test]
+    public void FewerJumpCandidates_RefusesExistingTarget()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "ludots-jump-" + Guid.NewGuid().ToString("N") + ".navsurface");
+        try
+        {
+            NavSurfaceJumpCandidate jump = new()
+            {
+                FromX = 0,
+                FromY = 0,
+                ToX = 1,
+                ToY = 1,
+                DropCm = 10,
+                LengthCells = 1,
+            };
+            NavSurfaceAsset existing = Bake(Grid(2, 100), TwoTypes, Sources(), new[] { jump });
+            using (FileStream created = File.Create(path))
+            {
+                NavSurfaceAsset.Write(existing, created);
+            }
+
+            NavSurfaceAsset baked = Bake(Grid(2, 100), TwoTypes, Sources());
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(path, baked));
+            Assert.That(ex!.Message, Does.Contain("1"));
+            Assert.That(ex.Message, Does.Contain("0"));
+            using (FileStream check = File.OpenRead(path))
+            {
+                Assert.That(NavSurfaceAsset.Read(check).JumpCandidates, Has.Length.EqualTo(1));
+            }
+
+            CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(path, existing);
+            using (FileStream replaced = File.OpenRead(path))
+            {
+                Assert.That(NavSurfaceAsset.Read(replaced).JumpCandidates, Has.Length.EqualTo(1));
+            }
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 
     [Test]
@@ -178,22 +231,28 @@ public sealed class CrowdNavSurfaceAuthoringTests
                     "assets");
                 string mapPath = Path.Combine(modAssets, "Maps", mapId + ".json");
                 JsonNode map = JsonNode.Parse(File.ReadAllText(mapPath))!;
-                int cellSizeCm = map["Boards"]![0]!["Grid"]!["CellSizeCm"]!.GetValue<int>();
-                string binPath = Path.Combine(modAssets, "terrain", mapId + ".map_data.bin");
+                JsonNode board = map["Boards"]![0]!;
+                Assert.That(board["DataFile"], Is.Null, name);
+                Assert.That(board["Grid"]!["CellSizeCm"]!.GetValue<int>(), Is.EqualTo(100), name);
                 string surfacePath = Path.Combine(modAssets, "terrain", mapId + ".navsurface");
-                LogicTerrainField terrain = ReactGridTerrainBinary.Read(binPath, cellSizeCm);
-                NavSurfaceAsset baked = CrowdNavSurfaceAuthoring.BakeAuthored(
-                    repo,
-                    modId,
-                    mapId,
-                    terrain,
-                    Array.Empty<NavSurfaceJumpCandidate>());
                 NavSurfaceAsset fixture;
                 using (FileStream input = File.OpenRead(surfacePath))
                 {
                     fixture = NavSurfaceAsset.Read(input);
                 }
 
+                string navPath = Path.Combine(modAssets, "Navigation", "navmesh.json");
+                JsonNode nav = JsonNode.Parse(File.ReadAllText(navPath))!;
+                string logicTerrainAsset = nav["maps"]![mapId]!["logicTerrainAsset"]!.GetValue<string>();
+                Assert.That(logicTerrainAsset, Is.EqualTo("terrain/" + mapId + ".map_data.bin"), name);
+                string binPath = Path.Combine(modAssets, logicTerrainAsset);
+                LogicTerrainField terrain = ReactGridTerrainBinary.Read(binPath, fixture.NavCellSizeCm);
+                NavSurfaceAsset baked = CrowdNavSurfaceAuthoring.BakeAuthored(
+                    repo,
+                    modId,
+                    mapId,
+                    terrain,
+                    Array.Empty<NavSurfaceJumpCandidate>());
                 Assert.That(baked.TerrainTypeIds, Is.EqualTo(fixture.TerrainTypeIds), name);
                 Assert.That(baked.TerrainCells, Is.EqualTo(fixture.TerrainCells), name);
                 Assert.That(baked.NavCellsX, Is.EqualTo(fixture.NavCellsX), name);
@@ -224,7 +283,6 @@ public sealed class CrowdNavSurfaceAuthoringTests
             "Maps/synthetic.json",
             200,
             200,
-            100,
             "terrain/synthetic.height",
             200,
             200,

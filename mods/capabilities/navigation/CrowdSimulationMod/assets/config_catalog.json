@@ -22,5 +22,9 @@
     "Path": "Presentation/host_assets.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Presentation/terrain_type_colors.json",
+    "Policy": "DeepObject"
   }
 ]

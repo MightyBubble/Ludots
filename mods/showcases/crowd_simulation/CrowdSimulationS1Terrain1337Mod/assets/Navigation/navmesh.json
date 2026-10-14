@@ -2,6 +2,7 @@
   "maps": {
     "crowd_simulation_s1337": {
       "solver": "crowd-simulation",
+      "logicTerrainAsset": "terrain/crowd_simulation_s1337.map_data.bin",
       "navAreas": [
         "Default",
         "shallow",

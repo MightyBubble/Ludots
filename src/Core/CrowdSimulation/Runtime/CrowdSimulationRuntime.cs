@@ -51,6 +51,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
     private CrowdSimulationDebugConfig? _debug;
     private CrowdSimulationDebugViewConfig? _debugView;
     private CrowdPlayerViewConfig? _playerView;
+    public CrowdTerrainTypeColorTable? TerrainTypeColors { get; private set; }
     internal bool HasFormalConfig => _configDto != null;
     private string? _focusedCrowdMapId;
     internal string? FormalConfigMapId => _focusedCrowdMapId;
@@ -483,6 +484,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
             _configDto!, mapConfig, agentProfiles, navmesh, pathing, templateFacts,
             (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
+        TerrainTypeColors = runtimeConfig.TerrainTypeIds.Count == 0
+            ? null
+            : BindTerrainTypeColors(engine, runtimeConfig);
 
         SolverAgentExclusivity.RejectMassNavigationAgent(engine.World, mapId);
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
@@ -706,6 +710,14 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             $"CrowdSimulation session activated for map '{_activeMapId}': navs={navs.Count}, script={_demoScript?.Count ?? 0}, autoReplayAt={_autoReplayAtTick}.");
     }
 
+    private static CrowdTerrainTypeColorTable BindTerrainTypeColors(GameEngine engine, CrowdSimulationRuntimeConfig runtime)
+    {
+        CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.LoadMerged(
+            engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        table.RequireExact(runtime.TerrainTypeIds, runtime.MapId);
+        return table;
+    }
+
     private void Deactivate(GameEngine engine)
     {
         _debugFuzz = null;
@@ -720,6 +732,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         if (engine.World.IsAlive(_sessionEntity)) engine.World.Destroy(_sessionEntity);
         _sessionEntity = Entity.Null;
         _session = null;
+        TerrainTypeColors = null;
         _pairRulesGuard = null;
         _activeMapId = null;
         _hashCount = 0;

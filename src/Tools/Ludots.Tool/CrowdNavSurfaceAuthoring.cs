@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
@@ -21,13 +22,12 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Tool;
 
 /// <summary>
-/// 地图、连续高度图和群体配置里已经写好的尺寸。烘焙只核对它们彼此一致，不另算一套格网。
+/// 地图范围、连续高度图和群体导航格边长。导航格由地图边长除以群体格边长得出，不读板的 Grid.CellSizeCm。
 /// </summary>
 public readonly record struct CrowdNavSurfaceBakeSources(
     string MapSource,
     int MapWidthCm,
     int MapHeightCm,
-    int MapCellSizeCm,
     string HeightSource,
     int HeightBoundsWidthCm,
     int HeightBoundsHeightCm,
@@ -85,38 +85,27 @@ public static class CrowdNavSurfaceAuthoring
                 $"{sources.MapSource}: 板必须是正方形（WidthCm {sources.MapWidthCm} ≠ HeightCm {sources.MapHeightCm}）。");
         }
 
-        if (sources.MapCellSizeCm <= 0)
-        {
-            throw new InvalidOperationException($"{sources.MapSource}: 格边长 {sources.MapCellSizeCm} cm 无效。");
-        }
-
         if (sources.CrowdCellSizeCm <= 0)
         {
             throw new InvalidOperationException(
                 $"{sources.CrowdSource}: profiles.cellSizeCm = {sources.CrowdCellSizeCm}，需为 > 0。");
         }
 
-        if (sources.MapCellSizeCm != sources.CrowdCellSizeCm)
+        if (sources.MapWidthCm % sources.CrowdCellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"{sources.MapSource}: 格边长 {sources.MapCellSizeCm} cm 与 {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 不一致。");
+                $"{sources.MapSource}: WidthCm（{sources.MapWidthCm}）不能被 {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 整除。");
         }
 
-        if (sources.MapWidthCm % sources.MapCellSizeCm != 0)
-        {
-            throw new InvalidOperationException(
-                $"{sources.MapSource}: WidthCm（{sources.MapWidthCm}）不能被格边长 {sources.MapCellSizeCm} cm 整除。");
-        }
-
-        int navCells = sources.MapWidthCm / sources.MapCellSizeCm;
+        int navCells = sources.MapWidthCm / sources.CrowdCellSizeCm;
         if (terrain.WidthCells != navCells ||
             terrain.HeightCells != navCells ||
-            terrain.HorizontalStepCm != sources.MapCellSizeCm ||
-            terrain.VerticalStepCm != sources.MapCellSizeCm)
+            terrain.HorizontalStepCm != sources.CrowdCellSizeCm ||
+            terrain.VerticalStepCm != sources.CrowdCellSizeCm)
         {
             throw new InvalidOperationException(
                 $"{sources.MapSource}: 逻辑地形是 {terrain.WidthCells}×{terrain.HeightCells} 格、步长 {terrain.HorizontalStepCm}×{terrain.VerticalStepCm} cm，" +
-                $"地图 {sources.MapWidthCm}×{sources.MapHeightCm} cm / 格边长 {sources.MapCellSizeCm} cm 推出 {navCells}×{navCells} 格。");
+                $"地图 {sources.MapWidthCm}×{sources.MapHeightCm} cm / {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 推出 {navCells}×{navCells} 格。");
         }
 
         if (sources.HeightBoundsWidthCm != sources.MapWidthCm || sources.HeightBoundsHeightCm != sources.MapHeightCm)
@@ -161,7 +150,7 @@ public static class CrowdNavSurfaceAuthoring
         {
             NavCellsX = navCells,
             NavCellsY = navCells,
-            NavCellSizeCm = sources.MapCellSizeCm,
+            NavCellSizeCm = sources.CrowdCellSizeCm,
             TerrainTypeIds = typeIds,
             TerrainCells = cells,
             JumpCandidates = jumps,
@@ -216,7 +205,6 @@ public static class CrowdNavSurfaceAuthoring
             $"Maps/{mapId}.json",
             board.WidthCm,
             board.HeightCm,
-            board.GridCellSizeCm,
             heightAsset.Replace('\\', '/'),
             height.Bounds.Width,
             height.Bounds.Height,
@@ -227,9 +215,70 @@ public static class CrowdNavSurfaceAuthoring
         return Bake(terrain, binding.Runtime.TerrainTypeIds, sources, jumpCandidates);
     }
 
+    public readonly record struct CrowdAuthoringTerrainFile(string RelativePath, string FullPath, int CellSizeCm);
+
+    public static CrowdAuthoringTerrainFile RequireAuthoringTerrain(string repoRoot, string modId, string mapId)
+    {
+        MapConfig map = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+        CrowdAuthoringBinding binding = LoadRuntime(repoRoot, modId, map);
+        string? asset = binding.MapNav.LogicTerrainAsset;
+        if (string.IsNullOrWhiteSpace(asset))
+        {
+            throw new InvalidOperationException(
+                $"Navigation/navmesh.json: maps.{mapId}.logicTerrainAsset 为空。地编资产不写在地图 Board.DataFile 上。");
+        }
+
+        string modRoot = ToolMapConfigResolver.ResolveModRoot(repoRoot, modId);
+        string full = ResolveModAssetPath(modRoot, asset);
+        if (!File.Exists(full))
+        {
+            throw new InvalidOperationException($"地编资产不存在：{asset}（{full}）。");
+        }
+
+        return new CrowdAuthoringTerrainFile(asset.Replace('\\', '/'), full, binding.Runtime.NavCellSizeCm);
+    }
+
+    public static void WritePreservingJumpCandidates(string targetPath, NavSurfaceAsset asset)
+    {
+        ArgumentNullException.ThrowIfNull(asset);
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            throw new InvalidOperationException("输出路径为空。");
+        }
+
+        if (File.Exists(targetPath))
+        {
+            NavSurfaceAsset existing;
+            using (FileStream input = File.OpenRead(targetPath))
+            {
+                existing = NavSurfaceAsset.Read(input);
+            }
+
+            int existingCount = existing.JumpCandidates.Length;
+            int bakedCount = asset.JumpCandidates.Length;
+            if (bakedCount < existingCount)
+            {
+                throw new InvalidOperationException(
+                    $"目标 {targetPath} 已有 {existingCount} 条跳跃候选，本次烘焙只有 {bakedCount} 条，拒绝覆盖。");
+            }
+        }
+
+        string? directory = Path.GetDirectoryName(Path.GetFullPath(targetPath));
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        using FileStream output = File.Create(targetPath);
+        NavSurfaceAsset.Write(asset, output);
+    }
+
     private readonly record struct CrowdAuthoringBinding(
         CrowdSimulationRuntimeConfig Runtime,
-        NavMapNavBoardsConfig MapNav);
+        NavMapNavBoardsConfig MapNav,
+        ConfigPipeline Pipeline,
+        ConfigCatalog Catalog,
+        ConfigConflictReport Report);
 
     private static CrowdAuthoringBinding LoadRuntime(string repoRoot, string modId, MapConfig map)
     {
@@ -267,7 +316,38 @@ public static class CrowdNavSurfaceAuthoring
         CrowdPairRules rules = CrowdPairRules.Matrices(players, response, shares);
         CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(
             config, map, profiles, navmesh, pathing, facts, fixedHz, rules);
-        return new CrowdAuthoringBinding(runtime, mapNav);
+        return new CrowdAuthoringBinding(runtime, mapNav, pipeline, catalog, report);
+    }
+
+    public readonly record struct CrowdTerrainTypeColorRow(
+        string TerrainId,
+        int Index,
+        int Red,
+        int Green,
+        int Blue,
+        int Alpha);
+
+    public static IReadOnlyList<CrowdTerrainTypeColorRow> LoadMapTerrainColors(string repoRoot, string modId, string mapId)
+    {
+        MapConfig map = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+        CrowdAuthoringBinding binding = LoadRuntime(repoRoot, modId, map);
+        IReadOnlyList<string> terrainIds = binding.Runtime.TerrainTypeIds;
+        if (terrainIds.Count == 0)
+        {
+            throw new InvalidOperationException($"Navigation/navmesh.json: maps.{mapId}.terrainAreas 为空。");
+        }
+
+        CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.LoadMerged(
+            binding.Pipeline, binding.Catalog, binding.Report);
+        table.RequireExact(terrainIds, mapId);
+        var rows = new CrowdTerrainTypeColorRow[terrainIds.Count];
+        for (int i = 0; i < terrainIds.Count; i++)
+        {
+            CrowdTerrainTypeColor color = table.Colors[terrainIds[i]];
+            rows[i] = new CrowdTerrainTypeColorRow(terrainIds[i], i, color.Red, color.Green, color.Blue, color.Alpha);
+        }
+
+        return rows;
     }
 
     private static readonly JsonSerializerOptions TemplateJsonOptions = new()
