@@ -143,6 +143,8 @@
   "structures": {
     "blockCoverage": 0.5,
     "portalReachNavCells": 4,
+    "anchorTerrain": ["shore", "land"],
+    "spanTerrain": ["water"],
     "templates": {
       "building": {
         "name": "建筑",

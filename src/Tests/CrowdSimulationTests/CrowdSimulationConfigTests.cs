@@ -344,6 +344,44 @@ public class CrowdSimulationConfigTests
         Assert.That(byId["s7barrier"].Blocker, Is.True);
         Assert.That(byId["s7barrier"].LifetimeSec, Is.EqualTo(Fix64.FromDouble(4)));
         Assert.That(byId["s7barrier"].LifetimeSecRaw, Is.EqualTo(4.0));
+        Assert.That(runtime.Structures.AnchorTerrain, Is.EqualTo(new[] { false, true, true, false, false }));
+        Assert.That(runtime.Structures.SpanTerrain, Is.EqualTo(new[] { true, false, false, false, false }));
+    }
+
+    [Test]
+    public void BridgeTerrain_MissingOrUnknown_IsRejected()
+    {
+        var missing = TestDefaults.DefaultConfigJson();
+        missing["structures"]!.AsObject().Remove("anchorTerrain");
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(missing));
+        Assert.That(ex!.Message, Does.Contain("anchorTerrain"));
+
+        var blank = TestDefaults.DefaultConfigJson();
+        blank["structures"]!["anchorTerrain"] = new JsonArray("");
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(blank)));
+        Assert.That(ex!.Message, Does.Contain("anchorTerrain"));
+
+        var dup = TestDefaults.DefaultConfigJson();
+        dup["structures"]!["spanTerrain"] = new JsonArray("water", "water");
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(dup)));
+        Assert.That(ex!.Message, Does.Contain("重复"));
+
+        var unknown = TestDefaults.DefaultConfigJson();
+        unknown["structures"]!["spanTerrain"] = new JsonArray("lava");
+        ex = Assert.Throws<InvalidOperationException>(
+            () => TestDefaults.Assemble(CrowdSimulationConfig.Load(unknown)));
+        Assert.That(ex!.Message, Does.Contain("未知地形类型"));
+
+        var layered = TestDefaults.DefaultConfigJson();
+        layered["structures"]!["templates"] = new JsonObject
+        {
+            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"deck","priority":1,"layered":true}""")!,
+        };
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(layered)));
+        Assert.That(ex!.Message, Does.Contain("足迹需为 path"));
     }
 
     [Test]
