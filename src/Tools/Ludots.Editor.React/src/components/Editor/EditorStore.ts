@@ -248,7 +248,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     terrain: new TerrainStore(8, 8), // Default 8x8 chunks
     boardMetrics: DEFAULT_BOARD_METRICS,
 
-    bridgeBaseUrl: 'http://localhost:5299',
+    bridgeBaseUrl: bridgeBaseFromEnv(),
     mods: [],
     selectedModId: null,
     maps: [],
@@ -1262,6 +1262,12 @@ function readObstacleNavRadiusCm(overrides: Record<string, unknown> | null | und
     const raw = intent.navRadiusCm ?? intent.NavRadiusCm ?? intent.radiusCm ?? intent.RadiusCm;
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function bridgeBaseFromEnv(): string {
+    const env = (import.meta as { env?: { VITE_BRIDGE_URL?: string } }).env;
+    const configured = env?.VITE_BRIDGE_URL;
+    return configured != null ? configured : 'http://localhost:5299';
 }
 
 function asRecord(value: unknown): JsonRecord | null {
