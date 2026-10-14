@@ -50,6 +50,7 @@ namespace Ludots.Tests.GAS.Production
         private const float DeltaTime = 1f / 60f;
         private const string HubMapId = "interaction_showcase_hub";
         private const string StressMapId = "interaction_showcase_stress";
+        private const string TargetFirstModeId = "Interaction.Mode.TargetFirst";
         private const string LolModeId = "Interaction.Mode.LoL";
         private const string Sc2ModeId = "Interaction.Mode.SC2";
         private const string IndicatorModeId = "Interaction.Mode.Indicator";
@@ -121,9 +122,7 @@ namespace Ludots.Tests.GAS.Production
             SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
             AssertSelectedEntity(engine, "Arcweaver");
             PressButton(engine, backend, "<Keyboard>/f1", frameTimesMs);
-            // WoW and LoL both write pref.aim.cast_mode = interaction.context.aim.smart. The deleted target_first and smart_cast
-            // contexts mounted the same slot graphs, so the HUD representative for that mode is LoL.
-            Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(TargetFirstModeId));
             PressButton(engine, backend, "<Keyboard>/f2", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "arcweaver_selected_lol");
@@ -1429,6 +1428,11 @@ namespace Ludots.Tests.GAS.Production
             }
 
             string prefValue = ReadAimPrefValue(engine, rep);
+            if (string.Equals(prefValue, "interaction.context.aim.target_first", StringComparison.Ordinal))
+            {
+                return TargetFirstModeId;
+            }
+
             if (string.Equals(prefValue, "interaction.context.aim.smart", StringComparison.Ordinal))
             {
                 return LolModeId;
