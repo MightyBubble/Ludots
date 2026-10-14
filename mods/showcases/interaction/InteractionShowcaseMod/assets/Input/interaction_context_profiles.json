@@ -50,6 +50,9 @@
           "trigger": "graph.interaction.bind_aim_actor"
         },
         {
+          "trigger": "graph.aim.write_current_target"
+        },
+        {
           "trigger": "graph.interaction.shape_indicate"
         },
         {

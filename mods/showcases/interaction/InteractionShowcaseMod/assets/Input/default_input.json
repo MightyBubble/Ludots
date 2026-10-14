@@ -158,7 +158,7 @@
           "path": "<Keyboard>/leftShift"
         },
         {
-          "actionId": "Aim.CastMode.TargetFirst",
+          "actionId": "Aim.CastMode.Smart",
           "path": "<Keyboard>/f1"
         },
         {
@@ -176,6 +176,10 @@
         {
           "actionId": "InteractionModeAction",
           "path": "<Keyboard>/f5"
+        },
+        {
+          "actionId": "Aim.CastMode.TargetFirst",
+          "path": "<Keyboard>/f6"
         },
         {
           "actionId": "SelectionGroupRecall1",

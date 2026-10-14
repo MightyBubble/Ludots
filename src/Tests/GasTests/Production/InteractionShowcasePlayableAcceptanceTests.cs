@@ -122,11 +122,13 @@ namespace Ludots.Tests.GAS.Production
             SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
             AssertSelectedEntity(engine, "Arcweaver");
             PressButton(engine, backend, "<Keyboard>/f1", frameTimesMs);
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
+            PressButton(engine, backend, "<Keyboard>/f6", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(TargetFirstModeId));
             PressButton(engine, backend, "<Keyboard>/f2", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "arcweaver_selected_lol");
-            timeline.Add("[T+002] Arcweaver selected | switched F1 WoW then F2 LoL");
+            timeline.Add("[T+002] Arcweaver selected | F1 LoL, F6 target-first, F2 LoL");
 
             float skirmisherAHealthBeforeQ = ReadHealth(engine.World, "EnemySkirmisherA");
             SetMouseScreen(engine, backend, GetEntityScreen(engine, "EnemySkirmisherA"), frameTimesMs);

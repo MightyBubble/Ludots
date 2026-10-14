@@ -484,10 +484,14 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             const string modeId = "interaction.context.aim.target_first";
             SetMode(modeId, "f4");
             Grant("Ability.AimSchemes.UnitOnly", 0);
-            SetCurrentTarget(Near);
+            ClickSelect(Position(Near));
+            Assert.That(CollectionCount("aim.current_target"), Is.EqualTo(1), Diag("selected target"));
+            Assert.That(CollectionMember("aim.current_target"), Is.EqualTo(Near), Diag("selected target member"));
+            Assert.That(CollectionOwner("aim.current_target"), Is.EqualTo(Hero), Diag("selected target owner"));
+            string commandKey = InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource");
+            Assert.That(CollectionMember(commandKey), Is.EqualTo(Hero), Diag("click leaves the commanded unit"));
             AimMouse(Position(Hero) + new Vector2(700f, 0f));
             Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(1), Diag("cursor point before target-first"));
-            Assert.That(CollectionCount("aim.current_target"), Is.EqualTo(1), Diag("selected target"));
 
             int pressTick = _engine.GameSession.CurrentTick;
             PressSlot(AimSurface.KeyboardCursor, 0);
@@ -500,7 +504,6 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Settle();
 
             Grant("Ability.AimSchemes.Ground", 0);
-            SetCurrentTarget(Near);
             AimMouse(Position(Hero) + new Vector2(700f, 0f));
             int errorsBeforeGround = _engine.TriggerManager.Errors.Count;
             PressSlot(AimSurface.KeyboardCursor, 0);
@@ -513,7 +516,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("ground skill next tick"));
             ReleaseSlot(AimSurface.KeyboardCursor, 0);
 
-            SetCurrentTarget(null);
+            ClickSelect(new Vector2(3200f, 3200f));
             Assert.That(CollectionCount("aim.current_target"), Is.EqualTo(0), Diag("cleared target"));
             PressSlot(AimSurface.KeyboardCursor, 0);
             Assert.That(CastCount(), Is.EqualTo(0), Diag("missing target submit"));
@@ -540,19 +543,45 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             granted.Grant(slot, id, sourceTagId: 0);
         }
 
-        private void SetCurrentTarget(Entity? target)
+        private void ClickSelect(Vector2 screenCm)
+        {
+            AimMouse(screenCm);
+            ClickLeft();
+        }
+
+        private Entity CollectionOwner(string key) => CollectionView(key).Owner;
+
+        private Entity CollectionMember(string key)
         {
             EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
-            Entity primary = target ?? Entity.Null;
-            Entity[] members = target.HasValue ? new[] { target.Value } : Array.Empty<Entity>();
-            EntityCollectionDescriptor descriptor = EntityCollectionDescriptor.Create(
-                "aim.current_target",
-                EntityCollectionSourceKind.Explicit,
-                EntityCollectionRoleKind.Display,
-                Hero,
-                primary);
-            collections.Replace(Hero, descriptor, members, Hero);
+            Entity owner = CollectionOwner(key);
+            Span<Entity> members = stackalloc Entity[Math.Max(CollectionCount(key), 1)];
+            int copied = collections.CopyEntities(owner, key, members);
+            if (copied <= 0)
+            {
+                throw new InvalidOperationException($"collection '{key}' has no members");
+            }
+
+            return members[0];
+        }
+
+        private EntityCollectionView CollectionView(string key)
+        {
+            EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Span<EntityCollectionHandle> handles = stackalloc EntityCollectionHandle[Math.Max(collections.CollectionCount, 1)];
+            int count = collections.CopyActiveHandles(handles);
+            for (int i = 0; i < count; i++)
+            {
+                if (collections.TryGetView(handles[i], out EntityCollectionView view) &&
+                    string.Equals(view.Key, key, StringComparison.Ordinal))
+                {
+                    return view;
+                }
+            }
+
+            throw new InvalidOperationException($"collection '{key}' missing");
         }
 
         private int CastCount()
