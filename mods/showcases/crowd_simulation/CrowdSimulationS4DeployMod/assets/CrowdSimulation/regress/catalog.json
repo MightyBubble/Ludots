@@ -51,11 +51,16 @@
     "boomRadiusCm": 12500,
     "ringScale": 2,
     "impulse": 4,
+    "bridgeTemplate": "bridge",
+    "bridgeWidthCm": 6250,
+    "bridgeSpanCm": 62500,
     "ops": [
       { "id": "spawn", "structure": false, "probeHandles": false, "reserved": false },
       { "id": "order", "structure": false, "probeHandles": false, "reserved": false },
       { "id": "place", "structure": true, "probeHandles": false, "reserved": false },
       { "id": "remove", "structure": true, "probeHandles": false, "reserved": false },
+      { "id": "placeBridge", "structure": true, "probeHandles": false, "reserved": false },
+      { "id": "removeBridge", "structure": true, "probeHandles": false, "reserved": false },
       { "id": "kill", "structure": false, "probeHandles": true, "reserved": false }
     ]
   },

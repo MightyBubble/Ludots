@@ -145,11 +145,21 @@ internal sealed class CrowdSimulationDebugConfig
             throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.stallGuard 必须 ≥ 1。");
         if (fuzz.Ops == null || fuzz.Ops.Length == 0)
             throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.ops 至少一条。");
+        bool placeBridge = false;
         for (int i = 0; i < fuzz.Ops.Length; i++)
         {
             if (string.IsNullOrWhiteSpace(fuzz.Ops[i].Id))
                 throw new InvalidOperationException($"CrowdSimulationDebug.json: fuzz.ops[{i}].id 必填。");
+            if (fuzz.Ops[i].Id == "placeBridge") placeBridge = true;
         }
+
+        if (!placeBridge) return;
+        if (string.IsNullOrWhiteSpace(fuzz.BridgeTemplate))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.bridgeTemplate 必填。");
+        if (fuzz.BridgeWidthCm < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.bridgeWidthCm 必须 ≥ 1。");
+        if (fuzz.BridgeSpanCm < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.bridgeSpanCm 必须 ≥ 1。");
     }
 
     private static void ValidateRates(CrowdDebugRates rates)
@@ -243,6 +253,9 @@ internal sealed class CrowdDebugFuzz
     [JsonRequired] public string OrderShape { get; init; } = string.Empty;
     [JsonRequired] public int OrderMemberCap { get; init; }
     [JsonRequired] public int StallGuard { get; init; }
+    public string BridgeTemplate { get; init; } = "";
+    public int BridgeWidthCm { get; init; }
+    public int BridgeSpanCm { get; init; }
     [JsonRequired] public CrowdDebugFuzzOp[] Ops { get; init; } = Array.Empty<CrowdDebugFuzzOp>();
 
     public CrowdFuzzPlan ToPlan(CrowdDebugTools tools)
@@ -272,6 +285,9 @@ internal sealed class CrowdDebugFuzz
             OrderShape = OrderShape,
             OrderMemberCap = OrderMemberCap,
             StallGuard = StallGuard,
+            BridgeTemplate = BridgeTemplate,
+            BridgeWidthCm = BridgeWidthCm,
+            BridgeSpanCm = BridgeSpanCm,
             BoomRadiusCm = tools.BoomRadiusCm,
             RingScale = Fix64.FromDouble(tools.RingScale),
             Impulse = Fix64.FromDouble(tools.Impulse),
