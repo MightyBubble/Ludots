@@ -2573,7 +2573,9 @@ namespace Ludots.Core.Engine
                     inputConfigRoot,
                     () => GetService(CoreServiceKeys.ClientLocalSeatRegistry),
                     () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime),
-                    interactionContextTriggerGate.ReconcileAfterInputAction),
+                    interactionContextTriggerGate.ReconcileAfterInputAction,
+                    interactionContextTriggerGate.BeginInputDispatchPhase,
+                    interactionContextTriggerGate.EndInputDispatchPhase),
                 SystemGroup.DeferredTriggerCollection);
             // Sole per-tick writer of CameraManager.State. Action graphs enqueue
             // CameraPoseRequest; publishing here applies that request in the same fixed step.
