@@ -30,6 +30,7 @@ public sealed partial class CrowdSimulationRuntime
     private ISystem<float>? _pathPresentation;
     private ISystem<float>? _deployInput;
     private ISystem<float>? _deployPresentation;
+    private ISystem<float>? _terrainOverlayInput;
 
     internal void BindProjectorSlot(GlobalFieldVisualProjectorRegistry registry)
     {
@@ -242,6 +243,7 @@ public sealed partial class CrowdSimulationRuntime
             debugView.BindEngine(engine);
             input.UseDebugView(debugView);
             presented.UseDebugView(debugView);
+            TerrainTypeOverlay?.SetEnabled(debugView.TerrainTypes);
         }
 
         if (playerView != null)
@@ -257,6 +259,19 @@ public sealed partial class CrowdSimulationRuntime
         engine.RegisterPresentationSystem(_deployPresentation);
         _deployDemo = demo;
         _deployPresentationInstalled = true;
+    }
+
+    private void InstallTerrainOverlayInput(GameEngine engine)
+    {
+        if (_terrainOverlayInput != null || _deployInput != null || _debugView == null || TerrainTypeOverlay == null) return;
+        var system = new CrowdTerrainOverlayInputSystem(engine, _debugView.Actions.ToggleTerrainTypes);
+        engine.RegisterSystem(system, SystemGroup.PostMovement);
+        _terrainOverlayInput = system;
+    }
+
+    private void ReleaseTerrainOverlayInput(GameEngine engine)
+    {
+        UnregisterFixed(engine, ref _terrainOverlayInput, SystemGroup.PostMovement);
     }
 
     private static int ResolveLocalSeatVisionScope(GameEngine engine)

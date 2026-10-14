@@ -1,0 +1,493 @@
+{
+  "version": 1,
+  "arrowMinScreenPx": 10,
+  "lineThicknessPx": 6,
+  "unitMarkPx": 14,
+  "maxScreenSegments": 2800,
+  "maxFieldCells": 8192,
+  "maxWorldSegments": 65536,
+  "densityMax": 8,
+  "overlayReserve": 128,
+  "dirtyPulsePercent": 70,
+  "inspect": {
+    "layerIndex": 0,
+    "radiusIndex": 0
+  },
+  "beliefGroup": 0,
+  "unitColor": "off",
+  "overlays": {
+    "funnel": false,
+    "corridor": false,
+    "hpaGraph": false,
+    "navPolygons": false,
+    "tileGrid": false,
+    "flow": false,
+    "density": false,
+    "jumpLinks": false,
+    "belief": false,
+    "blocked": false,
+    "terrainTypes": false
+  },
+  "colors": {
+    "nav": {
+      "red": 70,
+      "green": 74,
+      "blue": 160,
+      "alpha": 210
+    },
+    "plan": {
+      "red": 150,
+      "green": 42,
+      "blue": 72,
+      "alpha": 180
+    },
+    "tile": {
+      "red": 214,
+      "green": 154,
+      "blue": 42,
+      "alpha": 200
+    },
+    "tileDirty": {
+      "red": 230,
+      "green": 170,
+      "blue": 40,
+      "alpha": 230
+    },
+    "ink": {
+      "red": 24,
+      "green": 18,
+      "blue": 28,
+      "alpha": 210
+    },
+    "paper": {
+      "red": 236,
+      "green": 230,
+      "blue": 214,
+      "alpha": 48
+    },
+    "twoWay": {
+      "red": 70,
+      "green": 74,
+      "blue": 160,
+      "alpha": 230
+    },
+    "oneWay": {
+      "red": 214,
+      "green": 154,
+      "blue": 42,
+      "alpha": 230
+    },
+    "densityLow": {
+      "red": 60,
+      "green": 90,
+      "blue": 170,
+      "alpha": 50
+    },
+    "densityHigh": {
+      "red": 200,
+      "green": 50,
+      "blue": 40,
+      "alpha": 190
+    },
+    "beliefDiff": {
+      "red": 70,
+      "green": 130,
+      "blue": 200,
+      "alpha": 170
+    },
+    "beliefGhost": {
+      "red": 150,
+      "green": 70,
+      "blue": 170,
+      "alpha": 190
+    },
+    "leader": {
+      "red": 170,
+      "green": 48,
+      "blue": 78,
+      "alpha": 240
+    },
+    "funnel": {
+      "red": 190,
+      "green": 60,
+      "blue": 90,
+      "alpha": 240
+    },
+    "panelText": {
+      "red": 236,
+      "green": 232,
+      "blue": 220,
+      "alpha": 255
+    },
+    "alert": {
+      "red": 255,
+      "green": 72,
+      "blue": 56,
+      "alpha": 255
+    },
+    "terrainBlocked": {
+      "red": 211,
+      "green": 47,
+      "blue": 47,
+      "alpha": 230
+    },
+    "teams": [
+      {
+        "red": 229,
+        "green": 57,
+        "blue": 57,
+        "alpha": 230
+      },
+      {
+        "red": 229,
+        "green": 186,
+        "blue": 57,
+        "alpha": 230
+      },
+      {
+        "red": 143,
+        "green": 229,
+        "blue": 57,
+        "alpha": 230
+      },
+      {
+        "red": 57,
+        "green": 229,
+        "blue": 100,
+        "alpha": 230
+      },
+      {
+        "red": 57,
+        "green": 229,
+        "blue": 229,
+        "alpha": 230
+      },
+      {
+        "red": 57,
+        "green": 100,
+        "blue": 229,
+        "alpha": 230
+      },
+      {
+        "red": 143,
+        "green": 57,
+        "blue": 229,
+        "alpha": 230
+      },
+      {
+        "red": 229,
+        "green": 57,
+        "blue": 186,
+        "alpha": 230
+      }
+    ],
+    "templates": [
+      {
+        "red": 242,
+        "green": 84,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 114,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 143,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 173,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 202,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 232,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 222,
+        "green": 242,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 193,
+        "green": 242,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 163,
+        "green": 242,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 133,
+        "green": 242,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 104,
+        "green": 242,
+        "blue": 84,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 242,
+        "blue": 94,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 242,
+        "blue": 124,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 242,
+        "blue": 153,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 242,
+        "blue": 183,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 242,
+        "blue": 212,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 242,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 212,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 183,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 153,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 124,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 84,
+        "green": 94,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 104,
+        "green": 84,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 133,
+        "green": 84,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 163,
+        "green": 84,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 193,
+        "green": 84,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 222,
+        "green": 84,
+        "blue": 242,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 84,
+        "blue": 232,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 84,
+        "blue": 202,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 84,
+        "blue": 173,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 84,
+        "blue": 143,
+        "alpha": 230
+      },
+      {
+        "red": 242,
+        "green": 84,
+        "blue": 114,
+        "alpha": 230
+      }
+    ],
+    "priorities": [
+      {
+        "red": 89,
+        "green": 77,
+        "blue": 75,
+        "alpha": 230
+      },
+      {
+        "red": 107,
+        "green": 83,
+        "blue": 80,
+        "alpha": 230
+      },
+      {
+        "red": 124,
+        "green": 86,
+        "blue": 81,
+        "alpha": 230
+      },
+      {
+        "red": 142,
+        "green": 86,
+        "blue": 78,
+        "alpha": 230
+      },
+      {
+        "red": 160,
+        "green": 82,
+        "blue": 72,
+        "alpha": 230
+      },
+      {
+        "red": 178,
+        "green": 76,
+        "blue": 62,
+        "alpha": 230
+      },
+      {
+        "red": 196,
+        "green": 66,
+        "blue": 49,
+        "alpha": 230
+      },
+      {
+        "red": 214,
+        "green": 53,
+        "blue": 32,
+        "alpha": 230
+      },
+      {
+        "red": 232,
+        "green": 38,
+        "blue": 11,
+        "alpha": 230
+      }
+    ]
+  },
+  "layers": {
+    "paper": 20,
+    "corridor": 21,
+    "density": 23,
+    "belief": 24,
+    "flow": 3,
+    "blocked": 22
+  },
+  "actions": {
+    "toggleFunnel": "CrowdSimulation.S4.ToggleFunnel",
+    "toggleCorridor": "CrowdSimulation.S4.ToggleCorridor",
+    "toggleHpaGraph": "CrowdSimulation.S4.ToggleHpaGraph",
+    "toggleNavPolygons": "CrowdSimulation.S4.ToggleNavPolygons",
+    "toggleTileGrid": "CrowdSimulation.S4.ToggleTileGrid",
+    "toggleFlow": "CrowdSimulation.S4.ToggleFlow",
+    "toggleDensity": "CrowdSimulation.S4.ToggleDensity",
+    "toggleObstacles": "CrowdSimulation.S4.ToggleObstacles",
+    "toggleJumpLinks": "CrowdSimulation.S4.ToggleJumpLinks",
+    "toggleBelief": "CrowdSimulation.S4.ToggleBelief",
+    "toggleTerrainTypes": "CrowdSimulation.S4.ToggleTerrainTypes",
+    "cycleUnitColor": "CrowdSimulation.S4.CycleUnitColor",
+    "cycleBeliefGroup": "CrowdSimulation.S4.CycleBeliefGroup",
+    "cycleInspectLayer": "CrowdSimulation.S4.CycleInspectLayer",
+    "cycleInspectRadius": "CrowdSimulation.S4.CycleInspectRadius",
+    "toggleNavPanel": "CrowdSimulation.S4.ToggleNavPanel",
+    "toggleTelemetryPanel": "CrowdSimulation.S4.ToggleTelemetryPanel",
+    "probePathFault": "CrowdSimulation.S4.ProbePathFault"
+  },
+  "panel": {
+    "fontSize": 18,
+    "originXPx": 16,
+    "originYPx": 264
+  },
+  "telemetry": {
+    "sampleMs": 250,
+    "history": 48,
+    "alerts": {
+      "lowFps": 90,
+      "simMs": 12,
+      "avoidMs": 6,
+      "headingDeg": 25,
+      "flipPct": 30
+    }
+  },
+  "panels": {
+    "nav": false,
+    "telemetry": false,
+    "navOriginXPx": 16,
+    "navOriginYPx": 240,
+    "telemetryOriginXPx": 16,
+    "telemetryOriginYPx": 400,
+    "faultOriginXPx": 16,
+    "faultOriginYPx": 698,
+    "widthPx": 1248,
+    "linePx": 18,
+    "sparkHeightPx": 16,
+    "sparkWidthPx": 180
+  }
+}

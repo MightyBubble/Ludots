@@ -110,6 +110,7 @@ public sealed partial class CrowdSimulationRuntime
         frame.BindEngine(_engine);
         input.UseDebugView(frame);
         presented.UseDebugView(frame);
+        TerrainTypeOverlay?.SetEnabled(frame.TerrainTypes);
         _projectorSlot.Current = new S4DeployFrameProjector(_deployViewProjector, frame, () => _session);
     }
 

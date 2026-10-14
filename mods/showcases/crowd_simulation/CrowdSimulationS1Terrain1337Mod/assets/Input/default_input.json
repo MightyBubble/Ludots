@@ -1,0 +1,14 @@
+{
+  "actions": [
+    { "id": "CrowdSimulation.S4.ToggleTerrainTypes", "name": "CrowdSimulation_S4_ToggleTerrainTypes", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "priority": 0,
+      "bindings": [
+        { "actionId": "CrowdSimulation.S4.ToggleTerrainTypes", "path": "<Keyboard>/leftBracket" }
+      ]
+    }
+  ]
+}
