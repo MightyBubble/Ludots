@@ -111,6 +111,14 @@
         "event": "Aim.Rule.Resolve"
       },
       {
+        "id": "eq_submits",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "submit_jump",
+        "op": "JumpIfFalse"
+      },
+      {
         "id": "read_handled",
         "op": "ReadBlackboardInt",
         "blackboardKey": "aim.rule.handled"
@@ -251,6 +259,21 @@
       {
         "from": "dispatch",
         "fromPort": "next",
+        "to": "eq_submits"
+      },
+      {
+        "from": "eq_submits",
+        "fromPort": "next",
+        "to": "submit_jump"
+      },
+      {
+        "from": "submit_jump",
+        "fromPort": "true",
+        "to": "deact_miss"
+      },
+      {
+        "from": "submit_jump",
+        "fromPort": "false",
         "to": "read_handled"
       },
       {
@@ -440,6 +463,24 @@
         "fromPort": "value",
         "to": "dispatch",
         "toPort": "modifiers"
+      },
+      {
+        "from": "dispatch",
+        "fromPort": "value",
+        "to": "eq_submits",
+        "toPort": "a"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "eq_submits",
+        "toPort": "b"
+      },
+      {
+        "from": "eq_submits",
+        "fromPort": "value",
+        "to": "submit_jump",
+        "toPort": "condition"
       },
       {
         "from": "member",

@@ -11,7 +11,7 @@
 | `scheme.aim.kbm_skills` | 光标 | 左键 `Aim.Primary`：敌对单位攻击，否则移动；空格确认 |
 | `scheme.aim.gamepad_left` | 左摇杆 | 左摇杆同时驱动 `Aim.Stick` 和 `axisMove` |
 
-施法手感看玩家偏好键 `pref.aim.cast_mode`。种子是 `interaction.context.aim.smart`。F1 / F2 / F3 / F4 经 `graph.aim.set_cast_mode` 写成智能、松开、点击、先选目标四个手势状态。左键 `Select.End` 经 `graph.aim.write_current_target` 把点中的一个单位写入代表身上的 `aim.current_target`，不改受控单位。先选目标读这个集合。没有活着的成员就打开点击瞄准。地面技能在已有活目标时，派发不返回提交次数，所以不提交，也不打开点击瞄准。
+施法手感看玩家偏好键 `pref.aim.cast_mode`。种子是 `interaction.context.aim.smart`。F1 / F2 / F3 / F4 经 `graph.aim.set_cast_mode` 写成智能、松开、点击、先选目标四个手势状态。左键 `Select.End` 经 `graph.aim.write_current_target` 把点中的一个单位写入代表身上的 `aim.current_target`，不改受控单位。先选目标读这个集合。没有活着的成员就打开点击瞄准。地面技能在已有活目标时不提交，并打开点击瞄准。
 
 ```
 scripts/run-mod-launcher.cmd cli launch preset:aim_control_schemes_raylib --adapter raylib

@@ -142,7 +142,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     }
 
     [Test]
-    public void TargetFirst_SelectedUnitCastsOnThePressTick_MissingTargetFails_GroundSkipsCursor()
+    public void TargetFirst_SelectedUnitCastsOnThePressTick_GroundAndMissingTargetOpenClickAim()
     {
         using Session session = Session.Boot("scheme.aim.kbm");
         session.AssertTargetFirst();
@@ -507,13 +507,19 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             AimMouse(Position(Hero) + new Vector2(700f, 0f));
             int errorsBeforeGround = _engine.TriggerManager.Errors.Count;
             PressSlot(AimSurface.KeyboardCursor, 0);
-            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill does not submit at the cursor"));
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill does not submit"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("ground skill exec"));
-            Assert.That(AimGestureOpen(), Is.False, Diag("ground skill gesture"));
+            Assert.That(Contexts(), Does.Contain("interaction.context.aim.click"), Diag("ground skill opens click aim"));
             Assert.That(Contexts(), Does.Not.Contain("interaction.context.aim.target_first"), Diag("ground skill context"));
             Assert.That(_engine.TriggerManager.Errors.Count, Is.EqualTo(errorsBeforeGround), Diag("ground skill errors"));
+            Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("ground skill keeps the mode"));
             AdvanceTick();
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("ground skill indicator"));
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill still no submit"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("ground skill next tick"));
+            Cancel(AimSurface.KeyboardCursor);
+            Assert.That(AimGestureOpen(), Is.False, Diag("ground skill click aim closed"));
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill cancel submits nothing"));
             ReleaseSlot(AimSurface.KeyboardCursor, 0);
 
             ClickSelect(new Vector2(3200f, 3200f));

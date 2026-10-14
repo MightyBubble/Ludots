@@ -17,7 +17,7 @@
 
 `scheme.aim.kbm_skills` 与 `scheme.aim.gamepad_left` 写在瞄准能力 mod 里，因为换装的是通用键位，不是这一场的英雄。
 
-F1 `interaction.context.aim.smart`（按下就提交），F2 `interaction.context.aim.release`（按住转向，松开下令），F3 `interaction.context.aim.click`（先打开指示器，再确认），F4 `interaction.context.aim.target_first`（用代表身上 `aim.current_target` 的第 0 个活着的成员立刻提交）。左键 `Select.End` 走 `graph.aim.write_current_target`，把指针周围那个可选单位写进这个集合，不改 `commandSource`。点在空地上就清空。没有活着的成员就关掉该状态并打开点击瞄准，不按光标直接提交。只对地面的技能在已有活目标时，派发不返回提交次数，所以不提交，也不打开瞄准。范围圈和指示线跟着点击 / 松开两个状态的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
+F1 `interaction.context.aim.smart`（按下就提交），F2 `interaction.context.aim.release`（按住转向，松开下令），F3 `interaction.context.aim.click`（先打开指示器，再确认），F4 `interaction.context.aim.target_first`（用代表身上 `aim.current_target` 的第 0 个活着的成员立刻提交）。左键 `Select.End` 走 `graph.aim.write_current_target`，把指针周围那个可选单位写进这个集合，不改 `commandSource`。点在空地上就清空。没有活着的成员就关掉该状态并打开点击瞄准，不按光标直接提交。只对地面的技能在已有活目标时不提交，并打开点击瞄准。范围圈和指示线跟着点击 / 松开两个状态的打开和关闭，画在瞄准演员上。悬停圈仍然看 `aim.hover`。
 
 ## 怎么启动
 
