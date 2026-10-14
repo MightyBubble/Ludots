@@ -34,7 +34,7 @@ Channel ability (R):
 **Key Components**:
 - `InputGate`: Pauses ability execution until player provides input (fire button press)
 - `EffectSignal`: Fires a projectile using current cursor direction from Blackboard
-- Cursor direction is continuously written to Blackboard while "channeling" tag is active (via `InputOrderMappingSystem`)
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 
 **Already Existing**: `InputGate` in `AbilityExecSpec` is confirmed to exist.
 

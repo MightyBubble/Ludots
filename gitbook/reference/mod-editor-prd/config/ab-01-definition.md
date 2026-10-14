@@ -24,7 +24,7 @@
     "activationPrecondition": { "validationGraph": "Graph.Example.CanCast" },
     "toggleSpec": { "toggleTag": "State.Example.On", "activeEffects": [], "deactivateExec": {} },
     "targeting": { "castRangeCm": 400, "impactEffect": "Effect.Example.Impact" },
-    "presentation": { "displayName": "示例", "displayNameToken": "UI.ABILITY.EXAMPLE.NAME", "modeHints": { "SmartCastWithIndicator": "按住预览" } },
+    "presentation": { "displayName": "示例", "displayNameToken": "UI.ABILITY.EXAMPLE.NAME", "modeHints": { "interaction.context.aim.release": "按住预览" } },
     "useRequirement": "Progression.Example.Unlocked", "showRequirement": "Progression.Example.Visible" } ]
 ```
 

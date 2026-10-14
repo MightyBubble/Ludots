@@ -1,12 +1,12 @@
 # S4: Alt 自我施放（Alt Self Cast）
 
-> 按住 Alt 键释放目标型技能时，强制以自身为目标进行施放。如：Dota 2 Alt+治疗 = 自我治疗。
+> 友方或自身目标来自技能引用的 `graph.aim.pick.friendly`。Dota 2 里 Alt+治疗打自己，是这页要对齐的玩家手感；修饰键本身不改目标。
 
 ---
 
 ## 机制描述
 
-玩家按住 Alt 键的同时释放需要目标的技能，技能自动以施法者自身为目标，无需手动选中自己。常见于：
+指针落在友方或自己身上时，`graph.aim.pick.friendly` 选出那个单位。常见参照：
 - **Dota 2**：Alt+治疗 = 自我治疗
 - **英雄联盟（LoL）**：Alt+护盾 = 自我护盾
 - **风暴英雄（HotS）**：Alt+增益技能 = 自我增益
@@ -18,31 +18,11 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **TargetType**: `Entity`（但强制 target = self）
-- **InteractionMode**: `TargetFirst` / `SmartCast`
+- **TargetType**: `Entity`（`graph.aim.pick.friendly`）
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/heal_spell.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "heal_spell",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "Entity",
-  "isSkillMapping": true,
-  "castModeOverride": "TargetFirst",
-  "autoTargetPolicy": "None",                     // Alt 按下时不自动选目标
-  "modifierBehavior": {
-    "AltHeld": {
-      "forceTargetSelf": true                     // Alt 按下时强制目标 = self
-    }
-  }
-}
-```
+Alt 绑在 `Camera.Rig` 的 `AlternateModifier` 上。技能数据里没有强制自身的字段。打到自己或友方时，技能在 `triggerGraphs` 里引用 `graph.aim.rule.unit_only` 和 `graph.aim.pick.friendly`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
 
-**关键点**：
-- `ModifierBehavior.AltHeld.forceTargetSelf = true` 覆盖目标选择逻辑
-- 在 `InputOrderMappingSystem` 中检测 Alt 键状态，将 `Order.Target` 设为施法者自身
 
 ---
 
@@ -57,7 +37,7 @@ Alt 自我施放的 Graph 实现与普通目标施放完全相同，差异仅在
 
 Phase OnCalculate:
   LoadContextSource         E[0]          // 施法者
-  LoadContextTarget         E[1]          // 目标（Alt 按下时 = E[0]）
+  LoadContextTarget         E[1]          // 目标（拾取图选出的单位）
   LoadAttribute             E[0], HealPower → F[0]
   LoadConfigFloat           "HealCoeff" → F[1]
   MulFloat                  F[0], F[1]   → F[2]
@@ -88,40 +68,15 @@ Effect 模板示例：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
-| InputOrderMappingSystem | `src/Core/Input/Orders/InputOrderMappingSystem.cs` | ❌ P2 — 需支持 ModifierBehavior.forceTargetSelf |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 
 ---
 
 ## 新增需求
 
-| 需求 | 优先级 | 说明 |
-|------|--------|------|
-| ModifierBehavior.forceTargetSelf | P2 | `InputOrderMappingSystem` 需检测 Alt 键状态，当 `forceTargetSelf = true` 时，将 `Order.Target` 设为施法者自身（`Order.Actor`）。 |
+无。友方或自身目标写在技能引用的 `graph.aim.pick.friendly`。
 
-**实现思路**：
-```csharp
-// src/Core/Input/Orders/InputOrderMappingSystem.cs
-public void ProcessInput(InputOrderMapping mapping)
-{
-    if (mapping.ModifierBehavior?.AltHeld?.ForceTargetSelf == true && IsAltHeld())
-    {
-        var order = new Order
-        {
-            Actor = localPlayerEntity,
-            Target = localPlayerEntity,  // 强制目标 = 自身
-            OrderTypeKey = mapping.OrderTypeKey,
-            Args = mapping.ArgsTemplate
-        };
-        SubmitOrder(order);
-        return;
-    }
-
-    // 正常目标选择逻辑
-    // ...
-}
-```
 
 ---
 
@@ -130,8 +85,8 @@ public void ProcessInput(InputOrderMapping mapping)
 - **DO**: 为自我施放提供视觉反馈（如技能图标边框变色），提示玩家 Alt 键已生效。
 - **DO**: 自我施放与普通施放共享相同的冷却和资源消耗。
 - **DO**: 在 UI 中显示 Alt 键提示（如技能图标下方显示"Alt: 自我施放"）。
-- **DON'T**: 不要在 Graph 层实现目标覆盖（属于 Input 层职责）。
-- **DON'T**: 不要将 Alt 自我施放与 SmartCast 的自动 fallback 混淆：Alt 是明确的强制行为，SmartCast fallback 是无目标时的兜底。
+- **DON'T**: 不要在技能数据里加强制自身字段。目标规则和拾取写在技能引用的图上。
+- **DON'T**: 不要把 Alt 写成另一套手势。手势仍是 `pref.aim.cast_mode`。友方目标写在 `graph.aim.pick.friendly`。
 
 ---
 
@@ -141,9 +96,9 @@ public void ProcessInput(InputOrderMapping mapping)
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 玩家按住 Alt，按下治疗技能键，当前 HP=300/500 |
+| **输入** | 技能引用 `graph.aim.pick.friendly`，指针在施法者身上，按下治疗技能键，当前 HP=300/500 |
 | **预期输出** | 治疗施法者自身，HP 恢复到 450/500（假设 HealAmount=150） |
-| **Log 关键字** | `[Input] AltHeld detected, forceTargetSelf=true` <br> `[Input] OrderSubmitted actionId=heal_spell target=<self_id>` <br> `[GAS] ApplyEffect Effect.Ability.HealSpell.Main -> source=<self_id> target=<self_id> HealAmount=150` |
+| **Log 关键字** | 目标来自 `graph.aim.pick.friendly` <br> `[GAS] ApplyEffect Effect.Ability.HealSpell.Main -> source=<self_id> target=<self_id> HealAmount=150` |
 | **截图要求** | 治疗特效出现在施法者身上，HP 条上升，浮字显示 +150 |
 | **多帧录屏** | F0: 按 Alt+技能键 → F1: Order 入队 → F2: Effect Propose → F4: OnApply → F5: HP 变化 → F6: 浮字出现 |
 
@@ -174,7 +129,7 @@ public void ProcessInput(InputOrderMapping mapping)
 ```csharp
 // 路径: src/Tests/GasTests/SpecialInput/AltSelfCastTests.cs
 [Test]
-public void S4_AltHeld_ForcesSelfTarget()
+public void S4_FriendlyPick_HealsSource()
 {
     // Arrange
     var world = CreateTestWorld();
@@ -182,8 +137,7 @@ public void S4_AltHeld_ForcesSelfTarget()
     var ally = SpawnUnit(world, hp: 200, maxHp: 500);
 
     // Act
-    world.HoldKey(source, "Alt");
-    world.SubmitOrder(source, OrderType.CastAbility, ally, abilityId: "heal_spell");  // 悬停 ally
+    world.SubmitOrder(source, OrderType.CastAbility, source, abilityId: "heal_spell");
     world.Tick(3);
 
     // Assert
@@ -210,14 +164,13 @@ public void S4_NoAlt_TargetsAlly()
 }
 
 [Test]
-public void S4_AltHeld_InsufficientMana_ActivationFailed()
+public void S4_FriendlyPick_InsufficientMana_ActivationFailed()
 {
     // Arrange
     var world = CreateTestWorld();
     var source = SpawnUnit(world, hp: 300, maxHp: 500, mana: 10);  // Cost = 50
 
     // Act
-    world.HoldKey(source, "Alt");
     world.SubmitOrder(source, OrderType.CastAbility, source, abilityId: "heal_spell");
     world.Tick(3);
 

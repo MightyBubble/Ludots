@@ -31,7 +31,7 @@ AbilityExecSystem 激活时:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | targetType: None |
+| `graph.aim.rule.none` | AimInteractionMod | 无目标 |
 | GameplayTagContainer | ✅ 已有 | weapon tag 切换 |
 | AbilityStateBuffer | ⚠️ 需要扩展 | form-based ability mapping，与 J2/J3 共用需求 |
 

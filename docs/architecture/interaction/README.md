@@ -7,14 +7,14 @@
 
 ## 1. 当前分支的事实边界
 
-截至 `feat/mod-interaction-showcase` / `94f5277`，以下能力已经是分支内的真实 runtime：
+以下路径是仓库里的运行时：
 
 - `ContextGroup` 运行时基础设施：
   - `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`
   - `src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`
 - `ContextScored` 输入路由：
   - `src/Core/Input/Orders/ContextScoredOrderResolver.cs`
-  - `src/Core/Input/Orders/InputOrderMappingSystem.cs`
+  - `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 - form-based ability routing：
   - `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`
   - `src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`
@@ -26,8 +26,8 @@
 - 最小 validation graph primitive：
   - `src/Core/NodeLibraries/GASGraph/GraphExecutor.cs`
 - 分支验证边界：
-  - `src/Tests/GasTests/ContextScoredResolverTests.cs`
-  - `src/Tests/GasTests/InputOrderAbilityAuditTests.cs`
+  - `src/Tests/GasTests/Ability/ContextScoredResolverTests.cs`
+  - `src/Tests/GasTests/Ability/InputOrderAbilityAuditTests.cs`
   - `src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`
   - `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
 
@@ -100,15 +100,18 @@ enum Acquisition
 
 ## 4. Ludots 映射
 
-### CastModeType → Acquisition
+### 手势与 Acquisition
 
-| Ludots CastModeType | Acquisition | 说明 |
-|---------------------------|-------------|------|
-| `TargetFirst` | `Explicit` | 先选单位，再按键 |
-| `SmartCast` | `Explicit` | 按键时自动取光标下目标 |
-| `AimCast` | `Explicit` | 按键后进入瞄准，再确认 |
-| `SmartCastWithIndicator` | `Explicit` | 按住显示指示器，松开确认 |
-| `ContextScored` | `ContextScored` | 已落地，见 `src/Core/Input/Orders/InputOrderMappingSystem.cs` |
+手势不是 Core 枚举。玩家偏好 `pref.aim.cast_mode`（`Input/interaction_prefs.json`）的取值就是交互状态。
+
+| 取值 | Acquisition | 说明 |
+|------|-------------|------|
+| `interaction.context.aim.smart` | `Explicit` | 状态激活时提交，然后 `DeactivateOwnContext` |
+| `interaction.context.aim.click` | `Explicit` | 按下进入瞄准，再点确认 |
+| `interaction.context.aim.release` | `Explicit` | 按下进入瞄准，松开确认 |
+| context group root | `ContextScored` | `CommandIntentBufferDrainSystem` 把该槽交给 `ContextScoredOrderResolver` |
+
+先选再放要给 `pref.aim.cast_mode` 再加一个取值和状态，规则图不用改。
 
 ### OrderTargetType → TargetMode
 
@@ -209,8 +212,9 @@ ability 激活阶段只读取两类 gate：
 当前分支没有把 `ContextGroupId` 塞进 `AbilityDefinition`。真实路径是：
 
 ```text
-Input mapping root slot (ArgsTemplate.I0)
-  -> resolve root ability
+SubmitCast slot
+  -> CommandIntentBufferDrainSystem
+  -> AbilitySlotResolver 取出 root ability
   -> ContextGroupRegistry.TryGetByRootAbility(...)
   -> spatial query in search radius
   -> per-candidate distance / angle / hovered bias
@@ -225,12 +229,11 @@ Input mapping root slot (ArgsTemplate.I0)
 - `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`
 - `src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`
 - `src/Core/Input/Orders/ContextScoredOrderResolver.cs`
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs`
-- `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 
 分支验证路径：
 
-- `src/Tests/GasTests/ContextScoredResolverTests.cs`
+- `src/Tests/GasTests/Ability/ContextScoredResolverTests.cs`
 - `src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`
 - `artifacts/acceptance/interaction-showcase/path.mmd`
 - `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`

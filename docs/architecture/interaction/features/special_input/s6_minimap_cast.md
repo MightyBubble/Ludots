@@ -19,20 +19,10 @@
 
 - **Trigger**: `PressedThisFrame`
 - **TargetType**: `Position`（小地图坐标→世界坐标）
-- **InteractionMode**: `Explicit`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/teleport.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "teleport",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "Position",
-  "isSkillMapping": true,
-  "inputSource": "Minimap"                        // ❌ P3 — 需新增 Minimap 输入源
-}
-```
+小地图指针是交互状态 `interaction.context.minimap`（LudotsCoreMod，`foreground`，`pointerRouting` 为 `ui`）。按下、松开、移动是 `graph.minimap.press`、`graph.minimap.release`、`graph.minimap.track`。命令点地是 `graph.minimap.command`，由声明了 `Command` 的 mod 合并进这个状态。世界点来自 `GraphPointerSampleRuntime`。
+
 
 **关键点**：
 - 需要 `MinimapInputAdapter` 将小地图点击坐标转换为世界坐标
@@ -84,7 +74,7 @@ Effect 模板示例：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | MinimapInputAdapter | `src/Core/Input/Minimap/MinimapInputAdapter.cs` | ❌ P3 — 需新增小地图点击→世界坐标转换 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 

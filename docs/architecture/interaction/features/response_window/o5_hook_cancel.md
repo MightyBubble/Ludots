@@ -22,7 +22,7 @@ Hook/取消是一种程序自动取消效果的机制，无需玩家交互。核
 
 - **Trigger**: 无（Phase Listener 自动触发）
 - **TargetType**: `None`
-- **InteractionMode**: 不适用
+- **手势**: 偏好 `pref.aim.cast_mode`
 
 ```json5
 // 配置路径: mods/<yourMod>/Effects/<shield_effect_id>.json

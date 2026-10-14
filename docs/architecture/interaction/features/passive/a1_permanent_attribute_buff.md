@@ -14,11 +14,11 @@
 
 - **Trigger**: N/A（被动，无输入触发）
 - **TargetType**: N/A
-- **InteractionMode**: N/A
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 无 InputOrderMapping — 被动在 entity spawn 时或装备时由系统直接 ApplyEffectTemplate
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
+这条不走玩家输入。技能不引用瞄准规则图，也不占用控制方案上的技能键。
+
+```
 // 此机制不经过输入层
 ```
 

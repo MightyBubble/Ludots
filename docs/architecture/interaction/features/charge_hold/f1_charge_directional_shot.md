@@ -16,22 +16,10 @@
 
 - **Trigger**: `PressedThisFrame`（Down 边沿触发 .Start）+ `ReleasedThisFrame`（Up 边沿触发 .End）
 - **TargetType**: `Direction`
-- **InteractionMode**: `SmartCastWithIndicator`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/ability_Q.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_Q",
-  "trigger": "PressedThisFrame",          // Down 边沿生成 .Start order
-  "orderTypeKey": "castAbility",
-  "targetType": "Direction",
-  "isSkillMapping": true,
-  "castModeOverride": "SmartCastWithIndicator",
-  "heldPolicy": "StartEnd"               // 自动生成 .Start / .End 对
-  // ReleasedThisFrame → suffix ".End" order，无需第二个 mapping
-}
-```
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ---
 
@@ -114,7 +102,7 @@ Effect 模板示例：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| HeldPolicy.StartEnd | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 按下与松开 | 交互状态 | 按下激活 `pref.aim.cast_mode` 指向的手势状态，松开确认走 `graph.aim.release_confirm` |
 | AbilityExecSpec EventGate | `src/Core/Gameplay/GAS/AbilityExecSpec.cs` | ✅ 已有 |
 | LoadSelfAttribute / WriteSelfAttribute | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | EffectClip duration + period | `src/Core/Gameplay/GAS/Components/EffectClip.cs` | ✅ 已有 |

@@ -23,7 +23,7 @@
 
 - **Trigger**: 无（被动触发）
 - **TargetType**: `None`（或根据具体响应类型）
-- **InteractionMode**: 不适用
+- **手势**: 偏好 `pref.aim.cast_mode`
 
 ```json5
 // 配置路径: mods/<yourMod>/ResponseChainListeners/<listener_id>.json
