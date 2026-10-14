@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using Ludots.Core.UI.CommandDeck;
@@ -16,7 +17,6 @@ using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
 using Ludots.WebUI.PanelKit;
 using NUnit.Framework;
-using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.WebUiPanelKit;
 
@@ -544,7 +544,9 @@ public sealed class CommandDeckDisplayModeTests
 				world,
 				new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry())),
 			query,
-			keyRegistry.Register("collection.ui.cast.raw"));
+			InputCollectionKeyDeclarations.ForResolvedRoles(
+				keyRegistry,
+				new Dictionary<string, string> { ["castRaw"] = "collection.ui.cast.raw" }));
 		var controlPlane = new ControlPlaneView(collections, query);
 
 		Entity p1 = world.Create(new PlayerIdentity { PlayerId = 1 });

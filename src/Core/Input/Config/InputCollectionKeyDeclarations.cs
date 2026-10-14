@@ -74,12 +74,6 @@ namespace Ludots.Core.Input.Config
                 "Input/collection_keys.json",
                 global::Ludots.Core.Config.ConfigMergePolicy.DeepObject);
             List<global::Ludots.Core.Config.ConfigFragment> fragments = configs.CollectFragmentsWithSources(in entry);
-            if (fragments.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    "INPUT.COLLECTION_KEYS.ERR.FileMissing: Input/collection_keys.json must declare input collection key roles (constitution §08: no builtin key fallback).");
-            }
-
             var roles = new Dictionary<string, string>(StringComparer.Ordinal);
             var firstSource = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i < fragments.Count; i++)

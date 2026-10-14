@@ -114,7 +114,7 @@ namespace Ludots.Tests.GAS.Production
 
             int abilityTargetsKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
             int commandSourceKey = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
-            int rawKey = store.KeyRegistry.GetId("collection.ui.cast.raw");
+            int rawKey = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireRole(engine, "castRaw"));
             int casterMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
             int targetMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
 

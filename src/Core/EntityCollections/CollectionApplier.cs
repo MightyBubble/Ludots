@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 
 namespace Ludots.Core.EntityCollections
@@ -45,7 +46,7 @@ namespace Ludots.Core.EntityCollections
         private readonly EntityCollectionStore _store;
         private ControlDomainQuery? _domains;
         private FilterProfileRegistry? _filters;
-        private int _castRawCollectionKeyId;
+        private InputCollectionKeyDeclarations? _collectionKeys;
 
         private readonly EntityKeyedSoaTable<RouteRecord> _routes;
         private readonly Dictionary<Entity, int> _domainIndexMap = new(capacity: 8);
@@ -74,19 +75,17 @@ namespace Ludots.Core.EntityCollections
         /// Binds the cast-commit / domain-routing dependencies (engine assembly time, after the
         /// input interaction registries exist). Cast commits and routed writes fail closed until
         /// this is called; <see cref="Apply"/> and <see cref="ApplyDescriptor"/> work from construction.
+        /// CommitCast resolves role <c>castRaw</c> from <paramref name="collectionKeys"/>.
+        /// An unbound role fails that commit with RoleUnbound.
         /// </summary>
-        public void BindInputInteraction(FilterProfileRegistry filters, ControlDomainQuery domains, int castRawCollectionKeyId)
+        public void BindInputInteraction(
+            FilterProfileRegistry filters,
+            ControlDomainQuery domains,
+            InputCollectionKeyDeclarations collectionKeys)
         {
             _filters = filters ?? throw new ArgumentNullException(nameof(filters));
             _domains = domains ?? throw new ArgumentNullException(nameof(domains));
-            if (castRawCollectionKeyId <= 0 || string.IsNullOrEmpty(_store.KeyRegistry.GetName(castRawCollectionKeyId)))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(castRawCollectionKeyId),
-                    "The cast-raw collection key must be a registered, data-declared key (Input/collection_keys.json castRaw).");
-            }
-
-            _castRawCollectionKeyId = castRawCollectionKeyId;
+            _collectionKeys = collectionKeys ?? throw new ArgumentNullException(nameof(collectionKeys));
         }
 
         /// <summary>
@@ -255,7 +254,7 @@ namespace Ludots.Core.EntityCollections
 
         private void RequireRoutedBound()
         {
-            if (_domains == null || _filters == null)
+            if (_domains == null || _filters == null || _collectionKeys == null)
             {
                 throw new InvalidOperationException(
                     "COLLECTION.APPLIER.RoutingUnbound: cast commits and domain-routed writes require BindInputInteraction (engine assembly time).");
@@ -280,13 +279,18 @@ namespace Ludots.Core.EntityCollections
                 throw new ArgumentException("Local anchor rep is required for cast commits.", nameof(localAnchorRep));
             }
 
-            string castRawKeyName = _store.KeyRegistry.GetName(_castRawCollectionKeyId)
-                ?? throw new InvalidOperationException("COLLECTION.COMMIT_CAST.RawKeyUnregistered.");
+            int castRawKeyId = _collectionKeys!.RequireRoleKeyId("castRaw");
+            string castRawKeyName = _store.KeyRegistry.GetName(castRawKeyId);
+            if (string.IsNullOrEmpty(castRawKeyName))
+            {
+                throw new InvalidOperationException("COLLECTION.COMMIT_CAST.RawKeyUnregistered.");
+            }
+
             var rawDescriptor = EntityCollectionDescriptor.Create(
                 castRawKeyName,
                 sourceKind,
                 EntityCollectionRoleKind.AcquisitionPreview);
-            _store.Replace(localAnchorRep, _castRawCollectionKeyId, in rawDescriptor, rawHits, localAnchorRep);
+            _store.Replace(localAnchorRep, castRawKeyId, in rawDescriptor, rawHits, localAnchorRep);
 
             int filterProfileId = _world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context)
                 ? context.FilterProfileId

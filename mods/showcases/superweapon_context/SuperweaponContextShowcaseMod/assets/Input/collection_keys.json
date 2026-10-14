@@ -1,3 +1,4 @@
 {
-  "commandSource": "interaction.selection"
+  "commandSource": "interaction.selection",
+  "castRaw": "collection.ui.cast.raw"
 }

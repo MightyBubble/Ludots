@@ -566,7 +566,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberAdded",
-          "key": "collection.ui.command.hover"
+          "key": "role:hover"
         },
         "command": {
           "kind": "CreatePresenter",
@@ -577,7 +577,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.ui.command.hover"
+          "key": "role:hover"
         },
         "command": {
           "kind": "DestroyScopedPresenter",

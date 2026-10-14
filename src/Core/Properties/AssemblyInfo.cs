@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("ArchitectureTests")]
 [assembly: InternalsVisibleTo("NetworkingTests")]
 [assembly: InternalsVisibleTo("GasTests")]
+[assembly: InternalsVisibleTo("WebUiPanelKitTests")]
 [assembly: InternalsVisibleTo("Ludots.Tool")]
 [assembly: InternalsVisibleTo("CapabilityStandardScriptFlowSandboxMod")]
 [assembly: InternalsVisibleTo("CapabilityStandardLiveSkillWorkbenchShowcaseMod")]

@@ -8,10 +8,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using NUnit.Framework;
-using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -211,6 +211,24 @@ namespace Ludots.Tests.GAS
             Assert.That(allocated, Is.EqualTo(0));
         }
 
+        [Test]
+        public void CommitCast_UnboundCastRawRole_FailsRoleUnbound()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, declareCastRaw: false);
+            Entity anchor = world.Create(new PlayerIdentity { PlayerId = 1 });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
+                harness.Writer.CommitCast(
+                    anchor,
+                    harness.CommandSourceKeyId,
+                    Array.Empty<Entity>(),
+                    EntityCollectionSourceKind.UiAcquisition));
+
+            Assert.That(ex!.Message, Does.Contain("RoleUnbound"));
+            Assert.That(ex.Message, Does.Contain("castRaw"));
+        }
+
         private static long MeasureCommitCastAllocations(Harness harness, Entity anchor, Entity[] raw)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();
@@ -234,7 +252,7 @@ namespace Ludots.Tests.GAS
             public int CommandSourceKeyId;
             public int UiCastRawKeyId;
 
-            public static Harness Create(World world)
+            public static Harness Create(World world, bool declareCastRaw = true)
             {
                 var types = new RelationshipTypeRegistry();
                 var relationships = new RelationshipRuntime(
@@ -297,10 +315,10 @@ namespace Ludots.Tests.GAS
                     World = world,
                     Store = store,
                     Filters = filters,
-                    Writer = CreateApplier(world, store, filters, domains, keyRegistry),
+                    Writer = CreateApplier(world, store, filters, domains, keyRegistry, declareCastRaw),
                     ControlsTypeId = controlsTypeId,
                     CommandSourceKeyId = keyRegistry.Register("core.selection"),
-                    UiCastRawKeyId = keyRegistry.Register("collection.ui.cast.raw"),
+                    UiCastRawKeyId = declareCastRaw ? keyRegistry.Register("collection.ui.cast.raw") : 0,
                 };
             }
 
@@ -309,10 +327,20 @@ namespace Ludots.Tests.GAS
                 EntityCollectionStore store,
                 FilterProfileRegistry filters,
                 ControlDomainQuery domains,
-                StringIntRegistry keyRegistry)
+                StringIntRegistry keyRegistry,
+                bool declareCastRaw)
             {
+                var roles = new Dictionary<string, string>(StringComparer.Ordinal);
+                if (declareCastRaw)
+                {
+                    roles["castRaw"] = "collection.ui.cast.raw";
+                }
+
                 var applier = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
-                applier.BindInputInteraction(filters, domains, keyRegistry.Register("collection.ui.cast.raw"));
+                applier.BindInputInteraction(
+                    filters,
+                    domains,
+                    InputCollectionKeyDeclarations.ForResolvedRoles(keyRegistry, roles));
                 return applier;
             }
 

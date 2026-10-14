@@ -56,7 +56,7 @@
       {
         "id": "write",
         "op": "WriteCollection",
-        "collectionKey": "collection.ui.command.hover"
+        "collectionKey": "role:hover"
       },
       {
         "id": "ok",

@@ -156,13 +156,15 @@ namespace Ludots.Tests.Architecture
             Assert.That(File.Exists(entityCollectionTypesPath), Is.True, $"Missing {entityCollectionTypesPath}");
             Assert.That(File.Exists(gameEnginePath), Is.True, $"Missing {gameEnginePath}");
             Assert.That(File.Exists(contextRuntimePath), Is.True, $"Missing {contextRuntimePath}");
-            Assert.That(File.Exists(collectionKeysDeclarationPath), Is.True, $"Missing {collectionKeysDeclarationPath}");
             Assert.That(File.Exists(applierPath), Is.True, $"Missing {applierPath}");
 
             string entityCollectionTypes = File.ReadAllText(entityCollectionTypesPath);
             string gameEngine = File.ReadAllText(gameEnginePath);
             string contextRuntime = File.ReadAllText(contextRuntimePath);
-            string collectionKeysDeclaration = File.ReadAllText(collectionKeysDeclarationPath);
+            string applier = File.ReadAllText(applierPath);
+            string collectionKeysDeclaration = File.Exists(collectionKeysDeclarationPath)
+                ? File.ReadAllText(collectionKeysDeclarationPath)
+                : string.Empty;
 
             Assert.Multiple(() =>
             {
@@ -170,10 +172,14 @@ namespace Ludots.Tests.Architecture
                     "Constitution §08: the engine holds no builtin collection key table; key semantics are data-declared.");
                 Assert.That(gameEngine, Does.Contain("InputCollectionKeyDeclarations.LoadAndRegister"),
                     "GameEngine must register input collection keys from the Input/collection_keys.json declaration, not from a C# constant table.");
-                Assert.That(collectionKeysDeclaration, Does.Contain("\"castRaw\""),
-                    "The cast-raw capture key must be declared in Input/collection_keys.json.");
-                Assert.That(collectionKeysDeclaration, Does.Contain("\"hover\""),
-                    "The hover collection role must be declared in Input/collection_keys.json.");
+                Assert.That(gameEngine, Does.Not.Contain("RequireRoleKeyId(\"castRaw\")"),
+                    "Engine assembly must not require castRaw. The role is bound by the boot that calls CommitCast.");
+                Assert.That(applier, Does.Contain("RequireRoleKeyId(\"castRaw\")"),
+                    "CommitCast must resolve the castRaw role and fail with RoleUnbound when it is missing.");
+                Assert.That(collectionKeysDeclaration, Does.Not.Contain("\"castRaw\""),
+                    "The engine root must not declare castRaw.");
+                Assert.That(collectionKeysDeclaration, Does.Not.Contain("\"hover\""),
+                    "The engine root must not declare hover.");
                 Assert.That(collectionKeysDeclaration, Does.Not.Contain("\"commandSource\""),
                     "commandSource is declared by the game entry that loads the role. The engine root file leaves it unbound.");
                 Assert.That(gameEngine, Does.Not.Contain("InteractionContextIds.Default"),

@@ -1822,7 +1822,7 @@ namespace Ludots.Core.Engine
 
             gasGraphApi.BindCustomEvents(customEventCatalog.Names);
             var collectionApplier = new CollectionApplier(World, entityCollectionStore);
-            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.RequireRoleKeyId("castRaw"));
+            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations);
             gasGraphApi.BindCollectionApplier(collectionApplier);
             // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
             var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
