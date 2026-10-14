@@ -1,4 +1,5 @@
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
@@ -1268,6 +1269,75 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
     }
 
     return Results.Ok(new { ok = true, path = outFile });
+});
+
+app.MapPost("/api/mods/{modId}/maps/{mapId}/crowd-navsurface", async (string modId, string mapId, string? boardName, HttpRequest req) =>
+{
+    if (!req.HasFormContentType)
+    {
+        return Results.BadRequest(new { ok = false, error = "Expected multipart/form-data." });
+    }
+
+    var form = await req.ReadFormAsync();
+    var terrainFile = form.Files.GetFile("terrain");
+    string output = form["output"].ToString();
+    if (terrainFile == null)
+    {
+        return Results.BadRequest(new { ok = false, error = "Missing form file 'terrain'." });
+    }
+
+    if (string.IsNullOrWhiteSpace(output))
+    {
+        return Results.BadRequest(new { ok = false, error = "Missing form field 'output'." });
+    }
+
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found)
+        {
+            return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
+        }
+
+        var board = EditorRepo.ResolveRequiredBoardByName(mapR.Map, boardName);
+        if (!EditorRepo.IsGridBoard(board))
+        {
+            return Results.BadRequest(new { ok = false, error = $"Board SpatialType '{board.SpatialType}' 不是网格，不能烘焙 CrowdSimulation 地表。" });
+        }
+
+        int cellSizeCm = EditorRepo.RequireGridCellSizeCm(board);
+        await using var terrainStream = terrainFile.OpenReadStream();
+        var terrain = ReactGridTerrainBinary.Read(terrainFile.FileName, terrainStream, cellSizeCm);
+        NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthored(
+            repoRoot,
+            modId,
+            mapId,
+            terrain,
+            Array.Empty<NavSurfaceJumpCandidate>());
+        string modRoot = ctx.ModsById[ctx.TargetModId].RootPath;
+        string outFile = CrowdNavSurfaceAuthoring.ResolveNavSurfaceOutputPath(modRoot, output);
+        Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+        await using (var outputStream = File.Create(outFile))
+        {
+            NavSurfaceAsset.Write(asset, outputStream);
+        }
+
+        return Results.Ok(new
+        {
+            ok = true,
+            path = outFile,
+            cellsX = asset.NavCellsX,
+            cellsY = asset.NavCellsY,
+            terrainCount = asset.TerrainTypeIds.Length,
+            jumpCount = asset.JumpCandidates.Length,
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
