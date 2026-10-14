@@ -35,7 +35,14 @@
           "terrainId": "cliff",
           "areaId": "sheer"
         }
-      ]
+      ],
+      "jumpLinkBake": {
+        "maxGapCm": 37500,
+        "linkSpacingCm": 31250,
+        "endpointMaxSlopeDeg": 22,
+        "endpointTerrain": ["shore", "land", "mountain"],
+        "gapTerrain": ["cliff", "water"]
+      }
     }
   }
 }

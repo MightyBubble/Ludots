@@ -125,22 +125,31 @@ public sealed class CrowdNavSurfaceAuthoringTests
         string path = Path.Combine(Path.GetTempPath(), "ludots-jump-" + Guid.NewGuid().ToString("N") + ".navsurface");
         try
         {
-            NavSurfaceJumpCandidate jump = new()
+            NavSurfaceAsset baked = Bake(Grid(2, 100), TwoTypes, Sources());
+            NavSurfaceAsset existing = new()
             {
-                FromX = 0,
-                FromY = 0,
-                ToX = 1,
-                ToY = 1,
-                DropCm = 10,
-                LengthCells = 1,
+                NavCellsX = baked.NavCellsX,
+                NavCellsY = baked.NavCellsY,
+                NavCellSizeCm = baked.NavCellSizeCm,
+                TerrainTypeIds = baked.TerrainTypeIds,
+                TerrainCells = baked.TerrainCells,
+                JumpCandidates =
+                [
+                    new NavSurfaceJumpCandidate
+                    {
+                        FromX = 0,
+                        FromY = 0,
+                        ToX = 1,
+                        ToY = 1,
+                        DropCm = 10,
+                        LengthCells = 1,
+                    },
+                ],
             };
-            NavSurfaceAsset existing = Bake(Grid(2, 100), TwoTypes, Sources(), new[] { jump });
             using (FileStream created = File.Create(path))
             {
                 NavSurfaceAsset.Write(existing, created);
             }
-
-            NavSurfaceAsset baked = Bake(Grid(2, 100), TwoTypes, Sources());
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(path, baked));
             Assert.That(ex!.Message, Does.Contain("1"));
@@ -160,50 +169,6 @@ public sealed class CrowdNavSurfaceAuthoringTests
         {
             if (File.Exists(path)) File.Delete(path);
         }
-    }
-
-    [Test]
-    public void JumpCandidateOutOfGrid_NamesIndex()
-    {
-        NavSurfaceJumpCandidate jump = new()
-        {
-            FromX = 3,
-            FromY = 0,
-            ToX = 0,
-            ToY = 0,
-            DropCm = 100,
-            LengthCells = 3,
-        };
-
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            Bake(Grid(2, 100), TwoTypes, Sources(), new[] { jump }));
-
-        Assert.That(ex!.Message, Does.Contain("跳跃候选 0"));
-        Assert.That(ex.Message, Does.Contain("（3,0）"));
-        Assert.That(ex.Message, Does.Contain("2×2"));
-    }
-
-    [Test]
-    public void JumpCandidateInGrid_IsCopied()
-    {
-        NavSurfaceJumpCandidate jump = new()
-        {
-            FromX = 0,
-            FromY = 0,
-            ToX = 1,
-            ToY = 1,
-            DropCm = -40,
-            LengthCells = 1.5f,
-        };
-
-        NavSurfaceAsset asset = Bake(Grid(2, 100), TwoTypes, Sources(), new[] { jump });
-
-        Assert.That(asset.JumpCandidates, Has.Length.EqualTo(1));
-        Assert.That(asset.JumpCandidates[0].FromX, Is.EqualTo(jump.FromX));
-        Assert.That(asset.JumpCandidates[0].ToY, Is.EqualTo(jump.ToY));
-        Assert.That(asset.JumpCandidates[0].DropCm, Is.EqualTo(jump.DropCm));
-        Assert.That(asset.TerrainCells, Is.EqualTo(new byte[4]));
-        Assert.That(asset.TerrainTypeIds, Is.EqualTo(TwoTypes));
     }
 
     [Test]
@@ -251,14 +216,13 @@ public sealed class CrowdNavSurfaceAuthoringTests
                     repo,
                     modId,
                     mapId,
-                    terrain,
-                    Array.Empty<NavSurfaceJumpCandidate>());
+                    terrain);
                 Assert.That(baked.TerrainTypeIds, Is.EqualTo(fixture.TerrainTypeIds), name);
                 Assert.That(baked.TerrainCells, Is.EqualTo(fixture.TerrainCells), name);
                 Assert.That(baked.NavCellsX, Is.EqualTo(fixture.NavCellsX), name);
                 Assert.That(baked.NavCellsY, Is.EqualTo(fixture.NavCellsY), name);
                 Assert.That(baked.NavCellSizeCm, Is.EqualTo(fixture.NavCellSizeCm), name);
-                Assert.That(baked.JumpCandidates, Is.Empty, name);
+                Assert.That(baked.JumpCandidates, Has.Length.EqualTo(fixture.JumpCandidates.Length), name);
                 Assert.That(fixture.JumpCandidates, Is.Not.Empty, name);
             }
         });
@@ -267,13 +231,8 @@ public sealed class CrowdNavSurfaceAuthoringTests
     private static NavSurfaceAsset Bake(
         LogicTerrainField terrain,
         IReadOnlyList<string> terrainTypeIds,
-        CrowdNavSurfaceBakeSources sources,
-        IReadOnlyList<NavSurfaceJumpCandidate>? jumps = null)
-        => CrowdNavSurfaceAuthoring.Bake(
-            terrain,
-            terrainTypeIds,
-            sources,
-            jumps ?? Array.Empty<NavSurfaceJumpCandidate>());
+        CrowdNavSurfaceBakeSources sources)
+        => CrowdNavSurfaceAuthoring.Bake(terrain, terrainTypeIds, sources, jumpLinkBake: null);
 
     private static SparseGridLogicTerrainField Grid(int cells, int cellCm)
         => new(cells, cells, cellCm, chunkSizeCells: 64);
