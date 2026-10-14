@@ -389,6 +389,7 @@ namespace Ludots.Tests.GasTests.Graph
             var modifiers = new EventParamSchema("modifiers", EventParamType.Int, "Aim.Modifiers");
             schemas.RegisterCustom(new EventSchema("Aim.Rule.Press", EventScope.Map, new[] { modifiers }));
             schemas.RegisterCustom(new EventSchema("Aim.Rule.Resolve", EventScope.Map, new[] { modifiers }));
+            schemas.RegisterCustom(new EventSchema("Aim.Shape.Bind", EventScope.Map, Array.Empty<EventParamSchema>()));
 
             foreach (string path in Directory.GetFiles(aimDir, "graph.aim.*.json"))
             {
