@@ -12,7 +12,7 @@ public class CrowdS1LogicTerrainCouplingTests
     public void S1337_LogicTerrainStaysFlatMeterGrid()
     {
         string repoRoot = FindRepoRoot();
-        var engine = new GameEngine();
+        using var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(CrowdMods(repoRoot), Path.Combine(repoRoot, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
         engine.SetService(CoreServiceKeys.ViewController, new StubView());
