@@ -1573,8 +1573,7 @@ namespace {modId}
                     repoRoot,
                     modId,
                     mapId,
-                    terrain,
-                    Array.Empty<NavSurfaceJumpCandidate>());
+                    terrain);
                 string fullOut = Path.GetFullPath(outFile);
                 CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(fullOut, asset);
 

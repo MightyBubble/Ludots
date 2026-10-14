@@ -1315,8 +1315,7 @@ app.MapPost("/api/mods/{modId}/maps/{mapId}/crowd-navsurface", async (string mod
             repoRoot,
             modId,
             mapId,
-            terrain,
-            Array.Empty<NavSurfaceJumpCandidate>());
+            terrain);
         string modRoot = ctx.ModsById[ctx.TargetModId].RootPath;
         string outFile = CrowdNavSurfaceAuthoring.ResolveNavSurfaceOutputPath(modRoot, output);
         CrowdNavSurfaceAuthoring.WritePreservingJumpCandidates(outFile, asset);
