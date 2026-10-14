@@ -22,6 +22,14 @@
         "graph.aim.pick.hostile",
         "graph.aim.enter"
       ]
+    },
+    {
+      "id": "interaction.context.aim.cast",
+      "triggers": [
+        {
+          "trigger": "graph.aim_schemes.apply_scheme_cast_default"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,130 @@
+[
+  {
+    "id": "graph.moba.apply_scheme_cast_default",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "scheme.aim.kbm",
+        "event": "ControlSchemeChanged",
+        "start": "rep_kbm",
+        "budget": "single-slice",
+        "filters": {
+          "payload": {
+            "MapTrigger.NewSchemeId": "scheme.aim.kbm"
+          }
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep_kbm",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot_kbm",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "check_kbm",
+        "op": "IsPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
+        "id": "jump_kbm",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "set_kbm",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep_kbm",
+        "fromPort": "next",
+        "to": "slot_kbm"
+      },
+      {
+        "from": "slot_kbm",
+        "fromPort": "next",
+        "to": "check_kbm"
+      },
+      {
+        "from": "check_kbm",
+        "fromPort": "next",
+        "to": "jump_kbm"
+      },
+      {
+        "from": "jump_kbm",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "jump_kbm",
+        "fromPort": "false",
+        "to": "set_kbm"
+      },
+      {
+        "from": "set_kbm",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep_kbm",
+        "fromPort": "value",
+        "to": "check_kbm",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_kbm",
+        "fromPort": "value",
+        "to": "check_kbm",
+        "toPort": "target"
+      },
+      {
+        "from": "rep_kbm",
+        "fromPort": "value",
+        "to": "set_kbm",
+        "toPort": "source"
+      },
+      {
+        "from": "slot_kbm",
+        "fromPort": "value",
+        "to": "check_kbm",
+        "toPort": "value"
+      },
+      {
+        "from": "check_kbm",
+        "fromPort": "value",
+        "to": "jump_kbm",
+        "toPort": "condition"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

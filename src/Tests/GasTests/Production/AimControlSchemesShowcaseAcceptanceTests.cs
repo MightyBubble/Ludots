@@ -18,6 +18,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Persistence;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Camera;
@@ -88,7 +89,14 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     }
 
     [Test]
-    public void SchemeSwitch_ToGamepad_MouseStopsDrivingAimAndStickStarts()
+        public void SchemeSwitch_AppliesMappedCastDefault_ExplicitChoiceSurvivesSwitchAndSnapshot()
+        {
+            using Session session = Session.Boot("scheme.aim.kbm");
+            session.AssertSchemeDefaultFollowsUntilPlayerChooses();
+        }
+
+        [Test]
+        public void SchemeSwitch_ToGamepad_MouseStopsDrivingAimAndStickStarts()
     {
         using Session session = Session.Boot("scheme.aim.kbm");
         Vector2 hero = session.Position(session.Hero);
@@ -188,9 +196,9 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         }
 
         public string SchemeId { get; }
-        public Entity Hero { get; }
-        public Entity Near { get; }
-        public Entity StickDummy { get; }
+        public Entity Hero { get; private set; }
+        public Entity Near { get; private set; }
+        public Entity StickDummy { get; private set; }
 
         public static Session Boot(string schemeId)
         {
@@ -286,6 +294,47 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             WaitUntil(() => ActiveOrderTypeId() == AttackOrderTypeId(), 6);
             Order attack = RequireActiveOrder("attackTarget");
             Assert.That(attack.Target, Is.EqualTo(Near), Diag("primary hostile attack"));
+        }
+
+        public void AssertSchemeDefaultFollowsUntilPlayerChooses()
+        {
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.smart"), Diag("kbm default"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("scheme"), Diag("seeded origin"));
+
+            SwitchScheme("scheme.aim.gamepad");
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.release"), Diag("gamepad default"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("scheme"), Diag("origin stays scheme"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("scheme default"));
+
+            SwitchScheme("scheme.aim.kbm");
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.smart"), Diag("kbm default again"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("scheme"), Diag("origin still scheme"));
+
+            SetMode("interaction.context.aim.click", "f3");
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("player"), Diag("explicit origin"));
+
+            var snapshotService = new WorldSnapshotService();
+            var restoreService = new WorldRestoreService();
+            WorldSaveSnapshot snapshot = snapshotService.Capture(
+                _engine,
+                SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+
+            SwitchScheme("scheme.aim.gamepad");
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.click"), Diag("explicit survives switch"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("player"), Diag("explicit origin survives switch"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("explicit switch"));
+
+            SetMode("interaction.context.aim.smart", "f1");
+            restoreService.Restore(_engine, snapshot);
+            RebindPlaced();
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.click"), Diag("snapshot cast mode"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("player"), Diag("snapshot origin"));
+
+            TickUntilFixedTickAdvances(3);
+            RebindPossessedRep(Hero);
+            SwitchScheme("scheme.aim.kbm_skills");
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.click"), Diag("restored choice survives switch"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("player"), Diag("restored origin"));
         }
 
         public void SwitchScheme(string schemeId)
@@ -479,7 +528,11 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(input.HasContext("AimSchemes.Controls"), Is.True, Diag("startup controls"));
             Assert.That(input.HasContext(_inputContextId), Is.True, Diag("scheme context"));
             Assert.That(Contexts(), Does.Contain("interaction.context.aim.cast"), Diag("aim cast context"));
-            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.smart"), Diag("seeded cast mode"));
+            string expectedMode = SchemeId == "scheme.aim.gamepad"
+                ? "interaction.context.aim.release"
+                : "interaction.context.aim.smart";
+            Assert.That(ReadCastMode(), Is.EqualTo(expectedMode), Diag("scheme cast default"));
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("scheme"), Diag("cast origin"));
             Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(0f).Within(0.1f), Diag("range stays unset until a cast"));
             Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("stick seed"));
             Assert.That(CollectionCount("aim.actors"), Is.EqualTo(1), Diag("aim actor"));
@@ -853,7 +906,43 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         private string ReadCastMode()
         {
-            return ReadAimPrefValue(_engine, Hero);
+            return ReadPref("pref.aim.cast_mode");
+        }
+
+        private string ReadPref(string key)
+        {
+            return ReadAimPrefValue(_engine, Hero, key);
+        }
+
+        private void RebindPlaced()
+        {
+            Hero = FindNamed("AimSchemes Hero");
+            Near = FindNamed("Dummy Near");
+            StickDummy = FindNamed("Dummy Stick");
+        }
+
+        private void RebindPossessedRep(Entity rep)
+        {
+            ClientLocalSeatRegistry seats = _engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry)
+                ?? throw new InvalidOperationException("ClientLocalSeatRegistry missing.");
+            seats.Require("seat.0").PossessedRep = rep;
+        }
+
+        private Entity FindNamed(string name)
+        {
+            Entity found = Entity.Null;
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            _engine.World.Query(in query, (Entity entity, ref Name entityName) =>
+            {
+                if (string.Equals(entityName.Value, name, StringComparison.Ordinal))
+                {
+                    found = entity;
+                    count++;
+                }
+            });
+            Assert.That(count, Is.EqualTo(1), Diag("name " + name));
+            return found;
         }
 
         private bool AimGestureOpen()
@@ -1165,7 +1254,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
         }
     
-        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep, string key)
         {
             InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
                 ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
@@ -1174,10 +1263,10 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 return "<none>";
             }
 
-            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            int keyId = catalog.Keys.GetId(key);
             if (keyId == catalog.Keys.InvalidId)
             {
-                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+                throw new InvalidOperationException(key + " is not declared.");
             }
 
             int valueId = pref.ResolvePref(0, keyId);
