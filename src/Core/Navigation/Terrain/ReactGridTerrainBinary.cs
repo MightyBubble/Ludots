@@ -6,9 +6,10 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.Navigation.Terrain
 {
     /// <summary>
-    /// Reads the React web editor's grid map_data.bin terrain: chunks of TerrainChunkCells squared,
-    /// dense stride-4 cells or the sparse 0x84 chunk-indexed layout. Shared by the runtime board
-    /// loader and the bake tooling so grid boards keep one authoritative reader.
+    /// React web editor grid map_data.bin: chunks of TerrainChunkCells squared, dense stride-4
+    /// cells or the sparse 0x84 chunk-indexed layout. Shared by the runtime board loader and the
+    /// bake tooling so grid boards keep one authoritative reader.
+    /// <see cref="WriteAreaGrid"/> writes the dense layout with AreaId in byte 3 and every other channel zero.
     /// </summary>
     public static class ReactGridTerrainBinary
     {
@@ -90,6 +91,61 @@ namespace Ludots.Core.Navigation.Terrain
             }
 
             return terrain;
+        }
+
+        public static void WriteAreaGrid(Stream output, int cellsX, int cellsY, byte[] areaIds)
+        {
+            if (output == null) throw new ArgumentNullException(nameof(output));
+            if (areaIds == null) throw new ArgumentNullException(nameof(areaIds));
+            if (cellsX <= 0 || cellsY <= 0)
+            {
+                throw new InvalidOperationException($"React terrain area grid {cellsX}×{cellsY} 无效（需为 > 0）。");
+            }
+
+            if (cellsX % ChunkSize != 0 || cellsY % ChunkSize != 0)
+            {
+                throw new InvalidOperationException(
+                    $"React terrain area grid {cellsX}×{cellsY} 必须能被区块边长 {ChunkSize} 整除。");
+            }
+
+            int cellCount = checked(cellsX * cellsY);
+            if (areaIds.Length != cellCount)
+            {
+                throw new InvalidOperationException(
+                    $"React terrain area grid 需要 {cellCount} 个格值，实得 {areaIds.Length}。");
+            }
+
+            int widthChunks = cellsX / ChunkSize;
+            int heightChunks = cellsY / ChunkSize;
+            var chunk = new byte[ChunkBytes];
+            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            writer.Write(widthChunks);
+            writer.Write(heightChunks);
+            writer.Write(DenseCellStride);
+
+            for (int chunkY = 0; chunkY < heightChunks; chunkY++)
+            {
+                for (int chunkX = 0; chunkX < widthChunks; chunkX++)
+                {
+                    Array.Clear(chunk, 0, chunk.Length);
+                    int originCol = chunkX * ChunkSize;
+                    int originRow = chunkY * ChunkSize;
+                    for (int localY = 0; localY < ChunkSize; localY++)
+                    {
+                        int row = originRow + localY;
+                        int rowIndex = row * cellsX;
+                        int localRow = localY * ChunkSize;
+                        for (int localX = 0; localX < ChunkSize; localX++)
+                        {
+                            chunk[(localRow + localX) * DenseCellStride + 3] = areaIds[rowIndex + originCol + localX];
+                        }
+                    }
+
+                    writer.Write(chunk);
+                }
+            }
+
+            writer.Flush();
         }
 
         private static void ValidateHeader(string inputName, int widthChunks, int heightChunks, byte strideOrVersion)

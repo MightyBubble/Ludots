@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Map.Hex;
@@ -490,6 +491,44 @@ namespace Ludots.Tool
                 ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(estimateRecastReactNavCommand);
+
+            var bakeCrowdNavSurfaceCommand = new Command(
+                "bake-crowd-navsurface",
+                "Bake a CrowdSimulation .navsurface from the board's React terrain. Terrain type cells only; jump candidates are not generated.");
+            var crowdOutOption = new Option<string>("--out", "Output .navsurface path") { IsRequired = true };
+            var crowdModIdOption = new Option<string>("--modId", "Mod that authors the map") { IsRequired = true };
+            var crowdOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
+            bakeCrowdNavSurfaceCommand.AddOption(mapIdOption);
+            bakeCrowdNavSurfaceCommand.AddOption(crowdModIdOption);
+            bakeCrowdNavSurfaceCommand.AddOption(crowdOutOption);
+            bakeCrowdNavSurfaceCommand.AddOption(crowdOverwriteOption);
+            bakeCrowdNavSurfaceCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(crowdModIdOption);
+                var outFile = ctx.ParseResult.GetValueForOption(crowdOutOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(crowdOverwriteOption);
+                ctx.ExitCode = BakeCrowdNavSurface(mapId, modId, outFile, overwrite);
+            });
+            navCommand.AddCommand(bakeCrowdNavSurfaceCommand);
+
+            var importNavSurfaceReactCommand = new Command(
+                "import-navsurface-react",
+                "Write a React terrain bin whose AreaId equals each .navsurface cell. Jump candidates are not copied.");
+            var importNavSurfaceInOption = new Option<string>("--in", "Input .navsurface path") { IsRequired = true };
+            var importNavSurfaceOutOption = new Option<string>("--out", "Output React map_data.bin path") { IsRequired = true };
+            var importNavSurfaceOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
+            importNavSurfaceReactCommand.AddOption(importNavSurfaceInOption);
+            importNavSurfaceReactCommand.AddOption(importNavSurfaceOutOption);
+            importNavSurfaceReactCommand.AddOption(importNavSurfaceOverwriteOption);
+            importNavSurfaceReactCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var inputPath = ctx.ParseResult.GetValueForOption(importNavSurfaceInOption);
+                var outFile = ctx.ParseResult.GetValueForOption(importNavSurfaceOutOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(importNavSurfaceOverwriteOption);
+                ctx.ExitCode = ImportNavSurfaceReact(inputPath, outFile, overwrite);
+            });
+            navCommand.AddCommand(importNavSurfaceReactCommand);
             rootCommand.AddCommand(navCommand);
 
             return await rootCommand.InvokeAsync(args);
@@ -1510,6 +1549,110 @@ namespace {modId}
             string relative = Path.GetRelativePath(assetsRoot, fullInput)
                 .Replace('\\', '/');
             return "Core:" + relative;
+        }
+
+        static int BakeCrowdNavSurface(string mapId, string modId, string outFile, bool overwrite)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(outFile))
+                {
+                    throw new InvalidOperationException("--out is required.");
+                }
+
+                if (File.Exists(outFile) && !overwrite)
+                {
+                    throw new IOException($"File exists: {outFile}");
+                }
+
+                string repoRoot = FindAssetsRoot();
+                MapConfig map = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+                NavMeshBakeConfig navmesh = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId).Config;
+                NavMapNavBoardsConfig mapNav = NavSolverDeclaration.RequireMap(navmesh, mapId);
+                BoardConfig board = NavSolverDeclaration.RequireBoard(map, mapNav);
+                if (string.IsNullOrWhiteSpace(board.DataFile))
+                {
+                    throw new InvalidOperationException($"Maps/{mapId}.json: 板 \"{board.Name}\" 的 DataFile 为空。");
+                }
+
+                if (board.GridCellSizeCm <= 0)
+                {
+                    throw new InvalidOperationException($"Maps/{mapId}.json: 板 \"{board.Name}\" 的格边长 {board.GridCellSizeCm} cm 无效。");
+                }
+
+                string modRoot = ToolMapConfigResolver.ResolveModRoot(repoRoot, modId);
+                string dataPath = CrowdNavSurfaceAuthoring.ResolveModAssetPath(modRoot, board.DataFile);
+                if (!File.Exists(dataPath))
+                {
+                    throw new InvalidOperationException($"地编资产不存在：{dataPath}");
+                }
+
+                LogicTerrainField terrain = ReactGridTerrainBinary.Read(dataPath, board.GridCellSizeCm);
+                NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthored(
+                    repoRoot,
+                    modId,
+                    mapId,
+                    terrain,
+                    Array.Empty<NavSurfaceJumpCandidate>());
+                string fullOut = Path.GetFullPath(outFile);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullOut)!);
+                using (FileStream output = File.Create(fullOut))
+                {
+                    NavSurfaceAsset.Write(asset, output);
+                }
+
+                Console.WriteLine(
+                    $"Wrote {fullOut} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int ImportNavSurfaceReact(string inputPath, string outFile, bool overwrite)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(inputPath) || !File.Exists(inputPath))
+                {
+                    throw new InvalidOperationException($"Input not found: {inputPath}");
+                }
+
+                if (string.IsNullOrWhiteSpace(outFile))
+                {
+                    throw new InvalidOperationException("--out is required.");
+                }
+
+                if (File.Exists(outFile) && !overwrite)
+                {
+                    throw new IOException($"File exists: {outFile}");
+                }
+
+                NavSurfaceAsset asset;
+                using (FileStream input = File.OpenRead(inputPath))
+                {
+                    asset = NavSurfaceAsset.Read(input);
+                }
+
+                string fullOut = Path.GetFullPath(outFile);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullOut)!);
+                using (FileStream output = File.Create(fullOut))
+                {
+                    CrowdNavSurfaceAuthoring.WriteReactAreaGrid(asset, output);
+                }
+
+                Console.WriteLine(
+                    $"Wrote {fullOut} ({asset.NavCellsX}x{asset.NavCellsY} area cells; jump candidates were not copied)");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
         }
 
         static void GenerateReactMapDataBin(string outFile, int widthChunks, int heightChunks, string preset, bool overwrite)
