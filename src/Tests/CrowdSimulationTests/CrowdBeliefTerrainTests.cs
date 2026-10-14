@@ -200,6 +200,7 @@ public class CrowdBeliefTerrainTests
             int clearance = ClearanceOf(config, "foot_r100");
             var nav = NavContextBaker.Bake(config, surface, heights, deck, foot, clearance, cache);
             var store = CrowdStructuresStore.Build(config, surface, new[] { blocker });
+            store.UseDeck(deck);
             store.InstallMapBridges(store.TemplateIndexOf("bridge"), new[] { span });
             var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
             var sources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);

@@ -158,6 +158,14 @@
         "priority": 30,
         "layered": true
       },
+      "timedBridge": {
+        "name": "限时桥梁",
+        "footprint": "path",
+        "area": "deck",
+        "priority": 30,
+        "layered": true,
+        "lifetimeSec": 4
+      },
       "road": {
         "name": "道路",
         "footprint": "path",

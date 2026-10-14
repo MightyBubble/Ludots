@@ -113,9 +113,21 @@ public static class CrowdNavRebake
     {
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
-        int erosion = nav.ClearanceNavCells - 1;
-        int kind = Classify(nav, sources, store, rect);
+        int erosion = Math.Max(0, nav.ClearanceNavCells - 1);
+        int groundKind = Classify(nav, sources, store, rect);
+        int upperKind = RefreshUpper(nav, sources, rect, erosion);
+        int kind = groundKind > upperKind ? groundKind : upperKind;
         var grown = Grow(rect, erosion, navCellsPerSide);
+        if (upperKind == KindPassable)
+        {
+            var upperOut = Grow(rect, 2 * erosion, navCellsPerSide);
+            grown = (
+                Math.Min(grown.X0, upperOut.X0),
+                Math.Min(grown.Y0, upperOut.Y0),
+                Math.Max(grown.X1, upperOut.X1),
+                Math.Max(grown.Y1, upperOut.Y1));
+        }
+
         List<int> tiles;
         if (kind == KindPassable)
         {
@@ -161,9 +173,225 @@ public static class CrowdNavRebake
             nav.LastRebake = KindCost;
         }
 
+        if (upperKind != KindNone)
+        {
+            RebuildUpperTiles(nav, sources, cache, Grow(rect, 2 * erosion, navCellsPerSide));
+        }
+
         nav.Version++;
         nav.InvalidateReach();
         return tiles;
+    }
+
+    /// <summary>
+    /// 桥面可走比足迹多出两倍腐蚀半径：岸边并入一圈，净空腐蚀再一圈。
+    /// 腐蚀输入比输出再大一圈，桥头检索再大一圈，窗口内的结果才和整图腐蚀一致。
+    /// 窗口里没有桥面也没有残留桥面可走时不碰缓冲。
+    /// </summary>
+    private static int RefreshUpper(
+        NavContext nav,
+        CrowdRebakeSources sources,
+        (int X0, int Y0, int X1, int Y1) rect,
+        int erosion)
+    {
+        var deck = sources.Deck;
+        int side = nav.NavCellsPerSide;
+        var output = Grow(rect, 2 * erosion, side);
+        var win = Grow(output, erosion, side);
+        var portals = Grow(win, erosion, side);
+        if (UpperWindowClean(nav, deck, portals, output)) return KindNone;
+
+        int n2 = side * side;
+        if (nav.DeckWin == null || nav.DeckWin.Length < n2) nav.DeckWin = new byte[n2];
+        if (nav.DeckEroded == null || nav.DeckEroded.Length < n2) nav.DeckEroded = new byte[n2];
+        ClearRect(nav.DeckWin, side, win);
+        var agent = sources.Config.AgentTypes[nav.LayerIndex];
+        var row = agent.CostByArea;
+        var speedRow = agent.SpeedDivisorByArea;
+        var area = deck.AreaIndex;
+        var portalFlag = deck.PortalFlag;
+        for (int y = win.Y0; y < win.Y1; y++)
+        {
+            int rowBase = y * side;
+            for (int x = win.X0; x < win.X1; x++)
+            {
+                int a = area[rowBase + x] - 1;
+                if (a >= 0 && row[a] > Fix64.Zero) nav.DeckWin[rowBase + x] = 1;
+            }
+        }
+
+        if (erosion > 0)
+        {
+            var walk = nav.Walk;
+            for (int y = portals.Y0; y < portals.Y1; y++)
+            {
+                for (int x = portals.X0; x < portals.X1; x++)
+                {
+                    int cell = y * side + x;
+                    int a = area[cell] - 1;
+                    if (a < 0 || portalFlag[cell] == 0 || row[a] <= Fix64.Zero) continue;
+                    int y0 = Math.Max(win.Y0, y - erosion);
+                    int y1 = Math.Min(win.Y1, y + erosion + 1);
+                    int x0 = Math.Max(win.X0, x - erosion);
+                    int x1 = Math.Min(win.X1, x + erosion + 1);
+                    for (int gy = y0; gy < y1; gy++)
+                    {
+                        int grow = gy * side;
+                        for (int gx = x0; gx < x1; gx++)
+                        {
+                            if (walk[grow + gx] != 0) nav.DeckWin[grow + gx] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        ErodeRect(nav, nav.DeckWin, side, nav.ClearanceNavCells, output, nav.DeckEroded);
+        int kind = KindNone;
+        var eroded = nav.DeckEroded;
+        for (int y = output.Y0; y < output.Y1; y++)
+        {
+            int rowBase = y * side;
+            for (int x = output.X0; x < output.X1; x++)
+            {
+                int i = rowBase + x;
+                int a = area[i] - 1;
+                bool ok = a >= 0 && row[a] > Fix64.Zero && eroded[i] != 0;
+                byte up = ok ? (byte)1 : (byte)0;
+                byte po = ok && portalFlag[i] != 0 ? (byte)1 : (byte)0;
+                byte ua = ok ? (byte)a : (byte)0;
+                Fix64 uc = ok ? row[a] : Fix64.Zero;
+                Fix64 us = ok ? speedRow[a] : Fix64.Zero;
+                if (nav.UpPass[i] != up || nav.Portal[i] != po) kind = KindPassable;
+                else if (kind != KindPassable && (nav.UpArea[i] != ua || nav.UpCost[i] != uc || nav.UpSpeedDivisor[i] != us))
+                {
+                    kind = KindCost;
+                }
+
+                nav.UpPass[i] = up;
+                nav.Portal[i] = po;
+                nav.UpArea[i] = ua;
+                nav.UpCost[i] = uc;
+                nav.UpSpeedDivisor[i] = us;
+            }
+        }
+
+        return kind;
+    }
+
+    private static bool UpperWindowClean(
+        NavContext nav,
+        DeckSurface deck,
+        (int X0, int Y0, int X1, int Y1) portals,
+        (int X0, int Y0, int X1, int Y1) output)
+    {
+        int side = nav.NavCellsPerSide;
+        var area = deck.AreaIndex;
+        var flag = deck.PortalFlag;
+        for (int y = portals.Y0; y < portals.Y1; y++)
+        {
+            int row = y * side;
+            for (int x = portals.X0; x < portals.X1; x++)
+            {
+                int i = row + x;
+                if (area[i] != 0 || flag[i] != 0) return false;
+            }
+        }
+
+        for (int y = output.Y0; y < output.Y1; y++)
+        {
+            int row = y * side;
+            for (int x = output.X0; x < output.X1; x++)
+            {
+                int i = row + x;
+                if (nav.UpPass[i] != 0 || nav.Portal[i] != 0 || nav.UpArea[i] != 0
+                    || nav.UpCost[i] != Fix64.Zero || nav.UpSpeedDivisor[i] != Fix64.Zero)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static void ClearRect(byte[] buffer, int side, (int X0, int Y0, int X1, int Y1) rect)
+    {
+        int width = rect.X1 - rect.X0;
+        if (width <= 0) return;
+        for (int y = rect.Y0; y < rect.Y1; y++) Array.Clear(buffer, y * side + rect.X0, width);
+    }
+
+    private static void RebuildUpperTiles(
+        NavContext nav,
+        CrowdRebakeSources sources,
+        NavTileCache cache,
+        (int X0, int Y0, int X1, int Y1) rect)
+    {
+        if (nav.Tiles == null || rect.X1 <= rect.X0 || rect.Y1 <= rect.Y0) return;
+        int side = nav.NavCellsPerSide;
+        int tileSize = sources.Config.Hpa.NavCellsPerTile;
+        int tilesPerSide = side / tileSize;
+        int tx0 = rect.X0 / tileSize;
+        int ty0 = rect.Y0 / tileSize;
+        int tx1 = (rect.X1 - 1) / tileSize;
+        int ty1 = (rect.Y1 - 1) / tileSize;
+        var upPass = nav.UpPass;
+        var portal = nav.Portal;
+        var upCost = nav.UpCost;
+        var upArea = nav.UpArea;
+        int span = tileSize * tileSize;
+        for (int ty = ty0; ty <= ty1; ty++)
+        {
+            for (int tx = tx0; tx <= tx1; tx++)
+            {
+                int tileId = ty * tilesPerSide + tx;
+                int originX = tx * tileSize;
+                int originY = ty * tileSize;
+                bool any = false;
+                for (int y = originY; y < originY + tileSize && !any; y++)
+                {
+                    int row = y * side;
+                    for (int x = originX; x < originX + tileSize; x++)
+                    {
+                        if (upPass[row + x] == 0) continue;
+                        any = true;
+                        break;
+                    }
+                }
+
+                var dict = nav.UpperTiles;
+                if (!any)
+                {
+                    if (dict != null && dict.Remove(tileId) && dict.Count == 0) nav.UpperTiles = null;
+                    continue;
+                }
+
+                var entry = cache.Acquire(upPass, upArea, side, tx, ty);
+                var portals = new List<int>();
+                var pc = new Fix64[entry.Count];
+                var cnt = new int[entry.Count];
+                for (int k = 0; k < span; k++)
+                {
+                    int cell = (originY + k / tileSize) * side + originX + k % tileSize;
+                    if (portal[cell] != 0) portals.Add(k);
+                    int p = entry.PolyOf[k];
+                    if (p >= 0)
+                    {
+                        pc[p] += upCost[cell];
+                        cnt[p]++;
+                    }
+                }
+
+                for (int p = 0; p < entry.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
+                (nav.UpperTiles ??= new Dictionary<int, UpperTileInfo>())[tileId] = new UpperTileInfo
+                {
+                    Entry = entry,
+                    Portals = portals.ToArray(),
+                    PolyCost = pc,
+                };
+            }
+        }
     }
 
     private static readonly List<int> NoTiles = new();

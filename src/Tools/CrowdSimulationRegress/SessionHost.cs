@@ -110,6 +110,7 @@ static class SessionHost
 
         var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, capabilityDir));
         session.Structures = CrowdStructuresStore.Build(runtime, bundle.Grid, bundle.MapSurface.Blockers);
+        session.Structures.UseDeck(deck);
         if (bundle.MapSurface.Bridges.Count > 0)
         {
             int bridgeTpl = session.Structures.TemplateIndexOf("bridge");

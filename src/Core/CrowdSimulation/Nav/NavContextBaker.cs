@@ -204,6 +204,8 @@ public static class NavContextBaker
         nav.UnionParent = new int[n2 * 2];
         nav.UnionDense = new int[n2 * 2];
         nav.ErodeRow = new byte[n2];
+        nav.DeckWin = new byte[n2];
+        nav.DeckEroded = new byte[n2];
         nav.PrevTiles = new NavTileEntry?[CrowdSimulationLimits.HotPathSlotReserve];
         nav.PrefillRebakePools();
         return nav;

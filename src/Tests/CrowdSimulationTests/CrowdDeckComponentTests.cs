@@ -152,6 +152,7 @@ public class CrowdDeckComponentTests
             Assert.That(clearance, Is.EqualTo(1));
             var nav = NavContextBaker.Bake(config, surface, heights, deck, foot, clearance, cache);
             var store = CrowdStructuresStore.Build(config, surface, System.Array.Empty<BlockerFootprint>());
+            store.UseDeck(deck);
             int bridgeTpl = store.TemplateIndexOf("bridge");
             store.InstallMapBridges(bridgeTpl, new[]
             {

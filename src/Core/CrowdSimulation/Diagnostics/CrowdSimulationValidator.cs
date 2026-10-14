@@ -95,6 +95,8 @@ public static class CrowdSimulationValidator
                 $"tick {session.TickCount} 结构栅格与全量重标不一致 @格 {i} 区域 {store.Area[i]}/{derived.Area[i]} 阻挡 {store.Blocked[i]}/{derived.Blocked[i]}",
                 session.TickCount, -1, -1, i % side, i / side, -1, -1, -1);
         }
+
+        store.VerifyDeckContract(session.TickCount);
     }
 
     /// <summary>运动内核里的空间哈希与稠密计数排序对照。没有内核时抛错。</summary>

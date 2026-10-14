@@ -333,7 +333,7 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
         var templates = runtime.Structures.Templates;
         Assert.That(templates.Select(t => t.Id).ToArray(), Is.EqualTo(
-            new[] { "bridge", "building", "fire", "flood", "road", "s7barrier" }));
+            new[] { "bridge", "building", "fire", "flood", "road", "s7barrier", "timedBridge" }));
         var byId = templates.ToDictionary(t => t.Id);
         Assert.That(byId["building"].Blocker, Is.True);
         Assert.That(byId["building"].AreaIndex, Is.Null);

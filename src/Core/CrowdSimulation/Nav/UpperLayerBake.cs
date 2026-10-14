@@ -12,8 +12,8 @@ public sealed class DeckSurface
 {
     public required byte[] AreaIndex { get; init; }
     public required byte[] PortalFlag { get; init; }
-    /// <summary>含桥面格的 tile 编号,按首次写入序。</summary>
-    public required int[] TileOrder { get; init; }
+    /// <summary>含桥面格的 tile 编号。全量栅格按首次写入序；增量重画只保证集合覆盖每个仍有桥面的 tile。</summary>
+    public required int[] TileOrder { get; set; }
 
     public static DeckSurface Empty(int cellsPerSide) => new()
     {
