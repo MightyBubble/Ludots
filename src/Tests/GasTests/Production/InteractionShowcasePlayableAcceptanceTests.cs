@@ -710,15 +710,34 @@ namespace Ludots.Tests.GAS.Production
             backend.SetAxis("<Gamepad>/rightStick/x", 0f);
             backend.SetAxis("<Gamepad>/rightStick/y", 0f);
             Tick(engine, 1, frameTimesMs);
-            HoldButton(engine, backend, "<Keyboard>/q", holdFrames: 2, frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/e", holdFrames: 2, frameTimesMs);
             backend.SetAxis("<Gamepad>/rightStick/x", 1f);
             Tick(engine, 4, frameTimesMs);
 
             Entity arcweaver = FindEntityByName(engine.World, "Arcweaver");
             string before = DescribeAimActors(engine, arcweaver);
             Assert.That(TriggerErrorText(engine), Is.EqualTo("<none>"), before);
+            Assert.That(ReadBlackboardInt(engine, arcweaver, "aim.slot"), Is.EqualTo(2), before);
             Assert.That(CountActivePresenter(engine, "aim.range", arcweaver), Is.GreaterThan(0), before);
             Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.GreaterThan(0), before);
+            Assert.That(CountActivePresenter(engine, "aim.cone", arcweaver), Is.EqualTo(0), before);
+            Assert.That(
+                ReadOwnerPresenterFloat(engine, arcweaver, "aim.line", WellKnownPresenterParamKeys.OverlayLength),
+                Is.EqualTo(7.6f).Within(0.02f),
+                before);
+            Assert.That(
+                ReadOwnerPresenterFloat(engine, arcweaver, "aim.line", WellKnownPresenterParamKeys.OverlayWidth),
+                Is.EqualTo(0.8f).Within(0.02f),
+                before);
+            Assert.That(
+                ReadOwnerPresenterFloat(engine, arcweaver, "aim.range", WellKnownPresenterParamKeys.OverlayRadius),
+                Is.EqualTo(7.6f).Within(0.02f),
+                before);
+            GroundOverlayItem fireLance = RequireOverlay(engine, GroundOverlayShape.Line);
+            Assert.That(fireLance.Length, Is.EqualTo(7.6f).Within(0.02f), before);
+            Assert.That(fireLance.Width, Is.EqualTo(0.8f).Within(0.02f), before);
+            GroundOverlayItem fireLanceRange = RequireOverlay(engine, GroundOverlayShape.Circle, RangeFill);
+            Assert.That(fireLanceRange.Radius, Is.EqualTo(7.6f).Within(0.02f), before);
 
             // aim.release is foreground, so the battle Select.Begin mount is parked for the gesture.
             // Selection commit writes command source; that membership event is what rebind hears.
@@ -731,13 +750,27 @@ namespace Ludots.Tests.GAS.Production
             Entity vanguard = FindEntityByName(engine.World, "Vanguard");
             Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Vanguard"));
             Assert.That(TriggerErrorText(engine), Is.EqualTo("<none>"), "stick aim after reselect");
-            Assert.That(CountActivePresenter(engine, "aim.range", vanguard), Is.GreaterThan(0), "range indicator on Vanguard");
-            Assert.That(CountActivePresenter(engine, "aim.line", vanguard), Is.GreaterThan(0), "line indicator on Vanguard");
+            Assert.That(ReadBlackboardInt(engine, vanguard, "aim.slot"), Is.EqualTo(2), "held E slot");
+            Assert.That(CountActivePresenter(engine, "aim.cone", vanguard), Is.GreaterThan(0), "cone indicator on Vanguard");
+            Assert.That(CountActivePresenter(engine, "aim.line", vanguard), Is.EqualTo(0), "Vanguard E is a cone");
+            Assert.That(CountActivePresenter(engine, "aim.range", vanguard), Is.EqualTo(0), "cone does not spawn the range ring");
             Assert.That(CountActivePresenter(engine, "aim.range", arcweaver), Is.EqualTo(0), "old range indicator");
             Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.EqualTo(0), "old line indicator");
+            Assert.That(CountActivePresenter(engine, "aim.cone", arcweaver), Is.EqualTo(0), "old cone indicator");
+            Assert.That(
+                ReadOwnerPresenterFloat(engine, vanguard, "aim.cone", WellKnownPresenterParamKeys.OverlayRadius),
+                Is.EqualTo(3.6f).Within(0.02f),
+                "CleaveCone radius");
+            Assert.That(
+                ReadOwnerPresenterFloat(engine, vanguard, "aim.cone", WellKnownPresenterParamKeys.OverlayAngle),
+                Is.EqualTo(42f).Within(0.02f),
+                "CleaveCone angle");
+            GroundOverlayItem cleave = RequireOverlay(engine, GroundOverlayShape.Cone);
+            Assert.That(cleave.Radius, Is.EqualTo(3.6f).Within(0.02f), "CleaveCone overlay radius");
+            Assert.That(cleave.Angle, Is.EqualTo(42f * MathF.PI / 180f).Within(0.02f), "CleaveCone overlay angle");
             Assert.That(ReadBlackboardInt(engine, vanguard, "aim.stick.valid"), Is.EqualTo(1), "stick sample on the new actor");
 
-            ReleaseButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            ReleaseButton(engine, backend, "<Keyboard>/e", frameTimesMs);
         }
 
         private static GameEngine CreateEngine()
@@ -1049,6 +1082,53 @@ namespace Ludots.Tests.GAS.Production
                 view.Title,
                 view.Summary);
             collections.Replace(owner, view.KeyId, descriptor, new[] { member }, default, default);
+        }
+
+        private static float ReadOwnerPresenterFloat(GameEngine engine, Entity owner, string definitionKey, int paramKey)
+        {
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int defId = definitions.GetId(definitionKey);
+            float value = float.NaN;
+            int found = 0;
+            var query = new QueryDescription().WithAll<PresenterState, PresenterFloatParams>();
+            engine.World.Query(in query, (Entity _, ref PresenterState state, ref PresenterFloatParams floats) =>
+            {
+                if (state.DefId != defId || state.OwnerEntity != owner)
+                {
+                    return;
+                }
+
+                found++;
+                if (!floats.TryGet(paramKey, out value))
+                {
+                    value = float.NaN;
+                }
+            });
+            Assert.That(found, Is.EqualTo(1), definitionKey);
+            return value;
+        }
+
+        private static GroundOverlayItem RequireOverlay(GameEngine engine, GroundOverlayShape shape, Func<GroundOverlayItem, bool>? match = null)
+        {
+            GroundOverlayBuffer overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            foreach (ref readonly GroundOverlayItem item in overlays.GetSpan())
+            {
+                if (item.Shape == shape && (match == null || match(item)))
+                {
+                    return item;
+                }
+            }
+
+            throw new InvalidOperationException(BuildOverlayDiagnostics(overlays));
+        }
+
+        private static bool RangeFill(GroundOverlayItem item)
+        {
+            return MathF.Abs(item.FillColor.X - 0.28f) <= 0.05f &&
+                   MathF.Abs(item.FillColor.Y - 0.52f) <= 0.05f &&
+                   MathF.Abs(item.FillColor.Z - 0.88f) <= 0.05f;
         }
 
         private static int ReadBlackboardInt(GameEngine engine, Entity entity, string key)

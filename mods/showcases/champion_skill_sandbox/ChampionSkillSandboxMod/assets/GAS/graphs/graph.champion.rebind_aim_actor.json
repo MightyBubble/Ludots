@@ -30,6 +30,19 @@
         "intValue": 0
       },
       {
+        "id": "r_cand",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "r_probe",
+        "op": "LoadSlotAbilityId",
+        "validOutput": "can_cast"
+      },
+      {
+        "id": "r_probe_jump",
+        "op": "JumpIfFalse"
+      },
+      {
         "id": "r_write",
         "op": "WriteCollection",
         "collectionKey": "aim.actors"
@@ -64,13 +77,23 @@
         "id": "r_refresh",
         "op": "InvokeGraph",
         "functionName": "graph.aim.refresh_gesture"
+      },
+      {
+        "id": "r_held",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.read_held_slot"
+      },
+      {
+        "id": "r_put",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.held.code"
       }
     ],
     "controlEdges": [
       {
         "from": "r_rep",
         "fromPort": "next",
-        "to": "r_q"
+        "to": "r_held"
       },
       {
         "from": "r_q",
@@ -85,7 +108,27 @@
       {
         "from": "r_c0",
         "fromPort": "next",
+        "to": "r_cand"
+      },
+      {
+        "from": "r_cand",
+        "fromPort": "next",
+        "to": "r_probe"
+      },
+      {
+        "from": "r_probe",
+        "fromPort": "next",
+        "to": "r_probe_jump"
+      },
+      {
+        "from": "r_probe_jump",
+        "fromPort": "true",
         "to": "r_write"
+      },
+      {
+        "from": "r_probe_jump",
+        "fromPort": "false",
+        "to": "r_halt"
       },
       {
         "from": "r_write",
@@ -125,6 +168,16 @@
       {
         "from": "r_prep",
         "fromPort": "next",
+        "to": "r_put"
+      },
+      {
+        "from": "r_held",
+        "fromPort": "next",
+        "to": "r_q"
+      },
+      {
+        "from": "r_put",
+        "fromPort": "next",
         "to": "r_pick"
       }
     ],
@@ -134,6 +187,30 @@
         "fromPort": "value",
         "to": "r_q",
         "toPort": "source"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "value",
+        "to": "r_cand",
+        "toPort": "value"
+      },
+      {
+        "from": "r_cand",
+        "fromPort": "value",
+        "to": "r_probe",
+        "toPort": "source"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "value",
+        "to": "r_probe",
+        "toPort": "value"
+      },
+      {
+        "from": "r_probe",
+        "fromPort": "can_cast",
+        "to": "r_probe_jump",
+        "toPort": "condition"
       },
       {
         "from": "r_c0",
@@ -164,6 +241,18 @@
         "fromPort": "value",
         "to": "r_halt",
         "toPort": "value"
+      },
+      {
+        "from": "r_held",
+        "fromPort": "value",
+        "to": "r_put",
+        "toPort": "value"
+      },
+      {
+        "from": "r_actor",
+        "fromPort": "value",
+        "to": "r_put",
+        "toPort": "source"
       }
     ]
   }

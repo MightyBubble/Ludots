@@ -64,6 +64,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.OfferActivity:
                     case GraphNodeOp.OfferTask:
+                    case GraphNodeOp.LoadAbilityEffectFloat:
                         _ = ResolveSymbol(symbols, ins.Imm);
                         break;
                     case GraphNodeOp.ReadCalendarYear:

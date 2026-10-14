@@ -175,5 +175,24 @@
     "categories": [
       "Effect.GraphOpsSandbox.Buff"
     ]
+  },
+  {
+    "id": "Effect.GraphOps.NamedRadius",
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 320
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.GraphOps.ChainOpening"
+    }
   }
 ]

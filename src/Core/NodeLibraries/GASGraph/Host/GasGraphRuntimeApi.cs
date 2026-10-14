@@ -156,6 +156,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly int[] _contextMountProfiles = new int[ContextMountStackCapacity];
         private int _contextMountDepth;
         private AbilityDefinitionRegistry? _abilityDefinitions;
+        private EffectTemplateRegistry? _installedEffectTemplates;
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
@@ -356,6 +357,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindAbilityDefinitions(AbilityDefinitionRegistry abilityDefinitions)
         {
             _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
+        }
+
+        /// <summary>
+        /// Binds the installed effect templates so a graph can read a named float from the
+        /// ability's impact effect. Unbound calls fail closed. This is the catalog, not the
+        /// transient effect-execution context.
+        /// </summary>
+        public void BindEffectTemplateRegistry(EffectTemplateRegistry effectTemplates)
+        {
+            _installedEffectTemplates = effectTemplates ?? throw new ArgumentNullException(nameof(effectTemplates));
         }
 
         /// <summary>
@@ -1432,8 +1443,104 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <inheritdoc />
+        public float LoadAbilityEffectFloat(Entity actor, int slot, int currentGraphId, string fieldKey)
+        {
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatActorDead: actor {actor} is not alive.");
+            }
+
+            if (string.IsNullOrWhiteSpace(fieldKey))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: LoadAbilityEffectFloat requires a non-empty key.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            AbilityDefinitionRegistry definitions = _abilityDefinitions
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.AbilityDefinitionsUnavailable: no ability definition registry is bound to the graph runtime.");
+            if (!definitions.TryGet(slotState.AbilityId, out AbilityDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatUnknownAbility: actor {actor} slot {slot} ability {slotState.AbilityId} is not installed.");
+            }
+
+            string graphName = GraphIdRegistry.GetName(currentGraphId);
+            if (string.IsNullOrEmpty(graphName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoGraph: graph id {currentGraphId} is not registered.");
+            }
+
+            string abilityName = AbilityIdRegistry.GetName(slotState.AbilityId);
+            if (definition.EffectFieldKeyConflicts(graphName, fieldKey))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' effectFields['{graphName}']['{fieldKey}'] is both an effect field and a literal.");
+            }
+
+            if (!definition.TryReadEffectField(graphName, fieldKey, out bool isLiteral, out string field, out float literal))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' does not declare effectFields['{graphName}']['{fieldKey}'].");
+            }
+
+            if (isLiteral)
+            {
+                if (!(literal > 0f))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.EFFECT.ERR.NamedFloatAbsent: ability '{abilityName}' graph '{graphName}' key '{fieldKey}' effectFields literal is not greater than 0.");
+                }
+
+                return literal;
+            }
+
+            if (!definition.HasTargeting || definition.Targeting.ImpactEffectTemplateId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoEffect: ability '{abilityName}' has no targeting.impactEffect.");
+            }
+
+            EffectTemplateRegistry templates = _installedEffectTemplates
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoRegistry: no effect template registry is bound to the graph runtime.");
+            int effectId = definition.Targeting.ImpactEffectTemplateId;
+            if (!templates.TryGet(effectId, out EffectTemplateData template))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatUnknownEffect: ability '{abilityName}' impact effect {effectId} is not installed.");
+            }
+
+            string effectName = EffectTemplateIdRegistry.GetName(effectId);
+            return EffectTemplateNamedFloat.Require(
+                in template,
+                field,
+                string.IsNullOrEmpty(effectName) ? effectId.ToString() : effectName);
+        }
+
+        /// <inheritdoc />
         public int LoadSlotAbilityId(Entity actor, int slot)
         {
+            if (!TryLoadSlotAbilityId(actor, slot, out int abilityId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            return abilityId;
+        }
+
+        public bool TryLoadSlotAbilityId(Entity actor, int slot, out int abilityId)
+        {
+            abilityId = 0;
             if (_world == null || !_world.IsAlive(actor))
             {
                 throw new InvalidOperationException(
@@ -1442,11 +1549,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
             {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {actor} slot {slot} has no ability.");
+                return false;
             }
 
-            return slotState.AbilityId;
+            abilityId = slotState.AbilityId;
+            return true;
         }
 
         /// <summary>

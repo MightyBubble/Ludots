@@ -35,7 +35,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.unit"
     ],
     "targeting": {
       "castRangeCm": 1200,
@@ -141,8 +142,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.cone"
     ],
+    "effectFields": {
+      "graph.aim.shape.cone": {
+        "radius": "targetQuery.radius",
+        "angle": "targetQuery.halfAngle"
+      }
+    },
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Damage.E"
@@ -199,8 +207,14 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.circle"
     ],
+    "effectFields": {
+      "graph.aim.shape.circle": {
+        "radius": "targetQuery.radius"
+      }
+    },
     "targeting": {
       "castRangeCm": 1200,
       "impactEffect": "Effect.Moba.Search.BlizzardZone"

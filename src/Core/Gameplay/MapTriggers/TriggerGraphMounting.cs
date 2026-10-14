@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -32,7 +33,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             EntityTriggerGraphMounts? entityMounts,
             CustomEventNameRegistry? customEvents = null,
             AbilityDefinitionRegistry? abilityDefinitions = null,
-            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            EffectTemplateRegistry? effectTemplates = null)
         {
             if (session == null)
             {
@@ -83,7 +85,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     abilityDefinitions,
                     customEvents ?? throw new InvalidOperationException(
                         $"Map '{mapId}' requires CustomEventNameRegistry for ability TriggerGraph validation."),
-                    $"Map '{mapId}'"));
+                    $"Map '{mapId}'",
+                    effectTemplates));
             }
 
             return triggers;
@@ -276,7 +279,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             GraphProgramRegistry programs,
             AbilityDefinitionRegistry abilityDefinitions,
             CustomEventNameRegistry customEvents,
-            string ownerLabel)
+            string ownerLabel,
+            EffectTemplateRegistry? effectTemplates = null)
         {
             if (programs == null) throw new ArgumentNullException(nameof(programs));
             if (abilityDefinitions == null) throw new ArgumentNullException(nameof(abilityDefinitions));
@@ -296,21 +300,178 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 for (int g = 0; g < definition.TriggerGraphs.Count; g++)
                 {
                     string graph = definition.TriggerGraphs[g];
+                    string abilityOwner = $"{ownerLabel} ability '{AbilityLabel(abilityId)}'";
+                    GraphProgramRegistration registration = RequireGraphRegistration(
+                        programs,
+                        graph,
+                        TriggerGraphMount.FieldName,
+                        abilityOwner);
+                    RequireEffectFloatBinding(definition, abilityId, graph, registration, effectTemplates, ownerLabel);
                     AppendEntryTriggers(
                         triggers,
-                        RequireGraphRegistration(programs, graph, TriggerGraphMount.FieldName, $"{ownerLabel} ability '{abilityId}'"),
+                        registration,
                         graph,
                         Entity.Null,
                         TriggerGraphMountDomain.Ability,
                         TriggerGraphMountRoute.Local,
                         abilityId,
                         TriggerGraphMount.FieldName,
-                        $"{ownerLabel} ability '{abilityId}'",
+                        abilityOwner,
                         customEvents);
                 }
             }
 
             return triggers;
+        }
+
+        private static void RequireEffectFloatBinding(
+            AbilityDefinition definition,
+            int abilityId,
+            string graph,
+            GraphProgramRegistration registration,
+            EffectTemplateRegistry? effectTemplates,
+            string ownerLabel)
+        {
+            var readKeys = new List<string>();
+            CollectEffectFieldKeys(registration, graph, readKeys);
+            var declaredKeys = new List<string>();
+            definition.CopyEffectFieldKeys(graph, declaredKeys);
+            string abilityLabel = AbilityLabel(abilityId);
+            if (readKeys.Count == 0)
+            {
+                if (declaredKeys.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} ability '{abilityLabel}' effectFields names graph '{graph}', which does not read an effect float.");
+                }
+
+                return;
+            }
+
+            if (!definition.HasTargeting || definition.Targeting.CastRangeCm <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads an effect float but targeting.castRangeCm must be > 0.");
+            }
+
+            for (int i = 0; i < readKeys.Count; i++)
+            {
+                RequireOneEffectField(definition, readKeys[i], graph, abilityLabel, effectTemplates, ownerLabel);
+            }
+
+            for (int i = 0; i < declaredKeys.Count; i++)
+            {
+                if (!ContainsKey(readKeys, declaredKeys[i]))
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields declares key '{declaredKeys[i]}', which that graph does not read.");
+                }
+            }
+        }
+
+        private static void RequireOneEffectField(
+            AbilityDefinition definition,
+            string key,
+            string graph,
+            string abilityLabel,
+            EffectTemplateRegistry? effectTemplates,
+            string ownerLabel)
+        {
+            if (definition.EffectFieldKeyConflicts(graph, key))
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' effectFields['{graph}']['{key}'] is both an effect field and a literal.");
+            }
+
+            if (!definition.TryReadEffectField(graph, key, out bool isLiteral, out string field, out float literal))
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field key '{key}' but effectFields does not declare it.");
+            }
+
+            if (isLiteral)
+            {
+                if (!(literal > 0f))
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields['{key}'] literal must be greater than 0.");
+                }
+
+                return;
+            }
+
+            if (effectTemplates == null)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field key '{key}' but EffectTemplateRegistry is not available.");
+            }
+
+            int effectId = definition.Targeting.ImpactEffectTemplateId;
+            if (effectId <= 0 || !effectTemplates.TryGet(effectId, out EffectTemplateData template))
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field '{field}' but targeting.impactEffect {effectId} is not installed.");
+            }
+
+            string effectName = EffectTemplateIdRegistry.GetName(effectId);
+            try
+            {
+                EffectTemplateNamedFloat.Require(
+                    in template,
+                    field,
+                    string.IsNullOrEmpty(effectName) ? effectId.ToString() : effectName);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' key '{key}' {ex.Message}",
+                    ex);
+            }
+        }
+
+        private static void CollectEffectFieldKeys(GraphProgramRegistration registration, string graph, List<string> keys)
+        {
+            ushort code = (ushort)GraphNodeOp.LoadAbilityEffectFloat;
+            GraphInstruction[] program = registration.Program;
+            string[] symbols = registration.Symbols;
+            for (int i = 0; i < program.Length; i++)
+            {
+                if (program[i].Op != code)
+                {
+                    continue;
+                }
+
+                int index = program[i].Imm;
+                if ((uint)index >= (uint)symbols.Length || string.IsNullOrWhiteSpace(symbols[index]))
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{graph}' LoadAbilityEffectFloat at pc={i} has no key symbol.");
+                }
+
+                if (!ContainsKey(keys, symbols[index]))
+                {
+                    keys.Add(symbols[index]);
+                }
+            }
+        }
+
+        private static bool ContainsKey(List<string> keys, string key)
+        {
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (string.Equals(keys[i], key, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string AbilityLabel(int abilityId)
+        {
+            string name = AbilityIdRegistry.GetName(abilityId);
+            return string.IsNullOrEmpty(name) ? abilityId.ToString() : name;
         }
 
         public static List<Trigger> BuildModMountTriggers(

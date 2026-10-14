@@ -12,6 +12,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Persistence;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -90,7 +91,8 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         bool deactivate = string.Equals(op, nameof(GraphNodeOp.DeactivateOwnContext), StringComparison.Ordinal);
         bool loadRange = string.Equals(op, nameof(GraphNodeOp.LoadAbilityCastRange), StringComparison.Ordinal);
         bool loadSlot = string.Equals(op, nameof(GraphNodeOp.LoadSlotAbilityId), StringComparison.Ordinal);
-        if (!isPref && !setPref && !activate && !deactivate && !loadRange && !loadSlot)
+        bool loadEffect = string.Equals(op, nameof(GraphNodeOp.LoadAbilityEffectFloat), StringComparison.Ordinal);
+        if (!isPref && !setPref && !activate && !deactivate && !loadRange && !loadSlot && !loadEffect)
         {
             return;
         }
@@ -143,9 +145,41 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             ctx.Api.PushContextMount(actor, profileId);
         }
 
-        if (isPref || activate || loadRange || loadSlot)
+        if (isPref || activate || loadRange || loadSlot || loadEffect)
         {
-            SeedRangedAbilitySlot(ctx, actor);
+            SeedRangedAbilitySlot(ctx, actor, loadEffect ? "Ability.GraphOps.EffectFloat" : GalleryRangedAbilityId);
+        }
+
+        if (loadEffect)
+        {
+            string graphName = GraphOpsNodeIds.GraphId(op);
+            int graphId = GraphIdRegistry.GetId(graphName);
+            if (graphId <= 0)
+            {
+                graphId = GraphIdRegistry.Register(graphName);
+            }
+
+            if (ctx.Programs == null)
+            {
+                throw new InvalidOperationException(
+                    "Gallery LoadAbilityEffectFloat requires the featured program registry.");
+            }
+
+            if (!ctx.Programs.TryGetRegistration(graphId, out _))
+            {
+                GraphProgramPackage package = ctx.Compiled.Package
+                    ?? throw new InvalidOperationException(
+                        "Gallery LoadAbilityEffectFloat compiled without a program package.");
+                ctx.Programs.Register(
+                    graphId,
+                    package.Program,
+                    ctx.Kind,
+                    GraphInstructionSourceMap.Empty,
+                    package.Symbols,
+                    package.TriggerGraphEntries);
+            }
+
+            ctx.FeaturedGraphId = graphId;
         }
     }
 
@@ -193,13 +227,13 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         return profiles;
     }
 
-    private static void SeedRangedAbilitySlot(GraphOpsNodeDriverContext ctx, Entity actor)
+    private static void SeedRangedAbilitySlot(GraphOpsNodeDriverContext ctx, Entity actor, string abilityName)
     {
-        int abilityId = AbilityIdRegistry.GetId(GalleryRangedAbilityId);
+        int abilityId = AbilityIdRegistry.GetId(abilityName);
         if (abilityId <= 0)
         {
             throw new InvalidOperationException(
-                $"Gallery ranged ability '{GalleryRangedAbilityId}' is not installed.");
+                $"Gallery ranged ability '{abilityName}' is not installed.");
         }
 
         if (!ctx.SimWorld.Has<AbilityStateBuffer>(actor))

@@ -324,6 +324,44 @@ namespace Ludots.Tests.Gas.Graph
                 "unpark is not a window close either — no Deactivated slot");
         }
 
+        [Test]
+        public void InputDispatchPhase_DefersUnparkUntilThePhaseEnds()
+        {
+            using World world = NewWorld(out var gate, out var profiles, out _);
+            var runtime = new InteractionContextInstanceRuntime(world, profiles, NewEvents());
+
+            Entity subject = world.Create(NewMapEntity());
+            MountBaseContext(world, profiles, subject, ParentProfile);
+            int parentId = profiles.ProfileIdRegistry.GetId(ParentProfile);
+            int parentKey = ConfigKeyRegistry.Register(ParentProfile);
+            int childKey = ConfigKeyRegistry.Register(ForegroundChildProfile);
+
+            gate.Update(0.016f);
+            runtime.Activate(subject, childKey, parentKey);
+            gate.Update(0.016f);
+            Assert.That(HasActionMount(RequireMounts(gate, subject, parentId), out _), Is.False);
+
+            gate.BeginInputDispatchPhase();
+            runtime.Deactivate(subject, childKey);
+            gate.ReconcileAfterInputAction(subject);
+            Assert.That(
+                HasActionMount(RequireMounts(gate, subject, parentId), out _),
+                Is.False,
+                "closing the foreground context mid-phase leaves the parked actions down");
+
+            gate.EndInputDispatchPhase();
+            Assert.That(HasActionMount(RequireMounts(gate, subject, parentId), out _), Is.True);
+        }
+
+        private static IReadOnlyList<Trigger> RequireMounts(
+            InteractionContextTriggerMountSystem gate,
+            Entity subject,
+            int profileId)
+        {
+            Assert.That(gate.TryGetMountedTriggers(subject, profileId, out IReadOnlyList<Trigger> mounts), Is.True);
+            return mounts;
+        }
+
         private static bool HasActionMount(IReadOnlyList<Trigger> mounts, out TriggerGraphMountTrigger actionMount)
         {
             for (int i = 0; i < mounts.Count; i++)

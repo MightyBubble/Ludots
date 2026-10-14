@@ -37,6 +37,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "useRequirement",
             "showRequirement",
             "triggerGraphs",
+            "effectFields",
         };
 
         private static readonly string[] RemovedAimVisualFieldNames =
@@ -291,7 +292,125 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
+            if (obj["effectFields"] is JsonObject effectFields)
+            {
+                CompileEffectFields(
+                    effectFields,
+                    id,
+                    path,
+                    out Dictionary<string, Dictionary<string, string>>? fields,
+                    out Dictionary<string, Dictionary<string, float>>? literals);
+                def.TriggerGraphEffectFields = fields;
+                def.TriggerGraphEffectLiterals = literals;
+            }
+            else if (obj["effectFields"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'effectFields' must be an object.");
+            }
+
             return def;
+        }
+
+        private static void CompileEffectFields(
+            JsonObject fields,
+            string id,
+            string path,
+            out Dictionary<string, Dictionary<string, string>>? fieldMap,
+            out Dictionary<string, Dictionary<string, float>>? literalMap)
+        {
+            fieldMap = null;
+            literalMap = null;
+            foreach (KeyValuePair<string, JsonNode?> kvp in fields)
+            {
+                string graph = kvp.Key;
+                if (string.IsNullOrWhiteSpace(graph) || !string.Equals(graph, graph.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'effectFields' keys must be trimmed non-empty graph ids.");
+                }
+
+                if (kvp.Value is not JsonObject keys || keys.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' effectFields['{graph}'] must be an object of keys. " +
+                        "Each key is an effect field name or a number greater than 0.");
+                }
+
+                foreach (KeyValuePair<string, JsonNode?> entry in keys)
+                {
+                    string key = entry.Key;
+                    if (string.IsNullOrWhiteSpace(key) || !string.Equals(key, key.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' effectFields['{graph}'] keys must be trimmed non-empty strings.");
+                    }
+
+                    if (entry.Value is not JsonValue value)
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] must be an effect field name or a number greater than 0.");
+                    }
+
+                    if (value.TryGetValue<string>(out string? field))
+                    {
+                        if (string.IsNullOrWhiteSpace(field) || !string.Equals(field, field.Trim(), StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] must be a trimmed field name.");
+                        }
+
+                        if (!EffectTemplateNamedFloat.IsKnown(field))
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] names unknown field '{field}'. " +
+                                $"Known fields: {string.Join(", ", EffectTemplateNamedFloat.KnownFields)}.");
+                        }
+
+                        fieldMap ??= new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+                        if (!fieldMap.TryGetValue(graph, out Dictionary<string, string>? graphFields))
+                        {
+                            graphFields = new Dictionary<string, string>(StringComparer.Ordinal);
+                            fieldMap.Add(graph, graphFields);
+                        }
+
+                        graphFields.Add(key, field);
+                        continue;
+                    }
+
+                    if (!TryGetJsonNumber(value, out double number) || !(number > 0d) || double.IsInfinity(number))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' effectFields['{graph}']['{key}'] must be an effect field name or a number greater than 0.");
+                    }
+
+                    literalMap ??= new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
+                    if (!literalMap.TryGetValue(graph, out Dictionary<string, float>? graphLiterals))
+                    {
+                        graphLiterals = new Dictionary<string, float>(StringComparer.Ordinal);
+                        literalMap.Add(graph, graphLiterals);
+                    }
+
+                    graphLiterals.Add(key, (float)number);
+                }
+            }
+        }
+
+        private static bool TryGetJsonNumber(JsonValue value, out double number)
+        {
+            if (value.TryGetValue<double>(out number))
+            {
+                return true;
+            }
+
+            if (value.TryGetValue<int>(out int whole))
+            {
+                number = whole;
+                return true;
+            }
+
+            number = 0d;
+            return false;
         }
 
         private static int ResolveProgressionRequirement(JsonObject obj, string fieldName, string id, string path)

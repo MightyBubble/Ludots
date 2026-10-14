@@ -408,6 +408,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.MinimapApplyWheelZoom or
                 GraphNodeOp.SetTargetPos or
                 GraphNodeOp.LoadAbilityCastRange or
+                GraphNodeOp.LoadAbilityEffectFloat or
                 GraphNodeOp.LoadSlotAbilityId or
                 GraphNodeOp.Fail or
                 GraphNodeOp.IsContextActive
@@ -999,6 +1000,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.MinimapApplyWheelZoom, HandleMinimapApplyWheelZoom, "MinimapApplyWheelZoom graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
+            Register(GraphNodeOp.LoadAbilityEffectFloat, HandleLoadAbilityEffectFloat, "LoadAbilityEffectFloat graph opcode.");
             Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
             Register(GraphNodeOp.IsContextActive, HandleIsContextActive, "IsContextActive graph opcode.");
             Register(GraphNodeOp.Fail, HandleFail, "Fail graph opcode.");
@@ -1933,9 +1935,54 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.F[ins.Dst] = s.Api.LoadAbilityCastRange(s.E[ins.A], s.I[ins.B]);
         }
 
+        private static void HandleLoadAbilityEffectFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.LoadAbilityEffectFloat(
+                s.E[ins.A],
+                s.I[ins.B],
+                s.CurrentGraphId,
+                RequireProgramSymbol(ref s, in ins, nameof(GraphNodeOp.LoadAbilityEffectFloat)));
+        }
+
+        private static string RequireProgramSymbol(ref GraphExecutionState s, in GraphInstruction ins, string opName)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    $"{opName} requires a registered program so Symbols[Imm] can supply the key.");
+            }
+
+            if ((uint)ins.Imm >= (uint)registration.Symbols.Length ||
+                string.IsNullOrWhiteSpace(registration.Symbols[ins.Imm]))
+            {
+                throw new InvalidOperationException(
+                    $"{opName} Imm {ins.Imm} is outside program symbol table length {registration.Symbols.Length}.");
+            }
+
+            return registration.Symbols[ins.Imm];
+        }
+
         private static void HandleLoadSlotAbilityId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = s.Api.LoadSlotAbilityId(s.E[ins.A], s.I[ins.B]);
+            // Flags 0: an empty slot throws. Flags = scratch+1: write that bool scratch
+            // (1 resolved, 0 empty) and leave the id unused on a miss.
+            bool found = s.Api.TryLoadSlotAbilityId(s.E[ins.A], s.I[ins.B], out int abilityId);
+            if (ins.Flags == 0)
+            {
+                if (!found)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {s.E[ins.A]} slot {s.I[ins.B]} has no ability.");
+                }
+
+                s.I[ins.Dst] = abilityId;
+            }
+            else
+            {
+                s.B[ins.Flags - 1] = (byte)(found ? 1 : 0);
+                s.I[ins.Dst] = found ? abilityId : 0;
+            }
         }
 
         private static void HandleIsContextActive(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -3251,9 +3298,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             // I[dst] = E[A].BB_Int[Imm]
             var entity = s.E[ins.A];
-            if (!s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
-                throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
-            s.I[ins.Dst] = value;
+            bool found = s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value);
+            if (ins.Flags == 0)
+            {
+                if (!found)
+                {
+                    throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
+                }
+
+                s.I[ins.Dst] = value;
+            }
+            else
+            {
+                s.B[ins.Flags - 1] = (byte)(found ? 1 : 0);
+                s.I[ins.Dst] = found ? value : 0;
+            }
             s.DebugTrace?.RecordBlackboardInt(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 

@@ -26,5 +26,26 @@
       "castRangeCm": 640,
       "impactEffect": "Effect.GraphOps.ChainOpening"
     }
+  },
+  {
+    "id": "Ability.GraphOps.EffectFloat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 640,
+      "impactEffect": "Effect.GraphOps.NamedRadius"
+    },
+    "effectFields": {
+      "showcase.graph_op.LoadAbilityEffectFloat": {
+        "radius": "targetQuery.radius"
+      }
+    }
   }
 ]

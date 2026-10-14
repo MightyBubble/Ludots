@@ -225,6 +225,7 @@
 - [读出木桩的朝向](LoadEntityFacing.md) — 不靠眼睛看，图里直接读木桩面朝哪一度，读数顺手折成伤打出去。
 - [读出木桩的横坐标](LoadEntityPosX.md) — 不靠眼睛看，图里直接读木桩站在第几厘米，读数顺手折成伤打出去。
 - [读出木桩的纵坐标](LoadEntityPosY.md) — 横向读过了，这次读纵坐标，木桩站得多偏一看便知。
+- [读出这一槽点名的效果数值](LoadAbilityEffectFloat.md) — 图按槽位找到技能，再按这张图在 effectFields 里点的名字，读冲击效果上的那个数。
 - [读出这一槽的技能编号](LoadSlotAbilityId.md) — 图按槽位找到技能，读它的编号。
 - [读出这一槽的施法距离](LoadAbilityCastRange.md) — 图按槽位找到技能，读它写明的施法距离。
 - [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
