@@ -16,7 +16,8 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// S1 逐格对拍：从 Ludots 侧资产（.navsurface + Maps/<id>.json + 模板）重建与 Web 导出器
-/// 同一字节流，FNV-1a 摘要必须相等。字节流契约见 `tools/crowdsimulation-export/exportLudots.mjs`（沙盒运行时放在 `scripts/` 下）。
+/// 同一字节流，FNV-1a 摘要必须相等。地形格、阻挡物和桥逐字节比；跳跃候选那一段用 Web 快照
+/// s1-jump-truth.json 填，入库 .navsurface 的候选由 Ludots 烘焙，按行为对拍另测。字节流契约见 `tools/crowdsimulation-export/exportLudots.mjs`（沙盒运行时放在 `scripts/` 下）。
 /// </summary>
 [TestFixture]
 public class S1SurfaceTruthTests
@@ -86,7 +87,7 @@ public class S1SurfaceTruthTests
         var (blockers, bridges) = LoadMapEntities(seed);
         var grid = SurfaceGrid.Build(runtime, surface, blockers);
 
-        var hash = ComputeDigest(surface, grid, blockers, bridges);
+        var hash = ComputeDigest(surface, grid, blockers, bridges, S1JumpTruth.Read(SeedDir(seed)));
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulation", "parity", "s1-truth.json")))!;
         Assert.That(hash, Is.EqualTo(truth["fnv1a"]!.GetValue<string>()),
             $"S1 地表与 Web 导出逐格不一致（seed {seed}）");
@@ -241,7 +242,8 @@ public class S1SurfaceTruthTests
         NavSurfaceAsset surface,
         SurfaceGrid grid,
         List<BlockerFootprint> blockers,
-        List<(int x0, int y0, int x1, int y1, int width)> bridges)
+        List<(int x0, int y0, int x1, int y1, int width)> bridges,
+        IReadOnlyList<NavSurfaceJumpCandidate> jumpCandidates)
     {
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
@@ -277,8 +279,8 @@ public class S1SurfaceTruthTests
             w.Write(b.width);
         }
 
-        w.Write(surface.JumpCandidates.Length);
-        foreach (var j in surface.JumpCandidates)
+        w.Write(jumpCandidates.Count);
+        foreach (var j in jumpCandidates)
         {
             w.Write(j.FromX);
             w.Write(j.FromY);
