@@ -2611,6 +2611,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
             RegisterSystem(new GraphOutputValueCleanupSystem(World, graphOutputValueStore), SystemGroup.Cleanup);
+            RegisterSystem(new BlackboardEntityRefLifetimeSystem(World), SystemGroup.Cleanup);
             RegisterSystem(new PanelRealtimeRefreshSystem(panelHost), SystemGroup.Cleanup);
             RegisterSystem(new OrderAdmissionEntityIntakeEndSystem(orderAdmissionResults), SystemGroup.Cleanup);
 

@@ -89,11 +89,18 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     }
 
     [Test]
-        public void SchemeSwitch_AppliesMappedCastDefault_ExplicitChoiceSurvivesSwitchAndSnapshot()
-        {
-            using Session session = Session.Boot("scheme.aim.kbm");
-            session.AssertSchemeDefaultFollowsUntilPlayerChooses();
-        }
+    public void SchemeSwitch_AppliesMappedCastDefault_ExplicitChoiceSurvivesSwitchAndSnapshot()
+    {
+        using Session session = Session.Boot("scheme.aim.kbm");
+        session.AssertSchemeDefaultFollowsUntilPlayerChooses();
+    }
+
+    [Test]
+    public void SaveMidAim_AfterTargetDestroyed_RoundTrips()
+    {
+        using Session session = Session.Boot("scheme.aim.kbm");
+        session.AssertSaveMidAimAfterTargetDestroyed();
+    }
 
         [Test]
         public void SchemeSwitch_ToGamepad_MouseStopsDrivingAimAndStickStarts()
@@ -315,10 +322,6 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
             var snapshotService = new WorldSnapshotService();
             var restoreService = new WorldRestoreService();
-            // Aim tracking can leave a dead entity in the blackboard. The save
-            // validator rejects that reference; the preference under test is a
-            // separate component and is left as written.
-            DropDeadBlackboardEntityRefs();
             WorldSaveSnapshot snapshot = snapshotService.Capture(
                 _engine,
                 SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
@@ -339,6 +342,32 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             SwitchScheme("scheme.aim.kbm_skills");
             Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.click"), Diag("restored choice survives switch"));
             Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("player"), Diag("restored origin"));
+        }
+
+        public void AssertSaveMidAimAfterTargetDestroyed()
+        {
+            AimMouse(Position(Near));
+            Assert.That(ReadTarget(), Is.EqualTo(Near), Diag("aimed target"));
+            int keyId = OrderBlackboardKeyRegistry.Resolve("aim.target");
+            _engine.World.Destroy(Near);
+            Assert.That(_engine.World.IsAlive(Near), Is.False, "target destroyed");
+            Assert.That(ReadTarget(), Is.EqualTo(Entity.Null), "dead target cleared");
+            Assert.That(_engine.World.Get<BlackboardEntityBuffer>(Hero).HasKey(keyId), Is.True, "aim.target key remains");
+
+            var snapshotService = new WorldSnapshotService();
+            var restoreService = new WorldRestoreService();
+            WorldSaveSnapshot snapshot = snapshotService.Capture(
+                _engine,
+                SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+            restoreService.Restore(_engine, snapshot);
+
+            Hero = RequireNamed("AimSchemes Hero");
+            Assert.That(ReadTarget(), Is.EqualTo(Entity.Null), "restored aim target");
+            Assert.That(_engine.World.Get<BlackboardEntityBuffer>(Hero).HasKey(keyId), Is.True, "restored aim.target key");
+            Assert.That(CountNamed("Dummy Near"), Is.EqualTo(0), "destroyed dummy stays gone");
+            StickDummy = RequireNamed("Dummy Stick");
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.smart"), "restored cast mode");
+            Assert.That(ReadPref("pref.aim.cast_mode_origin"), Is.EqualTo("scheme"), "restored origin");
         }
 
         public void SwitchScheme(string schemeId)
@@ -918,33 +947,6 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             return ReadAimPrefValue(_engine, Hero, key);
         }
 
-        private unsafe void DropDeadBlackboardEntityRefs()
-        {
-            var owners = new List<Entity>();
-            var query = new QueryDescription().WithAll<BlackboardEntityBuffer>();
-            _engine.World.Query(in query, (Entity entity, ref BlackboardEntityBuffer _) => owners.Add(entity));
-            for (int o = 0; o < owners.Count; o++)
-            {
-                ref BlackboardEntityBuffer buffer = ref _engine.World.Get<BlackboardEntityBuffer>(owners[o]);
-                int count = buffer.Count;
-                Span<int> deadKeys = stackalloc int[count];
-                int deadCount = 0;
-                for (int i = 0; i < count; i++)
-                {
-                    Entity target = EntityUtil.Reconstruct(buffer.EntityIds[i], buffer.WorldIds[i], buffer.Versions[i]);
-                    if (target != Entity.Null && !_engine.World.IsAlive(target))
-                    {
-                        deadKeys[deadCount++] = buffer.Keys[i];
-                    }
-                }
-
-                for (int i = 0; i < deadCount; i++)
-                {
-                    buffer.Remove(deadKeys[i]);
-                }
-            }
-        }
-
         private void RebindPlaced()
         {
             Hero = FindNamed("AimSchemes Hero");
@@ -961,19 +963,43 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         private Entity FindNamed(string name)
         {
+            Entity found = LookupNamed(name, out int count);
+            Assert.That(count, Is.EqualTo(1), Diag("name " + name));
+            return found;
+        }
+
+        private Entity RequireNamed(string name)
+        {
+            Entity found = LookupNamed(name, out int count);
+            if (count != 1)
+            {
+                throw new InvalidOperationException($"name {name} count={count}");
+            }
+
+            return found;
+        }
+
+        private Entity LookupNamed(string name, out int count)
+        {
             Entity found = Entity.Null;
-            int count = 0;
+            int matches = 0;
             var query = new QueryDescription().WithAll<Name>();
             _engine.World.Query(in query, (Entity entity, ref Name entityName) =>
             {
                 if (string.Equals(entityName.Value, name, StringComparison.Ordinal))
                 {
                     found = entity;
-                    count++;
+                    matches++;
                 }
             });
-            Assert.That(count, Is.EqualTo(1), Diag("name " + name));
+            count = matches;
             return found;
+        }
+
+        private int CountNamed(string name)
+        {
+            LookupNamed(name, out int count);
+            return count;
         }
 
         private bool AimGestureOpen()

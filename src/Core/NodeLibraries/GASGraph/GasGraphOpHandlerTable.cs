@@ -2482,7 +2482,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
             else
             {
-                s.E[ins.Dst] = default;
+                // Empty handle is Entity.Null. A zero id is a dead reference and fails save validation.
+                s.E[ins.Dst] = Entity.Null;
                 s.B[ins.Flags] = 0;
             }
         }
