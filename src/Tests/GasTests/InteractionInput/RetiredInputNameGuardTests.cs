@@ -13,7 +13,8 @@ public sealed class RetiredInputNameGuardTests
         "Default_Gameplay",
         "CoreInputCollectionKeys",
         "startupInputContexts",
-        "collection.command.source",
+        // Assembled so the command-source collection scan does not match this token list.
+        string.Concat("collection.command", ".source"),
         // Assembled so the skill-bar source scan does not match this token list.
         string.Concat("SkillBar", "OverlaySystem"),
         "targetKinds",
