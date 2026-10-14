@@ -195,7 +195,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S1 交付：地形与障碍物（本次）
 
 - **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
-- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。
+- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。板的 `DataFile` 指向 `terrain/crowd_simulation_s<种子>.map_data.bin`，`Grid.CellSizeCm` 为 6250，React 编辑器按这块板打开。仓库里已提交的 `.navsurface` 仍是 Web 导出的对拍夹具。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
 
@@ -478,7 +478,7 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 ## 现在的范围
 
-原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，后三条里迷雾和动态建造已经在内核里，高度笔刷也有；导航区域笔刷和正方形阻挡仍然在。
+原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，迷雾和动态建造已经在内核里，高度笔刷也有。CrowdSimulation 地图可以在 React 编辑器里把地形类型画进逻辑地形，再烘焙成 `.navsurface`。正方形阻挡仍然在。
 
 阻挡物仍然只能是正方形。`CrowdSimulationAuthoringContract` 要求地图上 `sinkNavigationObstacle` 的实体 `shape` 为 `Box`，并且 `halfWidthCm` 等于 `halfHeightCm`。圆形非阻挡区域实体不走这条拒绝。结构模板的 `blocker` 只接受 `footprint` 为 `rect`；`CrowdStructureFootprint.Make` 把 rect 写成 `Hx = Hy = sizeCm / 2`。`disc` 和 `path` 可以当结构，不能当阻挡。
 
@@ -488,7 +488,15 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
 
-编辑器：`VisualTerrainEditorDocument.PaintWorld` 只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。没有把导航区域画进 `.navsurface` 的笔刷。原句「无编辑器笔刷」对高度笔刷已不成立；导航区域笔刷仍然没有。
+CrowdSimulation 地图的地形类型在 React 编辑器里画。板的 `DataFile` 是 React 网格地形二进制，每格 `AreaId` 就是这张图 `maps.<mapId>.terrainAreas` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。三张 S1 图的逻辑格和导航格都是 256×256。打开 `solver` 为 `crowd-simulation` 的地图时，Area 工具按 `terrainAreas` 列出序号和 `terrainId`。这一项只有 `terrainId` 和 `areaId`，没有按类型分开的颜色；出生点颜色在 `deploy.bases[].color`，地表着色走连续高度图。别的地图仍用原来的 Default / Road / Forest 调色板，也不显示烘焙动作。
+
+工具栏「烘焙 CrowdSimulation 地表」把当前逻辑地形交给编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface`，写到作者填的 `.navsurface` 路径。默认路径把 `ContinuousHeightmap.asset` 的 `.height` 换成 `.navsurface`，可以改。运行时仍按这条派生路径读文件。失败报文带格坐标和字段，编辑器原样显示。命令行是同一份函数：`nav bake-crowd-navsurface --mapId <地图 id> --modId <Mod 名> --out <路径>`。已有 `.navsurface` 转成地编资产用 `nav import-navsurface-react --in <.navsurface> --out <map_data.bin>`。
+
+烘焙函数是 `Ludots.Tool` 的 `CrowdNavSurfaceAuthoring.Bake`。它核对地图边长、板的格边长、`.height` 的包围盒和采样、群体配置里实际用到的 `profiles.cellSizeCm`。对不上就报错。格上的 `HeightLevel`、`WaterHeightLevel`、`Water`、`Ramp`、`Blocked` 对这块地表没有含义，出现非零值就报哪一格、哪个字段，不丢掉。高度只认 `.height`。阻挡物仍是地图实体。群体运行时不读逻辑地形。
+
+跳跃候选是 `Bake` 的显式参数。命令和编辑器桥传空列表，不生成，也不从旧文件抄。Web 导出的三份 `.navsurface` 留着对拍；烘焙写到派生路径会换掉里面的跳跃候选，所以不要覆盖仓库里的那三份。生成规则在 Web 的 `linkBake.js`，这边还没接上。
+
+`VisualTerrainEditorDocument.PaintWorld` 仍只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 仍写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。
 
 ## 不变量抽查
 
