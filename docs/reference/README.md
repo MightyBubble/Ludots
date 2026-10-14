@@ -16,8 +16,8 @@
   * 外部 `Arch` / `Arch.Extended` 源码入口与职责说明
 * [Champion Skill Stress Scenario](champion_skill_stress_scenario.md)
   * `ChampionSkillSandboxMod` 双阵营压力地图的场景卡、复用清单、工具面板与验收要求
-* [Champion Skill Sandbox Delivery Plan](champion_skill_sandbox_delivery_plan.md)
-  * `ChampionSkillSandboxMod` 的复用基线、交付内容与当前实现切片回写
+* [瞄准与控制方案](../../gitbook/architecture/graph-capability-status.md) §3.3.2
+  * 冠军沙盒的手势偏好、控制方案和 `role:` 集合
 * [关系系统：市场案例抽象与 Ludots 复用设计](relationship_system_market_abstraction.md)
   * CRPG / JRPG / 自走棋 / 三国英雄题材的关系机制抽象、Ludots 基建复用清单、配置与 showcase 验收口径
 * [Entity-Scoped Progression 作者配置指南](entity_scoped_progression_author_guide.html)
