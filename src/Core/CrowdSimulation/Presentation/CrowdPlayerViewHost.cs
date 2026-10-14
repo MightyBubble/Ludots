@@ -641,7 +641,8 @@ internal sealed class CrowdPlayerViewHost
             DrawOrderFeedback(session, routes, viewer, leader, goal, unfinished);
         }
 
-        PublishText(latest, planning, moving, arrived, other);
+        var card = CrowdCommandStatusCard.Classify(planning, moving, arrived, other);
+        PublishText(latest, card, planning, moving, arrived, other);
         DrawChrome(overlay);
     }
 
@@ -1193,7 +1194,7 @@ internal sealed class CrowdPlayerViewHost
             _goal);
     }
 
-    private void PublishText(CrowdOrder? latest, int planning, int moving, int arrived, int other)
+    private void PublishText(CrowdOrder? latest, CrowdCommandCardState card, int planning, int moving, int arrived, int other)
     {
         int shape = latest == null ? -1 : ShapeIndex(latest.ShapeId);
         int mode = latest == null ? -1 : (int)latest.Mode;
@@ -1260,6 +1261,8 @@ internal sealed class CrowdPlayerViewHost
         _teamBar = _sb.ToString();
         _sb.Clear();
         var labels = _config.Labels;
+        _sb.Append(CardLabel(card));
+        AppendSep();
         AppendLabeled(labels.CountPlanning, planning);
         AppendSep();
         AppendLabeled(labels.CountMoving, moving);
@@ -1356,6 +1359,15 @@ internal sealed class CrowdPlayerViewHost
         overlay.AddText(textX, textY + (step * 2), _clickLine, _config.FontSize, _text);
         overlay.AddText(textX, textY + (step * 3), _deployLine, _config.FontSize, _text);
     }
+
+    private string CardLabel(CrowdCommandCardState card) => card switch
+    {
+        CrowdCommandCardState.Planning => _config.Labels.Planning,
+        CrowdCommandCardState.Moving => _config.Labels.Moving,
+        CrowdCommandCardState.Arrived => _config.Labels.Arrived,
+        CrowdCommandCardState.Partial => _config.Labels.Partial,
+        _ => _config.Labels.Idle,
+    };
 
     private void AppendSep()
     {

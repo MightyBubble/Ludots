@@ -194,7 +194,7 @@ public sealed class CrowdPlayerViewTests
             }
         }
 
-        Assert.That(texts, Does.Contain("countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
+        Assert.That(texts, Does.Contain("idle · countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
         Assert.That(texts, Does.Contain("clickSpawn unitType 0 · radius 0 · count 8"));
         Assert.That(texts, Has.Some.StartsWith("deploy 24 · radius 0-"));
         Assert.That(texts, Has.Some.Contains(" · layer 0"));
