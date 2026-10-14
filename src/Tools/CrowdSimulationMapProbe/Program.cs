@@ -10,6 +10,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Systems;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -31,10 +32,6 @@ namespace CrowdSimulationMapProbe;
 public static class Program
 {
     private const int RenderSize = 1024;
-
-    // 地形类型着色用水/岸/陆/山/悬崖各自一眼可分的颜色(与参考实现区域着色同色系)
-    private static readonly (int r, int g, int b)[] TypeColors =
-        { (70, 110, 170), (200, 184, 130), (150, 170, 110), (150, 120, 90), (60, 50, 44) };
 
     public static int Main(string[] args)
     {
@@ -74,9 +71,9 @@ public static class Program
         Directory.CreateDirectory(outDir);
 
         var bundle = Load(seedDir, standardDir, capabilityDir);
-        RenderTypes(bundle.Surface, bundle.Height, Path.Combine(outDir, $"{bundle.MapId}_types.png"));
-        RenderBlocked(bundle.Surface, bundle.Height, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
-        RenderFull(bundle.Surface, bundle.Height, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
+        RenderTypes(bundle.Surface, bundle.Height, bundle.TypeColors, Path.Combine(outDir, $"{bundle.MapId}_types.png"));
+        RenderBlocked(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
+        RenderFull(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
 
         Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.Bridges.Count} jumps={bundle.Surface.JumpCandidates.Length}");
         return 0;
@@ -116,7 +113,7 @@ public static class Program
 
     private static void RenderNav(SeedBundle bundle, NavContext nav, NavHeightField heights, string path)
     {
-        var px = BaseLayer(bundle.Surface, bundle.Height);
+        var px = BaseLayer(bundle.Surface, bundle.Height, bundle.TypeColors);
         int navCellsPerSide = nav.NavCellsPerSide;
         // 不可走遮罩
         for (int cy = 0; cy < navCellsPerSide; cy++)
@@ -173,7 +170,7 @@ public static class Program
             runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
         var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, 0, 1, cache);
 
-        var px = BaseLayer(bundle.Surface, bundle.Height);
+        var px = BaseLayer(bundle.Surface, bundle.Height, bundle.TypeColors);
         float cellPx = (float)RenderSize / navCellsPerSide;
         float csCm = runtime.NavCellSizeCm;
 
@@ -290,7 +287,7 @@ public static class Program
 
     private static void RenderPath(SeedBundle bundle, NavContext nav, FlowField flow, List<int> trace, Fix64[]? pts, int pointCount, int start, int goal, string path)
     {
-        var px = BaseLayer(bundle.Surface, bundle.Height);
+        var px = BaseLayer(bundle.Surface, bundle.Height, bundle.TypeColors);
         int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         float worldCm = navCellsPerSide * bundle.Runtime.NavCellSizeCm;
 
@@ -379,7 +376,7 @@ public static class Program
         var dbgRng = CrowdSimRng.Create((long)runtime.WorldSeed * 31 + 1L * 7919);
         int n0 = runtime.NavCellsPerSide;
         var dbgTypes = new List<int>();
-        for (int t = 0; t < runtime.UnitTypes.Count; t++) if (!runtime.UnitTypes[t].Special) dbgTypes.Add(t);
+        for (int t = 0; t < runtime.UnitTypes.Count; t++) dbgTypes.Add(t);
         int gid = 0;
         for (int p = 0; p < runtime.Deploy.Bases.Count; p++)
         {
@@ -391,6 +388,7 @@ public static class Program
                 for (int r = 0; r < radiusClasses.Count; r++)
                 {
                     int l = runtime.UnitTypes[t].AgentTypeIndex;
+                    if (CrowdDeployment.ProfileOf(runtime, l, r).Special) continue;
                     var nav = session.NavFor(l, r);
                     if (nav.Cells.Length == 0) continue;
                     var cs = new List<int>();
@@ -473,7 +471,8 @@ public static class Program
         ContinuousHeightmapAsset Height,
         CrowdSimulationMapSurface MapSurface,
         SurfaceGrid Grid,
-        NavHeightField Heights);
+        NavHeightField Heights,
+        (int R, int G, int B)[] TypeColors);
 
     /// <summary>单位创建单路径的无头装配:与引擎同一装载链(VFS 挂载能力 mod 资产 →
     /// ConfigPipeline → MapLoader.LoadTemplates)取模板注册表与模板键;选中属主置空,不镜像。</summary>
@@ -678,18 +677,33 @@ public static class Program
             heightPath,
             mapSurface.Blockers);
 
-        return new SeedBundle(mapId, runtime, surface, height, mapSurface, ingested.Grid, ingested.Heights);
+        return new SeedBundle(mapId, runtime, surface, height, mapSurface, ingested.Grid, ingested.Heights, TypeColorsOf(standardDir, runtime));
     }
 
-    private static void RenderTypes(NavSurfaceAsset surface, ContinuousHeightmapAsset height, string path)
+    private static (int R, int G, int B)[] TypeColorsOf(string standardDir, CrowdSimulationRuntimeConfig runtime)
     {
-        var px = BaseLayer(surface, height);
+        string path = Path.Combine(standardDir, CrowdTerrainTypeColors.RelativePath);
+        CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        table.RequireCovers(runtime.TerrainTypeIds, runtime.MapId);
+        var colors = new (int R, int G, int B)[runtime.TerrainTypeIds.Count];
+        for (int i = 0; i < colors.Length; i++)
+        {
+            CrowdTerrainTypeColor color = table.Colors[runtime.TerrainTypeIds[i]];
+            colors[i] = (color.Red, color.Green, color.Blue);
+        }
+
+        return colors;
+    }
+
+    private static void RenderTypes(NavSurfaceAsset surface, ContinuousHeightmapAsset height, (int R, int G, int B)[] typeColors, string path)
+    {
+        var px = BaseLayer(surface, height, typeColors);
         PngWriter.Write(path, RenderSize, RenderSize, px);
     }
 
-    private static void RenderBlocked(NavSurfaceAsset surface, ContinuousHeightmapAsset height, SurfaceGrid grid, string path)
+    private static void RenderBlocked(NavSurfaceAsset surface, ContinuousHeightmapAsset height, (int R, int G, int B)[] typeColors, SurfaceGrid grid, string path)
     {
-        var px = BaseLayer(surface, height);
+        var px = BaseLayer(surface, height, typeColors);
         int navCellsPerSide = grid.NavCellsPerSide;
         for (int cy = 0; cy < navCellsPerSide; cy++)
         {
@@ -706,12 +720,13 @@ public static class Program
     private static void RenderFull(
         NavSurfaceAsset surface,
         ContinuousHeightmapAsset height,
+        (int R, int G, int B)[] typeColors,
         SurfaceGrid grid,
         CrowdSimulationMapSurface mapSurface,
         CrowdSimulationRuntimeConfig runtime,
         string path)
     {
-        var px = BaseLayer(surface, height);
+        var px = BaseLayer(surface, height, typeColors);
         int navCellsPerSide = grid.NavCellsPerSide;
 
         // 阻挡格
@@ -741,8 +756,8 @@ public static class Program
         PngWriter.Write(path, RenderSize, RenderSize, px);
     }
 
-    /// <summary>地形类型着色 + 轻度坡面晕渲(类型颜色为主信号,明暗只作辅助)。</summary>
-    private static byte[] BaseLayer(NavSurfaceAsset surface, ContinuousHeightmapAsset height)
+    /// <summary>地形类型着色 + 轻度坡面晕渲(类型颜色为主信号,明暗只作辅助)。底色读 Presentation/terrain_type_colors.json。</summary>
+    private static byte[] BaseLayer(NavSurfaceAsset surface, ContinuousHeightmapAsset height, (int R, int G, int B)[] typeColors)
     {
         var px = new byte[RenderSize * RenderSize * 3];
         int n = surface.NavCellsX;
@@ -760,7 +775,12 @@ public static class Program
                 int hx = Math.Min(b - 1, x * b / RenderSize);
                 int hy = Math.Min(b - 1, y * b / RenderSize);
 
-                var (r, g, bb) = TypeColors[type];
+                if ((uint)type >= (uint)typeColors.Length)
+                {
+                    throw new InvalidOperationException($"地形类型编号 {type} 超出颜色表 {typeColors.Length}。");
+                }
+
+                var (r, g, bb) = typeColors[type];
 
                 // 晕渲:东向坡亮、西向坡暗(压低强度,保住类型颜色)
                 int xl = Math.Max(0, hx - 1), xr = Math.Min(b - 1, hx + 1);
