@@ -121,7 +121,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 `CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。单位模板上的 `CrowdSimulationAgent` 必写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。这些字符串留在模板和配置里。生成时把档案下标、移动类型下标，以及模板上已经写成定点数的速度、个人半径、推挤优先级，写进实体上的 `CrowdSimulationAgent`。组件没有字符串字段，tick 里不再解析 id。速度按模板各写各的。领队步速取本组已生成成员的模板速度最小值；子步数取本图绑定模板里的最大速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 不写时等于 `cost`，两者都必须大于 0。本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` 里的每一个区域；排除写 `passable: false`，不能省略行，缺行也不当成代价 1 或不可通行。`areas` 为 null 直接报错。绑定集是体型 `navProfileId` 落在这张图 `navProfiles` 里的 pathing 类型，加上本图群体单位模板点名的 `agentTypeId`。没进绑定集的类型不校验，也不建网格查询。核心 `Humanoid` 保持 `PreferMesh`，Mod 的 pathing 不要再写它。`passable` 为 false 时群体代价记 0，Detour 过滤掉这一区域。`special` 为 true 的模板不参与批量部署。群体运行时只绑定被单位模板引用的 agent type，pathing 里没有模板的类型不进运行时表。只加载能力 Mod、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
 
-地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。群体的 AgentTypeIndex 是被单位模板引用的 pathing agent type，按合并后的属性顺序编号。`maps.<mapId>.terrainAreas` 是有序数组，每项 `{ terrainId, areaId }`，数组下标就是 `.navsurface` 的地形编号。`.navsurface` 从地图的 `ContinuousHeightmap.asset` 推导：去掉 `assets/` 前缀，把 `.height` 换成 `.navsurface`。带导航标签的地图用 `maps.<mapId>.navProfiles` 列出要烘焙和装载瓦片库的能力档 id，数组顺序就是烘焙顺序。绑定了移动类型的地图写 `maps.<mapId>.navAreas`（区域 id 数组）。`terrainAreas` 的 `areaId` 必须是它的子集；结构模板会动态铺上的 `deck`、`road`、`flooded`、`burning` 也写进去。没有 nav 标签，或没有 `navProfiles`，启动时不建网格查询。查询只给 PreferMesh / AutoCheapest、且体型 `navProfileId` 在这张图 `navProfiles` 里的类型。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，地图把模板绑进会话就失败，报文带模板 id 和 agent id。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
+地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。群体的 AgentTypeIndex 是被单位模板引用的 pathing agent type，按合并后的属性顺序编号。`maps.<mapId>.terrainAreas` 是有序数组，每项 `{ terrainId, areaId }`，数组下标就是 `.navsurface` 的地形编号。同级的 `logicTerrainAsset` 指向地编 React 网格，只给编辑器打开和烘焙；运行时不把它装成 LogicTerrain。`.navsurface` 从地图的 `ContinuousHeightmap.asset` 推导：去掉 `assets/` 前缀，把 `.height` 换成 `.navsurface`。带导航标签的地图用 `maps.<mapId>.navProfiles` 列出要烘焙和装载瓦片库的能力档 id，数组顺序就是烘焙顺序。绑定了移动类型的地图写 `maps.<mapId>.navAreas`（区域 id 数组）。`terrainAreas` 的 `areaId` 必须是它的子集；结构模板会动态铺上的 `deck`、`road`、`flooded`、`burning` 也写进去。没有 nav 标签，或没有 `navProfiles`，启动时不建网格查询。查询只给 PreferMesh / AutoCheapest、且体型 `navProfileId` 在这张图 `navProfiles` 里的类型。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，地图把模板绑进会话就失败，报文带模板 id 和 agent id。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
 
 覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是合并后的属性顺序，不按键名重排。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.navProfiles` 是能力档 id 数组，按下标烘焙和装载，列出的档没有瓦片就是装载错误。`maps.<mapId>.navAreas` 写在 navmesh.json。登记进 `maps` 的地图必须写 `solver`，取值只能是 `navmesh`、`mass-navigation`、`crowd-simulation`。求解器板写在 `maps.<mapId>.boards`，有这个键时只能有一块，空对象会拒绝。不写 `boards` 时，群体会话和大规模导航用 `MapManager.ResolveRootBoard` 决定仿真哪一块板：写了 `RootBoard` 就按名字找（大小写不敏感），没写就用第一块板。带 `Feature.NavMesh:On` 的地图仍要写 `maps.<mapId>.boards`，瓦片尺寸在这块声明里，`LoadNavForMap` 找不到就失败。`solver` 为 `crowd-simulation` 的地图在聚焦时建群体会话，并按 `CrowdSimulationConfig.json` 的 `worker.planTimeoutMs` 建路径服务、调用 `EnableMovement`。这个值是必填的正整数毫秒。调试文件再写 `worker.planTimeoutMs` 会报错，并指向这份配置。`terrainAreas` 只记地形类型到区域的对应，不决定跑哪种求解器。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。`CrowdSimulationDebug.json` 再写 `session.autostart` 会报错。`MassNavigationConfig.json` 再写 `mapId` 会报错：哪张图跑大规模导航只看 `solver`。
 
@@ -195,7 +195,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S1 交付：地形与障碍物（本次）
 
 - **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
-- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。
+- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用群体 `profiles.cellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 仍是 Web 导出的对拍夹具。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
 
@@ -478,7 +478,7 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 ## 现在的范围
 
-原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，后三条里迷雾和动态建造已经在内核里，高度笔刷也有；导航区域笔刷和正方形阻挡仍然在。
+原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，迷雾和动态建造已经在内核里，高度笔刷也有。CrowdSimulation 地图可以在 React 编辑器里把地形类型画进逻辑地形，再烘焙成 `.navsurface`。正方形阻挡仍然在。
 
 阻挡物仍然只能是正方形。`CrowdSimulationAuthoringContract` 要求地图上 `sinkNavigationObstacle` 的实体 `shape` 为 `Box`，并且 `halfWidthCm` 等于 `halfHeightCm`。圆形非阻挡区域实体不走这条拒绝。结构模板的 `blocker` 只接受 `footprint` 为 `rect`；`CrowdStructureFootprint.Make` 把 rect 写成 `Hx = Hy = sizeCm / 2`。`disc` 和 `path` 可以当结构，不能当阻挡。
 
@@ -488,7 +488,15 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
 
-编辑器：`VisualTerrainEditorDocument.PaintWorld` 只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。没有把导航区域画进 `.navsurface` 的笔刷。原句「无编辑器笔刷」对高度笔刷已不成立；导航区域笔刷仍然没有。
+CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是 `maps.<mapId>.logicTerrainAsset` 指向的 React 网格，每格 `AreaId` 就是 `terrainAreas` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。板不设 `DataFile`，`Grid.CellSizeCm` 保持地图原来的值；S1 是 100。导航格由地图边长除以群体 `profiles.cellSizeCm` 得到，S1 是 256×256、格边 6250 cm。编辑器合并地图时保留 `DefaultCamera`，后到的片段覆盖先到的，和运行时 `MapManager` 同一条规则。打开后相机用这份位姿。拾取平面的宽高就是地图的米制宽高。打开 `solver` 为 `crowd-simulation` 的地图并选中 Area 工具时，调色板和地面叠层用 `Presentation/terrain_type_colors.json` 里按 `terrainId` 的颜色。文件在 `CrowdSimulationStandardMod`，目录项在 `CrowdSimulationMod`。颜色表是多张地图共用的合并结果：这张图 `terrainAreas` 里的每个 `terrainId` 都必须有颜色，缺一个就在进图时报错；别的地图才用到的颜色可以留在表里。编辑器经 `GET /api/mods/{modId}/maps/{mapId}/crowd-terrain-colors` 读合并结果，前端不写死色值。游戏内按类型着色还没接，会话上已经留下同一份表。三维网格本身仍按高度和生物群落上色。出生点颜色仍在 `deploy.bases[].color`。别的地图仍用原来的 Default / Road / Forest 调色板，也不显示烘焙动作。
+
+工具栏「烘焙 CrowdSimulation 地表」把当前逻辑地形交给编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface`。输出路径没有默认值，空着时按钮不可用。运行时仍从 `ContinuousHeightmap.asset` 把 `.height` 换成 `.navsurface` 来读。目标文件里的跳跃候选比这次烘焙多时，写入函数拒绝覆盖，报文写明目标里有几条、这次有几条。`--overwrite` 不绕过这条。失败报文带格坐标和字段，编辑器原样显示。命令行是同一份函数：`nav bake-crowd-navsurface --mapId <地图 id> --modId <Mod 名> --out <路径>`。已有 `.navsurface` 转成地编资产用 `nav import-navsurface-react --in <.navsurface> --out <map_data.bin>`。
+
+烘焙函数是 `Ludots.Tool` 的 `CrowdNavSurfaceAuthoring.Bake`。它核对地图边长、`.height` 的包围盒和采样、群体配置里实际用到的 `profiles.cellSizeCm`。不读板的 `Grid.CellSizeCm`。地编网格按群体格边长读入，步长和格数必须和由此推出的导航格一致。对不上就报错。格上的 `HeightLevel`、`WaterHeightLevel`、`Water`、`Ramp`、`Blocked` 对这块地表没有含义，出现非零值就报哪一格、哪个字段，不丢掉。高度只认 `.height`。阻挡物仍是地图实体。群体运行时不读逻辑地形，也不读 `logicTerrainAsset`。
+
+跳跃候选是 `Bake` 的显式参数。命令和编辑器桥传空列表，不生成，也不从旧文件抄。目标里已有的跳跃候选更多时拒绝覆盖，所以对着仓库里那三份烘会失败。`--overwrite` 只跳过「文件已存在」，不跳过条数检查。生成规则在 Web 的 `linkBake.js`，这边还没接上。
+
+`VisualTerrainEditorDocument.PaintWorld` 仍只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 仍写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。
 
 ## 不变量抽查
 
@@ -510,6 +518,6 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
 - 多张地图共用标准参数 Mod 的一份 CrowdSimulationConfig。地图自己的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。聚焦哪张图，就为哪张图建会话。动态分层桥仍然没有：桥面层由会话激活时从地图桥实体生成，结构模板 `layered` 为真时拒绝放置。
-- Raylib 宿主内的地形类型着色 / 阻挡格叠加层还没有 presenter（当前宿主画面是高程着色的高度图地形）；阻挡物还没有呈现网格。
+- Raylib 宿主内的地形类型着色 / 阻挡格叠加层还没有 presenter（当前宿主画面是高程着色的高度图地形）。按 `terrainId` 的颜色已经在 `Presentation/terrain_type_colors.json`，编辑器 Area 工具在用，游戏内还没画。阻挡物还没有呈现网格。
 - Web 侧对拍基线的定点数学适配未开工（Fix64 语义在 Ludots 侧，Web 需跟进同一套）。
 - 引擎销毁后还有约 165 MB 收不回来。`GameEngine.Dispose` 已经先结束群体会话，路径服务的工作线程不再引用会话。剩下的引用来自 `ModLoadContext`：`Unload` 之后运行时对它仍持有强句柄，它的 `_sharedAssemblyResolver` 指向 `ModLoader`，`ModLoader` 经 `EngineSystemRegistrar` 指向 `GameEngine`，引擎里又有这个上下文程序集里的类型实例，所以上下文卸载不掉，整个引擎外壳跟着留下。只在 `Unload` 前清掉解析委托、程序集缓存和依赖解析器，没有效果。同一进程里连续起引擎就会累积（测试进程、编辑器里反复重建）。这是 Mod 加载层的问题，不在群体模拟里修。复现：同一进程里起 S4 引擎、进图、走一帧、销毁，重复 5 次，每次强制回收后托管堆每轮涨约 165 MB；用 `dotnet-dump` 的 `gcroot` 查剩下的 `GameEngine`，能看到上面这条引用链。

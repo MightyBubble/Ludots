@@ -108,6 +108,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         /// <summary>有序绑定。数组下标就是 .navsurface 里的地形类型编号。</summary>
         public List<NavTerrainAreaBinding> TerrainAreas { get; set; }
+
+        /// <summary>
+        /// 地编 React 网格的 Mod 内相对路径。运行时不把它装成 LogicTerrain。
+        /// </summary>
+        public string LogicTerrainAsset { get; set; }
     }
 
     public sealed class NavTerrainAreaBinding

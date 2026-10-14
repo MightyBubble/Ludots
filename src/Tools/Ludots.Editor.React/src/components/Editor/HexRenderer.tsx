@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
-import { useEditorStore, type BakedNavTileVisual, type EntityTemplatePayload, type JsonRecord } from './EditorStore';
+import { useEditorStore, type BakedNavTileVisual, type EntityTemplatePayload, type JsonRecord, type TerrainTypeColor } from './EditorStore';
 import { ChunkRenderer } from '../../Core/Render/ChunkRenderer';
 import {
     cellToWorldPosition,
     getBrushVisualRadius,
     getMapWorldSizeM,
     getTopologyNeighbors,
+    orbitFrameLimits,
     worldPointToCell,
 } from '../../Core/Map/TopologyMetrics';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
@@ -30,6 +31,26 @@ function asRecord(value: unknown): JsonRecord | null {
         : null;
 }
 
+function fitPickPlane(plane: THREE.Mesh, width: number, height: number) {
+    const safeWidth = Math.max(width, 1);
+    const safeHeight = Math.max(height, 1);
+    plane.geometry.dispose();
+    plane.geometry = new THREE.PlaneGeometry(safeWidth, safeHeight);
+    plane.scale.set(1, 1, 1);
+    plane.position.set(safeWidth / 2, 0, safeHeight / 2);
+    plane.updateMatrixWorld(true);
+}
+
+function expandOrbitFrame(camera: THREE.PerspectiveCamera, controls: OrbitControls, worldWidthM: number, worldHeightM: number) {
+    const limits = orbitFrameLimits(worldWidthM, worldHeightM, 0);
+    controls.maxDistance = Math.max(controls.maxDistance, limits.maxDistance);
+    if (camera.far < limits.far) {
+        camera.far = limits.far;
+        camera.near = limits.near;
+        camera.updateProjectionMatrix();
+    }
+}
+
 const disposeThreeObject = (object: THREE.Object3D) => {
     object.traverse((child) => {
         const renderable = child as RenderableObject;
@@ -45,7 +66,7 @@ const disposeThreeObject = (object: THREE.Object3D) => {
 
 export const HexRenderer: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { terrain, boardMetrics, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, navSimulation, navSimulationVersion, navPanelTab, navQueryProfileId, navQueryLayer, navQueryStartCell, navQueryGoalCell, navigationConfig, navigationConfigVersion, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, setNavQueryStartCell, setNavQueryGoalCell, registerCamera, reportDirtyChunks, reportMinimapDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, navSimulation, navSimulationVersion, navPanelTab, navQueryProfileId, navQueryLayer, navQueryStartCell, navQueryGoalCell, navigationConfig, navigationConfigVersion, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, terrainTypeColors, setNavQueryStartCell, setNavQueryGoalCell, registerCamera, reportDirtyChunks, reportMinimapDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
     const canvasHasRepoSession = Boolean(canvasSessionKind === 'repo' && loadedModId && loadedMapId && loadedBoardName);
     const canvasHasVisibleSession = canvasSessionKind === 'local' || canvasHasRepoSession;
     const canvasMapLoaded = Boolean(canvasHasRepoSession && selectedModId && selectedMapId && selectedBoardName && loadedModId === selectedModId && loadedMapId === selectedMapId && loadedBoardName === selectedBoardName);
@@ -109,6 +130,13 @@ export const HexRenderer: React.FC = () => {
     // because the animation loop closure captures the initial terrain instance.
     const terrainRef = useRef(terrain);
     const boardMetricsRef = useRef(boardMetrics);
+    const activeCategoryRef = useRef(activeCategory);
+    const terrainTypeColorsRef = useRef<TerrainTypeColor[] | null>(terrainTypeColors);
+    const areaOverlayRef = useRef<THREE.Mesh | null>(null);
+    const areaOverlayKeyRef = useRef('');
+    const refreshAreaOverlayRef = useRef<(terrainDirty: boolean) => void>(() => {});
+    activeCategoryRef.current = activeCategory;
+    terrainTypeColorsRef.current = terrainTypeColors;
     const viewStateRef = useRef({
         showGrid,
         showChunkBorders,
@@ -120,6 +148,74 @@ export const HexRenderer: React.FC = () => {
     const renderDirtyChunksRef = useRef<Set<string>>(new Set());
     const renderedWindowKeyRef = useRef<string | null>(null);
     const canvasHasVisibleSessionRef = useRef(canvasHasVisibleSession);
+    refreshAreaOverlayRef.current = (terrainDirty: boolean) => {
+        const scene = sceneRef.current;
+        if (!scene) return;
+        const colors = terrainTypeColorsRef.current;
+        const show = activeCategoryRef.current === 'Area' && colors != null && colors.length > 0 && canvasHasVisibleSessionRef.current;
+        const currentTerrain = terrainRef.current;
+        const metrics = boardMetricsRef.current;
+        if (!show) {
+            if (areaOverlayRef.current) areaOverlayRef.current.visible = false;
+            areaOverlayKeyRef.current = '';
+            return;
+        }
+
+        const cellsX = currentTerrain.widthChunks * metrics.chunkSizeCells;
+        const cellsY = currentTerrain.heightChunks * metrics.chunkSizeCells;
+        const colorKey = colors.map((color) => `${color.index}:${color.red},${color.green},${color.blue},${color.alpha}`).join('|');
+        const key = `${cellsX}x${cellsY}:${metrics.cellSizeCm}:${colorKey}`;
+        if (!terrainDirty && areaOverlayKeyRef.current === key && areaOverlayRef.current?.visible) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, cellsX);
+        canvas.height = Math.max(1, cellsY);
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        const image = context.createImageData(canvas.width, canvas.height);
+        const lookup: Array<[number, number, number, number] | undefined> = [];
+        for (const color of colors) lookup[color.index] = [color.red, color.green, color.blue, color.alpha];
+        const pixels = image.data;
+        let offset = 0;
+        for (let row = 0; row < cellsY; row++) {
+            for (let col = 0; col < cellsX; col++) {
+                const rgba = lookup[currentTerrain.getAreaId(col, row)];
+                if (rgba) {
+                    pixels[offset] = rgba[0];
+                    pixels[offset + 1] = rgba[1];
+                    pixels[offset + 2] = rgba[2];
+                    pixels[offset + 3] = rgba[3];
+                }
+                offset += 4;
+            }
+        }
+        context.putImageData(image, 0, 0);
+
+        const worldSize = getMapWorldSizeM(currentTerrain.widthChunks, currentTerrain.heightChunks, metrics);
+        let mesh = areaOverlayRef.current;
+        if (!mesh) {
+            const material = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+            mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+            mesh.name = 'terrainTypeOverlay';
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.renderOrder = 2;
+            scene.add(mesh);
+            areaOverlayRef.current = mesh;
+        }
+        fitPickPlane(mesh, worldSize.width, worldSize.height);
+        mesh.position.y = 0.8;
+        const material = mesh.material as THREE.MeshBasicMaterial;
+        const previous = material.map;
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        material.map = texture;
+        material.needsUpdate = true;
+        previous?.dispose();
+        mesh.visible = true;
+        areaOverlayKeyRef.current = key;
+    };
 
     const getChunkCount = (currentTerrain = terrainRef.current) => currentTerrain.widthChunks * currentTerrain.heightChunks;
 
@@ -463,7 +559,7 @@ export const HexRenderer: React.FC = () => {
         registerCamera(camera, controls);
 
         // 6. Input Plane (Invisible plane for raycasting)
-        const planeGeo = new THREE.PlaneGeometry(1000, 1000);
+        const planeGeo = new THREE.PlaneGeometry(1, 1);
         const planeMat = new THREE.MeshBasicMaterial({ visible: false });
         const inputPlane = new THREE.Mesh(planeGeo, planeMat);
         inputPlane.rotation.x = -Math.PI / 2;
@@ -590,11 +686,12 @@ export const HexRenderer: React.FC = () => {
         // Update Input Plane Size/Pos
         if (inputPlaneRef.current) {
             const worldSize = getMapWorldSizeM(terrain.widthChunks, terrain.heightChunks, boardMetrics);
-            const totalW = worldSize.width;
-            const totalH = worldSize.height;
-            inputPlaneRef.current.scale.set(totalW, totalH, 1);
-            inputPlaneRef.current.position.set(totalW/2, 0, totalH/2);
-            inputPlaneRef.current.updateMatrixWorld();
+            fitPickPlane(inputPlaneRef.current, worldSize.width, worldSize.height);
+            const camera = cameraRef.current;
+            const controls = controlsRef.current;
+            if (camera && controls) {
+                expandOrbitFrame(camera, controls, worldSize.width, worldSize.height);
+            }
         }
 
     }, [terrain, boardMetrics, canvasHasVisibleSession]); // Re-run when terrain, topology, or session visibility changes
@@ -777,6 +874,8 @@ export const HexRenderer: React.FC = () => {
     const updateDirtyChunks = () => {
         if (!canvasHasVisibleSessionRef.current) return;
         const currentTerrain = terrainRef.current;
+        const areaDirty = currentTerrain.dirtyChunks.size > 0;
+        refreshAreaOverlayRef.current(areaDirty);
         moveTerrainDirtyChunksToRenderQueue(currentTerrain);
         enqueueVisibleRenderWindow(false);
         if (!chunkRendererRef.current || !terrainGroupRef.current || renderDirtyChunksRef.current.size === 0) return;

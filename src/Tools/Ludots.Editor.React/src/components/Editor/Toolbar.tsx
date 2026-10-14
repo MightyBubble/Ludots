@@ -162,6 +162,44 @@ function errorMessage(value: unknown): string {
     return String(value ?? 'Unknown error');
 }
 
+type CrowdTerrainArea = { index: number; terrainId: string };
+
+function jsonRecord(value: unknown): JsonRecord | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    return value as JsonRecord;
+}
+
+function readCrowdTerrainAreas(navigationConfig: JsonRecord | null, mapId: string | null): {
+    active: boolean;
+    areas: CrowdTerrainArea[];
+    error: string | null;
+} {
+    if (!navigationConfig || !mapId) return { active: false, areas: [], error: null };
+    const navmesh = jsonRecord(navigationConfig.navmesh);
+    const maps = jsonRecord(navmesh?.maps);
+    const map = jsonRecord(maps?.[mapId]);
+    if (!map || String(map.solver ?? '') !== 'crowd-simulation') {
+        return { active: false, areas: [], error: null };
+    }
+
+    const rows = map.terrainAreas;
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return { active: true, areas: [], error: `maps.${mapId}.terrainAreas 为空，无法列出地形类型。` };
+    }
+
+    const areas: CrowdTerrainArea[] = [];
+    for (let i = 0; i < rows.length; i++) {
+        const row = jsonRecord(rows[i]);
+        const terrainId = String(row?.terrainId ?? '').trim();
+        if (!terrainId) {
+            return { active: true, areas: [], error: `maps.${mapId}.terrainAreas[${i}].terrainId 为空。` };
+        }
+        areas.push({ index: i, terrainId });
+    }
+
+    return { active: true, areas, error: null };
+}
+
 function textValue(value: unknown, fallback = ''): string {
     return value == null ? fallback : String(value);
 }
@@ -285,7 +323,8 @@ export const Toolbar: React.FC = () => {
         activeLayer, setActiveLayer,
         terrain, loadMap, initMap,
         bridgeBaseUrl,
-        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, boardMetrics,
+        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, boardMetrics, mapConfig,
+        terrainTypeColors, terrainTypeColorError, setTerrainTypeColors,
         refreshMods, selectMod, selectMap, selectBoard, loadSelectedMap, saveSelectedMap,
         createBoard, updateSelectedBoard, deleteSelectedBoard,
         loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
@@ -356,6 +395,50 @@ export const Toolbar: React.FC = () => {
     const [navQueryState, setNavQueryState] = React.useState<NavQueryUiState>(idleNavQueryState);
     const [navQueryMaxPortals, setNavQueryMaxPortals] = React.useState(DefaultNavQueryMaxPortals);
     const navAbortRef = React.useRef<AbortController | null>(null);
+    const [crowdNavSurfacePath, setCrowdNavSurfacePath] = React.useState('');
+    const [crowdBakeMessage, setCrowdBakeMessage] = React.useState<string | null>(null);
+    const [crowdBakeOk, setCrowdBakeOk] = React.useState<boolean | null>(null);
+    const crowdPalette = React.useMemo(
+        () => readCrowdTerrainAreas(navigationConfig, loadedMapId),
+        [navigationConfig, loadedMapId],
+    );
+    React.useEffect(() => {
+        setCrowdNavSurfacePath('');
+        setCrowdBakeMessage(null);
+        setCrowdBakeOk(null);
+    }, [loadedMapId]);
+    React.useEffect(() => {
+        if (!crowdPalette.active || !loadedModId || !loadedMapId) {
+            setTerrainTypeColors(null, null);
+            return;
+        }
+        const controller = new AbortController();
+        const endpoint = `${bridgeBaseUrl}/api/mods/${encodeURIComponent(loadedModId)}/maps/${encodeURIComponent(loadedMapId)}/crowd-terrain-colors`;
+        void fetch(endpoint, { signal: controller.signal })
+            .then(async (res) => {
+                const json = await res.json() as JsonRecord;
+                if (!res.ok || json.ok === false) {
+                    throw new Error(String(json.error ?? `Bridge error ${res.status}`));
+                }
+                const rows = Array.isArray(json.colors) ? json.colors : [];
+                setTerrainTypeColors(rows.map((row) => {
+                    const record = jsonRecord(row) ?? {};
+                    return {
+                        terrainId: String(record.terrainId ?? ''),
+                        index: Number(record.index ?? 0),
+                        red: Number(record.red ?? 0),
+                        green: Number(record.green ?? 0),
+                        blue: Number(record.blue ?? 0),
+                        alpha: Number(record.alpha ?? 0),
+                    };
+                }), null);
+            })
+            .catch((err: unknown) => {
+                if (controller.signal.aborted) return;
+                setTerrainTypeColors(null, errorMessage(err));
+            });
+        return () => controller.abort();
+    }, [crowdPalette.active, loadedModId, loadedMapId, bridgeBaseUrl, setTerrainTypeColors]);
 
     const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
     const selectedBoards = selectedMapInfo?.boards ?? [];
@@ -728,6 +811,37 @@ export const Toolbar: React.FC = () => {
     const buildMapBlob = () => {
         const terrainBinary = terrain.toReactTerrainBinary();
         return new Blob([terrainBinary.header, terrainBinary.body], { type: 'application/octet-stream' });
+    };
+
+    const handleBakeCrowdNavSurface = async () => {
+        if (!canvasMapLoaded || !selectedModId || !selectedMapId || !selectedBoardName) return;
+        const output = crowdNavSurfacePath.trim();
+        if (!output) {
+            setCrowdBakeOk(false);
+            setCrowdBakeMessage('要写明 .navsurface 路径。');
+            return;
+        }
+
+        setCrowdBakeMessage(null);
+        setCrowdBakeOk(null);
+        try {
+            const form = new FormData();
+            form.append('terrain', buildMapBlob(), 'map_data.bin');
+            form.append('output', output);
+            const endpoint = `${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/crowd-navsurface?boardName=${encodeURIComponent(selectedBoardName)}`;
+            const res = await fetch(endpoint, { method: 'POST', body: form });
+            const json = await res.json() as JsonRecord;
+            if (!res.ok || json.ok === false) {
+                setCrowdBakeOk(false);
+                setCrowdBakeMessage(String(json.error ?? `Bridge error ${res.status}`));
+                return;
+            }
+            setCrowdBakeOk(true);
+            setCrowdBakeMessage(`已写入 ${String(json.path ?? output)}。跳跃候选不生成。`);
+        } catch (err: unknown) {
+            setCrowdBakeOk(false);
+            setCrowdBakeMessage(errorMessage(err));
+        }
     };
 
     const handleDownload = () => {
@@ -1487,6 +1601,33 @@ export const Toolbar: React.FC = () => {
 
     const renderBrushValueControls = () => {
         if (activeCategory === 'Area') {
+            if (crowdPalette.active) {
+                return (
+                    <div className="grid grid-cols-2 gap-2">
+                        {crowdPalette.error || terrainTypeColorError ? (
+                            <div className="col-span-2 rounded border border-red-800/70 bg-red-950/40 p-2 text-xs text-red-100">{crowdPalette.error ?? terrainTypeColorError}</div>
+                        ) : crowdPalette.areas.map((area) => {
+                            const color = terrainTypeColors?.find((entry) => entry.terrainId === area.terrainId);
+                            return (
+                            <button
+                                key={area.terrainId}
+                                data-terrain-id={area.terrainId}
+                                onClick={() => {
+                                    setBrushValue(area.index);
+                                    setMode('Set');
+                                }}
+                                style={color ? { backgroundColor: `rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha / 255})` } : undefined}
+                                className={`rounded border p-2 text-left text-xs font-semibold transition ${brushValue === area.index ? 'border-white text-white shadow-md' : 'border-slate-700 text-slate-100 hover:border-slate-500'}`}
+                            >
+                                {area.index} {area.terrainId}
+                            </button>
+                            );
+                        })}
+                        <div className="col-span-2 text-[10px] text-slate-500">下标写入逻辑地形 AreaId，与 maps.{loadedMapId}.terrainAreas 同序。颜色来自 Presentation/terrain_type_colors.json。</div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="grid grid-cols-2 gap-2">
                     {[
@@ -2841,6 +2982,37 @@ export const Toolbar: React.FC = () => {
                         <fieldset disabled={brushInspectorLocked} className={brushInspectorLocked ? 'pointer-events-none opacity-60' : ''}>
                             {renderBrushValueControls()}
                         </fieldset>
+                        {crowdPalette.active ? (
+                            <div className="space-y-2 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] uppercase tracking-wide text-slate-500">CrowdSimulation 地表</div>
+                                <label className={fieldLabelClass}>
+                                    .navsurface
+                                    <input
+                                        value={crowdNavSurfacePath}
+                                        onChange={(e) => setCrowdNavSurfacePath(e.target.value)}
+                                        className={inputClass}
+                                        spellCheck={false}
+                                    />
+                                </label>
+                                <button
+                                    type="button"
+                                    data-crowd-navsurface-bake
+                                    onClick={() => { void handleBakeCrowdNavSurface(); }}
+                                    disabled={!canvasMapLoaded || crowdNavSurfacePath.trim().length === 0}
+                                    className={darkButtonClass}
+                                >
+                                    烘焙 CrowdSimulation 地表
+                                </button>
+                                {crowdBakeMessage ? (
+                                    <div
+                                        data-crowd-navsurface-status={crowdBakeOk ? 'ok' : 'error'}
+                                        className={`max-h-24 overflow-auto whitespace-pre-wrap rounded border p-2 text-[11px] ${crowdBakeOk ? 'border-emerald-800/70 bg-emerald-950/40 text-emerald-100' : 'border-red-800/70 bg-red-950/40 text-red-100'}`}
+                                    >
+                                        {crowdBakeMessage}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : null}
                     </div>
 
                     <div className="flex w-36 flex-col justify-between gap-2">
