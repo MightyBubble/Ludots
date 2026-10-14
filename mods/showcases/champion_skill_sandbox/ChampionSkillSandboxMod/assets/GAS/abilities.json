@@ -44,7 +44,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 440,
@@ -90,7 +91,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 760,
@@ -136,7 +138,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 840,
@@ -182,7 +185,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 2200,
@@ -276,7 +280,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 320,
@@ -322,7 +327,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.unit"
     ],
     "targeting": {
       "castRangeCm": 520,
@@ -368,7 +374,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 0,
@@ -414,7 +421,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 720,
@@ -460,7 +468,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 720,
@@ -506,7 +515,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 720,
@@ -552,7 +562,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 920,
@@ -598,7 +609,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 640,
@@ -644,7 +656,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 0,
@@ -690,7 +703,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 880,
@@ -736,7 +750,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 0,
@@ -782,7 +797,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.cone"
     ],
     "targeting": {
       "castRangeCm": 300,
@@ -828,7 +844,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 520,
@@ -964,7 +981,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.cone"
     ],
     "targeting": {
       "castRangeCm": 180,
@@ -1010,7 +1028,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 1200,
@@ -1056,7 +1075,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 1400,
@@ -1102,7 +1122,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.unit"
     ],
     "targeting": {
       "castRangeCm": 900,
@@ -1148,7 +1169,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 760,
@@ -1194,7 +1216,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 760,
@@ -1245,7 +1268,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 700,
@@ -1295,7 +1319,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 1050,

@@ -12,7 +12,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,
@@ -32,7 +33,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,
@@ -52,7 +54,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,
@@ -72,7 +75,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,
@@ -92,7 +96,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,
@@ -112,7 +117,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,
@@ -132,7 +138,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.friendly",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.line"
     ],
     "targeting": {
       "castRangeCm": 800,

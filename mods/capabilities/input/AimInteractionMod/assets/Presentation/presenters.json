@@ -317,12 +317,258 @@
     }
   },
   {
+    "id": "aim.circle",
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.angle",
+        "lane": "Float",
+        "floatValue": 45
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.length",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.92
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.62
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.16
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.52
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.88
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.48
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.025
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "aim.range_cm"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        },
+        "style": {
+          "color": [
+            0.92,
+            0.62,
+            0.18,
+            0.2
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.04,
+        0
+      ]
+    }
+  },
+  {
+    "id": "aim.cone",
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.angle",
+        "lane": "Float",
+        "floatValue": 80
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.46
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.16
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.8
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.04
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "aim.range_cm"
+      },
+      {
+        "paramKey": "groundOverlay.angle",
+        "source": "constant",
+        "constantValue": 80
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "Cast.Facing"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.46
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 0.16
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.8
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Cone",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.46,
+            0.16,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
     "id": "aim.rules",
     "rules": [
       {
         "event": {
           "kind": "ContextActivated",
-          "key": "interaction.context.aim.click"
+          "key": "interaction.context.aim.shape.line"
         },
         "command": {
           "kind": "CreatePresenter",
@@ -338,7 +584,7 @@
       {
         "event": {
           "kind": "ContextDeactivated",
-          "key": "interaction.context.aim.click"
+          "key": "interaction.context.aim.shape.line"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
@@ -351,7 +597,7 @@
       {
         "event": {
           "kind": "ContextActivated",
-          "key": "interaction.context.aim.click"
+          "key": "interaction.context.aim.shape.line"
         },
         "command": {
           "kind": "CreatePresenter",
@@ -367,7 +613,7 @@
       {
         "event": {
           "kind": "ContextDeactivated",
-          "key": "interaction.context.aim.click"
+          "key": "interaction.context.aim.shape.line"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
@@ -380,11 +626,11 @@
       {
         "event": {
           "kind": "ContextActivated",
-          "key": "interaction.context.aim.release"
+          "key": "interaction.context.aim.shape.circle"
         },
         "command": {
           "kind": "CreatePresenter",
-          "definitionId": "aim.range",
+          "definitionId": "aim.circle",
           "scopeSource": "EventKeyId",
           "ownerSource": "EventSourceCollectionMember",
           "ownerCollection": "aim.actors"
@@ -396,11 +642,11 @@
       {
         "event": {
           "kind": "ContextDeactivated",
-          "key": "interaction.context.aim.release"
+          "key": "interaction.context.aim.shape.circle"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
-          "definitionId": "aim.range",
+          "definitionId": "aim.circle",
           "scopeSource": "EventKeyId",
           "ownerSource": "EventSourceCollectionMember",
           "ownerCollection": "aim.actors"
@@ -409,11 +655,11 @@
       {
         "event": {
           "kind": "ContextActivated",
-          "key": "interaction.context.aim.release"
+          "key": "interaction.context.aim.shape.cone"
         },
         "command": {
           "kind": "CreatePresenter",
-          "definitionId": "aim.line",
+          "definitionId": "aim.cone",
           "scopeSource": "EventKeyId",
           "ownerSource": "EventSourceCollectionMember",
           "ownerCollection": "aim.actors"
@@ -425,11 +671,11 @@
       {
         "event": {
           "kind": "ContextDeactivated",
-          "key": "interaction.context.aim.release"
+          "key": "interaction.context.aim.shape.cone"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
-          "definitionId": "aim.line",
+          "definitionId": "aim.cone",
           "scopeSource": "EventKeyId",
           "ownerSource": "EventSourceCollectionMember",
           "ownerCollection": "aim.actors"
@@ -438,7 +684,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberAdded",
-          "key": "aim.hover"
+          "key": "aim.unit.highlight"
         },
         "command": {
           "kind": "CreatePresenter",
@@ -453,7 +699,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberRemoved",
-          "key": "aim.hover"
+          "key": "aim.unit.highlight"
         },
         "command": {
           "kind": "DestroyScopedPresenter",

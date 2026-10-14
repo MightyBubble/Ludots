@@ -78,6 +78,16 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "q_hi",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.unit.highlight"
+      },
+      {
+        "id": "sub_hi",
+        "op": "WriteCollection",
+        "collectionKey": "aim.unit.highlight"
       }
     ],
     "controlEdges": [
@@ -99,7 +109,7 @@
       {
         "from": "sub_hov",
         "fromPort": "next",
-        "to": "q_act"
+        "to": "q_hi"
       },
       {
         "from": "q_act",
@@ -155,6 +165,16 @@
         "from": "alive_jump",
         "fromPort": "true",
         "to": "c99"
+      },
+      {
+        "from": "q_hi",
+        "fromPort": "next",
+        "to": "sub_hi"
+      },
+      {
+        "from": "sub_hi",
+        "fromPort": "next",
+        "to": "q_act"
       }
     ],
     "valueEdges": [
@@ -228,6 +248,18 @@
         "from": "null_get",
         "fromPort": "value",
         "to": "write_null",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hi",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "sub_hi",
         "toPort": "value"
       }
     ]

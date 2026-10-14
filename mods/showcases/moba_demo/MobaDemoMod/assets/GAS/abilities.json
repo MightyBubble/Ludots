@@ -35,7 +35,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.unit"
     ],
     "targeting": {
       "castRangeCm": 1200,
@@ -141,7 +142,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.cone"
     ],
     "targeting": {
       "castRangeCm": 1200,
@@ -199,7 +201,8 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.circle"
     ],
     "targeting": {
       "castRangeCm": 1200,
