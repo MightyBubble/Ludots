@@ -1849,6 +1849,51 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsTargetingWithoutCastRange()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.MissingRange", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting.castRangeCm"));
+            That(ex.Message, Does.Contain("is required"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsNegativeCastRange()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": -1,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.NegativeRange", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting.castRangeCm"));
+            That(ex.Message, Does.Contain("non-negative"));
+        }
+
+        [Test]
         public void AbilityExecLoader_CompileAbility_RejectsRemovedIndicatorField()
         {
             var obj = JsonNode.Parse(
