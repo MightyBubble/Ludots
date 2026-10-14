@@ -231,6 +231,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 这次图基建收口自己的自审：`artifacts/gas-composition-gate-pr969-graph-closeout.md`。
 打分短剧自己的自审：`artifacts/gas-composition-gate-graph-score-showcase.md`。
 方案默认施法自己的自审：`artifacts/gas-composition-gate-scheme-cast-default.md`。
+空实体常量自己的自审：`artifacts/gas-composition-gate-const-null-entity.md`。
 
 ---
 

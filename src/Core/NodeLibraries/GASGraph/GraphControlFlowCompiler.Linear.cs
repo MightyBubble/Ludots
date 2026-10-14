@@ -26,6 +26,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                 case GraphNodeOp.ConstBool:
                 case GraphNodeOp.ConstInt:
+                case GraphNodeOp.ConstNullEntity:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
                 case GraphNodeOp.LoadViewer:
@@ -1144,6 +1145,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.ConstNullEntity:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
                 case GraphNodeOp.LoadViewer:

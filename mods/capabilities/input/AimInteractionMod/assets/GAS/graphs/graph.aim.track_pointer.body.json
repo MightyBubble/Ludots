@@ -35,11 +35,6 @@
         "intValue": 2
       },
       {
-        "id": "c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
         "id": "member",
         "op": "TargetListGet"
       },
@@ -197,7 +192,7 @@
       },
       {
         "id": "null_get",
-        "op": "TargetListGet"
+        "op": "ConstNullEntity"
       },
       {
         "id": "write_null",
@@ -381,11 +376,6 @@
         "to": "pick_radius"
       },
       {
-        "from": "write_invalid",
-        "fromPort": "next",
-        "to": "c99"
-      },
-      {
         "from": "ground_jump",
         "fromPort": "false",
         "to": "write_stick_fail"
@@ -481,11 +471,6 @@
         "to": "halt_ok"
       },
       {
-        "from": "pick_jump",
-        "fromPort": "false",
-        "to": "c99"
-      },
-      {
         "from": "read_tgt",
         "fromPort": "next",
         "to": "tgt_alive"
@@ -514,11 +499,6 @@
         "from": "write_stick_fail",
         "fromPort": "next",
         "to": "write_invalid"
-      },
-      {
-        "from": "c99",
-        "fromPort": "next",
-        "to": "null_get"
       },
       {
         "from": "c2",
@@ -569,6 +549,16 @@
         "from": "pick_rel_1",
         "fromPort": "next",
         "to": "hover_hostile"
+      },
+      {
+        "from": "write_invalid",
+        "fromPort": "next",
+        "to": "null_get"
+      },
+      {
+        "from": "pick_jump",
+        "fromPort": "false",
+        "to": "null_get"
       }
     ],
     "valueEdges": [
@@ -786,12 +776,6 @@
         "from": "c0",
         "fromPort": "value",
         "to": "write_hover",
-        "toPort": "value"
-      },
-      {
-        "from": "c99",
-        "fromPort": "value",
-        "to": "null_get",
         "toPort": "value"
       },
       {

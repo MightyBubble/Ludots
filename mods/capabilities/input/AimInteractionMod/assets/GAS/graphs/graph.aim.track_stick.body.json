@@ -35,11 +35,6 @@
         "intValue": 2
       },
       {
-        "id": "c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
         "id": "member",
         "op": "TargetListGet"
       },
@@ -238,7 +233,7 @@
       },
       {
         "id": "null_get",
-        "op": "TargetListGet"
+        "op": "ConstNullEntity"
       },
       {
         "id": "write_null",
@@ -353,16 +348,6 @@
         "from": "c1",
         "fromPort": "next",
         "to": "c2"
-      },
-      {
-        "from": "c2",
-        "fromPort": "next",
-        "to": "c99"
-      },
-      {
-        "from": "c99",
-        "fromPort": "next",
-        "to": "member"
       },
       {
         "from": "member",
@@ -718,6 +703,11 @@
         "from": "pick_rel_1",
         "fromPort": "next",
         "to": "hover_hostile"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "member"
       }
     ],
     "valueEdges": [
@@ -1001,12 +991,6 @@
         "from": "c0",
         "fromPort": "value",
         "to": "write_hover",
-        "toPort": "value"
-      },
-      {
-        "from": "c99",
-        "fromPort": "value",
-        "to": "null_get",
         "toPort": "value"
       },
       {

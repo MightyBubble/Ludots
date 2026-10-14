@@ -161,13 +161,8 @@
         "blackboardKey": "aim.target"
       },
       {
-        "id": "sk_c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
         "id": "sk_null",
-        "op": "TargetListGet"
+        "op": "ConstNullEntity"
       },
       {
         "id": "sk_wnull",
@@ -346,16 +341,6 @@
         "to": "halt_ok"
       },
       {
-        "from": "sk_ajump",
-        "fromPort": "false",
-        "to": "sk_c99"
-      },
-      {
-        "from": "sk_c99",
-        "fromPort": "next",
-        "to": "sk_null"
-      },
-      {
         "from": "sk_null",
         "fromPort": "next",
         "to": "sk_wnull"
@@ -374,6 +359,11 @@
         "from": "pick_rel",
         "fromPort": "next",
         "to": "sk_hostile"
+      },
+      {
+        "from": "sk_ajump",
+        "fromPort": "false",
+        "to": "sk_null"
       }
     ],
     "valueEdges": [
@@ -603,12 +593,6 @@
         "from": "sk_nearest",
         "fromPort": "value",
         "to": "sk_wt",
-        "toPort": "value"
-      },
-      {
-        "from": "sk_c99",
-        "fromPort": "value",
-        "to": "sk_null",
         "toPort": "value"
       },
       {

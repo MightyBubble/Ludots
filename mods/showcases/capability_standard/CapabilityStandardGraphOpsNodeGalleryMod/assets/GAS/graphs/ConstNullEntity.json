@@ -1,0 +1,15 @@
+[
+  {
+    "id": "showcase.graph_op.ConstNullEntity",
+    "kind": "Effect",
+    "entry": "nullEntity",
+    "nodes": [
+      {
+        "id": "nullEntity",
+        "op": "ConstNullEntity"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]
