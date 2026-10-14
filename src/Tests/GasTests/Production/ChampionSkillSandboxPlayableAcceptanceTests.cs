@@ -128,7 +128,6 @@ namespace Ludots.Tests.GAS.Production
             var backend = GetInputBackend(engine);
 
             LoadMap(engine, MapId, frameTimesMs);
-            engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey] = EntityCommandPanelShowcaseTheme.ClassicId;
             Tick(engine, 2, frameTimesMs);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             Assert.That(GetActiveModeId(engine), Is.EqualTo(SmartCastModeId));

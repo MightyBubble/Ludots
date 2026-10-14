@@ -10,6 +10,14 @@
     "Pitch": 58,
     "FovYDeg": 44
   },
+  "Variables": [
+    { "name": "stress.teamA.desired", "type": "int", "initial": 48 },
+    { "name": "stress.teamB.desired", "type": "int", "initial": 48 },
+    { "name": "stress.teamA.live", "type": "int", "initial": 0 },
+    { "name": "stress.teamB.live", "type": "int", "initial": 0 },
+    { "name": "stress.proj", "type": "int", "initial": 0 },
+    { "name": "stress.projPeak", "type": "int", "initial": 0 }
+  ],
   "Entities": [
     {
       "Template": "champion_skill_sandbox_participant_anchor",

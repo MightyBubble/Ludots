@@ -19,7 +19,28 @@
       "id": "ResetCamera",
       "name": "ChampionSkillSandbox_ResetCamera",
       "type": "Button"
-    }
+    },
+    { "id": "Champion.Camera.Free", "name": "Champion_Camera_Free", "type": "Button" },
+    { "id": "Champion.Camera.Follow", "name": "Champion_Camera_Follow", "type": "Button" },
+    { "id": "Champion.Camera.Group", "name": "Champion_Camera_Group", "type": "Button" },
+    { "id": "Champion.Camera.Stress.Free", "name": "Champion_Camera_Stress_Free", "type": "Button" },
+    { "id": "Champion.Camera.Stress.Follow", "name": "Champion_Camera_Stress_Follow", "type": "Button" },
+    { "id": "Champion.Camera.Stress.Group", "name": "Champion_Camera_Stress_Group", "type": "Button" },
+    { "id": "Champion.Theme.Dota2", "name": "Champion_Theme_Dota2", "type": "Button" },
+    { "id": "Champion.Theme.LoL", "name": "Champion_Theme_LoL", "type": "Button" },
+    { "id": "Champion.Theme.SC2", "name": "Champion_Theme_SC2", "type": "Button" },
+    { "id": "Champion.Stress.TeamA.Dec", "name": "Champion_Stress_TeamA_Dec", "type": "Button" },
+    { "id": "Champion.Stress.TeamA.Inc", "name": "Champion_Stress_TeamA_Inc", "type": "Button" },
+    { "id": "Champion.Stress.TeamB.Dec", "name": "Champion_Stress_TeamB_Dec", "type": "Button" },
+    { "id": "Champion.Stress.TeamB.Inc", "name": "Champion_Stress_TeamB_Inc", "type": "Button" },
+    { "id": "Champion.Stress.Hud.Bars", "name": "Champion_Stress_Hud_Bars", "type": "Button" },
+    { "id": "Champion.Stress.Hud.Text", "name": "Champion_Stress_Hud_Text", "type": "Button" },
+    { "id": "Champion.Stress.Hud.Float", "name": "Champion_Stress_Hud_Float", "type": "Button" },
+    { "id": "Champion.View.P1", "name": "Champion_View_P1", "type": "Button" },
+    { "id": "Champion.View.P1F", "name": "Champion_View_P1F", "type": "Button" },
+    { "id": "Champion.View.AI", "name": "Champion_View_AI", "type": "Button" },
+    { "id": "Champion.View.AIF", "name": "Champion_View_AIF", "type": "Button" },
+    { "id": "Champion.View.CMD", "name": "Champion_View_CMD", "type": "Button" }
   ],
   "contexts": [
     {

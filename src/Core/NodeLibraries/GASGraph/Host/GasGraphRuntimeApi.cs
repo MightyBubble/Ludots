@@ -161,6 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Func<GameEngine?>? _engineResolver;
         private Ludots.Core.Gameplay.Camera.VirtualCameraRegistry? _virtualCameras;
         private System.Collections.Generic.Dictionary<string, object>? _virtualCameraGlobals;
+        private Func<Ludots.Core.Config.CameraConfig?>? _mapDefaultCamera;
         private CalendarRuntime? _calendar;
         private TimeFlowService? _timeFlow;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
@@ -1202,7 +1203,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
         {
             Ludots.Core.Input.Interaction.InteractionPref pref = RequirePref(rep, actor, nameof(IsPref));
-            int abilityId = RequireSlotAbility(actor, slot, nameof(IsPref));
+            // A negative slot is the player-level table. Zero and up name an ability slot.
+            int abilityId = slot < 0 ? 0 : RequireSlotAbility(actor, slot, nameof(IsPref));
             (int keyRegistryId, int valueRegistryId) = ResolveAllowedPref(keyId, valueId, nameof(IsPref));
             int resolved = pref.ResolvePref(abilityId, keyRegistryId);
             if (resolved == 0)
@@ -2740,6 +2742,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _virtualCameraGlobals = globals ?? throw new ArgumentNullException(nameof(globals));
         }
 
+        public void BindMapDefaultCamera(Func<Ludots.Core.Config.CameraConfig?> currentMapCamera)
+        {
+            _mapDefaultCamera = currentMapCamera ?? throw new ArgumentNullException(nameof(currentMapCamera));
+        }
+
         public void ActivateVirtualCamera(Entity rep, int cameraKeyId)
         {
             RejectDerivedAttributeSideEffect(nameof(ActivateVirtualCamera));
@@ -2775,6 +2782,65 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true,
             };
+        }
+
+        public void ApplyMapDefaultCamera(Entity rep)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ApplyMapDefaultCamera));
+            if (_virtualCameras == null || _virtualCameraGlobals == null || _mapDefaultCamera == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+            }
+
+            Ludots.Core.Config.CameraConfig? cam = _mapDefaultCamera();
+            if (cam == null || string.IsNullOrWhiteSpace(cam.VirtualCameraId))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.MapDefaultCameraMissing: the current map has no DefaultCamera.VirtualCameraId.");
+            }
+
+            string cameraId = cam.VirtualCameraId;
+            if (!_virtualCameras.TryGet(cameraId, out Ludots.Core.Gameplay.Camera.VirtualCameraDefinition definition) || definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.VirtualCameraUnknown: ApplyMapDefaultCamera names '{cameraId}', which Camera/virtual_cameras.json does not declare.");
+            }
+
+            Entity followOwner = Entity.Null;
+            if (Ludots.Core.Gameplay.Camera.CameraFollowTargetFactory.RequiresEntityCollection(definition.FollowTargetKind))
+            {
+                if (_world == null || !_world.IsAlive(rep))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.VirtualCameraFollowOwnerDead: virtual camera '{cameraId}' follows a collection, but the caster {rep} is not alive.");
+                }
+
+                followOwner = rep;
+            }
+
+            _virtualCameraGlobals[CoreServiceKeys.VirtualCameraRequest.Name] = new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+            {
+                Id = cameraId,
+                FollowCollectionOwnerOverride = followOwner,
+                SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true,
+                BlendDurationSeconds = 0f,
+            };
+            var pose = new Ludots.Core.Gameplay.Camera.CameraPoseRequest
+            {
+                VirtualCameraId = cameraId,
+                Yaw = cam.Yaw,
+                Pitch = cam.Pitch,
+                DistanceCm = cam.DistanceCm,
+                FovYDeg = cam.FovYDeg,
+            };
+            if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+            {
+                pose.TargetCm = new Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
+            }
+
+            _virtualCameraGlobals[CoreServiceKeys.CameraPoseRequest.Name] = pose;
         }
 
         public void BindResponseChain(

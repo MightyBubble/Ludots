@@ -3,38 +3,264 @@
     "id": "toolbar.champion",
     "panel": "entity-command-panel",
     "title": "Cast + Showcase",
-    "subtitle": "Theme Classic | Cast + Camera | F1/F2/F3 Cast | RMB Move",
-    "maps": ["champion_skill_sandbox", "champion_skill_stress"],
-    "byMap": [
-      { "map": "champion_skill_stress", "title": "Stress Harness" }
-    ],
+    "subtitle": {
+      "template": "Theme {theme} | Cast + Camera | F1/F2/F3 Cast | RMB Move",
+      "slots": [
+        {
+          "name": "theme",
+          "pref": "pref.panel.theme",
+          "labels": {
+            "EntityCommandPanel.Showcase.Classic": "Classic",
+            "EntityCommandPanel.Showcase.Dota2": "Dota2",
+            "EntityCommandPanel.Showcase.LoL": "LoL",
+            "EntityCommandPanel.Showcase.SC2": "SC2"
+          }
+        }
+      ]
+    },
+    "maps": ["champion_skill_sandbox"],
     "buttons": [
       {
         "id": "ChampionSkillSandbox.Mode.SmartCast",
         "label": "Quick",
         "accent": "#F6C35B",
         "actionId": "Aim.CastMode.Smart",
-        "highlight": {
-          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.smart" }
-        }
+        "highlight": { "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.smart" } }
       },
       {
         "id": "ChampionSkillSandbox.Mode.Indicator",
         "label": "Indicator",
         "accent": "#61C3FF",
         "actionId": "Aim.CastMode.AimRelease",
-        "highlight": {
-          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.release" }
-        }
+        "highlight": { "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.release" } }
       },
       {
         "id": "ChampionSkillSandbox.Mode.PressReleaseAim",
         "label": "RTS",
         "accent": "#93E07A",
         "actionId": "Aim.CastMode.AimClick",
-        "highlight": {
-          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.click" }
+        "highlight": { "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.click" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.Free",
+        "label": "Free",
+        "accent": "#D7D2C4",
+        "actionId": "Champion.Camera.Free",
+        "highlight": { "pref": { "key": "pref.camera.follow", "value": "camera.follow.free" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.Selection",
+        "label": "Follow",
+        "accent": "#8ED9A9",
+        "actionId": "Champion.Camera.Follow",
+        "highlight": { "pref": { "key": "pref.camera.follow", "value": "camera.follow.selection" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.SelectionGroup",
+        "label": "Group",
+        "accent": "#F0C35A",
+        "actionId": "Champion.Camera.Group",
+        "highlight": { "pref": { "key": "pref.camera.follow", "value": "camera.follow.group" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.Reset",
+        "label": "Reset",
+        "accent": "#D7D2C4",
+        "actionId": "ResetCamera"
+      },
+      {
+        "id": "EntityCommandPanel.Showcase.Dota2",
+        "label": "Dota2",
+        "accent": "#D37A4B",
+        "actionId": "Champion.Theme.Dota2",
+        "highlight": { "equals": { "key": "pref.panel.theme", "value": "EntityCommandPanel.Showcase.Dota2" } }
+      },
+      {
+        "id": "EntityCommandPanel.Showcase.LoL",
+        "label": "LoL",
+        "accent": "#D5B25B",
+        "actionId": "Champion.Theme.LoL",
+        "highlight": { "equals": { "key": "pref.panel.theme", "value": "EntityCommandPanel.Showcase.LoL" } }
+      },
+      {
+        "id": "EntityCommandPanel.Showcase.SC2",
+        "label": "SC2",
+        "accent": "#59B7FF",
+        "actionId": "Champion.Theme.SC2",
+        "highlight": { "equals": { "key": "pref.panel.theme", "value": "EntityCommandPanel.Showcase.SC2" } }
+      }
+    ]
+  },
+  {
+    "id": "toolbar.champion.stress",
+    "panel": "entity-command-panel",
+    "title": "Stress Harness",
+    "subtitle": {
+      "template": "View {view} | A {liveA}/{desiredA} | B {liveB}/{desiredB} | Proj {proj} peak {peak} | HUD {bars}{text}{float}",
+      "slots": [
+        {
+          "name": "view",
+          "pref": "pref.selection.view",
+          "labels": {
+            "ChampionSkillSandbox.Selection.Player.Live": "P1 Live",
+            "ChampionSkillSandbox.Selection.Player.Formation": "P1 Formation",
+            "ChampionSkillSandbox.Selection.AI.Targets": "AI Targets",
+            "ChampionSkillSandbox.Selection.AI.Formation": "AI Formation",
+            "ChampionSkillSandbox.Selection.Command.Snapshot": "Command Snapshot"
+          }
+        },
+        { "name": "liveA", "mapVar": "stress.teamA.live" },
+        { "name": "desiredA", "mapVar": "stress.teamA.desired" },
+        { "name": "liveB", "mapVar": "stress.teamB.live" },
+        { "name": "desiredB", "mapVar": "stress.teamB.desired" },
+        { "name": "proj", "mapVar": "stress.proj" },
+        { "name": "peak", "mapVar": "stress.projPeak" },
+        {
+          "name": "bars",
+          "pref": "pref.hud.bars",
+          "labels": { "on": "B", "off": "-" }
+        },
+        {
+          "name": "text",
+          "pref": "pref.hud.text",
+          "labels": { "on": "T", "off": "-" }
+        },
+        {
+          "name": "float",
+          "pref": "pref.hud.float",
+          "labels": { "on": "F", "off": "-" }
         }
+      ]
+    },
+    "maps": ["champion_skill_stress"],
+    "buttons": [
+      {
+        "id": "ChampionSkillSandbox.Mode.SmartCast",
+        "label": "Quick",
+        "accent": "#F6C35B",
+        "actionId": "Aim.CastMode.Smart",
+        "highlight": { "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.smart" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Mode.Indicator",
+        "label": "Indicator",
+        "accent": "#61C3FF",
+        "actionId": "Aim.CastMode.AimRelease",
+        "highlight": { "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.release" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Mode.PressReleaseAim",
+        "label": "RTS",
+        "accent": "#93E07A",
+        "actionId": "Aim.CastMode.AimClick",
+        "highlight": { "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.click" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.Free",
+        "label": "Free",
+        "accent": "#D7D2C4",
+        "actionId": "Champion.Camera.Stress.Free",
+        "highlight": { "pref": { "key": "pref.camera.follow", "value": "camera.follow.free" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.Selection",
+        "label": "Follow",
+        "accent": "#8ED9A9",
+        "actionId": "Champion.Camera.Stress.Follow",
+        "highlight": { "pref": { "key": "pref.camera.follow", "value": "camera.follow.selection" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.SelectionGroup",
+        "label": "Group",
+        "accent": "#F0C35A",
+        "actionId": "Champion.Camera.Stress.Group",
+        "highlight": { "pref": { "key": "pref.camera.follow", "value": "camera.follow.group" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Camera.Reset",
+        "label": "Reset",
+        "accent": "#D7D2C4",
+        "actionId": "ResetCamera"
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.TeamA.Decrease",
+        "label": "A-",
+        "accent": "#FF9B7A",
+        "actionId": "Champion.Stress.TeamA.Dec"
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.TeamA.Increase",
+        "label": "A+",
+        "accent": "#FF9B7A",
+        "actionId": "Champion.Stress.TeamA.Inc"
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.TeamB.Decrease",
+        "label": "B-",
+        "accent": "#67D4FF",
+        "actionId": "Champion.Stress.TeamB.Dec"
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.TeamB.Increase",
+        "label": "B+",
+        "accent": "#67D4FF",
+        "actionId": "Champion.Stress.TeamB.Inc"
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.HudBar.Toggle",
+        "label": "Bar",
+        "accent": "#E2D7A6",
+        "actionId": "Champion.Stress.Hud.Bars",
+        "highlight": { "equals": { "key": "pref.hud.bars", "value": "on" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.HudText.Toggle",
+        "label": "Text",
+        "accent": "#F2E3B3",
+        "actionId": "Champion.Stress.Hud.Text",
+        "highlight": { "equals": { "key": "pref.hud.text", "value": "on" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Stress.CombatText.Toggle",
+        "label": "Float",
+        "accent": "#FFCF86",
+        "actionId": "Champion.Stress.Hud.Float",
+        "highlight": { "equals": { "key": "pref.hud.float", "value": "on" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Selection.Player.Live",
+        "label": "P1",
+        "accent": "#98E7A7",
+        "actionId": "Champion.View.P1",
+        "highlight": { "pref": { "key": "pref.selection.view", "value": "ChampionSkillSandbox.Selection.Player.Live" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Selection.Player.Formation",
+        "label": "P1F",
+        "accent": "#DAE89B",
+        "actionId": "Champion.View.P1F",
+        "highlight": { "pref": { "key": "pref.selection.view", "value": "ChampionSkillSandbox.Selection.Player.Formation" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Selection.AI.Targets",
+        "label": "AI",
+        "accent": "#FFAE86",
+        "actionId": "Champion.View.AI",
+        "highlight": { "pref": { "key": "pref.selection.view", "value": "ChampionSkillSandbox.Selection.AI.Targets" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Selection.AI.Formation",
+        "label": "AIF",
+        "accent": "#F6CF79",
+        "actionId": "Champion.View.AIF",
+        "highlight": { "pref": { "key": "pref.selection.view", "value": "ChampionSkillSandbox.Selection.AI.Formation" } }
+      },
+      {
+        "id": "ChampionSkillSandbox.Selection.Command.Snapshot",
+        "label": "CMD",
+        "accent": "#7FD8F2",
+        "actionId": "Champion.View.CMD",
+        "highlight": { "pref": { "key": "pref.selection.view", "value": "ChampionSkillSandbox.Selection.Command.Snapshot" } }
       }
     ]
   }

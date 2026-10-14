@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -10,8 +11,9 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Loader for <c>Input/interaction_prefs.json</c>: declared preference keys plus the
     /// game-instance seed planted on every bound player representative that lacks
-    /// <see cref="InteractionPref"/>. Catalog-declared DeepObject merge through
-    /// <see cref="ConfigPipeline"/>. Id resolution against installed registries is fail fast.
+    /// <see cref="InteractionPref"/>. Catalog policy stays DeepObject. <c>keys</c> merge by
+    /// <c>id</c> and <c>defaults.prefs</c> merge by <c>key</c>; later fields win. Id resolution
+    /// against installed registries is fail fast.
     /// </summary>
     public sealed class InteractionPrefConfigLoader
     {
@@ -36,16 +38,86 @@ namespace Ludots.Core.Input.Interaction
             string relativePath = "Input/interaction_prefs.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
+            List<ConfigFragment> fragments = _pipeline.CollectFragmentsWithSources(in entry);
+            if (fragments.Count == 0)
             {
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            JsonObject mergedObject = ConfigMerger.MergeDeepObjectArrayById(fragments, in entry, "keys", report);
+            MergePlayerPrefSeeds(mergedObject, fragments, relativePath);
             var config = mergedObject.Deserialize<InteractionPrefsConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
+        }
+
+        /// <summary>
+        /// <c>defaults.prefs</c> is an array inside an object, so DeepObject would let the last
+        /// fragment that mentions it replace the whole seed. Rebuild it by <c>key</c>; later wins.
+        /// </summary>
+        private static void MergePlayerPrefSeeds(JsonObject merged, IReadOnlyList<ConfigFragment> fragments, string source)
+        {
+            var byKey = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+            var order = new List<string>();
+            for (int i = 0; i < fragments.Count; i++)
+            {
+                if (fragments[i].Node is not JsonObject root ||
+                    root["defaults"] is not JsonObject defaults ||
+                    !defaults.TryGetPropertyValue("prefs", out JsonNode? prefsNode))
+                {
+                    continue;
+                }
+
+                if (prefsNode is not JsonArray prefs)
+                {
+                    throw new InvalidOperationException(
+                        $"{source} fragment '{fragments[i].SourceUri}' defaults.prefs must be an array.");
+                }
+
+                for (int p = 0; p < prefs.Count; p++)
+                {
+                    if (prefs[p] is not JsonObject pair)
+                    {
+                        throw new InvalidOperationException(
+                            $"{source} fragment '{fragments[i].SourceUri}' defaults.prefs[{p}] must be an object.");
+                    }
+
+                    if (pair["key"] is not JsonValue keyValue ||
+                        !keyValue.TryGetValue<string>(out string? keyName) ||
+                        string.IsNullOrWhiteSpace(keyName) ||
+                        !string.Equals(keyName, keyName.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{source} fragment '{fragments[i].SourceUri}' defaults.prefs[{p}].key must be a non-empty token.");
+                    }
+
+                    if (!byKey.ContainsKey(keyName))
+                    {
+                        order.Add(keyName);
+                    }
+
+                    byKey[keyName] = pair;
+                }
+            }
+
+            if (order.Count == 0)
+            {
+                return;
+            }
+
+            if (merged["defaults"] is not JsonObject mergedDefaults)
+            {
+                throw new InvalidOperationException($"{source} defaults must be an object.");
+            }
+
+            var mergedPrefs = new JsonArray();
+            for (int i = 0; i < order.Count; i++)
+            {
+                mergedPrefs.Add(byKey[order[i]].DeepClone());
+            }
+
+            mergedDefaults["prefs"] = mergedPrefs;
         }
 
         /// <summary>Structural fail-fast validation. Profile installation is checked in <see cref="ResolveSeed"/>.</summary>

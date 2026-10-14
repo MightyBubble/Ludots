@@ -628,6 +628,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         MinimapApplyWheelZoom = 550,
 
+        /// <summary>
+        /// Replace the local camera stack with the current map's DefaultCamera and apply that pose.
+        /// Blend duration is zero. A collection follow uses the caster.
+        /// </summary>
+        ApplyMapDefaultCamera = 551,
+
     }
 
     /// <summary>
