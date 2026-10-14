@@ -12,9 +12,28 @@ public sealed class RetiredInputNameGuardTests
         "CoreInputMod",
         "Default_Gameplay",
         "CoreInputCollectionKeys",
+        "startupInputContexts",
+        "collection.command.source",
+        "SkillBarOverlaySystem",
+        "targetKinds",
     };
 
-    private static readonly string[] Roots = { "mods", "src", "gitbook", "docs/architecture", "docs/diagrams" };
+    private static readonly string[] Roots =
+    {
+        "mods",
+        "src",
+        "gitbook",
+        "docs/architecture",
+        "docs/diagrams",
+        "docs/reference",
+        "docs/conventions",
+    };
+
+    private static readonly HashSet<string> ExcludedRelativePaths = new(StringComparer.Ordinal)
+    {
+        "gitbook/architecture/graph-capability-status.md",
+        "docs/reference/champion_skill_sandbox_delivery_plan.md",
+    };
 
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -49,7 +68,7 @@ public sealed class RetiredInputNameGuardTests
                 if (relative.Contains("/bin/", StringComparison.Ordinal) ||
                     relative.Contains("/obj/", StringComparison.Ordinal) ||
                     relative.EndsWith("RetiredInputNameGuardTests.cs", StringComparison.Ordinal) ||
-                    relative.Equals("gitbook/architecture/graph-capability-status.md", StringComparison.Ordinal))
+                    ExcludedRelativePaths.Contains(relative))
                 {
                     continue;
                 }
@@ -90,7 +109,7 @@ public sealed class RetiredInputNameGuardTests
         Assert.That(
             hits,
             Is.Empty,
-            "Retired input names must stay out of mods, src, gitbook, docs/architecture, and docs/diagrams:\n" + string.Join("\n", hits));
+            "Retired input names must stay out of mods, src, gitbook, docs/architecture, docs/diagrams, docs/reference, and docs/conventions:\n" + string.Join("\n", hits));
     }
 
     private static string FindRepoRoot()
