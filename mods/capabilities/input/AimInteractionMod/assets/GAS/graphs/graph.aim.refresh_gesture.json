@@ -108,8 +108,26 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "read_slot",
+        "id": "read_code",
         "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.held.code"
+      },
+      {
+        "id": "code_absent",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "code_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "code_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "put_slot",
+        "op": "WriteBlackboardInt",
         "blackboardKey": "aim.slot"
       },
       {
@@ -236,15 +254,40 @@
       {
         "from": "re_click_jump",
         "fromPort": "true",
-        "to": "read_slot"
+        "to": "read_code"
       },
       {
         "from": "re_release_jump",
         "fromPort": "true",
-        "to": "read_slot"
+        "to": "read_code"
       },
       {
-        "from": "read_slot",
+        "from": "read_code",
+        "fromPort": "next",
+        "to": "code_absent"
+      },
+      {
+        "from": "code_absent",
+        "fromPort": "next",
+        "to": "code_eq"
+      },
+      {
+        "from": "code_eq",
+        "fromPort": "next",
+        "to": "code_jump"
+      },
+      {
+        "from": "code_jump",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "code_jump",
+        "fromPort": "false",
+        "to": "put_slot"
+      },
+      {
+        "from": "put_slot",
         "fromPort": "next",
         "to": "load_ability"
       },
@@ -371,11 +414,41 @@
       {
         "from": "member",
         "fromPort": "value",
-        "to": "read_slot",
+        "to": "read_code",
         "toPort": "source"
       },
       {
-        "from": "read_slot",
+        "from": "read_code",
+        "fromPort": "value",
+        "to": "code_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "code_absent",
+        "fromPort": "value",
+        "to": "code_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "code_eq",
+        "fromPort": "value",
+        "to": "code_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "read_code",
+        "fromPort": "value",
+        "to": "put_slot",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "put_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "read_code",
         "fromPort": "value",
         "to": "load_ability",
         "toPort": "value"

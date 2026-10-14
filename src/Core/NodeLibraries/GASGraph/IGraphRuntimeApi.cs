@@ -182,6 +182,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Same resolution as <see cref="LoadSlotAbilityId"/>. A dead actor fails closed.
+        /// An actor with no ability in the slot returns false and writes 0.
+        /// </summary>
+        bool TryLoadSlotAbilityId(Entity actor, int slot, out int abilityId)
+        {
+            abilityId = 0;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LoadSlotAbilityIdUnavailable");
+        }
+
+        /// <summary>
         /// Activates an interaction context instance on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). The graph
         /// encoding uses <c>0xFFFF</c> for "the mount currently running this graph"; the

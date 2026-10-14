@@ -164,7 +164,7 @@
       {
         "id": "r_put",
         "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.slot"
+        "blackboardKey": "aim.held.code"
       }
     ],
     "controlEdges": [

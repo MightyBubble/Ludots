@@ -1556,11 +1556,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
-                    // ReadBlackboardInt only: a missing integer blackboard is a zero read.
-                    // The held-slot graph uses this when the previous actor cannot carry a slot.
-                    if (op.NodeOp == GraphNodeOp.ReadBlackboardInt && node.BoolValue)
+                    // Flags 0: a missing integer value throws. Flags = scratch+1: write that
+                    // bool scratch (1 present, 0 missing) and leave the int unused on a miss.
+                    // Scratch index 0 is a real register, so it cannot share the throw sentinel.
+                    if (op.NodeOp == GraphNodeOp.ReadBlackboardInt &&
+                        !string.IsNullOrWhiteSpace(node.ValidOutput) &&
+                        boolScratches[nodeIndex] != byte.MaxValue)
                     {
-                        instruction.Flags = 1;
+                        instruction.Flags = (byte)(boolScratches[nodeIndex] + 1);
                     }
 
                     break;
@@ -2471,6 +2474,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    // Flags 0: an empty slot throws. Flags = scratch+1 reports whether the slot resolved.
+                    if (op.NodeOp == GraphNodeOp.LoadSlotAbilityId &&
+                        !string.IsNullOrWhiteSpace(node.ValidOutput) &&
+                        boolScratches[nodeIndex] != byte.MaxValue)
+                    {
+                        instruction.Flags = (byte)(boolScratches[nodeIndex] + 1);
+                    }
+
                     break;
 
                 case GraphNodeOp.IsContextActive:

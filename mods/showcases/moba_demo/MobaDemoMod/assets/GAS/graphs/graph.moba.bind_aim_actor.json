@@ -79,7 +79,7 @@
       {
         "id": "put_slot",
         "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.slot"
+        "blackboardKey": "aim.held.code"
       }
     ],
     "controlEdges": [

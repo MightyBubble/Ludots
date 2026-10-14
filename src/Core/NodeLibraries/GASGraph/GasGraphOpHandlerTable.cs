@@ -1965,7 +1965,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleLoadSlotAbilityId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = s.Api.LoadSlotAbilityId(s.E[ins.A], s.I[ins.B]);
+            // Flags 0: an empty slot throws. Flags = scratch+1: write that bool scratch
+            // (1 resolved, 0 empty) and leave the id unused on a miss.
+            bool found = s.Api.TryLoadSlotAbilityId(s.E[ins.A], s.I[ins.B], out int abilityId);
+            if (ins.Flags == 0)
+            {
+                if (!found)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {s.E[ins.A]} slot {s.I[ins.B]} has no ability.");
+                }
+
+                s.I[ins.Dst] = abilityId;
+            }
+            else
+            {
+                s.B[ins.Flags - 1] = (byte)(found ? 1 : 0);
+                s.I[ins.Dst] = found ? abilityId : 0;
+            }
         }
 
         private static void HandleIsContextActive(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -3281,17 +3298,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             // I[dst] = E[A].BB_Int[Imm]
             var entity = s.E[ins.A];
-            if (!s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
+            bool found = s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value);
+            if (ins.Flags == 0)
             {
-                if (ins.Flags == 0)
+                if (!found)
                 {
                     throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
                 }
 
-                value = 0;
+                s.I[ins.Dst] = value;
             }
-
-            s.I[ins.Dst] = value;
+            else
+            {
+                s.B[ins.Flags - 1] = (byte)(found ? 1 : 0);
+                s.I[ins.Dst] = found ? value : 0;
+            }
             s.DebugTrace?.RecordBlackboardInt(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
 

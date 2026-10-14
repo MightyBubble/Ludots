@@ -1529,6 +1529,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// <inheritdoc />
         public int LoadSlotAbilityId(Entity actor, int slot)
         {
+            if (!TryLoadSlotAbilityId(actor, slot, out int abilityId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            return abilityId;
+        }
+
+        public bool TryLoadSlotAbilityId(Entity actor, int slot, out int abilityId)
+        {
+            abilityId = 0;
             if (_world == null || !_world.IsAlive(actor))
             {
                 throw new InvalidOperationException(
@@ -1537,11 +1549,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
             {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {actor} slot {slot} has no ability.");
+                return false;
             }
 
-            return slotState.AbilityId;
+            abilityId = slotState.AbilityId;
+            return true;
         }
 
         /// <summary>
