@@ -729,6 +729,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Opens one submit-count slot for the DispatchMapEvent that is about to fire.
+        /// SubmitCast and SubmitCommandIntent calls completed before the matching
+        /// <see cref="EndDispatchSubmitCount"/> increment that slot. A nested dispatch
+        /// opens its own slot; those calls do not increment the outer one.
+        /// </summary>
+        void BeginDispatchSubmitCount()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DispatchSubmitCountUnavailable");
+        }
+
+        /// <summary>
+        /// Closes the innermost submit-count slot and returns how many SubmitCast and
+        /// SubmitCommandIntent calls it recorded. Engage submits are not recorded.
+        /// Calls made with no open slot are not recorded.
+        /// </summary>
+        int EndDispatchSubmitCount()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DispatchSubmitCountUnavailable");
+        }
+
+        /// <summary>
         /// Offers an activity by definition id to the scope host through
         /// ActivityRuntimeService. Repeat/admission policy decides the outcome;
         /// policy rejection lands in the presentation buffer, while an unknown
