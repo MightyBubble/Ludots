@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Config;
@@ -351,6 +352,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             int keyId = OrderBlackboardKeyRegistry.Resolve("aim.target");
             _engine.World.Destroy(Near);
             Assert.That(_engine.World.IsAlive(Near), Is.False, "target destroyed");
+            BlackboardEntityRefLifetimeSystem.FlushWorld(_engine.World);
             Assert.That(ReadTarget(), Is.EqualTo(Entity.Null), "dead target cleared");
             Assert.That(_engine.World.Get<BlackboardEntityBuffer>(Hero).HasKey(keyId), Is.True, "aim.target key remains");
 
