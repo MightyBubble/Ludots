@@ -189,6 +189,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `allowedSchemes` 里同一个 id 出现两次 | 追加合并只往后接，不去重 | **已改**：校验读到重复 id 直接失败 |
 | Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | **已改**：类型、命名空间和服务绑定改成 `GraphPointerSampleRuntime` / `IGraphPointerSampleRuntime`（`Ludots.Core.Input.PointerSample`，`BindPointerSample`）。`ScreenPointToGround` 这些操作名本来就不含 aim，保持不动。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 不归这条线 |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
+| `targeting.castRangeCm`（主干上原有）和 `LoadAbilityCastRange`（534）；`context_groups.json` 的 `requiresTarget` | 待查过：射程是不是和已撤的目标种类一样，只写在 Core 上的玩法枚举；`requiresTarget` 是不是「技能要不要目标」的另一份 | **已改**：射程留在技能定义上。`CompositeOrderPlanner` 提交 `castAbility` 时读 `targeting.castRangeCm`，目标超出这段距离就先走到射程边缘再施放。值为 0，或技能没有 `targeting` 块，这一单不走近，原单照原样入队。激活校验和订单校验只跑各自的 validation 图。技能引用的规则图不带这个厘米数。`LoadConfigFloat` 的存储是效果模板参数，`TableReadFloat` 的存储是查找表，技能定义上的厘米数仍由 534 读出。槽位空、技能没装上、定义里没有这个字段，图操作直接失败。`targeting` 块缺 `castRangeCm` 或写成负数，装载直接失败，不补默认距离。`requiresTarget` 留下：它决定这一候选是无实体打一次分，还是对搜索半径里每个实体打一次，距离、角度、悬停分写在候选上。瞄准规则图决定玩家瞄哪一类。交互展示里 `Ability.Interaction.Arcweaver.ArcDash` 引用 `graph.aim.rule.ground_only`，同组候选仍写 `requiresTarget: true` |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**
 
@@ -209,8 +210,6 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
 | 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：槽位、落点、射程、目标、朝向和摇杆清零只写在 `graph.aim.prepare_actor`。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 和每个游戏的重绑路径也调用它 |
 | 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
-
-**待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
 
 **`CoreInputMod` 收尾已改。** 目录、依赖和 `Default_Gameplay` 都已删掉。根资产的相机键位上下文叫 `Camera.Rig`，`scheme.default` 的 `inputContexts` 就是它；原先跟默认玩法一起激活的 mod，在自己的方案里写上 `Camera.Rig`。`startupInputContexts` 已删：宿主绑上输入处理器时，`ControlSchemeRuntime.ApplyActiveContexts` 把当前方案的上下文推上去。小地图指针仍走 `interaction.context.minimap`（LudotsCoreMod，`foreground`，`pointerRouting` 为 `ui`）。`presentation.minimap.interactionContextId` 指向它。按下、松开、移动是 `graph.minimap.press` / `release` / `track`。滚轮是 `graph.minimap.zoom`：动作 `Minimap.Zoom` 绑在 `Minimap.Device` 上，这个状态的 `inputContextId` 指向它，前台状态打开时投影这组键。世界点选绑在 `Core.Select`，`interaction.context.moba.battle` 的 `inputContextId` 指向它。命令点地仍是 `graph.minimap.command`，图在 LudotsCoreMod，但这个状态默认不挂它。`Command` 由 MinimapShowcaseMod、FogVisionDecayShowcaseMod、PresenterBlacksmithShowcaseMod 各自声明，并合并进这个状态。只装 LudotsCoreMod 时有滚轮，没有命令图。`Command` / `Cancel` 由使用它们的 mod 在自己的输入数据里声明。`PointerPos` 的声明和 `<Mouse>/Pos` 绑在 `Camera.Rig`。指针落在 `pointerRouting` 为 `ui` 的区域里时，相机 `Zoom` 仍按 `suppressOnUiWheelCaptured` 被压住。跳相机只提交 `CameraPoseRequest`。`MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions` 已删。集合键 **已改**：共享图、相机和 presenter 写成 `role:命令角色名`，例如 `role:commandSource`。`Input/collection_keys.json` 把角色名映射到集合名。引擎根文件不声明 `commandSource`，由实际开局声明。同一个角色两处值不一样，装载失败；值相同可以重复。没声明的角色在用到它的图、presenter 或相机上失败，报出角色和来源 mod。字面集合名不加 `role:` 前缀。本机输入开局在地图已有交互状态或吃输入的触发、却没有带 `controlSchemeId` 和附身代表的本地座位时，加载直接失败，错误写出地图名和游戏名；权威服务器和加载时没有输入处理器的无头开局不要座位。
 
