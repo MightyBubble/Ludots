@@ -70,7 +70,8 @@
       {
         "id": "read",
         "op": "ReadBlackboardInt",
-        "blackboardKey": "aim.slot"
+        "blackboardKey": "aim.slot",
+        "boolValue": true
       },
       {
         "id": "halt",

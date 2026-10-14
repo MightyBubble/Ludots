@@ -1556,6 +1556,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    // ReadBlackboardInt only: a missing integer blackboard is a zero read.
+                    // The held-slot graph uses this when the previous actor cannot carry a slot.
+                    if (op.NodeOp == GraphNodeOp.ReadBlackboardInt && node.BoolValue)
+                    {
+                        instruction.Flags = 1;
+                    }
+
                     break;
 
                 case GraphNodeOp.LoadConfigFloat:

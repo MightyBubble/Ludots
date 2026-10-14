@@ -3282,7 +3282,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // I[dst] = E[A].BB_Int[Imm]
             var entity = s.E[ins.A];
             if (!s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
-                throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
+            {
+                if (ins.Flags == 0)
+                {
+                    throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
+                }
+
+                value = 0;
+            }
+
             s.I[ins.Dst] = value;
             s.DebugTrace?.RecordBlackboardInt(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, value, pc, s.TreeSteps);
         }
