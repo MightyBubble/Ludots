@@ -1,6 +1,6 @@
 # 读出这一槽点名的效果数值
 
-图按槽位找到技能，再按这张图在 effectFields 里点的名字，读冲击效果上的那个数。效果上没有这个数时，effectFields 也可以直接写正数；缺了或不是正数，读的时候失败。
+图按槽位找到技能，再按这张图在 effectFields 里点的名字，读冲击效果上的那个数。节点的 `key` 指向 `effectFields` 里这一张图的一项。这项是冲击效果上的字段名；效果上没有这个数时写成正数。缺了或不是正数，读的时候失败。
 
 本页演示录像尚未录制，可用下方启动命令运行场景。
 
@@ -13,14 +13,14 @@
 | 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Float → 小数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体）、`value`（数值） |
-| 特殊写法 | 结果写入 dst 寄存器 |
+| 特殊写法 | 节点字段 `key` 是 `effectFields` 里这一张图的键，结果写入 dst 寄存器 |
 
 手册分册（全量字段与语义）：[算术与比较 · gr-op-02](../mod-editor-prd/config/gr-op-02-math.md)
 
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/LoadAbilityEffectFloat.json`）：
 
 ```json
-{"id": "radius", "op": "LoadAbilityEffectFloat"}
+{"id": "radius", "op": "LoadAbilityEffectFloat", "key": "radius"}
 ```
 
 接线（值边把上一步的结果送进本节点端口）：
