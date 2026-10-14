@@ -193,12 +193,18 @@ public class S4DeployTruthTests
     internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, CrowdPairRules pairRules)
         => BuildSession(seed, lineOfSight: false, pairRules);
 
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, NavSurfaceAsset surface)
+        => BuildSession(seed, lineOfSight: false, pairRules: null, surface);
+
     private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
         string seed, bool lineOfSight, CrowdPairRules? pairRules)
+        => BuildSession(seed, lineOfSight, pairRules, S1SurfaceTruthTests.ReadSurface(seed));
+
+    private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, NavSurfaceAsset surface)
     {
         CrowdTestScheduler.Ensure();
         var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight, pairRules);
-        var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var map = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "Maps", $"crowd_simulation_{seed}.json")))!;
         int boardWidthCm = map["Boards"]![0]!["WidthCm"]!.GetValue<int>();
