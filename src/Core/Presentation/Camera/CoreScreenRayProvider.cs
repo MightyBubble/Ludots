@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Camera
     /// <summary>
     /// Core implementation of <see cref="IScreenRayProvider"/>. Mirrors
     /// <see cref="CoreScreenProjector"/> so gameplay input can use the same
-    /// smoothed render camera math as presentation when available.
+    /// smoothed render camera math as presentation, including the logical camera before the first presented frame.
     /// </summary>
     public sealed class CoreScreenRayProvider : IScreenRayProvider, IPresentationCameraSnapshotScope
     {
@@ -66,7 +66,7 @@ namespace Ludots.Core.Presentation.Camera
                 return CameraViewportUtil.StateToRenderState(in state);
             }
 
-            if (_presenter != null)
+            if (_presenter is { HasPresented: true })
             {
                 return _presenter.SmoothedRenderState;
             }

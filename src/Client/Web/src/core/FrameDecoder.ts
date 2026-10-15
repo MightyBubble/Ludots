@@ -22,6 +22,8 @@ export interface CameraState {
   tgtX: number; tgtY: number; tgtZ: number;
   upX: number; upY: number; upZ: number;
   fov: number;
+  nearMeters: number;
+  farMeters: number;
 }
 
 export interface PrimitiveItem {
@@ -234,8 +236,10 @@ export class FrameDecoder {
       tgtX: v.getFloat32(p + 12, true), tgtY: v.getFloat32(p + 16, true), tgtZ: v.getFloat32(p + 20, true),
       upX: v.getFloat32(p + 24, true), upY: v.getFloat32(p + 28, true), upZ: v.getFloat32(p + 32, true),
       fov: v.getFloat32(p + 36, true),
+      nearMeters: v.getFloat32(p + 40, true),
+      farMeters: v.getFloat32(p + 44, true),
     };
-    return p + 40;
+    return p + 48;
   }
 
   private readPrimitives(frame: DecodedFrame, v: DataView, p: number, count: number): number {
@@ -490,7 +494,7 @@ export class FrameDecoder {
   private emptyFrame(): DecodedFrame {
     return {
       frameNumber: 0, simTick: 0, timestampMs: 0,
-      camera: { posX: 0, posY: 10, posZ: 10, tgtX: 0, tgtY: 0, tgtZ: 0, upX: 0, upY: 1, upZ: 0, fov: 60 },
+      camera: { posX: 0, posY: 10, posZ: 10, tgtX: 0, tgtY: 0, tgtZ: 0, upX: 0, upY: 1, upZ: 0, fov: 60, nearMeters: 0.1, farMeters: 10000 },
       primitives: [], debugLines: [], debugCircles: [], debugBoxes: [],
       groundOverlays: [], screenHud: [], screenOverlays: [],
     };

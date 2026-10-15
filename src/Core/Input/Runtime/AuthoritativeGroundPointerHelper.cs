@@ -97,15 +97,8 @@ namespace Ludots.Core.Input.Runtime
                 return false;
             }
 
-            try
-            {
-                ScreenRay ray = rayProvider.GetRay(screenPosition);
-                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return false;
-            }
+            ScreenRay ray = rayProvider.GetRay(screenPosition);
+            return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
         }
     }
 }
