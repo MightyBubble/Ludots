@@ -51,6 +51,7 @@ export function UnitTemplateInspector({ modId, view, draftText, issues, onDraftC
   const profileDraft = profileId ? draftProfile(draftText, profileId) : undefined;
   const related = issuesFor(issues, item.id, profileId);
   const presenterErrors = presenterIssues(related);
+  const otherIssues = related.filter((issue) => !presenterErrors.includes(issue));
 
   function edit(apply: () => string) {
     try {
@@ -226,7 +227,7 @@ export function UnitTemplateInspector({ modId, view, draftText, issues, onDraftC
             </li>
           ))}
         </ul>
-      ) : (
+      ) : presenterErrors.length > 0 ? null : (
         <p className="mt-1 text-xs text-studio-muted" data-presenter-links="">
           {PRESENTERS_FILE} 里没有在 EntitySpawned 时为它创建表现的规则。
         </p>
@@ -244,9 +245,9 @@ export function UnitTemplateInspector({ modId, view, draftText, issues, onDraftC
         </span>
       ))}
 
-      {related.length > 0 ? (
+      {otherIssues.length > 0 ? (
         <ul className="mt-4 space-y-2" data-template-issues="">
-          {related.map((issue, index) => (
+          {otherIssues.map((issue, index) => (
             <li key={`${issue.path}-${index}`} className="rounded-md border border-studio-red/40 bg-studio-red/10 px-3 py-2 text-xs">
               <span className="block">{issue.message}</span>
               <span className="mt-1 block font-mono text-studio-secondary">
