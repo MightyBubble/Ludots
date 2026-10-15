@@ -150,9 +150,9 @@ public sealed class CrowdReferenceScript
                 return;
             case "order":
                 var order = CrowdSimCommand.Parse(cmd, requireOrderMembers: false);
-                if (order.Members == null || order.Members.Length == 0)
+                if (order.AllOwnMembers)
                 {
-                    order = order with { Members = Capture(sim, order.Player) };
+                    order = order with { Members = Capture(sim, order.Player), AllOwnMembers = false };
                 }
 
                 sim.Commands.Submit<object?>(sim, order, CrowdSimCommands.Exec);

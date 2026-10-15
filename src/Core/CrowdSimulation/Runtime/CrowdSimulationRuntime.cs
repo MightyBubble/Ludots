@@ -686,7 +686,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         {
             _demoScript = CrowdDemoScript.Load(rows);
             _demoScript.ValidateStructure(_session);
-            _session.StageDeferredCommands = _demoScript.StageFormable;
+            _demoScript.Schedule(_session);
         }
         else
         {

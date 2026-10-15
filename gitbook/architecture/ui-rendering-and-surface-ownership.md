@@ -171,6 +171,8 @@ GPU UnderUi HUD（血条/名字等世界批）→ Skia 面板层 → TopMost。�
 
 `ScreenOverlayBuffer` 的每一项都要写明层：跟着世界走的标记（调试着色、选中轮廓）写 `PresentationOverlayLayer.UnderUi`，面板挂上后会盖住它们；窗口锚定的面板、宿主诊断字和框选矩形写 `TopMost`。`PresentationOverlaySceneBuilder` 按项上的层分道，没有默认层。
 
+Web 端同一套层序：屏幕叠层每项在线上带一个层字节（`WireScreenOverlayItem.LayerOffset`），客户端把 UnderUi 画进 UI 画布下面的 `hud-canvas`，TopMost 画进 UI 画布上面的 `top-canvas`。层字节不是 0 / 1 时解码直接报错。
+
 **按写法选构建器：**
 
 - **Compose / Reactive**：构造 `UiElementBuilder` 或 `ReactivePage`，用 `UiSurfaceContribution.FromBuilder(...)` / `FromReactivePage(page)`。

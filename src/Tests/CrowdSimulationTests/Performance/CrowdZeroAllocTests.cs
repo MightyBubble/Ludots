@@ -221,7 +221,7 @@ public sealed class CrowdZeroAllocTests
         int n = session.Units.CopyOwnHandles(player, all);
         var members = new uint[n];
         Array.Copy(all, members, n);
-        return new CrowdCommand(tick, parsed with { Members = members });
+        return new CrowdCommand(tick, parsed with { Members = members, AllOwnMembers = false });
     }
 
     private static void Bind(CrowdSimulationRuntime host, CrowdSimSession session)

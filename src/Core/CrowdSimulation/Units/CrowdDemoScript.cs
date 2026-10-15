@@ -5,20 +5,14 @@ using System.Text.Json.Nodes;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// 演示调试脚本。能成形的行在校验码之前排进指令队列，没有成员的 order 等该玩家有了单位再补句柄。
-/// 句柄数组和入队归并只发生在该行第一次成形的 tick。select / selectAll / clearSelection 不属于演示脚本。
+/// 演示调试脚本。会话第一 tick 之前整段排进指令队列，诊断断面和回放看到同一份未执行队列。
+/// 没写 members 的 order 是全体己方选择，到执行 tick 才取句柄。select / selectAll / clearSelection 不属于演示脚本。
 /// </summary>
 public sealed class CrowdDemoScript
 {
     private readonly (int Tick, JsonObject Cmd)[] _entries;
-    private readonly bool[] _staged;
-    private readonly CrowdCommand[] _row = new CrowdCommand[1];
 
-    private CrowdDemoScript((int Tick, JsonObject Cmd)[] entries)
-    {
-        _entries = entries;
-        _staged = new bool[entries.Length];
-    }
+    private CrowdDemoScript((int Tick, JsonObject Cmd)[] entries) => _entries = entries;
 
     public int Count => _entries.Length;
 
@@ -69,55 +63,27 @@ public sealed class CrowdDemoScript
         }
     }
 
-    /// <summary>
-    /// 把已经能成形的行排进队列。更早的 order 还没有单位时，后面的行照样入队。
-    /// 返回 true 表示这次新排进了至少一行。
-    /// </summary>
-    public bool StageFormable(CrowdSimSession sim)
+    public void Schedule(CrowdSimSession sim)
     {
-        bool any = false;
+        if (sim.TickCount != 0)
+        {
+            throw new InvalidOperationException($"演示脚本要在第一 tick 之前入队，会话已在 tick {sim.TickCount}。");
+        }
+
+        var rows = new CrowdCommand[_entries.Length];
         for (int i = 0; i < _entries.Length; i++)
         {
-            if (_staged[i]) continue;
-            if (!TryStage(sim, i)) continue;
-            _staged[i] = true;
-            any = true;
+            var (tick, cmd) = _entries[i];
+            string type = cmd["type"]?.GetValue<string>() ?? throw new InvalidOperationException("指令缺少 type 字段。");
+            rows[i] = new CrowdCommand(tick, type switch
+            {
+                "select" or "selectAll" or "clearSelection" => throw new InvalidOperationException($"演示脚本不接受 {type}。"),
+                "order" => CrowdSimCommand.Parse(cmd, requireOrderMembers: false),
+                _ => CrowdSimCommand.Parse(cmd),
+            });
         }
 
-        return any;
-    }
-
-    private bool TryStage(CrowdSimSession sim, int index)
-    {
-        var (tick, cmd) = _entries[index];
-        string type = cmd["type"]?.GetValue<string>() ?? throw new InvalidOperationException("指令缺少 type 字段。");
-        CrowdSimCommand parsed;
-        switch (type)
-        {
-            case "select":
-            case "selectAll":
-            case "clearSelection":
-                throw new InvalidOperationException($"演示脚本不接受 {type}。");
-            case "order":
-                parsed = CrowdSimCommand.Parse(cmd, requireOrderMembers: false);
-                if (parsed.Members == null || parsed.Members.Length == 0)
-                {
-                    int count = sim.Units.CopyOwnHandles(parsed.Player, sim.MemberCapture);
-                    if (count == 0) return false;
-                    var members = new uint[count];
-                    sim.MemberCapture.AsSpan(0, count).CopyTo(members);
-                    parsed = parsed with { Members = members };
-                }
-
-                break;
-            default:
-                parsed = CrowdSimCommand.Parse(cmd);
-                break;
-        }
-
-        _row[0] = new CrowdCommand(tick, parsed);
-        sim.Commands.Schedule(sim, _row);
-        return true;
+        sim.Commands.Schedule(sim, rows);
     }
 
     private static void RequirePlayer(CrowdSimSession sim, int player)

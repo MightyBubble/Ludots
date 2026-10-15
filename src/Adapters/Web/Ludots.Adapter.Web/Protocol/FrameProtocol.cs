@@ -51,7 +51,8 @@ namespace Ludots.Adapter.Web.Protocol
 
     public static class WireScreenOverlayItem
     {
-        public const int SizeInBytes = 95;
+        public const int LayerOffset = 95;
+        public const int SizeInBytes = 96;
     }
 
     public static class WireDebugLine

@@ -7,7 +7,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// 指令集:spawn、spawnAt、order(成员句柄在入队时钉死)、迷雾面、结构面、
+/// 指令集:spawn、spawnAt、order(成员句柄在入队时钉死，全体己方选择在执行时取)、迷雾面、结构面、
 /// kill、scatter、rates、rebakeSlices、clearCaches。
 /// 指令是 struct 数据,只在 tick 边界执行。仿真频率就是 FixedHz,不存在第二个时钟。
 /// </summary>
@@ -91,7 +91,12 @@ public static class CrowdSimCommands
         {
             if (cmd.HasFogTerrain) RequireFog(sim, "order");
             _ = Movement.CrowdFormations.ShapeOf(sim.Config.Formations, cmd.ShapeId!);
-            if (cmd.Members == null || cmd.Members.Length == 0)
+            if (cmd.AllOwnMembers)
+            {
+                if (cmd.Members != null)
+                    throw new System.InvalidOperationException("order: 成员句柄和全体己方选择只能给一个。");
+            }
+            else if (cmd.Members == null || cmd.Members.Length == 0)
             {
                 throw new System.InvalidOperationException("order: 成员集为空。");
             }
@@ -216,6 +221,20 @@ public static class CrowdSimCommands
                     }
                 }
 
+                System.ReadOnlySpan<uint> members = cmd.Members;
+                if (cmd.AllOwnMembers)
+                {
+                    sim.Units.MaterializePending();
+                    int count = sim.Units.CopyOwnHandles(cmd.Player, sim.MemberCapture);
+                    if (count == 0)
+                    {
+                        sim.NotifyEmptyOrderSelection(cmd.Player);
+                        return null;
+                    }
+
+                    members = sim.MemberCapture.AsSpan(0, count);
+                }
+
                 // 模式是值类型。tick 的 Flush 把返回值收成 object，直接 return 会装箱。
                 Movement.CrowdIssueOrder.Issue(
                     sim,
@@ -226,7 +245,7 @@ public static class CrowdSimCommands
                     cmd.HasAuto ? cmd.Auto : null,
                     cmd.HasFace ? new Fix64Vec2(cmd.FaceX, cmd.FaceY) : null,
                     Fix64.FromInt(cmd.WidthCm),
-                    cmd.Members);
+                    members);
                 return null;
             case CrowdSimCommandKind.FogSight:
                 (sim.Fog ?? throw new System.InvalidOperationException("fogSight: 迷雾未启用(会话没有运动内核)。")).Los =

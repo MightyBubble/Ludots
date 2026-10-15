@@ -17,8 +17,12 @@ namespace CrowdSimulationTests.Performance;
 /// 50k 压力场景下全部 HUD 面板打开（状态、玩家卡、检视、导航、遥测），走 UIRoot + Skia + UiSurfaceHost 真实链路。
 /// 第一段每个仿真 tick 之后跑一帧 HUD，比较 HUD 开关两种情况下的 tick 中位数。
 /// 第二段模拟 30 s：HUD 按 16 ms 一帧推进，仿真按固定频率在帧间步进。
-/// 断言：预热后采样帧和非采样帧都零分配，窗口内零 GC，HUD 重画帧 p95 不超过 1.5 ms，tick 中位数打开与不开在噪声内。
-/// 计时类断言只在优化构建上作硬门；Debug 只记数字。
+/// 断言：预热后采样帧和非采样帧都零分配，窗口内零 GC，HUD 重画帧的折算 CPU 时间 p95 不超过 1.5 ms，tick 中位数打开与不开在噪声内。
+/// 重画按测试线程的 CPU 时间量，被抢占、等调度不算。缓存和内存带宽被别的进程占着时 CPU 时间仍会成倍变长，
+/// 所以每次重画后紧跟着量一遍固定的 Skia 光栅参照（<see cref="SkiaReferenceRaster"/>），按同一帧两者的比值记成本：
+/// 折算 = 重画 CPU ÷ 本帧参照 CPU × <see cref="ReferenceRasterNominalMs"/>。参照只在重画帧跑，和 HUD 一样隔着仿真 tick 冷启动，
+/// 机器忙时两者一起变慢；HUD 自己多做的活不会让参照变慢，照样超预算。
+/// 墙钟和未折算的 CPU 时间只记进 trace。计时类断言只在优化构建上作硬门；Debug 只记数字。
 /// </summary>
 public sealed class CrowdHud50KUiPathTests
 {
@@ -27,6 +31,8 @@ public sealed class CrowdHud50KUiPathTests
     private const double FrameMs = 16d;
     private const double WindowSeconds = 30d;
     private const double RedrawP95BudgetMs = 1.5d;
+    /// <summary>参照光栅在定 1.5 ms 预算的那台机器上、空闲时的 CPU 时间中位数，把比值换回毫秒。</summary>
+    private const double ReferenceRasterNominalMs = 0.87d;
 
     [Test]
     public void AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise()
@@ -112,12 +118,16 @@ public sealed class CrowdHud50KUiPathTests
             $"reads status={feed.DeployReads} player={feed.PlayerReads} inspect={feed.InspectReads} nav={feed.NavReads} telemetry={feed.TelemetryReads}\n" +
             $"window {WindowSeconds:F0}s: frames={window.Frames} ticks={window.Ticks} gc0={window.Gc0} gc1={window.Gc1} gc2={window.Gc2} " +
             $"processAllocated={window.ProcessAllocated} hudAlloc sample={window.SampleAlloc} nonSample={window.NonSampleAlloc} sampleFrames={window.SampleFrames} " +
-            $"redraws={window.Redraws.Count} redraw median={Median(window.Redraws):F3}ms p95={Percentile(window.Redraws, 0.95):F3}ms max={window.Redraws.Max():F3}ms " +
+            $"redraws={window.Redraws.Count} redrawCost median={Median(window.RedrawCost):F3}ms p95={Percentile(window.RedrawCost, 0.95):F3}ms max={window.RedrawCost.Max():F3}ms " +
+            $"redrawCpu median={Median(window.RedrawCpu):F3}ms p95={Percentile(window.RedrawCpu, 0.95):F3}ms " +
+            $"referenceCpu median={Median(window.ReferenceCpu):F3}ms p95={Percentile(window.ReferenceCpu, 0.95):F3}ms " +
+            $"redrawWall median={Median(window.Redraws):F3}ms p95={Percentile(window.Redraws, 0.95):F3}ms max={window.Redraws.Max():F3}ms " +
             $"composes={window.Composes}";
         TestContext.Out.WriteLine(line);
         string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-hud-50k-ui"));
         Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "trace.txt"), line + "\n" + $"load {File.ReadAllText("/proc/loadavg").Trim()}\n");
+        string load = OperatingSystem.IsLinux() ? $"load {File.ReadAllText("/proc/loadavg").Trim()}\n" : "";
+        File.WriteAllText(Path.Combine(dir, "trace.txt"), line + "\n" + load);
 
         Assert.That(nonSampleFrames, Is.GreaterThan(0), "没量到非采样帧");
         Assert.That(sampleFrames, Is.GreaterThan(0), "没量到采样帧");
@@ -133,8 +143,9 @@ public sealed class CrowdHud50KUiPathTests
         Assert.That(window.Gc0 + window.Gc1 + window.Gc2, Is.EqualTo(0),
             $"{WindowSeconds:F0} s 窗口内发生 GC：gen0 {window.Gc0} gen1 {window.Gc1} gen2 {window.Gc2}（进程共分配 {window.ProcessAllocated} 字节）");
 #if !DEBUG
-        Assert.That(Percentile(window.Redraws, 0.95), Is.LessThanOrEqualTo(RedrawP95BudgetMs),
-            $"HUD 重画帧 p95 {Percentile(window.Redraws, 0.95):F3} ms 超过 {RedrawP95BudgetMs} ms");
+        Assert.That(Percentile(window.RedrawCost, 0.95), Is.LessThanOrEqualTo(RedrawP95BudgetMs),
+            $"HUD 重画帧折算 CPU 时间 p95 {Percentile(window.RedrawCost, 0.95):F3} ms 超过 {RedrawP95BudgetMs} ms" +
+            $"（未折算 CPU p95 {Percentile(window.RedrawCpu, 0.95):F3} ms，墙钟 p95 {Percentile(window.Redraws, 0.95):F3} ms）");
         Assert.That(visibleMedian - hiddenMedian, Is.LessThanOrEqualTo(noise),
             $"打开 HUD 后 tick 中位数 {visibleMedian:F3} ms，关着 {hiddenMedian:F3} ms，差超过噪声 {noise:F3} ms");
 #endif
@@ -153,6 +164,9 @@ public sealed class CrowdHud50KUiPathTests
         public int Gc2;
         public int Composes;
         public readonly List<double> Redraws = new();
+        public readonly List<double> RedrawCpu = new();
+        public readonly List<double> ReferenceCpu = new();
+        public readonly List<double> RedrawCost = new();
     }
 
     /// <summary>
@@ -165,6 +179,13 @@ public sealed class CrowdHud50KUiPathTests
         double tickPeriodMs = 1000d / session.Config.FixedHz;
         var stats = new WindowStats { Frames = frames };
         stats.Redraws.Capacity = frames;
+        stats.RedrawCpu.Capacity = frames;
+        stats.ReferenceCpu.Capacity = frames;
+        stats.RedrawCost.Capacity = frames;
+        var redrawCpuRaw = new long[frames];
+        var referenceCpuRaw = new long[frames];
+        using var raster = new SkiaReferenceRaster((int)ui.Width, (int)ui.Height);
+        raster.Run();
         var hudWatch = new Stopwatch();
         double simClockMs = 0d;
         int composes0 = ui.Controller.ComposeCount;
@@ -173,6 +194,7 @@ public sealed class CrowdHud50KUiPathTests
         GC.Collect();
         int gc0 = GC.CollectionCount(0), gc1 = GC.CollectionCount(1), gc2 = GC.CollectionCount(2);
         long process0 = GC.GetTotalAllocatedBytes(precise: true);
+        var cpu = ThreadCpuClock.StartOnCurrentThread();
         for (int f = 0; f < frames; f++)
         {
             simClockMs += FrameMs;
@@ -186,11 +208,20 @@ public sealed class CrowdHud50KUiPathTests
             int reads = TotalReads(feed);
             int renders = ui.Renders;
             long before = GC.GetAllocatedBytesForCurrentThread();
+            long cpu0 = cpu.ReadRaw();
             hudWatch.Restart();
             ui.Frame(feed, FrameMs);
             hudWatch.Stop();
+            long cpuRaw = cpu.ReadRaw() - cpu0;
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            if (ui.Renders != renders) stats.Redraws.Add(hudWatch.Elapsed.TotalMilliseconds);
+            if (ui.Renders != renders)
+            {
+                long reference0 = cpu.ReadRaw();
+                raster.Run();
+                referenceCpuRaw[stats.Redraws.Count] = cpu.ReadRaw() - reference0;
+                redrawCpuRaw[stats.Redraws.Count] = cpuRaw;
+                stats.Redraws.Add(hudWatch.Elapsed.TotalMilliseconds);
+            }
             if (TotalReads(feed) == reads)
             {
                 stats.NonSampleAlloc += allocated;
@@ -203,6 +234,15 @@ public sealed class CrowdHud50KUiPathTests
         }
 
         stats.ProcessAllocated = GC.GetTotalAllocatedBytes(precise: true) - process0;
+        double rawPerMs = cpu.RawPerMs();
+        for (int i = 0; i < stats.Redraws.Count; i++)
+        {
+            stats.RedrawCpu.Add(redrawCpuRaw[i] / rawPerMs);
+            stats.ReferenceCpu.Add(referenceCpuRaw[i] / rawPerMs);
+        }
+
+        for (int i = 0; i < stats.Redraws.Count; i++)
+            stats.RedrawCost.Add(stats.RedrawCpu[i] / stats.ReferenceCpu[i] * ReferenceRasterNominalMs);
         stats.Gc0 = GC.CollectionCount(0) - gc0;
         stats.Gc1 = GC.CollectionCount(1) - gc1;
         stats.Gc2 = GC.CollectionCount(2) - gc2;
