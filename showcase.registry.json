@@ -11189,6 +11189,28 @@
       ]
     },
     {
+      "id": "crowd_simulation_minimal",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationMinimalMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 最小样板",
+      "summary": "从空目录写出的群体 Mod：一种单位、一个表现、256×256 导航格的陆地 + 水面小图，方块墙挡在中间，两名玩家各 200 人绕墙走到对面。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_minimal",
+      "preset": "crowd_simulation_minimal_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-minimal-mod.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Authoring.CrowdSimulationMinimalModTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-minimal",
+      "screenshot": "artifacts/acceptance/crowdsimulation-minimal/crowd_minimal_around_wall.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_SubmitResponseChainOrder",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod",
       "projectPath": "CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod.csproj",
