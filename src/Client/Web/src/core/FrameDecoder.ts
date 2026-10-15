@@ -87,8 +87,12 @@ export interface ScreenHudItem {
   textTemplates?: Map<number, string>;
 }
 
+export const OVERLAY_LAYER_UNDER_UI = 0;
+export const OVERLAY_LAYER_TOP_MOST = 1;
+
 export interface ScreenOverlayItem {
   kind: number;
+  layer: number;
   x: number; y: number;
   width: number; height: number;
   fontSize: number;
@@ -337,8 +341,13 @@ export class FrameDecoder {
     const items: ScreenOverlayItem[] = [];
     for (let i = 0; i < count; i++) {
       const textPacket = this.readTextPacket(v, p + 55);
+      const layer = v.getUint8(p + 95);
+      if (layer !== OVERLAY_LAYER_UNDER_UI && layer !== OVERLAY_LAYER_TOP_MOST) {
+        throw new Error(`screen overlay item ${i}: unknown layer ${layer}`);
+      }
       items.push({
         kind: v.getUint8(p),
+        layer,
         x: v.getInt32(p + 1, true),
         y: v.getInt32(p + 5, true),
         width: v.getInt32(p + 9, true),
@@ -352,7 +361,7 @@ export class FrameDecoder {
         textPacket,
       });
       stringIds.push(v.getUint16(p + 53, true));
-      p += 95;
+      p += 96;
     }
 
     const stringCount = v.getUint16(p, true); p += 2;

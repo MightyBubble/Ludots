@@ -292,6 +292,50 @@ namespace Ludots.Tests.ThreeC
             Assert.That(template, Is.EqualTo("READY {0}"));
         }
 
+        [Test]
+        public void ScreenOverlay_FullAndDeltaFrames_CarryEachItemsCompositorLayer()
+        {
+            var overlay = new ScreenOverlayBuffer();
+            overlay.AddRect(PresentationOverlayLayer.UnderUi, 10, 20, 30, 40, new Vector4(0f, 0f, 1f, 0.5f), new Vector4(1f, 1f, 1f, 1f));
+            overlay.AddText(PresentationOverlayLayer.TopMost, 12, 24, "TOP", 18, new Vector4(1f, 1f, 0f, 1f));
+            overlay.AddRect(PresentationOverlayLayer.TopMost, 50, 60, 70, 80, new Vector4(1f, 0f, 0f, 0.5f), new Vector4(0f, 0f, 0f, 0f));
+            overlay.AddText(PresentationOverlayLayer.UnderUi, 5, 6, "UNDER", 14, new Vector4(0f, 1f, 0f, 1f));
+            var expected = new[]
+            {
+                (ScreenOverlayItemKind.Rect, PresentationOverlayLayer.UnderUi, 10),
+                (ScreenOverlayItemKind.Text, PresentationOverlayLayer.TopMost, 12),
+                (ScreenOverlayItemKind.Rect, PresentationOverlayLayer.TopMost, 50),
+                (ScreenOverlayItemKind.Text, PresentationOverlayLayer.UnderUi, 5),
+            };
+            var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);
+
+            var full = new BinaryFrameEncoder();
+            full.Encode(1, 2, 3, in camera, null, null, null, null, null, null, overlay, null);
+            AssertLayers(full.GetResult(), expected);
+
+            var delta = new DeltaCompressor();
+            Assert.That(delta.TryEncodeDelta(1, 2, 3, in camera, null, null, null, null, null, overlay), Is.True);
+            var bytes = new byte[delta.EncodedLength];
+            delta.CopyTo(bytes);
+            AssertLayers(bytes, expected);
+
+            static void AssertLayers(ReadOnlySpan<byte> buffer, (ScreenOverlayItemKind Kind, PresentationOverlayLayer Layer, int X)[] items)
+            {
+                var (payloadOffset, itemCount, _) = FindSection(buffer, FrameProtocol.SectionScreenOverlay);
+                Assert.That(itemCount, Is.EqualTo(items.Length));
+                for (int i = 0; i < items.Length; i++)
+                {
+                    int itemOffset = payloadOffset + i * WireScreenOverlayItem.SizeInBytes;
+                    Assert.That(buffer[itemOffset], Is.EqualTo((byte)items[i].Kind), $"item {i} kind");
+                    Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(itemOffset + 1, 4)), Is.EqualTo(items[i].X), $"item {i} x");
+                    Assert.That(buffer[itemOffset + WireScreenOverlayItem.LayerOffset], Is.EqualTo((byte)items[i].Layer), $"item {i} layer");
+                }
+
+                int cursor = payloadOffset + items.Length * WireScreenOverlayItem.SizeInBytes;
+                Assert.That(BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(cursor, 2)), Is.EqualTo(2), "string table follows the last item");
+            }
+        }
+
         private static (int PayloadOffset, int ItemCount, int ByteLength) FindSection(ReadOnlySpan<byte> buffer, byte sectionType)
         {
             int cursor = FrameProtocol.FrameHeaderSize;

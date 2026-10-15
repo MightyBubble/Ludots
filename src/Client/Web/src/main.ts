@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FrameDecoder, type DecodedFrame } from './core/FrameDecoder';
+import { FrameDecoder, OVERLAY_LAYER_TOP_MOST, OVERLAY_LAYER_UNDER_UI, type DecodedFrame } from './core/FrameDecoder';
 import { InputCapture } from './input/InputCapture';
 import { EntityManager } from './rendering/EntityManager';
 import { HudRenderer } from './rendering/HudRenderer';
@@ -28,12 +28,14 @@ scene.add(dirLight);
 
 const hudCanvas = document.getElementById('hud-canvas') as HTMLCanvasElement;
 const uiCanvas = document.getElementById('ui-canvas') as HTMLCanvasElement;
+const topCanvas = document.getElementById('top-canvas') as HTMLCanvasElement;
 const statsEl = document.getElementById('stats')!;
 
 const decoder = new FrameDecoder();
 const inputCapture = new InputCapture(renderer.domElement);
 const entityManager = new EntityManager(scene);
 const hudRenderer = new HudRenderer(hudCanvas);
+const topRenderer = new HudRenderer(topCanvas);
 const groundOverlayRenderer = new GroundOverlayRenderer(scene);
 const interpolator = new PositionInterpolator();
 const referenceWorldRenderer = new ReferenceWorldRenderer(scene);
@@ -159,9 +161,12 @@ function animate(): void {
       worldToScreen2D,
     );
     hudRenderer.drawScreenHud(_lastFrame.screenHud);
-    hudRenderer.drawScreenOverlays(_lastFrame.screenOverlays);
+    hudRenderer.drawScreenOverlays(_lastFrame.screenOverlays, OVERLAY_LAYER_UNDER_UI);
 
     uiOverlay.update(_lastFrame.uiScene);
+
+    topRenderer.clear();
+    topRenderer.drawScreenOverlays(_lastFrame.screenOverlays, OVERLAY_LAYER_TOP_MOST);
   }
 
   renderer.render(scene, camera);
@@ -187,11 +192,13 @@ function onResize(): void {
   renderer.setSize(window.innerWidth, window.innerHeight);
   hudRenderer.resize(window.innerWidth, window.innerHeight);
   uiOverlay.resize(window.innerWidth, window.innerHeight);
+  topRenderer.resize(window.innerWidth, window.innerHeight);
 }
 
 window.addEventListener('resize', onResize);
 hudRenderer.resize(window.innerWidth, window.innerHeight);
 uiOverlay.resize(window.innerWidth, window.innerHeight);
+topRenderer.resize(window.innerWidth, window.innerHeight);
 
 connectWebSocket();
 animate();

@@ -91,12 +91,13 @@ export class HudRenderer {
     }
   }
 
-  drawScreenOverlays(items: ScreenOverlayItem[]): void {
+  drawScreenOverlays(items: ScreenOverlayItem[], layer: number): void {
     const ctx = this._ctx;
     const OVERLAY_TEXT = 0;
     const OVERLAY_RECT = 1;
 
     for (const item of items) {
+      if (item.layer !== layer) continue;
       if (item.kind === OVERLAY_TEXT) {
         const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
         ctx.font = `${fontSize}px monospace`;
