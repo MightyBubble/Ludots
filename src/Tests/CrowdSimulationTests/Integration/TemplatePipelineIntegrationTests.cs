@@ -25,7 +25,7 @@ public class TemplatePipelineIntegrationTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         var wiring = session.Presentation;
         Assert.That(wiring.TemplateRegistry.Get("crowd_simulation.unit.infantry.r100"), Is.Not.Null,
-            "模板注册表应装到 CrowdSimulationMod 的 Entities/templates.json(经 MapLoader.LoadTemplates 装载链)");
+            "模板注册表应装到 CrowdSimulationDemoContentMod 的 Entities/templates.json(经 MapLoader.LoadTemplates 装载链)");
 
         session.Commands.Schedule(session, new[]
         {
