@@ -10,6 +10,7 @@ using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Scripting;
 using Ludots.Launcher.Backend;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.ThreeC
@@ -69,10 +70,14 @@ namespace Ludots.Tests.ThreeC
                 Step(driver, 30);
 
                 WebWireClient.FrameSummary frame = client.ReceiveFrame(cts.Token);
+                WebWireClient.WireCamera camera = frame.Camera ?? throw new AssertionException("Every Web frame must carry the camera section.");
+                CameraClipPlanes expectedClip = camera.State.ResolveClipPlanes();
                 Assert.Multiple(() =>
                 {
                     Assert.That(client.MeshMapReceived, Is.True, "Client must receive the mesh map before frames.");
-                    Assert.That(frame.CameraFovYDeg, Is.GreaterThan(0f), "Streamed camera must carry a presented FOV.");
+                    Assert.That(camera.State.FovYDeg, Is.GreaterThan(0f), "Streamed camera must carry a presented FOV.");
+                    Assert.That(camera.NearMeters, Is.EqualTo(expectedClip.NearMeters));
+                    Assert.That(camera.FarMeters, Is.EqualTo(expectedClip.FarMeters));
                     Assert.That(frame.Sections, Does.Contain(FrameProtocol.SectionUiScene),
                         "CrowdSimulationUiMod HUD must reach the client through the Web UI bridge.");
                 });

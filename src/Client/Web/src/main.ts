@@ -151,6 +151,8 @@ function animate(): void {
     camera.lookAt(cam.tgtX, cam.tgtY, cam.tgtZ);
     camera.up.set(cam.upX, cam.upY, cam.upZ);
     camera.fov = cam.fov;
+    camera.near = cam.nearMeters;
+    camera.far = cam.farMeters;
     camera.updateProjectionMatrix();
 
     referenceWorldRenderer.update(cam.tgtX, cam.tgtY, cam.tgtZ);

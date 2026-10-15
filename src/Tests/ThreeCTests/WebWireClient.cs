@@ -1,13 +1,16 @@
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Adapter.Web.Streaming;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.ThreeC
 {
@@ -188,12 +191,14 @@ namespace Ludots.Tests.ThreeC
             _sendLock.Dispose();
         }
 
-        public readonly record struct FrameSummary(float CameraFovYDeg, IReadOnlyList<byte> Sections)
+        public readonly record struct WireCamera(CameraRenderState3D State, float NearMeters, float FarMeters);
+
+        public readonly record struct FrameSummary(WireCamera? Camera, IReadOnlyList<byte> Sections)
         {
             public static FrameSummary Parse(ReadOnlySpan<byte> frame)
             {
                 var sections = new List<byte>();
-                float fov = 0f;
+                WireCamera? camera = null;
                 int pos = FrameProtocol.FrameHeaderSize;
                 while (pos < frame.Length)
                 {
@@ -207,14 +212,35 @@ namespace Ludots.Tests.ThreeC
                     int payload = pos + FrameProtocol.SectionHeaderSize;
                     if (section == FrameProtocol.SectionCamera)
                     {
-                        fov = BinaryPrimitives.ReadSingleLittleEndian(frame.Slice(payload + (9 * sizeof(float)), 4));
+                        if (byteLength != WireCameraState.SizeInBytes)
+                        {
+                            throw new InvalidDataException($"Camera section is {byteLength} bytes; protocol says {WireCameraState.SizeInBytes}.");
+                        }
+
+                        camera = ReadCamera(frame.Slice(payload, byteLength));
                     }
 
                     sections.Add(section);
                     pos = payload + byteLength;
                 }
 
-                return new FrameSummary(fov, sections);
+                return new FrameSummary(camera, sections);
+            }
+
+            private static WireCamera ReadCamera(ReadOnlySpan<byte> payload)
+            {
+                Span<float> f = stackalloc float[WireCameraState.SizeInBytes / sizeof(float)];
+                for (int i = 0; i < f.Length; i++)
+                {
+                    f[i] = BinaryPrimitives.ReadSingleLittleEndian(payload.Slice(i * sizeof(float), sizeof(float)));
+                }
+
+                var state = new CameraRenderState3D(
+                    new Vector3(f[0], f[1], f[2]),
+                    new Vector3(f[3], f[4], f[5]),
+                    new Vector3(f[6], f[7], f[8]),
+                    f[9]);
+                return new WireCamera(state, f[10], f[11]);
             }
         }
     }
