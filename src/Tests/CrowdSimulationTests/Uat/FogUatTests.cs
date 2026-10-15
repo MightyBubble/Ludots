@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
@@ -19,6 +20,10 @@ public sealed class FogUatTests
     private const double SecondOffset = 0.125;
     private const int MaxTicks = 6000;
     private const int SettleTicks = 120;
+    private const double SpanAt = 0.65;
+    private const double SpanFrom = 0.5;
+    private const double SpanTo = 0.8;
+    private const int SecondSearchRings = 40;
 
     [Test]
     public void UnseenBuildingOnRoute_IsPlannedThroughUntilSeenThenAvoided()
@@ -49,9 +54,9 @@ public sealed class FogUatTests
         Assert.That(g, Is.Not.Null, "指令未产生领队");
 
         var leader = g!.Leader!;
-        int k = Math.Max(1, (int)Math.Floor(leader.PathCount * 0.65));
-        var at = leader.PathAt(k);
-        int bx = (int)at.X.ToLong(), by = (int)at.Y.ToLong();
+        var spot = LegalSpotOnRoute(s, leader, size);
+        Assert.That(spot, Is.Not.Null, $"场景无效：路线 {SpanFrom:P0}–{SpanTo:P0} 段内没有能合法放下 {size} 厘米建筑的点");
+        var (bx, by, offsetCells, fraction) = spot!.Value;
         int id = Place(s, "building", bx, by, size);
         bool planningAfterPlace = g.Planning;
         CrowdUatKit.Step(s, 2);
@@ -67,11 +72,15 @@ public sealed class FogUatTests
         CheckBeliefs(s, "认知变体", errors);
 
         int x2 = Math.Min(w - size, bx + (int)(SecondOffset * w)), y2 = Math.Min(w - size, by + (int)(SecondOffset * w));
+        var second = LegalSpotNear(s, x2, y2, size);
+        Assert.That(second, Is.Not.Null, $"场景无效：({x2}, {y2}) 周围 {SecondSearchRings} 圈内放不下第二栋建筑");
+        int ring2;
+        (x2, y2, ring2) = second!.Value;
         Place(s, "building", x2, y2, size);
         CrowdUatKit.Step(s, 2);
         CheckBeliefs(s, "再次放置后认知变体", errors);
 
-        var leader0 = g.Leader;
+        var path0 = PathOf(g.Leader!);
         int seenAt = -1;
         for (int t = 0; t < MaxTicks && seenAt < 0; t += 10)
         {
@@ -88,7 +97,7 @@ public sealed class FogUatTests
             if (after == null) errors.Add("看见建筑后指令丢失");
             else
             {
-                replanned = !ReferenceEquals(after.Leader, leader0) || after.Leader!.PathCount != leader0!.PathCount;
+                replanned = !PathOf(after.Leader!).SequenceEqual(path0);
                 blockedAfter = Blocked(after, after.BodyNavId);
                 if (blockedAfter) errors.Add("看见建筑后未改道（领队路线仍被真实导航阻挡）");
             }
@@ -104,10 +113,82 @@ public sealed class FogUatTests
         }
 
         TestContext.Out.WriteLine(
-            $"fog: building ({bx}, {by}) size {size}, path point {k}/{leader.PathCount}, planningAfterPlace {planningAfterPlace}, " +
+            $"fog: building ({bx}, {by}) size {size}, offset {offsetCells:+0;-0;0} cells from {SpanAt:P0}, route {fraction:P1}, second ({x2}, {y2}) ring {ring2}, planningAfterPlace {planningAfterPlace}, " +
             $"truthBlocked {truthBlocked}, beliefBlocked {beliefBlocked}, seenAt {seenAt}, replanned {replanned}, blockedAfter {blockedAfter}, ticks {s.TickCount}");
         Assert.That(errors, Is.Empty, string.Join("；", errors));
     }
+
+    /// <summary>
+    /// 放置指令拒收与已有结构重叠的足迹（沙盒的 place 不判合法性）。从路线弧长 SpanAt 处沿路线逐格前移、再逐格后移，
+    /// 取第一个放置裁定通过的点；足迹中心在路线上，路线必然穿过它。只在弧长 [SpanFrom, SpanTo] 内找，建筑边长不变。
+    /// </summary>
+    private static (int X, int Y, int OffsetCells, double Fraction)? LegalSpotOnRoute(CrowdSimSession s, CrowdLeader leader, int size)
+    {
+        var store = s.Structures!;
+        var template = s.Config.Structures.Templates[store.TemplateIndexOf("building")];
+        int cs = s.Config.NavCellSizeCm, n = leader.PathCount;
+        var arc = new double[n];
+        for (int i = 1; i < n; i++)
+        {
+            var a = leader.PathAt(i - 1);
+            var b = leader.PathAt(i);
+            arc[i] = arc[i - 1] + Math.Sqrt(Math.Pow((b.X - a.X).ToDouble(), 2) + Math.Pow((b.Y - a.Y).ToDouble(), 2));
+        }
+
+        double total = arc[n - 1], from = SpanFrom * total, to = SpanTo * total, start = SpanAt * total;
+        (int, int, int, double)? Try(int step)
+        {
+            double at = start + (double)step * cs;
+            if (at < from || at > to) return null;
+            int seg = 1;
+            while (seg < n - 1 && arc[seg] < at) seg++;
+            var a = leader.PathAt(seg - 1);
+            var b = leader.PathAt(seg);
+            double len = arc[seg] - arc[seg - 1], t = len > 0 ? (at - arc[seg - 1]) / len : 0;
+            int x = (int)Math.Round(a.X.ToDouble() + (b.X - a.X).ToDouble() * t);
+            int y = (int)Math.Round(a.Y.ToDouble() + (b.Y - a.Y).ToDouble() * t);
+            var fp = CrowdStructureFootprint.Make(template, Fix64.FromInt(x), Fix64.FromInt(y), Fix64.FromInt(size), Fix64.Zero, Fix64.Zero);
+            return store.JudgePlacement(template, fp) == CrowdPlacementReject.None ? (x, y, step, at / total) : null;
+        }
+
+        for (int step = 0; start + (double)step * cs <= to; step++)
+        {
+            if (Try(step) is { } hit) return hit;
+        }
+
+        for (int step = -1; start + (double)step * cs >= from; step--)
+        {
+            if (Try(step) is { } hit) return hit;
+        }
+
+        return null;
+    }
+
+    /// <summary>第二栋建筑只用来再造一次真相变化；原位被放置裁定拒收时按格环外移，边长不变。</summary>
+    private static (int X, int Y, int Ring)? LegalSpotNear(CrowdSimSession s, int x, int y, int size)
+    {
+        var store = s.Structures!;
+        var template = s.Config.Structures.Templates[store.TemplateIndexOf("building")];
+        int cs = s.Config.NavCellSizeCm;
+        for (int ring = 0; ring <= SecondSearchRings; ring++)
+        {
+            for (int dy = -ring; dy <= ring; dy++)
+            {
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != ring) continue;
+                    int px = x + dx * cs, py = y + dy * cs;
+                    var fp = CrowdStructureFootprint.Make(template, Fix64.FromInt(px), Fix64.FromInt(py), Fix64.FromInt(size), Fix64.Zero, Fix64.Zero);
+                    if (store.JudgePlacement(template, fp) == CrowdPlacementReject.None) return (px, py, ring);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static Fix64Vec2[] PathOf(CrowdLeader leader) =>
+        Enumerable.Range(0, leader.PathCount).Select(leader.PathAt).ToArray();
 
     private static void CheckBeliefs(CrowdSimSession s, string when, List<string> errors)
     {
