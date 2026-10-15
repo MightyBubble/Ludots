@@ -311,10 +311,12 @@ public class CrowdDynamicDeckTests
                 NavCellsY = side,
                 NavCellSizeCm = cell,
                 TerrainTypeIds = CopyIds(config.TerrainTypeIds),
+                LinkKindIds = TestDefaults.LinkKindIds(config),
+                LinkBakeDigest = config.LinkBakeDigest,
                 TerrainCells = terrain,
                 JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
             }, Array.Empty<BlockerFootprint>());
-            var deck = UpperLayerBake.RasterizeDecks(Array.Empty<BridgeDeckRecord>(), config);
+            var deck = UpperLayerBake.RasterizeLayeredPaths(Array.Empty<LayeredPathRecord>(), config);
             var heights = new NavHeightField
             {
                 NavCellsPerSide = side,
@@ -380,7 +382,7 @@ public class CrowdDynamicDeckTests
             }
 
             var store = CrowdStructuresStore.Build(config, surface, Array.Empty<BlockerFootprint>());
-            store.UseDeck(deck);
+            store.UseUpperLayer(deck);
             var world = ArchWorld.Create();
             var session = new CrowdSimSession(config, world, navs, navBy, Wiring(config, world));
             session.Structures = store;

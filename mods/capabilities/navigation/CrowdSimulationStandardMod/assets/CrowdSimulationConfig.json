@@ -103,7 +103,6 @@
     "speedCapRatio": 1.5,
     "restAccelScale": 2,
     "restSeparationScale": 0.6,
-    "jumpSpeedRatio": 1.3,
     "slotTimeConstantSec": 1.5
   },
   "avoidance": {
@@ -141,13 +140,18 @@
     "navCellInsetFraction": 0.02
   },
   "structures": {
-    "blockCoverage": 0.5,
-    "portalReachNavCells": 4,
     "templates": {
       "building": {
-        "name": "建筑",
-        "footprint": "rect",
-        "blocker": true
+        "layer": "base",
+        "footprint": "square",
+        "effect": {
+          "kind": "block",
+          "coverage": 0.5
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
+        "lifetimeSec": null
       }
     }
   },

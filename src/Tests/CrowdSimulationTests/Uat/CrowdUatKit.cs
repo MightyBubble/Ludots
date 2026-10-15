@@ -75,10 +75,10 @@ internal static class CrowdUatKit
 
     /// <summary>演示体型表按半径级（升序）逐级换半径，单位模板的个人半径随之按避让倍数重算。</summary>
     public static CrowdTestBodies DemoBodiesWithRadii(params int[] radiusCmByClass)
-        => DemoBodies(radiusCmByClass, speedCmPerSecond: null, tunePathing: null);
+        => DemoBodies(radiusCmByClass, speedCmPerSecond: null, tuneTraversal: null);
 
-    /// <summary>演示体型与模板；<paramref name="speedCmPerSecond"/> 给定时所有单位模板换成这一速度，<paramref name="tunePathing"/> 在演示寻路 JSON 上改值。</summary>
-    public static CrowdTestBodies DemoBodies(int[]? radiusCmByClass, Fix64? speedCmPerSecond, Action<JsonObject>? tunePathing)
+    /// <summary>演示体型与模板；<paramref name="speedCmPerSecond"/> 给定时所有单位模板换成这一速度，<paramref name="tuneTraversal"/> 在演示 traversal.json 合并结果上改值。</summary>
+    public static CrowdTestBodies DemoBodies(int[]? radiusCmByClass, Fix64? speedCmPerSecond, Action<JsonObject>? tuneTraversal)
     {
         var profiles = System.Text.Json.JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             System.IO.File.ReadAllText(System.IO.Path.Combine("assets", "agent_profiles.json")),
@@ -106,15 +106,15 @@ internal static class CrowdUatKit
             PushPriority = t.PushPriority,
             Special = t.Special,
         }).ToList();
-        Ludots.Core.Navigation.Pathing.Config.PathingConfig? pathing = null;
-        if (tunePathing != null)
+        CrowdTraversalConfig? traversal = null;
+        if (tuneTraversal != null)
         {
-            var json = TestDefaults.DefaultPathingJson();
-            tunePathing(json);
-            pathing = TestDefaults.ParsePathing(json);
+            var json = TestDefaults.DefaultTraversalJson();
+            tuneTraversal(json);
+            traversal = TestDefaults.ParseTraversal(json);
         }
 
-        return new CrowdTestBodies(new AgentProfileRegistry(profiles), templates, pathing);
+        return new CrowdTestBodies(new AgentProfileRegistry(profiles), templates, traversal);
     }
 
     /// <summary>地图中心最近的可走格上生成 <paramref name="count"/> 个玩家 1 的 0 号兵种。</summary>

@@ -186,7 +186,7 @@ public class ConfigMergeProvenanceTests
     }
 
     [Test]
-    public void Capture_StandardModLoadOrder_ReportsNavmeshFragmentsAndFileWinner()
+    public void Capture_StandardModLoadOrder_ReportsTraversalFragmentsAndFileWinner()
     {
         string repoRoot = FindRepoRoot();
         var mounts = new List<ConfigModMount>
@@ -194,23 +194,22 @@ public class ConfigMergeProvenanceTests
             new("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod")),
             new("CrowdSimulationMod", Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod")),
             new("CrowdSimulationStandardMod", Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod")),
+            new("CrowdSimulationDemoContentMod", Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod")),
         };
 
         ConfigProvenanceSnapshot snapshot = ConfigMergeProvenance.Capture(Path.Combine(repoRoot, "assets"), mounts);
         ConfigProvenanceFile navmesh = FindFile(snapshot, "Navigation/navmesh.json");
-        const string coreUri = "Core:Navigation/navmesh.json";
-        const string coreModUri = "LudotsCoreMod:assets/Navigation/navmesh.json";
-        const string standardUri = "CrowdSimulationStandardMod:assets/Navigation/navmesh.json";
-        Assert.That(navmesh.Fragments, Does.Contain(coreUri));
-        Assert.That(navmesh.Fragments, Does.Contain(coreModUri));
-        Assert.That(navmesh.Fragments, Does.Contain(standardUri));
-        Assert.That(IndexOf(navmesh.Fragments, coreUri), Is.LessThan(IndexOf(navmesh.Fragments, coreModUri)));
-        Assert.That(IndexOf(navmesh.Fragments, coreModUri), Is.LessThan(IndexOf(navmesh.Fragments, standardUri)));
-        Assert.That(navmesh.FileWinner, Is.EqualTo(standardUri));
+        Assert.That(navmesh.Fragments, Is.EqualTo(new[] { "Core:Navigation/navmesh.json", "LudotsCoreMod:assets/Navigation/navmesh.json" }));
+
+        ConfigProvenanceFile traversal = FindFile(snapshot, "CrowdSimulation/traversal.json");
+        const string standardUri = "CrowdSimulationStandardMod:assets/CrowdSimulation/traversal.json";
+        const string demoUri = "CrowdSimulationDemoContentMod:assets/CrowdSimulation/traversal.json";
+        Assert.That(traversal.Fragments, Is.EqualTo(new[] { standardUri, demoUri }));
+        Assert.That(traversal.FileWinner, Is.EqualTo(demoUri));
 
         string json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        Assert.That(json, Does.Contain("\"relativePath\":\"Navigation/navmesh.json\""));
-        Assert.That(json, Does.Contain("\"fileWinner\":\"CrowdSimulationStandardMod:assets/Navigation/navmesh.json\""));
+        Assert.That(json, Does.Contain("\"relativePath\":\"CrowdSimulation/traversal.json\""));
+        Assert.That(json, Does.Contain("\"fileWinner\":\"CrowdSimulationDemoContentMod:assets/CrowdSimulation/traversal.json\""));
         Assert.That(json, Does.Contain("\"fragments\""));
         Assert.That(json, Does.Contain("\"winners\""));
         Assert.That(json, Does.Contain("\"deletions\""));
@@ -511,7 +510,7 @@ public class ConfigMergeProvenanceTests
                 "graphCostWeight": 1.0,
                 "meshCostWeight": 1.0
               },
-              "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1.0 } ] },
+              "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1.0, "passable": true } ] },
               "nodeGraph": {
                 "projectionMaxRadiusCm": 200000,
                 "useDynamicOverlay": false,

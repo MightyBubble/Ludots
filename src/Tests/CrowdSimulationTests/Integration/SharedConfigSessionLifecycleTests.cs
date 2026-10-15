@@ -257,11 +257,12 @@ public sealed class SharedConfigSessionLifecycleTests
         Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Navigation"));
         File.WriteAllText(Path.Combine(probeModRoot, "mod.json"),
             """{"name":"LudotsCrowdSolverProbe","version":"1.0.0","priority":0,"dependencies":{"LudotsCoreMod":"^1.0.0"}}""");
+        string crowdFacts = solver == NavSolverDeclaration.CrowdSimulation ? """, "navCellSizeCm": 100, "terrainTypes": ["land"]""" : "";
         File.WriteAllText(Path.Combine(probeModRoot, "assets", "Navigation", "navmesh.json"),
             $$"""
 {
   "maps": {
-    "{{mapId}}": { "solver": "{{solver}}" }
+    "{{mapId}}": { "solver": "{{solver}}"{{crowdFacts}} }
   }
 }
 """);

@@ -334,30 +334,46 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                             $"NavMeshBakeConfig.maps.{mapEntry.Key}.agentTypes 已删除。本图要烘焙的能力档写在 maps.{mapEntry.Key}.navProfiles（能力档 id 数组）。");
                     }
 
-                    RequireOnlyProperties(
-                        mapObj,
-                        $"NavMeshBakeConfig.maps.{mapEntry.Key}",
-                        new[] { "solver" },
-                        new[] { "boards", "terrainAreas", "navProfiles", "navAreas", "logicTerrainAsset", "jumpLinkBake" });
+                    if (mapObj.ContainsKey("jumpLinkBake"))
+                    {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.jumpLinkBake 已删除。几何参数写在 maps.{mapEntry.Key}.linkCandidateBake.<链接种类>（maxGapCm、linkSpacingCm、endpointMaxSlopeDeg），端点和硬缝地形由 traversal.json 推导。");
+                    }
+
                     string solver = RequireString(mapObj, "solver", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
                     if (!NavSolverDeclaration.IsKnown(solver))
                     {
                         throw new InvalidOperationException(
                             $"NavMeshBakeConfig.maps.{mapEntry.Key}.solver 必须是 {NavSolverDeclaration.AllowedList}，当前是 \"{solver}\"。");
                     }
+
+                    RequireOnlyProperties(
+                        mapObj,
+                        $"NavMeshBakeConfig.maps.{mapEntry.Key}（solver {solver}）",
+                        [.. NavSolverDeclaration.RequiredMapKeys(solver)],
+                        [.. NavSolverDeclaration.OptionalMapKeys(solver)]);
                     if (mapObj.ContainsKey("navProfiles"))
                     {
                         RequireNavProfiles(mapObj, mapEntry.Key);
                     }
 
-                    if (mapObj.ContainsKey("terrainAreas"))
+                    if (mapObj.ContainsKey("terrainTypes"))
                     {
-                        ValidateTerrainAreasArray(mapObj, mapEntry.Key);
+                        ValidateTerrainTypes(mapObj, mapEntry.Key);
                     }
 
-                    if (mapObj.ContainsKey("jumpLinkBake"))
+                    if (mapObj.ContainsKey("navCellSizeCm"))
                     {
-                        ValidateJumpLinkBake(mapObj, mapEntry.Key);
+                        int navCellSizeCm = RequireInt(mapObj, "navCellSizeCm", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                        if (navCellSizeCm <= 0)
+                        {
+                            throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.navCellSizeCm 需为 > 0。");
+                        }
+                    }
+
+                    if (mapObj.ContainsKey("linkCandidateBake"))
+                    {
+                        ValidateLinkCandidateBake(mapObj, mapEntry.Key);
                     }
 
                     if (mapObj.ContainsKey("logicTerrainAsset"))
@@ -369,7 +385,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         RequireModRelativeAsset(asset, $"NavMeshBakeConfig.maps.{mapEntry.Key}.logicTerrainAsset");
                     }
 
-                    bool bindsAgents = mapObj.ContainsKey("navProfiles") || mapObj.ContainsKey("terrainAreas");
+                    bool bindsAgents = mapObj.ContainsKey("navProfiles");
                     if (mapObj.ContainsKey("navAreas") || bindsAgents)
                     {
                         RequireNavAreas(mapObj, mapEntry.Key, bindsAgents);
@@ -566,8 +582,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
             ValidateNavProfileReferences(root);
             ValidateNavAreaReferences(root, seenAreaIds);
-            ValidateTerrainAreaReferences(root, seenAreaIds);
-            ValidateTerrainAreasCoveredByNavAreas(root);
 
             if (root["runtimeIncremental"] is not JsonObject runtimeIncremental)
             {
@@ -767,215 +781,73 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
 
-        private static void ValidateTerrainAreasCoveredByNavAreas(JsonObject root)
+        private static void ValidateTerrainTypes(JsonObject mapObj, string mapId)
         {
-            if (root["maps"] is not JsonObject maps)
+            string path = $"NavMeshBakeConfig.maps.{mapId}.terrainTypes";
+            if (mapObj["terrainTypes"] is not JsonArray terrainTypes || terrainTypes.Count == 0)
             {
-                return;
+                throw new InvalidOperationException($"{path} 必须是非空的地形 id 数组。数组下标就是地编资产和 .navsurface 里的地形编号。");
             }
 
-            foreach (var mapEntry in maps)
+            if (terrainTypes.Count > 256)
             {
-                if (mapEntry.Value is not JsonObject mapObj || mapObj["terrainAreas"] is not JsonArray terrainAreas)
-                {
-                    continue;
-                }
-
-                var declared = new HashSet<string>(StringComparer.Ordinal);
-                if (mapObj["navAreas"] is JsonArray navAreas)
-                {
-                    for (int i = 0; i < navAreas.Count; i++)
-                    {
-                        if (navAreas[i] is JsonValue value && value.TryGetValue<string>(out string id) && id != null)
-                        {
-                            declared.Add(id);
-                        }
-                    }
-                }
-
-                for (int i = 0; i < terrainAreas.Count; i++)
-                {
-                    string areaId = string.Empty;
-                    if (terrainAreas[i] is JsonObject row &&
-                        row["areaId"] is JsonValue value &&
-                        value.TryGetValue<string>(out string parsed) &&
-                        parsed != null)
-                    {
-                        areaId = parsed;
-                    }
-
-                    if (!declared.Contains(areaId))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}] 的 areaId \"{areaId}\" 不在 maps.{mapEntry.Key}.navAreas 里。");
-                    }
-                }
-            }
-        }
-
-        private static void ValidateTerrainAreasArray(JsonObject mapObj, string mapId)
-        {
-            if (mapObj["terrainAreas"] is JsonObject)
-            {
-                throw new InvalidOperationException(
-                    $"NavMeshBakeConfig.maps.{mapId}.terrainAreas 是有序数组 [{{ terrainId, areaId }}]，不再使用对象。数组下标就是 .navsurface 地形编号。");
-            }
-
-            if (mapObj["terrainAreas"] is not JsonArray terrainAreas)
-            {
-                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.terrainAreas must be an array.");
+                throw new InvalidOperationException($"{path} 有 {terrainTypes.Count} 项，最多 256 项（格里存 u8）。");
             }
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < terrainAreas.Count; i++)
+            for (int i = 0; i < terrainTypes.Count; i++)
             {
-                if (terrainAreas[i] is not JsonObject row)
+                if (terrainTypes[i] is not JsonValue value ||
+                    !value.TryGetValue<string>(out string? id) ||
+                    string.IsNullOrWhiteSpace(id) ||
+                    !string.Equals(id.Trim(), id, StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.terrainAreas[{i}] must be an object.");
+                    throw new InvalidOperationException($"{path}[{i}] 必须是非空地形 id。");
                 }
 
-                string path = $"NavMeshBakeConfig.maps.{mapId}.terrainAreas[{i}]";
-                RequireOnlyProperties(row, path, "terrainId", "areaId");
-                string terrainId = RequireString(row, "terrainId", path);
-                RequireString(row, "areaId", path);
-                if (!seen.Add(terrainId))
+                if (!seen.Add(id))
                 {
-                    throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.terrainAreas contains duplicate terrainId '{terrainId}'.");
-                }
-            }
-        }
-
-        private static void ValidateTerrainAreaReferences(JsonObject root, HashSet<string> areaIds)
-        {
-            if (root["maps"] is not JsonObject maps)
-            {
-                return;
-            }
-
-            foreach (var mapEntry in maps)
-            {
-                if (mapEntry.Value is not JsonObject mapObj || mapObj["terrainAreas"] is not JsonArray terrainAreas)
-                {
-                    continue;
-                }
-
-                for (int i = 0; i < terrainAreas.Count; i++)
-                {
-                    string areaId = string.Empty;
-                    string terrainId = string.Empty;
-                    if (terrainAreas[i] is JsonObject row)
-                    {
-                        if (row["terrainId"] is JsonValue terrainValue &&
-                            terrainValue.TryGetValue<string>(out string? parsedTerrain) &&
-                            parsedTerrain != null)
-                        {
-                            terrainId = parsedTerrain;
-                        }
-
-                        if (row["areaId"] is JsonValue value &&
-                            value.TryGetValue<string>(out string? parsed) &&
-                            parsed != null)
-                        {
-                            areaId = parsed;
-                        }
-                    }
-
-                    if (areaId.Length == 0 || !areaIds.Contains(areaId))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}]（{terrainId}）references unknown area '{areaId}'.");
-                    }
+                    throw new InvalidOperationException($"{path} 重复写了地形 \"{id}\"。");
                 }
             }
         }
 
-        private static void ValidateJumpLinkBake(JsonObject mapObj, string mapId)
+        private static void ValidateLinkCandidateBake(JsonObject mapObj, string mapId)
         {
-            string path = $"NavMeshBakeConfig.maps.{mapId}.jumpLinkBake";
-            if (mapObj["jumpLinkBake"] is not JsonObject bake)
+            string path = $"NavMeshBakeConfig.maps.{mapId}.linkCandidateBake";
+            if (mapObj["linkCandidateBake"] is not JsonObject kinds || kinds.Count == 0)
             {
-                throw new InvalidOperationException($"{path} 必须是对象。");
+                throw new InvalidOperationException($"{path} 必须是以链接种类 id 为键的非空对象。");
             }
 
-            RequireOnlyProperties(
-                bake,
-                path,
-                "maxGapCm",
-                "linkSpacingCm",
-                "endpointMaxSlopeDeg",
-                "endpointTerrain",
-                "gapTerrain");
-            int maxGapCm = RequireInt(bake, "maxGapCm", path);
-            int linkSpacingCm = RequireInt(bake, "linkSpacingCm", path);
-            float endpointMaxSlopeDeg = RequireFloat(bake, "endpointMaxSlopeDeg", path);
-            if (maxGapCm <= 0)
+            int navCellSizeCm = RequireInt(mapObj, "navCellSizeCm", $"NavMeshBakeConfig.maps.{mapId}");
+            foreach (var kind in kinds)
             {
-                throw new InvalidOperationException($"{path}.maxGapCm = {maxGapCm}，需为 > 0。");
-            }
-
-            if (linkSpacingCm <= 0)
-            {
-                throw new InvalidOperationException($"{path}.linkSpacingCm = {linkSpacingCm}，需为 > 0。");
-            }
-
-            if (!(endpointMaxSlopeDeg > 0f) || float.IsInfinity(endpointMaxSlopeDeg))
-            {
-                throw new InvalidOperationException($"{path}.endpointMaxSlopeDeg = {endpointMaxSlopeDeg}，需为 > 0。");
-            }
-
-            if (mapObj["terrainAreas"] is not JsonArray terrainAreas)
-            {
-                throw new InvalidOperationException($"{path} 需要 maps.{mapId}.terrainAreas 来核对地形 id。");
-            }
-
-            var terrainIds = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < terrainAreas.Count; i++)
-            {
-                if (terrainAreas[i] is JsonObject row &&
-                    row["terrainId"] is JsonValue value &&
-                    value.TryGetValue<string>(out string? terrainId) &&
-                    terrainId != null)
+                string kindPath = $"{path}.{kind.Key}";
+                if (kind.Value is not JsonObject bake)
                 {
-                    terrainIds.Add(terrainId);
+                    throw new InvalidOperationException($"{kindPath} 必须是对象。");
+                }
+
+                RequireOnlyProperties(bake, kindPath, "maxGapCm", "linkSpacingCm", "endpointMaxSlopeDeg");
+                RequireNavCellMultiple(bake, "maxGapCm", kindPath, navCellSizeCm);
+                RequireNavCellMultiple(bake, "linkSpacingCm", kindPath, navCellSizeCm);
+                RequireNumber(bake, "endpointMaxSlopeDeg", kindPath);
+                double endpointMaxSlopeDeg = bake["endpointMaxSlopeDeg"]!.GetValue<double>();
+                if (!(endpointMaxSlopeDeg > 0d && endpointMaxSlopeDeg < 90d))
+                {
+                    throw new InvalidOperationException($"{kindPath}.endpointMaxSlopeDeg = {endpointMaxSlopeDeg}，需在 (0, 90) 之间。");
                 }
             }
-
-            RequireTerrainIdList(bake, "endpointTerrain", path, terrainIds, mapId);
-            RequireTerrainIdList(bake, "gapTerrain", path, terrainIds, mapId);
         }
 
-        private static void RequireTerrainIdList(
-            JsonObject bake,
-            string field,
-            string path,
-            HashSet<string> terrainIds,
-            string mapId)
+        private static void RequireNavCellMultiple(JsonObject bake, string key, string path, int navCellSizeCm)
         {
-            if (bake[field] is not JsonArray list)
+            int centimeters = RequireInt(bake, key, path);
+            if (centimeters <= 0 || centimeters % navCellSizeCm != 0)
             {
-                throw new InvalidOperationException($"{path}.{field} 必须是地形 id 数组。");
-            }
-
-            if (list.Count == 0)
-            {
-                throw new InvalidOperationException($"{path}.{field} 不能是空数组。");
-            }
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i] is not JsonValue value ||
-                    !value.TryGetValue<string>(out string? terrainId) ||
-                    string.IsNullOrWhiteSpace(terrainId) ||
-                    !string.Equals(terrainId.Trim(), terrainId, StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException($"{path}.{field}[{i}] 必须是非空地形 id。");
-                }
-
-                if (!terrainIds.Contains(terrainId))
-                {
-                    throw new InvalidOperationException(
-                        $"{path}.{field} 的地形 id \"{terrainId}\" 不在 maps.{mapId}.terrainAreas 里。");
-                }
+                throw new InvalidOperationException(
+                    $"{path}.{key} = {centimeters}，需为 > 0 且是 navCellSizeCm（{navCellSizeCm}）的整数倍。");
             }
         }
 

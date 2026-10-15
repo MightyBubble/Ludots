@@ -106,8 +106,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         /// </summary>
         public List<string> NavAreas { get; set; }
 
-        /// <summary>有序绑定。数组下标就是 .navsurface 里的地形类型编号。</summary>
-        public List<NavTerrainAreaBinding> TerrainAreas { get; set; }
+        /// <summary>crowd-simulation 图的导航格边长（厘米）。</summary>
+        public int? NavCellSizeCm { get; set; }
+
+        /// <summary>crowd-simulation 图的有序地形 id。数组下标就是地编资产和 .navsurface 里的地形编号。</summary>
+        public List<string> TerrainTypes { get; set; }
 
         /// <summary>
         /// 地编 React 网格的 Mod 内相对路径。运行时不把它装成 LogicTerrain。
@@ -115,23 +118,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public string LogicTerrainAsset { get; set; }
 
         /// <summary>
-        /// 地图级跳跃候选烘焙。缺省表示这张图不生成候选。运行时只收下，不拿来过滤链接。
+        /// 按链接种类 id 写的候选烘焙几何参数。缺省表示这张图不生成候选。端点和硬缝地形由群体通行矩阵推导，不写在这里。
         /// </summary>
-        public NavJumpLinkBakeConfig? JumpLinkBake { get; set; }
+        public Dictionary<string, NavLinkCandidateBakeConfig>? LinkCandidateBake { get; set; }
     }
 
-    public sealed class NavJumpLinkBakeConfig
+    public sealed class NavLinkCandidateBakeConfig
     {
         public int MaxGapCm { get; set; }
         public int LinkSpacingCm { get; set; }
-        public float EndpointMaxSlopeDeg { get; set; }
-        public List<string> EndpointTerrain { get; set; } = new();
-        public List<string> GapTerrain { get; set; } = new();
-    }
-
-    public sealed class NavTerrainAreaBinding
-    {
-        public string TerrainId { get; set; } = string.Empty;
-        public string AreaId { get; set; } = string.Empty;
+        public double EndpointMaxSlopeDeg { get; set; }
     }
 }

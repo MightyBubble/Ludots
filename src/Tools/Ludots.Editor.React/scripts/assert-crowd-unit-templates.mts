@@ -30,7 +30,6 @@ const draft = JSON.stringify(
       { id: 'derived.unit', extends: 'crowd_minimal.unit' },
     ],
     agentProfiles: [{ id: 'crowd_minimal_unit', radiusCm: 150, heightCm: 180 }],
-    agentTypes: { foot: {} },
   },
   null,
   2,
@@ -46,7 +45,7 @@ assert(authoredValue('string', 'hover') === 'hover', 'string fields store text a
 const faster = setAgentField(draft, component, 'crowd_minimal.unit', 'speedCmPerSecond', 1650);
 assert(draftAgent(faster, component, 'crowd_minimal.unit')?.speedCmPerSecond === 1650, 'speed edit lands in the draft');
 assert(draftAgent(faster, component, 'crowd_minimal.unit')?.agentTypeId === 'foot', 'other fields stay');
-assert(JSON.parse(faster).agentTypes.foot !== undefined, 'other draft sections stay');
+assert(JSON.parse(faster).agentProfiles[0].radiusCm === 150, 'other draft sections stay');
 assert(faster.includes('\n  "unitTypes": [\n'), 'draft keeps two-space indentation');
 
 const derived = setAgentField(draft, component, 'derived.unit', 'speedCmPerSecond', 900);

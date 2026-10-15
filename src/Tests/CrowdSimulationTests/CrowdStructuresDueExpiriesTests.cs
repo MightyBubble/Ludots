@@ -20,7 +20,7 @@ public class CrowdStructuresDueExpiriesTests
         Assert.That(tpl, Is.GreaterThanOrEqualTo(0));
         var fp = new CrowdStructureFootprint
         {
-            Shape = CrowdStructureShape.Rect,
+            Shape = CrowdStructureShape.Square,
             CenterXCm = Fix64.FromInt(3000),
             CenterYCm = Fix64.FromInt(3000),
             Hx = Fix64.FromInt(200),

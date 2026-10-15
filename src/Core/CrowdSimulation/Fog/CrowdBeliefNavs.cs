@@ -212,11 +212,11 @@ public sealed class CrowdBeliefNavs
         });
     }
 
-    /// <summary>该移动类型最便宜的可跨区域(assumedArea;slopeFree 优先——未知坡度永不挡路)。</summary>
+    /// <summary>该移动类型最便宜的可跨区域(assumedArea;ignoresSlope 优先——未知坡度永不挡路)。</summary>
     public int AssumedArea(int layerIdx)
     {
         var row = _sim.Config.AgentTypes[layerIdx].CostByArea;
-        int Free(int a) => _sim.Config.NavAreas[a].SlopeFree ? 1 : 0;
+        int Free(int a) => _sim.Config.NavAreas[a].IgnoresSlope ? 1 : 0;
         int best = -1;
         for (int a = 0; a < row.Length; a++)
         {

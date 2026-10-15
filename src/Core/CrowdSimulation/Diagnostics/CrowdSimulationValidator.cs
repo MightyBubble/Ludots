@@ -96,7 +96,7 @@ public static class CrowdSimulationValidator
                 session.TickCount, -1, -1, i % side, i / side, -1, -1, -1);
         }
 
-        store.VerifyDeckContract(session.TickCount);
+        store.VerifyUpperLayerContract(session.TickCount);
     }
 
     /// <summary>运动内核里的空间哈希与稠密计数排序对照。没有内核时抛错。</summary>

@@ -510,7 +510,7 @@ namespace Ludots.Tool
 
             var bakeCrowdNavSurfaceCommand = new Command(
                 "bake-crowd-navsurface",
-                "Bake a CrowdSimulation .navsurface from the board's React terrain: terrain type cells, plus jump candidates when the map declares jumpLinkBake.");
+                "Bake a CrowdSimulation .navsurface from the board's React terrain: terrain type cells, plus link candidates for each kind in the map's linkCandidateBake.");
             var crowdOutOption = new Option<string>("--out", "Output .navsurface path") { IsRequired = true };
             var crowdModIdOption = new Option<string>("--modId", "Mod that authors the map") { IsRequired = true };
             var crowdOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
@@ -531,7 +531,7 @@ namespace Ludots.Tool
             var initCrowdTerrainCommand = new Command(
                 "init-crowd-terrain",
                 "Write the map's logicTerrainAsset for a new CrowdSimulation map: fill every nav cell with one terrain type, then paint inclusive nav-cell rectangles in order.");
-            var initTerrainFillOption = new Option<string>("--fill", "Terrain id (from terrainAreas) for every cell") { IsRequired = true };
+            var initTerrainFillOption = new Option<string>("--fill", "Terrain id (from maps.<mapId>.terrainTypes) for every cell") { IsRequired = true };
             var initTerrainRectOption = new Option<string[]>("--rect", () => Array.Empty<string>(), "terrainId:minCol,minRow,maxCol,maxRow (repeatable)")
             {
                 Arity = ArgumentArity.ZeroOrMore,
@@ -1635,7 +1635,7 @@ namespace {modId}
             {
                 NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthoredFile(FindAssetsRoot(), modId, mapId, outFile, overwrite);
                 Console.WriteLine(
-                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");
+                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, linkKinds=[{string.Join(",", asset.LinkKindIds)}], linkCandidates={asset.JumpCandidates.Length}, linkBakeDigest=0x{asset.LinkBakeDigest:X8})");
                 return 0;
             }
             catch (Exception ex)

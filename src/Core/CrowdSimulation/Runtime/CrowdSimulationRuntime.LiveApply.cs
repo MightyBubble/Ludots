@@ -6,7 +6,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.CrowdSimulation.Runtime;
@@ -122,7 +121,7 @@ public sealed partial class CrowdSimulationRuntime
             CrowdSimulationConfig config = new CrowdSimulationConfigLoader(engine.ConfigPipeline).LoadConfig(catalog, report);
             AgentProfileRegistry profiles = new AgentProfileConfigLoader(engine.ConfigPipeline).Load(catalog, report);
             NavMeshBakeConfig navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, profiles).Load(catalog, report);
-            PathingConfig pathing = new PathingConfigLoader(engine.ConfigPipeline).Load(catalog, report);
+            CrowdTraversalConfig traversal = CrowdTraversalConfig.Load(engine.ConfigPipeline, catalog, report);
             MapConfig map = engine.MapManager.LoadMap(mapId)
                 ?? throw new InvalidOperationException($"Maps/{mapId}.json 没有装载出来。");
             List<EntityTemplate> templates = ReadTemplates(engine, catalog, report);
@@ -135,7 +134,7 @@ public sealed partial class CrowdSimulationRuntime
             // 投影失败时会话还在。拆掉会话只发生在这份检查通过之后。
             var projected = CrowdPairRulesProjection.Project(config, map, teamRelations, players, engine.World);
             int fixedHz = (int)MathF.Round(1f / Time.FixedDeltaTime);
-            CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, pathing, facts, fixedHz, projected.Rules);
+            CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, traversal, facts, fixedHz, projected.Rules);
             return Array.Empty<CrowdSimulationAuthoringIssue>();
         }
         catch (Exception ex)

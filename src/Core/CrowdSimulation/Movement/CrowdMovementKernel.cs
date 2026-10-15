@@ -706,7 +706,8 @@ public sealed class CrowdMovementKernel
             UnitTurnRate = mv.UnitTurnRateRadPerSec,
             StopSpeedRatio = mv.StopSpeedRatio,
             SpeedCapRatio = mv.SpeedCapRatio,
-            JumpSpeedRatio = mv.JumpSpeedRatio,
+            // 没有链接种类时没有单位会进入 Jump 状态，这个倍率不会被读。
+            JumpSpeedRatio = cfg.LinkKinds.Count > 0 ? cfg.LinkKinds[0].TraversalSpeedRatio : Fix64.Zero,
             LeaderSpeed = fc.LeaderSpeed,
             LeaderTurnRate = fc.LeaderTurnRatePerSec,
             FaceTurnScale = fc.FaceTurnScale,

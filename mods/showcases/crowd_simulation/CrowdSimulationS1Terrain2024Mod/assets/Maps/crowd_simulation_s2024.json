@@ -3712,11 +3712,11 @@
       "InstanceId": "bridge_0001",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 334375,
-          "y0Cm": 590625,
-          "x1Cm": 334375,
-          "y1Cm": 659375,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 334375,
+          "fromYCm": 590625,
+          "toXCm": 334375,
+          "toYCm": 659375,
           "widthCm": 6250
         }
       }
@@ -3725,11 +3725,11 @@
       "InstanceId": "bridge_0002",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 515625,
-          "y0Cm": 509375,
-          "x1Cm": 515625,
-          "y1Cm": 578125,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 515625,
+          "fromYCm": 509375,
+          "toXCm": 515625,
+          "toYCm": 578125,
           "widthCm": 6250
         }
       }
@@ -3738,11 +3738,11 @@
       "InstanceId": "bridge_0003",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 653125,
-          "y0Cm": 378125,
-          "x1Cm": 653125,
-          "y1Cm": 453125,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 653125,
+          "fromYCm": 378125,
+          "toXCm": 653125,
+          "toYCm": 453125,
           "widthCm": 6250
         }
       }
@@ -3751,11 +3751,11 @@
       "InstanceId": "bridge_0004",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 784375,
-          "y0Cm": 465625,
-          "x1Cm": 784375,
-          "y1Cm": 540625,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 784375,
+          "fromYCm": 465625,
+          "toXCm": 784375,
+          "toYCm": 540625,
           "widthCm": 6250
         }
       }
@@ -3764,11 +3764,11 @@
       "InstanceId": "bridge_0005",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 884375,
-          "y0Cm": 490625,
-          "x1Cm": 990625,
-          "y1Cm": 490625,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 884375,
+          "fromYCm": 490625,
+          "toXCm": 990625,
+          "toYCm": 490625,
           "widthCm": 6250
         }
       }
@@ -3777,11 +3777,11 @@
       "InstanceId": "bridge_0006",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 1271875,
-          "y0Cm": 365625,
-          "x1Cm": 1271875,
-          "y1Cm": 446875,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 1271875,
+          "fromYCm": 365625,
+          "toXCm": 1271875,
+          "toYCm": 446875,
           "widthCm": 6250
         }
       }

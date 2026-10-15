@@ -1,0 +1,50 @@
+{
+  "world": {
+    "seed": 1337
+  },
+  "deploy": {
+    "initialUnits": 0,
+    "bases": [
+      {
+        "playerId": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "color": "#4DB2FF"
+      },
+      {
+        "playerId": 2,
+        "xCm": 1120000,
+        "yCm": 1040000,
+        "color": "#7ED957"
+      },
+      {
+        "playerId": 3,
+        "xCm": 1120000,
+        "yCm": 480000,
+        "color": "#FFC53D"
+      },
+      {
+        "playerId": 4,
+        "xCm": 480000,
+        "yCm": 1120000,
+        "color": "#C792FF"
+      }
+    ]
+  },
+  "structures": {
+    "templates": {
+      "s7barrier": {
+        "layer": "base",
+        "footprint": "square",
+        "effect": {
+          "kind": "block",
+          "coverage": 0.5
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
+        "lifetimeSec": 4
+      }
+    }
+  }
+}

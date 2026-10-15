@@ -250,10 +250,10 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Set(host, "_planTimeout", TimeSpan.FromSeconds(30));
         Set(host, "_surfaceGrid", session.Structures!.TerrainSurface());
         Set(host, "_heights", sources.HeightS);
-        Set(host, "_deck", sources.Deck);
+        Set(host, "_deck", sources.UpperLayer);
         Set(host, "_jumpCandidates", sources.JumpCandidates);
         Set(host, "_mapSurfaceBlockers", map.Blockers);
-        Set(host, "_mapSurfaceBridges", map.Bridges);
+        Set(host, "_mapSurfaceBridges", map.LayeredPaths);
     }
 
     private static void Set(CrowdSimulationRuntime host, string field, object value)

@@ -1,40 +1,41 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation.NavMesh.Config;
 
 namespace Ludots.Tool;
 
 /// <summary>
-/// 一次跳跃候选烘焙要用的高度、桥面掩码和地图参数。地图没写 jumpLinkBake 时不传。
+/// 一次链接候选烘焙要用的高度、桥面掩码和各种类参数。地图没写 linkCandidateBake 时不传。
 /// </summary>
-public sealed class CrowdJumpLinkBakeInput
+public sealed class CrowdLinkCandidateBakeInput
 {
     public required string MapId { get; init; }
-    public required NavJumpLinkBakeConfig Settings { get; init; }
+    /// <summary>按 .navsurface 链接种类表顺序；候选的 kindIndex 就是这里的下标。</summary>
+    public required IReadOnlyList<RuntimeLinkCandidateBake> Kinds { get; init; }
     public required NavHeightField Heights { get; init; }
     public required byte[] Bridge { get; init; }
 }
 
 /// <summary>
-/// 地形级跳跃候选。方向表用 NavGridSteps。坡度上限的正切用机动档案 maxSlopeDeg 的同一式子：Fix64.FromDouble 再乘 Deg2Rad 后 Tan。
+/// 一种链接的地形级候选。方向表用 NavGridSteps。坡度上限的正切用机动档案 maxSlopeDeg 的同一式子：Fix64.FromDouble 再乘 Deg2Rad 后 Tan。
+/// 端点和硬缝地形掩码由通行矩阵推导，见 <see cref="RuntimeLinkCandidateBake"/>。
 /// </summary>
-public static class CrowdJumpCandidateBake
+public static class CrowdLinkCandidateBake
 {
     public static NavSurfaceJumpCandidate[] Bake(
         string mapId,
         int navCells,
         byte[] terrain,
-        IReadOnlyList<string> terrainTypeIds,
-        NavJumpLinkBakeConfig settings,
+        byte kindIndex,
+        RuntimeLinkCandidateBake settings,
         NavHeightField heights,
         byte[] bridge,
         int cellSizeCm)
     {
         ArgumentNullException.ThrowIfNull(terrain);
-        ArgumentNullException.ThrowIfNull(terrainTypeIds);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(heights);
         ArgumentNullException.ThrowIfNull(bridge);
@@ -42,7 +43,7 @@ public static class CrowdJumpCandidateBake
         if (terrain.Length != n2 || heights.HeightsCm.Length != n2 || heights.Slope.Length != n2 || bridge.Length != n2)
         {
             throw new InvalidOperationException(
-                $"地图 \"{mapId}\" 的跳跃候选输入长度不一致（导航格 {navCells}×{navCells}）。");
+                $"地图 \"{mapId}\" 的链接候选输入长度不一致（导航格 {navCells}×{navCells}）。");
         }
 
         if (heights.NavCellsPerSide != navCells || heights.NavCellSizeCm != cellSizeCm)
@@ -51,16 +52,30 @@ public static class CrowdJumpCandidateBake
                 $"地图 \"{mapId}\" 的高度场是 {heights.NavCellsPerSide} 格、边长 {heights.NavCellSizeCm} cm，导航格是 {navCells} 格、边长 {cellSizeCm} cm。");
         }
 
-        int maxCells = CellsOf(mapId, "maxGapCm", settings.MaxGapCm, cellSizeCm);
-        int spacing = CellsOf(mapId, "linkSpacingCm", settings.LinkSpacingCm, cellSizeCm);
-        if (!(settings.EndpointMaxSlopeDeg > 0f) || float.IsInfinity(settings.EndpointMaxSlopeDeg))
+        string path = $"linkCandidateBake.{settings.KindId}";
+        int maxCells = CellsOf(mapId, $"{path}.maxGapCm", settings.MaxGapCm, cellSizeCm);
+        int spacing = CellsOf(mapId, $"{path}.linkSpacingCm", settings.LinkSpacingCm, cellSizeCm);
+        if (maxCells >= ushort.MaxValue)
         {
-            throw new InvalidOperationException(
-                $"地图 \"{mapId}\" 的 jumpLinkBake.endpointMaxSlopeDeg = {settings.EndpointMaxSlopeDeg}，需为 > 0。");
+            throw new InvalidOperationException($"地图 \"{mapId}\" 的 {path}.maxGapCm 换算 {maxCells} 格，超过候选 steps 的 u16。");
         }
 
-        bool[] endpoint = TerrainMask(mapId, "endpointTerrain", settings.EndpointTerrain, terrainTypeIds);
-        bool[] hardGap = TerrainMask(mapId, "gapTerrain", settings.GapTerrain, terrainTypeIds);
+        if (!(settings.EndpointMaxSlopeDeg > 0d && settings.EndpointMaxSlopeDeg < 90d))
+        {
+            throw new InvalidOperationException(
+                $"地图 \"{mapId}\" 的 {path}.endpointMaxSlopeDeg = {settings.EndpointMaxSlopeDeg}，需在 (0, 90) 之间。");
+        }
+
+        bool[] endpoint = settings.EndpointTerrain;
+        bool[] hardGap = settings.HardGapTerrain;
+        for (int i = 0; i < terrain.Length; i++)
+        {
+            if (terrain[i] >= endpoint.Length || terrain[i] >= hardGap.Length)
+            {
+                throw new InvalidOperationException(
+                    $"地图 \"{mapId}\" 的格 {i} 地形编号 {terrain[i]} 超出 {path} 的地形掩码（{endpoint.Length} 项）。");
+            }
+        }
         Fix64 degrees = Fix64.FromDouble(settings.EndpointMaxSlopeDeg);
         Fix64 flat = Fix64Math.Tan(degrees * Fix64.Deg2Rad);
         Fix64[] height = heights.HeightsCm;
@@ -126,23 +141,23 @@ public static class CrowdJumpCandidateBake
 
         if (navCells > ushort.MaxValue)
         {
-            throw new InvalidOperationException($"地图 \"{mapId}\" 的导航格数 {navCells} 超过跳跃候选端点的 ushort。");
+            throw new InvalidOperationException($"地图 \"{mapId}\" 的导航格数 {navCells} 超过链接候选端点的 ushort。");
         }
 
         var jumps = new NavSurfaceJumpCandidate[order.Count];
         for (int i = 0; i < order.Count; i++)
         {
             Slot slot = order[i];
-            int dropCm = (height[slot.A] - height[slot.B]).RoundToInt();
-            float length = slot.Diagonal ? (float)(slot.T * Math.Sqrt(2.0)) : slot.T;
             jumps[i] = new NavSurfaceJumpCandidate
             {
+                KindIndex = kindIndex,
+                Diagonal = slot.Diagonal,
+                Steps = (ushort)slot.T,
                 FromX = (ushort)(slot.A % navCells),
                 FromY = (ushort)(slot.A / navCells),
                 ToX = (ushort)(slot.B % navCells),
                 ToY = (ushort)(slot.B / navCells),
-                DropCm = dropCm,
-                LengthCells = length,
+                DropCm = (height[slot.A] - height[slot.B]).RoundToInt(),
             };
         }
 
@@ -156,7 +171,7 @@ public static class CrowdJumpCandidateBake
     {
         if (centimeters <= 0)
         {
-            throw new InvalidOperationException($"地图 \"{mapId}\" 的 jumpLinkBake.{field} = {centimeters}，需为 > 0。");
+            throw new InvalidOperationException($"地图 \"{mapId}\" 的 {field} = {centimeters}，需为 > 0。");
         }
 
         if (cellSizeCm <= 0)
@@ -167,43 +182,10 @@ public static class CrowdJumpCandidateBake
         if (centimeters % cellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"地图 \"{mapId}\" 的 jumpLinkBake.{field}（{centimeters} cm）不能被格边长 {cellSizeCm} cm 整除。");
+                $"地图 \"{mapId}\" 的 {field}（{centimeters} cm）不能被格边长 {cellSizeCm} cm 整除。");
         }
 
         return centimeters / cellSizeCm;
-    }
-
-    private static bool[] TerrainMask(string mapId, string field, IReadOnlyList<string>? ids, IReadOnlyList<string> terrainTypeIds)
-    {
-        if (ids == null || ids.Count == 0)
-        {
-            throw new InvalidOperationException($"地图 \"{mapId}\" 的 jumpLinkBake.{field} 不能是空数组。");
-        }
-
-        var mask = new bool[terrainTypeIds.Count];
-        for (int i = 0; i < ids.Count; i++)
-        {
-            string id = ids[i];
-            int index = -1;
-            for (int t = 0; t < terrainTypeIds.Count; t++)
-            {
-                if (string.Equals(terrainTypeIds[t], id, StringComparison.Ordinal))
-                {
-                    index = t;
-                    break;
-                }
-            }
-
-            if (index < 0)
-            {
-                throw new InvalidOperationException(
-                    $"地图 \"{mapId}\" 的 jumpLinkBake.{field} 的地形 id \"{id}\" 不在 terrainAreas 里。");
-            }
-
-            mask[index] = true;
-        }
-
-        return mask;
     }
 
     private static bool IsStrictlyShorter(Slot next, Slot current)

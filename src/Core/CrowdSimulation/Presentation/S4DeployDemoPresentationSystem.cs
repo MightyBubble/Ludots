@@ -719,8 +719,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         CrowdPlacementReject.OutOfBounds => Hint(deploy.PlaceOutOfBounds, "placeOutOfBounds"),
         CrowdPlacementReject.OverlapsStructure => Hint(deploy.PlaceOverlapsStructure, "placeOverlapsStructure"),
         CrowdPlacementReject.OverlapsBlocked => Hint(deploy.PlaceOverlapsBlocked, "placeOverlapsBlocked"),
-        CrowdPlacementReject.SpanTerrain => Hint(deploy.PlaceSpanTerrain, "placeSpanTerrain"),
-        CrowdPlacementReject.AnchorTerrain => Hint(deploy.PlaceAnchorTerrain, "placeAnchorTerrain"),
+        CrowdPlacementReject.InteriorArea => Hint(deploy.PlaceSpanTerrain, "placeSpanTerrain"),
+        CrowdPlacementReject.EndpointArea => Hint(deploy.PlaceAnchorTerrain, "placeAnchorTerrain"),
         _ => throw new InvalidOperationException($"未知放置拒绝原因 {reason}。"),
     };
 

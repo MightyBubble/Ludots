@@ -15,9 +15,9 @@ public sealed class SurfaceGrid
     public required int NavCellSizeCm { get; init; }
     /// <summary>逐格地形类型编号（= .navsurface 栅格，类型表下标）。</summary>
     public required byte[] TerrainType { get; init; }
-    /// <summary>逐格导航区域编号（terrainAreas 映射结果）。</summary>
+    /// <summary>逐格导航区域编号（地形经 traversal.json 的 terrainAreas 映射的结果）。</summary>
     public required byte[] Area { get; init; }
-    /// <summary>逐格阻挡：阻挡足迹覆盖率 ≥ structures.blockCoverage。</summary>
+    /// <summary>逐格阻挡：阻挡足迹覆盖率 ≥ 实体点名模板的 effect.coverage。</summary>
     public required byte[] Blocked { get; init; }
     /// <summary>跳跃候选（.navsurface 资产原样携带;按几何 profile 过滤成链接是烘焙侧的事）。</summary>
     public required NavSurfaceJumpCandidate[] JumpCandidates { get; init; }
@@ -44,9 +44,9 @@ public sealed class SurfaceGrid
 
         var blocked = new byte[n2];
         int navCellSizeCm = config.NavCellSizeCm;
-        var coverage = config.Structures.BlockCoverage;
         foreach (var b in blockers)
         {
+            var coverage = config.Structures.Templates[config.Structures.RequireMapTemplate(b.TemplateId, CrowdStructureEffectKind.Block)].BlockCoverage;
             int minX = FloorDiv(b.XCm - b.HalfSizeCm, navCellSizeCm);
             int minY = FloorDiv(b.YCm - b.HalfSizeCm, navCellSizeCm);
             int maxX = FloorDiv(b.XCm + b.HalfSizeCm, navCellSizeCm) + 1;
@@ -95,17 +95,19 @@ public sealed class SurfaceGrid
     }
 }
 
-/// <summary>正方形阻挡足迹（Box、halfWidthCm = halfHeightCm，装载契约已校验）。</summary>
+/// <summary>地图上的正方形阻挡足迹（Box、halfWidthCm = halfHeightCm，装载契约已校验）和实体点名的结构模板 id。</summary>
 public readonly struct BlockerFootprint
 {
-    public BlockerFootprint(int xCm, int yCm, int halfSizeCm)
+    public BlockerFootprint(int xCm, int yCm, int halfSizeCm, string templateId)
     {
         XCm = xCm;
         YCm = yCm;
         HalfSizeCm = halfSizeCm;
+        TemplateId = templateId ?? throw new ArgumentNullException(nameof(templateId));
     }
 
     public int XCm { get; }
     public int YCm { get; }
     public int HalfSizeCm { get; }
+    public string TemplateId { get; }
 }

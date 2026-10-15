@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -26,6 +27,12 @@ public sealed class CrowdSimulationRuntimeConfig
     public required IReadOnlyList<RuntimeNavArea> NavAreas { get; init; }
     /// <summary>terrainIdx → navAreaIdx，长度 = TerrainTypeIds.Count。</summary>
     public required IReadOnlyList<int> TerrainToArea { get; init; }
+    /// <summary>链接种类，按 traversal.json linkKinds 合并顺序。内核目前最多消费一种。</summary>
+    public required IReadOnlyList<RuntimeLinkKind> LinkKinds { get; init; }
+    /// <summary>本图写了 linkCandidateBake 的种类，按 linkKinds 合并顺序；就是 .navsurface 的链接种类表。</summary>
+    public required IReadOnlyList<RuntimeLinkCandidateBake> LinkCandidateBakes { get; init; }
+    /// <summary>按当前配置算出的 .navsurface linkBakeDigest。</summary>
+    public required uint LinkBakeDigest { get; init; }
     public required IReadOnlyList<RuntimeNavProfile> NavProfiles { get; init; }
     public required IReadOnlyList<RuntimeAgentType> AgentTypes { get; init; }
     public required IReadOnlyList<RuntimeUnitType> UnitTypes { get; init; }
@@ -66,13 +73,34 @@ public enum CrowdPushResponse
 public sealed class RuntimeNavArea
 {
     public required string Id { get; init; }
-    public required bool SlopeFree { get; init; }
+    public required bool IgnoresSlope { get; init; }
 }
 
+public sealed class RuntimeLinkKind
+{
+    public required string Id { get; init; }
+    public required Fix64 TraversalSpeedRatio { get; init; }
+}
+
+/// <summary>
+/// 一种链接的候选烘焙参数。几何参数来自地图；两张地形掩码按地形表下标，由通行矩阵推导：
+/// 端点 = 有这种链接能力的行里 depart 或 arrive 含它的区域，硬缝 = 这些行都不可通行的区域。
+/// </summary>
+public sealed class RuntimeLinkCandidateBake
+{
+    public required string KindId { get; init; }
+    public required int MaxGapCm { get; init; }
+    public required int LinkSpacingCm { get; init; }
+    public required double EndpointMaxSlopeDeg { get; init; }
+    public required bool[] EndpointTerrain { get; init; }
+    public required bool[] HardGapTerrain { get; init; }
+}
+
+/// <summary>移动类型的坡度与链接参数，和 <see cref="RuntimeAgentType"/> 一一对应。</summary>
 public sealed class RuntimeNavProfile
 {
     public required string Id { get; init; }
-    /// <summary>坡度上限（度）；null = 不限坡度。slopeFree 区域不适用。</summary>
+    /// <summary>坡度上限（度）；null = 不限坡度。ignoresSlope 区域不适用。</summary>
     public required Fix64? MaxSlopeDeg { get; init; }
     public required RuntimeJumpCapability? Jump { get; init; }
 }
@@ -83,20 +111,24 @@ public sealed class RuntimeJumpCapability
     public required int DownCm { get; init; }
     public required int RangeNavCells { get; init; }
     public required Fix64 Cost { get; init; }
+    /// <summary>按区域下标：这一行能从这种区域出发走链接。</summary>
+    public required bool[] DepartByArea { get; init; }
+    /// <summary>按区域下标：这一行能经链接落到这种区域。</summary>
+    public required bool[] ArriveByArea { get; init; }
 }
 
 public sealed class RuntimeAgentType
 {
     public required string Id { get; init; }
     /// <summary>
-    /// 被单位模板引用的 pathing agent type，按合并后的属性顺序编号。
+    /// 被单位模板引用的 traversal.json 移动类型，按合并后的属性顺序编号。
     /// 体型档案的 layer 是 NavTile 层，不参与这个编号。
     /// </summary>
     public required int AgentTypeIndex { get; init; }
     public required int NavProfileIndex { get; init; }
-    /// <summary>按下标 = areaId 的通行代价。passable 为 false 时为 0。</summary>
+    /// <summary>按区域下标的通行代价。不可通行为 0。</summary>
     public required Fix64[] CostByArea { get; init; }
-    /// <summary>按下标 = areaId 的速度除数。未写 speedDivisor 时与代价相同；不可通行为 0。</summary>
+    /// <summary>按区域下标的速度除数。不可通行为 0。</summary>
     public required Fix64[] SpeedDivisorByArea { get; init; }
 }
 
@@ -221,7 +253,6 @@ public sealed class RuntimeMovementSection
     public required Fix64 SpeedCapRatio { get; init; }
     public required Fix64 RestAccelScale { get; init; }
     public required Fix64 RestSeparationScale { get; init; }
-    public required Fix64 JumpSpeedRatio { get; init; }
 }
 
 public sealed class RuntimeAvoidanceSection
@@ -344,32 +375,97 @@ public sealed class RuntimeSpawnSection
 
 public sealed class RuntimeStructuresSection
 {
-    public required Fix64 BlockCoverage { get; init; }
-    public required int PortalReachNavCells { get; init; }
-    /// <summary>与 TerrainTypeIds 等长。真表示该地形可以落桥端点。</summary>
-    public required bool[] AnchorTerrain { get; init; }
-    /// <summary>与 TerrainTypeIds 等长。真表示该地形可以被桥跨越。</summary>
-    public required bool[] SpanTerrain { get; init; }
-    /// <summary>运行时表按下标排列，placeStructure 写的是模板 id 字符串，仓再用 TemplateIndexOf 换成下标。area 在装载时收成区域下标。</summary>
+    /// <summary>运行时表按下标排列，placeStructure 写的是模板 id 字符串，仓再用 TemplateIndexOf 换成下标。区域在装载时收成区域下标。</summary>
     public required IReadOnlyList<RuntimeStructureTemplate> Templates { get; init; }
+
+    public int TemplateIndexOf(string templateId)
+    {
+        for (int i = 0; i < Templates.Count; i++)
+        {
+            if (Templates[i].Id == templateId) return i;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// 地图实体点名的模板。阻挡只接受 square + block，条带只接受 path + surface，两者都必须永久。
+    /// </summary>
+    public int RequireMapTemplate(string templateId, CrowdStructureEffectKind effect)
+    {
+        string role = effect == CrowdStructureEffectKind.Block ? "阻挡" : "条带";
+        int index = TemplateIndexOf(templateId);
+        if (index < 0)
+        {
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 地图{role}实体点名的结构模板 \"{templateId}\" 不存在。");
+        }
+
+        var tpl = Templates[index];
+        bool fits = effect == CrowdStructureEffectKind.Block
+            ? tpl.Effect == CrowdStructureEffectKind.Block && tpl.Footprint == CrowdStructureShape.Square
+            : tpl.Effect == CrowdStructureEffectKind.Surface && tpl.Footprint == CrowdStructureShape.Path;
+        if (!fits)
+        {
+            throw new InvalidOperationException(effect == CrowdStructureEffectKind.Block
+                ? $"{CrowdSimulationConfigValidator.FileName}: 地图阻挡实体点名的结构模板 \"{templateId}\" 必须是 square 足迹的 block 模板。"
+                : $"{CrowdSimulationConfigValidator.FileName}: 地图条带实体点名的结构模板 \"{templateId}\" 必须是 path 足迹的 surface 模板。");
+        }
+
+        if (tpl.LifetimeSec != null)
+        {
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 地图{role}实体点名的结构模板 \"{templateId}\" 带寿命；地图上的结构必须是永久的。");
+        }
+
+        return index;
+    }
+}
+
+public enum CrowdStructureLayer : byte
+{
+    Base,
+    Upper,
+}
+
+public enum CrowdStructureEffectKind : byte
+{
+    Block,
+    SetArea,
+    Surface,
+}
+
+public enum CrowdStructurePlacementKind : byte
+{
+    Unrestricted,
+    SpanEnds,
 }
 
 public sealed class RuntimeStructureTemplate
 {
     public required string Id { get; init; }
-    public required string Name { get; init; }
-    /// <summary>足迹形状:rect / disc / path(厘米域,尺寸由 place 指令给出)。</summary>
-    public required string Footprint { get; init; }
-    public required bool Blocker { get; init; }
-    /// <summary>导航区域下标;null = 不改区域。</summary>
+    public required CrowdStructureLayer Layer { get; init; }
+    /// <summary>尺寸由 place 指令给出：square 边长、disc 半径、path 宽，都是厘米。</summary>
+    public required CrowdStructureShape Footprint { get; init; }
+    public required CrowdStructureEffectKind Effect { get; init; }
+    /// <summary>block 的覆盖份额；其他效果为 0。</summary>
+    public required Fix64 BlockCoverage { get; init; }
+    /// <summary>setArea / surface 的区域下标；block 为 null。</summary>
     public required int? AreaIndex { get; init; }
-    /// <summary>区域覆盖优先级(area 非空时必有);同级后放置者胜。</summary>
+    /// <summary>setArea 的覆盖优先级，同级后放置者胜；其他效果为 0。</summary>
     public required int Priority { get; init; }
+    /// <summary>surface 的入口格数；其他效果为 0。</summary>
+    public required int PortalReachNavCells { get; init; }
+    public required CrowdStructurePlacementKind Placement { get; init; }
+    /// <summary>spanEnds 时按区域下标，真表示端点格的静态地形区域可以是它；unrestricted 时为空数组。</summary>
+    public required bool[] EndpointAreas { get; init; }
+    /// <summary>spanEnds 时按区域下标，真表示端点以外的盖住格的静态地形区域可以是它；unrestricted 时为空数组。</summary>
+    public required bool[] InteriorAreas { get; init; }
     /// <summary>寿命(仿真秒);null = 永久。到期 tick 用配置原始 double 做有理数 ceil，整数 tick 不容骑线。</summary>
     public required Fix64? LifetimeSec { get; init; }
     /// <summary>寿命的配置原始值。到期 tick = placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)。</summary>
     public double? LifetimeSecRaw { get; init; }
-    public required bool Layered { get; init; }
+
+    public bool Blocks => Effect == CrowdStructureEffectKind.Block;
+    public bool OnUpperLayer => Layer == CrowdStructureLayer.Upper;
 }
 
 public sealed class RuntimeDeploySection

@@ -16,7 +16,6 @@ using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;
@@ -75,7 +74,7 @@ public static class Program
         RenderBlocked(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
         RenderFull(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
 
-        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.Bridges.Count} jumps={bundle.Surface.JumpCandidates.Length}");
+        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.LayeredPaths.Count} jumps={bundle.Surface.JumpCandidates.Length}");
         return 0;
     }
 
@@ -93,7 +92,7 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, demoDir);
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, bundle.Runtime);
 
         var seen = new HashSet<int>();
         for (int a = 0; a < bundle.Runtime.AgentTypes.Count; a++)
@@ -160,7 +159,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile, c = navCellsPerSide / t;
 
         // 步兵上下文(含桥面),缓存随烘焙填充
@@ -230,7 +229,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile;
 
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulation", "parity", "s3c-query-truth.json")))!;
@@ -344,7 +343,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -616,6 +615,24 @@ public static class Program
             $"从 {seedDir} 往上找不到 assets/Relationships/catalog.json 和 mods/LudotsCoreMod 的关系目录。");
     }
 
+    /// <summary>Core 的 assets 目录：从 standardDir 往上找同时有 mods/ 和 assets/Navigation/navmesh.json 的仓库根。</summary>
+    private static string CoreAssetsDir(string standardDir)
+    {
+        var dir = new DirectoryInfo(Path.GetFullPath(standardDir));
+        while (dir != null)
+        {
+            string assets = Path.Combine(dir.FullName, "assets");
+            if (Directory.Exists(Path.Combine(dir.FullName, "mods")) && File.Exists(Path.Combine(assets, "Navigation", "navmesh.json")))
+            {
+                return assets;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException($"从 {standardDir} 往上找不到带 assets/Navigation/navmesh.json 的仓库根。");
+    }
+
     private static SeedBundle Load(string seedDir, string standardDir, string demoDir)
     {
         string mapId = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json").Single()
@@ -639,15 +656,16 @@ public static class Program
             File.ReadAllText(Path.Combine(standardDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
         var profiles = new AgentProfileRegistry(profileList);
-        var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "navmesh.json")))!;
+        var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(CoreAssetsDir(standardDir), "Navigation", "navmesh.json")))!;
         string seedNavPath = Path.Combine(seedDir, "Navigation", "navmesh.json");
         if (File.Exists(seedNavPath))
         {
             ConfigPipeline.DeepMerge(navmeshJson, (JsonObject)JsonNode.Parse(File.ReadAllText(seedNavPath))!);
         }
 
-        var pathing = PathingConfigLoader.Parse(
-            (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "pathing.json")))!);
+        var traversalJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "CrowdSimulation", "traversal.json")))!;
+        ConfigPipeline.DeepMerge(traversalJson, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(demoDir, "CrowdSimulation", "traversal.json")))!);
+        var traversal = CrowdTraversalConfig.Parse(traversalJson);
         var unitTemplates = JsonSerializer.Deserialize<List<EntityTemplate>>(
             File.ReadAllText(Path.Combine(demoDir, "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
@@ -657,7 +675,7 @@ public static class Program
             map,
             profiles,
             bake,
-            pathing,
+            traversal,
             CrowdUnitTemplateFacts.FromTemplates(unitTemplates),
             ReadSeedFixedHz(seedDir),
             ProjectSeedMap(seedDir, config, map));
@@ -741,9 +759,9 @@ public static class Program
 
         // 桥面(路径足迹,带宽)
         float worldCm = (float)navCellsPerSide * grid.NavCellSizeCm;
-        foreach (var b in mapSurface.Bridges)
+        foreach (var b in mapSurface.LayeredPaths)
         {
-            RasterizePath(px, b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm, worldCm, (150, 110, 70));
+            RasterizePath(px, b.Span.FromXCm, b.Span.FromYCm, b.Span.ToXCm, b.Span.ToYCm, b.Span.WidthCm, worldCm, (150, 110, 70));
         }
 
         // 跳跃候选:双向(落差 ≤ 25 m)靛蓝,单向琥珀

@@ -8,7 +8,6 @@ using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -195,7 +194,7 @@ public static partial class CrowdSimulationEditorApi
                 var rows = new JsonArray();
                 StampObject(ConfigFile, rows);
                 StampObject(NavmeshFile, rows);
-                StampObject(PathingFile, rows);
+                StampObject(TraversalFile, rows);
                 StampObject(DebugFile, rows);
                 StampObject(DebugViewFile, rows);
                 StampIds(TemplatesFile, report, rows);
@@ -338,111 +337,44 @@ public static partial class CrowdSimulationEditorApi
 
         private static JsonObject TemplatesDocument(
             JsonArray templates,
-            JsonObject pathing,
-            JsonObject navmesh,
             JsonArray profiles,
             JsonObject config)
         {
             return new JsonObject
             {
                 ["unitTypes"] = templates.DeepClone(),
-                ["agentTypes"] = pathing["agentTypes"]?.DeepClone() ?? new JsonObject(),
-                ["navProfiles"] = navmesh["profiles"]?.DeepClone() ?? new JsonObject(),
                 ["agentProfiles"] = profiles.DeepClone(),
                 ["structures"] = config["structures"]?.DeepClone() ?? new JsonObject(),
             };
         }
 
-        private static JsonObject CostMatrix(JsonObject pathing, JsonObject navmesh, string mapId)
+        /// <summary>traversal 是合并后的全文，列是全部区域。mapAreas 是这张图的地形经 terrainAreas 落到的区域，只用来高亮。</summary>
+        private static JsonObject CostMatrix(JsonObject traversal, JsonObject navmesh, string mapId)
         {
-            var named = new List<(int Id, string Name)>();
-            if (navmesh["areas"] is JsonObject areas)
-            {
-                foreach (KeyValuePair<string, JsonNode?> pair in areas)
-                {
-                    if (pair.Value is JsonObject area
-                        && area["areaId"] is JsonValue idValue
-                        && idValue.TryGetValue(out int areaId))
-                    {
-                        named.Add((areaId, pair.Key));
-                    }
-                }
-            }
-
+            var mapAreas = new JsonArray();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             if (navmesh["maps"] is JsonObject maps
                 && maps[mapId] is JsonObject map
-                && map["navAreas"] is JsonArray names)
+                && map["terrainTypes"] is JsonArray terrainTypes
+                && traversal["terrainAreas"] is JsonObject terrainAreas)
             {
-                var allowed = new HashSet<string>(StringComparer.Ordinal);
-                foreach (JsonNode? name in names)
+                foreach (JsonNode? terrain in terrainTypes)
                 {
-                    if (name != null)
+                    if (terrain is JsonValue terrainValue
+                        && terrainValue.TryGetValue(out string? terrainId)
+                        && terrainAreas[terrainId] is JsonValue areaValue
+                        && areaValue.TryGetValue(out string? areaId)
+                        && seen.Add(areaId))
                     {
-                        allowed.Add(name.ToString());
+                        mapAreas.Add(areaId);
                     }
-                }
-
-                named = named.Where(area => allowed.Contains(area.Name)).ToList();
-            }
-
-            named.Sort((left, right) => left.Id.CompareTo(right.Id));
-            var areaList = new JsonArray();
-            foreach ((int id, string name) in named)
-            {
-                areaList.Add(new JsonObject { ["id"] = id, ["name"] = name });
-            }
-
-            var agentNames = new JsonArray();
-            var cells = new JsonObject();
-            if (pathing["agentTypes"] is JsonObject agents)
-            {
-                foreach (KeyValuePair<string, JsonNode?> agent in agents)
-                {
-                    agentNames.Add(agent.Key);
-                    var byId = new Dictionary<int, JsonObject>();
-                    if (agent.Value is JsonObject body
-                        && body["navMesh"] is JsonObject nav
-                        && nav["areaCosts"] is JsonArray costs)
-                    {
-                        foreach (JsonNode? cost in costs)
-                        {
-                            if (cost is JsonObject entry
-                                && entry["areaId"] is JsonValue idValue
-                                && idValue.TryGetValue(out int areaId))
-                            {
-                                byId[areaId] = entry;
-                            }
-                        }
-                    }
-
-                    var row = new JsonObject();
-                    foreach ((int id, string _) in named)
-                    {
-                        string key = id.ToString();
-                        if (!byId.TryGetValue(id, out JsonObject? entry))
-                        {
-                            row[key] = JsonNode.Parse("null");
-                            continue;
-                        }
-
-                        bool passable = true;
-                        if (entry["passable"] is JsonValue passableValue && passableValue.TryGetValue(out bool flag))
-                        {
-                            passable = flag;
-                        }
-
-                        row[key] = passable ? entry["cost"]?.DeepClone() : JsonNode.Parse("null");
-                    }
-
-                    cells[agent.Key] = row;
                 }
             }
 
             return new JsonObject
             {
-                ["areas"] = areaList,
-                ["agentTypes"] = agentNames,
-                ["cells"] = cells,
+                ["traversal"] = traversal.DeepClone(),
+                ["mapAreas"] = mapAreas,
             };
         }
 
@@ -450,10 +382,11 @@ public static partial class CrowdSimulationEditorApi
         {
             return new JsonArray
             {
-                HelpItem("规模", "sim.maxUnits 是单位上限。profiles 的 cellSizeCm 和地图板宽决定格子数。deploy.initialUnits 是开局人数。"),
+                HelpItem("规模", "sim.maxUnits 是单位上限。Navigation/navmesh.json 的 maps.<地图 id>.navCellSizeCm 和地图板宽决定格子数。deploy.initialUnits 是开局人数。"),
                 HelpItem("手感", "单位速度在模板的 speedCmPerSecond。formation.leaderSpeed、catchUp、settleTimeSec 管队形。movement.unitTurnRateRadPerSec 管转向。"),
                 HelpItem("拥挤", "推挤优先级在模板的 pushPriority。半径在 Navigation/agent_profiles.json。push、avoidance、agents.avoidanceRadiusScale 管挤开。"),
                 HelpItem("地图", "地图文件是 Maps/<startupMapId>.json。导航事实在 Navigation/navmesh.json 的 maps.<地图 id>。地形生成器不进运行时。"),
+                HelpItem("通行", "区域、地形到区域、链接种类和移动类型 × 区域的通行矩阵都在 CrowdSimulation/traversal.json。不可通行的格写 false。"),
                 HelpItem("外交", "玩家的 TeamId 在地图 Players。代表实体上的 Relations 决定关系。pairRules.yieldsTo 与 sharesVisionWith 是关系类型名。"),
             };
         }
@@ -605,6 +538,39 @@ public static partial class CrowdSimulationEditorApi
             }
 
             return draft.DeepClone();
+        }
+
+        /// <summary>
+        /// 当前 Mod 要写的覆盖片段。和 <see cref="DeepDiff"/> 的差别：草稿里的 null 和下层不同时照写成 null，
+        /// 因为 traversal.json 用 null 表示“不限坡度”，DeepObject 合并时 null 覆盖数。
+        /// </summary>
+        private static JsonNode? OverrideOf(JsonNode? draft, JsonNode? baseline)
+        {
+            if (Same(draft, baseline))
+            {
+                return null;
+            }
+
+            if (draft is JsonObject draftObject && baseline is JsonObject baselineObject)
+            {
+                var diff = new JsonObject();
+                foreach (KeyValuePair<string, JsonNode?> pair in draftObject)
+                {
+                    bool present = baselineObject.TryGetPropertyValue(pair.Key, out JsonNode? baseNode);
+                    if (present && Same(pair.Value, baseNode))
+                    {
+                        continue;
+                    }
+
+                    diff[pair.Key] = present && pair.Value is JsonObject && baseNode is JsonObject
+                        ? OverrideOf(pair.Value, baseNode)
+                        : pair.Value?.DeepClone();
+                }
+
+                return diff.Count == 0 ? null : diff;
+            }
+
+            return draft?.DeepClone();
         }
 
         private static JsonObject DeepMergeObject(JsonObject? baseline, JsonObject overlay)
@@ -811,50 +777,6 @@ public static partial class CrowdSimulationEditorApi
             }
 
             return string.Empty;
-        }
-
-        private static JsonObject? PreviousCost(JsonObject pathing, string agentId, int areaId)
-        {
-            if (pathing["agentTypes"] is not JsonObject agents || agents[agentId] is not JsonObject agent)
-            {
-                return null;
-            }
-
-            if (agent["navMesh"] is not JsonObject nav || nav["areaCosts"] is not JsonArray costs)
-            {
-                return null;
-            }
-
-            foreach (JsonNode? cost in costs)
-            {
-                if (cost is JsonObject entry
-                    && entry["areaId"] is JsonValue idValue
-                    && idValue.TryGetValue(out int id)
-                    && id == areaId)
-                {
-                    return entry;
-                }
-            }
-
-            return null;
-        }
-
-        // 装载器拒绝缺少 cost 的行，也拒绝把一行省掉。空格子写成不可通行，代价沿用原行；原来没有行时用装载器接受的最小正数。
-        private const int ImpassableCostWhenRowMissing = 1;
-
-        private static int PreviousNumber(JsonObject? entry, string key)
-        {
-            if (entry?[key] is JsonValue value && value.TryGetValue(out int number) && number > 0)
-            {
-                return number;
-            }
-
-            if (entry?[key] is JsonValue real && real.TryGetValue(out double numberReal) && numberReal > 0)
-            {
-                return (int)numberReal;
-            }
-
-            return ImpassableCostWhenRowMissing;
         }
 
         private void PutIfPresent(PatchSet patches, string relative, JsonObject file)

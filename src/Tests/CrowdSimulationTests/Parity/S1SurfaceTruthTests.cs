@@ -49,6 +49,8 @@ public class S1SurfaceTruthTests
             NavCellsY = cellsY,
             NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = typeIds,
+            LinkKindIds = surface.LinkKindIds,
+            LinkBakeDigest = surface.LinkBakeDigest,
             TerrainCells = surface.TerrainCells,
             JumpCandidates = surface.JumpCandidates,
         };
@@ -92,7 +94,8 @@ public class S1SurfaceTruthTests
         Assert.That(hash, Is.EqualTo(truth["fnv1a"]!.GetValue<string>()),
             $"S1 地表与 Web 导出逐格不一致（seed {seed}）");
         Assert.That(blockers.Count, Is.EqualTo(truth["blockers"]!.GetValue<int>()));
-        Assert.That(bridges.Count, Is.EqualTo(truth["bridges"]!.GetValue<int>()));
+        Assert.That(bridges.Count, Is.EqualTo(truth["layeredPaths"]!.GetValue<int>()));
+        Assert.That(surface.JumpCandidates.Length, Is.EqualTo(truth["linkCandidates"]!.GetValue<int>()));
     }
 
     [Test]
@@ -141,7 +144,7 @@ public class S1SurfaceTruthTests
         var runtime = LoadRuntime("s1337");
         var surface = ReadSurface("s1337");
         var (blockers, _) = LoadMapEntities("s1337");
-        var grown = blockers.Select(b => new BlockerFootprint(b.XCm, b.YCm, b.HalfSizeCm + 6250)).ToArray();
+        var grown = blockers.Select(b => new BlockerFootprint(b.XCm, b.YCm, b.HalfSizeCm + 6250, b.TemplateId)).ToArray();
         var baseline = SurfaceGrid.Build(runtime, surface, blockers);
         var resized = SurfaceGrid.Build(runtime, surface, grown);
         int delta = 0;
@@ -159,10 +162,10 @@ public class S1SurfaceTruthTests
         var runtime = TestDefaults.Assemble();
         var surface = EmptySurface(runtime);
         // 6250 cm 格：半宽 1562 cm（边长 3125 cm）居中于格心 → 覆盖 0.25 < 0.5 不阻挡
-        var small = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 1562) });
+        var small = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 1562, "building") });
         Assert.That(small.Blocked[0], Is.EqualTo(0));
         // 半宽 3125 cm（边长 = 格边长）居中 → 覆盖 1.0 ≥ 0.5 阻挡
-        var full = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 3125) });
+        var full = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 3125, "building") });
         Assert.That(full.Blocked[0], Is.EqualTo(1));
     }
 
@@ -202,7 +205,7 @@ public class S1SurfaceTruthTests
             map,
             bodies?.Profiles ?? TestDefaults.DemoProfiles(),
             TestDefaults.ParseNavmesh(navmeshJson, bodies?.Profiles),
-            bodies?.Pathing ?? TestDefaults.DemoPathing(),
+            bodies?.Traversal ?? TestDefaults.DemoTraversal(),
             bodies?.Templates ?? TestDefaults.DemoTemplates(),
             TestDefaults.FixedHz,
             pairRules ?? TestDefaults.DemoPairRules());
@@ -226,7 +229,7 @@ public class S1SurfaceTruthTests
     {
         var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
-        var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
+        var bridges = surface.LayeredPaths.Select(b => (b.Span.FromXCm, b.Span.FromYCm, b.Span.ToXCm, b.Span.ToYCm, b.Span.WidthCm)).ToList();
         // 地图实体按抽取时的遍历序返回，这里不排序。
         return (blockers, bridges);
     }
@@ -240,6 +243,8 @@ public class S1SurfaceTruthTests
             NavCellsY = navCellsPerSide,
             NavCellSizeCm = runtime.NavCellSizeCm,
             TerrainTypeIds = runtime.TerrainTypeIds.ToArray(),
+            LinkKindIds = runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray(),
+            LinkBakeDigest = runtime.LinkBakeDigest,
             TerrainCells = new byte[navCellsPerSide * navCellsPerSide], // 全部 water（下标 0）
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
         };
@@ -309,8 +314,8 @@ public class S1SurfaceTruthTests
     }
 }
 
-/// <summary>会话用的体型表与单位模板事实（两者须互相一致：模板的个人半径 = 体型半径 × 避让倍数），可另换寻路代价表（null = 演示资产）。</summary>
+/// <summary>会话用的体型表与单位模板事实（两者须互相一致：模板的个人半径 = 体型半径 × 避让倍数），可另换通行矩阵（null = 演示资产）。</summary>
 internal sealed record CrowdTestBodies(
     Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry Profiles,
     List<CrowdUnitTemplateFacts> Templates,
-    Ludots.Core.Navigation.Pathing.Config.PathingConfig? Pathing = null);
+    CrowdTraversalConfig? Traversal = null);

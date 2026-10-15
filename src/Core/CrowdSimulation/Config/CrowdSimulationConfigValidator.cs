@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using static Ludots.Core.CrowdSimulation.Config.CrowdSimulationConfig;
 
 namespace Ludots.Core.CrowdSimulation.Config;
 
@@ -50,7 +51,6 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.maxStepNavCells", config.Movement.MaxStepNavCells, gt: 0, lt: 1);
         Rule("movement.slotTimeConstantSec", config.Movement.SlotTimeConstantSec, gt: 0);
         Rule("movement.unitTurnRateRadPerSec", config.Movement.UnitTurnRateRadPerSec, gt: 0);
-        Rule("movement.jumpSpeedRatio", config.Movement.JumpSpeedRatio, gt: 0);
         Rule("movement.blendRatePerSec", config.Movement.BlendRatePerSec, gt: 0);
         Rule("movement.speedCapRatio", config.Movement.SpeedCapRatio, gt: 0);
         Rule("movement.stopSpeedRatio", config.Movement.StopSpeedRatio, gt: 0);
@@ -97,10 +97,6 @@ public static class CrowdSimulationConfigValidator
         Rule("sim.maxUnits", config.Sim.MaxUnits, intRequired: true, min: 1, max: 200000);
         Rule("sim.parallelWorkerCount", config.Sim.ParallelWorkerCount, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxParallelWorkers);
         Rule("sim.simSecondsPerTickSecond", config.Sim.SimSecondsPerTickSecond, gt: 0);
-        Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
-        Rule("structures.portalReachNavCells", config.Structures.PortalReachNavCells, intRequired: true, min: 1);
-        ValidateTerrainIds("structures.anchorTerrain", config.Structures.AnchorTerrain);
-        ValidateTerrainIds("structures.spanTerrain", config.Structures.SpanTerrain);
         ValidateStructureTemplates(config);
         Rule("deploy.initialUnits", config.Deploy.InitialUnits, intRequired: true, min: 0);
         Rule("deploy.centersPerGroup", config.Deploy.CentersPerGroup, intRequired: true, min: 1);
@@ -145,14 +141,14 @@ public static class CrowdSimulationConfigValidator
         }
     }
 
-    /// <summary>只查 footprint 枚举、blocker 仅 rect、area 与 priority 同进同出、priority ≥ 0、
-    /// 非阻挡且无 area 拒绝、lifetimeSec 若写则 &gt; 0。区域名是否存在由装载解析。</summary>
+    /// <summary>
+    /// 允许的组合（layer, footprint, effect, placement）：
+    /// (base, square, block 或 setArea, unrestricted)、(base, disc, setArea, unrestricted)、
+    /// (base, path, setArea, unrestricted)、(upper, path, surface, spanEnds)。区域名是否存在由装载解析。
+    /// </summary>
     private static void ValidateStructureTemplates(CrowdSimulationConfig config)
     {
-        var templates = config.Structures.Templates;
-        if (templates == null) return;
-        var footprints = new HashSet<string> { "rect", "disc", "path" };
-        foreach (var (id, t) in templates)
+        foreach (var (id, t) in config.Structures.Templates)
         {
             string path = $"structures.templates.{id}";
             if (string.IsNullOrWhiteSpace(id))
@@ -160,48 +156,81 @@ public static class CrowdSimulationConfigValidator
                 throw Invalid(path, "id 需为非空字符串");
             }
 
-            if (!footprints.Contains(t.Footprint))
+            if (t.Layer is not ("base" or "upper"))
             {
-                throw Invalid($"{path}.footprint", "需为 rect / disc / path");
+                throw Invalid($"{path}.layer", "需为 base / upper");
             }
 
-            if (t.Blocker && t.Footprint != "rect")
+            if (t.Footprint is not ("square" or "disc" or "path"))
             {
-                throw Invalid($"{path}", "blocker 只支持 rect 占地");
+                throw Invalid($"{path}.footprint", "需为 square / disc / path");
             }
 
-            if (t.Layered && t.Footprint != "path")
+            switch (t.Effect)
             {
-                throw Invalid($"{path}", "分层实体的足迹需为 path");
+                case StructureBlockEffect block:
+                    Rule($"{path}.effect.coverage", block.Coverage, gt: 0, max: 1);
+                    break;
+                case StructureSetAreaEffect setArea:
+                    RequireText($"{path}.effect.area", setArea.Area);
+                    Rule($"{path}.effect.priority", setArea.Priority, min: 0);
+                    break;
+                case StructureSurfaceEffect surface:
+                    RequireText($"{path}.effect.area", surface.Area);
+                    Rule($"{path}.effect.portalReachNavCells", surface.PortalReachNavCells, min: 1);
+                    break;
             }
 
-            if ((t.Area == null) != (t.Priority == null))
+            if (t.Placement is StructureSpanEndsPlacement spanEnds)
             {
-                throw Invalid($"{path}", "area 与 priority 需同时给出");
+                ValidateAreaIds($"{path}.placement.endpointAreas", spanEnds.EndpointAreas);
+                ValidateAreaIds($"{path}.placement.interiorAreas", spanEnds.InteriorAreas);
             }
 
-            if (t.Priority is { } p && p < 0)
+            string effect = EffectKind(t.Effect);
+            string placement = t.Placement is StructureSpanEndsPlacement ? "spanEnds" : "unrestricted";
+            bool allowed = (t.Layer, t.Footprint, effect, placement) switch
             {
-                throw Invalid($"{path}.priority", "需为 ≥ 0 的整数");
+                ("base", "square", "block" or "setArea", "unrestricted") => true,
+                ("base", "disc" or "path", "setArea", "unrestricted") => true,
+                ("upper", "path", "surface", "spanEnds") => true,
+                _ => false,
+            };
+            if (!allowed)
+            {
+                throw Invalid(path,
+                    $"layer / footprint / effect / placement = {t.Layer} / {t.Footprint} / {effect} / {placement} 不是允许的组合。"
+                    + "允许：base / square / block 或 setArea / unrestricted，base / disc 或 path / setArea / unrestricted，upper / path / surface / spanEnds");
             }
 
-            if (!t.Blocker && t.Area == null)
+            if (t.LifetimeSec is { } life && !(IsFinite(life) && life > 0))
             {
-                throw Invalid($"{path}", "既不阻挡也不改导航区域（无效实体）");
-            }
-
-            if (t.LifetimeSec is { } life && !(life > 0))
-            {
-                throw Invalid($"{path}.lifetimeSec", "需 > 0");
+                throw Invalid($"{path}.lifetimeSec", "需 > 0，永久写 null");
             }
         }
     }
 
-    private static void ValidateTerrainIds(string path, string[]? ids)
+    private static string EffectKind(StructureEffectEntry effect) => effect switch
+    {
+        StructureBlockEffect => "block",
+        StructureSetAreaEffect => "setArea",
+        StructureSurfaceEffect => "surface",
+        _ => throw new InvalidOperationException($"未知的结构效果类型 {effect.GetType().Name}。"),
+    };
+
+    private static void RequireText(string path, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw Invalid(path, "需为非空字符串");
+        }
+    }
+
+    private static void ValidateAreaIds(string path, string[]? ids)
     {
         if (ids == null || ids.Length == 0)
         {
-            throw Invalid(path, "需为非空的地形类型 id 数组");
+            throw Invalid(path, "需为非空的区域 id 数组");
         }
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -215,7 +244,7 @@ public static class CrowdSimulationConfigValidator
 
             if (!seen.Add(id))
             {
-                throw Invalid($"{path}", $"地形类型 \"{id}\" 重复");
+                throw Invalid($"{path}", $"区域 \"{id}\" 重复");
             }
         }
     }

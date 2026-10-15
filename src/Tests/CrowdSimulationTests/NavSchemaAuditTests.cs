@@ -29,7 +29,19 @@ public class NavSchemaAuditTests
         Assert.That(foot.SpeedDivisorByArea[4], Is.EqualTo(Fix64.Zero));
         Assert.That(foot.CostByArea[0], Is.EqualTo(Fix64.OneValue));
 
-        PathingAgentTypeConfig pathingFoot = TestDefaults.DemoPathing().AgentTypes.Single(agent => agent.Id == "foot");
+        PathingAgentTypeConfig pathingFoot = PathingConfigLoader.Parse(JsonNode.Parse("""
+            {
+              "agentTypes": {
+                "foot": {
+                  "profileId": "Small",
+                  "navMesh": { "areaCosts": [
+                    { "areaId": 0, "cost": 1, "passable": true },
+                    { "areaId": 4, "cost": 1, "passable": false }
+                  ] }
+                }
+              }
+            }
+            """)!.AsObject()).AgentTypes.Single(agent => agent.Id == "foot");
         NavAreaCostTable table = PathingAreaCostCompiler.Compile(pathingFoot.NavMesh);
         Assert.That(table.IsPassable(4), Is.False);
         Assert.That(table.Get(4) > Fix64.Zero, Is.True);
@@ -48,23 +60,6 @@ public class NavSchemaAuditTests
     }
 
     [Test]
-    public void AgentType_MissingAreaRow_IsRejectedOnlyForDeclaredNavAreas()
-    {
-        JsonObject catalogOnly = TestDefaults.DefaultNavmeshJson();
-        catalogOnly["areas"]!["lava"] = JsonNode.Parse("""{"areaId":9,"slopeFree":false}""");
-        Assert.DoesNotThrow(() => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(catalogOnly)));
-
-        JsonObject declared = TestDefaults.DefaultNavmeshJson();
-        declared["areas"]!["lava"] = JsonNode.Parse("""{"areaId":9,"slopeFree":false}""");
-        declared["maps"]!["crowd_simulation_demo"]!["navAreas"]!.AsArray().Add("lava");
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(declared)))!;
-        Assert.That(ex.Message, Does.Contain("foot"));
-        Assert.That(ex.Message, Does.Contain("areaId 9"));
-        Assert.That(ex.Message, Does.Contain("passable"));
-    }
-
-    [Test]
     public void RequireComplete_NullAreas_Throws()
     {
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
@@ -73,21 +68,17 @@ public class NavSchemaAuditTests
     }
 
     [Test]
-    public void MergedHumanoid_SelectionEqualsCore_InCrowdAndTotalWar()
+    public void MergedHumanoid_SelectionEqualsCore_InTotalWar()
     {
         string root = RepoRoot();
         JsonObject core = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(root, "assets", "Navigation", "pathing.json")))!;
-        JsonObject crowd = (JsonObject)core.DeepClone();
-        ConfigPipeline.DeepMerge(crowd, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(
-            root, "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/Navigation/pathing.json")))!);
         JsonObject totalWar = (JsonObject)core.DeepClone();
         ConfigPipeline.DeepMerge(totalWar, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(
             root, "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod/assets/Navigation/pathing.json")))!);
 
         PathingSelectionConfig coreSelection = PathingConfigLoader.Parse(core).AgentTypes.Single(agent => agent.Id == "Humanoid").Selection;
-        AssertSelectionEquals(coreSelection, PathingConfigLoader.Parse(crowd).AgentTypes.Single(agent => agent.Id == "Humanoid").Selection);
         AssertSelectionEquals(coreSelection, PathingConfigLoader.Parse(totalWar).AgentTypes.Single(agent => agent.Id == "Humanoid").Selection);
-        Assert.That(File.ReadAllText(Path.Combine(root, "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/Navigation/pathing.json")), Does.Not.Contain("Humanoid"));
+        Assert.That(File.Exists(Path.Combine(root, "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/Navigation/pathing.json")), Is.False);
         Assert.That(File.ReadAllText(Path.Combine(root, "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod/assets/Navigation/pathing.json")), Does.Not.Contain("Humanoid"));
     }
 
@@ -131,12 +122,12 @@ public class NavSchemaAuditTests
                 "Humanoid": {
                   "profileId": "Small",
                   "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
-                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1 } ] }
+                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1, "passable": true } ] }
                 },
                 "Ship": {
                   "profileId": "Medium",
                   "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
-                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1 } ] }
+                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1, "passable": true } ] }
                 }
               }
             }
@@ -185,12 +176,12 @@ public class NavSchemaAuditTests
                 "Humanoid": {
                   "profileId": "Small",
                   "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
-                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1 } ] }
+                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1, "passable": true } ] }
                 }
               }
             }
             """)!.AsObject());
-        NavMapAgentBinding binding = NavMapAgentBinding.Create("demo", navTagged: false, bake, pathing, Bodies("Small"), Array.Empty<string>());
+        NavMapAgentBinding binding = NavMapAgentBinding.Create("demo", navTagged: false, bake, pathing, Bodies("Small"));
         var template = new EntityTemplate
         {
             Id = "mass_unit",

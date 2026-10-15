@@ -2,39 +2,8 @@
   "maps": {
     "crowd_simulation_demo": {
       "solver": "crowd-simulation",
-      "navAreas": [
-        "Default",
-        "shallow",
-        "rough",
-        "sheer",
-        "deep",
-        "road",
-        "deck",
-        "flooded",
-        "burning"
-      ],
-      "terrainAreas": [
-        {
-          "terrainId": "water",
-          "areaId": "deep"
-        },
-        {
-          "terrainId": "shore",
-          "areaId": "shallow"
-        },
-        {
-          "terrainId": "land",
-          "areaId": "Default"
-        },
-        {
-          "terrainId": "mountain",
-          "areaId": "rough"
-        },
-        {
-          "terrainId": "cliff",
-          "areaId": "sheer"
-        }
-      ]
+      "navCellSizeCm": 6250,
+      "terrainTypes": ["water", "shore", "land", "mountain", "cliff"]
     }
   }
 }

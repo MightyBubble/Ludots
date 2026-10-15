@@ -33,12 +33,12 @@ public class S3RegressionTests
     {
         // 轴对齐桥的端点格:t == len 恰好落在 EPS 边界上——定点 Sqrt 的近似误差曾把这个格丢掉。
         var runtime = TestDefaults.Assemble();
-        var deck = UpperLayerBake.RasterizeDecks(
+        var deck = UpperLayerBake.RasterizeLayeredPaths(
             new[]
             {
-                new BridgeDeckRecord(
-                    new CrowdSimulationBridgeSpan { X0Cm = 1078125, Y0Cm = 1321875, X1Cm = 1140625, Y1Cm = 1321875, WidthCm = 18750 },
-                    "deck"),
+                new LayeredPathRecord(
+                    new CrowdSimulationPathSpan { FromXCm = 1078125, FromYCm = 1321875, ToXCm = 1140625, ToYCm = 1321875, WidthCm = 18750 },
+                    "bridge"),
             },
             runtime);
 

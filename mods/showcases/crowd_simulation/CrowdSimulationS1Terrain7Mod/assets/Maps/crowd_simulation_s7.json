@@ -3712,11 +3712,11 @@
       "InstanceId": "bridge_0001",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 115625,
-          "y0Cm": 565625,
-          "x1Cm": 115625,
-          "y1Cm": 646875,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 115625,
+          "fromYCm": 565625,
+          "toXCm": 115625,
+          "toYCm": 646875,
           "widthCm": 6250
         }
       }
@@ -3725,11 +3725,11 @@
       "InstanceId": "bridge_0002",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 240625,
-          "y0Cm": 837500,
-          "x1Cm": 315625,
-          "y1Cm": 837500,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 240625,
+          "fromYCm": 837500,
+          "toXCm": 315625,
+          "toYCm": 837500,
           "widthCm": 12500
         }
       }
@@ -3738,11 +3738,11 @@
       "InstanceId": "bridge_0003",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 309375,
-          "y0Cm": 565625,
-          "x1Cm": 309375,
-          "y1Cm": 628125,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 309375,
+          "fromYCm": 565625,
+          "toXCm": 309375,
+          "toYCm": 628125,
           "widthCm": 6250
         }
       }
@@ -3751,11 +3751,11 @@
       "InstanceId": "bridge_0004",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 556250,
-          "y0Cm": 390625,
-          "x1Cm": 556250,
-          "y1Cm": 459375,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 556250,
+          "fromYCm": 390625,
+          "toXCm": 556250,
+          "toYCm": 459375,
           "widthCm": 12500
         }
       }
@@ -3764,11 +3764,11 @@
       "InstanceId": "bridge_0005",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 740625,
-          "y0Cm": 378125,
-          "x1Cm": 740625,
-          "y1Cm": 478125,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 740625,
+          "fromYCm": 378125,
+          "toXCm": 740625,
+          "toYCm": 478125,
           "widthCm": 18750
         }
       }
@@ -3777,11 +3777,11 @@
       "InstanceId": "bridge_0006",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 896875,
-          "y0Cm": 59375,
-          "x1Cm": 896875,
-          "y1Cm": 128125,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 896875,
+          "fromYCm": 59375,
+          "toXCm": 896875,
+          "toYCm": 128125,
           "widthCm": 6250
         }
       }
@@ -3790,11 +3790,11 @@
       "InstanceId": "bridge_0007",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 896875,
-          "y0Cm": 565625,
-          "x1Cm": 996875,
-          "y1Cm": 565625,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 896875,
+          "fromYCm": 565625,
+          "toXCm": 996875,
+          "toYCm": 565625,
           "widthCm": 6250
         }
       }
@@ -3803,11 +3803,11 @@
       "InstanceId": "bridge_0008",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 1059375,
-          "y0Cm": 959375,
-          "x1Cm": 1121875,
-          "y1Cm": 959375,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 1059375,
+          "fromYCm": 959375,
+          "toXCm": 1121875,
+          "toYCm": 959375,
           "widthCm": 18750
         }
       }
@@ -3816,11 +3816,11 @@
       "InstanceId": "bridge_0009",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 1109375,
-          "y0Cm": 837500,
-          "x1Cm": 1178125,
-          "y1Cm": 837500,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 1109375,
+          "fromYCm": 837500,
+          "toXCm": 1178125,
+          "toYCm": 837500,
           "widthCm": 12500
         }
       }
@@ -3829,11 +3829,11 @@
       "InstanceId": "bridge_0010",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 1115625,
-          "y0Cm": 1034375,
-          "x1Cm": 1115625,
-          "y1Cm": 1134375,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 1115625,
+          "fromYCm": 1034375,
+          "toXCm": 1115625,
+          "toYCm": 1134375,
           "widthCm": 6250
         }
       }
@@ -3842,11 +3842,11 @@
       "InstanceId": "bridge_0011",
       "Template": "crowd_simulation_bridge",
       "Overrides": {
-        "CrowdSimulationBridgeSpan": {
-          "x0Cm": 1293750,
-          "y0Cm": 703125,
-          "x1Cm": 1293750,
-          "y1Cm": 784375,
+        "CrowdSimulationPathSpan": {
+          "fromXCm": 1293750,
+          "fromYCm": 703125,
+          "toXCm": 1293750,
+          "toYCm": 784375,
           "widthCm": 12500
         }
       }

@@ -68,12 +68,12 @@ public sealed class NavContext
     // 增量重烘的全图缓冲。首次重烘分配，之后原地复用。CloneNav 不拷这些缓冲，变体上是 null，该变体第一次重烘才分配。
     internal int[]? FloodQueue;
     internal int[]? MergeBuffer;
-    internal int[]? DeckCompBuffer;
+    internal int[]? UpperLayerCompBuffer;
     internal int[]? UnionParent;
     internal int[]? UnionDense;
     internal byte[]? ErodeRow;
-    internal byte[]? DeckWin;
-    internal byte[]? DeckEroded;
+    internal byte[]? UpperLayerWin;
+    internal byte[]? UpperLayerEroded;
     internal readonly List<int> TileScratch = new(16);
     internal readonly HashSet<int> TileSeenScratch = new(16);
     internal readonly List<int> ChangedTileList = new(16);

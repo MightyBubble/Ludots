@@ -16,17 +16,19 @@ public sealed class BankJumpUatTests
     public void NoJumpEndpoint_OnBridgeSpanOrBankExtension([ValueSource(typeof(S4DeployTruthTests), nameof(S4DeployTruthTests.Seeds))] string seed)
     {
         var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
-        var bridges = S1SurfaceTruthTests.LoadMapSurface(seed).Bridges;
+        var bridges = S1SurfaceTruthTests.LoadMapSurface(seed).LayeredPaths;
         var jumps = S1SurfaceTruthTests.ReadSurface(seed).JumpCandidates;
         int n = runtime.NavCellsPerSide, cs = runtime.NavCellSizeCm;
-        int ext = runtime.Structures.PortalReachNavCells - 1;
         Assert.That(bridges.Count, Is.GreaterThan(0), "场景无效：世界无桥");
         Assert.That(jumps.Length, Is.GreaterThan(0), "场景无效：世界无 jump 候选");
-        Assert.That(ext, Is.GreaterThanOrEqualTo(1), "场景无效：portalReachNavCells − 1 < 1，无岸上延伸段");
 
         var zone = new byte[n * n];
+        int ext = 0;
         foreach (var bridge in bridges)
         {
+            var template = runtime.Structures.Templates[runtime.Structures.TemplateIndexOf(bridge.TemplateId)];
+            ext = template.PortalReachNavCells - 1;
+            Assert.That(ext, Is.GreaterThanOrEqualTo(1), $"场景无效：{template.Id} 的 portalReachNavCells − 1 < 1，无岸上延伸段");
             var s = SpanCells(bridge.Span, cs, n, ext);
             for (int t = -ext; t <= s.Len + ext; t++)
             {
@@ -61,16 +63,16 @@ public sealed class BankJumpUatTests
     /// 这里反推桥跨：起锚格 (X, Y)、轴向 (Dx, Dy)、跨长 Len、横向起始偏移 Low 与宽 W，均为导航格。
     /// </summary>
     private static (int X, int Y, int Dx, int Dy, int Len, int Low, int W) SpanCells(
-        CrowdSimulationBridgeSpan span, int cs, int n, int ext)
+        CrowdSimulationPathSpan span, int cs, int n, int ext)
     {
-        int dx = Math.Sign(span.X1Cm - span.X0Cm), dy = Math.Sign(span.Y1Cm - span.Y0Cm);
+        int dx = Math.Sign(span.ToXCm - span.FromXCm), dy = Math.Sign(span.ToYCm - span.FromYCm);
         if (dx < 0 || dy < 0 || dx + dy != 1)
         {
-            throw new InvalidOperationException($"场景无效：桥 ({span.X0Cm},{span.Y0Cm})→({span.X1Cm},{span.Y1Cm}) 不是沿 +x 或 +y 的轴向桥。");
+            throw new InvalidOperationException($"场景无效：桥 ({span.FromXCm},{span.FromYCm})→({span.ToXCm},{span.ToYCm}) 不是沿 +x 或 +y 的轴向桥。");
         }
 
-        int along0 = dx == 1 ? span.X0Cm : span.Y0Cm, along1 = dx == 1 ? span.X1Cm : span.Y1Cm;
-        int across = dx == 1 ? span.Y0Cm : span.X0Cm;
+        int along0 = dx == 1 ? span.FromXCm : span.FromYCm, along1 = dx == 1 ? span.ToXCm : span.ToYCm;
+        int across = dx == 1 ? span.FromYCm : span.FromXCm;
         int w = Exact(span.WidthCm, cs, "宽");
         int start = Exact(along0 - cs / 2, cs, "起端") + ext;
         int len = Exact(along1 - along0, cs, "长") - 2 * ext;

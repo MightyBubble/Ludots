@@ -14,7 +14,6 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -39,7 +38,7 @@ public readonly record struct CrowdNavSurfaceBakeSources(
 
 /// <summary>
 /// 把逻辑地形的 AreaId 烤成 .navsurface 的地形类型格。
-/// 传入 jumpLinkBake 时，用同一份高度场和桥面栅格生成跳跃候选。
+/// 传入 linkCandidateBake 时，用同一份高度场和桥面栅格逐种类生成链接候选，并写入 linkBakeDigest。
 /// </summary>
 public static class CrowdNavSurfaceAuthoring
 {
@@ -47,7 +46,7 @@ public static class CrowdNavSurfaceAuthoring
         LogicTerrainField terrain,
         IReadOnlyList<string> terrainTypeIds,
         CrowdNavSurfaceBakeSources sources,
-        CrowdJumpLinkBakeInput? jumpLinkBake)
+        CrowdLinkCandidateBakeInput? linkCandidateBake)
     {
         ArgumentNullException.ThrowIfNull(terrain);
         ArgumentNullException.ThrowIfNull(terrainTypeIds);
@@ -58,7 +57,7 @@ public static class CrowdNavSurfaceAuthoring
         if (terrainTypeIds.Count < 1 || terrainTypeIds.Count > CrowdSimulationLimits.MaxTerrainTypeIds)
         {
             throw new InvalidOperationException(
-                $"{sources.CrowdSource}: terrainAreas 有 {terrainTypeIds.Count} 项，需为 1~{CrowdSimulationLimits.MaxTerrainTypeIds}。");
+                $"{sources.CrowdSource}: terrainTypes 有 {terrainTypeIds.Count} 项，需为 1~{CrowdSimulationLimits.MaxTerrainTypeIds}。");
         }
 
         var typeIds = new string[terrainTypeIds.Count];
@@ -68,12 +67,12 @@ public static class CrowdNavSurfaceAuthoring
             string id = terrainTypeIds[i];
             if (string.IsNullOrWhiteSpace(id))
             {
-                throw new InvalidOperationException($"{sources.CrowdSource}: terrainAreas[{i}].terrainId 为空。");
+                throw new InvalidOperationException($"{sources.CrowdSource}: terrainTypes[{i}] 为空。");
             }
 
             if (!seen.Add(id))
             {
-                throw new InvalidOperationException($"{sources.CrowdSource}: terrainAreas 的 terrainId \"{id}\" 重复。");
+                throw new InvalidOperationException($"{sources.CrowdSource}: terrainTypes 的 \"{id}\" 重复。");
             }
 
             typeIds[i] = id;
@@ -88,13 +87,13 @@ public static class CrowdNavSurfaceAuthoring
         if (sources.CrowdCellSizeCm <= 0)
         {
             throw new InvalidOperationException(
-                $"{sources.CrowdSource}: profiles.cellSizeCm = {sources.CrowdCellSizeCm}，需为 > 0。");
+                $"{sources.CrowdSource}: navCellSizeCm = {sources.CrowdCellSizeCm}，需为 > 0。");
         }
 
         if (sources.MapWidthCm % sources.CrowdCellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"{sources.MapSource}: WidthCm（{sources.MapWidthCm}）不能被 {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 整除。");
+                $"{sources.MapSource}: WidthCm（{sources.MapWidthCm}）不能被 {sources.CrowdSource} 的 navCellSizeCm {sources.CrowdCellSizeCm} cm 整除。");
         }
 
         int navCells = sources.MapWidthCm / sources.CrowdCellSizeCm;
@@ -105,7 +104,7 @@ public static class CrowdNavSurfaceAuthoring
         {
             throw new InvalidOperationException(
                 $"{sources.MapSource}: 逻辑地形是 {terrain.WidthCells}×{terrain.HeightCells} 格、步长 {terrain.HorizontalStepCm}×{terrain.VerticalStepCm} cm，" +
-                $"地图 {sources.MapWidthCm}×{sources.MapHeightCm} cm / {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 推出 {navCells}×{navCells} 格。");
+                $"地图 {sources.MapWidthCm}×{sources.MapHeightCm} cm / {sources.CrowdSource} 的 navCellSizeCm {sources.CrowdCellSizeCm} cm 推出 {navCells}×{navCells} 格。");
         }
 
         if (sources.HeightBoundsWidthCm != sources.MapWidthCm || sources.HeightBoundsHeightCm != sources.MapHeightCm)
@@ -133,17 +132,23 @@ public static class CrowdNavSurfaceAuthoring
             }
         }
 
-        NavSurfaceJumpCandidate[] jumps = jumpLinkBake == null
-            ? Array.Empty<NavSurfaceJumpCandidate>()
-            : CrowdJumpCandidateBake.Bake(
-                jumpLinkBake.MapId,
+        IReadOnlyList<RuntimeLinkCandidateBake> kinds =
+            linkCandidateBake?.Kinds ?? Array.Empty<RuntimeLinkCandidateBake>();
+        var kindIds = new string[kinds.Count];
+        var candidates = new List<NavSurfaceJumpCandidate>();
+        for (int k = 0; k < kinds.Count; k++)
+        {
+            kindIds[k] = kinds[k].KindId;
+            candidates.AddRange(CrowdLinkCandidateBake.Bake(
+                linkCandidateBake!.MapId,
                 navCells,
                 cells,
-                typeIds,
-                jumpLinkBake.Settings,
-                jumpLinkBake.Heights,
-                jumpLinkBake.Bridge,
-                sources.CrowdCellSizeCm);
+                checked((byte)k),
+                kinds[k],
+                linkCandidateBake.Heights,
+                linkCandidateBake.Bridge,
+                sources.CrowdCellSizeCm));
+        }
 
         return new NavSurfaceAsset
         {
@@ -151,8 +156,10 @@ public static class CrowdNavSurfaceAuthoring
             NavCellsY = navCells,
             NavCellSizeCm = sources.CrowdCellSizeCm,
             TerrainTypeIds = typeIds,
+            LinkKindIds = kindIds,
+            LinkBakeDigest = NavSurfaceContract.LinkBakeDigest(sources.CrowdCellSizeCm, kinds),
             TerrainCells = cells,
-            JumpCandidates = jumps,
+            JumpCandidates = candidates.ToArray(),
         };
     }
 
@@ -183,11 +190,6 @@ public static class CrowdNavSurfaceAuthoring
         string? heightAsset = map.ContinuousHeightmap?.Asset;
         if (string.IsNullOrWhiteSpace(heightAsset))
         {
-            if (binding.MapNav.JumpLinkBake != null)
-            {
-                throw new InvalidOperationException($"地图 \"{mapId}\" 写了 jumpLinkBake，但缺少 ContinuousHeightmap.asset。");
-            }
-
             throw new InvalidOperationException($"地图 \"{mapId}\" 缺少 ContinuousHeightmap.asset。");
         }
 
@@ -215,29 +217,29 @@ public static class CrowdNavSurfaceAuthoring
             height.SampleRows,
             "Navigation/navmesh.json",
             binding.Runtime.NavCellSizeCm);
-        CrowdJumpLinkBakeInput? jumpLinkBake = null;
-        if (binding.MapNav.JumpLinkBake != null)
+        CrowdLinkCandidateBakeInput? linkCandidateBake = null;
+        if (binding.Runtime.LinkCandidateBakes.Count > 0)
         {
             NavHeightField heights = NavHeightField.FromHeightmap(height, binding.Runtime.NavCellsPerSide, binding.Runtime.NavCellSizeCm);
             byte[] bridge = RasterizeBridgeMask(binding.Bridges, binding.Runtime);
-            jumpLinkBake = new CrowdJumpLinkBakeInput
+            linkCandidateBake = new CrowdLinkCandidateBakeInput
             {
                 MapId = mapId,
-                Settings = binding.MapNav.JumpLinkBake,
+                Kinds = binding.Runtime.LinkCandidateBakes,
                 Heights = heights,
                 Bridge = bridge,
             };
         }
 
-        return Bake(terrain, binding.Runtime.TerrainTypeIds, sources, jumpLinkBake);
+        return Bake(terrain, binding.Runtime.TerrainTypeIds, sources, linkCandidateBake);
     }
 
     /// <summary>
-    /// 桥面掩码。端点已经含岸上延伸（portalReachNavCells − 1），栅格化不再外扩。
+    /// 桥面掩码。端点已经含岸上延伸（模板 effect.portalReachNavCells − 1），栅格化不再外扩。
     /// </summary>
-    public static byte[] RasterizeBridgeMask(IReadOnlyList<BridgeDeckRecord> bridges, CrowdSimulationRuntimeConfig config)
+    public static byte[] RasterizeBridgeMask(IReadOnlyList<LayeredPathRecord> bridges, CrowdSimulationRuntimeConfig config)
     {
-        DeckSurface deck = UpperLayerBake.RasterizeDecks(bridges, config);
+        UpperLayerSurface deck = UpperLayerBake.RasterizeLayeredPaths(bridges, config);
         var mask = new byte[deck.AreaIndex.Length];
         for (int i = 0; i < mask.Length; i++)
         {
@@ -340,7 +342,7 @@ public static class CrowdNavSurfaceAuthoring
     }
 
     /// <summary>
-    /// 先整张填 <paramref name="fillTerrainId"/>，再按顺序盖矩形，后写的覆盖先写的。返回逐格 AreaId（terrainAreas 下标）。
+    /// 先整张填 <paramref name="fillTerrainId"/>，再按顺序盖矩形，后写的覆盖先写的。返回逐格 AreaId（terrainTypes 下标）。
     /// </summary>
     public static byte[] PaintTerrainAreas(
         int navCellsPerSide,
@@ -467,7 +469,7 @@ public static class CrowdNavSurfaceAuthoring
         }
 
         throw new InvalidOperationException(
-            $"地形类型 \"{terrainId}\" 不在 terrainAreas（{string.Join(", ", terrainTypeIds)}）里。");
+            $"地形类型 \"{terrainId}\" 不在 maps.<mapId>.terrainTypes（{string.Join(", ", terrainTypeIds)}）里。");
     }
 
     public static void WriteNavSurface(string targetPath, NavSurfaceAsset asset)
@@ -494,7 +496,7 @@ public static class CrowdNavSurfaceAuthoring
         ConfigPipeline Pipeline,
         ConfigCatalog Catalog,
         ConfigConflictReport Report,
-        IReadOnlyList<BridgeDeckRecord> Bridges);
+        IReadOnlyList<LayeredPathRecord> Bridges);
 
     private static CrowdAuthoringBinding LoadRuntime(string repoRoot, string modId, MapConfig map)
     {
@@ -520,7 +522,7 @@ public static class CrowdNavSurfaceAuthoring
                 $"地图 \"{map.Id}\" 的 solver 是 \"{mapNav.Solver}\"，烘焙 CrowdSimulation 地表只接受 {NavSolverDeclaration.CrowdSimulation}。");
         }
 
-        PathingConfig pathing = new PathingConfigLoader(pipeline).Load(catalog, report);
+        CrowdTraversalConfig traversal = CrowdTraversalConfig.Load(pipeline, catalog, report);
         CrowdSimulationConfig config = new CrowdSimulationConfigLoader(pipeline).LoadConfig(catalog, report);
         int fixedHz = new EngineClockConfigLoader(pipeline).Load(catalog, report).FixedHz;
         List<EntityTemplate> templates = LoadTemplates(pipeline, catalog, report);
@@ -531,9 +533,9 @@ public static class CrowdNavSurfaceAuthoring
         var shares = new bool[players * players];
         CrowdPairRules rules = CrowdPairRules.Matrices(players, response, shares);
         CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(
-            config, map, profiles, navmesh, pathing, facts, fixedHz, rules);
-        IReadOnlyList<BridgeDeckRecord> bridges = Array.Empty<BridgeDeckRecord>();
-        if (mapNav.JumpLinkBake != null)
+            config, map, profiles, navmesh, traversal, facts, fixedHz, rules);
+        IReadOnlyList<LayeredPathRecord> bridges = Array.Empty<LayeredPathRecord>();
+        if (runtime.LinkCandidateBakes.Count > 0)
         {
             var templatesById = new Dictionary<string, EntityTemplate>(templates.Count, StringComparer.Ordinal);
             for (int i = 0; i < templates.Count; i++)
@@ -542,7 +544,7 @@ public static class CrowdNavSurfaceAuthoring
                 templatesById.Add(template.Id, template);
             }
 
-            bridges = CrowdSimulationMapSurfaceSource.Extract(map, templatesById).Bridges;
+            bridges = CrowdSimulationMapSurfaceSource.Extract(map, templatesById).LayeredPaths;
         }
 
         return new CrowdAuthoringBinding(runtime, mapNav, pipeline, catalog, report, bridges);
@@ -563,7 +565,7 @@ public static class CrowdNavSurfaceAuthoring
         IReadOnlyList<string> terrainIds = binding.Runtime.TerrainTypeIds;
         if (terrainIds.Count == 0)
         {
-            throw new InvalidOperationException($"Navigation/navmesh.json: maps.{mapId}.terrainAreas 为空。");
+            throw new InvalidOperationException($"Navigation/navmesh.json: maps.{mapId}.terrainTypes 为空。");
         }
 
         CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.LoadMerged(
@@ -708,7 +710,7 @@ public static class CrowdNavSurfaceAuthoring
         if (cell.AreaId >= terrainCount)
         {
             throw new InvalidOperationException(
-                $"格（{col},{row}）的 AreaId = {cell.AreaId}，超出 terrainAreas（{terrainCount} 项）。");
+                $"格（{col},{row}）的 AreaId = {cell.AreaId}，超出 terrainTypes（{terrainCount} 项）。");
         }
     }
 

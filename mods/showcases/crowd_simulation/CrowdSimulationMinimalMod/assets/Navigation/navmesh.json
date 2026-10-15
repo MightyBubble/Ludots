@@ -3,20 +3,8 @@
     "crowd_minimal": {
       "solver": "crowd-simulation",
       "logicTerrainAsset": "terrain/crowd_minimal.map_data.bin",
-      "navAreas": [
-        "Default",
-        "deep"
-      ],
-      "terrainAreas": [
-        {
-          "terrainId": "land",
-          "areaId": "Default"
-        },
-        {
-          "terrainId": "water",
-          "areaId": "deep"
-        }
-      ]
+      "navCellSizeCm": 6250,
+      "terrainTypes": ["land", "water"]
     }
   }
 }

@@ -1,0 +1,78 @@
+{
+  "areas": {
+    "open": { "ignoresSlope": false },
+    "shallow": { "ignoresSlope": false },
+    "rough": { "ignoresSlope": false },
+    "sheer": { "ignoresSlope": false },
+    "deep": { "ignoresSlope": true }
+  },
+  "terrainAreas": {
+    "water": "deep",
+    "shore": "shallow",
+    "land": "open",
+    "mountain": "rough",
+    "cliff": "sheer"
+  },
+  "linkKinds": {
+    "jump": { "traversalSpeedRatio": 1.3 }
+  },
+  "agentTypes": {
+    "foot": {
+      "maxSlopeDeg": 24,
+      "links": { "jump": false },
+      "cells": {
+        "open": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "shallow": { "cost": 1.3, "speedDivisor": 1.3, "depart": [], "arrive": [] },
+        "rough": false,
+        "sheer": false,
+        "deep": false
+      }
+    },
+    "hull": {
+      "maxSlopeDeg": null,
+      "links": { "jump": false },
+      "cells": {
+        "open": false,
+        "shallow": { "cost": 1.6, "speedDivisor": 1.6, "depart": [], "arrive": [] },
+        "rough": false,
+        "sheer": false,
+        "deep": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] }
+      }
+    },
+    "climber": {
+      "maxSlopeDeg": 38,
+      "links": { "jump": false },
+      "cells": {
+        "open": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "shallow": { "cost": 1.4, "speedDivisor": 1.4, "depart": [], "arrive": [] },
+        "rough": { "cost": 1.8, "speedDivisor": 1.8, "depart": [], "arrive": [] },
+        "sheer": false,
+        "deep": false
+      }
+    },
+    "amphib": {
+      "maxSlopeDeg": 20,
+      "links": { "jump": false },
+      "cells": {
+        "open": { "cost": 1.1, "speedDivisor": 1.1, "depart": [], "arrive": [] },
+        "shallow": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "rough": false,
+        "sheer": false,
+        "deep": { "cost": 1.5, "speedDivisor": 1.5, "depart": [], "arrive": [] }
+      }
+    },
+    "leaper": {
+      "maxSlopeDeg": 30,
+      "links": {
+        "jump": { "upCm": 2500, "downCm": 20000, "rangeNavCells": 7, "costPerNavCell": 2 }
+      },
+      "cells": {
+        "open": { "cost": 1, "speedDivisor": 1, "depart": ["jump"], "arrive": ["jump"] },
+        "shallow": { "cost": 1.2, "speedDivisor": 1.2, "depart": ["jump"], "arrive": ["jump"] },
+        "rough": { "cost": 1.6, "speedDivisor": 1.6, "depart": ["jump"], "arrive": ["jump"] },
+        "sheer": false,
+        "deep": false
+      }
+    }
+  }
+}

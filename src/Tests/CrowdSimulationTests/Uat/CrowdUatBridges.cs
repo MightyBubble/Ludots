@@ -30,7 +30,7 @@ internal static class CrowdUatBridges
         var ids = new List<int>();
         foreach (int id in store.EntityIds)
         {
-            if (store.TryGetTemplate(id, out int tpl) && templates[tpl].Layered) ids.Add(id);
+            if (store.TryGetTemplate(id, out int tpl) && templates[tpl].OnUpperLayer) ids.Add(id);
         }
 
         return ids;

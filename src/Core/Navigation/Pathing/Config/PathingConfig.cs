@@ -46,15 +46,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
         public int AreaId { get; set; }
         public double Cost { get; set; }
 
-        /// <summary>
-        /// 缺省等于 cost。这是 schema 默认。唯一读取处是 <see cref="PathingAreaCosts.Resolve"/>。
-        /// </summary>
-        public double? SpeedDivisor { get; set; }
-
-        /// <summary>
-        /// 缺省为可通行。false 表示该 agent 进不了这个区域。
-        /// </summary>
-        public bool? Passable { get; set; }
+        /// <summary>false 表示该 agent 进不了这个区域。</summary>
+        public bool Passable { get; set; }
     }
 
     public sealed class PathingNodeGraphConfig

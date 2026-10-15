@@ -4,6 +4,10 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "CrowdSimulation/traversal.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Entities/templates.json",
     "Policy": "ArrayById",
     "IdField": "id"

@@ -212,8 +212,11 @@ public sealed class CrowdLeader
         Fix64 ox = XCm, oy = YCm;
         // 桥面层:地面不可走但桥面可走时,步速吃桥面代价而不是水下代价
         int cell = CrowdSimulationSpace.CellAt(XCm, YCm, navCellSizeCm, navCellsPerSide);
-        Fix64 div = Nav.Passable[cell] != 0 ? Nav.SpeedDivisor[cell] : Nav.UpPass[cell] != 0 ? Nav.UpSpeedDivisor[cell] : Fix64.OneValue;
-        Fix64 rem = (speedCmPerSecond / (div == Fix64.Zero ? Fix64.OneValue : div)) * pace * dt;
+        // 路线只在链接缝和墙角上经过两层都不可走的格。那里没有这一行的格参数，步速不按地面缩放。
+        Fix64 cellSpeed = Nav.Passable[cell] != 0 ? speedCmPerSecond / Nav.SpeedDivisor[cell]
+            : Nav.UpPass[cell] != 0 ? speedCmPerSecond / Nav.UpSpeedDivisor[cell]
+            : speedCmPerSecond;
+        Fix64 rem = cellSpeed * pace * dt;
         while (rem > Fix64.Zero && Seg < n)
         {
             Fix64 tx = _path[Seg].X - XCm, ty = _path[Seg].Y - YCm;
