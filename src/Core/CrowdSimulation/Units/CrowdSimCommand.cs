@@ -89,6 +89,31 @@ public readonly record struct CrowdSimCommand
     /// <summary>reveal/obscure/forget 的区域形状(Parse 经 CrowdFogShape 恰一校验)。</summary>
     public CrowdFogShape? Area { get; init; }
 
+    /// <summary>成员与区域数组各拷一份的副本:脚本入队后调用方再改自己的数组，不影响队列。</summary>
+    public CrowdSimCommand Detached()
+    {
+        if (Members == null && Area == null) return this;
+        CrowdFogShape? area = null;
+        if (Area != null)
+        {
+            double[][]? poly = null;
+            if (Area.Poly != null)
+            {
+                poly = new double[Area.Poly.Length][];
+                for (int i = 0; i < poly.Length; i++) poly[i] = (double[])Area.Poly[i].Clone();
+            }
+
+            area = new CrowdFogShape
+            {
+                Rect = (double[]?)Area.Rect?.Clone(),
+                Circle = (double[]?)Area.Circle?.Clone(),
+                Poly = poly,
+            };
+        }
+
+        return this with { Members = (uint[]?)Members?.Clone(), Area = area };
+    }
+
     /// <summary>报错文案用的 type 名(与 JSON type 字段一致)。</summary>
     public static string KindName(CrowdSimCommandKind kind) => kind switch
     {
