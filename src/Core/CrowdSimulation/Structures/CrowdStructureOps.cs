@@ -214,7 +214,7 @@ public static class CrowdStructureOps
         var store = call.Sim.Structures!;
         var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, store, call.Rect, call.Cache);
         // 桥面变更时，已物化的变体在这把锁里按各自的场重烘。RebakeContexts 会换掉重烘结果缓冲。
-        if (store.LastMutationTouchedDeck)
+        if (store.LastMutationTouchedUpperLayer)
         {
             call.Sim.Beliefs?.RebakeMaterialized(call.Rect, call.Cache);
         }

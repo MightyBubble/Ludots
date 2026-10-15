@@ -20,7 +20,7 @@ public static class NavContextBaker
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid surface,
         NavHeightField heights,
-        DeckSurface deck,
+        UpperLayerSurface upperLayer,
         int agentTypeIndex,
         int clearanceCells,
         NavTileCache? tileCache = null)
@@ -87,25 +87,25 @@ public static class NavContextBaker
         var upArea = new byte[n2];
         var upCost = new Fix64[n2];
         var upSpeedDivisor = new Fix64[n2];
-        int[]? deckLocal = null;
-        if (deck.TileOrder.Length > 0)
+        int[]? upperLocal = null;
+        if (upperLayer.TileOrder.Length > 0)
         {
-            UpperLayerBake.BakeDeck(config, agentTypeIndex, clearanceCells, walk, deck.AreaIndex, deck.PortalFlag, upPass, portal);
+            UpperLayerBake.BakeUpperLayer(config, agentTypeIndex, clearanceCells, walk, upperLayer.AreaIndex, upperLayer.PortalFlag, upPass, portal);
             for (int i = 0; i < n2; i++)
             {
-                // DeckSurface.AreaIndex 是 +1 编码(0 = 无桥面);UpArea 存 0 基区域下标供 tile 缓存输入
+                // UpperLayerSurface.AreaIndex 是 +1 编码(0 = 无桥面);UpArea 存 0 基区域下标供 tile 缓存输入
                 if (upPass[i] != 0)
                 {
-                    upArea[i] = (byte)(deck.AreaIndex[i] - 1);
+                    upArea[i] = (byte)(upperLayer.AreaIndex[i] - 1);
                     upCost[i] = agent.CostByArea[upArea[i]];
                     upSpeedDivisor[i] = agent.SpeedDivisorByArea[upArea[i]];
                 }
             }
 
             var merged = new int[n2];
-            deckLocal = new int[n2];
-            compCount = UpperLayerBake.MergeDeckComponents(
-                comp, compCount, passable, upPass, portal, navCellsPerSide, merged, deckLocal);
+            upperLocal = new int[n2];
+            compCount = UpperLayerBake.MergeUpperLayerComponents(
+                comp, compCount, passable, upPass, portal, navCellsPerSide, merged, upperLocal);
             comp = merged;
         }
 
@@ -124,7 +124,7 @@ public static class NavContextBaker
                 }
             }
 
-            foreach (int tileId in deck.TileOrder)
+            foreach (int tileId in upperLayer.TileOrder)
             {
                 int tx = tileId % navTilesPerSide, ty = tileId / navTilesPerSide;
                 bool any = false;
@@ -160,7 +160,7 @@ public static class NavContextBaker
         }
 
         var links = BuildLinks(config, surface, profile, passable, comp);
-        var (upComp, compCountTotal, reachOut) = BuildDeckReachability(navCellsPerSide, comp, compCount, links, upPass, portal, deckLocal);
+        var (upComp, compCountTotal, reachOut) = BuildUpperLayerReachability(navCellsPerSide, comp, compCount, links, upPass, portal, upperLocal);
 
         // 最便宜定价区域代价:A* 启发缩放,只取已定价值的行项
         Fix64 minCost = Fix64.MaxValue;
@@ -200,12 +200,12 @@ public static class NavContextBaker
         // 增量重烘的全图缓冲在装载期备好。第一次放置不再为它们分配。
         nav.FloodQueue = new int[n2];
         nav.MergeBuffer = new int[n2];
-        nav.DeckCompBuffer = new int[n2];
+        nav.UpperLayerCompBuffer = new int[n2];
         nav.UnionParent = new int[n2 * 2];
         nav.UnionDense = new int[n2 * 2];
         nav.ErodeRow = new byte[n2];
-        nav.DeckWin = new byte[n2];
-        nav.DeckEroded = new byte[n2];
+        nav.UpperLayerWin = new byte[n2];
+        nav.UpperLayerEroded = new byte[n2];
         nav.PrevTiles = new NavTileEntry?[CrowdSimulationLimits.HotPathSlotReserve];
         nav.PrefillRebakePools();
         return nav;
@@ -309,12 +309,12 @@ public static class NavContextBaker
     }
 
     /// <summary>
-    /// 桥面可达性。deckLocal 是 MergeDeckComponents 写下的桥面 4 连通局部号（-1 = 无桥面），
+    /// 桥面可达性。upperLocal 是 MergeUpperLayerComponents 写下的桥面 4 连通局部号（-1 = 无桥面），
     /// 与地面洪泛同一邻接；这里只把局部号接到地面合并后的编号之后，不再按区域并块。
     /// 桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向边。可达图 = 跳跃链接边 + 这些边。
     /// </summary>
-    internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(
-        int navCellsPerSide, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, int[]? deckLocal)
+    internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildUpperLayerReachability(
+        int navCellsPerSide, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, int[]? upperLocal)
     {
         int n2 = navCellsPerSide * navCellsPerSide;
         var reachOut = new Dictionary<int, HashSet<int>>();
@@ -324,13 +324,13 @@ public static class NavContextBaker
         }
 
         var upComp = new int[n2];
-        int total = WriteDeckLabels(upComp, upPass, compCount, deckLocal);
+        int total = WriteUpperLayerLabels(upComp, upPass, compCount, upperLocal);
         for (int c = 0; c < n2; c++)
         {
             if (portal[c] == 0 || comp[c] < 0 || upComp[c] < 0) continue;
-            int ground = comp[c], deck = upComp[c];
-            AddEdge(reachOut, ground, deck);
-            AddEdge(reachOut, deck, ground);
+            int baseLayer = comp[c], upperLayer = upComp[c];
+            AddEdge(reachOut, baseLayer, upperLayer);
+            AddEdge(reachOut, upperLayer, baseLayer);
         }
 
         return (upComp, total, reachOut);
@@ -346,22 +346,22 @@ public static class NavContextBaker
     /// 把桥面局部号写成全局号：全局号 = 地面合并后的连通域数 + 局部号。
     /// 局部号按格号升序的首见块分配，所以全局号也是这个顺序，接在地面编号后面。
     /// </summary>
-    internal static int WriteDeckLabels(int[] upComp, byte[] upPass, int groundCount, int[]? deckLocal)
+    internal static int WriteUpperLayerLabels(int[] upComp, byte[] upPass, int baseCount, int[]? upperLocal)
     {
         Array.Fill(upComp, -1);
-        if (deckLocal == null) return groundCount;
-        int deckCount = 0;
-        int n = Math.Min(upComp.Length, Math.Min(upPass.Length, deckLocal.Length));
+        if (upperLocal == null) return baseCount;
+        int upperCount = 0;
+        int n = Math.Min(upComp.Length, Math.Min(upPass.Length, upperLocal.Length));
         for (int c = 0; c < n; c++)
         {
             if (upPass[c] == 0) continue;
-            int local = deckLocal[c];
+            int local = upperLocal[c];
             if (local < 0) continue;
-            upComp[c] = groundCount + local;
-            if (local >= deckCount) deckCount = local + 1;
+            upComp[c] = baseCount + local;
+            if (local >= upperCount) upperCount = local + 1;
         }
 
-        return groundCount + deckCount;
+        return baseCount + upperCount;
     }
 
     /// <summary>连通域标号(4 连通洪泛,格号升序首见分配编号):全量烘焙与增量重烘共用一份划分。</summary>

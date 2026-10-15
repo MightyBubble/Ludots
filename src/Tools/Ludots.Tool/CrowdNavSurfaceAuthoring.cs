@@ -235,9 +235,9 @@ public static class CrowdNavSurfaceAuthoring
     /// <summary>
     /// 桥面掩码。端点已经含岸上延伸（portalReachNavCells − 1），栅格化不再外扩。
     /// </summary>
-    public static byte[] RasterizeBridgeMask(IReadOnlyList<BridgeDeckRecord> bridges, CrowdSimulationRuntimeConfig config)
+    public static byte[] RasterizeBridgeMask(IReadOnlyList<LayeredPathRecord> bridges, CrowdSimulationRuntimeConfig config)
     {
-        DeckSurface deck = UpperLayerBake.RasterizeDecks(bridges, config);
+        UpperLayerSurface deck = UpperLayerBake.RasterizeLayeredPaths(bridges, config);
         var mask = new byte[deck.AreaIndex.Length];
         for (int i = 0; i < mask.Length; i++)
         {
@@ -494,7 +494,7 @@ public static class CrowdNavSurfaceAuthoring
         ConfigPipeline Pipeline,
         ConfigCatalog Catalog,
         ConfigConflictReport Report,
-        IReadOnlyList<BridgeDeckRecord> Bridges);
+        IReadOnlyList<LayeredPathRecord> Bridges);
 
     private static CrowdAuthoringBinding LoadRuntime(string repoRoot, string modId, MapConfig map)
     {
@@ -532,7 +532,7 @@ public static class CrowdNavSurfaceAuthoring
         CrowdPairRules rules = CrowdPairRules.Matrices(players, response, shares);
         CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(
             config, map, profiles, navmesh, pathing, facts, fixedHz, rules);
-        IReadOnlyList<BridgeDeckRecord> bridges = Array.Empty<BridgeDeckRecord>();
+        IReadOnlyList<LayeredPathRecord> bridges = Array.Empty<LayeredPathRecord>();
         if (mapNav.JumpLinkBake != null)
         {
             var templatesById = new Dictionary<string, EntityTemplate>(templates.Count, StringComparer.Ordinal);

@@ -93,7 +93,7 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, demoDir);
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, bundle.Runtime);
 
         var seen = new HashSet<int>();
         for (int a = 0; a < bundle.Runtime.AgentTypes.Count; a++)
@@ -160,7 +160,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile, c = navCellsPerSide / t;
 
         // 步兵上下文(含桥面),缓存随烘焙填充
@@ -230,7 +230,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile;
 
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulation", "parity", "s3c-query-truth.json")))!;
@@ -344,7 +344,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),

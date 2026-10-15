@@ -18,7 +18,7 @@ public static class CrowdSimulationMapSurfaceSource
         ArgumentNullException.ThrowIfNull(templatesById);
 
         var blockers = new List<BlockerFootprint>();
-        var bridges = new List<BridgeDeckRecord>();
+        var bridges = new List<LayeredPathRecord>();
         foreach (var entity in map.Entities)
         {
             if (entity == null || string.IsNullOrWhiteSpace(entity.Template))
@@ -43,7 +43,7 @@ public static class CrowdSimulationMapSurfaceSource
             if (span != null)
             {
                 var navArea = EffectiveNavArea(template, entity);
-                bridges.Add(new BridgeDeckRecord(span.Value, navArea?.Area ?? throw new InvalidOperationException(
+                bridges.Add(new LayeredPathRecord(span.Value, navArea?.Area ?? throw new InvalidOperationException(
                     $"Maps/{map.Id}.json: 桥实体 \"{entity.InstanceId}\" 缺少 CrowdSimulationNavArea 区域声明。")));
             }
         }
@@ -153,7 +153,7 @@ public static class CrowdSimulationMapSurfaceSource
 
 public sealed class CrowdSimulationMapSurface
 {
-    public CrowdSimulationMapSurface(IReadOnlyList<BlockerFootprint> blockers, IReadOnlyList<BridgeDeckRecord> bridges)
+    public CrowdSimulationMapSurface(IReadOnlyList<BlockerFootprint> blockers, IReadOnlyList<LayeredPathRecord> bridges)
     {
         Blockers = blockers;
         Bridges = bridges;
@@ -161,13 +161,13 @@ public sealed class CrowdSimulationMapSurface
 
     public IReadOnlyList<BlockerFootprint> Blockers { get; }
     /// <summary>桥面层实体:跨度 + 区域覆盖声明。</summary>
-    public IReadOnlyList<BridgeDeckRecord> Bridges { get; }
+    public IReadOnlyList<LayeredPathRecord> Bridges { get; }
 }
 
 /// <summary>桥面层实体记录:几何跨度 + 其覆盖的导航区域 id。</summary>
-public readonly struct BridgeDeckRecord
+public readonly struct LayeredPathRecord
 {
-    public BridgeDeckRecord(CrowdSimulationBridgeSpan span, string areaId)
+    public LayeredPathRecord(CrowdSimulationBridgeSpan span, string areaId)
     {
         Span = span;
         AreaId = areaId;

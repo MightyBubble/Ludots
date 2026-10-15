@@ -182,7 +182,7 @@ public class CrowdBeliefTerrainTests
                 Y1Cm = cell + cell / 2,
                 WidthCm = cell,
             };
-            var deck = UpperLayerBake.RasterizeDecks(new[] { new BridgeDeckRecord(span, "deck") }, config);
+            var deck = UpperLayerBake.RasterizeLayeredPaths(new[] { new LayeredPathRecord(span, "deck") }, config);
             var heights = new NavHeightField
             {
                 NavCellsPerSide = side,
@@ -200,7 +200,7 @@ public class CrowdBeliefTerrainTests
             int clearance = ClearanceOf(config, "foot_r100");
             var nav = NavContextBaker.Bake(config, surface, heights, deck, foot, clearance, cache);
             var store = CrowdStructuresStore.Build(config, surface, new[] { blocker });
-            store.UseDeck(deck);
+            store.UseUpperLayer(deck);
             store.InstallMapBridges(store.TemplateIndexOf("bridge"), new[] { span });
             var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
             var sources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);

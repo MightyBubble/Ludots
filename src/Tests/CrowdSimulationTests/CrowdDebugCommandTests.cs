@@ -552,7 +552,7 @@ public sealed class CrowdDebugCommandTests
         {
             int cx = painted[i] % side;
             int cy = painted[i] / side;
-            if (store.GroundCellHit(building, box, cx, cy) || store.GroundCellHit(flood, disc, cx, cy)) return true;
+            if (store.BaseLayerCellHit(building, box, cx, cy) || store.BaseLayerCellHit(flood, disc, cx, cy)) return true;
         }
 
         return false;

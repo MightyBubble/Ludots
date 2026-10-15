@@ -495,7 +495,7 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 部署配置 `deploy` 仍是出生点加散布：`initialUnits`、`spreadCm`、`baseJitterCm`、`centersPerGroup`、`bases[]`（`playerId`、`xCm`、`yCm`）。指令里另有 `spawnAt`，按点、玩家、兵种和半径级生成。原句「仅出生点加散布」只覆盖配置节，指令集里还有 `spawnAt`。
 
-动态建造已经有。`placeStructure` 和 `removeStructureAt` 在指令 tick 执行，结构带寿命，变更走脏 tile 重烘。分层模板（桥）同样可以放、拆、到期：两端锚在 `structures.anchorTerrain`，跨越段落在 `structures.spanTerrain`。放桥、拆桥和到期会增量更新桥面格、桥头和桥面 tile。地图上的桥在会话激活时由 `UpperLayerBake.RasterizeDecks` 生成，之后和动态桥共用这一份桥面层。拆桥后，桥上单位先落到地面；地面不可走时，按既有挤离挪到最近可走格。
+动态建造已经有。`placeStructure` 和 `removeStructureAt` 在指令 tick 执行，结构带寿命，变更走脏 tile 重烘。分层模板（桥）同样可以放、拆、到期：两端锚在 `structures.anchorTerrain`，跨越段落在 `structures.spanTerrain`。放桥、拆桥和到期会增量更新桥面格、桥头和桥面 tile。地图上的桥在会话激活时由 `UpperLayerBake.RasterizeLayeredPaths` 生成，之后和动态桥共用这一份桥面层。拆桥后，桥上单位先落到地面；地面不可走时，按既有挤离挪到最近可走格。
 
 迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
 
@@ -513,7 +513,7 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 谁能跳仍看机动档案 `profiles.<id>.jump`。落差在 `upCm` 以内的候选双向，超过 `upCm` 且不超过 `downCm` 的单向，再高的丢掉。`rangeNavCells` 是格距上限，`cost` 是链接代价。候选上没有单位。没有手摆链接。链接过滤只读 `.navsurface` 里的候选和这份 `jump`。`jumpLinkBake` 留在导航配置上，群体模拟步进不读它。
 
-桥面格不能当起跳点或落点。掩码来自地图上的 `CrowdSimulationBridgeSpan`，栅格复用运行时的 `UpperLayerBake.RasterizeDecks`。岸上延伸已经写在桥实体端点里，长度是 `structures.portalReachNavCells − 1` 格，对应 Web 的 `portalCells − 1`。
+桥面格不能当起跳点或落点。掩码来自地图上的 `CrowdSimulationBridgeSpan`，栅格复用运行时的 `UpperLayerBake.RasterizeLayeredPaths`。岸上延伸已经写在桥实体端点里，长度是 `structures.portalReachNavCells − 1` 格，对应 Web 的 `portalCells − 1`。
 
 地图写了 `jumpLinkBake` 却没有 `ContinuousHeightmap.asset` 时，烘焙报错。高度和坡度用 `NavHeightField.FromHeightmap`。
 

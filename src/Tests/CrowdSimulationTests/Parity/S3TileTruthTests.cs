@@ -26,7 +26,7 @@ public class S3TileTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtime);
         var heightAsset = Ludots.Core.Presentation.Terrain.ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);

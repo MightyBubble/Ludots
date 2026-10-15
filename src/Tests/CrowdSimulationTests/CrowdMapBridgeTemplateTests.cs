@@ -39,10 +39,10 @@ public class CrowdMapBridgeTemplateTests
         Assert.That(store.FootprintOf(last).Shape, Is.EqualTo(CrowdStructureShape.Path));
     }
 
-    private static BridgeDeckRecord Bridge(CrowdSimulationRuntimeConfig config)
+    private static LayeredPathRecord Bridge(CrowdSimulationRuntimeConfig config)
     {
         int cell = config.NavCellSizeCm;
-        return new BridgeDeckRecord(new CrowdSimulationBridgeSpan
+        return new LayeredPathRecord(new CrowdSimulationBridgeSpan
         {
             X0Cm = cell / 2,
             Y0Cm = cell + cell / 2,

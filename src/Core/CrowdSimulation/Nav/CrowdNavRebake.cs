@@ -15,7 +15,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 public sealed record CrowdRebakeSources(
     CrowdSimulationRuntimeConfig Config,
     NavHeightField HeightS,
-    DeckSurface Deck,
+    UpperLayerSurface UpperLayer,
     NavSurfaceJumpCandidate[] JumpCandidates)
 {
     internal readonly CrowdRebakeResultScratch Results = new();
@@ -114,9 +114,9 @@ public static class CrowdNavRebake
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         int erosion = Math.Max(0, nav.ClearanceNavCells - 1);
-        int groundKind = Classify(nav, sources, store, rect);
+        int baseKind = Classify(nav, sources, store, rect);
         int upperKind = RefreshUpper(nav, sources, rect, erosion);
-        int kind = groundKind > upperKind ? groundKind : upperKind;
+        int kind = baseKind > upperKind ? baseKind : upperKind;
         var grown = Grow(rect, erosion, navCellsPerSide);
         if (upperKind == KindPassable)
         {
@@ -194,29 +194,29 @@ public static class CrowdNavRebake
         (int X0, int Y0, int X1, int Y1) rect,
         int erosion)
     {
-        var deck = sources.Deck;
+        var upperLayer = sources.UpperLayer;
         int side = nav.NavCellsPerSide;
         var output = Grow(rect, 2 * erosion, side);
         var win = Grow(output, erosion, side);
         var portals = Grow(win, erosion, side);
-        if (UpperWindowClean(nav, deck, portals, output)) return KindNone;
+        if (UpperWindowClean(nav, upperLayer, portals, output)) return KindNone;
 
         int n2 = side * side;
-        if (nav.DeckWin == null || nav.DeckWin.Length < n2) nav.DeckWin = new byte[n2];
-        if (nav.DeckEroded == null || nav.DeckEroded.Length < n2) nav.DeckEroded = new byte[n2];
-        ClearRect(nav.DeckWin, side, win);
+        if (nav.UpperLayerWin == null || nav.UpperLayerWin.Length < n2) nav.UpperLayerWin = new byte[n2];
+        if (nav.UpperLayerEroded == null || nav.UpperLayerEroded.Length < n2) nav.UpperLayerEroded = new byte[n2];
+        ClearRect(nav.UpperLayerWin, side, win);
         var agent = sources.Config.AgentTypes[nav.LayerIndex];
         var row = agent.CostByArea;
         var speedRow = agent.SpeedDivisorByArea;
-        var area = deck.AreaIndex;
-        var portalFlag = deck.PortalFlag;
+        var area = upperLayer.AreaIndex;
+        var portalFlag = upperLayer.PortalFlag;
         for (int y = win.Y0; y < win.Y1; y++)
         {
             int rowBase = y * side;
             for (int x = win.X0; x < win.X1; x++)
             {
                 int a = area[rowBase + x] - 1;
-                if (a >= 0 && row[a] > Fix64.Zero) nav.DeckWin[rowBase + x] = 1;
+                if (a >= 0 && row[a] > Fix64.Zero) nav.UpperLayerWin[rowBase + x] = 1;
             }
         }
 
@@ -239,16 +239,16 @@ public static class CrowdNavRebake
                         int grow = gy * side;
                         for (int gx = x0; gx < x1; gx++)
                         {
-                            if (walk[grow + gx] != 0) nav.DeckWin[grow + gx] = 1;
+                            if (walk[grow + gx] != 0) nav.UpperLayerWin[grow + gx] = 1;
                         }
                     }
                 }
             }
         }
 
-        ErodeRect(nav, nav.DeckWin, side, nav.ClearanceNavCells, output, nav.DeckEroded);
+        ErodeRect(nav, nav.UpperLayerWin, side, nav.ClearanceNavCells, output, nav.UpperLayerEroded);
         int kind = KindNone;
-        var eroded = nav.DeckEroded;
+        var eroded = nav.UpperLayerEroded;
         for (int y = output.Y0; y < output.Y1; y++)
         {
             int rowBase = y * side;
@@ -281,13 +281,13 @@ public static class CrowdNavRebake
 
     private static bool UpperWindowClean(
         NavContext nav,
-        DeckSurface deck,
+        UpperLayerSurface upperLayer,
         (int X0, int Y0, int X1, int Y1) portals,
         (int X0, int Y0, int X1, int Y1) output)
     {
         int side = nav.NavCellsPerSide;
-        var area = deck.AreaIndex;
-        var flag = deck.PortalFlag;
+        var area = upperLayer.AreaIndex;
+        var flag = upperLayer.PortalFlag;
         for (int y = portals.Y0; y < portals.Y1; y++)
         {
             int row = y * side;
@@ -576,14 +576,14 @@ public static class CrowdNavRebake
         var queue = Ensure(ref nav.FloodQueue, n2);
         int compCount = NavContextBaker.Components(nav.Passable, navCellsPerSide, comp, queue);
 
-        int[]? deckLocal = null;
-        if (sources.Deck.TileOrder.Length > 0)
+        int[]? upperLocal = null;
+        if (sources.UpperLayer.TileOrder.Length > 0)
         {
             var merged = Ensure(ref nav.MergeBuffer, n2);
-            deckLocal = Ensure(ref nav.DeckCompBuffer, n2);
-            compCount = UpperLayerBake.MergeDeckComponents(
+            upperLocal = Ensure(ref nav.UpperLayerCompBuffer, n2);
+            compCount = UpperLayerBake.MergeUpperLayerComponents(
                 comp, compCount, nav.Passable, nav.UpPass, nav.Portal, navCellsPerSide, merged,
-                deckLocal, queue, Ensure(ref nav.UnionParent, n2 * 2), Ensure(ref nav.UnionDense, n2 * 2));
+                upperLocal, queue, Ensure(ref nav.UnionParent, n2 * 2), Ensure(ref nav.UnionDense, n2 * 2));
             (nav.Comp, nav.MergeBuffer) = (merged, comp);
             comp = nav.Comp;
         }
@@ -603,7 +603,7 @@ public static class CrowdNavRebake
             RelinkComponents(nav.Links, comp);
         }
 
-        RefillDeckReach(nav, compCount, nav.Links, deckLocal);
+        RefillUpperLayerReach(nav, compCount, nav.Links, upperLocal);
         nav.Hpa!.Update(nav, nav.Links, dirtyTiles, sameTiles);
     }
 
@@ -628,7 +628,7 @@ public static class CrowdNavRebake
         nav.CellCount = w;
     }
 
-    private static void RefillDeckReach(NavContext nav, int compCount, NavLinkSet? links, int[]? deckLocal)
+    private static void RefillUpperLayerReach(NavContext nav, int compCount, NavLinkSet? links, int[]? upperLocal)
     {
         int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
         var upComp = nav.UpComp ??= new int[n2];
@@ -647,7 +647,7 @@ public static class CrowdNavRebake
             }
         }
 
-        nav.CompCountTotal = NavContextBaker.WriteDeckLabels(upComp, nav.UpPass, compCount, deckLocal);
+        nav.CompCountTotal = NavContextBaker.WriteUpperLayerLabels(upComp, nav.UpPass, compCount, upperLocal);
         for (int c = 0; c < n2; c++)
         {
             if (nav.Portal[c] == 0 || nav.Comp[c] < 0 || upComp[c] < 0) continue;
@@ -751,7 +751,7 @@ public static class CrowdNavRebake
         NavTileCache freshCache)
     {
         var full = NavContextBaker.Bake(
-            sources.Config, field.SnapshotSurface(), sources.HeightS, sources.Deck,
+            sources.Config, field.SnapshotSurface(), sources.HeightS, sources.UpperLayer,
             nav.LayerIndex, nav.ClearanceNavCells, freshCache);
         VerifyContext(nav, full, tick, linksByCountOnly);
     }

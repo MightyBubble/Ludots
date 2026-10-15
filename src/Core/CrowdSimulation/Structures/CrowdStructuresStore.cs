@@ -75,13 +75,13 @@ public sealed class CrowdStructuresStore
     private readonly int[] _rasterPrio;
     private int[] _judgeCells;
     private byte[] _judgeFlags;
-    private DeckSurface? _deck;
+    private UpperLayerSurface? _upperLayer;
 
     /// <summary>最近一次放上或拆除是否改了桥面。地面结构保持 false。</summary>
-    internal bool LastMutationTouchedDeck { get; private set; }
+    internal bool LastMutationTouchedUpperLayer { get; private set; }
 
     /// <summary>挂上与重烘源同一份桥面。地图桥先栅格化再入仓，这里不重画。</summary>
-    public void UseDeck(DeckSurface deck) => _deck = deck ?? throw new ArgumentNullException(nameof(deck));
+    public void UseUpperLayer(UpperLayerSurface upperLayer) => _upperLayer = upperLayer ?? throw new ArgumentNullException(nameof(upperLayer));
 
     private CrowdStructuresStore(CrowdSimulationRuntimeConfig config, SurfaceGrid grid)
     {
@@ -318,7 +318,7 @@ public sealed class CrowdStructuresStore
     public void ReplaceArea(byte[] area) => Area = area;
 
     /// <summary>地图上的桥按模板 <c>bridge</c> 入仓，按列表顺序续号。</summary>
-    public void InstallMapBridges(IReadOnlyList<BridgeDeckRecord> bridges)
+    public void InstallMapBridges(IReadOnlyList<LayeredPathRecord> bridges)
     {
         if (bridges.Count == 0) return;
         int tpl = TemplateIndexOf("bridge");
@@ -347,9 +347,9 @@ public sealed class CrowdStructuresStore
     /// <summary>放置实体(组件自模板)并重标足迹格矩形;返回 (id, 格矩形)。分层实体只重画桥面。</summary>
     public (int Id, (int X0, int Y0, int X1, int Y1) Rect) PlaceEntity(int tplIndex, CrowdStructureFootprint fp, int expireTick)
     {
-        LastMutationTouchedDeck = false;
+        LastMutationTouchedUpperLayer = false;
         var tpl = _config.Structures.Templates[tplIndex];
-        if (tpl.Layered && _deck == null)
+        if (tpl.Layered && _upperLayer == null)
         {
             throw new InvalidOperationException("结构仓没有桥面层。");
         }
@@ -361,9 +361,9 @@ public sealed class CrowdStructuresStore
         if (expireTick >= 0) _lifetime[id] = expireTick;
         if (tpl.Layered)
         {
-            LastMutationTouchedDeck = true;
+            LastMutationTouchedUpperLayer = true;
             var rect = fp.CellRectOf(NavCellSizeCm, NavCellsPerSide);
-            RestampDeck(rect);
+            RestampUpperLayer(rect);
             return (id, rect);
         }
 
@@ -377,12 +377,12 @@ public sealed class CrowdStructuresStore
     {
         if (!_footprint.TryGetValue(id, out var fp)) return null;
         bool layered = _config.Structures.Templates[_tpl[id]].Layered;
-        if (layered && _deck == null)
+        if (layered && _upperLayer == null)
         {
             throw new InvalidOperationException("结构仓没有桥面层。");
         }
 
-        LastMutationTouchedDeck = false;
+        LastMutationTouchedUpperLayer = false;
         bool wasBlocker = _blocker.Remove(id);
         _ids.Remove(id);
         _tpl.Remove(id);
@@ -390,9 +390,9 @@ public sealed class CrowdStructuresStore
         _navArea.Remove(id);
         _lifetime.Remove(id);
         if (!layered) return (id, fp, CommitRect(id, fp, wasBlocker));
-        LastMutationTouchedDeck = true;
+        LastMutationTouchedUpperLayer = true;
         var rect = fp.CellRectOf(NavCellSizeCm, NavCellsPerSide);
-        RestampDeck(rect);
+        RestampUpperLayer(rect);
         return (id, fp, rect);
     }
 
@@ -435,7 +435,7 @@ public sealed class CrowdStructuresStore
         CrowdStructurePlacement.Judge(this, template, footprint, ref _judgeCells, ref _judgeFlags, out _);
 
     /// <summary>地面模板写进这一格：区域看格心，阻挡看覆盖份额。</summary>
-    internal bool GroundCellHit(RuntimeStructureTemplate tpl, CrowdStructureFootprint fp, int x, int y)
+    internal bool BaseLayerCellHit(RuntimeStructureTemplate tpl, CrowdStructureFootprint fp, int x, int y)
     {
         if (tpl.Layered) return false;
         bool hit = false;
@@ -602,7 +602,7 @@ public sealed class CrowdStructuresStore
     }
 
     /// <summary>桥面格、桥头和含桥面的 tile 集合与按分层实体全量重画的结果一致。</summary>
-    internal void VerifyDeckContract(int tick)
+    internal void VerifyUpperLayerContract(int tick)
     {
         int layered = 0;
         for (int i = 0; i < _ids.Count; i++)
@@ -610,7 +610,7 @@ public sealed class CrowdStructuresStore
             if (_config.Structures.Templates[_tpl[_ids[i]]].Layered) layered++;
         }
 
-        if (_deck == null)
+        if (_upperLayer == null)
         {
             if (layered == 0) return;
             throw Component(tick, -1, "结构仓没有桥面层。");
@@ -622,9 +622,9 @@ public sealed class CrowdStructuresStore
         PaintLayered(area, portal, (0, 0, NavCellsPerSide, NavCellsPerSide), clear: false);
         for (int i = 0; i < n2; i++)
         {
-            if (_deck.AreaIndex[i] == area[i] && _deck.PortalFlag[i] == portal[i]) continue;
+            if (_upperLayer.AreaIndex[i] == area[i] && _upperLayer.PortalFlag[i] == portal[i]) continue;
             throw Component(tick, -1,
-                $"桥面格与分层实体全量栅格不一致 @格 {i} 区域 {_deck.AreaIndex[i]}/{area[i]} 桥头 {_deck.PortalFlag[i]}/{portal[i]}");
+                $"桥面格与分层实体全量栅格不一致 @格 {i} 区域 {_upperLayer.AreaIndex[i]}/{area[i]} 桥头 {_upperLayer.PortalFlag[i]}/{portal[i]}");
         }
 
         int tileSize = NavCellsPerTile;
@@ -638,19 +638,19 @@ public sealed class CrowdStructuresStore
             expected.Add((y / tileSize) * tilesPerSide + x / tileSize);
         }
 
-        var actual = new HashSet<int>(_deck.TileOrder);
-        if (actual.Count != _deck.TileOrder.Length || !actual.SetEquals(expected))
+        var actual = new HashSet<int>(_upperLayer.TileOrder);
+        if (actual.Count != _upperLayer.TileOrder.Length || !actual.SetEquals(expected))
         {
-            throw Component(tick, -1, $"桥面 tile 集合与分层实体不一致：仓内 {_deck.TileOrder.Length}，全量 {expected.Count}。");
+            throw Component(tick, -1, $"桥面 tile 集合与分层实体不一致：仓内 {_upperLayer.TileOrder.Length}，全量 {expected.Count}。");
         }
     }
 
     /// <summary>矩形内先清再按放置序重画。后放的区域盖住先放的，portal 只置位。</summary>
-    private void RestampDeck((int X0, int Y0, int X1, int Y1) rect)
+    private void RestampUpperLayer((int X0, int Y0, int X1, int Y1) rect)
     {
-        if (_deck == null) throw new InvalidOperationException("结构仓没有桥面层。");
+        if (_upperLayer == null) throw new InvalidOperationException("结构仓没有桥面层。");
         if (rect.X1 <= rect.X0 || rect.Y1 <= rect.Y0) return;
-        PaintLayered(_deck.AreaIndex, _deck.PortalFlag, rect, clear: true);
+        PaintLayered(_upperLayer.AreaIndex, _upperLayer.PortalFlag, rect, clear: true);
         RefreshTileOrder(rect);
     }
 
@@ -684,7 +684,7 @@ public sealed class CrowdStructuresStore
             }
 
             var fp = _footprint[id];
-            var span = DeckSpanGeometry.FromCentimeters(
+            var span = UpperLayerSpanGeometry.FromCentimeters(
                 fp.X0.ToInt(), fp.Y0.ToInt(), fp.X1.ToInt(), fp.Y1.ToInt(), fp.WidthCm.ToInt(),
                 NavCellsPerSide, NavCellSizeCm, reach);
             int xa = Math.Max(span.MinX, clip.X0);
@@ -712,7 +712,7 @@ public sealed class CrowdStructuresStore
         int ty0 = rect.Y0 / tileSize;
         int tx1 = (rect.X1 - 1) / tileSize;
         int ty1 = (rect.Y1 - 1) / tileSize;
-        var old = _deck!.TileOrder;
+        var old = _upperLayer!.TileOrder;
         var next = new List<int>(old.Length + 4);
         var kept = new HashSet<int>();
         for (int i = 0; i < old.Length; i++)
@@ -721,7 +721,7 @@ public sealed class CrowdStructuresStore
             int tx = tile % tilesPerSide;
             int ty = tile / tilesPerSide;
             bool touched = tx >= tx0 && tx <= tx1 && ty >= ty0 && ty <= ty1;
-            if (touched && !TileHasDeck(tx, ty, tileSize)) continue;
+            if (touched && !TileHasUpperLayer(tx, ty, tileSize)) continue;
             next.Add(tile);
             kept.Add(tile);
         }
@@ -731,17 +731,17 @@ public sealed class CrowdStructuresStore
             for (int tx = tx0; tx <= tx1; tx++)
             {
                 int tile = ty * tilesPerSide + tx;
-                if (kept.Contains(tile) || !TileHasDeck(tx, ty, tileSize)) continue;
+                if (kept.Contains(tile) || !TileHasUpperLayer(tx, ty, tileSize)) continue;
                 next.Add(tile);
             }
         }
 
-        _deck.TileOrder = next.Count == 0 ? Array.Empty<int>() : next.ToArray();
+        _upperLayer.TileOrder = next.Count == 0 ? Array.Empty<int>() : next.ToArray();
     }
 
-    private bool TileHasDeck(int tx, int ty, int tileSize)
+    private bool TileHasUpperLayer(int tx, int ty, int tileSize)
     {
-        var area = _deck!.AreaIndex;
+        var area = _upperLayer!.AreaIndex;
         int side = NavCellsPerSide;
         int x0 = tx * tileSize;
         int y0 = ty * tileSize;

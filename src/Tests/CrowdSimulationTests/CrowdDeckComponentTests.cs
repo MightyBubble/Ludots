@@ -128,12 +128,12 @@ public class CrowdDeckComponentTests
                 JumpCandidates = System.Array.Empty<NavSurfaceJumpCandidate>(),
             }, System.Array.Empty<BlockerFootprint>());
 
-            var bridges = new List<BridgeDeckRecord>
+            var bridges = new List<LayeredPathRecord>
             {
                 Bridge(1, 4, cell),
                 Bridge(9, 12, cell),
             };
-            var deck = UpperLayerBake.RasterizeDecks(bridges, config);
+            var deck = UpperLayerBake.RasterizeLayeredPaths(bridges, config);
             var heights = new NavHeightField
             {
                 NavCellsPerSide = side,
@@ -152,7 +152,7 @@ public class CrowdDeckComponentTests
             Assert.That(clearance, Is.EqualTo(1));
             var nav = NavContextBaker.Bake(config, surface, heights, deck, foot, clearance, cache);
             var store = CrowdStructuresStore.Build(config, surface, System.Array.Empty<BlockerFootprint>());
-            store.UseDeck(deck);
+            store.UseUpperLayer(deck);
             int bridgeTpl = store.TemplateIndexOf("bridge");
             store.InstallMapBridges(bridgeTpl, new[]
             {
@@ -164,7 +164,7 @@ public class CrowdDeckComponentTests
             return new Baked(config, store, nav, navs, sources, cache, side, cell);
         }
 
-        private static BridgeDeckRecord Bridge(int x0, int x1, int cell) => new(
+        private static LayeredPathRecord Bridge(int x0, int x1, int cell) => new(
             new CrowdSimulationBridgeSpan
             {
                 X0Cm = Center(x0, cell),

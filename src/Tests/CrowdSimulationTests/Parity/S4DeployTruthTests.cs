@@ -231,7 +231,7 @@ public class S4DeployTruthTests
             mapSurface.Blockers);
         var grid = ingested.Grid;
         var heights = ingested.Heights;
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -262,7 +262,7 @@ public class S4DeployTruthTests
         // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
-        session.Structures.UseDeck(deck);
+        session.Structures.UseUpperLayer(deck);
         session.Structures.InstallMapBridges(mapSurface.Bridges);
 
         session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);

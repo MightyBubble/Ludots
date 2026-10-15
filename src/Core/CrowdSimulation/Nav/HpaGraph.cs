@@ -34,7 +34,7 @@ public sealed class HpaGraph
     /// <summary>簇内边:(i, j, dist) 三元组,下标为 Cells 内序号。</summary>
     public required int[][] Intra { get; set; }
     public required Fix64[][] IntraDist { get; set; }
-    /// <summary>跨层 0 代价边(ground cell, deck key)对。</summary>
+    /// <summary>跨层 0 代价边(baseLayer cell, upperLayer key)对。</summary>
     public required int[][] CrossLayer { get; set; }
     /// <summary>簇块:节点格 + 格→局部号 + CSR 出边。增量重烘原地改写。</summary>
     public required HpaTileBlock[] Blocks { get; set; }

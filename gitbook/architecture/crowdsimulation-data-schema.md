@@ -249,8 +249,8 @@ DemoContent 依赖 StandardMod，所以合并后的区域顺序是 `open, shallo
 
 `coverage` 和 `portalReachNavCells` 改成按模板之后，内核这几处都能按结构取值，现有代码里它们本来就是逐个结构循环：
 
-- `CrowdStructuresStore.RasterRect` 的阻挡循环和 `GroundCellHit` 逐个实体判格，`SurfaceGrid.Build` 逐个地图阻挡判格，改成读这个实体所属模板的 `coverage`。
-- `UpperLayerBake.RasterizeDecks` 逐个地图条带算 `DeckSpanGeometry`，`CrowdStructuresStore.PaintLayered` 逐个分层实体算，两处的入口距离都改成取这个条带模板的值；地图条带记录 `BridgeDeckRecord` 带上模板下标。
+- `CrowdStructuresStore.RasterRect` 的阻挡循环和 `BaseLayerCellHit` 逐个实体判格，`SurfaceGrid.Build` 逐个地图阻挡判格，改成读这个实体所属模板的 `coverage`。
+- `UpperLayerBake.RasterizeLayeredPaths` 逐个地图条带算 `UpperLayerSpanGeometry`，`CrowdStructuresStore.PaintLayered` 逐个分层实体算，两处的入口距离都改成取这个条带模板的值；地图条带记录 `LayeredPathRecord` 带上模板下标。
 - `CrowdStructurePlacement.JudgeBridge` 判的就是这一个模板，直接读它的值。
 
 现有数据里两个阻挡模板都是 0.5，两个条带模板都是 4，和今天的全局值相同，栅格逐位不变。
@@ -409,7 +409,7 @@ S4 只写顺序和选择键，并在自己的条目片段里加上 S1 图专有�
 - `square` 轴对齐，中心 ± 边长/2。`disc` 用 Int128 比较距离平方，避开 Q31.32 平方在约 46340 厘米处溢出。`path` 是没有圆角的条带，长度不超过 1e-7 厘米时方向取 (1, 0)。
 - 层固定两个：`base` 地面栅格（区域下标 + 阻挡位图），`upper` 条带上层，只在入口格和地面相连。层没有参数。
 - `setArea` 按格心是否在足迹内；`block` 按 X、Y 两向覆盖份额之积 ≥ 这个模板的 `coverage`。
-- 上层条带用 `DeckSpanGeometry` 判格，端点容差 1e-6 米；入口是离端点距离 < 这个模板的 `portalReachNavCells × navCellSizeCm` 的格；条带和岸边合并半径 = 净空 − 1。
+- 上层条带用 `UpperLayerSpanGeometry` 判格，端点容差 1e-6 米；入口是离端点距离 < 这个模板的 `portalReachNavCells × navCellSizeCm` 的格；条带和岸边合并半径 = 净空 − 1。
 - 坡度判定 `slope > tan(maxSlopeDeg)`，`ignoresSlope` 区域跳过。
 - 链接按直线走，速度 = 单位速度 × `traversalSpeedRatio`；走链接时避让半径记 0；落点取不到时退回格心；链接长度下限 1e-3。
 - 候选烘焙走 8 个方向，长度到 `maxGapCm / navCellSizeCm + 1` 格；按中点和 `linkSpacingCm` 分桶去重，同桶保留更短的；落差四舍五入到厘米。
@@ -721,7 +721,7 @@ public struct CrowdSimulationPathSpan
 |---|---|---|---|
 | 0 | 本页：配置结构设计稿，评审通过后作为实现依据 | — | 本次 |
 | 1 | 棘轮测试：扫描 `src/Core/CrowdSimulation` 主题词，当前计数为上限，只许减少 | 0 | 现在 |
-| 2 | 导航层改名：`Deck*` → `UpperLayer*`，`Ground*` → `BaseLayer*`，`BridgeDeckRecord` → `LayeredPathRecord`；只动 `Nav/`、`Structures/`、`World/`，不动数据 | 1 | 现在；`Nav/Pathing/PathQueryService.cs` 那几处等 `cursor/crowdsim-stray-extend-parity-af78` |
+| 2 | 导航层改名：`Deck*` → `UpperLayer*`，`Ground*` → `BaseLayer*`，`LayeredPathRecord` → `LayeredPathRecord`；只动 `Nav/`、`Structures/`、`World/`，不动数据 | 1 | 现在；`Nav/Pathing/PathQueryService.cs` 那几处等 `cursor/crowdsim-stray-extend-parity-af78` |
 | 3a | 运动、单位、诊断改名：`Jump*` → `Link*`，`CrowdUnitState.Traversing = 4`，校验域常量值不变 | 2 | 等 `cursor/crowdsim-stray-extend-parity-af78`、`cursor/crowdsim-showcases-af78`（都改 `CrowdSimPlanner.cs`） |
 | 3b | 呈现、HUD、遥测改名（`Jumping` → `Traversing`，文案） | 2 | 等 `cursor/crowdsim-ui-infra-af78`、`cursor/crowdsim-showcases-af78`（重写 `S4DeployDemoPresentationSystem`、`CrowdPlayerViewHost`、`CrowdDebugPanels`，HUD 搬进 `CrowdSimulationUiMod`） |
 | 4 | 模板 id 特例去掉：`CrowdSimulationStructure`、`CrowdSimulationPathSpan`，删 `CrowdSimulationNavArea`，改 S1 三张图和 Minimal 的实体模板与地图实例，删 `MapSurfaceSource` 的隐藏默认 | 2 | 现在 |

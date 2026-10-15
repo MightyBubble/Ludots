@@ -59,8 +59,8 @@ public static class CrowdStructurePlacement
             {
                 for (int x = rect.X0; x < rect.X1; x++)
                 {
-                    if (!store.GroundCellHit(template, footprint, x, y)) continue;
-                    byte flag = GroundFlag(store, template.Layered, x, y, ref reason);
+                    if (!store.BaseLayerCellHit(template, footprint, x, y)) continue;
+                    byte flag = BaseLayerFlag(store, template.Layered, x, y, ref reason);
                     cells[count] = y * side + x;
                     flags[count] = flag;
                     count++;
@@ -83,7 +83,7 @@ public static class CrowdStructurePlacement
         int side = store.NavCellsPerSide;
         int cellCm = store.NavCellSizeCm;
         var reach = CrowdReferenceMeters.TruncatedCmToM(store.PortalReachNavCells * cellCm);
-        var geo = DeckSpanGeometry.FromCentimeters(
+        var geo = UpperLayerSpanGeometry.FromCentimeters(
             footprint.X0.ToInt(), footprint.Y0.ToInt(), footprint.X1.ToInt(), footprint.Y1.ToInt(), footprint.WidthCm.ToInt(),
             side, cellCm, reach);
         int spanW = geo.MaxX >= geo.MinX ? geo.MaxX - geo.MinX + 1 : 0;
@@ -115,7 +115,7 @@ public static class CrowdStructurePlacement
                     reason = Worse(reason, anchorCell ? CrowdPlacementReject.AnchorTerrain : CrowdPlacementReject.SpanTerrain);
                 }
 
-                flag |= GroundFlag(store, template.Layered, x, y, ref reason);
+                flag |= BaseLayerFlag(store, template.Layered, x, y, ref reason);
                 cells[count] = y * side + x;
                 flags[count] = flag;
                 count++;
@@ -130,7 +130,7 @@ public static class CrowdStructurePlacement
         return reason;
     }
 
-    private static byte GroundFlag(
+    private static byte BaseLayerFlag(
         CrowdStructuresStore store,
         bool layered,
         int x,
@@ -167,7 +167,7 @@ public static class CrowdStructurePlacement
             {
                 if (BridgePaints(store, fp, x, y)) return true;
             }
-            else if (store.GroundCellHit(existing, fp, x, y))
+            else if (store.BaseLayerCellHit(existing, fp, x, y))
             {
                 return true;
             }
@@ -179,7 +179,7 @@ public static class CrowdStructurePlacement
     private static bool BridgePaints(CrowdStructuresStore store, CrowdStructureFootprint footprint, int x, int y)
     {
         var reach = CrowdReferenceMeters.TruncatedCmToM(store.PortalReachNavCells * store.NavCellSizeCm);
-        var geo = DeckSpanGeometry.FromCentimeters(
+        var geo = UpperLayerSpanGeometry.FromCentimeters(
             footprint.X0.ToInt(), footprint.Y0.ToInt(), footprint.X1.ToInt(), footprint.Y1.ToInt(), footprint.WidthCm.ToInt(),
             store.NavCellsPerSide, store.NavCellSizeCm, reach);
         return geo.Hit(x, y, out _);

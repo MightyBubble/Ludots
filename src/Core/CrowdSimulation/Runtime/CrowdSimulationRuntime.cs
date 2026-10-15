@@ -175,9 +175,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
     private CrowdSimulation.World.SurfaceGrid? _surfaceGrid;
     private CrowdSimulation.World.NavSurfaceJumpCandidate[]? _jumpCandidates;
     private CrowdSimulation.World.NavHeightField? _heights;
-    private CrowdSimulation.Nav.DeckSurface? _deck;
+    private CrowdSimulation.Nav.UpperLayerSurface? _deck;
     private IReadOnlyList<CrowdSimulation.World.BlockerFootprint>? _mapSurfaceBlockers;
-    private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
+    private IReadOnlyList<CrowdSimulation.World.LayeredPathRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private bool _pathReplyPending;
     private CrowdPlayerOrderPrefs? _orderPrefs;
@@ -519,7 +519,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _mapSurfaceBridges = mapSurface.Bridges;
         var heights = ingested.Heights;
         _heights = heights;
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtimeConfig);
         _deck = deck;
         var cache = new NavTileCache(
             runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.NavCellsPerTile,
@@ -618,7 +618,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
         // 阻挡盒索引取仓的 CSR（外扩 ReachCm）。S5 对拍会话不装阻挡盒。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
-        structures.UseDeck(deck);
+        structures.UseUpperLayer(deck);
         structures.InstallMapBridges(mapSurface.Bridges);
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
@@ -878,7 +878,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             }
 
             // 活会话的桥面会被放桥改写。回放从地图桥重新栅格化，不复用那一份。
-            var replayDeck = UpperLayerBake.RasterizeDecks(_mapSurfaceBridges, session.Config);
+            var replayDeck = UpperLayerBake.RasterizeLayeredPaths(_mapSurfaceBridges, session.Config);
             var replayNavs = new Dictionary<int, NavContext>();
             var replayCache = new NavTileCache(
                 session.Config.NavtileCacheCapacity, session.Config.Hpa.NavCellsPerTile,
@@ -898,7 +898,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             replay.ReplaceNavs(replayNavs);
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
-            replay.Structures.UseDeck(replayDeck);
+            replay.Structures.UseUpperLayer(replayDeck);
             replay.Structures.InstallMapBridges(_mapSurfaceBridges);
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, replayDeck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());

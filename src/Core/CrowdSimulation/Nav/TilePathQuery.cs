@@ -28,7 +28,7 @@ public static class TilePathQuery
         public Dictionary<int, int> Parent = new(4096);
         public HashSet<int> Closed = new(4096);
         /// <summary>逐 (navId, tile 条目) 的地面多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
-        public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> GroundCostMemo = new(1024);
+        public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> BaseLayerCostMemo = new(1024);
         public List<Fix64> Portals = new();
         public List<Fix64> FunnelPoints = new();
         public HashSet<int> PortalSeen = new();
@@ -65,7 +65,7 @@ public static class TilePathQuery
             Ey.EnsureCapacity(4096);
             Parent.EnsureCapacity(4096);
             Closed.EnsureCapacity(4096);
-            GroundCostMemo.EnsureCapacity(1024);
+            BaseLayerCostMemo.EnsureCapacity(1024);
             while (_costFree.Count < 1024) _costFree.Push(new Fix64[tileCellCount]);
         }
 
@@ -148,7 +148,7 @@ public static class TilePathQuery
     {
         ArgumentNullException.ThrowIfNull(nav.Tiles);
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile;
-        int sp = GroundRef(nav, navCellsPerTile, startCell), gp = GroundRef(nav, navCellsPerTile, goalCell);
+        int sp = BaseLayerRef(nav, navCellsPerTile, startCell), gp = BaseLayerRef(nav, navCellsPerTile, goalCell);
         if (sp < 0 || gp < 0) return null;
 
         var half = Fix64.HalfValue;
@@ -239,7 +239,7 @@ public static class TilePathQuery
     }
 
     // 地面格的 poly 引用,-1 = 该格无多边形
-    private static int GroundRef(NavContext nav, int navCellsPerTile, int cell)
+    private static int BaseLayerRef(NavContext nav, int navCellsPerTile, int cell)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
@@ -249,11 +249,11 @@ public static class TilePathQuery
     }
 
     // 地面 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
-    private static Fix64[] GroundCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
+    private static Fix64[] BaseLayerCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var e = nav.Tiles![tile];
-        if (s.GroundCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
+        if (s.BaseLayerCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
         int ox = tile % navTilesPerSide * navCellsPerTile, oy = tile / navTilesPerSide * navCellsPerTile;
         var pc = s.RentCost();
         if (pc.Length < e.Count) pc = new Fix64[e.Count];
@@ -271,7 +271,7 @@ public static class TilePathQuery
         }
 
         for (int p = 0; p < e.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
-        s.GroundCostMemo[(nav.Id, e)] = pc;
+        s.BaseLayerCostMemo[(nav.Id, e)] = pc;
         return pc;
     }
 
@@ -280,7 +280,7 @@ public static class TilePathQuery
         int l = navCellsPerTile * navCellsPerTile, tl = refr / l;
         return (tl & 1) != 0
             ? nav.UpperTiles![tl >> 1].PolyCost[refr - tl * l]
-            : GroundCost(nav, navCellsPerTile, tl >> 1, s)[refr - tl * l];
+            : BaseLayerCost(nav, navCellsPerTile, tl >> 1, s)[refr - tl * l];
     }
 
     private static NavTileEntry? EntryOf(NavContext nav, int tile, int layer)
