@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -13,6 +14,11 @@ using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
+using Ludots.UI;
+using Ludots.UI.Runtime;
+using Ludots.UI.Skia;
+using Ludots.UI.Surface;
+using SkiaSharp;
 
 namespace CrowdSimulationTests.Showcases;
 
@@ -30,6 +36,7 @@ internal sealed class CrowdShowcaseHost : IDisposable
     {
         Path.Combine("mods", "LudotsCoreMod"),
         Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationMod"),
+        Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationUiMod"),
         Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
         Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
         Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
@@ -37,14 +44,22 @@ internal sealed class CrowdShowcaseHost : IDisposable
         Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationShowcaseStageMod"),
     };
 
-    private CrowdShowcaseHost(GameEngine engine, CrowdSimSession session, JsonArray script)
+    private readonly SKSurface _uiSurface;
+
+    private CrowdShowcaseHost(GameEngine engine, CrowdSimSession session, JsonArray script, UIRoot ui, UiSurfaceHost uiHost, SKSurface uiSurface)
     {
         Engine = engine;
         Session = session;
         Script = script;
+        Ui = ui;
+        UiHost = uiHost;
+        _uiSurface = uiSurface;
     }
 
     public GameEngine Engine { get; }
+    /// <summary>和 Raylib 宿主同一套 UI 服务；HUD 由链上的 CrowdSimulationUiMod 在呈现帧里挂上。</summary>
+    public UIRoot Ui { get; }
+    public UiSurfaceHost UiHost { get; }
     public CrowdSimSession Session { get; }
     /// <summary>合并后的 session.script。舞台清空 S4 的脚本，场景 Mod 整段替换。</summary>
     public JsonArray Script { get; }
@@ -55,11 +70,23 @@ internal sealed class CrowdShowcaseHost : IDisposable
         var mods = Chain.Select(m => Path.Combine(repo, m)).ToList();
         mods.Add(SceneDir(repo, sceneMod));
         var engine = new GameEngine();
+        var uiSurface = SKSurface.Create(new SKImageInfo(1280, 720));
         try
         {
             engine.InitializeWithConfigPipeline(mods, Path.Combine(repo, "assets"));
             engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
             engine.SetService(CoreServiceKeys.ViewController, new StubView());
+            var renderer = new SkiaUiRenderer();
+            renderer.SetCanvas(uiSurface.Canvas);
+            var ui = new UIRoot(renderer);
+            ui.Resize(1280, 720);
+            var textMeasurer = new SkiaTextMeasurer();
+            var imageSizeProvider = new SkiaImageSizeProvider();
+            var uiHost = new UiSurfaceHost(ui, textMeasurer, imageSizeProvider);
+            engine.SetService(CoreServiceKeys.UIRoot, ui);
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, textMeasurer);
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, imageSizeProvider);
+            engine.SetService(CoreServiceKeys.UiSurfaceHost, uiHost);
             engine.Start();
             engine.LoadMap(MapId);
             var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
@@ -69,13 +96,36 @@ internal sealed class CrowdShowcaseHost : IDisposable
             var rows = CrowdSimulationDebugConfig.SessionScript(debug.Session, rel => CrowdSimulationRuntime.OpenAsset(engine, rel))
                 ?? throw new InvalidOperationException($"{sceneMod}: 合并后的 CrowdSimulationDebug.json 没有会话脚本。");
             var script = CrowdSimulationRuntime.ComposeDemoScript(session.Config.Deploy.InitialUnits, rows);
-            return new CrowdShowcaseHost(engine, session, script);
+            return new CrowdShowcaseHost(engine, session, script, ui, uiHost, uiSurface);
         }
         catch
         {
             engine.Dispose();
+            uiSurface.Dispose();
             throw;
         }
+    }
+
+    /// <summary>按 Raylib 合成器的规则：UI 脏了才渲染，然后读 HUD 节点及其子孙的文字。</summary>
+    public string HudText(string elementId)
+    {
+        if (Ui.IsDirty) Ui.Render();
+        UiNode node = UiHost.Scene?.FindByElementId(elementId)
+            ?? throw new InvalidOperationException($"UI 文档里没有 #{elementId}。");
+        var sb = new StringBuilder();
+        AppendText(node, sb);
+        return sb.ToString();
+    }
+
+    private static void AppendText(UiNode node, StringBuilder sb)
+    {
+        if (!string.IsNullOrEmpty(node.TextContent))
+        {
+            if (sb.Length > 0) sb.Append('\n');
+            sb.Append(node.TextContent);
+        }
+
+        for (int i = 0; i < node.Children.Count; i++) AppendText(node.Children[i], sb);
     }
 
     /// <summary>按目录登记的 DeepObject 合并读出本次 Mod 链上的配置。</summary>
@@ -170,7 +220,11 @@ internal sealed class CrowdShowcaseHost : IDisposable
         throw new InvalidOperationException($"选中的贴花 {decal.Id} 不在本帧缓冲里。");
     }
 
-    public void Dispose() => Engine.Dispose();
+    public void Dispose()
+    {
+        Engine.Dispose();
+        _uiSurface.Dispose();
+    }
 
     private static string SceneDir(string repo, string sceneMod)
         => Path.Combine(repo, "mods", "showcases", "crowd_simulation", sceneMod);
