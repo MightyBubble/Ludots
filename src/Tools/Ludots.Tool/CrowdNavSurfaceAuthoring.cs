@@ -254,23 +254,162 @@ public static class CrowdNavSurfaceAuthoring
 
     public static CrowdAuthoringTerrainFile RequireAuthoringTerrain(string repoRoot, string modId, string mapId)
     {
+        CrowdAuthoringStart start = ResolveAuthoringStart(repoRoot, modId, mapId);
+        if (!File.Exists(start.TerrainFullPath))
+        {
+            throw new InvalidOperationException(
+                $"地编资产不存在：{start.TerrainRelativePath}（{start.TerrainFullPath}）。新地图先跑 nav init-crowd-terrain。");
+        }
+
+        return new CrowdAuthoringTerrainFile(start.TerrainRelativePath, start.TerrainFullPath, start.NavCellSizeCm);
+    }
+
+    /// <summary>
+    /// 新地图起步要写的两份文件：逻辑地形和连续高度图。路径和尺寸都从地图与 navmesh.json 推出，文件本身可以还不存在。
+    /// </summary>
+    public readonly record struct CrowdAuthoringStart(
+        string TerrainRelativePath,
+        string TerrainFullPath,
+        string HeightRelativePath,
+        string HeightFullPath,
+        int BoardSizeCm,
+        int NavCellsPerSide,
+        int NavCellSizeCm,
+        IReadOnlyList<string> TerrainTypeIds);
+
+    public static CrowdAuthoringStart ResolveAuthoringStart(string repoRoot, string modId, string mapId)
+    {
         MapConfig map = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
         CrowdAuthoringBinding binding = LoadRuntime(repoRoot, modId, map);
-        string? asset = binding.MapNav.LogicTerrainAsset;
-        if (string.IsNullOrWhiteSpace(asset))
+        string? terrainAsset = binding.MapNav.LogicTerrainAsset;
+        if (string.IsNullOrWhiteSpace(terrainAsset))
         {
             throw new InvalidOperationException(
                 $"Navigation/navmesh.json: maps.{mapId}.logicTerrainAsset 为空。地编资产不写在地图 Board.DataFile 上。");
         }
 
-        string modRoot = ToolMapConfigResolver.ResolveModRoot(repoRoot, modId);
-        string full = ResolveModAssetPath(modRoot, asset);
-        if (!File.Exists(full))
+        string? heightAsset = map.ContinuousHeightmap?.Asset;
+        if (string.IsNullOrWhiteSpace(heightAsset))
         {
-            throw new InvalidOperationException($"地编资产不存在：{asset}（{full}）。");
+            throw new InvalidOperationException($"地图 \"{mapId}\" 缺少 ContinuousHeightmap.asset。");
         }
 
-        return new CrowdAuthoringTerrainFile(asset.Replace('\\', '/'), full, binding.Runtime.NavCellSizeCm);
+        BoardConfig board = NavSolverDeclaration.RequireBoard(map, binding.MapNav);
+        string modRoot = ToolMapConfigResolver.ResolveModRoot(repoRoot, modId);
+        return new CrowdAuthoringStart(
+            terrainAsset.Replace('\\', '/'),
+            ResolveModAssetPath(modRoot, terrainAsset),
+            heightAsset.Replace('\\', '/'),
+            ResolveModAssetPath(modRoot, heightAsset),
+            board.WidthCm,
+            binding.Runtime.NavCellsPerSide,
+            binding.Runtime.NavCellSizeCm,
+            binding.Runtime.TerrainTypeIds);
+    }
+
+    /// <summary>
+    /// 地形类型矩形，导航格坐标，两端都含。文本形式 <c>terrainId:minCol,minRow,maxCol,maxRow</c>。
+    /// </summary>
+    public readonly record struct CrowdTerrainRect(string TerrainId, int MinCol, int MinRow, int MaxCol, int MaxRow)
+    {
+        public static CrowdTerrainRect Parse(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException("--rect 为空。");
+            }
+
+            int colon = text.IndexOf(':', StringComparison.Ordinal);
+            string[] parts = colon > 0 ? text[(colon + 1)..].Split(',') : Array.Empty<string>();
+            if (parts.Length != 4)
+            {
+                throw new InvalidOperationException($"--rect \"{text}\" 须写成 terrainId:minCol,minRow,maxCol,maxRow。");
+            }
+
+            var values = new int[4];
+            for (int i = 0; i < 4; i++)
+            {
+                if (!int.TryParse(parts[i].Trim(), out values[i]))
+                {
+                    throw new InvalidOperationException($"--rect \"{text}\" 第 {i + 1} 个坐标不是整数。");
+                }
+            }
+
+            return new CrowdTerrainRect(text[..colon].Trim(), values[0], values[1], values[2], values[3]);
+        }
+    }
+
+    /// <summary>
+    /// 先整张填 <paramref name="fillTerrainId"/>，再按顺序盖矩形，后写的覆盖先写的。返回逐格 AreaId（terrainAreas 下标）。
+    /// </summary>
+    public static byte[] PaintTerrainAreas(
+        int navCellsPerSide,
+        IReadOnlyList<string> terrainTypeIds,
+        string fillTerrainId,
+        IReadOnlyList<CrowdTerrainRect> rects)
+    {
+        ArgumentNullException.ThrowIfNull(terrainTypeIds);
+        ArgumentNullException.ThrowIfNull(rects);
+        if (navCellsPerSide <= 0)
+        {
+            throw new InvalidOperationException($"导航格数 {navCellsPerSide} 无效。");
+        }
+
+        var cells = new byte[checked(navCellsPerSide * navCellsPerSide)];
+        Array.Fill(cells, TerrainIndex(terrainTypeIds, fillTerrainId));
+        for (int r = 0; r < rects.Count; r++)
+        {
+            CrowdTerrainRect rect = rects[r];
+            if (rect.MinCol < 0 || rect.MinRow < 0 ||
+                rect.MaxCol >= navCellsPerSide || rect.MaxRow >= navCellsPerSide ||
+                rect.MinCol > rect.MaxCol || rect.MinRow > rect.MaxRow)
+            {
+                throw new InvalidOperationException(
+                    $"矩形 {rect.TerrainId}:{rect.MinCol},{rect.MinRow},{rect.MaxCol},{rect.MaxRow} 超出 0~{navCellsPerSide - 1} 或首尾颠倒。");
+            }
+
+            byte area = TerrainIndex(terrainTypeIds, rect.TerrainId);
+            for (int row = rect.MinRow; row <= rect.MaxRow; row++)
+            {
+                cells.AsSpan(row * navCellsPerSide + rect.MinCol, rect.MaxCol - rect.MinCol + 1).Fill(area);
+            }
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// 平地高度图：uint16 缩放布局（群体会话只读这种布局），每边一个导航格一个采样，所有采样都是 <paramref name="heightCm"/>。
+    /// </summary>
+    public static ContinuousHeightmapAsset CreateFlatHeightmap(int boardSizeCm, int samplesPerSide, int heightCm)
+    {
+        if (boardSizeCm <= 0 || samplesPerSide <= 0)
+        {
+            throw new InvalidOperationException($"高度图尺寸无效：板 {boardSizeCm} cm，每边 {samplesPerSide} 个采样。");
+        }
+
+        int samples = checked(samplesPerSide * samplesPerSide);
+        return new ContinuousHeightmapAsset(
+            new WorldAabbCm(0, 0, boardSizeCm, boardSizeCm),
+            samplesPerSide,
+            samplesPerSide,
+            new ushort[samples],
+            new[] { new ContinuousHeightmapLayerDefinition(0, "base", 0, samples) },
+            new ContinuousHeightSampleScale(heightCm, 1, 1));
+    }
+
+    private static byte TerrainIndex(IReadOnlyList<string> terrainTypeIds, string terrainId)
+    {
+        for (int i = 0; i < terrainTypeIds.Count; i++)
+        {
+            if (string.Equals(terrainTypeIds[i], terrainId, StringComparison.Ordinal))
+            {
+                return (byte)i;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"地形类型 \"{terrainId}\" 不在 terrainAreas（{string.Join(", ", terrainTypeIds)}）里。");
     }
 
     public static void WriteNavSurface(string targetPath, NavSurfaceAsset asset)
