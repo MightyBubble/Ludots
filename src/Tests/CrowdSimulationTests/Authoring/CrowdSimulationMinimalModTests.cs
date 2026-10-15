@@ -19,7 +19,8 @@ namespace CrowdSimulationTests.Authoring;
 /// 每 tick 查所有单位不在阻挡格、不在水格；到墙东的单位必须曾越过墙的南北端。
 /// 2000 tick 内至少 95% 到达墙东且处于 Arrived。
 /// 散开度按玩家算：到达点最近两人距离不小于两倍单位半径，包围半径（离质心最远者）不小于 半径 × √到达人数。
-/// 墙南端与水面夹出的凹角会卡住个别单位，所以到达比例不要求 100%。
+/// 马达贴墙滑动只去掉最后一个接触法线方向的速度（和 Web 参考同一算法）。墙南端与水面夹出的凹角里，
+/// 朝水的速度一直留着，被人群推进角里的单位出不来，所以到达比例不要求 100%。
 /// </summary>
 [TestFixture]
 public sealed class CrowdSimulationMinimalModTests

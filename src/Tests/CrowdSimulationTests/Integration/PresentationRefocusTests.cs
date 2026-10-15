@@ -33,6 +33,7 @@ public class PresentationRefocusTests
             Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
+            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
             Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
             Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS3PathMod"),
             clockModRoot,

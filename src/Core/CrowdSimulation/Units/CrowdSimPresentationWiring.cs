@@ -106,7 +106,7 @@ public sealed class CrowdSimPresentationWiring
                 if (templateKeyId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"CrowdSimulation 单位模板键 '{templateId}' 未注册(应由 CrowdSimulationMod 的 Entities/templates.json 提供)。");
+                        $"CrowdSimulation 单位模板键 '{templateId}' 未注册。单位模板写在地图依赖的 Mod 的 Entities/templates.json。");
                 }
 
                 row[r] = (templateId, templateKeyId);

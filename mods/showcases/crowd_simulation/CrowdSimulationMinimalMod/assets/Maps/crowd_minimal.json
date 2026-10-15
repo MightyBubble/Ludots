@@ -30,7 +30,7 @@
     }
   },
   "DefaultCamera": {
-    "VirtualCameraId": "CrowdSimulationMinimal.Camera",
+    "VirtualCameraId": "CrowdSimulationMinimalMod.Camera",
     "TargetXCm": 800000,
     "TargetYCm": 770000,
     "Yaw": 0,

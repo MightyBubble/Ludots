@@ -18,6 +18,11 @@
     },
     {
       "kind": "csproj",
+      "value": "mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod",
+      "reason": "群体模拟演示单位和演示结构模板，S1 种子、S3、S4 共用，没有地图，不是独立的 showcase"
+    },
+    {
+      "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorCommon",
       "reason": "shared library for graph-behavior capability showcases; not a standalone showcase entry"
     },

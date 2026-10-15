@@ -97,7 +97,7 @@ public static class Program
             OpenScenario = scenario => SessionHost.Open(
                 Path.Combine(repo, catalog.Scenarios[scenario.Id].SeedAssets!),
                 Path.Combine(repo, catalog.StandardAssets),
-                Path.Combine(repo, catalog.CapabilityAssets),
+                Path.Combine(repo, catalog.DemoAssets),
                 scenario.Movement),
             OpenFuzz = ops > 0
                 ? () =>
@@ -105,7 +105,7 @@ public static class Program
                     var host = SessionHost.Open(
                         Path.Combine(repo, catalog.FuzzSeedAssets),
                         Path.Combine(repo, catalog.StandardAssets),
-                        Path.Combine(repo, catalog.CapabilityAssets),
+                        Path.Combine(repo, catalog.DemoAssets),
                         catalog.FuzzMovement);
                     host.Session.TruthNavFrozen = catalog.FuzzTruthNavFrozen;
                     return host;
@@ -227,19 +227,19 @@ public static class Program
             using var hide = SessionHost.Open(
                 Path.Combine(repo, catalog.Fog.SeedAssets),
                 Path.Combine(repo, catalog.StandardAssets),
-                Path.Combine(repo, catalog.CapabilityAssets),
+                Path.Combine(repo, catalog.DemoAssets),
                 movement: true);
             CrowdFogAcceptance.RunHide(hide.Session, scene);
             using var off = SessionHost.Open(
                 Path.Combine(repo, catalog.Fog.SeedAssets),
                 Path.Combine(repo, catalog.StandardAssets),
-                Path.Combine(repo, catalog.CapabilityAssets),
+                Path.Combine(repo, catalog.DemoAssets),
                 movement: true);
             CrowdFogAcceptance.RunTerrain(off.Session, scene, optimistic: false);
             using var on = SessionHost.Open(
                 Path.Combine(repo, catalog.Fog.SeedAssets),
                 Path.Combine(repo, catalog.StandardAssets),
-                Path.Combine(repo, catalog.CapabilityAssets),
+                Path.Combine(repo, catalog.DemoAssets),
                 movement: true);
             CrowdFogAcceptance.RunTerrain(on.Session, scene, optimistic: true);
         }

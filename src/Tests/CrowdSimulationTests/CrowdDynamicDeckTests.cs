@@ -409,7 +409,7 @@ public class CrowdDynamicDeckTests
         private static CrowdSimPresentationWiring Wiring(CrowdSimulationRuntimeConfig config, ArchWorld world)
         {
             var vfs = new VirtualFileSystem();
-            vfs.Mount("Core", Path.Combine("assets", "crowdmod"));
+            vfs.Mount("Core", Path.Combine("assets", "crowddemo"));
             var pipeline = new ConfigPipeline(vfs, null!);
             var mapLoader = new MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
             mapLoader.LoadTemplates(ConfigCatalogLoader.Load(pipeline));

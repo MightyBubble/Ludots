@@ -1,0 +1,47 @@
+{
+  "structures": {
+    "anchorTerrain": [
+      "shore",
+      "land"
+    ],
+    "spanTerrain": [
+      "water"
+    ],
+    "templates": {
+      "bridge": {
+        "name": "桥梁",
+        "footprint": "path",
+        "area": "deck",
+        "priority": 30,
+        "layered": true
+      },
+      "timedBridge": {
+        "name": "限时桥梁",
+        "footprint": "path",
+        "area": "deck",
+        "priority": 30,
+        "layered": true,
+        "lifetimeSec": 4
+      },
+      "road": {
+        "name": "道路",
+        "footprint": "path",
+        "area": "road",
+        "priority": 10
+      },
+      "flood": {
+        "name": "泛洪区",
+        "footprint": "disc",
+        "area": "flooded",
+        "priority": 20
+      },
+      "fire": {
+        "name": "火场",
+        "footprint": "disc",
+        "area": "burning",
+        "priority": 40,
+        "lifetimeSec": 900
+      }
+    }
+  }
+}

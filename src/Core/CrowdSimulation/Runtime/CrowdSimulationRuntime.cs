@@ -167,20 +167,6 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
     private CrowdPairRulesSessionGuard? _pairRulesGuard;
     private Entity _sessionEntity;
 
-    /// <summary>地图桥入认知仓:桥模板按 id 查配置表(缺失 = 配置没有 bridge 模板,
-    /// 无桥地图自然为空表)。</summary>
-    private static void InstallMapBridges(
-        Structures.CrowdStructuresStore store,
-        Config.CrowdSimulationRuntimeConfig config,
-        IReadOnlyList<BridgeDeckRecord>? bridges)
-    {
-        if (bridges == null || bridges.Count == 0) return;
-        int tpl = store.TemplateIndexOf("bridge");
-        if (tpl < 0) return;
-        var spans = new List<CrowdSimulationBridgeSpan>(bridges.Count);
-        foreach (var b in bridges) spans.Add(b.Span);
-        store.InstallMapBridges(tpl, spans);
-    }
     private string? _activeMapId;
     private bool _systemsInstalled;
     private CrowdSimulation.Nav.Pathing.PathQueryService? _pathService;
@@ -632,7 +618,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         // 阻挡盒索引取仓的 CSR（外扩 ReachCm）。S5 对拍会话不装阻挡盒。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
         structures.UseDeck(deck);
-        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // 桥入认知仓，按给出的 span 顺序续号
+        structures.InstallMapBridges(mapSurface.Bridges);
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
@@ -910,7 +896,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
             replay.Structures.UseDeck(replayDeck);
-            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // 回放仓按同一 span 列表补桥
+            replay.Structures.InstallMapBridges(_mapSurfaceBridges);
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, replayDeck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
             replay.NavTileCache = replayCache;

@@ -317,6 +317,21 @@ public sealed class CrowdStructuresStore
     /// <summary>换掉区域数组。调用方要保证这是该仓私有的一份。</summary>
     public void ReplaceArea(byte[] area) => Area = area;
 
+    /// <summary>地图上的桥按模板 <c>bridge</c> 入仓，按列表顺序续号。</summary>
+    public void InstallMapBridges(IReadOnlyList<BridgeDeckRecord> bridges)
+    {
+        if (bridges.Count == 0) return;
+        int tpl = TemplateIndexOf("bridge");
+        if (tpl < 0)
+        {
+            throw new InvalidOperationException($"地图上有 {bridges.Count} 座桥，需要结构模板 bridge（path 分层）。");
+        }
+
+        var spans = new CrowdSimulationBridgeSpan[bridges.Count];
+        for (int i = 0; i < spans.Length; i++) spans[i] = bridges[i].Span;
+        InstallMapBridges(tpl, spans);
+    }
+
     /// <summary>地图桥实体入仓。桥进入认知，不进地面栅格与碰撞。桥面由 UpperLayerBake 烘焙。按调用方给出的 span 顺序续号。</summary>
     public void InstallMapBridges(int tplIndex, IReadOnlyList<CrowdSimulationBridgeSpan> spans)
     {

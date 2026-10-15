@@ -13,9 +13,9 @@ using Ludots.Core.Navigation.Pathing.Config;
 namespace CrowdSimulationTests;
 
 /// <summary>
-/// S0 测试夹具：标准参数 Mod 的全量参数，叠上无头演示图的地图事实
-/// （出生点、s7barrier）。导航区域、能力档、移动类型和单位模板分别来自
-/// navmesh.json、pathing.json 与能力 Mod 的模板。
+/// S0 测试夹具：标准参数 Mod 的全量参数，叠上演示内容 Mod 的桥锚地形和结构模板，
+/// 再叠无头演示图的地图事实（开局单位数、出生点、s7barrier）。导航区域、能力档、移动类型和单位模板分别来自
+/// navmesh.json、pathing.json 与演示内容 Mod 的模板。
 /// </summary>
 public static class TestDefaults
 {
@@ -25,6 +25,7 @@ public static class TestDefaults
     public static JsonObject DefaultConfigJson()
     {
         var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "CrowdSimulationConfig.json")))!;
+        ConfigPipeline.DeepMerge(merged, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "crowddemo", "CrowdSimulationConfig.json")))!);
         var facts = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("fixtures", "demo-map-facts.json")))!;
         ConfigPipeline.DeepMerge(merged, facts);
         return merged;
@@ -62,7 +63,7 @@ public static class TestDefaults
     public static List<CrowdUnitTemplateFacts> DemoTemplates()
     {
         var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
-            File.ReadAllText(Path.Combine("assets", "crowdmod", "Entities", "templates.json")),
+            File.ReadAllText(Path.Combine("assets", "crowddemo", "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdUnitTemplateFacts.FromTemplates(templates);
     }
@@ -106,7 +107,7 @@ public static class TestDefaults
         };
     }
 
-    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读能力 Mod 的档案文件）。</summary>
+    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读标准参数 Mod 的档案文件）。</summary>
     public static AgentProfileRegistry DemoProfiles()
     {
         var list = JsonSerializer.Deserialize<List<AgentProfileConfig>>(

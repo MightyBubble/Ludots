@@ -54,7 +54,7 @@ public sealed class CrowdSimRegressCatalog
         long seed,
         int fuzzOps,
         string standardAssets,
-        string capabilityAssets,
+        string demoAssets,
         IReadOnlyDictionary<string, CrowdSimRegressScenarioSpec> scenarios,
         string fuzzSeedAssets,
         bool fuzzMovement,
@@ -82,7 +82,7 @@ public sealed class CrowdSimRegressCatalog
         Seed = seed;
         FuzzOps = fuzzOps;
         StandardAssets = standardAssets;
-        CapabilityAssets = capabilityAssets;
+        DemoAssets = demoAssets;
         Scenarios = scenarios;
         FuzzSeedAssets = fuzzSeedAssets;
         FuzzMovement = fuzzMovement;
@@ -111,7 +111,7 @@ public sealed class CrowdSimRegressCatalog
     public long Seed { get; }
     public int FuzzOps { get; }
     public string StandardAssets { get; }
-    public string CapabilityAssets { get; }
+    public string DemoAssets { get; }
     public IReadOnlyDictionary<string, CrowdSimRegressScenarioSpec> Scenarios { get; }
     public string FuzzSeedAssets { get; }
     public bool FuzzMovement { get; }
@@ -143,7 +143,7 @@ public sealed class CrowdSimRegressCatalog
     {
         ArgumentNullException.ThrowIfNull(root);
         RequireExact(root, "regress catalog",
-            "defaults", "full", "repeat", "seed", "fuzzOps", "standardAssets", "capabilityAssets", "scenarios", "fuzz", "fog");
+            "defaults", "full", "repeat", "seed", "fuzzOps", "standardAssets", "demoAssets", "scenarios", "fuzz", "fog");
         var scenarios = ParseScenarios(RequireObject(root, "scenarios"));
         var defaults = Strings(root["defaults"], "defaults");
         var full = Strings(root["full"], "full");
@@ -161,7 +161,7 @@ public sealed class CrowdSimRegressCatalog
             RequireLong(root, "seed"),
             RequireInt(root, "fuzzOps", 0, null),
             RequireString(root, "standardAssets"),
-            RequireString(root, "capabilityAssets"),
+            RequireString(root, "demoAssets"),
             scenarios,
             RequireString(fuzz, "seedAssets"),
             RequireBool(fuzz, "movement"),

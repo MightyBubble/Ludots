@@ -5,7 +5,7 @@
     "assetId": "crowd_simulation.unit.triangle",
     "backendId": "raylib",
     "sourceUris": [
-      "CrowdSimulationMod:assets/Models/unit_triangle.gltf"
+      "CrowdSimulationDemoContentMod:assets/Models/unit_triangle.gltf"
     ]
   }
 ]

@@ -46,12 +46,12 @@
       <Link>fixtures\demo-map-facts.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationMod\assets\Navigation\agent_profiles.json">
+    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationStandardMod\assets\Navigation\agent_profiles.json">
       <Link>assets\agent_profiles.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationMod\assets\**">
-      <Link>assets\crowdmod\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationDemoContentMod\assets\**">
+      <Link>assets\crowddemo\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain1337Mod\assets\**">
