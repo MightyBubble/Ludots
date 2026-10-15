@@ -43,6 +43,7 @@ public sealed class CrowdHudLayoutTests
         Assert.That(dock.Right, Is.EqualTo(right.X - Inset).Within(Tolerance));
         Assert.That(dock.Bottom, Is.EqualTo(height - Inset).Within(Tolerance));
 
+        Assert.That(ui.Find("crowd-team-swatches")!.Children, Has.Count.GreaterThanOrEqualTo(2), "队伍色块来自 TeamColorPalette");
         UiRect bar = ui.Rect("crowd-playerbar");
         Assert.That(bar.Y, Is.EqualTo(Inset).Within(Tolerance));
         Assert.That(bar.X + bar.Width / 2f, Is.EqualTo(width / 2f).Within(1f));

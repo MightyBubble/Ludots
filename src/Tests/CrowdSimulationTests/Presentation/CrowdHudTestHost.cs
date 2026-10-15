@@ -6,6 +6,7 @@ using CrowdSimulationUiMod.UI;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
@@ -54,6 +55,18 @@ internal sealed class CrowdHudTestHost : IDisposable
         if (!Engine.TryGetService(CoreServiceKeys.ViewController, out IViewController? _))
         {
             Engine.SetService(CoreServiceKeys.ViewController, new FixedView(width, height));
+        }
+
+        if (!Engine.TryGetService(CoreServiceKeys.TeamColorPalette, out TeamColorPalette? _))
+        {
+            Engine.SetService(CoreServiceKeys.TeamColorPalette, new TeamColorPalette(new[]
+            {
+                Vector4.Zero,
+                TeamColorPalette.ParseHex("#4db2ff", "test"),
+                TeamColorPalette.ParseHex("#ff5a4c", "test"),
+                TeamColorPalette.ParseHex("#73ff8c", "test"),
+                TeamColorPalette.ParseHex("#ffd966cc", "test"),
+            }));
         }
 
         Controller = new CrowdHudController(Settings, styleSheet);

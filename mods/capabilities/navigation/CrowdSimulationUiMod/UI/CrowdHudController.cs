@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Numerics;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Engine;
@@ -442,7 +441,7 @@ internal sealed class CrowdHudController
 
     private static double Elapsed(long start) => (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
 
-    private static string Rgba(Vector4 c) => string.Create(
-        CultureInfo.InvariantCulture,
-        $"rgba({(int)(c.X * 255f)}, {(int)(c.Y * 255f)}, {(int)(c.Z * 255f)}, {c.W:0.###})");
+    private static UiColor Rgba(Vector4 c) => new(Channel(c.X), Channel(c.Y), Channel(c.Z), Channel(c.W));
+
+    private static byte Channel(float v) => (byte)Math.Clamp((int)MathF.Round(v * 255f), 0, 255);
 }

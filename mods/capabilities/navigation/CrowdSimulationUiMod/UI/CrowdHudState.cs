@@ -1,4 +1,5 @@
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.UI.Runtime;
 
 namespace CrowdSimulationUiMod.UI;
 
@@ -16,7 +17,7 @@ internal sealed class CrowdHudState
 
     public CrowdHudState(int maxPlayers)
     {
-        Swatches = new string?[maxPlayers + 1];
+        Swatches = new UiColor?[maxPlayers + 1];
     }
 
     public CrowdHudKind Kind;
@@ -38,7 +39,7 @@ internal sealed class CrowdHudState
 
     public bool ShowPlayer;
     public int PlayerCount;
-    public readonly string?[] Swatches;
+    public readonly UiColor?[] Swatches;
     public string TeamLine = "";
     public string CardLine = "";
     public string ModeLine = "";
