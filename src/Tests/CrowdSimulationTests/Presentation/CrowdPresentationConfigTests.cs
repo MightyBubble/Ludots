@@ -95,16 +95,13 @@ public sealed class CrowdPresentationConfigTests
     [Test]
     public void EveryDebugFile_LoadsStrictly()
     {
-        string mods = Path.Combine(FindRepoRoot(), "mods");
-        var files = Directory.EnumerateFiles(mods, "CrowdSimulationDebug.json", SearchOption.AllDirectories)
-            .Where(path => path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") == false
-                && path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") == false)
-            .ToList();
-        Assert.That(files, Is.Not.Empty);
-        foreach (string file in files)
+        var mods = ModConfigChain.ModsShipping("CrowdSimulationDebug.json");
+        Assert.That(mods, Is.Not.Empty);
+        foreach (string modId in mods)
         {
-            var debug = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
-            Assert.DoesNotThrow(() => CrowdSimulationDebugConfig.Load(debug), file);
+            Assert.DoesNotThrow(
+                () => CrowdSimulationDebugConfig.Load(ModConfigChain.Open(modId).Merged("CrowdSimulationDebug.json")),
+                modId);
         }
     }
 
@@ -129,20 +126,9 @@ public sealed class CrowdPresentationConfigTests
     private static string DebugPath(string mod)
     {
         string path = Path.Combine(
-            FindRepoRoot(),
+            ModConfigChain.RepoRoot(),
             "mods", "showcases", "crowd_simulation", mod, "assets", "CrowdSimulationDebug.json");
         Assert.That(File.Exists(path), Is.True, path);
         return path;
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
     }
 }
