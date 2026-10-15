@@ -32,17 +32,15 @@ public sealed class FogUatTests
         int size = SizeCells * s.Config.NavCellSizeCm;
         int fromX = (int)(0.19 * w), fromY = (int)(0.5 * w), toX = (int)(0.81 * w), toY = (int)(0.5 * w);
         int v = Group(s, P0);
-        int p0 = s.Config.PairRules.IndexByPlayerId[P0];
 
-        CrowdNavGroupSet.Group? Ready() => s.Groups.Groups.FirstOrDefault(g =>
-            g != null && g.Count > 0 && g.Player == p0 && g.OrderId != 0 && g.Leader != null && !g.Planning);
+        CrowdNavGroupSet.Group? Ready() => ReadyGroup(s, P0);
         CrowdNavGroupSet.Group? Settle()
         {
             for (int t = 0; t < SettleTicks && Ready() == null; t++) CrowdUatKit.Step(s);
             return Ready();
         }
 
-        bool Blocked(CrowdNavGroupSet.Group g, int navId) => CrowdSimPlanner.LeaderPathBlocked(g.Leader, s.ResolveNavContext(navId), s);
+        bool Blocked(CrowdNavGroupSet.Group g, int navId) => LeaderBlocked(s, g, navId);
 
         CrowdUatKit.SpawnAt(s, Fix64.FromInt(fromX), Fix64.FromInt(fromY), Count, rIdx: 0);
         Order(s, P0, toX, toY, fogTerrain: false);
@@ -185,20 +183,5 @@ public sealed class FogUatTests
         }
 
         return null;
-    }
-
-    private static Fix64Vec2[] PathOf(CrowdLeader leader) =>
-        Enumerable.Range(0, leader.PathCount).Select(leader.PathAt).ToArray();
-
-    private static void CheckBeliefs(CrowdSimSession s, string when, List<string> errors)
-    {
-        try
-        {
-            CrowdSimulationValidator.ValidateNav(s);
-        }
-        catch (CrowdSimulationInvariantException ex)
-        {
-            errors.Add($"{when}：{ex.Message}");
-        }
     }
 }

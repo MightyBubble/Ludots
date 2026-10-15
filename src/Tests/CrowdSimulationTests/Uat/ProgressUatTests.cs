@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
@@ -11,17 +9,9 @@ namespace CrowdSimulationTests.Uat;
 [TestFixture]
 public sealed class ProgressUatTests
 {
-    private const int Count = 120;
-    private const double EpsCells = 0.02;
-    private const double RepeatBackLimit = 0.03, RepeatFlipsLimit = 2, TurnBackLimit = 0.02;
-
-    private readonly struct Measured
-    {
-        public Measured(double back, int moved, int flips) { Back = back; Moved = moved; Flips = flips; }
-        public double Back { get; }
-        public int Moved { get; }
-        public int Flips { get; }
-    }
+    internal const int Count = 120;
+    internal const double EpsCells = 0.02;
+    internal const double RepeatBackLimit = 0.03, RepeatFlipsLimit = 2, TurnBackLimit = 0.02;
 
     [Test]
     public void RepeatClicks_DoNotBackstepOrFlip_AndTurnStaysForward()
@@ -52,49 +42,18 @@ public sealed class ProgressUatTests
         });
     }
 
-    /// <summary>推进 n tick，数背离 (tx, ty) 的单位-tick（沿指向目标方向的位移分量 &lt; −eps，不设距离门）与到达↔非到达翻转。</summary>
-    private static Measured Measure(CrowdUatScene scene, int n, Fix64 tx, Fix64 ty, Action<int>? each)
+    /// <summary>推进 n tick，每 tick 前先调 <paramref name="each"/>。</summary>
+    private static CrowdProgressTally Measure(CrowdUatScene scene, int n, Fix64 tx, Fix64 ty, Action<int>? each)
     {
-        var sim = scene.Session;
-        double eps = EpsCells * scene.CellCm, txd = tx.ToDouble(), tyd = ty.ToDouble();
-        var prev = new Dictionary<uint, (double X, double Y, bool Arrived)>();
-        void Snap()
-        {
-            prev.Clear();
-            for (int i = 0; i < sim.Units.Count; i++)
-            {
-                var p = CrowdUatKit.PositionAt(sim, i);
-                prev[sim.Units.HandleAt(i)] = (p.X.ToDouble(), p.Y.ToDouble(), CrowdUatKit.StateAt(sim, i).State == (byte)CrowdUnitState.Arrived);
-            }
-        }
-
-        int back = 0, moved = 0, flips = 0;
-        Snap();
+        var tally = new CrowdProgressTally(scene.Session, EpsCells * scene.CellCm, tx, ty);
         for (int t = 0; t < n; t++)
         {
             each?.Invoke(t);
-            CrowdUatKit.Step(sim);
-            for (int i = 0; i < sim.Units.Count; i++)
-            {
-                if (!prev.TryGetValue(sim.Units.HandleAt(i), out var p)) continue;
-                var c = CrowdUatKit.PositionAt(sim, i);
-                double dx = c.X.ToDouble() - p.X, dy = c.Y.ToDouble() - p.Y;
-                if (Math.Sqrt(dx * dx + dy * dy) > eps)
-                {
-                    moved++;
-                    double gx = txd - p.X, gy = tyd - p.Y, gl = Math.Sqrt(gx * gx + gy * gy);
-                    double along = (dx * gx + dy * gy) / (gl > 0 ? gl : 1);
-                    if (along < -eps) back++;
-                }
-
-                bool arrived = CrowdUatKit.StateAt(sim, i).State == (byte)CrowdUnitState.Arrived;
-                if (arrived != p.Arrived) flips++;
-            }
-
-            Snap();
+            CrowdUatKit.Step(scene.Session);
+            tally.Observe();
         }
 
-        return new Measured((double)back / Math.Max(1, sim.Units.Count * n), moved, flips);
+        return tally;
     }
 
     private static bool Settle(CrowdSimSession sim, int max)
@@ -102,13 +61,7 @@ public sealed class ProgressUatTests
         for (int t = 0; t < max; t++)
         {
             CrowdUatKit.Step(sim);
-            int a = 0;
-            for (int i = 0; i < sim.Units.Count; i++)
-            {
-                if (CrowdUatKit.StateAt(sim, i).State == (byte)CrowdUnitState.Arrived) a++;
-            }
-
-            if (a * 100 >= sim.Units.Count * 95) return true;
+            if (CrowdMotionInvariants.Settled(sim)) return true;
         }
 
         return false;
