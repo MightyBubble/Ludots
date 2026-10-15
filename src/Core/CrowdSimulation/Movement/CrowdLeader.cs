@@ -16,6 +16,7 @@ public sealed class CrowdLeader
     private Fix64Vec2[] _path;
     private int _count;
     private Fix64 _lookAheadCm;
+    private readonly HashSet<int> _wall = new();
 
     /// <summary>路径缓冲在构造时一次留够。活前缀是 <see cref="PathCount"/>，尾部不参与步进。</summary>
     internal CrowdLeader(int pathCapacity)
@@ -43,6 +44,7 @@ public sealed class CrowdLeader
 
         _count = pathCm.Count;
         for (int i = 0; i < _count; i++) _path[i] = pathCm[i];
+        _wall.Clear();
         PaceCmPerSecond = paceCmPerSecond;
         LayerIdx = layerIdx;
         Nav = nav;
@@ -86,6 +88,37 @@ public sealed class CrowdLeader
     public bool Mirror { get; private set; }
     internal int PathCount => _count;
     internal Fix64Vec2 PathAt(int index) => _path[index];
+    internal bool IsWall(int cell) => _wall.Contains(cell);
+
+    /// <summary>
+    /// 规划时路线已贴靠或穿越的不可通行格（墙角、跳跃链接）记为基线，阻挡判定只认基线之外的新阻挡；
+    /// 否则任何无关的结构变化都会让沿墙角拉直的路线被判为受阻而重新规划。路径定稿（起点覆写）之后调用。
+    /// </summary>
+    internal void RecordWalls(NavContext nav, int navCellSizeCm, int navCellsPerSide)
+    {
+        _wall.Clear();
+        Fix64 step = Fix64.FromInt(navCellSizeCm) / 2, e = Fix64.FromInt(navCellSizeCm) / 4;
+        var pass = nav.Passable;
+        var up = nav.UpPass;
+        for (int k = 1; k < _count; k++)
+        {
+            Fix64 ax = _path[k - 1].X, ay = _path[k - 1].Y, bx = _path[k].X, by = _path[k].Y;
+            int m = Math.Max(1, (int)Fix64.Ceiling(CrowdFix.Hypot(bx - ax, by - ay) / step).ToLong());
+            for (int s = 0; s <= m; s++)
+            {
+                Fix64 x = ax + (bx - ax) * s / m, y = ay + (by - ay) * s / m;
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide));
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide));
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide));
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
+            }
+        }
+    }
+
+    private void AddWall(byte[] pass, byte[] up, int cell)
+    {
+        if (pass[cell] == 0 && up[cell] == 0) _wall.Add(cell);
+    }
 
     /// <summary>起点覆写到当前质心(请求时刻的起点格只作 8 邻域参照)。</summary>
     public void SetStart(Fix64 xCm, Fix64 yCm)

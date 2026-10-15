@@ -777,6 +777,7 @@ public sealed class CrowdSimPlanner
                 leader.InheritFrom(prev, fc.MirrorFlipDot, fc.HeadingInheritDot);
             }
 
+            leader.RecordWalls(leader.Nav, navCellSizeCm, cfg.NavCellsPerSide);
             o.Leaders.Add(leader);
             var mem = RentMembers();
             foreach (int gid in bucket)
@@ -1026,8 +1027,8 @@ public sealed class CrowdSimPlanner
         return lost;
     }
 
-    /// <summary>领队剩余路线是否被挡:沿线四角探边的坏格带。桥面托线由 upPass 覆盖。</summary>
-    private static bool LeaderPathBlocked(CrowdLeader? leader, NavContext nav, CrowdSimSession session)
+    /// <summary>领队剩余路线是否被挡:沿线四角探边的坏格带。桥面托线由 upPass 覆盖;规划时已记下的基线墙格不算。</summary>
+    internal static bool LeaderPathBlocked(CrowdLeader? leader, NavContext nav, CrowdSimSession session)
     {
         if (leader == null || leader.Done) return false;
         int navCellSizeCm = session.Config.NavCellSizeCm, navCellsPerSide = session.Config.NavCellsPerSide;
@@ -1042,7 +1043,7 @@ public sealed class CrowdSimPlanner
             int m = (int)Fix64.Ceiling(CrowdFix.Hypot(bx - ax, by - ay) / step).ToLong();
             for (int s = 1; s <= m; s++)
             {
-                if (LeaderBlockedAt(pass, up, ax + (bx - ax) * s / m, ay + (by - ay) * s / m, e, navCellSizeCm, navCellsPerSide)) return true;
+                if (LeaderBlockedAt(leader, pass, up, ax + (bx - ax) * s / m, ay + (by - ay) * s / m, e, navCellSizeCm, navCellsPerSide)) return true;
             }
 
             ax = bx;
@@ -1052,15 +1053,15 @@ public sealed class CrowdSimPlanner
         return false;
     }
 
-    private static bool LeaderBlockedAt(byte[] pass, byte[] up, Fix64 x, Fix64 y, Fix64 e, int navCellSizeCm, int navCellsPerSide)
+    private static bool LeaderBlockedAt(CrowdLeader leader, byte[] pass, byte[] up, Fix64 x, Fix64 y, Fix64 e, int navCellSizeCm, int navCellsPerSide)
     {
-        return LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide))
-            && LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide))
-            && LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide))
-            && LeaderCellBad(pass, up, CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
+        return LeaderCellBad(leader, pass, up, CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide))
+            && LeaderCellBad(leader, pass, up, CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide))
+            && LeaderCellBad(leader, pass, up, CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide))
+            && LeaderCellBad(leader, pass, up, CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
     }
 
-    private static bool LeaderCellBad(byte[] pass, byte[] up, int c) => pass[c] == 0 && up[c] == 0;
+    private static bool LeaderCellBad(CrowdLeader leader, byte[] pass, byte[] up, int c) => pass[c] == 0 && up[c] == 0 && !leader.IsWall(c);
 
     /// <summary>变更是否落在组的剩余路线上:走廊掩码触到脏 tile,
     /// 且脏 tile 内存在某成员剩余路线长度可达的格——只用掩码会把身后的变更也算进来。</summary>
