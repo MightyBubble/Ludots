@@ -248,10 +248,234 @@ public class CrowdSimulationEditorApiTests
         Assert.That(rebuilt, Is.True);
     }
 
-    private static string CopyS4()
+    [Test]
+    public void UnitTemplates_Minimal_ListsSchemaFieldSourcesProfileAndPresenter()
     {
-        string source = Path.Combine(FindRepoRoot(), "mods", "showcases", "crowd_simulation", S4);
-        string copy = Path.Combine(Path.GetTempPath(), "ludots-s4-edit-" + Guid.NewGuid().ToString("N"));
+        JsonObject view = UnitTemplates(CrowdSimulationEditorApi.Load(FindRepoRoot(), Minimal));
+        string[] schema = ((JsonArray)view["fields"]!).Select(field => Text((JsonObject)field!, "name")).ToArray();
+        Assert.That(schema, Is.EqualTo(CrowdUnitTemplateFacts.AuthoredFields.Select(field => field.Name).ToArray()));
+        Assert.That(view["agentTypes"]!.ToJsonString(), Does.Contain("\"foot\""));
+
+        JsonObject unit = Item(view, MinimalUnit);
+        Assert.That(Flag(unit, "ownedBySelection"), Is.True);
+        Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1400));
+        foreach (CrowdUnitTemplateField field in CrowdUnitTemplateFacts.AuthoredFields)
+        {
+            JsonObject source = (JsonObject)unit["fields"]![field.Name]!;
+            Assert.That(Text(source, "sourceMod"), Is.EqualTo(Minimal), field.Name);
+            Assert.That(Text(source, "sourceFile"), Does.EndWith("Entities/templates.json"), field.Name);
+        }
+
+        JsonObject profile = (JsonObject)unit["profile"]!;
+        Assert.That(Text(profile, "id"), Is.EqualTo("crowd_minimal_unit"));
+        Assert.That(profile["values"]!["radiusCm"]!.GetValue<int>(), Is.EqualTo(150));
+        Assert.That(Text((JsonObject)profile["fields"]!["radiusCm"]!, "sourceMod"), Is.EqualTo(Minimal));
+        Assert.That(profile["usedBy"]!.ToJsonString(), Does.Contain(MinimalUnit));
+
+        JsonObject presenter = (JsonObject)((JsonArray)unit["presenters"]!).Single()!;
+        Assert.That(Text(presenter, "definitionId"), Is.EqualTo(MinimalUnit));
+        Assert.That(Flag(presenter, "defined"), Is.True);
+        Assert.That(Text(presenter, "sourceMod"), Is.EqualTo(Minimal));
+    }
+
+    [Test]
+    public void UnitTemplates_S4_FieldsComeFromTheDependency()
+    {
+        JsonObject view = UnitTemplates(CrowdSimulationEditorApi.Load(FindRepoRoot(), S4));
+        JsonObject unit = Item(view, InfantryR100);
+        Assert.That(Flag(unit, "ownedBySelection"), Is.False);
+        Assert.That(Text((JsonObject)unit["fields"]!["speedCmPerSecond"]!, "sourceMod"), Is.EqualTo(DemoContent));
+        Assert.That(Text((JsonObject)unit["profile"]!, "id"), Is.EqualTo("foot_r100"));
+    }
+
+    [Test]
+    public void UnitTemplates_InvalidSpeed_ReturnsLoaderTextWithSourceAndDoesNotWrite()
+    {
+        string copy = CopyMod(Minimal);
+        string templatesPath = Path.Combine(copy, "assets", "Entities", "templates.json");
+        string before = File.ReadAllText(templatesPath);
+        try
+        {
+            JsonObject draft = TemplatesDraft(Minimal, copy);
+            Agent(draft, MinimalUnit)["speedCmPerSecond"] = -5;
+            JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", draft, copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            JsonObject issue = (JsonObject)((JsonArray)result["issues"]!)[0]!;
+            Assert.That(Text(issue, "message"), Does.Contain($"模板 \"{MinimalUnit}\" 的 CrowdSimulationAgent.speedCmPerSecond 需为 > 0 的数值"));
+            Assert.That(Text(issue, "path"), Is.EqualTo("CrowdSimulationAgent.speedCmPerSecond"));
+            Assert.That(Text(issue, "sourceMod"), Is.EqualTo(Minimal));
+            Assert.That(Text(issue, "sourceFile"), Does.EndWith("Entities/templates.json"));
+            Assert.That(File.ReadAllText(templatesPath), Is.EqualTo(before));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void UnitTemplates_UnknownAgentType_ReturnsLoaderText()
+    {
+        string copy = CopyMod(Minimal);
+        try
+        {
+            JsonObject draft = TemplatesDraft(Minimal, copy);
+            Agent(draft, MinimalUnit)["agentTypeId"] = "hover";
+            JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), Minimal, "templates", draft, copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("agentTypeId \\u0022hover\\u0022").Or.Contain("agentTypeId \"hover\""));
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("Navigation/pathing.json"));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void UnitTemplates_RadiusWithoutMatchingPersonalRadius_IsRejected()
+    {
+        string copy = CopyMod(Minimal);
+        string profilesPath = Path.Combine(copy, "assets", "Navigation", "agent_profiles.json");
+        string before = File.ReadAllText(profilesPath);
+        try
+        {
+            JsonObject draft = TemplatesDraft(Minimal, copy);
+            Profile(draft, "crowd_minimal_unit")["radiusCm"] = 200;
+            JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", draft, copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("personalRadiusCm"));
+            Assert.That(File.ReadAllText(profilesPath), Is.EqualTo(before));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void UnitTemplates_Minimal_SpeedAndRadius_WriteOwnFilesAndReload()
+    {
+        string repo = FindRepoRoot();
+        string copy = CopyMod(Minimal);
+        try
+        {
+            JsonObject draft = TemplatesDraft(Minimal, copy);
+            Agent(draft, MinimalUnit)["speedCmPerSecond"] = 1650;
+            Agent(draft, MinimalUnit)["personalRadiusCm"] = 1200;
+            Profile(draft, "crowd_minimal_unit")["radiusCm"] = 200;
+            JsonObject result = CrowdSimulationEditorApi.Apply(repo, Minimal, "templates", draft, copy);
+            Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
+            string written = result["written"]!.ToJsonString();
+            Assert.That(written, Does.Contain(Minimal + "/assets/Entities/templates.json"));
+            Assert.That(written, Does.Contain(Minimal + "/assets/Navigation/agent_profiles.json"));
+
+            string templatesText = File.ReadAllText(Path.Combine(copy, "assets", "Entities", "templates.json"));
+            Assert.That(templatesText, Does.Contain("\n  {\n    \"id\": \"crowd_minimal.team\""), "两格缩进，和其他编辑器写回一致");
+            Assert.That(templatesText, Does.Contain("crowd_minimal.wall_block"));
+
+            JsonObject unit = Item(UnitTemplates(CrowdSimulationEditorApi.Load(repo, Minimal, copy)), MinimalUnit);
+            Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1650));
+            Assert.That(unit["agent"]!["personalRadiusCm"]!.GetValue<int>(), Is.EqualTo(1200));
+            Assert.That(unit["profile"]!["values"]!["radiusCm"]!.GetValue<int>(), Is.EqualTo(200));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void UnitTemplates_S4_OverrideWritesOnlyChangedKeysInTheSelectedMod()
+    {
+        string repo = FindRepoRoot();
+        string demoTemplates = Path.Combine(repo, "mods", "showcases", "crowd_simulation", DemoContent, "assets", "Entities", "templates.json");
+        string demoBefore = File.ReadAllText(demoTemplates);
+        string copy = CopyMod(S4);
+        try
+        {
+            JsonObject draft = TemplatesDraft(S4, copy);
+            Agent(draft, InfantryR100)["speedCmPerSecond"] = 1500;
+            JsonObject result = CrowdSimulationEditorApi.Apply(repo, S4, "templates", draft, copy);
+            Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
+            Assert.That(result["written"]!.ToJsonString(), Does.Contain(S4 + "/assets/Entities/templates.json"));
+            Assert.That(result["written"]!.ToJsonString(), Does.Not.Contain(DemoContent));
+            Assert.That(File.ReadAllText(demoTemplates), Is.EqualTo(demoBefore));
+
+            var own = (JsonArray)JsonNode.Parse(File.ReadAllText(Path.Combine(copy, "assets", "Entities", "templates.json")))!;
+            JsonObject entry = (JsonObject)own.Single(node => node!["id"]!.GetValue<string>() == InfantryR100)!;
+            Assert.That(entry.ToJsonString(), Is.EqualTo(
+                "{\"id\":\"" + InfantryR100 + "\",\"components\":{\"CrowdSimulationAgent\":{\"speedCmPerSecond\":1500}}}"));
+
+            JsonObject unit = Item(UnitTemplates(CrowdSimulationEditorApi.Load(repo, S4, copy)), InfantryR100);
+            Assert.That(Flag(unit, "ownedBySelection"), Is.True);
+            Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1500));
+            Assert.That(Text((JsonObject)unit["fields"]!["speedCmPerSecond"]!, "sourceMod"), Is.EqualTo(S4));
+            Assert.That(Text((JsonObject)unit["fields"]!["profileId"]!, "sourceMod"), Is.EqualTo(DemoContent));
+
+            JsonObject reset = TemplatesDraft(S4, copy);
+            Agent(reset, InfantryR100)["speedCmPerSecond"] = 1400;
+            Assert.That(Flag(CrowdSimulationEditorApi.Apply(repo, S4, "templates", reset, copy), "ok"), Is.True);
+            string ownAfterReset = File.ReadAllText(Path.Combine(copy, "assets", "Entities", "templates.json"));
+            Assert.That(ownAfterReset, Does.Not.Contain(InfantryR100));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+            Assert.That(File.ReadAllText(demoTemplates), Is.EqualTo(demoBefore));
+        }
+    }
+
+    [Test]
+    public void UnitTemplates_S4_DroppingAKeyTheDependencyGives_IsRejected()
+    {
+        string copy = CopyMod(S4);
+        try
+        {
+            JsonObject draft = TemplatesDraft(S4, copy);
+            Agent(draft, InfantryR100).Remove("pushPriority");
+            JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), S4, "templates", draft, copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain($"unitTypes.{InfantryR100}.components.CrowdSimulationAgent.pushPriority"));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    private const string Minimal = "CrowdSimulationMinimalMod";
+    private const string MinimalUnit = "crowd_minimal.unit";
+    private const string DemoContent = "CrowdSimulationDemoContentMod";
+    private const string InfantryR100 = "crowd_simulation.unit.infantry.r100";
+
+    private static JsonObject UnitTemplates(JsonObject snapshot)
+    {
+        Assert.That(Flag(snapshot, "ok"), Is.True, snapshot.ToJsonString());
+        JsonObject view = (JsonObject)snapshot["unitTemplates"]!;
+        Assert.That(((JsonArray)view["issues"]!).Count, Is.EqualTo(0), view["issues"]!.ToJsonString());
+        return view;
+    }
+
+    private static JsonObject Item(JsonObject view, string id)
+        => (JsonObject)((JsonArray)view["items"]!).Single(item => item!["id"]!.GetValue<string>() == id)!;
+
+    private static JsonObject TemplatesDraft(string modId, string copy)
+        => (JsonObject)CrowdSimulationEditorApi.Load(FindRepoRoot(), modId, copy)["templates"]!.DeepClone()!;
+
+    private static JsonObject Agent(JsonObject draft, string templateId)
+        => (JsonObject)((JsonArray)draft["unitTypes"]!)
+            .Single(unit => unit!["id"]!.GetValue<string>() == templateId)!["components"]!["CrowdSimulationAgent"]!;
+
+    private static JsonObject Profile(JsonObject draft, string profileId)
+        => (JsonObject)((JsonArray)draft["agentProfiles"]!).Single(profile => profile!["id"]!.GetValue<string>() == profileId)!;
+
+    private static string CopyS4() => CopyMod(S4);
+
+    private static string CopyMod(string modId)
+    {
+        string source = Path.Combine(FindRepoRoot(), "mods", "showcases", "crowd_simulation", modId);
+        string copy = Path.Combine(Path.GetTempPath(), "ludots-crowd-edit-test-" + Guid.NewGuid().ToString("N"));
         CopyTree(source, copy);
         return copy;
     }

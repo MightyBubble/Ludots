@@ -684,7 +684,7 @@ public static partial class CrowdSimulationEditorApi
                 }
                 else
                 {
-                    changed[id] = obj;
+                    changed[id] = OverrideEntry(obj, baseNode, idField, id);
                 }
             }
 
@@ -738,6 +738,43 @@ public static partial class CrowdSimulationEditorApi
             }
 
             return result;
+        }
+
+        /// <summary>下层已有同 id 条目时，ArrayById 按 id 深合并，当前 Mod 只写与下层不同的键。</summary>
+        private static JsonObject OverrideEntry(JsonObject draft, JsonObject? baseline, string idField, string id)
+        {
+            if (baseline == null)
+            {
+                return draft;
+            }
+
+            var entry = new JsonObject { [idField] = id };
+            if (DeepDiff(draft, baseline) is JsonObject diff)
+            {
+                foreach (KeyValuePair<string, JsonNode?> pair in diff)
+                {
+                    if (!string.Equals(pair.Key, idField, StringComparison.Ordinal))
+                    {
+                        entry[pair.Key] = pair.Value?.DeepClone();
+                    }
+                }
+            }
+
+            return entry;
+        }
+
+        private static void RejectEntryOmissions(JsonArray draft, JsonArray baseline, string path, List<CrowdSimulationAuthoringIssue> issues)
+        {
+            Dictionary<string, JsonObject> baselineById = IndexById(baseline, "id");
+            foreach (JsonNode? node in draft)
+            {
+                if (node is JsonObject obj
+                    && IdOf(obj, "id") is { Length: > 0 } id
+                    && baselineById.TryGetValue(id, out JsonObject? baseNode))
+                {
+                    RejectOmissions(obj, baseNode, path + "." + id, issues);
+                }
+            }
         }
 
         private static Dictionary<string, JsonObject> IndexById(JsonArray array, string idField)

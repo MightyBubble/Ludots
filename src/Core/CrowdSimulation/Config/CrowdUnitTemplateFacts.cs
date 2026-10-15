@@ -6,11 +6,34 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Config;
 
+/// <summary>编辑器检视器用的字段说明。kind 是 string / number / bool；reference 指向可选值所在的表。</summary>
+public readonly record struct CrowdUnitTemplateField(string Name, string Kind, string? Reference);
+
 /// <summary>
 /// 单位模板上 CrowdSimulationAgent 的装载事实。速度、个人半径、推挤优先级以模板为准。
 /// </summary>
 public sealed class CrowdUnitTemplateFacts
 {
+    public const string ComponentName = "CrowdSimulationAgent";
+    public const string ProfileIdField = "profileId";
+    public const string AgentTypeIdField = "agentTypeId";
+    public const string SpeedField = "speedCmPerSecond";
+    public const string PersonalRadiusField = "personalRadiusCm";
+    public const string PushPriorityField = "pushPriority";
+    public const string SpecialField = "special";
+    public const string AgentProfilesReference = "agentProfiles";
+    public const string AgentTypesReference = "agentTypes";
+
+    public static readonly IReadOnlyList<CrowdUnitTemplateField> AuthoredFields =
+    [
+        new(ProfileIdField, "string", AgentProfilesReference),
+        new(AgentTypeIdField, "string", AgentTypesReference),
+        new(SpeedField, "number", null),
+        new(PersonalRadiusField, "number", null),
+        new(PushPriorityField, "number", null),
+        new(SpecialField, "bool", null),
+    ];
+
     public required string TemplateId { get; init; }
     public required string ProfileId { get; init; }
     public required string AgentTypeId { get; init; }
@@ -30,7 +53,7 @@ public sealed class CrowdUnitTemplateFacts
                 continue;
             }
 
-            if (!template.Components.TryGetValue("CrowdSimulationAgent", out var node) || node is not JsonObject obj)
+            if (!template.Components.TryGetValue(ComponentName, out var node) || node is not JsonObject obj)
             {
                 continue;
             }
@@ -45,16 +68,16 @@ public sealed class CrowdUnitTemplateFacts
     {
         ArgumentNullException.ThrowIfNull(obj);
         RejectRetiredKeys(obj);
-        string Prefix(string field) => $"Entities/templates.json: 模板 \"{templateId}\" 的 CrowdSimulationAgent.{field}";
+        string Prefix(string field) => $"Entities/templates.json: 模板 \"{templateId}\" 的 {ComponentName}.{field}";
         return new CrowdUnitTemplateFacts
         {
             TemplateId = templateId,
-            ProfileId = RequireString(obj, "profileId", Prefix("profileId")),
-            AgentTypeId = RequireString(obj, "agentTypeId", Prefix("agentTypeId")),
-            SpeedCmPerSecond = RequirePositive(obj, "speedCmPerSecond", Prefix("speedCmPerSecond")),
-            PersonalRadiusCm = RequirePositive(obj, "personalRadiusCm", Prefix("personalRadiusCm")),
-            PushPriority = RequirePriority(obj, "pushPriority", Prefix("pushPriority")),
-            Special = RequireBool(obj, "special", Prefix("special")),
+            ProfileId = RequireString(obj, ProfileIdField, Prefix(ProfileIdField)),
+            AgentTypeId = RequireString(obj, AgentTypeIdField, Prefix(AgentTypeIdField)),
+            SpeedCmPerSecond = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
+            PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
+            PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
+            Special = RequireBool(obj, SpecialField, Prefix(SpecialField)),
         };
     }
 

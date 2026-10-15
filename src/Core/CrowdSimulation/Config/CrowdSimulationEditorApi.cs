@@ -201,6 +201,7 @@ public static partial class CrowdSimulationEditorApi
         public required JsonObject? DebugView { get; init; }
         public required JsonObject? BaselineDebugView { get; init; }
         public required JsonArray Owners { get; init; }
+        public required JsonObject UnitTemplates { get; init; }
         public required JsonObject DisplayDefaults { get; init; }
 
         public static EditorSession Open(string repoRoot, string modId, string? targetRootOverride)
@@ -287,6 +288,7 @@ public static partial class CrowdSimulationEditorApi
                 DebugView = debugView,
                 BaselineDebugView = baselineDebugView,
                 Owners = full.Owners(report),
+                UnitTemplates = UnitTemplatesView(full, modId, templates, profiles, pathing),
                 DisplayDefaults = new JsonObject(),
             };
         }
@@ -334,6 +336,7 @@ public static partial class CrowdSimulationEditorApi
                         MapId),
                 },
                 ["owners"] = Owners.DeepClone(),
+                ["unitTemplates"] = UnitTemplates.DeepClone(),
                 ["costMatrix"] = CostMatrix(Pathing, Navmesh, MapId),
                 ["help"] = Help(),
                 ["issues"] = new JsonArray(),
@@ -635,6 +638,7 @@ public static partial class CrowdSimulationEditorApi
 
             if (draft["unitTypes"] is JsonArray units)
             {
+                RejectEntryOmissions(units, BaselineTemplates, "unitTypes", issues);
                 JsonNode? unitFile = UnitOverlay(units, BaselineTemplates, TargetRoot);
                 if (unitFile != null)
                 {
@@ -644,6 +648,7 @@ public static partial class CrowdSimulationEditorApi
 
             if (draft["agentProfiles"] is JsonArray profilesArray)
             {
+                RejectEntryOmissions(profilesArray, BaselineAgentProfiles, "agentProfiles", issues);
                 JsonNode? overlay = ArrayByIdOverlay(profilesArray, BaselineAgentProfiles, AgentProfilesFile, TargetRoot);
                 if (overlay != null)
                 {
