@@ -27,6 +27,8 @@ public sealed class CrowdZeroAllocTests
     private const int WarmupTicks = 120;
     private const int SteadyWindow = 80;
     private const int EventWindow = 40;
+    private const int JitQuietMs = 500;
+    private const int JitDrainTimeoutMs = 60_000;
 
     [Test]
     public void CrowdRuntime_MultiPlayerEvents_ZeroAllocation()
@@ -121,6 +123,7 @@ public sealed class CrowdZeroAllocTests
 
     private static long Measure(CrowdSimulationRuntime host, CrowdSimSession session, int ticks)
     {
+        WaitForBackgroundJitIdle();
         _ = GC.GetTotalAllocatedBytes(precise: true);
         int at = session.TickCount;
         long before = GC.GetTotalAllocatedBytes(precise: true);
@@ -132,6 +135,31 @@ public sealed class CrowdZeroAllocTests
         }
 
         return GC.GetTotalAllocatedBytes(precise: true) - before;
+    }
+
+    /// <summary>
+    /// 分层编译的后台线程会把建会话时攒下的方法（反射、JSON、烘焙）晚些再编成 tier1，
+    /// 编到引用结构体静态字段的 BCL 方法时会在那条线程上装箱分配静态存储（实测 24 字节的 <see cref="ModuleHandle"/>、32 字节的 <see cref="ArraySegment{T}"/>）。
+    /// 这份分配不属于模拟，却会落进全进程读数；机器忙时积压排得更晚，就成了偶发的非零窗。
+    /// 所以每扇窗开测前等编译计数静止 <see cref="JitQuietMs"/> 毫秒，窗内其余线程的分配照常计入。
+    /// </summary>
+    private static void WaitForBackgroundJitIdle()
+    {
+        var total = Stopwatch.StartNew();
+        var quiet = Stopwatch.StartNew();
+        long seen = System.Runtime.JitInfo.GetCompiledMethodCount();
+        while (quiet.ElapsedMilliseconds < JitQuietMs)
+        {
+            if (total.ElapsedMilliseconds > JitDrainTimeoutMs)
+                throw new InvalidOperationException($"后台编译 {JitDrainTimeoutMs} 毫秒内没有静止。");
+            System.Threading.Thread.Sleep(50);
+            long now = System.Runtime.JitInfo.GetCompiledMethodCount();
+            if (now != seen)
+            {
+                seen = now;
+                quiet.Restart();
+            }
+        }
     }
 
     private readonly record struct Windows(long Steady, long Orders, long Rebake, long After, int FogRefreshes, int Rebakes);
