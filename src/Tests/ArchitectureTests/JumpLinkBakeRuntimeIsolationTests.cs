@@ -14,7 +14,7 @@ public sealed class JumpLinkBakeRuntimeIsolationTests
         foreach (string file in Directory.EnumerateFiles(core, "*.cs", SearchOption.AllDirectories))
         {
             string name = Path.GetFileName(file);
-            if (name is "NavMeshBakeConfig.cs" or "NavMeshBakeConfigLoader.cs")
+            if (name is "NavMeshBakeConfig.cs" or "NavMeshBakeConfigLoader.cs" or "NavSolverDeclaration.cs")
             {
                 continue;
             }

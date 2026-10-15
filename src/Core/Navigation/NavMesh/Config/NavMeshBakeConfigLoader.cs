@@ -334,17 +334,18 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                             $"NavMeshBakeConfig.maps.{mapEntry.Key}.agentTypes 已删除。本图要烘焙的能力档写在 maps.{mapEntry.Key}.navProfiles（能力档 id 数组）。");
                     }
 
-                    RequireOnlyProperties(
-                        mapObj,
-                        $"NavMeshBakeConfig.maps.{mapEntry.Key}",
-                        new[] { "solver" },
-                        new[] { "boards", "terrainAreas", "navProfiles", "navAreas", "logicTerrainAsset", "jumpLinkBake" });
                     string solver = RequireString(mapObj, "solver", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
                     if (!NavSolverDeclaration.IsKnown(solver))
                     {
                         throw new InvalidOperationException(
                             $"NavMeshBakeConfig.maps.{mapEntry.Key}.solver 必须是 {NavSolverDeclaration.AllowedList}，当前是 \"{solver}\"。");
                     }
+
+                    RequireOnlyProperties(
+                        mapObj,
+                        $"NavMeshBakeConfig.maps.{mapEntry.Key}（solver {solver}）",
+                        new[] { "solver" },
+                        [.. NavSolverDeclaration.OptionalMapKeys(solver)]);
                     if (mapObj.ContainsKey("navProfiles"))
                     {
                         RequireNavProfiles(mapObj, mapEntry.Key);

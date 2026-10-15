@@ -49,6 +49,49 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Algorithm, Is.EqualTo("recast"));
         }
 
+        [TestCase("navmesh", "logicTerrainAsset")]
+        [TestCase("navmesh", "terrainAreas")]
+        [TestCase("mass-navigation", "jumpLinkBake")]
+        [TestCase("mass-navigation", "logicTerrainAsset")]
+        [TestCase("crowd-simulation", "navProfiles")]
+        public void NavMeshBakeConfigLoader_MapKeysAreWhitelistedPerSolver(string solver, string foreignKey)
+        {
+            JsonObject navmesh = CoreNavmeshJson();
+            navmesh["maps"] = new JsonObject
+            {
+                ["probe"] = new JsonObject
+                {
+                    ["solver"] = solver,
+                    [foreignKey] = new JsonArray(),
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles()));
+            Assert.That(ex!.Message, Does.Contain($"solver {solver}").And.Contain($"unknown property '{foreignKey}'"));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_EachSolverAcceptsItsOwnMapKeys()
+        {
+            foreach (string solver in new[] { NavSolverDeclaration.NavMesh, NavSolverDeclaration.MassNavigation, NavSolverDeclaration.CrowdSimulation })
+            {
+                Assert.That(NavSolverDeclaration.OptionalMapKeys(solver), Does.Contain("boards"), solver);
+            }
+
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.CrowdSimulation), Does.Not.Contain("navProfiles"));
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.MassNavigation), Does.Not.Contain("logicTerrainAsset"));
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.NavMesh), Does.Not.Contain("jumpLinkBake"));
+        }
+
+        private static JsonObject CoreNavmeshJson()
+            => JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "assets", NavMeshConfigPaths.BakeConfigPath)))!.AsObject();
+
+        private static AgentProfileRegistry CoreAgentProfiles()
+            => new(System.Text.Json.JsonSerializer.Deserialize<List<AgentProfileConfig>>(
+                File.ReadAllText(Path.Combine(FindRepoRoot(), "assets", "Navigation", "agent_profiles.json")),
+                StrictJsonOptions.CreateCamelCase())!);
+
         [Test]
         public void NavTileGranularity_MixedSizesAcrossBoardsAreRejected()
         {
