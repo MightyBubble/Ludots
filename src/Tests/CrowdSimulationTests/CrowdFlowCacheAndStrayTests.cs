@@ -17,22 +17,21 @@ namespace CrowdSimulationTests;
 public sealed class CrowdFlowCacheAndStrayTests
 {
     [Test]
-    public void Cache_HitRequiresKeyAndMaskCoverage_LruEvictsOldest()
+    public void Cache_GetsByKey_AdmitReplacesTheEntry_LruEvictsOldest()
     {
         var cache = new FlowFieldCache(2, 4);
         var wide = Field(3, 1, new byte[] { 1, 1, 1, 0 });
         var narrow = Field(3, 1, new byte[] { 1, 1, 0, 0 });
-        cache.Admit(narrow);
-        Assert.That(cache.TryHit(cache.KeyOf(3, 1), new byte[] { 1, 1, 1, 0 }, out _), Is.False);
+        Assert.That(cache.Get(cache.KeyOf(3, 1)), Is.Null);
         Assert.That(cache.Misses, Is.EqualTo(1));
-        Assert.That(cache.TryHit(cache.KeyOf(3, 1), new byte[] { 1, 0, 0, 0 }, out var hit), Is.True);
-        Assert.That(hit, Is.SameAs(narrow));
-        Assert.That(cache.TryHit(cache.KeyOf(9, 1), new byte[] { 1, 0, 0, 0 }, out _), Is.False);
+        cache.Admit(narrow);
+        Assert.That(cache.Get(cache.KeyOf(3, 1)), Is.SameAs(narrow));
+        Assert.That(cache.Get(cache.KeyOf(9, 1)), Is.Null);
 
         cache.Admit(wide);
-        Assert.That(cache.TryHit(cache.KeyOf(3, 1), new byte[] { 1, 1, 1, 0 }, out hit), Is.True);
-        Assert.That(hit, Is.SameAs(wide));
+        Assert.That(cache.Get(cache.KeyOf(3, 1)), Is.SameAs(wide));
         Assert.That(narrow.Cached, Is.False);
+        Assert.That(cache.Hits, Is.EqualTo(2));
 
         var a = Field(1, 0, new byte[] { 1, 0, 0, 0 });
         var b = Field(1, 1, new byte[] { 1, 0, 0, 0 });
@@ -44,7 +43,7 @@ public sealed class CrowdFlowCacheAndStrayTests
         lru.Admit(c);
         Assert.That(a.Cached, Is.False);
         Assert.That(lru.Evicts, Is.EqualTo(1));
-        Assert.That(lru.TryHit(lru.KeyOf(1, 1), new byte[] { 1, 0, 0, 0 }, out _), Is.True);
+        Assert.That(lru.Get(lru.KeyOf(1, 1)), Is.SameAs(b));
         lru.Admit(d);
         Assert.That(c.Cached, Is.False, "命中过的条目留到最后才被逐出");
         Assert.That(b.Cached, Is.True);
