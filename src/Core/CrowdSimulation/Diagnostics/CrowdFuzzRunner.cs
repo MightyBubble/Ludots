@@ -506,7 +506,7 @@ public static class CrowdFuzzRunner
         {
             int id = store.EntityIds[i];
             if (!store.TryGetTemplate(id, out int tpl)) continue;
-            if (!session.Config.Structures.Templates[tpl].Layered) continue;
+            if (!session.Config.Structures.Templates[tpl].OnUpperLayer) continue;
             seen++;
             if (NextInt(rng, seen) == 0) picked = id;
         }

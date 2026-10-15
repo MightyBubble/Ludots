@@ -40,16 +40,12 @@ public sealed class CrowdStructuresStore
     public int NavCellsPerSide { get; }
     public int NavCellSizeCm { get; }
     public int NavCellsPerTile { get; }
-    public Fix64 BlockCoverage { get; }
-    internal int PortalReachNavCells => _config.Structures.PortalReachNavCells;
-    internal bool[] AnchorTerrain => _config.Structures.AnchorTerrain;
-    internal bool[] SpanTerrain => _config.Structures.SpanTerrain;
     /// <summary>阻挡盒的电机查询半径(最大个人半径,厘米)。</summary>
     public Fix64 ReachCm { get; }
 
     /// <summary>导航区域栅格 = 地形源,被 NavArea 组件按优先级覆盖(高者胜,同级后放置者胜)。</summary>
     public byte[] Area { get; private set; }
-    /// <summary>阻挡栅格:被 blocker 足迹覆盖率 ≥ blockCoverage 的格。</summary>
+    /// <summary>阻挡栅格:被 block 足迹覆盖率 ≥ 该模板 coverage 的格。</summary>
     public byte[] Blocked { get; }
     /// <summary>初始地形区域。乐观层只覆写仍等于这份数组的格。</summary>
     public byte[] TerrainArea => _terrainArea;
@@ -89,7 +85,6 @@ public sealed class CrowdStructuresStore
         NavCellsPerSide = config.NavCellsPerSide;
         NavCellSizeCm = config.NavCellSizeCm;
         NavCellsPerTile = config.Hpa.NavCellsPerTile;
-        BlockCoverage = config.Structures.BlockCoverage;
         _terrainType = grid.TerrainType;
         _jumpCandidates = grid.JumpCandidates;
         int n2 = NavCellsPerSide * NavCellsPerSide;
@@ -112,7 +107,7 @@ public sealed class CrowdStructuresStore
         _lifetime.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 
-    /// <summary>建仓。地图阻挡按实体点名的模板入仓，模板必须是永久的 rect 阻挡。初始栅格取 SurfaceGrid 的既算结果。</summary>
+    /// <summary>建仓。地图阻挡按实体点名的模板入仓，模板必须是永久的 square + block。初始栅格取 SurfaceGrid 的既算结果。</summary>
     public static CrowdStructuresStore Build(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid grid,
@@ -121,13 +116,13 @@ public sealed class CrowdStructuresStore
         var store = new CrowdStructuresStore(config, grid);
         foreach (var b in blockers)
         {
-            int tplIndex = store.RequireMapTemplate(b.TemplateId, "阻挡", layered: false);
+            int tplIndex = config.Structures.RequireMapTemplate(b.TemplateId, CrowdStructureEffectKind.Block);
             int id = store._nextId++;
             store._ids.Add(id);
             store._tpl[id] = tplIndex;
             store._footprint[id] = new CrowdStructureFootprint
             {
-                Shape = CrowdStructureShape.Rect,
+                Shape = CrowdStructureShape.Square,
                 CenterXCm = Fix64.FromInt(b.XCm),
                 CenterYCm = Fix64.FromInt(b.YCm),
                 Hx = Fix64.FromInt(b.HalfSizeCm),
@@ -139,34 +134,6 @@ public sealed class CrowdStructuresStore
         store.RebuildColliders();
         store.ReserveEntitySlots();
         return store;
-    }
-
-    /// <summary>地图实体点名的模板：阻挡要 rect + blocker，条带要 path + layered，两者都不能有寿命。</summary>
-    private int RequireMapTemplate(string templateId, string role, bool layered)
-    {
-        int index = TemplateIndexOf(templateId);
-        if (index < 0)
-        {
-            throw new InvalidOperationException($"地图{role}实体点名的结构模板 \"{templateId}\" 不存在。");
-        }
-
-        var tpl = _config.Structures.Templates[index];
-        bool fits = layered
-            ? tpl.Layered && tpl.Footprint == "path"
-            : tpl.Blocker && !tpl.Layered && tpl.Footprint == "rect";
-        if (!fits)
-        {
-            throw new InvalidOperationException(layered
-                ? $"地图{role}实体点名的结构模板 \"{templateId}\" 必须是 path 足迹的分层模板。"
-                : $"地图{role}实体点名的结构模板 \"{templateId}\" 必须是 rect 足迹的阻挡模板。");
-        }
-
-        if (tpl.LifetimeSec != null)
-        {
-            throw new InvalidOperationException($"地图{role}实体点名的结构模板 \"{templateId}\" 带寿命；地图上的结构必须是永久的。");
-        }
-
-        return index;
     }
 
     public int TemplateIndexOf(string templateId) => _config.Structures.TemplateIndexOf(templateId);
@@ -208,7 +175,7 @@ public sealed class CrowdStructuresStore
             }
 
             var tpl = templates[tplIndex];
-            if (tpl.Layered)
+            if (tpl.OnUpperLayer)
             {
                 if (_navArea.ContainsKey(id) || _blocker.Contains(id))
                 {
@@ -227,7 +194,7 @@ public sealed class CrowdStructuresStore
                 throw Component(tick, id, $"实体 {id} 的模板 {tpl.Id} 没有区域，组件里却有");
             }
 
-            if (!tpl.Layered && _blocker.Contains(id) != tpl.Blocker)
+            if (!tpl.OnUpperLayer && _blocker.Contains(id) != tpl.Blocks)
             {
                 throw Component(tick, id, $"实体 {id} 的阻挡组件与模板 {tpl.Id} 不一致");
             }
@@ -300,10 +267,10 @@ public sealed class CrowdStructuresStore
             store._ids.Add(id);
             store._tpl[id] = tplIndex;
             store._footprint[id] = fp;
-            if (!tpl.Layered)
+            if (!tpl.OnUpperLayer)
             {
                 if (tpl.AreaIndex is { } area) store._navArea[id] = (area, tpl.Priority);
-                if (tpl.Blocker) store._blocker.Add(id);
+                if (tpl.Blocks) store._blocker.Add(id);
             }
             if (id >= store._nextId) store._nextId = id + 1;
         }
@@ -326,7 +293,7 @@ public sealed class CrowdStructuresStore
     {
         foreach (var record in layeredPaths)
         {
-            int tplIndex = RequireMapTemplate(record.TemplateId, "条带", layered: true);
+            int tplIndex = _config.Structures.RequireMapTemplate(record.TemplateId, CrowdStructureEffectKind.Surface);
             int id = _nextId++;
             _ids.Add(id);
             _tpl[id] = tplIndex;
@@ -339,7 +306,7 @@ public sealed class CrowdStructuresStore
     {
         LastMutationTouchedUpperLayer = false;
         var tpl = _config.Structures.Templates[tplIndex];
-        if (tpl.Layered && _upperLayer == null)
+        if (tpl.OnUpperLayer && _upperLayer == null)
         {
             throw new InvalidOperationException("结构仓没有桥面层。");
         }
@@ -349,7 +316,7 @@ public sealed class CrowdStructuresStore
         _tpl[id] = tplIndex;
         _footprint[id] = fp;
         if (expireTick >= 0) _lifetime[id] = expireTick;
-        if (tpl.Layered)
+        if (tpl.OnUpperLayer)
         {
             LastMutationTouchedUpperLayer = true;
             var rect = fp.CellRectOf(NavCellSizeCm, NavCellsPerSide);
@@ -358,7 +325,7 @@ public sealed class CrowdStructuresStore
         }
 
         if (tpl.AreaIndex is { } area) _navArea[id] = (area, tpl.Priority);
-        if (tpl.Blocker) _blocker.Add(id);
+        if (tpl.Blocks) _blocker.Add(id);
         return Commit(id, fp);
     }
 
@@ -366,7 +333,7 @@ public sealed class CrowdStructuresStore
     public (int Id, CrowdStructureFootprint Fp, (int X0, int Y0, int X1, int Y1) Rect)? RemoveEntity(int id)
     {
         if (!_footprint.TryGetValue(id, out var fp)) return null;
-        bool layered = _config.Structures.Templates[_tpl[id]].Layered;
+        bool layered = _config.Structures.Templates[_tpl[id]].OnUpperLayer;
         if (layered && _upperLayer == null)
         {
             throw new InvalidOperationException("结构仓没有桥面层。");
@@ -419,7 +386,8 @@ public sealed class CrowdStructuresStore
 
     internal RuntimeStructureTemplate LiveTemplate(int id) => _config.Structures.Templates[_tpl[id]];
 
-    internal byte TerrainIndex(int cell) => _terrainType[cell];
+    /// <summary>这一格静态地形经 terrainAreas 得到的区域下标，不受 setArea 影响。</summary>
+    internal int StaticTerrainArea(int cell) => _config.TerrainToArea[_terrainType[cell]];
 
     internal CrowdPlacementReject JudgePlacement(RuntimeStructureTemplate template, CrowdStructureFootprint footprint) =>
         CrowdStructurePlacement.Judge(this, template, footprint, ref _judgeCells, ref _judgeFlags, out _);
@@ -427,7 +395,7 @@ public sealed class CrowdStructuresStore
     /// <summary>地面模板写进这一格：区域看格心，阻挡看覆盖份额。</summary>
     internal bool BaseLayerCellHit(RuntimeStructureTemplate tpl, CrowdStructureFootprint fp, int x, int y)
     {
-        if (tpl.Layered) return false;
+        if (tpl.OnUpperLayer) return false;
         bool hit = false;
         var cell = Fix64.FromInt(NavCellSizeCm);
         if (tpl.AreaIndex != null)
@@ -437,10 +405,10 @@ public sealed class CrowdStructuresStore
             hit = fp.Covers(cx, cy);
         }
 
-        if (tpl.Blocker)
+        if (tpl.Blocks)
         {
             var (bx0, by0, bx1, by1) = fp.Bbox();
-            if (CoverShare(bx0, bx1, x, cell) * CoverShare(by0, by1, y, cell) >= BlockCoverage) hit = true;
+            if (CoverShare(bx0, bx1, x, cell) * CoverShare(by0, by1, y, cell) >= tpl.BlockCoverage) hit = true;
         }
 
         return hit;
@@ -551,6 +519,7 @@ public sealed class CrowdStructuresStore
         {
             if (!_blocker.Contains(id)) continue;
             var fp = _footprint[id];
+            Fix64 coverage = _config.Structures.Templates[_tpl[id]].BlockCoverage;
             var (bx0, by0, bx1, by1) = fp.Bbox();
             var (a, b, c, d) = fp.CellRectOf(NavCellSizeCm, navCellsPerSide);
             for (int y = Math.Max(b, rect.Y0); y < Math.Min(d, rect.Y1); y++)
@@ -559,7 +528,7 @@ public sealed class CrowdStructuresStore
                 {
                     Fix64 coverX = CoverShare(bx0, bx1, x, navCellSizeCm);
                     Fix64 coverY = CoverShare(by0, by1, y, navCellSizeCm);
-                    if (coverX * coverY >= BlockCoverage) Blocked[y * navCellsPerSide + x] = 1;
+                    if (coverX * coverY >= coverage) Blocked[y * navCellsPerSide + x] = 1;
                 }
             }
         }
@@ -597,7 +566,7 @@ public sealed class CrowdStructuresStore
         int layered = 0;
         for (int i = 0; i < _ids.Count; i++)
         {
-            if (_config.Structures.Templates[_tpl[_ids[i]]].Layered) layered++;
+            if (_config.Structures.Templates[_tpl[_ids[i]]].OnUpperLayer) layered++;
         }
 
         if (_upperLayer == null)
@@ -660,14 +629,13 @@ public sealed class CrowdStructuresStore
             }
         }
 
-        var reach = CrowdReferenceMeters.TruncatedCmToM(PortalReachNavCells * NavCellSizeCm);
         int x1 = clip.X1 - 1;
         int y1 = clip.Y1 - 1;
         for (int i = 0; i < _ids.Count; i++)
         {
             int id = _ids[i];
             var tpl = _config.Structures.Templates[_tpl[id]];
-            if (!tpl.Layered) continue;
+            if (!tpl.OnUpperLayer) continue;
             if (tpl.AreaIndex is not int areaIndex)
             {
                 throw new InvalidOperationException($"分层模板 {tpl.Id} 没有导航区域。");
@@ -676,7 +644,7 @@ public sealed class CrowdStructuresStore
             var fp = _footprint[id];
             var span = UpperLayerSpanGeometry.FromCentimeters(
                 fp.X0.ToInt(), fp.Y0.ToInt(), fp.X1.ToInt(), fp.Y1.ToInt(), fp.WidthCm.ToInt(),
-                NavCellsPerSide, NavCellSizeCm, reach);
+                NavCellsPerSide, NavCellSizeCm, tpl.PortalReachNavCells);
             int xa = Math.Max(span.MinX, clip.X0);
             int ya = Math.Max(span.MinY, clip.Y0);
             int xb = Math.Min(span.MaxX, x1);

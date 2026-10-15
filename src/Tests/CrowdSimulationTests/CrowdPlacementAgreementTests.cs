@@ -30,7 +30,7 @@ public sealed class CrowdPlacementAgreementTests
             session, bridge,
             Fix64.FromInt(run.X * cell + cell / 2), Fix64.FromInt(run.Y * cell + cell / 2), size,
             Fix64.FromInt((run.X + 5) * cell + cell / 2), Fix64.FromInt(run.Y * cell + cell / 2),
-            CrowdPlacementReject.SpanTerrain);
+            CrowdPlacementReject.InteriorArea);
         store.Blocked[blocked.Index] = 1;
         Agree(session, building, Fix64.FromInt(blocked.X * cell + cell / 2), Fix64.FromInt(blocked.Y * cell + cell / 2), size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.OverlapsBlocked);
         var at = (Fix64.FromInt(free.X * cell + cell / 2), Fix64.FromInt(free.Y * cell + cell / 2));

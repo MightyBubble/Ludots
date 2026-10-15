@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.NavMesh.Config;
 using NUnit.Framework;
@@ -337,107 +338,220 @@ public class CrowdSimulationConfigTests
         Assert.That(templates.Select(t => t.Id).ToArray(), Is.EqualTo(
             new[] { "bridge", "building", "fire", "flood", "road", "s7barrier", "timedBridge" }));
         var byId = templates.ToDictionary(t => t.Id);
-        Assert.That(byId["building"].Blocker, Is.True);
-        Assert.That(byId["building"].AreaIndex, Is.Null);
-        Assert.That(byId["bridge"].Layered, Is.True);
-        Assert.That(byId["bridge"].AreaIndex, Is.Not.Null);
+        int Area(string id) => runtime.NavAreas.Select((a, i) => (a.Id, i)).Single(a => a.Id == id).i;
+
+        var building = byId["building"];
+        Assert.That(building.Layer, Is.EqualTo(CrowdStructureLayer.Base));
+        Assert.That(building.Footprint, Is.EqualTo(CrowdStructureShape.Square));
+        Assert.That(building.Effect, Is.EqualTo(CrowdStructureEffectKind.Block));
+        Assert.That(building.BlockCoverage, Is.EqualTo(Fix64.FromDouble(0.5)));
+        Assert.That(building.AreaIndex, Is.Null);
+        Assert.That(building.Placement, Is.EqualTo(CrowdStructurePlacementKind.Unrestricted));
+        Assert.That(building.LifetimeSec, Is.Null);
+
+        foreach (string id in new[] { "bridge", "timedBridge" })
+        {
+            var bridge = byId[id];
+            Assert.That(bridge.Layer, Is.EqualTo(CrowdStructureLayer.Upper), id);
+            Assert.That(bridge.Footprint, Is.EqualTo(CrowdStructureShape.Path), id);
+            Assert.That(bridge.Effect, Is.EqualTo(CrowdStructureEffectKind.Surface), id);
+            Assert.That(bridge.AreaIndex, Is.EqualTo(Area("deck")), id);
+            Assert.That(bridge.PortalReachNavCells, Is.EqualTo(4), id);
+            Assert.That(bridge.Placement, Is.EqualTo(CrowdStructurePlacementKind.SpanEnds), id);
+            Assert.That(Enumerable.Range(0, bridge.EndpointAreas.Length).Where(a => bridge.EndpointAreas[a]).ToArray(),
+                Is.EquivalentTo(new[] { Area("shallow"), Area("open") }), id);
+            Assert.That(Enumerable.Range(0, bridge.InteriorAreas.Length).Where(a => bridge.InteriorAreas[a]).ToArray(),
+                Is.EqualTo(new[] { Area("deep") }), id);
+        }
+
+        Assert.That(byId["bridge"].LifetimeSec, Is.Null);
+        Assert.That(byId["timedBridge"].LifetimeSecRaw, Is.EqualTo(4.0));
+        Assert.That(byId["road"].Effect, Is.EqualTo(CrowdStructureEffectKind.SetArea));
+        Assert.That(byId["road"].Footprint, Is.EqualTo(CrowdStructureShape.Path));
+        Assert.That(byId["road"].AreaIndex, Is.EqualTo(Area("road")));
         Assert.That(byId["road"].Priority, Is.EqualTo(10));
-        Assert.That(byId["fire"].LifetimeSec, Is.Not.Null);
-        Assert.That(byId["s7barrier"].Blocker, Is.True);
+        Assert.That(byId["flood"].Footprint, Is.EqualTo(CrowdStructureShape.Disc));
+        Assert.That(byId["flood"].Priority, Is.EqualTo(20));
+        Assert.That(byId["fire"].Priority, Is.EqualTo(40));
+        Assert.That(byId["fire"].LifetimeSecRaw, Is.EqualTo(900.0));
+        Assert.That(byId["s7barrier"].Blocks, Is.True);
+        Assert.That(byId["s7barrier"].BlockCoverage, Is.EqualTo(Fix64.FromDouble(0.5)));
         Assert.That(byId["s7barrier"].LifetimeSec, Is.EqualTo(Fix64.FromDouble(4)));
         Assert.That(byId["s7barrier"].LifetimeSecRaw, Is.EqualTo(4.0));
-        Assert.That(runtime.Structures.AnchorTerrain, Is.EqualTo(new[] { false, true, true, false, false }));
-        Assert.That(runtime.Structures.SpanTerrain, Is.EqualTo(new[] { true, false, false, false, false }));
     }
 
-    [Test]
-    public void BridgeTerrain_MissingOrUnknown_IsRejected()
+    [TestCase("blockCoverage", "0.5", "effect.coverage")]
+    [TestCase("portalReachNavCells", "4", "effect.portalReachNavCells")]
+    [TestCase("anchorTerrain", "[\"land\"]", "placement.endpointAreas")]
+    [TestCase("spanTerrain", "[\"water\"]", "placement.interiorAreas")]
+    public void StructureSection_RetiredKey_NamesItsReplacement(string key, string value, string replacement)
     {
-        var missing = TestDefaults.DefaultConfigJson();
-        missing["structures"]!.AsObject().Remove("anchorTerrain");
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(missing));
-        Assert.That(ex!.Message, Does.Contain("anchorTerrain"));
-
-        var blank = TestDefaults.DefaultConfigJson();
-        blank["structures"]!["anchorTerrain"] = new JsonArray("");
-        ex = Assert.Throws<InvalidOperationException>(
-            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(blank)));
-        Assert.That(ex!.Message, Does.Contain("anchorTerrain"));
-
-        var dup = TestDefaults.DefaultConfigJson();
-        dup["structures"]!["spanTerrain"] = new JsonArray("water", "water");
-        ex = Assert.Throws<InvalidOperationException>(
-            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(dup)));
-        Assert.That(ex!.Message, Does.Contain("重复"));
-
-        var unknown = TestDefaults.DefaultConfigJson();
-        unknown["structures"]!["spanTerrain"] = new JsonArray("lava");
-        ex = Assert.Throws<InvalidOperationException>(
-            () => TestDefaults.Assemble(CrowdSimulationConfig.Load(unknown)));
-        Assert.That(ex!.Message, Does.Contain("未知地形类型"));
-
-        var layered = TestDefaults.DefaultConfigJson();
-        layered["structures"]!["templates"] = new JsonObject
-        {
-            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"deck","priority":1,"layered":true}""")!,
-        };
-        ex = Assert.Throws<InvalidOperationException>(
-            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(layered)));
-        Assert.That(ex!.Message, Does.Contain("足迹需为 path"));
-    }
-
-    [Test]
-    public void StructureTemplates_InvalidRules_AreRejected()
-    {
-        // blocker 只支持 rect
         var json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonObject
-        {
-            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"disc","blocker":true}""")!,
-        };
+        json["structures"]![key] = JsonNode.Parse(value);
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain($"已删除 structures.{key}"));
+        Assert.That(ex.Message, Does.Contain(replacement));
+    }
+
+    [TestCase("name", "\"X\"")]
+    [TestCase("blocker", "true")]
+    [TestCase("area", "\"road\"")]
+    [TestCase("priority", "1")]
+    [TestCase("layered", "true")]
+    public void StructureTemplate_RetiredKey_IsRejected(string key, string value)
+    {
+        var json = WithTemplate(Building);
+        json["structures"]!["templates"]!["x"]![key] = JsonNode.Parse(value);
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain($"已删除 structures.templates.x.{key}"));
+    }
+
+    [Test]
+    public void StructureTemplate_KindAfterOtherKeys_Loads()
+    {
+        var json = WithTemplate("""
+            {"layer":"base","footprint":"square","effect":{"coverage":0.25,"kind":"block"},
+             "placement":{"kind":"unrestricted"},"lifetimeSec":null}
+            """);
+        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json));
+        Assert.That(runtime.Structures.Templates.Single(t => t.Id == "x").BlockCoverage, Is.EqualTo(Fix64.FromDouble(0.25)));
+    }
+
+    [Test]
+    public void StructureTemplate_LifetimeSecMissing_IsRejected()
+    {
+        var json = WithTemplate(Building);
+        json["structures"]!["templates"]!["x"]!.AsObject().Remove("lifetimeSec");
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain("lifetimeSec"));
+    }
+
+    [TestCase("effect", """{"kind":"wall"}""", "effect.kind 需为 block / setArea / surface")]
+    [TestCase("effect", """{"coverage":0.5}""", "effect.kind 需为 block / setArea / surface")]
+    [TestCase("placement", """{"kind":"anywhere"}""", "placement.kind 需为 unrestricted / spanEnds")]
+    public void StructureTemplate_UnknownKind_IsRejected(string key, string value, string message)
+    {
+        var json = WithTemplate(Building);
+        json["structures"]!["templates"]!["x"]![key] = JsonNode.Parse(value);
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain($"structures.templates.x.{message}"));
+    }
+
+    private const string Building = """
+        {"layer":"base","footprint":"square","effect":{"kind":"block","coverage":0.5},
+         "placement":{"kind":"unrestricted"},"lifetimeSec":null}
+        """;
+
+    private const string SpanEnds = """{"kind":"spanEnds","endpointAreas":["shallow","open"],"interiorAreas":["deep"]}""";
+
+    [TestCase("upper", "square", """{"kind":"surface","area":"deck","portalReachNavCells":4}""", SpanEnds)]
+    [TestCase("base", "disc", """{"kind":"block","coverage":0.5}""", """{"kind":"unrestricted"}""")]
+    [TestCase("base", "path", """{"kind":"block","coverage":0.5}""", """{"kind":"unrestricted"}""")]
+    [TestCase("base", "path", """{"kind":"setArea","area":"road","priority":1}""", SpanEnds)]
+    [TestCase("base", "path", """{"kind":"surface","area":"deck","portalReachNavCells":4}""", SpanEnds)]
+    [TestCase("upper", "path", """{"kind":"setArea","area":"road","priority":1}""", SpanEnds)]
+    [TestCase("upper", "path", """{"kind":"surface","area":"deck","portalReachNavCells":4}""", """{"kind":"unrestricted"}""")]
+    public void StructureTemplate_CombinationOutsideTable_IsRejected(string layer, string footprint, string effect, string placement)
+    {
+        var json = WithTemplate($$"""
+            {"layer":"{{layer}}","footprint":"{{footprint}}","effect":{{effect}},"placement":{{placement}},"lifetimeSec":null}
+            """);
         var ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
-        Assert.That(ex!.Message, Does.Contain("blocker 只支持 rect"));
+        Assert.That(ex!.Message, Does.Contain("不是允许的组合"));
+    }
 
-        // area 与 priority 同进同出
-        json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonObject
-        {
-            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"road"}""")!,
-        };
+    [TestCase("layer", "\"middle\"", "layer")]
+    [TestCase("footprint", "\"rect\"", "footprint")]
+    [TestCase("lifetimeSec", "0", "lifetimeSec")]
+    [TestCase("effect", """{"kind":"block","coverage":0}""", "effect.coverage")]
+    [TestCase("effect", """{"kind":"block","coverage":1.5}""", "effect.coverage")]
+    public void StructureTemplate_FieldOutOfRange_IsRejected(string key, string value, string path)
+    {
+        var json = WithTemplate(Building);
+        json["structures"]!["templates"]!["x"]![key] = JsonNode.Parse(value);
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain($"structures.templates.x.{path}"));
+    }
+
+    [Test]
+    public void StructureTemplate_SurfaceAndSetAreaRanges_AreRejected()
+    {
+        var json = WithTemplate($$"""
+            {"layer":"upper","footprint":"path","effect":{"kind":"surface","area":"deck","portalReachNavCells":0},
+             "placement":{{SpanEnds}},"lifetimeSec":null}
+            """);
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain("effect.portalReachNavCells"));
+
+        json = WithTemplate("""
+            {"layer":"base","footprint":"disc","effect":{"kind":"setArea","area":"road","priority":-1},
+             "placement":{"kind":"unrestricted"},"lifetimeSec":null}
+            """);
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
-        Assert.That(ex!.Message, Does.Contain("area 与 priority 需同时给出"));
+        Assert.That(ex!.Message, Does.Contain("effect.priority"));
 
-        // 未知区域
-        json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonObject
-        {
-            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"nowhere","priority":1}""")!,
-        };
-        ex = Assert.Throws<InvalidOperationException>(
-            () => TestDefaults.Assemble(CrowdSimulationConfig.Load(json)));
-        Assert.That(ex!.Message, Does.Contain("未知导航区域"));
-
-        // 非阻挡且无 area = 无效实体
-        json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonObject
-        {
-            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect"}""")!,
-        };
+        json = WithTemplate("""
+            {"layer":"upper","footprint":"path","effect":{"kind":"surface","area":"deck","portalReachNavCells":4},
+             "placement":{"kind":"spanEnds","endpointAreas":["open","open"],"interiorAreas":["deep"]},"lifetimeSec":null}
+            """);
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
-        Assert.That(ex!.Message, Does.Contain("无效实体"));
+        Assert.That(ex!.Message, Does.Contain("placement.endpointAreas"));
+        Assert.That(ex.Message, Does.Contain("重复"));
 
-        // lifetimeSec 需 > 0
-        json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonObject
-        {
-            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","blocker":true,"lifetimeSec":0}""")!,
-        };
+        json = WithTemplate("""
+            {"layer":"upper","footprint":"path","effect":{"kind":"surface","area":"deck","portalReachNavCells":4},
+             "placement":{"kind":"spanEnds","endpointAreas":["open"],"interiorAreas":[]},"lifetimeSec":null}
+            """);
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
-        Assert.That(ex!.Message, Does.Contain("lifetimeSec"));
+        Assert.That(ex!.Message, Does.Contain("placement.interiorAreas"));
+    }
+
+    [TestCase("""{"kind":"setArea","area":"nowhere","priority":1}""", """{"kind":"unrestricted"}""", "effect.area")]
+    [TestCase("""{"kind":"surface","area":"deck","portalReachNavCells":4}""", """{"kind":"spanEnds","endpointAreas":["lava"],"interiorAreas":["deep"]}""", "placement.endpointAreas[0]")]
+    [TestCase("""{"kind":"surface","area":"deck","portalReachNavCells":4}""", """{"kind":"spanEnds","endpointAreas":["open"],"interiorAreas":["lava"]}""", "placement.interiorAreas[0]")]
+    public void StructureTemplate_UnknownArea_IsRejected(string effect, string placement, string path)
+    {
+        string layer = effect.Contains("surface") ? "upper" : "base";
+        string footprint = effect.Contains("surface") ? "path" : "disc";
+        var json = WithTemplate($$"""
+            {"layer":"{{layer}}","footprint":"{{footprint}}","effect":{{effect}},"placement":{{placement}},"lifetimeSec":null}
+            """);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain($"structures.templates.x.{path}"));
+        Assert.That(ex.Message, Does.Contain("未知导航区域"));
+    }
+
+    [Test]
+    public void StructureTemplate_UpperArea_OnlyForSurface()
+    {
+        var setArea = WithTemplate("""
+            {"layer":"base","footprint":"disc","effect":{"kind":"setArea","area":"deck","priority":1},
+             "placement":{"kind":"unrestricted"},"lifetimeSec":null}
+            """, keepDefaults: true);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(setArea)));
+        Assert.That(ex!.Message, Does.Contain("structures.templates.x.effect.area \"deck\" 是上层区域"));
+
+        var endpoint = WithTemplate("""
+            {"layer":"upper","footprint":"path","effect":{"kind":"surface","area":"deck","portalReachNavCells":4},
+             "placement":{"kind":"spanEnds","endpointAreas":["deck"],"interiorAreas":["deep"]},"lifetimeSec":null}
+            """);
+        ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(endpoint)));
+        Assert.That(ex!.Message, Does.Contain("placement.endpointAreas[0] = \"deck\" 是上层区域"));
+    }
+
+    private static JsonObject WithTemplate(string template, bool keepDefaults = false)
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        var templates = keepDefaults ? json["structures"]!["templates"]!.AsObject() : new JsonObject();
+        templates["x"] = JsonNode.Parse(template);
+        json["structures"]!["templates"] = templates;
+        return json;
     }
 
     [Test]
@@ -516,6 +630,14 @@ public class CrowdSimulationConfigTests
                 new JsonObject { ["jump"] = new JsonObject { ["rangeCells"] = 7 } },
             };
             return "navProfiles[0].jump.rangeCells";
+        }
+
+        const string templateKey = "structures.templates[].";
+        if (oldPath.StartsWith(templateKey, StringComparison.Ordinal))
+        {
+            string key = oldPath[templateKey.Length..];
+            root["structures"]!["templates"]!["building"]![key] = 1;
+            return "structures.templates.building." + key;
         }
 
         var parts = oldPath.Split('.');

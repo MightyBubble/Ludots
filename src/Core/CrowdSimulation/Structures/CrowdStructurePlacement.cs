@@ -8,8 +8,8 @@ namespace Ludots.Core.CrowdSimulation.Structures;
 public enum CrowdPlacementReject : byte
 {
     None = 0,
-    SpanTerrain = 1,
-    AnchorTerrain = 2,
+    InteriorArea = 1,
+    EndpointArea = 2,
     OverlapsBlocked = 3,
     OverlapsStructure = 4,
     OutOfBounds = 5,
@@ -17,7 +17,7 @@ public enum CrowdPlacementReject : byte
 
 /// <summary>
 /// 放置合法性。输入是结构仓、模板和足迹，输出原因以及足迹实际盖住的导航格。
-/// 桥的端点格必须落在 anchorTerrain，其余桥面格必须落在 spanTerrain。
+/// spanEnds 模板的端点格的静态地形区域必须在 endpointAreas 里，其余盖住的格必须在 interiorAreas 里。
 /// 重叠只看同一层。越界按整段足迹的包围盒判定，不把界内仍合法的格标成非法。
 /// </summary>
 public static class CrowdStructurePlacement
@@ -43,9 +43,9 @@ public static class CrowdStructurePlacement
         bool outside = minX < Fix64.Zero || minY < Fix64.Zero || maxX > sideCm || maxY > sideCm;
         var reason = outside ? CrowdPlacementReject.OutOfBounds : CrowdPlacementReject.None;
 
-        if (template.Layered)
+        if (template.Placement == CrowdStructurePlacementKind.SpanEnds)
         {
-            reason = JudgeBridge(store, template, footprint, ref cells, ref flags, out count, reason);
+            reason = JudgeSpanEnds(store, template, footprint, ref cells, ref flags, out count, reason);
         }
         else
         {
@@ -60,7 +60,7 @@ public static class CrowdStructurePlacement
                 for (int x = rect.X0; x < rect.X1; x++)
                 {
                     if (!store.BaseLayerCellHit(template, footprint, x, y)) continue;
-                    byte flag = BaseLayerFlag(store, template.Layered, x, y, ref reason);
+                    byte flag = BaseLayerFlag(store, template.OnUpperLayer, x, y, ref reason);
                     cells[count] = y * side + x;
                     flags[count] = flag;
                     count++;
@@ -71,7 +71,7 @@ public static class CrowdStructurePlacement
         return reason;
     }
 
-    private static CrowdPlacementReject JudgeBridge(
+    private static CrowdPlacementReject JudgeSpanEnds(
         CrowdStructuresStore store,
         RuntimeStructureTemplate template,
         CrowdStructureFootprint footprint,
@@ -82,18 +82,17 @@ public static class CrowdStructurePlacement
     {
         int side = store.NavCellsPerSide;
         int cellCm = store.NavCellSizeCm;
-        var reach = CrowdReferenceMeters.TruncatedCmToM(store.PortalReachNavCells * cellCm);
         var geo = UpperLayerSpanGeometry.FromCentimeters(
             footprint.X0.ToInt(), footprint.Y0.ToInt(), footprint.X1.ToInt(), footprint.Y1.ToInt(), footprint.WidthCm.ToInt(),
-            side, cellCm, reach);
+            side, cellCm, template.PortalReachNavCells);
         int spanW = geo.MaxX >= geo.MinX ? geo.MaxX - geo.MinX + 1 : 0;
         int spanH = geo.MaxY >= geo.MinY ? geo.MaxY - geo.MinY + 1 : 0;
         Ensure(ref cells, ref flags, spanW > 0 && spanH > 0 ? spanW * spanH : 0);
         count = 0;
         bool painted0 = false;
         bool painted1 = false;
-        var anchor = store.AnchorTerrain;
-        var span = store.SpanTerrain;
+        var endpointAreas = template.EndpointAreas;
+        var interiorAreas = template.InteriorAreas;
         for (int y = geo.MinY; y <= geo.MaxY; y++)
         {
             for (int x = geo.MinX; x <= geo.MaxX; x++)
@@ -105,17 +104,15 @@ public static class CrowdStructurePlacement
                 byte flag = 0;
                 if (anchorCell) flag |= FlagAnchor;
                 if (geo.IsPortal(endDist)) flag |= FlagPortal;
-                int terrain = store.TerrainIndex(y * side + x);
-                bool terrainOk = anchorCell
-                    ? terrain < anchor.Length && anchor[terrain]
-                    : terrain < span.Length && span[terrain];
-                if (!terrainOk)
+                int area = store.StaticTerrainArea(y * side + x);
+                bool areaOk = anchorCell ? endpointAreas[area] : interiorAreas[area];
+                if (!areaOk)
                 {
                     flag |= FlagIllegal;
-                    reason = Worse(reason, anchorCell ? CrowdPlacementReject.AnchorTerrain : CrowdPlacementReject.SpanTerrain);
+                    reason = Worse(reason, anchorCell ? CrowdPlacementReject.EndpointArea : CrowdPlacementReject.InteriorArea);
                 }
 
-                flag |= BaseLayerFlag(store, template.Layered, x, y, ref reason);
+                flag |= BaseLayerFlag(store, template.OnUpperLayer, x, y, ref reason);
                 cells[count] = y * side + x;
                 flags[count] = flag;
                 count++;
@@ -124,7 +121,7 @@ public static class CrowdStructurePlacement
 
         if (!painted0 || !painted1)
         {
-            reason = Worse(reason, CrowdPlacementReject.AnchorTerrain);
+            reason = Worse(reason, CrowdPlacementReject.EndpointArea);
         }
 
         return reason;
@@ -161,11 +158,11 @@ public static class CrowdStructurePlacement
         {
             int id = store.LiveId(i);
             var existing = store.LiveTemplate(id);
-            if (existing.Layered != layered) continue;
+            if (existing.OnUpperLayer != layered) continue;
             var fp = store.FootprintOf(id);
             if (layered)
             {
-                if (BridgePaints(store, fp, x, y)) return true;
+                if (UpperLayerPaints(store, existing, fp, x, y)) return true;
             }
             else if (store.BaseLayerCellHit(existing, fp, x, y))
             {
@@ -176,12 +173,11 @@ public static class CrowdStructurePlacement
         return false;
     }
 
-    private static bool BridgePaints(CrowdStructuresStore store, CrowdStructureFootprint footprint, int x, int y)
+    private static bool UpperLayerPaints(CrowdStructuresStore store, RuntimeStructureTemplate template, CrowdStructureFootprint footprint, int x, int y)
     {
-        var reach = CrowdReferenceMeters.TruncatedCmToM(store.PortalReachNavCells * store.NavCellSizeCm);
         var geo = UpperLayerSpanGeometry.FromCentimeters(
             footprint.X0.ToInt(), footprint.Y0.ToInt(), footprint.X1.ToInt(), footprint.Y1.ToInt(), footprint.WidthCm.ToInt(),
-            store.NavCellsPerSide, store.NavCellSizeCm, reach);
+            store.NavCellsPerSide, store.NavCellSizeCm, template.PortalReachNavCells);
         return geo.Hit(x, y, out _);
     }
 

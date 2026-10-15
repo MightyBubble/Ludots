@@ -66,7 +66,7 @@ public class CrowdMapStructureTemplateTests
         var config = TestDefaults.Assemble();
         var ex = Assert.Throws<InvalidOperationException>(() =>
             CrowdStructuresStore.Build(config, EmptyGrid(config), new[] { new BlockerFootprint(0, 0, 100, "road") }));
-        Assert.That(ex!.Message, Does.Contain("\"road\"").And.Contain("rect"));
+        Assert.That(ex!.Message, Does.Contain("\"road\"").And.Contain("square").And.Contain("block"));
     }
 
     [Test]

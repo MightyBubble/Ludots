@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
+using static Ludots.Core.CrowdSimulation.Config.CrowdSimulationConfig;
 
 namespace Ludots.Core.CrowdSimulation.Config;
 
@@ -363,10 +365,6 @@ public sealed class CrowdSimulationConfigLoader
             },
             Structures = new RuntimeStructuresSection
             {
-                BlockCoverage = Fix64.FromDouble(config.Structures.BlockCoverage),
-                PortalReachNavCells = config.Structures.PortalReachNavCells,
-                AnchorTerrain = ResolveTerrainMask(config.Structures.AnchorTerrain, bound.TerrainTypeIds, "structures.anchorTerrain"),
-                SpanTerrain = ResolveTerrainMask(config.Structures.SpanTerrain, bound.TerrainTypeIds, "structures.spanTerrain"),
                 Templates = BuildStructureTemplates(config, bound.AreaIndexById),
             },
             Deploy = new RuntimeDeploySection
@@ -405,76 +403,95 @@ public sealed class CrowdSimulationConfigLoader
         return result;
     }
 
-    /// <summary>地形 id 收成与地图地形表等长的掩码。未知、空串、重复在装载即报错。</summary>
-    private static bool[] ResolveTerrainMask(string[] ids, IReadOnlyList<string> terrainTypeIds, string path)
-    {
-        var mask = new bool[terrainTypeIds.Count];
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < ids.Length; i++)
-        {
-            string id = ids[i];
-            if (string.IsNullOrWhiteSpace(id) || !seen.Add(id))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: {path}[{i}] 为空或重复。");
-            }
-
-            int index = -1;
-            for (int t = 0; t < terrainTypeIds.Count; t++)
-            {
-                if (terrainTypeIds[t] == id)
-                {
-                    index = t;
-                    break;
-                }
-            }
-
-            if (index < 0)
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: {path} 未知地形类型 \"{id}\"。");
-            }
-
-            mask[index] = true;
-        }
-
-        return mask;
-    }
-
-    /// <summary>结构模板表装载:模板 area id 解析为 navmesh areas 下标。未知区域在装载即报错。表按 id 排序。</summary>
+    /// <summary>结构模板表装载：区域 id 解析为 traversal 区域下标，未知区域在装载即报错。表按 id 排序。</summary>
     private static RuntimeStructureTemplate[] BuildStructureTemplates(
         CrowdSimulationConfig config,
         IReadOnlyDictionary<string, int> areaIndex)
     {
         var entries = config.Structures.Templates;
-        if (entries == null || entries.Count == 0) return Array.Empty<RuntimeStructureTemplate>();
+        if (entries.Count == 0) return Array.Empty<RuntimeStructureTemplate>();
         return OrderedById(entries, (id, t) =>
         {
+            string path = $"structures.templates.{id}";
+            Fix64 coverage = Fix64.Zero;
             int? area = null;
-            if (t.Area != null)
+            int priority = 0;
+            int portalReach = 0;
+            CrowdStructureEffectKind effect;
+            switch (t.Effect)
             {
-                if (!areaIndex.TryGetValue(t.Area, out int index))
-                {
-                    throw new InvalidOperationException(
-                        $"{CrowdSimulationConfigValidator.FileName}: structures.templates.{id}.area 未知导航区域 \"{t.Area}\"");
-                }
+                case StructureBlockEffect block:
+                    effect = CrowdStructureEffectKind.Block;
+                    coverage = Fix64.FromDouble(block.Coverage);
+                    break;
+                case StructureSetAreaEffect setArea:
+                    effect = CrowdStructureEffectKind.SetArea;
+                    area = ResolveArea(areaIndex, setArea.Area, $"{path}.effect.area");
+                    priority = setArea.Priority;
+                    break;
+                case StructureSurfaceEffect surface:
+                    effect = CrowdStructureEffectKind.Surface;
+                    area = ResolveArea(areaIndex, surface.Area, $"{path}.effect.area");
+                    portalReach = surface.PortalReachNavCells;
+                    break;
+                default:
+                    throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: {path}.effect 类型未知。");
+            }
 
-                area = index;
+            bool[] endpointAreas = Array.Empty<bool>();
+            bool[] interiorAreas = Array.Empty<bool>();
+            var placement = CrowdStructurePlacementKind.Unrestricted;
+            if (t.Placement is StructureSpanEndsPlacement spanEnds)
+            {
+                placement = CrowdStructurePlacementKind.SpanEnds;
+                endpointAreas = ResolveAreaMask(areaIndex, spanEnds.EndpointAreas, $"{path}.placement.endpointAreas");
+                interiorAreas = ResolveAreaMask(areaIndex, spanEnds.InteriorAreas, $"{path}.placement.interiorAreas");
             }
 
             return new RuntimeStructureTemplate
             {
                 Id = id,
-                Name = t.Name ?? id,
-                Footprint = t.Footprint,
-                Blocker = t.Blocker,
+                Layer = t.Layer == "upper" ? CrowdStructureLayer.Upper : CrowdStructureLayer.Base,
+                Footprint = t.Footprint switch
+                {
+                    "square" => CrowdStructureShape.Square,
+                    "disc" => CrowdStructureShape.Disc,
+                    _ => CrowdStructureShape.Path,
+                },
+                Effect = effect,
+                BlockCoverage = coverage,
                 AreaIndex = area,
-                Priority = t.Priority ?? 0,
+                Priority = priority,
+                PortalReachNavCells = portalReach,
+                Placement = placement,
+                EndpointAreas = endpointAreas,
+                InteriorAreas = interiorAreas,
                 LifetimeSec = t.LifetimeSec is { } sec ? Fix64.FromDouble(sec) : null,
                 LifetimeSecRaw = t.LifetimeSec,
-                Layered = t.Layered,
             };
         });
+    }
+
+    private static int ResolveArea(IReadOnlyDictionary<string, int> areaIndex, string areaId, string path)
+    {
+        if (!areaIndex.TryGetValue(areaId, out int index))
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: {path} 未知导航区域 \"{areaId}\"（区域在 {CrowdTraversalConfig.RelativePath} 的 areas）。");
+        }
+
+        return index;
+    }
+
+    private static bool[] ResolveAreaMask(IReadOnlyDictionary<string, int> areaIndex, string[] areaIds, string path)
+    {
+        var mask = new bool[areaIndex.Count];
+        for (int i = 0; i < areaIds.Length; i++)
+        {
+            mask[ResolveArea(areaIndex, areaIds[i], $"{path}[{i}]")] = true;
+        }
+
+        return mask;
     }
 
     private static NavigationBinding BindNavigation(
@@ -711,35 +728,35 @@ public sealed class CrowdSimulationConfigLoader
     }
 
     /// <summary>
-    /// 上层区域 = 被分层结构模板引用的区域。上层格不在地面栅格里，所以它不能是链接端点、不能是地形对应的目标，
-    /// 也不能被改写地面区域的模板引用。
+    /// 上层区域 = surface 效果引用的区域。上层格不在地面栅格里，所以它不能是链接端点、不能是地形对应的目标，
+    /// 不能被 setArea 引用，也不能出现在 spanEnds 的区域表里。
     /// </summary>
     private static void ValidateUpperLayerAreas(
         CrowdSimulationConfig config,
         CrowdTraversalConfig traversal,
         IReadOnlyDictionary<string, int> areaIndexById)
     {
-        var entries = config.Structures?.Templates;
-        if (entries == null) return;
+        var entries = config.Structures.Templates;
         var upper = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (id, t) in entries)
         {
-            if (t?.Area == null) continue;
-            if (!areaIndexById.ContainsKey(t.Area))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: structures.templates.{id}.area 未知导航区域 \"{t.Area}\"（区域在 {CrowdTraversalConfig.RelativePath} 的 areas）。");
-            }
-
-            if (t.Layered) upper.Add(t.Area);
+            if (t.Effect is not StructureSurfaceEffect surface) continue;
+            ResolveArea(areaIndexById, surface.Area, $"structures.templates.{id}.effect.area");
+            upper.Add(surface.Area);
         }
 
         foreach (var (id, t) in entries)
         {
-            if (t?.Area != null && !t.Layered && upper.Contains(t.Area))
+            if (t.Effect is StructureSetAreaEffect setArea && upper.Contains(setArea.Area))
             {
                 throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: structures.templates.{id}.area \"{t.Area}\" 是上层区域，只能被分层模板引用。");
+                    $"{CrowdSimulationConfigValidator.FileName}: structures.templates.{id}.effect.area \"{setArea.Area}\" 是上层区域，只能被 surface 效果引用。");
+            }
+
+            if (t.Placement is StructureSpanEndsPlacement spanEnds)
+            {
+                RejectUpperIn(upper, spanEnds.EndpointAreas, $"structures.templates.{id}.placement.endpointAreas");
+                RejectUpperIn(upper, spanEnds.InteriorAreas, $"structures.templates.{id}.placement.interiorAreas");
             }
         }
 
@@ -765,6 +782,18 @@ public sealed class CrowdSimulationConfigLoader
                             $"{CrowdTraversalConfig.RelativePath}: agentTypes.{row.Id}.cells.{areaId} 是上层区域，depart / arrive 必须为空。");
                     }
                 }
+            }
+        }
+    }
+
+    private static void RejectUpperIn(HashSet<string> upper, string[] areaIds, string path)
+    {
+        for (int i = 0; i < areaIds.Length; i++)
+        {
+            if (upper.Contains(areaIds[i]))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: {path}[{i}] = \"{areaIds[i]}\" 是上层区域，地面格的静态地形区域不会是它。");
             }
         }
     }

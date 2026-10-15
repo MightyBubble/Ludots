@@ -254,11 +254,6 @@ public static class CrowdModScaffold
                     new JsonObject { ["playerId"] = 1, ["xCm"] = Player1BaseXCm, ["yCm"] = BaseYCm, ["color"] = "#4DB2FF" },
                     new JsonObject { ["playerId"] = 2, ["xCm"] = Player2BaseXCm, ["yCm"] = BaseYCm, ["color"] = "#FFC53D" }),
             },
-            ["structures"] = new JsonObject
-            {
-                ["anchorTerrain"] = new JsonArray("land"),
-                ["spanTerrain"] = new JsonArray("water"),
-            },
         });
         WriteJson(assets, "CrowdSimulationDebug.json", new JsonObject
         {

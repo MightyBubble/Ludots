@@ -232,7 +232,7 @@ public static class CrowdNavSurfaceAuthoring
     }
 
     /// <summary>
-    /// 桥面掩码。端点已经含岸上延伸（portalReachNavCells − 1），栅格化不再外扩。
+    /// 桥面掩码。端点已经含岸上延伸（模板 effect.portalReachNavCells − 1），栅格化不再外扩。
     /// </summary>
     public static byte[] RasterizeBridgeMask(IReadOnlyList<LayeredPathRecord> bridges, CrowdSimulationRuntimeConfig config)
     {

@@ -1,45 +1,83 @@
 {
   "structures": {
-    "anchorTerrain": [
-      "shore",
-      "land"
-    ],
-    "spanTerrain": [
-      "water"
-    ],
     "templates": {
       "bridge": {
-        "name": "桥梁",
+        "layer": "upper",
         "footprint": "path",
-        "area": "deck",
-        "priority": 30,
-        "layered": true
+        "effect": {
+          "kind": "surface",
+          "area": "deck",
+          "portalReachNavCells": 4
+        },
+        "placement": {
+          "kind": "spanEnds",
+          "endpointAreas": [
+            "shallow",
+            "open"
+          ],
+          "interiorAreas": [
+            "deep"
+          ]
+        },
+        "lifetimeSec": null
       },
       "timedBridge": {
-        "name": "限时桥梁",
+        "layer": "upper",
         "footprint": "path",
-        "area": "deck",
-        "priority": 30,
-        "layered": true,
+        "effect": {
+          "kind": "surface",
+          "area": "deck",
+          "portalReachNavCells": 4
+        },
+        "placement": {
+          "kind": "spanEnds",
+          "endpointAreas": [
+            "shallow",
+            "open"
+          ],
+          "interiorAreas": [
+            "deep"
+          ]
+        },
         "lifetimeSec": 4
       },
       "road": {
-        "name": "道路",
+        "layer": "base",
         "footprint": "path",
-        "area": "road",
-        "priority": 10
+        "effect": {
+          "kind": "setArea",
+          "area": "road",
+          "priority": 10
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
+        "lifetimeSec": null
       },
       "flood": {
-        "name": "泛洪区",
+        "layer": "base",
         "footprint": "disc",
-        "area": "flooded",
-        "priority": 20
+        "effect": {
+          "kind": "setArea",
+          "area": "flooded",
+          "priority": 20
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
+        "lifetimeSec": null
       },
       "fire": {
-        "name": "火场",
+        "layer": "base",
         "footprint": "disc",
-        "area": "burning",
-        "priority": 40,
+        "effect": {
+          "kind": "setArea",
+          "area": "burning",
+          "priority": 40
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
         "lifetimeSec": 900
       }
     }

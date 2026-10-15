@@ -18,13 +18,5 @@
         "color": "#FFC53D"
       }
     ]
-  },
-  "structures": {
-    "anchorTerrain": [
-      "land"
-    ],
-    "spanTerrain": [
-      "water"
-    ]
   }
 }

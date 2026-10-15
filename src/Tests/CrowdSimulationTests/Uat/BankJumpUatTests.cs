@@ -19,14 +19,16 @@ public sealed class BankJumpUatTests
         var bridges = S1SurfaceTruthTests.LoadMapSurface(seed).LayeredPaths;
         var jumps = S1SurfaceTruthTests.ReadSurface(seed).JumpCandidates;
         int n = runtime.NavCellsPerSide, cs = runtime.NavCellSizeCm;
-        int ext = runtime.Structures.PortalReachNavCells - 1;
         Assert.That(bridges.Count, Is.GreaterThan(0), "场景无效：世界无桥");
         Assert.That(jumps.Length, Is.GreaterThan(0), "场景无效：世界无 jump 候选");
-        Assert.That(ext, Is.GreaterThanOrEqualTo(1), "场景无效：portalReachNavCells − 1 < 1，无岸上延伸段");
 
         var zone = new byte[n * n];
+        int ext = 0;
         foreach (var bridge in bridges)
         {
+            var template = runtime.Structures.Templates[runtime.Structures.TemplateIndexOf(bridge.TemplateId)];
+            ext = template.PortalReachNavCells - 1;
+            Assert.That(ext, Is.GreaterThanOrEqualTo(1), $"场景无效：{template.Id} 的 portalReachNavCells − 1 < 1，无岸上延伸段");
             var s = SpanCells(bridge.Span, cs, n, ext);
             for (int t = -ext; t <= s.Len + ext; t++)
             {

@@ -32,7 +32,7 @@ public sealed class UpperLayerSurface
 /// </summary>
 public static class UpperLayerBake
 {
-    /// <summary>上层条带实体栅格化：逐格上层区域下标(0 = 无上层)与桥头 portal 标记,及首写 tile 序。区域取实体点名模板的区域。</summary>
+    /// <summary>上层条带实体栅格化：逐格上层区域下标(0 = 无上层)与桥头 portal 标记,及首写 tile 序。区域和入口格数取实体点名模板的值。</summary>
     public static UpperLayerSurface RasterizeLayeredPaths(
         IReadOnlyList<LayeredPathRecord> layeredPaths,
         CrowdSimulationRuntimeConfig config)
@@ -44,14 +44,14 @@ public static class UpperLayerBake
         var tileSeen = new bool[(navCellsPerSide / config.Hpa.NavCellsPerTile) * (navCellsPerSide / config.Hpa.NavCellsPerTile)];
         var tileOrder = new List<int>();
         int tileSize = config.Hpa.NavCellsPerTile;
-        var portalReachM = CrowdReferenceMeters.TruncatedCmToM(config.Structures.PortalReachNavCells * navCellSizeCm);
         foreach (var record in layeredPaths)
         {
-            int areaIndex = AreaIndexOf(config, record.TemplateId);
+            var tpl = config.Structures.Templates[config.Structures.RequireMapTemplate(record.TemplateId, CrowdStructureEffectKind.Surface)];
+            int areaIndex = tpl.AreaIndex!.Value;
             var span = record.Span;
             var spanGeom = UpperLayerSpanGeometry.FromCentimeters(
                 span.FromXCm, span.FromYCm, span.ToXCm, span.ToYCm, span.WidthCm,
-                navCellsPerSide, navCellSizeCm, portalReachM);
+                navCellsPerSide, navCellSizeCm, tpl.PortalReachNavCells);
             for (int y = spanGeom.MinY; y <= spanGeom.MaxY; y++)
             {
                 for (int x = spanGeom.MinX; x <= spanGeom.MaxX; x++)
@@ -69,23 +69,6 @@ public static class UpperLayerBake
         }
 
         return new UpperLayerSurface { AreaIndex = upperAreaIndex, PortalFlag = portalFlag, TileOrder = tileOrder.ToArray() };
-
-        static int AreaIndexOf(CrowdSimulationRuntimeConfig config, string templateId)
-        {
-            int index = config.Structures.TemplateIndexOf(templateId);
-            if (index < 0)
-            {
-                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 地图条带实体点名的结构模板 \"{templateId}\" 不存在。");
-            }
-
-            var tpl = config.Structures.Templates[index];
-            if (!tpl.Layered || tpl.AreaIndex is not { } area)
-            {
-                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 地图条带实体点名的结构模板 \"{templateId}\" 必须是带区域的分层模板。");
-            }
-
-            return area;
-        }
     }
 
     /// <summary>
@@ -272,8 +255,9 @@ internal readonly struct UpperLayerSpanGeometry
 
     public static UpperLayerSpanGeometry FromCentimeters(
         int x0Cm, int y0Cm, int x1Cm, int y1Cm, int widthCm,
-        int navCellsPerSide, int navCellSizeCm, Fix64 portalReachM)
+        int navCellsPerSide, int navCellSizeCm, int portalReachNavCells)
     {
+        var portalReachM = CrowdReferenceMeters.TruncatedCmToM(portalReachNavCells * navCellSizeCm);
         int halfWCm = widthCm / 2;
         var originX = CrowdReferenceMeters.CmToMRaw(x0Cm);
         var originY = CrowdReferenceMeters.CmToMRaw(y0Cm);

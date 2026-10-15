@@ -29,7 +29,7 @@ public sealed class SpatialVocabularyContractTests
         "BlendCommit", "SightHysteresis",
         "MaxNeighbors", "MaxScan", "SeparationWeight",
         "RestDeadband", "MaxPush", "Smoothing", "MovingBonus", "DominantShare",
-        "PlayerA", "PlayerB", "MaxUnits", "BlockCoverage", "AreaIndex",
+        "PlayerA", "PlayerB", "MaxUnits", "BlockCoverage", "Coverage", "AreaIndex",
         "Priority", "LifetimeSecRaw", "InitialUnits", "CentersPerGroup", "PlayerId", "Ema",
         "IndexByPlayerId", "PlayerCount",
     };

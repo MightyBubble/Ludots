@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -42,10 +43,13 @@ public sealed class CrowdSimulationConfig
         ArgumentNullException.ThrowIfNull(configObject);
         RejectRetiredKeys(configObject);
         RejectIdKeyedNulls(configObject);
+        RequireStructureKinds(configObject);
+        var options = StrictJsonOptions.CreateCamelCase();
+        options.AllowOutOfOrderMetadataProperties = true;
         CrowdSimulationConfig cfg;
         try
         {
-            cfg = configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
+            cfg = configObject.Deserialize<CrowdSimulationConfig>(options)
                 ?? throw new InvalidOperationException("CrowdSimulationConfig.json: 反序列化结果为空。");
         }
         catch (JsonException ex)
@@ -115,7 +119,16 @@ public sealed class CrowdSimulationConfig
         ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
         ("spawn.cellInset", "spawn.navCellInsetFraction"),
         ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
-        ("structures.portalCells", "structures.portalReachNavCells"),
+        ("structures.portalCells", "structures.templates.<id>.effect.portalReachNavCells"),
+        ("structures.portalReachNavCells", "structures.templates.<id>.effect.portalReachNavCells"),
+        ("structures.blockCoverage", "structures.templates.<id>.effect.coverage"),
+        ("structures.anchorTerrain", "structures.templates.<id>.placement.endpointAreas（区域 id）"),
+        ("structures.spanTerrain", "structures.templates.<id>.placement.interiorAreas（区域 id）"),
+        ("structures.templates[].name", "面板条目的文案（模板没有名字）"),
+        ("structures.templates[].blocker", "structures.templates.<id>.effect { kind: \"block\", coverage }"),
+        ("structures.templates[].area", "structures.templates.<id>.effect.area"),
+        ("structures.templates[].priority", "structures.templates.<id>.effect.priority"),
+        ("structures.templates[].layered", "structures.templates.<id>.layer"),
         ("formation.settleTime", "formation.settleTimeSec"),
         ("movement.slotTimeConstant", "movement.slotTimeConstantSec"),
         ("sim.timeScale", "sim.simSecondsPerTickSecond"),
@@ -146,6 +159,35 @@ public sealed class CrowdSimulationConfig
         foreach (var (oldPath, newKey) in RetiredSpatialKeys)
         {
             RejectRetiredSpatialKey(root, oldPath.Split('.'), 0, "", newKey);
+        }
+    }
+
+    private static readonly string[] StructureEffectKinds = ["block", "setArea", "surface"];
+    private static readonly string[] StructurePlacementKinds = ["unrestricted", "spanEnds"];
+
+    private static void RequireStructureKinds(JsonObject root)
+    {
+        if (root["structures"] is not JsonObject structures || structures["templates"] is not JsonObject templates)
+        {
+            return;
+        }
+
+        foreach (var (id, node) in templates)
+        {
+            if (node is not JsonObject template) continue;
+            RequireKind(template, $"structures.templates.{id}", "effect", StructureEffectKinds);
+            RequireKind(template, $"structures.templates.{id}", "placement", StructurePlacementKinds);
+        }
+    }
+
+    private static void RequireKind(JsonObject template, string path, string key, string[] kinds)
+    {
+        if (template[key] is not JsonObject obj) return;
+        string? kind = obj["kind"] is JsonValue v && v.TryGetValue(out string? s) ? s : null;
+        if (kind == null || Array.IndexOf(kinds, kind) < 0)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: {path}.{key}.kind 需为 {string.Join(" / ", kinds)}。");
         }
     }
 
@@ -427,26 +469,65 @@ public sealed class CrowdSimulationConfig
 
     public sealed class StructuresSection
     {
-        public required double BlockCoverage { get; init; }
-        public required int PortalReachNavCells { get; init; }
-        /// <summary>桥两端锚点格允许的地形类型 id。装载时收成与地图地形表等长的掩码。</summary>
-        public required string[] AnchorTerrain { get; init; }
-        /// <summary>桥跨越段允许的地形类型 id。端点格不算跨越段。</summary>
-        public required string[] SpanTerrain { get; init; }
         /// <summary>键是模板 id。placeStructure / removeStructureAt 按 id 引用。运行时按 id 的序数排序，不看对象键顺序。</summary>
-        public Dictionary<string, StructureTemplateEntry>? Templates { get; init; }
+        public required Dictionary<string, StructureTemplateEntry> Templates { get; init; }
     }
 
-    /// <summary>footprint 必填且为 rect/disc/path；blocker 只允许 rect；area 与 priority 同进同出；lifetimeSec 若写则 &gt; 0。</summary>
+    /// <summary>layer、footprint、effect、placement 只允许 <see cref="CrowdSimulationConfigValidator"/> 列出的四种组合。</summary>
     public sealed class StructureTemplateEntry
     {
-        public string? Name { get; init; }
+        public required string Layer { get; init; }
         public required string Footprint { get; init; }
-        public bool Blocker { get; init; }
-        public string? Area { get; init; }
-        public int? Priority { get; init; }
-        public double? LifetimeSec { get; init; }
-        public bool Layered { get; init; }
+        public required StructureEffectEntry Effect { get; init; }
+        public required StructurePlacementEntry Placement { get; init; }
+        /// <summary>必写；null 表示永久。</summary>
+        public required double? LifetimeSec { get; init; }
+    }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+    [JsonDerivedType(typeof(StructureBlockEffect), "block")]
+    [JsonDerivedType(typeof(StructureSetAreaEffect), "setArea")]
+    [JsonDerivedType(typeof(StructureSurfaceEffect), "surface")]
+    public abstract class StructureEffectEntry
+    {
+    }
+
+    /// <summary>格被足迹盖住的面积份额（X、Y 两向之积）≥ coverage 时成为阻挡格。</summary>
+    public sealed class StructureBlockEffect : StructureEffectEntry
+    {
+        public required double Coverage { get; init; }
+    }
+
+    /// <summary>格心落在足迹里的地面格改成 area；重叠时 priority 高者胜，同级后放置者胜。</summary>
+    public sealed class StructureSetAreaEffect : StructureEffectEntry
+    {
+        public required string Area { get; init; }
+        public required int Priority { get; init; }
+    }
+
+    /// <summary>铺一条上层条带，格的通行参数取 area；离两端不到 portalReachNavCells 格的条带格是入口。</summary>
+    public sealed class StructureSurfaceEffect : StructureEffectEntry
+    {
+        public required string Area { get; init; }
+        public required int PortalReachNavCells { get; init; }
+    }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+    [JsonDerivedType(typeof(StructureUnrestrictedPlacement), "unrestricted")]
+    [JsonDerivedType(typeof(StructureSpanEndsPlacement), "spanEnds")]
+    public abstract class StructurePlacementEntry
+    {
+    }
+
+    public sealed class StructureUnrestrictedPlacement : StructurePlacementEntry
+    {
+    }
+
+    /// <summary>按格的静态地形区域判：两个端点格在 endpointAreas 里，其余盖住的格在 interiorAreas 里。</summary>
+    public sealed class StructureSpanEndsPlacement : StructurePlacementEntry
+    {
+        public required string[] EndpointAreas { get; init; }
+        public required string[] InteriorAreas { get; init; }
     }
 
     public sealed class DeploySection
