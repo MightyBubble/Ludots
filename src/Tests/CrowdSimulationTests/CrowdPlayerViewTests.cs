@@ -274,7 +274,7 @@ public sealed class CrowdPlayerViewTests
         return alpha;
     }
 
-    private static JsonObject ViewJson()
+    internal static JsonObject ViewJson()
     {
         var actions = new JsonObject();
         foreach (var name in new[]
