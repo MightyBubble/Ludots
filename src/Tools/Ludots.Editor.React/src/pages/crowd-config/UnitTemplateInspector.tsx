@@ -7,6 +7,8 @@ import {
   draftProfile,
   issueForField,
   issuesFor,
+  presenterIssues,
+  PRESENTERS_FILE,
   sameValue,
   setAgentField,
   setProfileField,
@@ -48,6 +50,8 @@ export function UnitTemplateInspector({ modId, view, draftText, issues, onDraftC
   const profile = item.profile && item.profile.id === profileId ? item.profile : null;
   const profileDraft = profileId ? draftProfile(draftText, profileId) : undefined;
   const related = issuesFor(issues, item.id, profileId);
+  const presenterErrors = presenterIssues(related);
+  const otherIssues = related.filter((issue) => !presenterErrors.includes(issue));
 
   function edit(apply: () => string) {
     try {
@@ -213,22 +217,37 @@ export function UnitTemplateInspector({ modId, view, draftText, issues, onDraftC
       {item.presenters.length > 0 ? (
         <ul className="mt-1 space-y-1 text-xs" data-presenter-links="">
           {item.presenters.map((link) => (
-            <li key={`${link.ruleOwner}:${link.definitionId}`} className="font-mono">
+            <li key={`${link.ruleOwner}:${link.rule}:${link.definitionId}`} className="font-mono">
               {link.definitionId}
-              <span className="text-studio-secondary"> · 规则在 {link.ruleOwner} · {describeSource(link)}</span>
-              {link.defined ? null : <span className="ml-1 text-studio-red">presenters.json 里没有这个定义</span>}
+              <span className="text-studio-secondary">
+                {' '}
+                · {link.ruleOwner} {link.rule}
+                {link.templateKey === item.id ? '' : ` · 键 ${link.templateKey}`} · {describeSource(link)}
+              </span>
             </li>
           ))}
         </ul>
-      ) : (
+      ) : presenterErrors.length > 0 ? null : (
         <p className="mt-1 text-xs text-studio-muted" data-presenter-links="">
-          Presentation/presenters.json 里没有在 EntitySpawned 时为它创建表现的规则。群体装载不检查这一项。
+          {PRESENTERS_FILE} 里没有在 EntitySpawned 时为它创建表现的规则。
         </p>
       )}
+      {presenterErrors.map((issue, index) => (
+        <span
+          key={`presenter-error-${index}`}
+          data-presenter-error=""
+          className="mt-1 block whitespace-pre-wrap rounded border border-studio-red/40 bg-studio-red/10 px-2 py-1 text-xs text-studio-red"
+        >
+          {issue.message}
+          <span className="mt-0.5 block font-mono text-studio-secondary">
+            {issue.sourceMod ?? ''} {issue.sourceFile ?? ''}
+          </span>
+        </span>
+      ))}
 
-      {related.length > 0 ? (
+      {otherIssues.length > 0 ? (
         <ul className="mt-4 space-y-2" data-template-issues="">
-          {related.map((issue, index) => (
+          {otherIssues.map((issue, index) => (
             <li key={`${issue.path}-${index}`} className="rounded-md border border-studio-red/40 bg-studio-red/10 px-3 py-2 text-xs">
               <span className="block">{issue.message}</span>
               <span className="mt-1 block font-mono text-studio-secondary">

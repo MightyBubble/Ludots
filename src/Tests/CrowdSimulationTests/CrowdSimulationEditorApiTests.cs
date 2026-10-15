@@ -274,8 +274,62 @@ public class CrowdSimulationEditorApiTests
 
         JsonObject presenter = (JsonObject)((JsonArray)unit["presenters"]!).Single()!;
         Assert.That(Text(presenter, "definitionId"), Is.EqualTo(MinimalUnit));
-        Assert.That(Flag(presenter, "defined"), Is.True);
+        Assert.That(Text(presenter, "ruleOwner"), Is.EqualTo(MinimalBootstrap));
+        Assert.That(Text(presenter, "rule"), Is.EqualTo("rules[0]"));
         Assert.That(Text(presenter, "sourceMod"), Is.EqualTo(Minimal));
+        Assert.That(Text(presenter, "sourceFile"), Is.EqualTo(Minimal + ":assets/Presentation/presenters.json"));
+    }
+
+    [Test]
+    public void UnitTemplates_UnitWithoutPresenter_ValidateReturnsTheCrowdContractWithTemplateSource()
+    {
+        string copy = CopyMod(Minimal);
+        try
+        {
+            EditPresenters(copy, presenters => presenters.RemoveAt(0));
+            JsonObject view = UnitTemplates(CrowdSimulationEditorApi.Load(FindRepoRoot(), Minimal, copy));
+            Assert.That((JsonArray)Item(view, MinimalUnit)["presenters"]!, Is.Empty);
+
+            JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), Minimal, "templates", TemplatesDraft(Minimal, copy), copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            JsonObject issue = (JsonObject)((JsonArray)result["issues"]!).Single()!;
+            Assert.That(Text(issue, "message"), Does.StartWith("CrowdSimulation 会话绑定的单位模板缺表现。"));
+            Assert.That(Text(issue, "message"), Does.Contain($"单位模板 \"{MinimalUnit}\"（{Minimal}:assets/Entities/templates.json）生成时没有表现"));
+            Assert.That(Text(issue, "sourceMod"), Is.EqualTo(Minimal));
+            Assert.That(Text(issue, "sourceFile"), Is.EqualTo(Minimal + ":assets/Entities/templates.json"));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void UnitTemplates_SpawnRuleCreatingUnknownDefinition_ValidateAndViewReturnPresenterLoaderText()
+    {
+        string copy = CopyMod(Minimal);
+        try
+        {
+            EditPresenters(copy, presenters => presenters[0]!["rules"]![0]!["command"]!["definitionId"] = MinimalUnit + "_typo");
+            string expected =
+                $"Presenter '{MinimalBootstrap}' rules[0]: EntitySpawned '{MinimalUnit}' creates unknown presenter definition '{MinimalUnit}_typo'. " +
+                $"Written by {Minimal}:assets/Presentation/presenters.json.";
+
+            JsonObject snapshot = CrowdSimulationEditorApi.Load(FindRepoRoot(), Minimal, copy);
+            JsonObject viewIssue = (JsonObject)((JsonArray)snapshot["unitTemplates"]!["issues"]!).Single()!;
+            Assert.That(Text(viewIssue, "message"), Is.EqualTo(expected));
+
+            JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), Minimal, "templates", TemplatesDraft(Minimal, copy), copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            JsonObject issue = (JsonObject)((JsonArray)result["issues"]!).Single()!;
+            Assert.That(Text(issue, "message"), Is.EqualTo(expected));
+            Assert.That(Text(issue, "sourceMod"), Is.EqualTo(Minimal));
+            Assert.That(Text(issue, "sourceFile"), Is.EqualTo(Minimal + ":assets/Presentation/presenters.json"));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
     }
 
     [Test]
@@ -471,6 +525,7 @@ public class CrowdSimulationEditorApiTests
 
     private const string Minimal = "CrowdSimulationMinimalMod";
     private const string MinimalUnit = "crowd_minimal.unit";
+    private const string MinimalBootstrap = "crowd_minimal.units.bootstrap";
     private const string DemoContent = "CrowdSimulationDemoContentMod";
     private const string InfantryR100 = "crowd_simulation.unit.infantry.r100";
 
@@ -494,6 +549,14 @@ public class CrowdSimulationEditorApiTests
 
     private static JsonObject Profile(JsonObject draft, string profileId)
         => (JsonObject)((JsonArray)draft["agentProfiles"]!).Single(profile => profile!["id"]!.GetValue<string>() == profileId)!;
+
+    private static void EditPresenters(string modRoot, Action<JsonArray> edit)
+    {
+        string path = Path.Combine(modRoot, "assets", "Presentation", "presenters.json");
+        JsonArray presenters = JsonNode.Parse(File.ReadAllText(path))!.AsArray();
+        edit(presenters);
+        File.WriteAllText(path, presenters.ToJsonString());
+    }
 
     private static string CopyS4() => CopyMod(S4);
 

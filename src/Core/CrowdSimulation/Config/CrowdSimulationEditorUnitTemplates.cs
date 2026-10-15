@@ -2,14 +2,14 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Presenters;
-using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Config;
 
 public static partial class CrowdSimulationEditorApi
 {
-    public const string PresentersFile = "Presentation/presenters.json";
+    public const string PresentersFile = PresenterDefinitionConfigLoader.PresentersFile;
 
     private static readonly string[] AgentProfileBodyFields =
     [
@@ -200,7 +200,7 @@ public static partial class CrowdSimulationEditorApi
 
             Dictionary<string, JsonObject> rawById = IndexById(mergedTemplates, "id");
             FieldStamps templateStamps = FieldStamps.Collect(full, TemplatesFile);
-            Dictionary<string, JsonArray> presenters = PresenterLinks(full);
+            PresenterSpawnLinks? presenters = SpawnLinksOrIssue(full, expanded, (JsonArray)view["issues"]!);
             var crowd = new List<(string Id, JsonObject Raw, JsonObject Agent)>();
             var usedBy = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             foreach (JsonNode? node in mergedTemplates)
@@ -287,7 +287,7 @@ public static partial class CrowdSimulationEditorApi
                     ["agent"] = agent.DeepClone(),
                     ["fields"] = fieldSources,
                     ["profile"] = profileView,
-                    ["presenters"] = presenters.TryGetValue(id, out JsonArray? links) ? links.DeepClone() : new JsonArray(),
+                    ["presenters"] = PresenterLinksOf(presenters, id),
                 });
             }
 
@@ -349,74 +349,43 @@ public static partial class CrowdSimulationEditorApi
             return parents;
         }
 
-        /// <summary>模板 id → 生成时创建的表现。两种写法：rules 里的 EntitySpawned → CreatePresenter，或定义自己的 bindSpawn.template。</summary>
-        private static Dictionary<string, JsonArray> PresenterLinks(Opened full)
+        /// <summary>和表现装载同一份解析。链接本身有错时检视器不列表现，报错进 issues。</summary>
+        private static PresenterSpawnLinks? SpawnLinksOrIssue(Opened full, List<EntityTemplate> templates, JsonArray issues)
         {
-            var links = new Dictionary<string, JsonArray>(StringComparer.Ordinal);
-            JsonArray presenters = full.ReadArray(PresentersFile, new ConfigConflictReport());
-            if (presenters.Count == 0)
+            try
             {
-                return links;
+                return LoadSpawnLinks(full, templates, new ConfigConflictReport());
             }
-
-            FieldStamps stamps = FieldStamps.Collect(full, PresentersFile);
-            Dictionary<string, JsonObject> defined = IndexById(presenters, "id");
-            foreach (JsonNode? node in presenters)
+            catch (InvalidOperationException ex)
             {
-                if (node is not JsonObject presenter || IdOf(presenter, "id") is not { Length: > 0 } owner)
+                foreach (CrowdSimulationAuthoringIssue issue in CrowdSimulationAuthoringIssues.From(ex))
                 {
-                    continue;
+                    issues.Add(issue.ToJson());
                 }
 
-                if (presenter["bindSpawn"] is JsonObject bind
-                    && bind["template"] is JsonValue templateValue
-                    && templateValue.TryGetValue(out string? boundTemplate))
-                {
-                    AddLink(links, boundTemplate, owner, owner, defined, stamps.Leaf(owner, "bindSpawn.template"));
-                }
-
-                if (presenter["rules"] is not JsonArray rules)
-                {
-                    continue;
-                }
-
-                foreach (JsonNode? ruleNode in rules)
-                {
-                    if (ruleNode is JsonObject rule
-                        && rule["event"] is JsonObject ev
-                        && Text(ev["kind"]) == nameof(PresentationEventKind.EntitySpawned)
-                        && Text(ev["key"]) is { Length: > 0 } spawnedTemplate
-                        && rule["command"] is JsonObject command
-                        && Text(command["kind"]) == nameof(PresenterCommandKind.CreatePresenter)
-                        && Text(command["definitionId"]) is { Length: > 0 } definitionId)
-                    {
-                        AddLink(links, spawnedTemplate, definitionId, owner, defined, stamps.Leaf(owner, "rules"));
-                    }
-                }
+                return null;
             }
-
-            return links;
         }
 
-        private static void AddLink(
-            Dictionary<string, JsonArray> links,
-            string templateId,
-            string definitionId,
-            string ruleOwner,
-            Dictionary<string, JsonObject> defined,
-            string? sourceUri)
+        private static JsonArray PresenterLinksOf(PresenterSpawnLinks? links, string templateId)
         {
-            if (!links.TryGetValue(templateId, out JsonArray? list))
+            var list = new JsonArray();
+            if (links == null)
             {
-                list = new JsonArray();
-                links[templateId] = list;
+                return list;
             }
 
-            JsonObject link = sourceUri == null ? new JsonObject() : Source(sourceUri, null);
-            link["definitionId"] = definitionId;
-            link["ruleOwner"] = ruleOwner;
-            link["defined"] = defined.ContainsKey(definitionId);
-            list.Add(link);
+            foreach (PresenterSpawnLink link in links.For(templateId))
+            {
+                JsonObject node = Source(link.Source, null);
+                node["definitionId"] = link.DefinitionId;
+                node["ruleOwner"] = link.OwnerId;
+                node["rule"] = link.Rule;
+                node["templateKey"] = link.TemplateId;
+                list.Add(node);
+            }
+
+            return list;
         }
 
         private static string? Text(JsonNode? node)

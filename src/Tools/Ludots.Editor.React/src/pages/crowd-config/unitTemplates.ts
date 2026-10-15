@@ -1,6 +1,6 @@
 export type FieldSource = { sourceMod?: string; sourceFile?: string; template?: string };
 export type UnitField = { name: string; kind: 'string' | 'number' | 'bool'; reference?: string | null };
-export type PresenterLink = FieldSource & { definitionId: string; ruleOwner: string; defined: boolean };
+export type PresenterLink = FieldSource & { definitionId: string; ruleOwner: string; rule: string; templateKey: string };
 export type ProfileView = {
   id: string;
   navProfileId?: string;
@@ -108,6 +108,13 @@ export function issuesFor(issues: Issue[], templateId: string, profileId?: strin
     if (profileId && names(message, profileId)) return true;
     return (issue.path ?? '').startsWith(`unitTypes.${templateId}.`);
   });
+}
+
+export const PRESENTERS_FILE = 'Presentation/presenters.json';
+
+/** 和这个模板相关、点名了表现文件的报错：群体会话的表现检查，或表现装载对生成规则的检查。 */
+export function presenterIssues(related: Issue[]): Issue[] {
+  return related.filter((issue) => (issue.message ?? '').includes(PRESENTERS_FILE));
 }
 
 export function issueForField(issues: Issue[], field: string): Issue | undefined {

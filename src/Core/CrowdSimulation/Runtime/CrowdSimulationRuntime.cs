@@ -473,6 +473,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
             _configDto!, mapConfig, agentProfiles, navmesh, pathing, templateFacts,
             (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
+        var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 PresenterDefinitionRegistry 服务。");
+        CrowdUnitPresenterContract.Require(runtimeConfig, presenterDefinitions.SpawnLinks, engine.ConfigConflictReport);
         TerrainTypeColors = runtimeConfig.TerrainTypeIds.Count == 0
             ? null
             : BindTerrainTypeColors(engine, runtimeConfig);
