@@ -19,6 +19,7 @@ public sealed class CrowdModScaffoldTests
 {
     private const string ModId = "ScaffoldProbeCrowdMod";
     private const string MapId = "scaffold_probe";
+    private static readonly CrowdModScaffoldIds Ids = CrowdModScaffoldIds.Parse("land,water", "foot", "foot");
 
     private string _root = null!;
 
@@ -50,7 +51,7 @@ public sealed class CrowdModScaffoldTests
         }
 
         string modDir = Path.Combine(_root, "mods", ModId);
-        CrowdModScaffold.Write(modDir, ModId, MapId);
+        CrowdModScaffold.Write(modDir, ModId, MapId, Ids);
         var water = new[] { CrowdNavSurfaceAuthoring.CrowdTerrainRect.Parse("water:120,20,135,40") };
         CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
             CrowdNavSurfaceAuthoring.WriteInitialTerrain(_root, ModId, MapId, "land", water, overwrite: false);
@@ -89,9 +90,20 @@ public sealed class CrowdModScaffoldTests
     public void Scaffold_RefusesExistingDirectoryAndMissingMapId()
     {
         string modDir = Path.Combine(_root, ModId);
-        Assert.Throws<InvalidOperationException>(() => CrowdModScaffold.Write(modDir, ModId, ""));
+        Assert.Throws<InvalidOperationException>(() => CrowdModScaffold.Write(modDir, ModId, "", Ids));
         Directory.CreateDirectory(modDir);
-        Assert.Throws<IOException>(() => CrowdModScaffold.Write(modDir, ModId, MapId));
+        Assert.Throws<IOException>(() => CrowdModScaffold.Write(modDir, ModId, MapId, Ids));
+    }
+
+    [TestCase(null, "foot", "foot", "--terrainTypes")]
+    [TestCase("land,", "foot", "foot", "空 id")]
+    [TestCase("land,land", "foot", "foot", "重复")]
+    [TestCase("land", " ", "foot", "--navProfile")]
+    [TestCase("land", "foot", null, "--agentType")]
+    public void ScaffoldIds_MissingOrMalformed_AreRejected(string? terrainTypes, string? navProfile, string? agentType, string expected)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdModScaffoldIds.Parse(terrainTypes, navProfile, agentType));
+        Assert.That(ex!.Message, Does.Contain(expected));
     }
 
     private static GameEngine StartEngine(string repo, string modDir)

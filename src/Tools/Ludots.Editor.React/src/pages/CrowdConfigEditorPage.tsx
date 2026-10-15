@@ -89,7 +89,7 @@ export function CrowdConfigEditorPage() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const validateTimer = useRef<number | undefined>(undefined);
-  const [bridgePort, setBridgePort] = useState('47921');
+  const [rpcPort, setRpcPort] = useState('47921');
 
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +106,7 @@ export function CrowdConfigEditorPage() {
           return list.find((mod) => mod.id === 'CrowdSimulationS4DeployMod')?.id ?? list[0]?.id ?? '';
         });
       } catch (err) {
-        if (!cancelled) setStatus(err instanceof Error ? err.message : '桥没有返回 mod 列表');
+        if (!cancelled) setStatus(err instanceof Error ? err.message : '编辑器服务没有返回 mod 列表');
       }
     })();
     return () => {
@@ -234,14 +234,14 @@ export function CrowdConfigEditorPage() {
         return;
       }
       try {
-        const rpc = await fetch(`http://127.0.0.1:${bridgePort}/rpc`, {
+        const rpc = await fetch(`http://127.0.0.1:${rpcPort}/rpc`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: {} }),
         });
         const payload = (await rpc.json()) as { result?: { ok?: boolean; issues?: Issue[]; lost?: string[]; rebuilt?: boolean }; error?: { message?: string } };
         if (payload.error) {
-          setStatus(`已写入 ${written}。运行中的桥拒绝了：${payload.error.message ?? ''}`);
+          setStatus(`已写入 ${written}。运行中的游戏拒绝了：${payload.error.message ?? ''}`);
         } else if (payload.result?.ok === false) {
           setIssues(payload.result.issues ?? []);
           setStatus(`已写入 ${written}。运行中的局没有改，因为校验没有通过。`);
@@ -251,7 +251,7 @@ export function CrowdConfigEditorPage() {
           setStatus(`已写入 ${written}。运行中的局已按这份生效。`);
         }
       } catch {
-        setStatus(`已写入 ${written}。没有运行中的桥，所以没有当场生效。`);
+        setStatus(`已写入 ${written}。没有运行中的游戏，所以没有当场生效。`);
       }
       await reload();
     } catch (err) {
@@ -338,12 +338,12 @@ export function CrowdConfigEditorPage() {
             · FixedHz {snapshot?.fixedHz ?? '…'}
           </p>
           <label className={STUDIO_CHROME.label}>
-            运行桥端口
+            运行中游戏的 RPC 端口
             <input
               className={STUDIO_CHROME.field}
-              value={bridgePort}
-              onChange={(event) => setBridgePort(event.target.value)}
-              data-live-bridge-port=""
+              value={rpcPort}
+              onChange={(event) => setRpcPort(event.target.value)}
+              data-live-rpc-port=""
             />
           </label>
         </div>

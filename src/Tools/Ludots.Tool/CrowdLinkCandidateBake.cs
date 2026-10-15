@@ -8,7 +8,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Tool;
 
 /// <summary>
-/// 一次链接候选烘焙要用的高度、桥面掩码和各种类参数，以及由同一批输入算出的 bakeInputsDigest。地图没写 linkCandidateBake 时不传。
+/// 一次链接候选烘焙要用的高度、上层掩码和各种类参数，以及由同一批输入算出的 bakeInputsDigest。地图没写 linkCandidateBake 时不传。
 /// </summary>
 public sealed class CrowdLinkCandidateBakeInput
 {
@@ -16,7 +16,7 @@ public sealed class CrowdLinkCandidateBakeInput
     /// <summary>按 .navsurface 链接种类表顺序；候选的 kindIndex 就是这里的下标。</summary>
     public required IReadOnlyList<RuntimeLinkCandidateBake> Kinds { get; init; }
     public required NavHeightField Heights { get; init; }
-    public required byte[] Bridge { get; init; }
+    public required byte[] UpperLayerMask { get; init; }
     /// <summary>见 <see cref="NavSurfaceContract.BakeInputsDigest"/>。</summary>
     public required uint BakeInputsDigest { get; init; }
 }
@@ -27,22 +27,22 @@ public sealed class CrowdLinkCandidateBakeInput
 /// </summary>
 public static class CrowdLinkCandidateBake
 {
-    public static NavSurfaceJumpCandidate[] Bake(
+    public static NavSurfaceLinkCandidate[] Bake(
         string mapId,
         int navCells,
         byte[] terrain,
         byte kindIndex,
         RuntimeLinkCandidateBake settings,
         NavHeightField heights,
-        byte[] bridge,
+        byte[] upperLayerMask,
         int cellSizeCm)
     {
         ArgumentNullException.ThrowIfNull(terrain);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(heights);
-        ArgumentNullException.ThrowIfNull(bridge);
+        ArgumentNullException.ThrowIfNull(upperLayerMask);
         int n2 = checked(navCells * navCells);
-        if (terrain.Length != n2 || heights.HeightsCm.Length != n2 || heights.Slope.Length != n2 || bridge.Length != n2)
+        if (terrain.Length != n2 || heights.HeightsCm.Length != n2 || heights.Slope.Length != n2 || upperLayerMask.Length != n2)
         {
             throw new InvalidOperationException(
                 $"地图 \"{mapId}\" 的链接候选输入长度不一致（导航格 {navCells}×{navCells}）。");
@@ -146,11 +146,11 @@ public static class CrowdLinkCandidateBake
             throw new InvalidOperationException($"地图 \"{mapId}\" 的导航格数 {navCells} 超过链接候选端点的 ushort。");
         }
 
-        var jumps = new NavSurfaceJumpCandidate[order.Count];
+        var links = new NavSurfaceLinkCandidate[order.Count];
         for (int i = 0; i < order.Count; i++)
         {
             Slot slot = order[i];
-            jumps[i] = new NavSurfaceJumpCandidate
+            links[i] = new NavSurfaceLinkCandidate
             {
                 KindIndex = kindIndex,
                 Diagonal = slot.Diagonal,
@@ -163,10 +163,10 @@ public static class CrowdLinkCandidateBake
             };
         }
 
-        return jumps;
+        return links;
 
-        bool Dry(int cell) => endpoint[terrain[cell]] && slope[cell] <= flat && bridge[cell] == 0;
-        bool Gap(int cell) => bridge[cell] == 0 && !Dry(cell);
+        bool Dry(int cell) => endpoint[terrain[cell]] && slope[cell] <= flat && upperLayerMask[cell] == 0;
+        bool Gap(int cell) => upperLayerMask[cell] == 0 && !Dry(cell);
     }
 
     public static int CellsOf(string mapId, string field, int centimeters, int cellSizeCm)

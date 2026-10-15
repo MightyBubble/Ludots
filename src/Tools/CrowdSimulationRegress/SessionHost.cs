@@ -31,7 +31,7 @@ namespace CrowdSimulationRegress;
 
 /// <summary>
 /// 无头会话装配。装载链与地图探针相同：标准参数、能力 Mod、种子目录三份资产，
-/// 关系目录从仓库根往上找。结构仓和桥按部署真值会话的方式挂上。
+/// 关系目录从仓库根往上找。结构仓和上层按部署真值会话的方式挂上。
 /// </summary>
 static class SessionHost
 {
@@ -74,7 +74,7 @@ static class SessionHost
         service = null;
         var runtime = bundle.Runtime;
         var started = Stopwatch.GetTimestamp();
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -95,7 +95,7 @@ static class SessionHost
 
             for (int i = 0; i < clearances.Count; i++)
             {
-                var nav = NavContextBaker.Bake(runtime, bundle.Grid, bundle.Heights, deck, a, clearances[i], cache);
+                var nav = NavContextBaker.Bake(runtime, bundle.Grid, bundle.Heights, upperLayer, a, clearances[i], cache);
                 if (!seen.Add(nav.Id)) continue;
                 navs[nav.Id] = nav;
             }
@@ -110,10 +110,10 @@ static class SessionHost
 
         var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, demoDir, standardDir));
         session.Structures = CrowdStructuresStore.Build(runtime, bundle.Grid, bundle.MapSurface.Blockers);
-        session.Structures.UseUpperLayer(deck);
+        session.Structures.UseUpperLayer(upperLayer);
         session.Structures.InstallMapLayeredPaths(bundle.MapSurface.LayeredPaths);
 
-        session.RebakeSources = new CrowdRebakeSources(runtime, bundle.Heights, deck, bundle.Surface.JumpCandidates);
+        session.RebakeSources = new CrowdRebakeSources(runtime, bundle.Heights, upperLayer, bundle.Surface.LinkCandidates);
         session.NavTileCache = cache;
         bakeMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         session.BindVision(new FogLayerRegistry(), new FogFieldStore());

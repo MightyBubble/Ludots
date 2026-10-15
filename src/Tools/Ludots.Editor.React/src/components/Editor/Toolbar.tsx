@@ -837,7 +837,7 @@ export const Toolbar: React.FC = () => {
                 return;
             }
             setCrowdBakeOk(true);
-            setCrowdBakeMessage(`已写入 ${String(json.path ?? output)}，跳跃候选 ${String(json.jumpCount)} 条。`);
+            setCrowdBakeMessage(`已写入 ${String(json.path ?? output)}，链接候选 ${String(json.linkCandidateCount)} 条。`);
         } catch (err: unknown) {
             setCrowdBakeOk(false);
             setCrowdBakeMessage(errorMessage(err));
