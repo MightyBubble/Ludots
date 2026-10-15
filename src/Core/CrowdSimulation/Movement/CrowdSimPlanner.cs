@@ -1364,7 +1364,7 @@ public sealed class CrowdSimPlanner
     }
 
     /// <summary>离 target 最近且从 fromComp 可达的可走格(环形外扩,平手取格号小者)。</summary>
-    private int NearestReachable(NavContext nav, int fromComp, int target, int navCellsPerSide)
+    internal int NearestReachable(NavContext nav, int fromComp, int target, int navCellsPerSide)
     {
         if (fromComp < 0) return -1;
         int tx = target % navCellsPerSide, ty = target / navCellsPerSide;

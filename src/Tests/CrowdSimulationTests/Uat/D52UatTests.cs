@@ -25,14 +25,14 @@ public sealed class D52UatTests
     {
         using var scene = CrowdUatKit.Scene();
         var session = scene.Session;
-        var nav = session.Navs.OrderBy(kv => kv.Key).Select(kv => kv.Value).First(n => n.Links == null && PassableCells(n).Any());
+        var nav = session.Navs.OrderBy(kv => kv.Key).Select(kv => kv.Value).First(n => n.Links == null && CrowdUatNav.PassableCells(n).Any());
         int side = nav.NavCellsPerSide, perTile = nav.Hpa!.NavCellsPerTile, tilesPerSide = nav.Hpa.NavTilesPerSide;
         int pad = session.Config.Flowfield.CorridorPaddingNavTiles;
         int Tile(int c) => NavGridSteps.TileOf(c, side, perTile, tilesPerSide);
         int Tx(int c) => Tile(c) % tilesPerSide;
         int Ty(int c) => Tile(c) / tilesPerSide;
 
-        var cells = PassableCells(nav).ToArray();
+        var cells = CrowdUatNav.PassableCells(nav).ToArray();
         int goal = cells[cells.Length >> 1], comp = nav.Comp[goal];
         int near = cells.Where(c => c != goal && Tile(c) == Tile(goal) && nav.Comp[c] == comp).DefaultIfEmpty(-1).First();
         int far = cells.Where(c => nav.Comp[c] == comp &&
@@ -94,7 +94,7 @@ public sealed class D52UatTests
             foreach (var g in list)
             {
                 if (!session.Groups.TryGet(g.Id, out var live) || live != g || g.Flow?.Mask == null || planner.Refreshing(g)) continue;
-                int outside = CellOutside(session.ResolveNavContext(g.NavId), g.Flow.Mask);
+                int outside = CrowdUatNav.CellOutside(session.ResolveNavContext(g.NavId), g.Flow.Mask);
                 if (outside >= 0) planner.NoteStray(g.Id, outside);
             }
 
@@ -108,36 +108,5 @@ public sealed class D52UatTests
         var starved = list.Where(g => !served.Contains(g.Id)).Select(g => g.Id).ToArray();
         TestContext.Out.WriteLine($"[uat-d52-stray] groups={list.Count} served={served.Count} ticks={t} limit={limit}");
         Assert.That(starved, Is.Empty, $"{limit} tick 内未获预算的组：{string.Join(",", starved)}");
-    }
-
-    private static IEnumerable<int> PassableCells(NavContext nav)
-    {
-        for (int c = 0; c < nav.Passable.Length; c++)
-        {
-            if (nav.Passable[c] != 0) yield return c;
-        }
-    }
-
-    private static int CellOutside(NavContext nav, byte[] mask)
-    {
-        int perTile = nav.Hpa!.NavCellsPerTile, tilesPerSide = nav.Hpa.NavTilesPerSide;
-        for (int t = 0; t < mask.Length; t++)
-        {
-            if (mask[t] != 0) continue;
-            int tx = t % tilesPerSide, ty = t / tilesPerSide;
-            bool touches = false;
-            for (int dy = -1; dy <= 1 && !touches; dy++)
-            {
-                for (int dx = -1; dx <= 1 && !touches; dx++)
-                {
-                    int nx = tx + dx, ny = ty + dy;
-                    touches = nx >= 0 && ny >= 0 && nx < tilesPerSide && ny < tilesPerSide && mask[ny * tilesPerSide + nx] != 0;
-                }
-            }
-
-            if (touches) return ty * perTile * nav.NavCellsPerSide + tx * perTile;
-        }
-
-        return -1;
     }
 }
