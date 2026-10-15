@@ -145,7 +145,8 @@
         "layer": "base",
         "footprint": "square",
         "effect": {
-          "kind": "block"
+          "kind": "block",
+          "coverage": 0.5
         },
         "placement": {
           "kind": "unrestricted"

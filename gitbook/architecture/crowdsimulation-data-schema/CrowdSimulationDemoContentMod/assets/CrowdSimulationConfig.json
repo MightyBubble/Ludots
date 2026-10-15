@@ -4,7 +4,7 @@
       "bridge": {
         "layer": "upper",
         "footprint": "path",
-        "effect": { "kind": "surface", "area": "deck" },
+        "effect": { "kind": "surface", "area": "deck", "portalReachNavCells": 4 },
         "placement": {
           "kind": "spanEnds",
           "endpointAreas": ["shallow", "open"],
@@ -15,7 +15,7 @@
       "timedBridge": {
         "layer": "upper",
         "footprint": "path",
-        "effect": { "kind": "surface", "area": "deck" },
+        "effect": { "kind": "surface", "area": "deck", "portalReachNavCells": 4 },
         "placement": {
           "kind": "spanEnds",
           "endpointAreas": ["shallow", "open"],

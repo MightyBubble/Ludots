@@ -1,10 +1,10 @@
 {
   "areas": {
-    "open": { "slopeFree": false },
-    "shallow": { "slopeFree": false },
-    "rough": { "slopeFree": false },
-    "sheer": { "slopeFree": false },
-    "deep": { "slopeFree": true }
+    "open": { "ignoresSlope": false },
+    "shallow": { "ignoresSlope": false },
+    "rough": { "ignoresSlope": false },
+    "sheer": { "ignoresSlope": false },
+    "deep": { "ignoresSlope": true }
   },
   "terrainAreas": {
     "water": "deep",
@@ -12,10 +12,6 @@
     "land": "open",
     "mountain": "rough",
     "cliff": "sheer"
-  },
-  "layers": {
-    "base": { "blockCoverage": 0.5 },
-    "upper": { "portalReachNavCells": 4 }
   },
   "linkKinds": {
     "jump": { "traversalSpeedRatio": 1.3 }

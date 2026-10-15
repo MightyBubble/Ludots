@@ -24,7 +24,7 @@
 
 | 文件 | 谁写 | 合并方式 | 内容 |
 |---|---|---|---|
-| `CrowdSimulation/traversal.json` | StandardMod 写基础，DemoContent 追加 | DeepObject，目录项登记在 `CrowdSimulationMod` | 区域、地形到区域、层参数、链接种类、通行矩阵 |
+| `CrowdSimulation/traversal.json` | StandardMod 写基础，DemoContent 追加 | DeepObject，目录项登记在 `CrowdSimulationMod` | 区域、地形到区域、链接种类、通行矩阵 |
 | `CrowdSimulationConfig.json` 的 `structures.templates` | StandardMod、DemoContent、地图 Mod | DeepObject（不变） | 结构模板 |
 | `Navigation/navmesh.json` 的 `maps.<mapId>` | 地图 Mod | DeepObject（不变） | `solver`、`logicTerrainAsset`、`navCellSizeCm`、`terrainTypes`、`linkCandidateBake` |
 | `Navigation/agent_profiles.json` | 不变 | ArrayById（不变） | 体型 |
@@ -34,7 +34,7 @@
 
 删掉的文件：StandardMod 的 `Navigation/pathing.json` 和 `Navigation/navmesh.json`。Core 自带的 `assets/Navigation/navmesh.json` 已经有根上的 Recast 键（`mode`、`algorithm`、`profiles`、`layers`、`areas`、`runtimeIncremental`），StandardMod 不用再写一份。
 
-删掉的键：`movement.jumpSpeedRatio`、`structures.blockCoverage`、`structures.portalReachNavCells`、`structures.anchorTerrain`、`structures.spanTerrain`、结构模板的 `name` / `blocker` / `area` / `priority` / `layered`、`maps.<mapId>` 的 `navAreas` / `terrainAreas` / `navProfiles` / `jumpLinkBake`（群体地图）、`tools.placeTemplate` / `rectSizeCm` / `discRadiusCm` / `pathWidthCm`、`presentation.deploy.structures`、实体组件 `CrowdSimulationNavArea` 和 `CrowdSimulationBridgeSpan`。新格式上线后再写这些键，装载报错并指出新位置。
+删掉的键：`movement.jumpSpeedRatio`、`structures.blockCoverage`、`structures.portalReachNavCells`、`structures.anchorTerrain`、`structures.spanTerrain`、结构模板的 `name` / `blocker` / `area` / `priority` / `layered`、`maps.<mapId>` 的 `navAreas` / `terrainAreas` / `navProfiles` / `jumpLinkBake`（群体地图）、`tools.placeTemplate` / `rectSizeCm` / `discRadiusCm` / `pathWidthCm`、`presentation.deploy.structures`、实体组件 `CrowdSimulationNavArea` 和 `CrowdSimulationBridgeSpan`。新格式上线后再写这些键，装载报错并指出新位置。区域的 `slopeFree` 改名为 `ignoresSlope`。
 
 示例文件按发布时的样子放在 [`crowdsimulation-data-schema/`](crowdsimulation-data-schema/)，目录结构和 Mod 里一致：
 
@@ -62,12 +62,8 @@ Minimal 的 `agent_profiles.json`、`CrowdSimulationDebug.json`、`config_catalo
 
 ```json
 {
-  "areas": { "open": { "slopeFree": false }, "deep": { "slopeFree": true } },
+  "areas": { "open": { "ignoresSlope": false }, "deep": { "ignoresSlope": true } },
   "terrainAreas": { "land": "open", "water": "deep" },
-  "layers": {
-    "base": { "blockCoverage": 0.5 },
-    "upper": { "portalReachNavCells": 4 }
-  },
   "linkKinds": { "jump": { "traversalSpeedRatio": 1.3 } },
   "agentTypes": {
     "leaper": {
@@ -89,10 +85,8 @@ Minimal 的 `agent_profiles.json`、`CrowdSimulationDebug.json`、`config_catalo
 | 键 | 类型 | 规则 | 谁读 |
 |---|---|---|---|
 | `areas.<areaId>` | 对象 | 以 id 为键；下标 = 合并后的属性顺序；最多 256 个 | 栅格的 u8 区域值、每行代价数组 |
-| `areas.<areaId>.slopeFree` | bool，必写 | 为 true 时这一区域不做坡度判定 | `NavContextBaker` |
+| `areas.<areaId>.ignoresSlope` | bool，必写 | 为 true 时这一区域不做坡度判定 | `NavContextBaker` |
 | `terrainAreas.<terrainId>` | 区域 id，必须在 `areas` 里 | 地形类型到区域的全局对应 | 地面栅格初值、链接候选掩码、放置判定 |
-| `layers.base.blockCoverage` | 数，(0, 1] | `block` 效果盖住一格的面积份额达到它，这格就是阻挡格 | `CrowdStructuresStore` |
-| `layers.upper.portalReachNavCells` | 整数，≥ 1 | 上层条带两端多少格内算入口 | `UpperLayerBake`、`CrowdStructurePlacement` |
 | `linkKinds.<kind>.traversalSpeedRatio` | 数，> 0 | 走这种链接时速度 = 单位速度 × 它 | `CrowdMotor` |
 | `agentTypes.<type>.maxSlopeDeg` | 数或 null，必写 | 数取 (0, 90)；null 表示不限坡度 | `NavContextBaker`（按 `Fix64Math.Tan(deg × Deg2Rad)` 比较） |
 | `agentTypes.<type>.links.<kind>` | `false` 或对象，必写 | `false` 表示这一行没有这种链接能力 | — |
@@ -156,15 +150,28 @@ Minimal 的 `agent_profiles.json`、`CrowdSimulationDebug.json`、`config_catalo
 
 ### 2.5 两个层
 
-`base` 是地面栅格：每格一个区域下标，加一张阻挡位图。`upper` 是 `surface` 效果铺出的条带，两端 `portalReachNavCells` 格内是入口。上层格的代价和速度取同一行 `cells[<surface 的区域>]`。
+`base` 是地面栅格：每格一个区域下标，加一张阻挡位图。`upper` 是 `surface` 效果铺出的条带。上层格的代价和速度取同一行 `cells[<surface 的区域>]`。
 
-层的个数固定为两个，不做成可配置的层列表。今天内核只有这两套栅格和烘焙路径，多写一层没有代码去读。
+层本身没有参数，`traversal.json` 里没有层这一节。以前看起来像层参数的两个数，描述的其实是一个结构怎么往栅格上盖，所以放进结构模板的效果里（4.1）：阻挡的覆盖份额写在 `block.coverage`，入口格数写在 `surface.portalReachNavCells`，每个模板各写各的。层的个数固定为两个，是内核合同（5.1），不做成可配置的层列表。
 
 ### 2.6 地形到区域
 
 `terrainAreas` 是全局的一张表，写在 StandardMod。5 种地形（`water`、`shore`、`land`、`mountain`、`cliff`）和 StandardMod 的 `terrain_type_colors.json` 是同一组词，各张图的对应今天完全一致。
 
-地图上的地形顺序另写在 `maps.<mapId>.terrainTypes`，它是烘焙输入，也是 `.navsurface` 地形表必须逐字相同的那一份。
+### 2.7 地形顺序只有一处作者源
+
+地形顺序决定格里的字节是什么意思。今天和它有关的有四处，逐一看过代码：
+
+| 位置 | 里面有什么 | 证据 |
+|---|---|---|
+| 地图配置 `maps.<mapId>.terrainAreas[]`（新格式改名 `terrainTypes`） | 有序的地形 id 列表 | 唯一由人写的那一份 |
+| 地编资产 `logicTerrainAsset`（`map_data.bin`） | 每格一个 `AreaId` 字节，没有任何地形名字 | `ReactGridTerrainBinary` 只读写区块和逐格通道；`CrowdNavSurfaceAuthoring.Bake` 把 `cell.AreaId` 原样拷进格，只检查它小于地形个数；`init-crowd-terrain` 用 `PaintTerrainAreas` 按配置顺序把地形 id 换成下标写进去 |
+| `.navsurface` 地形表 | 有序的地形 id 列表 | 烘焙器 `Bake` 直接拿配置的 `TerrainTypeIds` 写进去；运行时 `NavSurfaceContract` 逐项比对配置，不同就报错 |
+| `terrain_type_colors.json` | 以地形 id 为键的颜色 | 和顺序无关；运行时和工具只用 `RequireCovers` 检查覆盖 |
+
+所以作者源只有地图配置这一份。地编资产里的字节是它的下标，`.navsurface` 地形表是烘焙时抄下的一份，用来在装载时发现“资产是按另一个顺序烘的”，颜色表只要求覆盖。新格式保持这个关系，只把键名从 `terrainAreas[]` 改成 `terrainTypes`，因为区域对应已经搬到全局表。
+
+顺序不能改由全局 `terrainAreas` 的属性顺序决定：Minimal 的顺序是 `land, water`，S1 是 `water, shore, land, mountain, cliff`，统一成一个顺序会改掉 Minimal 地编资产和 `.navsurface` 里的每个字节。
 
 ## 3 Mod 拆分与合并
 
@@ -173,7 +180,7 @@ Minimal 的 `agent_profiles.json`、`CrowdSimulationDebug.json`、`config_catalo
 | Mod | traversal.json 里写什么 |
 |---|---|
 | `CrowdSimulationMod` | 不写数据，只在 `config_catalog.json` 登记 `CrowdSimulation/traversal.json`（DeepObject） |
-| `CrowdSimulationStandardMod` | 区域 `open` `shallow` `rough` `sheer` `deep`（下标 0–4）；5 条地形对应；两层参数；链接种类 `jump`；5 行，每行 5 格 |
+| `CrowdSimulationStandardMod` | 区域 `open` `shallow` `rough` `sheer` `deep`（下标 0–4）；5 条地形对应；链接种类 `jump`；5 行，每行 5 格 |
 | `CrowdSimulationDemoContentMod` | 追加区域 `road` `deck` `flooded` `burning`（下标 5–8），以及这 4 列在 5 行里的格 |
 | 地图 Mod | 不写；只写 `navmesh.json` 的 `maps.<mapId>` |
 
@@ -204,7 +211,7 @@ DemoContent 依赖 StandardMod，所以合并后的区域顺序是 `open, shallo
 "bridge": {
   "layer": "upper",
   "footprint": "path",
-  "effect": { "kind": "surface", "area": "deck" },
+  "effect": { "kind": "surface", "area": "deck", "portalReachNavCells": 4 },
   "placement": {
     "kind": "spanEnds",
     "endpointAreas": ["shallow", "open"],
@@ -218,9 +225,9 @@ DemoContent 依赖 StandardMod，所以合并后的区域顺序是 `open, shallo
 |---|---|---|
 | `layer` | `base` / `upper` | 结构落在哪一层 |
 | `footprint` | `square` / `disc` / `path` | 尺寸每次放置时给：`square` 边长 = `sizeCm`，`disc` 半径 = `sizeCm`，`path` 宽 = `sizeCm`，两端点另给 |
-| `effect.kind = block` | 无其他键 | 盖住的地面格变阻挡格，阻挡格同时遮挡视线 |
+| `effect.kind = block` | `coverage`（数，(0, 1]） | 一格被足迹盖住的面积份额（X、Y 两向之积）≥ `coverage` 时变阻挡格；阻挡格同时遮挡视线 |
 | `effect.kind = setArea` | `area`（区域 id），`priority`（整数 ≥ 0） | 格心落在足迹里的地面格改成这个区域；重叠时高优先级覆盖低优先级 |
-| `effect.kind = surface` | `area`（区域 id） | 铺一条上层条带，格的通行参数取这个区域；没有优先级，重叠时按现行的实体顺序 |
+| `effect.kind = surface` | `area`（区域 id），`portalReachNavCells`（整数 ≥ 1） | 铺一条上层条带，格的通行参数取这个区域；离两端不到 `portalReachNavCells` 格的条带格是入口；没有优先级，重叠时按现行的实体顺序 |
 | `placement.kind = unrestricted` | 无其他键 | 不看地形 |
 | `placement.kind = spanEnds` | `endpointAreas`、`interiorAreas`（区域 id 数组） | 两个端点格的地形区域必须在 `endpointAreas` 里，其余被盖住的格必须在 `interiorAreas` 里；两个端点格都要落在条带上 |
 | `lifetimeSec` | 数 > 0，或 null，必写 | null 表示永久；到期 tick 仍是 `ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)` |
@@ -239,6 +246,14 @@ DemoContent 依赖 StandardMod，所以合并后的区域顺序是 `open, shallo
 | `upper` | `path` | `surface` | `spanEnds` |
 
 表外的组合装载报错。这四行正好是今天数据和内核支持的范围。`placement` 虽然现在由 `layer` 决定，仍然显式写出来，内核按 `placement.kind` 分派判定，编辑器也不用记隐含规则。以后放开 `upper + unrestricted` 或 `base path + spanEnds`，只需在这张表里加行和对应的判定代码。
+
+`coverage` 和 `portalReachNavCells` 改成按模板之后，内核这几处都能按结构取值，现有代码里它们本来就是逐个结构循环：
+
+- `CrowdStructuresStore.RasterRect` 的阻挡循环和 `GroundCellHit` 逐个实体判格，`SurfaceGrid.Build` 逐个地图阻挡判格，改成读这个实体所属模板的 `coverage`。
+- `UpperLayerBake.RasterizeDecks` 逐个地图条带算 `DeckSpanGeometry`，`CrowdStructuresStore.PaintLayered` 逐个分层实体算，两处的入口距离都改成取这个条带模板的值；地图条带记录 `BridgeDeckRecord` 带上模板下标。
+- `CrowdStructurePlacement.JudgeBridge` 判的就是这一个模板，直接读它的值。
+
+现有数据里两个阻挡模板都是 0.5，两个条带模板都是 4，和今天的全局值相同，栅格逐位不变。
 
 其他规则：`setArea.area` 必须是地面区域（不是上层区域）；`surface.area` 必须是上层区域（见 2.2 第 5 条）；`disc + block` 不支持，和今天“阻挡只能是正方形”一致。旧格式允许 `blocker` 和 `area` 同时写，现有数据没有这种模板，新格式不提供这个组合。
 
@@ -277,7 +292,8 @@ DemoContent 依赖 StandardMod，所以合并后的区域顺序是 `open, shallo
 ```
 
 - `CrowdSimulationStructure { template }`：模板 id，必写。
-- `square + block` 的模板：尺寸取 `ManifestationObstacleIntent2D`，必须 `shape = "Box"`、`sinkNavigationObstacle = true`、`halfWidthCm = halfHeightCm`，边长 = 2 × 半边长。
+- `square + block` 的模板：尺寸取 `ManifestationObstacleIntent2D`，必须 `shape = "Box"`、`sinkNavigationObstacle = true`、`halfWidthCm = halfHeightCm`，边长 = 2 × 半边长；覆盖份额取模板的 `coverage`。
+- `path + surface` 的模板：入口格数取模板的 `portalReachNavCells`，烘焙工具算候选时排除的桥面格也按它画。
 - `path + surface` 的模板：尺寸和端点取 `CrowdSimulationPathSpan { fromXCm, fromYCm, toXCm, toYCm, widthCm }`。
 - 地图实体只接受上面两种组合，模板的 `lifetimeSec` 必须是 null。其他组合今天的地图里没有，装载报错。
 - 地图实体不走放置判定，和今天一样。
@@ -289,8 +305,8 @@ DemoContent 依赖 StandardMod，所以合并后的区域顺序是 `open, shallo
 
 | 旧 | 新 |
 |---|---|
-| `structures.blockCoverage` | `traversal.json` 的 `layers.base.blockCoverage` |
-| `structures.portalReachNavCells` | `layers.upper.portalReachNavCells` |
+| `structures.blockCoverage` | 每个 `block` 模板的 `effect.coverage` |
+| `structures.portalReachNavCells` | 每个 `surface` 模板的 `effect.portalReachNavCells` |
 | `structures.anchorTerrain`（地图 Mod 和 DemoContent） | 模板的 `placement.endpointAreas`（区域 id） |
 | `structures.spanTerrain` | 模板的 `placement.interiorAreas` |
 | 模板 `name` | 删掉；面板文字在手势条目 `label` |
@@ -391,9 +407,10 @@ S4 只写顺序和选择键，并在自己的条目片段里加上 S1 图专有�
 这些是算法本身的约定或数值容差，改了就是另一个内核，不做成配置：
 
 - `square` 轴对齐，中心 ± 边长/2。`disc` 用 Int128 比较距离平方，避开 Q31.32 平方在约 46340 厘米处溢出。`path` 是没有圆角的条带，长度不超过 1e-7 厘米时方向取 (1, 0)。
-- `setArea` 按格心是否在足迹内；`block` 按 X、Y 两向覆盖份额之积 ≥ `blockCoverage`。
-- 上层条带用 `DeckSpanGeometry` 判格，端点容差 1e-6 米；入口是离端点距离 < `portalReachNavCells × navCellSizeCm` 的格；条带和岸边合并半径 = 净空 − 1。
-- 坡度判定 `slope > tan(maxSlopeDeg)`，`slopeFree` 区域跳过。
+- 层固定两个：`base` 地面栅格（区域下标 + 阻挡位图），`upper` 条带上层，只在入口格和地面相连。层没有参数。
+- `setArea` 按格心是否在足迹内；`block` 按 X、Y 两向覆盖份额之积 ≥ 这个模板的 `coverage`。
+- 上层条带用 `DeckSpanGeometry` 判格，端点容差 1e-6 米；入口是离端点距离 < 这个模板的 `portalReachNavCells × navCellSizeCm` 的格；条带和岸边合并半径 = 净空 − 1。
+- 坡度判定 `slope > tan(maxSlopeDeg)`，`ignoresSlope` 区域跳过。
 - 链接按直线走，速度 = 单位速度 × `traversalSpeedRatio`；走链接时避让半径记 0；落点取不到时退回格心；链接长度下限 1e-3。
 - 候选烘焙走 8 个方向，长度到 `maxGapCm / navCellSizeCm + 1` 格；按中点和 `linkSpacingCm` 分桶去重，同桶保留更短的；落差四舍五入到厘米。
 
@@ -414,7 +431,7 @@ S4 只写顺序和选择键，并在自己的条目片段里加上 S1 图专有�
 | 速度 | 每行每区域一个 `speedDivisor`，和代价分开 | 没有，由上层自己做 | 没有，`NavMeshAgent.speed` 全局 | 没有，由移动组件决定 |
 | 不可通行 | 格写 `false` | include / exclude 标志 | area mask | 查询过滤器排除 |
 | 移动类型 | 一份地面栅格，每行一套代价和净空变体 | 每套 agent 参数单独烘一份网格 | 每个 Agent Type 单独烘一份 | 每个 Supported Agent 单独一份 RecastNavMesh |
-| 坡度 | 每行 `maxSlopeDeg`，区域可 `slopeFree` | `walkableSlopeAngle`，烘焙时定 | Agent Type 的 Max Slope | Agent 的 Max Slope |
+| 坡度 | 每行 `maxSlopeDeg`，区域可 `ignoresSlope` | `walkableSlopeAngle`，烘焙时定 | Agent Type 的 Max Slope | Agent 的 Max Slope |
 | 链接 | 候选由地形几何自动烘焙，每行按 `upCm` / `downCm` / `rangeNavCells` 过滤，按格的 `depart` / `arrive` 选端点 | off-mesh connection，手放，带半径、方向、area、flags | `NavMeshLink` 手放；旧版烘焙有 Drop Height / Jump Distance 自动生成 | `NavLinkProxy` 手放 |
 | 多层 | 固定 `base` + `upper` 两层，上层只有条带 | 高度场原生支持重叠层 | 烘焙几何决定 | 烘焙几何决定 |
 | 运行时改地面 | `setArea` / `block` 结构，脏 tile 增量重烘 | TileCache 障碍物、凸体标 area | `NavMeshObstacle` carve、`NavMeshModifierVolume` | 动态障碍、`NavModifierVolume` |
@@ -474,14 +491,14 @@ v1 的 `f32 LengthCells` 去掉，改由 steps 和斜向位算：`diagonal ? (fl
 
 | 数值或不变量 | 今天在哪 | 新位置 | 值 |
 |---|---|---|---|
-| 区域顺序与 slopeFree | StandardMod `navmesh.json` `areas.<id>.areaId` | `traversal.json` `areas` 合并顺序 | 0 open(Default) / 1 shallow / 2 rough / 3 sheer / 4 deep(sf) / 5 road / 6 deck(sf) / 7 flooded(sf) / 8 burning |
+| 区域顺序与 ignoresSlope（旧名 slopeFree） | StandardMod `navmesh.json` `areas.<id>.areaId` | `traversal.json` `areas` 合并顺序 | 0 open(Default) / 1 shallow / 2 rough / 3 sheer / 4 deep（忽略坡度） / 5 road / 6 deck（忽略坡度） / 7 flooded（忽略坡度） / 8 burning |
 | 移动类型顺序 | `pathing.json` `agentTypes` 属性顺序 | `traversal.json` `agentTypes` 属性顺序 | foot, hull, climber, amphib, leaper |
 | 45 格的 cost / speedDivisor / 可通行 | `pathing.json` `areaCosts`（`speedDivisor` 省略 = cost，未列 = 不可通行） | `cells`，两项都显式写 | 见两份 traversal 示例 |
 | maxSlopeDeg | `navmesh.json` `profiles.<id>.maxSlopeDeg`，经体型 `navProfileId` | `agentTypes.<id>.maxSlopeDeg` | 24 / null / 38 / 20 / 30 |
 | 跳跃能力 | `profiles.leaper.jump { upCm, downCm, rangeNavCells, cost }` | `agentTypes.leaper.links.jump { upCm, downCm, rangeNavCells, costPerNavCell }` | 2500 / 20000 / 7 / 2 |
 | 链接速度倍率 | `movement.jumpSpeedRatio` | `linkKinds.jump.traversalSpeedRatio` | 1.3 |
-| 阻挡覆盖份额 | `structures.blockCoverage` | `layers.base.blockCoverage` | 0.5 |
-| 入口格数 | `structures.portalReachNavCells` | `layers.upper.portalReachNavCells` | 4 |
+| 阻挡覆盖份额 | `structures.blockCoverage`（全局一份） | `building`、`s7barrier` 的 `effect.coverage` | 0.5 |
+| 入口格数 | `structures.portalReachNavCells`（全局一份） | `bridge`、`timedBridge` 的 `effect.portalReachNavCells` | 4 |
 | 导航格边长 | 各能力档 `cellSizeCm`（必须相同） | `maps.<mapId>.navCellSizeCm` | 6250 |
 | 地形到区域 | 每图 `terrainAreas[]` | 全局 `terrainAreas` | water→deep, shore→shallow, land→open, mountain→rough, cliff→sheer |
 | 地形顺序 | 每图 `terrainAreas[]` 的下标 | 每图 `terrainTypes` | S1：water, shore, land, mountain, cliff；Minimal：land, water |
@@ -500,7 +517,7 @@ v1 的 `f32 LengthCells` 去掉，改由 steps 和斜向位算：`diagonal ? (fl
 
 已知例外只有一处：Minimal 的运行时区域表从 9 个变成 5 个（3.1），寻路结果相同，摘要和缓存键要在第 6b 步核对。
 
-表里配置部分（区域、矩阵、坡度、链接、层参数、地形对应、推导掩码、模板、放置集合、面板）已经用脚本对示例文件和当前 Mod 数据逐项比过，150 项全部一致。`.navsurface` 和 truth 两行要到第 8 步重烘后再比。
+表里配置部分（区域、矩阵、坡度、链接、地形对应、推导掩码、模板含覆盖份额和入口格数、放置集合、面板）已经用脚本对示例文件和当前 Mod 数据逐项比过，149 项全部一致。`.navsurface` 和 truth 两行要到第 8 步重烘后再比。
 
 ## 8 C# DTO 草图
 
@@ -513,30 +530,13 @@ public sealed record TraversalFile
 {
     [JsonRequired] public required OrderedIdMap<NavAreaDef> Areas { get; init; }
     [JsonRequired] public required Dictionary<string, string> TerrainAreas { get; init; }
-    [JsonRequired] public required TraversalLayers Layers { get; init; }
     [JsonRequired] public required OrderedIdMap<LinkKindDef> LinkKinds { get; init; }
     [JsonRequired] public required OrderedIdMap<TraversalRow> AgentTypes { get; init; }
 }
 
 public sealed record NavAreaDef
 {
-    [JsonRequired] public required bool SlopeFree { get; init; }
-}
-
-public sealed record TraversalLayers
-{
-    [JsonRequired] public required BaseLayerDef Base { get; init; }
-    [JsonRequired] public required UpperLayerDef Upper { get; init; }
-}
-
-public sealed record BaseLayerDef
-{
-    [JsonRequired] public required double BlockCoverage { get; init; }
-}
-
-public sealed record UpperLayerDef
-{
-    [JsonRequired] public required int PortalReachNavCells { get; init; }
+    [JsonRequired] public required bool IgnoresSlope { get; init; }
 }
 
 public sealed record LinkKindDef
@@ -602,7 +602,10 @@ public enum StructureFootprint { Square, Disc, Path }
 [JsonDerivedType(typeof(Surface), "surface")]
 public abstract record StructureEffect
 {
-    public sealed record Block : StructureEffect;
+    public sealed record Block : StructureEffect
+    {
+        [JsonRequired] public required double Coverage { get; init; }
+    }
 
     public sealed record SetArea : StructureEffect
     {
@@ -613,6 +616,7 @@ public abstract record StructureEffect
     public sealed record Surface : StructureEffect
     {
         [JsonRequired] public required string Area { get; init; }
+        [JsonRequired] public required int PortalReachNavCells { get; init; }
     }
 }
 
@@ -733,7 +737,7 @@ public struct CrowdSimulationPathSpan
 - 第 5 步排到第 7 步之后，因为手势条目要引用新模板字段。
 - 第 6a 步不再处理根上的 Recast 键：Core 自带的 `navmesh.json` 已经有，StandardMod 删掉自己那份即可。
 - 第 6b 步明确列出要删的三处隐藏默认。
-- 第 7 步里 `portalReachNavCells` 进 `layers.upper`，`blockCoverage` 进 `layers.base`；审计稿只挪了前者。
+- 第 7 步里 `blockCoverage` 和 `portalReachNavCells` 进每个模板的效果；审计稿只把后者挪进全局层参数。
 - 地图实体的组合限制（4.3）和 `tools` 三个尺寸键的删除是本页新增的。
 
 `cursor/crowdsim-showcases-af78` 新增的 Fog、March、Stress50k 等展示 Mod 只写 `session` 和 `presentation` 的标题、镜头，不碰结构、面板和矩阵，合进来后不需要跟着改数据。

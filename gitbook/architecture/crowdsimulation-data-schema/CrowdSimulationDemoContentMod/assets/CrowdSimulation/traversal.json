@@ -1,9 +1,9 @@
 {
   "areas": {
-    "road": { "slopeFree": false },
-    "deck": { "slopeFree": true },
-    "flooded": { "slopeFree": true },
-    "burning": { "slopeFree": false }
+    "road": { "ignoresSlope": false },
+    "deck": { "ignoresSlope": true },
+    "flooded": { "ignoresSlope": true },
+    "burning": { "ignoresSlope": false }
   },
   "agentTypes": {
     "foot": {
