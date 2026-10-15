@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
 using Ludots.UI.Runtime;
@@ -8,13 +10,15 @@ namespace CrowdSimulationTests.Presentation;
 
 /// <summary>
 /// HUD 分区对齐 Web 沙盒（Sandbox.jsx）：左右两栏距边 12px、全高、宽 max(15%, 272px)；
-/// 指令坞夹在两栏之间、各留 12px、贴底；队伍条水平居中；指令卡贴右栏左侧 12px。
-/// 面板全开时战场中部留空，任何文字不越出所在面板。
+/// 指令坞夹在两栏之间、各留 12px、贴底；队伍条水平居中；指令卡贴右栏左侧 12px、在按键提示下面。
+/// 面板全开时面板互不重叠、战场中部留空，任何文字不越出所在面板。
 /// </summary>
 public sealed class CrowdHudLayoutTests
 {
     private const float Inset = 12f;
     private const float Tolerance = 0.5f;
+    /// <summary>s7 脚本在这之前部署完开局单位，计数到四五位数，文案宽度和真机一致。</summary>
+    private const int DeployedTick = 125;
 
     private static readonly string[] PanelIds =
     {
@@ -50,16 +54,31 @@ public sealed class CrowdHudLayoutTests
 
         UiRect order = ui.Rect("crowd-order");
         Assert.That(order.Right, Is.EqualTo(right.X - Inset).Within(Tolerance));
-        Assert.That(order.Y, Is.EqualTo(Inset).Within(Tolerance));
-        Assert.That(order.Width, Is.GreaterThanOrEqualTo(240f - Tolerance));
+        Assert.That(order.Y, Is.GreaterThanOrEqualTo(ui.Rect("crowd-legend").Bottom));
+        Assert.That(order.Width, Is.EqualTo(240f).Within(Tolerance));
 
         UiRect telemetry = ui.Rect("crowd-telemetry");
         Assert.That(telemetry.Y, Is.EqualTo(Inset).Within(Tolerance));
         Assert.That(telemetry.Bottom, Is.EqualTo(height - Inset).Within(Tolerance));
 
-        float topBottom = MathF.Max(ui.Rect("crowd-top-middle").Bottom, order.Bottom);
+        float topBottom = ui.Rect("crowd-top").Bottom;
         float playHeight = dock.Y - topBottom;
         Assert.That(playHeight, Is.GreaterThan(0.4f * height), $"中部留空 {playHeight:0} px，顶栏到 {topBottom:0}，指令坞从 {dock.Y:0} 起");
+
+        var overlaps = new List<string>();
+        for (int a = 0; a < PanelIds.Length; a++)
+        {
+            for (int b = a + 1; b < PanelIds.Length; b++)
+            {
+                UiRect ra = ui.Rect(PanelIds[a]);
+                UiRect rb = ui.Rect(PanelIds[b]);
+                if (MathF.Min(ra.Right, rb.Right) - MathF.Max(ra.X, rb.X) > Tolerance &&
+                    MathF.Min(ra.Bottom, rb.Bottom) - MathF.Max(ra.Y, rb.Y) > Tolerance)
+                    overlaps.Add($"#{PanelIds[a]} {ra} 与 #{PanelIds[b]} {rb}");
+            }
+        }
+
+        Assert.That(overlaps, Is.Empty, string.Join("\n", overlaps));
     }
 
     [TestCase(1920, 1080)]
@@ -120,6 +139,11 @@ public sealed class CrowdHudLayoutTests
         player.Draw(session, new RouteVisualBuffer(), new ScreenOverlayBuffer());
         feed.UseDebugView(debug);
         feed.UsePlayerView(player);
+        var truth = JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "s1", "s7", "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
+        script.Advance(session, DeployedTick);
+        Assert.That(session.Units.Count, Is.GreaterThan(1000), "部署脚本没把开局单位放下去");
+        player.Draw(session, new RouteVisualBuffer(), new ScreenOverlayBuffer());
         var ui = new CrowdHudTestHost(null, width, height);
         for (int i = 0; i < 4; i++)
         {

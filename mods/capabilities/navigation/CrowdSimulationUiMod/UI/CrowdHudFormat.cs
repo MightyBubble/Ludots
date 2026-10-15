@@ -176,7 +176,7 @@ internal static class CrowdHudFormat
     public static string Fault(string firstLine, double timeoutMs)
     {
         string line = firstLine.Length == 0 ? "路径服务故障(原因未记录)" : firstLine;
-        return $"{line}  超时 {Ms(timeoutMs)} ms  仿真停摆，不在主线程补算";
+        return $"{line} · 超时 {Ms(timeoutMs)} ms · 仿真停摆，不在主线程补算";
     }
 
     public static void WriteNav(in CrowdNavReadout r, string[] lines)

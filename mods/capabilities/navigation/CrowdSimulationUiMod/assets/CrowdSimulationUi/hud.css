@@ -127,7 +127,11 @@
   gap: 10px;
 }
 
-/* 顶部居中：队伍条、按键提示、路径故障条；两侧等宽留白让中列落在屏幕中线上。 */
+/*
+ * 顶部居中：队伍条、按键提示、路径故障条，中列在两栏之间居中即在屏幕中线上。
+ * 指令卡 Web 放在右栏左侧顶部；1280 宽时中列只剩约 690px，和居中的队伍条、按键提示放不进同一行，
+ * 所以排在它们下面、贴右栏。
+ */
 #crowd-center {
   margin: 12px 0px;
   flex-grow: 1;
@@ -140,27 +144,9 @@
 
 #crowd-top {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.crowd-top-side {
-  flex-grow: 1;
-  flex-shrink: 1;
-  flex-basis: 0px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-#crowd-top-middle {
-  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  max-width: 62%;
 }
 
 #crowd-playerbar {
@@ -184,6 +170,7 @@
 
 #crowd-legend {
   padding: 4px 12px;
+  max-width: 62%;
 }
 
 #crowd-keys {
@@ -191,16 +178,28 @@
 }
 
 #crowd-fault {
+  max-width: 62%;
   border-color: rgba(181, 62, 48, 0.5);
 }
 
-#crowd-fault-line {
+#crowd-fault .crowd-chip {
   color: rgba(181, 62, 48, 1);
 }
 
-/* 右上指令卡：贴着右栏左侧，宽 240px。 */
+/* 样式解析器没有 align-self，靠整宽的行把订单卡推到右边。 */
+#crowd-order-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
 #crowd-order {
-  min-width: 240px;
+  width: 240px;
+}
+
+#crowd-order .crowd-chip {
+  color: rgba(60, 57, 52, 1);
 }
 
 /* 底部指令坞：会话状态在上，工具条（工具/步进/避让/倍速/切片）在下。 */

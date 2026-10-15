@@ -7,7 +7,7 @@ namespace CrowdSimulationUiMod.UI;
 
 /// <summary>
 /// HUD 结构，分区照 Web 沙盒：左栏（标题、玩家显示、调试视图）、右栏（遥测）、
-/// 顶部居中（队伍条与按键提示）、右上指令卡、底部居中指令坞（会话状态与工具条）。
+/// 顶部居中（队伍条与按键提示）、其下贴右栏的指令卡、底部居中指令坞（会话状态与工具条）。
 /// 这里只出节点与 id/class，位置、尺寸、配色全在 hud.css。
 /// </summary>
 internal static class CrowdHudView
@@ -72,17 +72,12 @@ internal static class CrowdHudView
     {
         var center = Box("div").Id("crowd-center");
         var top = Box("div").Id("crowd-top");
-        top.Child(Box("div").Class("crowd-top-side"));
-
-        var middle = Box("div").Id("crowd-top-middle");
-        if (s.ShowPlayer) middle.Child(PlayerBar(s));
-        middle.Child(Panel("crowd-legend").Child(Chips(s.Keys).Id("crowd-keys")));
-        if (s.ShowFault) middle.Child(Panel("crowd-fault").Child(Line(s.Fault).Id("crowd-fault-line")));
-        top.Child(middle);
-
-        var notices = Box("div").Class("crowd-top-side").Id("crowd-notices");
-        if (s.ShowPlayer) notices.Child(Panel("crowd-order").Child(Line(s.CardLine).Id("crowd-card-line")));
-        top.Child(notices);
+        if (s.ShowPlayer) top.Child(PlayerBar(s));
+        top.Child(Panel("crowd-legend").Child(Chips(s.Keys).Id("crowd-keys")));
+        if (s.ShowFault) top.Child(Panel("crowd-fault").Child(Chips(s.Fault).Id("crowd-fault-line")));
+        if (s.ShowPlayer)
+            top.Child(Box("div").Id("crowd-order-row")
+                .Child(Panel("crowd-order").Child(Chips(s.CardLine).Id("crowd-card-line"))));
         center.Child(top);
 
         var dock = Panel("crowd-dock");
