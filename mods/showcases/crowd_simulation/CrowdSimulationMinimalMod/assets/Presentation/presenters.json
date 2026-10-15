@@ -1,4 +1,5 @@
 [
+  {"id": "crowd_simulation.units.bootstrap", "__delete": true},
   {
     "id": "crowd_minimal.units.bootstrap",
     "rules": [
