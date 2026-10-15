@@ -1,0 +1,22 @@
+{
+  "name": "CrowdSimulationReversalShowcaseMod",
+  "version": "0.1.0",
+  "description": "折返演示：图中心 120 个步兵方块向东出发，领队路径一落地就下反向令掉头往西，掉头后每个单位沿旧航向的队内位置不穿队，新领队镜像排槽；随后同向再令一次，镜像继承不回翻。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationS4DeployMod": "^0.4.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c02",
+    "reversal"
+  ]
+}

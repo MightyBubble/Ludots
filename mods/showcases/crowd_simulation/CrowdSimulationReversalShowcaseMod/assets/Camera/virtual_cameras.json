@@ -1,0 +1,10 @@
+[
+  {
+    "id": "CrowdSimulation.Camera.S4Deploy",
+    "fixedTargetCm": {
+      "x": 803125,
+      "y": 803125
+    },
+    "distanceCm": 90000
+  }
+]

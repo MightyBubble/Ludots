@@ -1,0 +1,151 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Engine;
+using Ludots.Core.Scripting;
+
+namespace CrowdSimulationTests.Showcases;
+
+/// <summary>
+/// 按启动器预设的 Mod 链起真实引擎、进种子图，脚本由会话宿主自己跑。
+/// <see cref="Advance"/> 每次只推进一个会话 tick，测试在 tick 之间读状态。
+/// </summary>
+internal sealed class CrowdShowcaseHost : IDisposable
+{
+    private const string MapId = "crowd_simulation_s1337";
+    private const float FrameSeconds = 1f / 60f;
+    private static readonly TimeSpan StallLimit = TimeSpan.FromSeconds(60);
+
+    private static readonly string[] Chain =
+    {
+        Path.Combine("mods", "LudotsCoreMod"),
+        Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationMod"),
+        Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
+        Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
+        Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
+        Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod"),
+        Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationShowcaseStageMod"),
+    };
+
+    private CrowdShowcaseHost(GameEngine engine, CrowdSimSession session, JsonArray script)
+    {
+        Engine = engine;
+        Session = session;
+        Script = script;
+    }
+
+    public GameEngine Engine { get; }
+    public CrowdSimSession Session { get; }
+    /// <summary>场景 Mod 自己的 session.script（舞台把 S4 脚本清空，场景脚本整段替换）。</summary>
+    public JsonArray Script { get; }
+
+    public static CrowdShowcaseHost Start(string sceneMod)
+    {
+        string repo = RepoRoot();
+        var mods = Chain.Select(m => Path.Combine(repo, m)).ToList();
+        mods.Add(SceneDir(repo, sceneMod));
+        var engine = new GameEngine();
+        try
+        {
+            engine.InitializeWithConfigPipeline(mods, Path.Combine(repo, "assets"));
+            engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
+            engine.SetService(CoreServiceKeys.ViewController, new StubView());
+            engine.Start();
+            engine.LoadMap(MapId);
+            var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
+                ?? throw new InvalidOperationException($"{sceneMod}: 进图后没有群体会话。");
+            if (session.TickCount != 0) throw new InvalidOperationException($"{sceneMod}: 进图时会话已在 tick {session.TickCount}。");
+            return new CrowdShowcaseHost(engine, session, ReadScript(repo, sceneMod));
+        }
+        catch
+        {
+            engine.Dispose();
+            throw;
+        }
+    }
+
+    public static JsonObject ReadDebug(string sceneMod)
+        => JsonNode.Parse(File.ReadAllText(Path.Combine(SceneDir(RepoRoot(), sceneMod), "assets", "CrowdSimulationDebug.json")))!.AsObject();
+
+    /// <summary>脚本里 <paramref name="type"/> 行（可选按玩家）的 tick，按脚本顺序。</summary>
+    public int[] TicksOf(string type, int? player = null)
+        => Script.Select(r => r!.AsObject())
+            .Where(r => r["cmd"]!["type"]!.GetValue<string>() == type &&
+                        (player == null || r["cmd"]!["player"]?.GetValue<int>() == player))
+            .Select(r => r["tick"]!.GetValue<int>())
+            .ToArray();
+
+    public JsonObject CommandAt(string type, int index)
+        => Script.Select(r => r!["cmd"]!.AsObject()).Where(c => c["type"]!.GetValue<string>() == type).ElementAt(index);
+
+    /// <summary>推进一个会话 tick；路径答复没到时引擎帧会停在同一 tick，继续出帧直到 tick 前进。</summary>
+    public void Advance()
+    {
+        int tick = Session.TickCount;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (watch.Elapsed < StallLimit)
+        {
+            Engine.Tick(FrameSeconds);
+            if (Session.TickCount == tick + 1) return;
+            if (Session.TickCount != tick)
+                throw new InvalidOperationException($"一帧推进了 {Session.TickCount - tick} 个 tick（从 {tick}）。");
+            if (Session.Planner?.PendingCount > 0) System.Threading.Thread.Sleep(1);
+        }
+
+        throw new InvalidOperationException($"tick {tick} 停摆超过 {StallLimit.TotalSeconds} 秒。");
+    }
+
+    /// <summary>推进到会话 tick 等于 <paramref name="tick"/>；每推进一个 tick 后调 <paramref name="each"/>。</summary>
+    public void AdvanceTo(int tick, Action? each = null)
+    {
+        if (tick < Session.TickCount) throw new InvalidOperationException($"会话已在 tick {Session.TickCount}，回不到 {tick}。");
+        while (Session.TickCount < tick)
+        {
+            Advance();
+            each?.Invoke();
+        }
+    }
+
+    /// <summary>推进直到 <paramref name="done"/> 成立，最多 <paramref name="max"/> tick；返回是否成立。</summary>
+    public bool AdvanceUntil(Func<bool> done, int max, Action? each = null)
+    {
+        for (int t = 0; t < max; t++)
+        {
+            if (done()) return true;
+            Advance();
+            each?.Invoke();
+        }
+
+        return done();
+    }
+
+    public void Dispose() => Engine.Dispose();
+
+    private static JsonArray ReadScript(string repo, string sceneMod)
+        => ReadDebug(sceneMod)["session"]?["script"]?.AsArray()
+            ?? throw new InvalidOperationException($"{sceneMod}: CrowdSimulationDebug.json 没有 session.script。");
+
+    private static string SceneDir(string repo, string sceneMod)
+        => Path.Combine(repo, "mods", "showcases", "crowd_simulation", sceneMod);
+
+    internal static string RepoRoot()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
+        {
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return dir ?? throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
+    }
+
+    private sealed class StubView : Ludots.Core.Presentation.Camera.IViewController
+    {
+        public System.Numerics.Vector2 Resolution { get; } = new(1280, 720);
+        public float Fov { get; } = 50f;
+        public float AspectRatio { get; } = 1280f / 720f;
+    }
+}
