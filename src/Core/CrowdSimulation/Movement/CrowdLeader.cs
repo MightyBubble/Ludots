@@ -16,12 +16,13 @@ public sealed class CrowdLeader
     private Fix64Vec2[] _path;
     private int _count;
     private Fix64 _lookAheadCm;
-    private readonly HashSet<int> _wall = new();
+    private readonly HashSet<int> _wall;
 
-    /// <summary>路径缓冲在构造时一次留够。活前缀是 <see cref="PathCount"/>，尾部不参与步进。</summary>
+    /// <summary>路径缓冲与基线墙格集在构造时一次留够。活前缀是 <see cref="PathCount"/>，尾部不参与步进。</summary>
     internal CrowdLeader(int pathCapacity)
     {
         _path = new Fix64Vec2[pathCapacity];
+        _wall = new HashSet<int>(pathCapacity);
         PaceCmPerSecond = Fix64.OneValue;
         Nav = null!;
     }
