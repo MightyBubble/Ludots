@@ -1,13 +1,8 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.WebSockets;
 using System.Threading;
-using System.Threading.Tasks;
 using Ludots.Adapter.Web;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Client;
@@ -69,11 +64,11 @@ namespace Ludots.Tests.ThreeC
                     "The first Web frame must step the fixed-step simulation before any frame was presented.");
                 Assert.That(driver.CameraPresenter.HasPresented, Is.True);
 
-                using WireClient client = WireClient.Connect(setup.Transport, cts.Token);
+                using WebWireClient client = WebWireClient.Connect(setup.Transport, ViewportWidth, ViewportHeight, cts.Token);
                 client.SendState(buttonMask: 0, ViewportWidth * 0.5f, ViewportHeight * 0.5f);
                 Step(driver, 30);
 
-                WireClient.FrameSummary frame = client.ReceiveFrame(cts.Token);
+                WebWireClient.FrameSummary frame = client.ReceiveFrame(cts.Token);
                 Assert.Multiple(() =>
                 {
                     Assert.That(client.MeshMapReceived, Is.True, "Client must receive the mesh map before frames.");
@@ -159,7 +154,7 @@ namespace Ludots.Tests.ThreeC
             return max;
         }
 
-        private static void Drag(WebHostFrameDriver driver, WireClient client, int button, (float X, float Y) from, (float X, float Y) to)
+        private static void Drag(WebHostFrameDriver driver, WebWireClient client, int button, (float X, float Y) from, (float X, float Y) to)
         {
             client.SendPointer(WirePointerAction.Move, 0, from.X, from.Y);
             client.SendState(0, from.X, from.Y);
@@ -182,7 +177,7 @@ namespace Ludots.Tests.ThreeC
             Step(driver, 4);
         }
 
-        private static void Tap(WebHostFrameDriver driver, WireClient client, int button, (float X, float Y) at)
+        private static void Tap(WebHostFrameDriver driver, WebWireClient client, int button, (float X, float Y) at)
         {
             client.SendPointer(WirePointerAction.Move, 0, at.X, at.Y);
             client.SendState(0, at.X, at.Y);
@@ -219,180 +214,6 @@ namespace Ludots.Tests.ThreeC
             }
 
             throw new InvalidOperationException("Unable to locate repository root.");
-        }
-
-        private enum WirePointerAction : byte
-        {
-            Down = 0,
-            Move = 1,
-            Up = 2,
-        }
-
-        /// <summary>Browser-side half of the Web wire protocol over a loopback WebSocket.</summary>
-        private sealed class WireClient : IDisposable
-        {
-            private readonly TcpListener _listener;
-            private readonly TcpClient _tcp;
-            private readonly WebSocket _client;
-            private readonly WebSocket _server;
-            private readonly Task _serverLoop;
-            private readonly CancellationTokenSource _serverCts = new();
-            private readonly SemaphoreSlim _sendLock = new(1, 1);
-            private readonly byte[] _receiveBuffer = new byte[4 * 1024 * 1024];
-
-            private WireClient(TcpListener listener, TcpClient tcp, WebSocket client, WebSocket server, Ludots.Adapter.Web.Streaming.WebTransportLayer transport)
-            {
-                _listener = listener;
-                _tcp = tcp;
-                _client = client;
-                _server = server;
-                _serverLoop = transport.HandleClientAsync(server, _serverCts.Token);
-            }
-
-            public bool MeshMapReceived { get; private set; }
-
-            public static WireClient Connect(Ludots.Adapter.Web.Streaming.WebTransportLayer transport, CancellationToken ct) =>
-                Task.Run(() => ConnectAsync(transport, ct), ct).GetAwaiter().GetResult();
-
-            public FrameSummary ReceiveFrame(CancellationToken ct) =>
-                Task.Run(() => ReceiveFrameAsync(ct), ct).GetAwaiter().GetResult();
-
-            public void Dispose() => Task.Run(DisposeAsync).GetAwaiter().GetResult();
-
-            private static async Task<WireClient> ConnectAsync(Ludots.Adapter.Web.Streaming.WebTransportLayer transport, CancellationToken ct)
-            {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start();
-                var tcp = new TcpClient();
-                Task<TcpClient> accept = listener.AcceptTcpClientAsync(ct).AsTask();
-                await tcp.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port, ct);
-                TcpClient serverTcp = await accept;
-                WebSocket server = WebSocket.CreateFromStream(serverTcp.GetStream(), isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.Zero);
-                WebSocket client = WebSocket.CreateFromStream(tcp.GetStream(), isServer: false, subProtocol: null, keepAliveInterval: TimeSpan.Zero);
-                return new WireClient(listener, tcp, client, server, transport);
-            }
-
-            public void SendState(int buttonMask, float x, float y)
-            {
-                var msg = new byte[InputProtocol.InputStateMessageSize];
-                msg[0] = InputProtocol.MsgTypeInputState;
-                BinaryPrimitives.WriteInt32LittleEndian(msg.AsSpan(InputProtocol.InputStateButtonMaskOffset), buttonMask);
-                BinaryPrimitives.WriteSingleLittleEndian(msg.AsSpan(InputProtocol.InputStateMouseXOffset), x);
-                BinaryPrimitives.WriteSingleLittleEndian(msg.AsSpan(InputProtocol.InputStateMouseYOffset), y);
-                BinaryPrimitives.WriteInt32LittleEndian(msg.AsSpan(InputProtocol.InputStateViewportWidthOffset), ViewportWidth);
-                BinaryPrimitives.WriteInt32LittleEndian(msg.AsSpan(InputProtocol.InputStateViewportHeightOffset), ViewportHeight);
-                Send(msg);
-            }
-
-            public void SendPointer(WirePointerAction action, int buttonMask, float x, float y)
-            {
-                var msg = new byte[InputProtocol.PointerEventMessageSize];
-                msg[0] = InputProtocol.MsgTypePointerEvent;
-                msg[InputProtocol.PointerActionOffset] = (byte)action;
-                BinaryPrimitives.WriteInt32LittleEndian(msg.AsSpan(InputProtocol.PointerButtonMaskOffset), buttonMask);
-                BinaryPrimitives.WriteSingleLittleEndian(msg.AsSpan(InputProtocol.PointerXOffset), x);
-                BinaryPrimitives.WriteSingleLittleEndian(msg.AsSpan(InputProtocol.PointerYOffset), y);
-                BinaryPrimitives.WriteInt32LittleEndian(msg.AsSpan(InputProtocol.PointerViewportWidthOffset), ViewportWidth);
-                BinaryPrimitives.WriteInt32LittleEndian(msg.AsSpan(InputProtocol.PointerViewportHeightOffset), ViewportHeight);
-                Send(msg);
-            }
-
-            private void Send(byte[] msg)
-            {
-                _sendLock.Wait();
-                try
-                {
-                    Task.Run(() => _client.SendAsync(msg, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None))
-                        .GetAwaiter()
-                        .GetResult();
-                }
-                finally
-                {
-                    _sendLock.Release();
-                }
-            }
-
-            private async Task<FrameSummary> ReceiveFrameAsync(CancellationToken ct)
-            {
-                while (true)
-                {
-                    int length = 0;
-                    WebSocketReceiveResult result;
-                    do
-                    {
-                        result = await _client.ReceiveAsync(new ArraySegment<byte>(_receiveBuffer, length, _receiveBuffer.Length - length), ct);
-                        length += result.Count;
-                    }
-                    while (!result.EndOfMessage);
-
-                    if (length == 0)
-                    {
-                        continue;
-                    }
-
-                    if (_receiveBuffer[0] == FrameProtocol.MsgTypeMeshMap)
-                    {
-                        MeshMapReceived = true;
-                        continue;
-                    }
-
-                    if (_receiveBuffer[0] == FrameProtocol.MsgTypeFrame)
-                    {
-                        return FrameSummary.Parse(_receiveBuffer.AsSpan(0, length));
-                    }
-                }
-            }
-
-            private async Task DisposeAsync()
-            {
-                _serverCts.Cancel();
-                _client.Abort();
-                _server.Abort();
-                try
-                {
-                    await _serverLoop;
-                }
-                catch (OperationCanceledException)
-                {
-                }
-
-                _client.Dispose();
-                _server.Dispose();
-                _tcp.Dispose();
-                _listener.Stop();
-                _serverCts.Dispose();
-                _sendLock.Dispose();
-            }
-
-            public readonly record struct FrameSummary(float CameraFovYDeg, IReadOnlyList<byte> Sections)
-            {
-                public static FrameSummary Parse(ReadOnlySpan<byte> frame)
-                {
-                    var sections = new List<byte>();
-                    float fov = 0f;
-                    int pos = FrameProtocol.FrameHeaderSize;
-                    while (pos < frame.Length)
-                    {
-                        byte section = frame[pos];
-                        if (section == FrameProtocol.SectionEnd)
-                        {
-                            break;
-                        }
-
-                        int byteLength = BinaryPrimitives.ReadInt32LittleEndian(frame.Slice(pos + 3, 4));
-                        int payload = pos + FrameProtocol.SectionHeaderSize;
-                        if (section == FrameProtocol.SectionCamera)
-                        {
-                            fov = BinaryPrimitives.ReadSingleLittleEndian(frame.Slice(payload + (9 * sizeof(float)), 4));
-                        }
-
-                        sections.Add(section);
-                        pos = payload + byteLength;
-                    }
-
-                    return new FrameSummary(fov, sections);
-                }
-            }
         }
     }
 }
