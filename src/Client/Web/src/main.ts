@@ -98,10 +98,12 @@ function flushOutgoingInput(): void {
     return;
   }
 
-  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
+  // The server derives which button a pointer Down/Up changed from the mask it last saw; a state snapshot
+  // sent first would already carry the new mask and leave the transition with no changed button.
   for (const message of inputCapture.encoder.drainPointerMessages()) {
     socket.send(message);
   }
+  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
 }
 
 function worldToScreen2D(worldX: number, worldY: number): [number, number] | null {
