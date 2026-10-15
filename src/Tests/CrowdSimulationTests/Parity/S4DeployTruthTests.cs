@@ -281,13 +281,13 @@ public class S4DeployTruthTests
     }
 
     /// <summary>单位创建单路径的无头装配:模板注册表与模板键走引擎同一装载链
-    /// (VFS 挂载 CrowdSimulationMod 资产 → ConfigPipeline → MapLoader.LoadTemplates),
+    /// (VFS 挂载 CrowdSimulationDemoContentMod 资产 → ConfigPipeline → MapLoader.LoadTemplates),
     /// 单位实例化与真机同走 EntityBuilder.UseTemplate→Build;选中属主置空,不镜像。</summary>
     private static CrowdSimPresentationWiring BuildWiring(
         CrowdSimulationRuntimeConfig runtime, ArchWorld world, Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry profiles)
     {
         var vfs = new VirtualFileSystem();
-        vfs.Mount("Core", Path.Combine("assets", "crowdmod"));
+        vfs.Mount("Core", Path.Combine("assets", "crowddemo"));
         var pipeline = new ConfigPipeline(vfs, modLoader: null!);
         var mapLoader = new MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
         mapLoader.LoadTemplates(ConfigCatalogLoader.Load(pipeline));

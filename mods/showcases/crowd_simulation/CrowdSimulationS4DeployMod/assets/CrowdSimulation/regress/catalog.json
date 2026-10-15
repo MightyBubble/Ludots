@@ -5,7 +5,7 @@
   "seed": 1,
   "fuzzOps": 0,
   "standardAssets": "mods/capabilities/navigation/CrowdSimulationStandardMod/assets",
-  "capabilityAssets": "mods/capabilities/navigation/CrowdSimulationMod/assets",
+  "demoAssets": "mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod/assets",
   "scenarios": {
     "deploy": {
       "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",

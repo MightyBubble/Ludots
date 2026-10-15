@@ -62,7 +62,7 @@ public static class TestDefaults
     public static List<CrowdUnitTemplateFacts> DemoTemplates()
     {
         var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
-            File.ReadAllText(Path.Combine("assets", "crowdmod", "Entities", "templates.json")),
+            File.ReadAllText(Path.Combine("assets", "crowddemo", "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdUnitTemplateFacts.FromTemplates(templates);
     }
@@ -106,7 +106,7 @@ public static class TestDefaults
         };
     }
 
-    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读能力 Mod 的档案文件）。</summary>
+    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读标准参数 Mod 的档案文件）。</summary>
     public static AgentProfileRegistry DemoProfiles()
     {
         var list = JsonSerializer.Deserialize<List<AgentProfileConfig>>(

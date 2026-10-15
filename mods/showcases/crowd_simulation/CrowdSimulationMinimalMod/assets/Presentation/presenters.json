@@ -1,11 +1,15 @@
 [
-  {"id": "crowd_simulation.units.bootstrap", "__delete": true},
   {
     "id": "crowd_minimal.units.bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "crowd_minimal.scout" },
-        "condition": { "inline": "None" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_minimal.scout"
+        },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
           "kind": "CreatePresenter",
           "definitionId": "crowd_minimal.scout",
@@ -13,7 +17,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "crowd_minimal.scout" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_minimal.scout"
+        },
         "command": {
           "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
@@ -30,12 +37,20 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "crowd_simulation.unit.square",
+          "assetId": "crowd_minimal.scout.body",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localOffset": [0, 4, 0],
-          "localScale": [12, 8, 12],
+          "localOffset": [
+            0,
+            4,
+            0
+          ],
+          "localScale": [
+            12,
+            8,
+            12
+          ],
           "colorParamKey": "crowd_minimal.scout.color"
         }
       },
@@ -60,7 +75,12 @@
       {
         "paramKey": "crowd_minimal.scout.color",
         "lane": "Vector",
-        "vectorValue": [1, 1, 1, 1]
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
       }
     ]
   }

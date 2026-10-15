@@ -36,14 +36,14 @@ namespace CrowdSimulationRegress;
 /// </summary>
 static class SessionHost
 {
-    public static CrowdSimRegressHost Open(string seedDir, string standardDir, string capabilityDir, bool movement)
+    public static CrowdSimRegressHost Open(string seedDir, string standardDir, string demoDir, bool movement)
     {
-        var bundle = Load(seedDir, standardDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, demoDir);
         var world = World.Create();
         PathQueryService? service = null;
         try
         {
-            var session = Bake(bundle, world, capabilityDir, movement, out service, out double bakeMs);
+            var session = Bake(bundle, world, demoDir, standardDir, movement, out service, out double bakeMs);
             return new CrowdSimRegressHost
             {
                 Session = session,
@@ -66,7 +66,8 @@ static class SessionHost
     private static CrowdSimSession Bake(
         SeedBundle bundle,
         World world,
-        string capabilityDir,
+        string demoDir,
+        string standardDir,
         bool movement,
         out PathQueryService? service,
         out double bakeMs)
@@ -108,7 +109,7 @@ static class SessionHost
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
 
-        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, capabilityDir));
+        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, demoDir, standardDir));
         session.Structures = CrowdStructuresStore.Build(runtime, bundle.Grid, bundle.MapSurface.Blockers);
         session.Structures.UseDeck(deck);
         if (bundle.MapSurface.Bridges.Count > 0)
@@ -135,16 +136,16 @@ static class SessionHost
     }
 
     private static CrowdSimPresentationWiring BuildWiring(
-        CrowdSimulationRuntimeConfig runtime, World world, string capabilityDir)
+        CrowdSimulationRuntimeConfig runtime, World world, string demoDir, string standardDir)
     {
         var vfs = new VirtualFileSystem();
-        vfs.Mount("Core", capabilityDir);
+        vfs.Mount("Core", demoDir);
         var pipeline = new ConfigPipeline(vfs, modLoader: null!);
         var mapLoader = new MapLoader(world, new WorldMap(), pipeline);
         mapLoader.LoadTemplates(ConfigCatalogLoader.Load(pipeline));
         var collections = new EntityCollectionStore(new StringIntRegistry());
         var profiles = new AgentProfileRegistry(JsonSerializer.Deserialize<List<AgentProfileConfig>>(
-            File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
+            File.ReadAllText(Path.Combine(standardDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!);
         return new CrowdSimPresentationWiring
         {
@@ -160,7 +161,7 @@ static class SessionHost
         };
     }
 
-    private static SeedBundle Load(string seedDir, string standardDir, string capabilityDir)
+    private static SeedBundle Load(string seedDir, string standardDir, string demoDir)
     {
         string[] maps = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json");
         if (maps.Length != 1)
@@ -186,7 +187,7 @@ static class SessionHost
         }
 
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
-            File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
+            File.ReadAllText(Path.Combine(standardDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
         var profiles = new AgentProfileRegistry(profileList);
         var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "navmesh.json")))!;
@@ -199,7 +200,7 @@ static class SessionHost
         var pathing = PathingConfigLoader.Parse(
             (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "pathing.json")))!);
         var unitTemplates = JsonSerializer.Deserialize<List<EntityTemplate>>(
-            File.ReadAllText(Path.Combine(capabilityDir, "Entities", "templates.json")),
+            File.ReadAllText(Path.Combine(demoDir, "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var bake = NavMeshBakeConfigLoader.Parse(navmeshJson, profiles);
         var runtime = CrowdSimulationConfigLoader.Load(

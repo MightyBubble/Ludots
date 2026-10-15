@@ -26,7 +26,7 @@ namespace CrowdSimulationMapProbe;
 /// <summary>
 /// S1 地图探针：用真实 Ludots 装载路径（CrowdSimulationConfig 合并、.navsurface 读取、
 /// 地图实体提取、.height 读取）渲染三张种子图的地形类型 / 阻挡格 / 桥梁 / 跳跃候选。
-/// 用法: CrowdSimulationMapProbe &lt;seedAssetsDir&gt; &lt;standardAssetsDir&gt; &lt;capabilityAssetsDir&gt; &lt;outDir&gt;
+/// 用法: CrowdSimulationMapProbe &lt;seedAssetsDir&gt; &lt;standardAssetsDir&gt; &lt;demoAssetsDir&gt; &lt;outDir&gt;
 /// 配置读标准参数 Mod，体型档案读能力 Mod，FixedHz 读种子目录的 Engine/clock.json。
 /// </summary>
 public static class Program
@@ -66,11 +66,11 @@ public static class Program
 
         string seedDir = args[0];
         string standardDir = args[1];
-        string capabilityDir = args[2];
+        string demoDir = args[2];
         string outDir = args[3];
         Directory.CreateDirectory(outDir);
 
-        var bundle = Load(seedDir, standardDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, demoDir);
         RenderTypes(bundle.Surface, bundle.Height, bundle.TypeColors, Path.Combine(outDir, $"{bundle.MapId}_types.png"));
         RenderBlocked(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
         RenderFull(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
@@ -81,17 +81,17 @@ public static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <standardAssetsDir> <capabilityAssetsDir> <outDir>");
-        Console.Error.WriteLine("       CrowdSimulationMapProbe --s2|--s3|--s3c <seedAssetsDir> <standardAssetsDir> <capabilityAssetsDir> <outDir>");
-        Console.Error.WriteLine("       CrowdSimulationMapProbe --s4probe <seedAssetsDir> <standardAssetsDir> <capabilityAssetsDir>");
+        Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s2|--s3|--s3c <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s4probe <seedAssetsDir> <standardAssetsDir> <demoAssetsDir>");
         return 2;
     }
 
     /// <summary>S2:逐代理体型的可走区域视图(不可走 = 红色遮罩;桥 portal 高亮;跳跃链接叠画)。</summary>
-    private static int RunS2(string seedDir, string standardDir, string capabilityDir, string outDir)
+    private static int RunS2(string seedDir, string standardDir, string demoDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var bundle = Load(seedDir, standardDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, demoDir);
         var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
 
@@ -154,10 +154,10 @@ public static class Program
     }
 
     /// <summary>S3:NavMesh 多边形网格视图(地面 tile 白色描边,桥面 tile 棕色)。</summary>
-    private static int RunS3(string seedDir, string standardDir, string capabilityDir, string outDir)
+    private static int RunS3(string seedDir, string standardDir, string demoDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var bundle = Load(seedDir, standardDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
@@ -224,10 +224,10 @@ public static class Program
     }
 
     /// <summary>S3-c:两点路径 + 方向图视图(前 6 组对子的流场箭头与折线;另含跳跃层 2 组)。</summary>
-    private static int RunS3C(string seedDir, string standardDir, string capabilityDir, string outDir)
+    private static int RunS3C(string seedDir, string standardDir, string demoDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var bundle = Load(seedDir, standardDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
@@ -339,9 +339,9 @@ public static class Program
     }
 
     /// <summary>跑 spawn，把前 8 个单位的玩家、组、位置和 rawEq 打印出来。进程不因不一致而失败。</summary>
-    private static int RunS4Probe(string seedDir, string standardDir, string capabilityDir)
+    private static int RunS4Probe(string seedDir, string standardDir, string demoDir)
     {
-        var bundle = Load(seedDir, standardDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
@@ -371,7 +371,7 @@ public static class Program
         }
 
         var probeWorld = Arch.Core.World.Create();
-        var session = new CrowdSimSession(runtime, probeWorld, navs, navByLayerRadius, BuildWiring(runtime, probeWorld, capabilityDir));
+        var session = new CrowdSimSession(runtime, probeWorld, navs, navByLayerRadius, BuildWiring(runtime, probeWorld, demoDir, standardDir));
         // 复刻 spawn 的组分配(不生成),打印组清单与中心供对照
         var dbgRng = CrowdSimRng.Create((long)runtime.WorldSeed * 31 + 1L * 7919);
         int n0 = runtime.NavCellsPerSide;
@@ -477,10 +477,10 @@ public static class Program
     /// <summary>单位创建单路径的无头装配:与引擎同一装载链(VFS 挂载能力 mod 资产 →
     /// ConfigPipeline → MapLoader.LoadTemplates)取模板注册表与模板键;选中属主置空,不镜像。</summary>
     private static CrowdSimPresentationWiring BuildWiring(
-        CrowdSimulationRuntimeConfig runtime, Arch.Core.World world, string capabilityDir)
+        CrowdSimulationRuntimeConfig runtime, Arch.Core.World world, string demoDir, string standardDir)
     {
         var vfs = new Ludots.Core.Modding.VirtualFileSystem();
-        vfs.Mount("Core", capabilityDir);
+        vfs.Mount("Core", demoDir);
         var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader: null!);
         var mapLoader = new Ludots.Core.Systems.MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
         mapLoader.LoadTemplates(Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline));
@@ -494,7 +494,7 @@ public static class Program
             TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
                 runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys,
                 new AgentProfileRegistry(JsonSerializer.Deserialize<List<AgentProfileConfig>>(
-                    File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
+                    File.ReadAllText(Path.Combine(standardDir, "Navigation", "agent_profiles.json")),
                     StrictJsonOptions.CreateCamelCase())!),
                 "MapProbe 装配"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
@@ -616,7 +616,7 @@ public static class Program
             $"从 {seedDir} 往上找不到 assets/Relationships/catalog.json 和 mods/LudotsCoreMod 的关系目录。");
     }
 
-    private static SeedBundle Load(string seedDir, string standardDir, string capabilityDir)
+    private static SeedBundle Load(string seedDir, string standardDir, string demoDir)
     {
         string mapId = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json").Single()
             .Let(p => Path.GetFileNameWithoutExtension(p));
@@ -635,7 +635,7 @@ public static class Program
         var templatesById = templates.Where(t => !string.IsNullOrWhiteSpace(t.Id)).ToDictionary(t => t.Id, StringComparer.Ordinal);
 
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
-            File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
+            File.ReadAllText(Path.Combine(standardDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
         var profiles = new AgentProfileRegistry(profileList);
         var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "navmesh.json")))!;
@@ -648,7 +648,7 @@ public static class Program
         var pathing = PathingConfigLoader.Parse(
             (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "pathing.json")))!);
         var unitTemplates = JsonSerializer.Deserialize<List<EntityTemplate>>(
-            File.ReadAllText(Path.Combine(capabilityDir, "Entities", "templates.json")),
+            File.ReadAllText(Path.Combine(demoDir, "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var bake = NavMeshBakeConfigLoader.Parse(navmeshJson, profiles);
         var runtime = CrowdSimulationConfigLoader.Load(
