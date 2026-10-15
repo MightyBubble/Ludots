@@ -305,7 +305,10 @@ public static class CrowdSimulationValidator
                 session.TickCount, -1, -1, -1, -1, flow.NavId, -1, group.Id);
         }
 
-        if (flow.NavId != group.NavId || !NavExists(session, flow.NavId))
+        // 认知组可沿用真相流场；切换认知后、刷新答复落帧前仍持旧场
+        bool foreign = flow.NavId != group.NavId && flow.NavId != group.NavId % CrowdBeliefNavs.BeliefStride;
+        bool refreshing = session.Planner != null && session.Planner.Refreshing(group);
+        if ((foreign && !refreshing) || !NavExists(session, flow.NavId))
         {
             throw new CrowdSimulationInvariantException(
                 $"tick {session.TickCount} 组 {group.Id} 流场导航 {flow.NavId} 不属于本组 {group.NavId}",
