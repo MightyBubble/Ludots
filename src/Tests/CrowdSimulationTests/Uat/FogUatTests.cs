@@ -20,9 +20,6 @@ public sealed class FogUatTests
     private const double SecondOffset = 0.125;
     private const int MaxTicks = 6000;
     private const int SettleTicks = 120;
-    private const double SpanAt = 0.65;
-    private const double SpanFrom = 0.5;
-    private const double SpanTo = 0.8;
     private const int SecondSearchRings = 40;
 
     [Test]
@@ -54,10 +51,14 @@ public sealed class FogUatTests
         Assert.That(g, Is.Not.Null, "指令未产生领队");
 
         var leader = g!.Leader!;
-        var spot = LegalSpotOnRoute(s, leader, size);
-        Assert.That(spot, Is.Not.Null, $"场景无效：路线 {SpanFrom:P0}–{SpanTo:P0} 段内没有能合法放下 {size} 厘米建筑的点");
-        var (bx, by, offsetCells, fraction) = spot!.Value;
+        int k = Math.Max(1, (int)Math.Floor(leader.PathCount * 0.65)), pathCount0 = leader.PathCount;
+        var spot = LegalSpotOnRoute(s, leader, k, size);
+        Assert.That(spot, Is.Not.Null, $"场景无效：整条路线上没有能合法放下 {size} 厘米建筑的点");
+        var (bx, by, offsetCells, spotArc, leaderArc, total) = spot!.Value;
+        Assert.That(spotArc, Is.GreaterThan(leaderArc), $"场景无效：放置点（路线 {spotArc / total:P1}）不在领队（{leaderArc / total:P1}）前方");
         int id = Place(s, "building", bx, by, size);
+        int seenCells = FootprintCells(s, id).Count(c => Visible(fog, v, c));
+        Assert.That(seenCells, Is.Zero, $"场景无效：放置时足迹有 {seenCells} 个迷雾格对视野组可见");
         bool planningAfterPlace = g.Planning;
         CrowdUatKit.Step(s, 2);
         g = Settle();
@@ -113,50 +114,49 @@ public sealed class FogUatTests
         }
 
         TestContext.Out.WriteLine(
-            $"fog: building ({bx}, {by}) size {size}, offset {offsetCells:+0;-0;0} cells from {SpanAt:P0}, route {fraction:P1}, second ({x2}, {y2}) ring {ring2}, planningAfterPlace {planningAfterPlace}, " +
+            $"fog: building ({bx}, {by}) size {size}, waypoint {k}/{pathCount0} at {(spotArc - offsetCells * (double)s.Config.NavCellSizeCm) / total:P1}, offset {offsetCells:+0;-0;0} cells, route {spotArc / total:P1}, leader {leaderArc / total:P1}, second ({x2}, {y2}) ring {ring2}, planningAfterPlace {planningAfterPlace}, " +
             $"truthBlocked {truthBlocked}, beliefBlocked {beliefBlocked}, seenAt {seenAt}, replanned {replanned}, blockedAfter {blockedAfter}, ticks {s.TickCount}");
         Assert.That(errors, Is.Empty, string.Join("；", errors));
     }
 
     /// <summary>
-    /// 放置指令拒收与已有结构重叠的足迹（沙盒的 place 不判合法性）。从路线弧长 SpanAt 处沿路线逐格前移、再逐格后移，
-    /// 取第一个放置裁定通过的点；足迹中心在路线上，路线必然穿过它。只在弧长 [SpanFrom, SpanTo] 内找，建筑边长不变。
+    /// 放置指令拒收与已有结构重叠的足迹（沙盒的 place 不判合法性）。从第 k 个路径点起沿路线逐格前移到终点、再从它逐格后移到起点，
+    /// 取第一个放置裁定通过且足迹盖住该路线点的位置，建筑边长不变。返回偏移格数与该点、领队各自的路线弧长。
     /// </summary>
-    private static (int X, int Y, int OffsetCells, double Fraction)? LegalSpotOnRoute(CrowdSimSession s, CrowdLeader leader, int size)
+    private static (int X, int Y, int OffsetCells, double SpotArc, double LeaderArc, double Total)? LegalSpotOnRoute(
+        CrowdSimSession s, CrowdLeader leader, int k, int size)
     {
         var store = s.Structures!;
         var template = s.Config.Structures.Templates[store.TemplateIndexOf("building")];
         int cs = s.Config.NavCellSizeCm, n = leader.PathCount;
+        double Dist(Fix64Vec2 a, Fix64 bx, Fix64 by) =>
+            Math.Sqrt(Math.Pow((bx - a.X).ToDouble(), 2) + Math.Pow((by - a.Y).ToDouble(), 2));
         var arc = new double[n];
-        for (int i = 1; i < n; i++)
-        {
-            var a = leader.PathAt(i - 1);
-            var b = leader.PathAt(i);
-            arc[i] = arc[i - 1] + Math.Sqrt(Math.Pow((b.X - a.X).ToDouble(), 2) + Math.Pow((b.Y - a.Y).ToDouble(), 2));
-        }
+        for (int i = 1; i < n; i++) arc[i] = arc[i - 1] + Dist(leader.PathAt(i - 1), leader.PathAt(i).X, leader.PathAt(i).Y);
+        double total = arc[n - 1], start = arc[k];
+        double leaderArc = arc[leader.Seg - 1] + Dist(leader.PathAt(leader.Seg - 1), leader.XCm, leader.YCm);
 
-        double total = arc[n - 1], from = SpanFrom * total, to = SpanTo * total, start = SpanAt * total;
-        (int, int, int, double)? Try(int step)
+        (int, int, int, double, double, double)? Try(int step)
         {
             double at = start + (double)step * cs;
-            if (at < from || at > to) return null;
             int seg = 1;
             while (seg < n - 1 && arc[seg] < at) seg++;
             var a = leader.PathAt(seg - 1);
             var b = leader.PathAt(seg);
             double len = arc[seg] - arc[seg - 1], t = len > 0 ? (at - arc[seg - 1]) / len : 0;
-            int x = (int)Math.Round(a.X.ToDouble() + (b.X - a.X).ToDouble() * t);
-            int y = (int)Math.Round(a.Y.ToDouble() + (b.Y - a.Y).ToDouble() * t);
-            var fp = CrowdStructureFootprint.Make(template, Fix64.FromInt(x), Fix64.FromInt(y), Fix64.FromInt(size), Fix64.Zero, Fix64.Zero);
-            return store.JudgePlacement(template, fp) == CrowdPlacementReject.None ? (x, y, step, at / total) : null;
+            var x = Fix64.FromInt((int)Math.Round(a.X.ToDouble() + (b.X - a.X).ToDouble() * t));
+            var y = Fix64.FromInt((int)Math.Round(a.Y.ToDouble() + (b.Y - a.Y).ToDouble() * t));
+            var fp = CrowdStructureFootprint.Make(template, x, y, Fix64.FromInt(size), Fix64.Zero, Fix64.Zero);
+            if (store.JudgePlacement(template, fp) != CrowdPlacementReject.None || !fp.Covers(x, y)) return null;
+            return (x.ToInt(), y.ToInt(), step, at, leaderArc, total);
         }
 
-        for (int step = 0; start + (double)step * cs <= to; step++)
+        for (int step = 0; start + (double)step * cs <= total; step++)
         {
             if (Try(step) is { } hit) return hit;
         }
 
-        for (int step = -1; start + (double)step * cs >= from; step--)
+        for (int step = -1; start + (double)step * cs >= 0; step--)
         {
             if (Try(step) is { } hit) return hit;
         }
