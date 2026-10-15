@@ -93,7 +93,18 @@ public class CrowdNavSurfaceWalkabilityTests
         Assert.That(cellDiffs, Is.Zero);
         Assert.That(baked.TerrainCells[cell], Is.EqualTo((byte)water));
 
-        var (_, after) = S4DeployTruthTests.BuildSession(seed, baked);
+        var withoutCandidates = new NavSurfaceAsset
+        {
+            NavCellsX = baked.NavCellsX,
+            NavCellsY = baked.NavCellsY,
+            NavCellSizeCm = baked.NavCellSizeCm,
+            TerrainTypeIds = baked.TerrainTypeIds,
+            LinkKindIds = fixture.LinkKindIds,
+            LinkBakeDigest = fixture.LinkBakeDigest,
+            TerrainCells = baked.TerrainCells,
+            JumpCandidates = baked.JumpCandidates,
+        };
+        var (_, after) = S4DeployTruthTests.BuildSession(seed, withoutCandidates);
         foreach (int id in walkerNavIds)
         {
             byte[] passable = after.Navs[id].Passable;
