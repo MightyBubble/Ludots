@@ -398,6 +398,64 @@ public static class CrowdNavSurfaceAuthoring
             new ContinuousHeightSampleScale(heightCm, 1, 1));
     }
 
+    /// <summary>nav init-crowd-terrain：写 logicTerrainAsset 指向的逻辑地形。</summary>
+    public static CrowdAuthoringStart WriteInitialTerrain(
+        string repoRoot,
+        string modId,
+        string mapId,
+        string fillTerrainId,
+        IReadOnlyList<CrowdTerrainRect> rects,
+        bool overwrite)
+    {
+        CrowdAuthoringStart start = ResolveAuthoringStart(repoRoot, modId, mapId);
+        if (File.Exists(start.TerrainFullPath) && !overwrite)
+        {
+            throw new IOException($"File exists: {start.TerrainFullPath}");
+        }
+
+        byte[] cells = PaintTerrainAreas(start.NavCellsPerSide, start.TerrainTypeIds, fillTerrainId, rects);
+        Directory.CreateDirectory(Path.GetDirectoryName(start.TerrainFullPath)!);
+        using FileStream output = File.Create(start.TerrainFullPath);
+        ReactGridTerrainBinary.WriteAreaGrid(output, start.NavCellsPerSide, start.NavCellsPerSide, cells);
+        return start;
+    }
+
+    /// <summary>nav init-crowd-heightmap：写 ContinuousHeightmap.Asset 指向的平地高度图。</summary>
+    public static CrowdAuthoringStart WriteFlatHeightmap(string repoRoot, string modId, string mapId, int heightCm, bool overwrite)
+    {
+        CrowdAuthoringStart start = ResolveAuthoringStart(repoRoot, modId, mapId);
+        if (File.Exists(start.HeightFullPath) && !overwrite)
+        {
+            throw new IOException($"File exists: {start.HeightFullPath}");
+        }
+
+        ContinuousHeightmapAsset height = CreateFlatHeightmap(start.BoardSizeCm, start.NavCellsPerSide, heightCm);
+        Directory.CreateDirectory(Path.GetDirectoryName(start.HeightFullPath)!);
+        using FileStream output = File.Create(start.HeightFullPath);
+        ContinuousHeightmapBinary.Write(output, height);
+        return start;
+    }
+
+    /// <summary>nav bake-crowd-navsurface：读入库的逻辑地形和高度图，烤出 .navsurface 写到 <paramref name="outFile"/>。</summary>
+    public static NavSurfaceAsset BakeAuthoredFile(string repoRoot, string modId, string mapId, string outFile, bool overwrite)
+    {
+        if (string.IsNullOrWhiteSpace(outFile))
+        {
+            throw new InvalidOperationException("--out is required.");
+        }
+
+        if (File.Exists(outFile) && !overwrite)
+        {
+            throw new IOException($"File exists: {outFile}");
+        }
+
+        CrowdAuthoringTerrainFile authored = RequireAuthoringTerrain(repoRoot, modId, mapId);
+        LogicTerrainField terrain = ReactGridTerrainBinary.Read(authored.FullPath, authored.CellSizeCm);
+        NavSurfaceAsset asset = BakeAuthored(repoRoot, modId, mapId, terrain);
+        WriteNavSurface(Path.GetFullPath(outFile), asset);
+        return asset;
+    }
+
     private static byte TerrainIndex(IReadOnlyList<string> terrainTypeIds, string terrainId)
     {
         for (int i = 0; i < terrainTypeIds.Count; i++)

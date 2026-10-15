@@ -35,15 +35,31 @@ namespace Ludots.Tool
             var modIdOption = new Option<string>("--id", "The ID of the mod");
             modIdOption.IsRequired = true;
             var dirOption = new Option<string>("--dir", "Directory to create the mod in (default: mods/)");
-            var templateOption = new Option<string>("--template", () => "empty", "Template: empty, gameplay");
+            var templateOption = new Option<string>("--template", () => "empty", "Template: empty, gameplay, crowd-data");
+            var initMapIdOption = new Option<string?>("--mapId", () => null, "Map id (crowd-data only)");
             initCommand.AddOption(modIdOption);
             initCommand.AddOption(dirOption);
             initCommand.AddOption(templateOption);
+            initCommand.AddOption(initMapIdOption);
             initCommand.SetHandler((InvocationContext ctx) =>
             {
                 var id = ctx.ParseResult.GetValueForOption(modIdOption);
                 var dir = ctx.ParseResult.GetValueForOption(dirOption);
                 var template = ctx.ParseResult.GetValueForOption(templateOption) ?? "empty";
+                var mapId = ctx.ParseResult.GetValueForOption(initMapIdOption);
+                if (string.Equals(template, "crowd-data", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.ExitCode = InitCrowdDataMod(id, dir, mapId);
+                    return;
+                }
+
+                if (mapId != null)
+                {
+                    Console.WriteLine("Error: --mapId is only used by --template crowd-data.");
+                    ctx.ExitCode = 2;
+                    return;
+                }
+
                 InitMod(id, dir, template);
             });
             
@@ -576,6 +592,26 @@ namespace Ludots.Tool
             return await rootCommand.InvokeAsync(args);
         }
 
+        static int InitCrowdDataMod(string modId, string dir, string? mapId)
+        {
+            try
+            {
+                string modsRoot = !string.IsNullOrWhiteSpace(dir)
+                    ? dir
+                    : FindModsRoot() ?? throw new InvalidOperationException("Could not find 'mods' in hierarchy. Use --dir to specify a target directory.");
+                string modDir = Path.GetFullPath(Path.Combine(modsRoot, modId));
+                CrowdModScaffold.Write(modDir, modId, mapId!);
+                Console.WriteLine($"Mod '{modId}' initialized at {modDir}");
+                Console.WriteLine($"Next: nav init-crowd-terrain / init-crowd-heightmap / bake-crowd-navsurface --mapId {mapId} --modId {modId}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
         static void InitMod(string modId, string dir, string template)
         {
             Console.WriteLine($"Initializing mod '{modId}' (template={template})...");
@@ -605,7 +641,7 @@ namespace Ludots.Tool
             bool isGameplay = string.Equals(template, "gameplay", StringComparison.OrdinalIgnoreCase);
             if (!isGameplay && !string.Equals(template, "empty", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"Error: Unknown template '{template}'. Valid values: empty, gameplay");
+                Console.WriteLine($"Error: Unknown template '{template}'. Valid values: empty, gameplay, crowd-data");
                 return;
             }
 
@@ -1597,30 +1633,9 @@ namespace {modId}
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(outFile))
-                {
-                    throw new InvalidOperationException("--out is required.");
-                }
-
-                if (File.Exists(outFile) && !overwrite)
-                {
-                    throw new IOException($"File exists: {outFile}");
-                }
-
-                string repoRoot = FindAssetsRoot();
-                CrowdNavSurfaceAuthoring.CrowdAuthoringTerrainFile authored =
-                    CrowdNavSurfaceAuthoring.RequireAuthoringTerrain(repoRoot, modId, mapId);
-                LogicTerrainField terrain = ReactGridTerrainBinary.Read(authored.FullPath, authored.CellSizeCm);
-                NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthored(
-                    repoRoot,
-                    modId,
-                    mapId,
-                    terrain);
-                string fullOut = Path.GetFullPath(outFile);
-                CrowdNavSurfaceAuthoring.WriteNavSurface(fullOut, asset);
-
+                NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthoredFile(FindAssetsRoot(), modId, mapId, outFile, overwrite);
                 Console.WriteLine(
-                    $"Wrote {fullOut} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");
+                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");
                 return 0;
             }
             catch (Exception ex)
@@ -1634,28 +1649,14 @@ namespace {modId}
         {
             try
             {
-                string repoRoot = FindAssetsRoot();
-                CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
-                    CrowdNavSurfaceAuthoring.ResolveAuthoringStart(repoRoot, modId, mapId);
-                if (File.Exists(start.TerrainFullPath) && !overwrite)
-                {
-                    throw new IOException($"File exists: {start.TerrainFullPath}");
-                }
-
                 var rects = new CrowdNavSurfaceAuthoring.CrowdTerrainRect[rectTexts.Length];
                 for (int i = 0; i < rectTexts.Length; i++)
                 {
                     rects[i] = CrowdNavSurfaceAuthoring.CrowdTerrainRect.Parse(rectTexts[i]);
                 }
 
-                byte[] cells = CrowdNavSurfaceAuthoring.PaintTerrainAreas(
-                    start.NavCellsPerSide, start.TerrainTypeIds, fill, rects);
-                Directory.CreateDirectory(Path.GetDirectoryName(start.TerrainFullPath)!);
-                using (FileStream output = File.Create(start.TerrainFullPath))
-                {
-                    ReactGridTerrainBinary.WriteAreaGrid(output, start.NavCellsPerSide, start.NavCellsPerSide, cells);
-                }
-
+                CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
+                    CrowdNavSurfaceAuthoring.WriteInitialTerrain(FindAssetsRoot(), modId, mapId, fill, rects, overwrite);
                 Console.WriteLine(
                     $"Wrote {start.TerrainFullPath} ({start.NavCellsPerSide}x{start.NavCellsPerSide}, fill={fill}, rects={rects.Length})");
                 return 0;
@@ -1671,24 +1672,10 @@ namespace {modId}
         {
             try
             {
-                string repoRoot = FindAssetsRoot();
                 CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
-                    CrowdNavSurfaceAuthoring.ResolveAuthoringStart(repoRoot, modId, mapId);
-                if (File.Exists(start.HeightFullPath) && !overwrite)
-                {
-                    throw new IOException($"File exists: {start.HeightFullPath}");
-                }
-
-                ContinuousHeightmapAsset height = CrowdNavSurfaceAuthoring.CreateFlatHeightmap(
-                    start.BoardSizeCm, start.NavCellsPerSide, heightCm);
-                Directory.CreateDirectory(Path.GetDirectoryName(start.HeightFullPath)!);
-                using (FileStream output = File.Create(start.HeightFullPath))
-                {
-                    ContinuousHeightmapBinary.Write(output, height);
-                }
-
+                    CrowdNavSurfaceAuthoring.WriteFlatHeightmap(FindAssetsRoot(), modId, mapId, heightCm, overwrite);
                 Console.WriteLine(
-                    $"Wrote {start.HeightFullPath} ({height.SampleColumns}x{height.SampleRows} samples, {heightCm} cm)");
+                    $"Wrote {start.HeightFullPath} ({start.NavCellsPerSide}x{start.NavCellsPerSide} samples, {heightCm} cm)");
                 return 0;
             }
             catch (Exception ex)
