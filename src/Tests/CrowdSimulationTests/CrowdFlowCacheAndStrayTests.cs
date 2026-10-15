@@ -179,11 +179,88 @@ public sealed class CrowdFlowCacheAndStrayTests
         Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
     }
 
+    /// <summary>
+    /// 走失记录按组按 tile 累积,下一次扩展整份带走;轮转从上一次服务过的下一组起,每 tick 一次;
+    /// 只有刷新或扩展在途的组跳过,记录留到答复落帧。走失 tile 已在掩码里、掩码已满都照样提交。
+    /// </summary>
     [Test]
-    public void Stray_SubmitsOneExtensionPerTick_AndSkipsAClosedMask()
+    public void Stray_AccumulatesPerTile_RidesTheNextExtension_RoundRobinOnePerTick()
     {
         using var harness = Open();
         var session = harness.Session;
+        var planner = harness.Planner;
+        Assert.That(session.Config.Flowfield.MaxRebuildsPerTick, Is.EqualTo(1));
+        var nav = First(session);
+        int tiles = harness.PlannerTiles;
+        int side = nav.NavCellsPerSide, per = nav.Hpa!.NavCellsPerTile, tilesPerSide = nav.Hpa.NavTilesPerSide;
+        var goal = FirstPassable(nav);
+        int tile = NavGridSteps.TileOf(goal, side, per, tilesPerSide);
+        var mask = new byte[tiles];
+        mask[tile] = 1;
+        int outside = CellInNeighborTile(nav, tile);
+        int outsideTile = NavGridSteps.TileOf(outside, side, per, tilesPerSide);
+        int sameTile = outside + 1;
+        Assert.That(NavGridSteps.TileOf(sameTile, side, per, tilesPerSide), Is.EqualTo(outsideTile));
+        int farther = CellInNeighborTile(nav, outsideTile);
+        int fartherTile = NavGridSteps.TileOf(farther, side, per, tilesPerSide);
+        Assert.That(fartherTile, Is.Not.EqualTo(tile));
+
+        var covered = Dummy(session, nav, goal, (byte[])mask.Clone());
+        planner.NoteStray(covered.Id, goal);
+        planner.ProcessRefreshes(2);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(1), "走失 tile 已在掩码里也提交扩展");
+        Assert.That(covered.Extending, Is.True);
+
+        var a = Dummy(session, nav, goal, (byte[])mask.Clone());
+        var b = Dummy(session, nav, goal, (byte[])mask.Clone());
+        planner.NoteStray(a.Id, outside);
+        planner.NoteStray(b.Id, outside);
+        planner.ProcessRefreshes(3);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(2));
+        Assert.That((a.Extending ? 1 : 0) + (b.Extending ? 1 : 0), Is.EqualTo(1));
+
+        planner.ProcessRefreshes(4);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(3), "没提交的记录留到下一 tick");
+        Assert.That(a.Extending && b.Extending, Is.True);
+
+        var e = Dummy(session, nav, goal, (byte[])mask.Clone());
+        int tilesBefore = planner.ExtendStrayTiles;
+        planner.NoteStray(e.Id, outside);
+        planner.NoteStray(e.Id, sameTile);
+        planner.NoteStray(e.Id, farther);
+        planner.ProcessRefreshes(5);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(4));
+        Assert.That(planner.ExtendStrayTiles - tilesBefore, Is.EqualTo(2), "同一 tile 只记第一格");
+        Assert.That(e.Extending, Is.True);
+
+        int skipped = planner.StraySkipInFlight;
+        planner.NoteStray(e.Id, outside);
+        planner.ProcessRefreshes(6);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(4), "扩展在途不另提");
+        Assert.That(planner.StraySkipInFlight, Is.EqualTo(skipped + 1));
+        Assert.That(planner.ApplyDue(5 + session.Config.Planning.LatencyTicks, true), Is.True);
+        Assert.That(e.Extending, Is.False);
+        tilesBefore = planner.ExtendStrayTiles;
+        planner.ProcessRefreshes(6 + session.Config.Planning.LatencyTicks);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(5), "在途时记下的走失在答复落帧后提交");
+        Assert.That(planner.ExtendStrayTiles - tilesBefore, Is.EqualTo(1));
+        Assert.That(e.Extending, Is.True);
+
+        var closed = Dummy(session, nav, goal, Full(tiles));
+        planner.NoteStray(closed.Id, outside);
+        planner.ProcessRefreshes(7 + session.Config.Planning.LatencyTicks);
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(6), "掩码已满也提交扩展");
+        Assert.That(closed.Extending, Is.True);
+        Assert.That(planner.ApplyDue(7 + 2 * session.Config.Planning.LatencyTicks, true), Is.True);
+        Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Stray_RecordIsDroppedByReplanReactionAndRelease()
+    {
+        using var harness = Open();
+        var session = harness.Session;
+        var planner = harness.Planner;
         var nav = First(session);
         int tiles = harness.PlannerTiles;
         var goal = FirstPassable(nav);
@@ -192,35 +269,26 @@ public sealed class CrowdFlowCacheAndStrayTests
         mask[tile] = 1;
         int outside = CellInNeighborTile(nav, tile);
 
-        var covered = Dummy(session, nav, goal, (byte[])mask.Clone());
-        harness.Planner.NoteStray(covered.Id, goal);
-        harness.Planner.ProcessRefreshes(2);
-        Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(0));
-        Assert.That(harness.Planner.StraySkipCovered, Is.GreaterThan(0));
-        Assert.That(covered.Extending, Is.False);
+        var reacted = Dummy(session, nav, goal, (byte[])mask.Clone());
+        reacted.OrderId = 1;
+        planner.NoteStray(reacted.Id, outside);
+        planner.ReactRebake(new List<CrowdNavRebakeContextResult>
+        {
+            new() { NavId = nav.Id, DirtyTiles = new List<int> { tile }, Kind = 2 },
+        });
+        planner.ProcessRefreshes(2);
+        Assert.That(planner.StrayGroupTicks, Is.EqualTo(0), "反应取代攒下的走失记录");
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(0));
 
-        var a = Dummy(session, nav, goal, (byte[])mask.Clone());
-        var b = Dummy(session, nav, goal, (byte[])mask.Clone());
-        harness.Planner.NoteStray(a.Id, outside);
-        harness.Planner.NoteStray(b.Id, outside);
-        harness.Planner.ProcessRefreshes(3);
-        Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(1));
-        Assert.That((a.Extending ? 1 : 0) + (b.Extending ? 1 : 0), Is.EqualTo(1));
-
-        harness.Planner.NoteStray(a.Id, outside);
-        harness.Planner.NoteStray(b.Id, outside);
-        harness.Planner.ProcessRefreshes(4);
-        Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(2));
-        Assert.That(a.Extending, Is.True);
-        Assert.That(b.Extending, Is.True);
-
-        var closed = Dummy(session, nav, goal, Full(tiles));
-        int before = harness.Planner.ExtendSubmits;
-        harness.Planner.NoteStray(closed.Id, outside);
-        harness.Planner.ProcessRefreshes(5);
-        Assert.That(harness.Planner.ExtendSubmits, Is.EqualTo(before));
-        Assert.That(closed.Extending, Is.False);
-        Assert.That(harness.Planner.StraySkipNoGrowth, Is.GreaterThan(0));
+        var released = Dummy(session, nav, goal, (byte[])mask.Clone());
+        planner.NoteStray(released.Id, outside);
+        released.Count = 0;
+        session.Groups.ReleaseEmpty();
+        var reused = Dummy(session, nav, goal, (byte[])mask.Clone());
+        Assert.That(reused.Id, Is.EqualTo(released.Id));
+        planner.ProcessRefreshes(3);
+        Assert.That(planner.StrayGroupTicks, Is.EqualTo(0), "释放的组不把记录留给复用同号的新组");
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(0));
     }
 
     [Test]
