@@ -12,8 +12,8 @@ namespace Ludots.Core.CrowdSimulation.Config;
 public sealed class CrowdTraversalConfig
 {
     public const string RelativePath = "CrowdSimulation/traversal.json";
-    public const int MaxAreas = 256;
-    public const int MaxLinkKinds = 255;
+    public const int MaxAreas = byte.MaxValue + 1;
+    public const int MaxLinkKinds = byte.MaxValue;
 
     private readonly Dictionary<string, int> _areaIndex;
     private readonly Dictionary<string, int> _rowIndex;

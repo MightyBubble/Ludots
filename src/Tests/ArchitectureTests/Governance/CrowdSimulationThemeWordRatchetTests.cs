@@ -15,7 +15,7 @@ namespace Ludots.Tests.Architecture.Governance;
 [Category("arch-guard")]
 public sealed class CrowdSimulationThemeWordRatchetTests
 {
-    public const int MaxThemeWordSegments = 379;
+    public const int MaxThemeWordSegments = 370;
 
     private static readonly HashSet<string> ThemeWords = new(StringComparer.Ordinal)
     {
