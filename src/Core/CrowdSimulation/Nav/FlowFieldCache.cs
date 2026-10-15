@@ -77,6 +77,21 @@ public sealed class FlowFieldCache
         return true;
     }
 
+    /// <summary>只按键取，不看掩码覆盖。同样计命中 / 未命中，并把条目挪到最新。</summary>
+    public FlowField? Get(long key)
+    {
+        int slot = Find(key);
+        if (slot < 0)
+        {
+            Misses++;
+            return null;
+        }
+
+        Hits++;
+        Touch(slot);
+        return _fields[slot];
+    }
+
     public void Admit(FlowField field)
     {
         if (field.Mask == null) return;

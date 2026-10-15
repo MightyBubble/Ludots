@@ -116,24 +116,30 @@ public sealed class CrowdSimPlanner
 
     private sealed class PendingOrder
     {
+        public PendingOrder()
+        {
+            Job = new PathPlanJob(Groups);
+        }
+
         public CrowdOrder Order = null!;
         public readonly List<PendingGroup> Groups = new(8);
         public readonly List<PendingLeader> Leaders = new(4);
+        public readonly PathPlanJob Job;
+        public int RequestId;
     }
 
-    private sealed class PendingGroup
+    private sealed class PendingGroup : PathPlanGroup
     {
         public int GroupId;
         public int PlanSeq;
-        public int NavId;
-        public int Goal;
-        public int RequestId;
         /// <summary>答复落帧时导航版本或导航号变了，组进入 AfterStalePlan。</summary>
         public int Version;
-        /// <summary>每 (tile, 层) 一个起点,(格, 层) 成对。工人读到答复取走为止。</summary>
-        public int[] Origins = Array.Empty<int>();
-        public int OriginCount;
-        public int LeaderStart;
+        /// <summary>规划时钉住的缓存场,整份规划应用完才放开。</summary>
+        public FlowField? Pin;
+        public bool Ok;
+        public bool Stale;
+        /// <summary>应用时这一组最后拿到的场,给引用它的 Same 组用。</summary>
+        public FlowField? Resolved;
     }
 
     /// <summary>流场刷新的到点答复:同走廊在新导航上重建流场,领队与槽位不动。</summary>
@@ -206,6 +212,7 @@ public sealed class CrowdSimPlanner
         if (tileCount < 1) tileCount = 1;
         _maskA = new byte[tileCount];
         _maskUnion = new byte[tileCount];
+        foreach (var pooled in _groupPool) pooled.Corridor = new byte[tileCount];
         _strayStamp = new byte[CrowdNavGroupSet.MaxGroups];
         _strayCell = new int[CrowdNavGroupSet.MaxGroups];
         _extendByGroup = new int[CrowdNavGroupSet.MaxGroups];
@@ -396,6 +403,8 @@ public sealed class CrowdSimPlanner
                 pg.Origins = RentOrigins();
                 pg.OriginCount = CollectOrigins(session, mem, pg.Origins);
                 pg.LeaderStart = -1;
+                pg.Pin = PinCached(g.NavId, g.Goal);
+                pg.CachedMask = pg.Pin?.Mask;
                 po.Groups.Add(pg);
                 if (!byLayer.TryGetValue(g.LayerIdx, out var bucket))
                 {
@@ -436,9 +445,11 @@ public sealed class CrowdSimPlanner
                 var nav = session.ResolveNavContext(strictest.NavId);
                 int lc = CrowdDeployment.NearestPassable(nav,
                     CrowdSimulationSpace.CellAtStrict(sx / cnt, sy / cnt, cfg.NavCellSizeCm, navCellsPerSide));
-                var strictestPg = PendingGroupOf(po, strictestId);
+                int strictestIndex = PendingGroupIndex(po, strictestId);
+                var strictestPg = po.Groups[strictestIndex];
                 if (lc < 0 || !nav.CanReach(nav.Comp[lc], strictest.GoalComp)) lc = RepresentativeStart(strictestPg);
                 strictestPg.LeaderStart = lc;
+                po.Job.AddLeader(strictestIndex);
                 CrowdLeader? prev = null;
                 foreach (int gid in bucket)
                 {
@@ -456,12 +467,10 @@ public sealed class CrowdSimPlanner
                 po.Leaders.Add(pl);
             }
 
-            for (int gi = 0; gi < po.Groups.Count; gi++)
+            if (po.Groups.Count > 0)
             {
-                var pg = po.Groups[gi];
-                pg.RequestId = _service.Request(
-                    new PathQuery(pg.NavId, -1, pg.Goal, 0) { Origins = pg.Origins, OriginCount = pg.OriginCount, LeaderStart = pg.LeaderStart },
-                    tick);
+                var first = po.Groups[0];
+                po.RequestId = _service.Request(new PathQuery(first.NavId, -1, first.Goal, 0) { Plan = po.Job }, tick);
             }
 
             for (int li = 0; li < po.Leaders.Count; li++)
@@ -515,11 +524,7 @@ public sealed class CrowdSimPlanner
                 var plan = _pending[k];
                 foreach (var po in plan.Orders)
                 {
-                    foreach (var pg in po.Groups)
-                    {
-                        if (!_service.Ready(pg.RequestId)) return false;
-                    }
-
+                    if (!_service.Ready(po.RequestId)) return false;
                     foreach (var pl in po.Leaders)
                     {
                         if (!_service.Ready(pl.RequestId)) return false;
@@ -583,39 +588,133 @@ public sealed class CrowdSimPlanner
             var o = po.Order;
             var live = _live;
             live.Clear();
+            _service.ReleaseReply(_service.AwaitDue(po.RequestId));
             foreach (var pg in po.Groups)
             {
-                var result = _service.AwaitDue(pg.RequestId);
-                if (!_session.Groups.TryGet(pg.GroupId, out var g) || g.OrderId != o.Id)
-                {
-                    Recycle(result);
-                    continue;
-                }
-
-                if (!result.Reachable || result.Flow == null)
-                {
-                    Recycle(result);
-                    continue;
-                }
-
+                pg.Ok = _session.Groups.TryGet(pg.GroupId, out var g) && g.OrderId == o.Id;
+                pg.Stale = false;
+                pg.Resolved = null;
+                if (!pg.Ok) continue;
                 // 陈旧答复(请求后导航重烘过):场先挂上(刷新落地前组用它),组进裁决清单。
-                // 过渡场不进缓存,避免旧代价被后来的命中复用。
-                var nav = _session.ResolveNavContext(g.NavId);
-                bool fresh = nav.Version == pg.Version && g.NavId == pg.NavId;
-                if (!fresh)
-                {
-                    stale.Add(g);
-                    StalePlanApplies++;
-                }
-                SetFlow(g, result.Flow, fresh, pg.RequestId);
-                result.Flow = null;
-                _service.ReleaseReply(result);
-                g.Planning = false;
+                pg.Stale = _session.ResolveNavContext(g.NavId).Version != pg.Version || g.NavId != pg.NavId;
                 live[pg.GroupId] = new LiveGroup { Pg = pg };
+                if (!pg.Stale) continue;
+                stale.Add(g);
+                StalePlanApplies++;
+            }
+
+            // Same 可能指向组表里排在后面的组,先落自己建的场和缓存场。
+            ApplyPlanFlows(po, false, stale);
+            ApplyPlanFlows(po, true, stale);
+            foreach (var pg in po.Groups)
+            {
+                if (pg.Ok && _session.Groups.TryGet(pg.GroupId, out var g)) g.Planning = false;
             }
 
             FinishOrder(po, live);
         }
+
+        foreach (var po in plan.Orders)
+        {
+            foreach (var pg in po.Groups) UnpinPlanned(pg);
+        }
+    }
+
+    /// <summary>
+    /// 新建场:陈旧组挂上但不进缓存,免得旧代价被后来的命中复用;
+    /// 组已经不在这条指令上时,导航没变的场照样进缓存,变了就回池。
+    /// 组没拿到场(它引用的组的场回池了)就进裁决清单重规划。
+    /// </summary>
+    private void ApplyPlanFlows(PendingOrder po, bool same, List<CrowdNavGroupSet.Group> stale)
+    {
+        for (int j = 0; j < po.Groups.Count; j++)
+        {
+            var pg = po.Groups[j];
+            if ((pg.Reply == PathPlanReply.Same) != same) continue;
+            FlowField? flow;
+            bool admit = false;
+            switch (pg.Reply)
+            {
+                case PathPlanReply.New:
+                    flow = pg.Flow;
+                    pg.Flow = null;
+                    if (!pg.Stale)
+                    {
+                        if (!pg.Ok && !PlannedNavUnchanged(pg))
+                        {
+                            RecycleFlow(flow!);
+                            continue;
+                        }
+
+                        admit = true;
+                    }
+
+                    break;
+                case PathPlanReply.Cached:
+                    flow = pg.Pin;
+                    PlanCachedReplies++;
+                    break;
+                case PathPlanReply.Same:
+                    flow = po.Groups[pg.SameAs].Resolved;
+                    PlanSameReplies++;
+                    break;
+                default:
+                    throw new InvalidOperationException($"指令 {po.Order.Id} 的组 {pg.GroupId} 没有规划答复。");
+            }
+
+            pg.Resolved = flow;
+            int revision = pg.Reply == PathPlanReply.New ? po.RequestId : 0;
+            if (!pg.Ok)
+            {
+                if (!admit) continue;
+                flow!.BuildRevision = revision;
+                _cache.Admit(flow);
+                continue;
+            }
+
+            if (!_session.Groups.TryGet(pg.GroupId, out var g)) continue;
+            if (flow != null) SetFlow(g, flow, admit, revision);
+            else if (g.Flow == null) stale.Add(g);
+        }
+    }
+
+    private bool PlannedNavUnchanged(PendingGroup pg)
+    {
+        if (_session.Groups.TryGet(pg.GroupId, out var g))
+            return g.NavId == pg.NavId && _session.ResolveNavContext(g.NavId).Version == pg.Version;
+        return _session.TryGetMaterializedNav(pg.NavId, out var nav) && nav.Version == pg.Version;
+    }
+
+    /// <summary>
+    /// 钉住 (导航, 目标) 的缓存场,按键取,不看覆盖。认知变体没有自己的场时,
+    /// 真相场的走廊不碰任何分歧 tile 就借真相场。
+    /// </summary>
+    private FlowField? PinCached(int navId, int goal)
+    {
+        var flow = _cache.Get(_cache.KeyOf(navId, goal));
+        if (flow == null && navId >= CrowdBeliefNavs.BeliefStride)
+        {
+            var truth = _cache.Get(_cache.KeyOf(navId % CrowdBeliefNavs.BeliefStride, goal));
+            if (truth != null && _session.Beliefs!.SharesFlow(navId, truth.Mask!))
+            {
+                flow = truth;
+                BeliefFlowShares++;
+            }
+        }
+
+        if (flow != null) flow.Refs++;
+        return flow;
+    }
+
+    private void UnpinPlanned(PendingGroup pg)
+    {
+        var pin = pg.Pin;
+        pg.Pin = null;
+        pg.CachedMask = null;
+        pg.Resolved = null;
+        if (pin == null) return;
+        if (pin.Refs > 0) pin.Refs--;
+        _cache.Release(pin);
     }
 
     /// <summary>领队 + 阵型槽位 + 到达足印(质心与朝向继承按落帧时刻的成员位置)。</summary>
@@ -1142,6 +1241,12 @@ public sealed class CrowdSimPlanner
     internal int StalePlanApplies { get; private set; }
     internal int RefreshCacheHits { get; private set; }
     internal int RefreshCacheMisses { get; private set; }
+    /// <summary>落帧的组规划答复里,沿用规划时钉住的缓存场的组数。</summary>
+    internal int PlanCachedReplies { get; private set; }
+    /// <summary>落帧的组规划答复里,共用同指令另一组新建场的组数。</summary>
+    internal int PlanSameReplies { get; private set; }
+    /// <summary>认知变体规划时借用真相缓存场的次数。</summary>
+    internal int BeliefFlowShares { get; private set; }
     public int FlowCacheHits => _cache.Hits;
     public int FlowCacheMisses => _cache.Misses;
     public int FlowCacheEvicts => _cache.Evicts;
@@ -1275,11 +1380,11 @@ public sealed class CrowdSimPlanner
         return pg.Origins[0];
     }
 
-    private static PendingGroup PendingGroupOf(PendingOrder po, int groupId)
+    private static int PendingGroupIndex(PendingOrder po, int groupId)
     {
         for (int i = 0; i < po.Groups.Count; i++)
         {
-            if (po.Groups[i].GroupId == groupId) return po.Groups[i];
+            if (po.Groups[i].GroupId == groupId) return i;
         }
 
         throw new InvalidOperationException($"指令 {po.Order.Id} 的待发组里没有组 {groupId}。");
@@ -1549,12 +1654,13 @@ public sealed class CrowdSimPlanner
         if (!_orderPool.TryPop(out var order)) order = new PendingOrder();
         order.Groups.Clear();
         order.Leaders.Clear();
+        order.Job.LeaderCount = 0;
         return order;
     }
 
     private PendingGroup RentGroup()
     {
-        if (!_groupPool.TryPop(out var group)) group = new PendingGroup();
+        if (!_groupPool.TryPop(out var group)) group = new PendingGroup { Corridor = new byte[_maskA.Length] };
         return group;
     }
 
@@ -1583,8 +1689,13 @@ public sealed class CrowdSimPlanner
     {
         for (int i = 0; i < order.Groups.Count; i++)
         {
-            ReturnOrigins(order.Groups[i]);
-            _groupPool.Push(order.Groups[i]);
+            var pg = order.Groups[i];
+            ReturnOrigins(pg);
+            UnpinPlanned(pg);
+            if (pg.Flow != null) RecycleFlow(pg.Flow);
+            pg.Flow = null;
+            pg.Reply = PathPlanReply.None;
+            _groupPool.Push(pg);
         }
 
         order.Groups.Clear();
@@ -1613,6 +1724,7 @@ public sealed class CrowdSimPlanner
             {
                 PendingOrder order = plan.Orders[o];
                 h = CrowdSimChecksum.Mix(h, (uint)order.Order.Id);
+                h = CrowdSimChecksum.Mix(h, (uint)order.RequestId);
                 h = CrowdSimChecksum.Mix(h, (uint)order.Groups.Count);
                 for (int g = 0; g < order.Groups.Count; g++)
                 {
@@ -1621,8 +1733,8 @@ public sealed class CrowdSimPlanner
                     h = CrowdSimChecksum.Mix(h, (uint)pg.PlanSeq);
                     h = CrowdSimChecksum.Mix(h, (uint)pg.NavId);
                     h = CrowdSimChecksum.Mix(h, (uint)pg.Goal);
-                    h = CrowdSimChecksum.Mix(h, (uint)pg.RequestId);
                     h = CrowdSimChecksum.Mix(h, (uint)pg.Version);
+                    h = CrowdSimChecksum.MixI64(h, pg.Pin != null ? _cache.KeyOf(pg.Pin.NavId, pg.Pin.Goal) : -1);
                 }
 
                 h = CrowdSimChecksum.Mix(h, (uint)order.Leaders.Count);
