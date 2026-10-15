@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Ludots.UI;
+using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 using NUnit.Framework;
 using SkiaSharp;
 
@@ -98,6 +101,29 @@ public sealed class UiTextBindingTests
 		fixture.Scene.Layout(800f, 600f);
 		Assert.That(fixture.Scene.HasPendingTextChanges, Is.False);
 		Assert.That(fixture.Label.TextContent, Is.EqualTo("01"));
+	}
+
+	[Test]
+	public void BindingUpdate_LaidOutBeforeRender_KeepsRootDirtyUntilRendered()
+	{
+		var binding = new UiTextBinding("0");
+		var renderer = new LayoutThenCountRenderer();
+		var root = new UIRoot(renderer);
+		var host = new UiSurfaceHost(root, new HalfEmTextMeasurer(), new FixedImageSizeProvider());
+		root.Resize(320f, 200f);
+		UiSurfaceLeaseHandle lease = host.Acquire(new UiSurfaceLeaseRequest("test.bound-text"));
+		host.Publish(lease, UiSurfaceContribution.FromBuilder(() => Ui.Column(Ui.Text(binding)).Width(320f).Height(200f)));
+		root.Render();
+		Assert.That(root.IsDirty, Is.False);
+
+		binding.Set("01");
+		root.Scene!.Layout(320f, 200f);
+		Assert.That(root.Scene.HasPendingTextChanges, Is.False);
+		Assert.That(root.IsDirty, Is.True, "text laid out by an input or query pass must still reach the screen");
+
+		root.Render();
+		Assert.That(root.IsDirty, Is.False);
+		Assert.That(renderer.Renders, Is.EqualTo(2));
 	}
 
 	[Test]
@@ -340,6 +366,17 @@ public sealed class UiTextBindingTests
 	}
 
 	private sealed record BindingScene(UiScene Scene, UiNode Label, UiNode Sibling);
+
+	private sealed class LayoutThenCountRenderer : IUiRenderer
+	{
+		public int Renders { get; private set; }
+
+		public void Render(UiScene scene, float width, float height)
+		{
+			scene.Layout(width, height);
+			Renders++;
+		}
+	}
 
 	private sealed class HalfEmTextMeasurer : IUiTextMeasurer
 	{
