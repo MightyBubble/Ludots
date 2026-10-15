@@ -368,6 +368,62 @@ public sealed class CrowdFlowCacheAndStrayTests
         Assert.That(ServiceSeq(harness.Service), Is.EqualTo(seqBeforeHit));
     }
 
+    [Test]
+    public void Plan_ReusesAPinnedCachedFieldThatCovers_OtherwiseBuildsOverItsMask()
+    {
+        using var harness = Open();
+        var session = harness.Session;
+        var planner = harness.Planner;
+        session.Movement!.OnStray = null;
+        var group = OrderOne(session, 480000, 560000, 700000, 700000);
+        var corridor = group.Flow!.Mask!;
+        var nav = session.ResolveNavContext(group.NavId);
+        int tiles = harness.PlannerTiles;
+        var full = FlowFieldBuilder.Build(nav, group.Goal, Full(tiles), new FlowPool(nav.NavCellsPerSide, 1));
+        planner.FlowCache.Admit(full);
+
+        int hits = planner.FlowCacheHits;
+        group = Reorder(session, 700000, 700000);
+        Assert.That(planner.FlowCacheHits, Is.EqualTo(hits + 1), "规划时要按键钉住缓存场");
+        Assert.That(planner.PlanCachedReplies, Is.EqualTo(1));
+        Assert.That(group.Flow, Is.SameAs(full));
+        Assert.That(full.Refs, Is.EqualTo(1), "规划时的钉住在应用后要放开");
+
+        int farTile = FarthestTile(corridor, nav.Hpa!.NavTilesPerSide);
+        var far = new byte[tiles];
+        far[farTile] = 1;
+        var narrow = Field(group.NavId, group.Goal, far);
+        planner.FlowCache.Admit(narrow);
+
+        // 同成员同目标格同参数的指令会直接复用，换个行宽才重新规划。
+        group = Reorder(session, 700000, 700000, widthCm: 100);
+        var built = group.Flow!;
+        Assert.That(planner.PlanCachedReplies, Is.EqualTo(1));
+        Assert.That(built, Is.Not.SameAs(full).And.Not.SameAs(narrow));
+        Assert.That(built.Mask![farTile], Is.EqualTo(1), "新场要按 垫过的走廊 ∪ 缓存场掩码 建");
+        Assert.That(planner.FlowCacheContains(built), Is.True);
+        Assert.That(narrow.Cached, Is.False);
+        Assert.That(narrow.Refs, Is.EqualTo(0));
+    }
+
+    private static int FarthestTile(byte[] mask, int side)
+    {
+        int best = -1, bestD = -1;
+        for (int t = 0; t < mask.Length; t++)
+        {
+            int d = int.MaxValue;
+            for (int m = 0; m < mask.Length; m++)
+            {
+                if (mask[m] != 0) d = Math.Min(d, Math.Max(Math.Abs(t % side - m % side), Math.Abs(t / side - m / side)));
+            }
+
+            if (d > bestD) { bestD = d; best = t; }
+        }
+
+        Assert.That(bestD, Is.GreaterThan(2), "场景无效：走廊盖满了全图");
+        return best;
+    }
+
     private static int ServiceSeq(PathQueryService service) =>
         (int)typeof(PathQueryService).GetField("_seq", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(service)!;
 
@@ -542,6 +598,32 @@ public sealed class CrowdFlowCacheAndStrayTests
         for (int i = 0; i < session.Groups.Groups.Count; i++)
         {
             if (session.Groups.Groups[i] is { Flow: not null, Leader: not null } group) return group;
+        }
+
+        Assert.Fail("指令没有挂上流场");
+        return null!;
+    }
+
+    private static CrowdNavGroupSet.Group Reorder(CrowdSimSession session, int goalX, int goalY, int widthCm = 0)
+    {
+        var members = new uint[1];
+        int n = session.Units.CopyOwnHandles(1, members);
+        session.Commands.Submit(session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.Order,
+            Player = 1,
+            XCm = goalX,
+            YCm = goalY,
+            ShapeId = "box",
+            HasAuto = true,
+            Auto = false,
+            WidthCm = widthCm,
+            Members = members.AsSpan(0, n).ToArray(),
+        }, CrowdSimCommands.Exec);
+        session.Advance(session.Config.Planning.LatencyTicks + 2);
+        for (int i = 0; i < session.Groups.Groups.Count; i++)
+        {
+            if (session.Groups.Groups[i] is { Flow: not null, Leader: not null, Planning: false } group) return group;
         }
 
         Assert.Fail("指令没有挂上流场");
