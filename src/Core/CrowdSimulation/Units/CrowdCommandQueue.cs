@@ -39,7 +39,9 @@ public sealed class CrowdCommandQueue
         // 现场提交时单位已经在。脚本入队只查成员数组非空，句柄留到执行 tick 再解析。
         if (cmd.Kind == CrowdSimCommandKind.Order) sim.BindMemberSet(cmd.Members!, cmd.Player);
         _log.Add((sim.TickCount, cmd));
-        return exec(sim, cmd);
+        T result = exec(sim, cmd);
+        sim.SyncKernelMirror();
+        return result;
     }
 
     /// <summary>脚本入队(须按 tick 升序;与未执行的存量按 tick 归并,同 tick 先到先执行)。

@@ -147,6 +147,24 @@ public sealed class CrowdSimSession
     {
         Commands.Flush(this, ExecCommand);
         Units.MaterializePending();
+        SyncKernelMirror();
+    }
+
+    /// <summary>
+    /// 运动内核的稠密表（状态、位置、玩家表序、空间哈希）在 tick 首收拢，tick 内是真相，tick 间供呈现按稠密下标读。
+    /// 指令改组号、释放空组、增删单位都写 ECS；在 tick 之外执行时稠密表还停在上一次收拢，置这个位。
+    /// </summary>
+    internal bool KernelMirrorStale { get; set; }
+
+    /// <summary>tick 之外执行过指令后，把稠密表和空间哈希按 ECS 重收一次，呈现读到的组号与下标才和组注册表、单位表一致。</summary>
+    internal void SyncKernelMirror()
+    {
+        if (!KernelMirrorStale) return;
+        KernelMirrorStale = false;
+        if (Movement == null) return;
+        Units.MaterializePending();
+        Movement.GatherUnits();
+        Movement.RebuildHash();
     }
 
     private FogLayerRegistry? _visionLayers;
@@ -398,6 +416,7 @@ public sealed class CrowdSimSession
                 telemetry.AddPlanTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
                 // Flush 可能改了成员,scatter 还没跑;成员数没变就留着上一份直方。
                 if (Units.Count != _stateHistogramMembers) RecountUnitStates();
+                SyncKernelMirror();
                 Telemetry.MarkPathWait();
                 checksum = 0;
                 return false;
@@ -410,6 +429,7 @@ public sealed class CrowdSimSession
                 Movement.BeginMotionTick();
                 if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
                 Movement.GatherUnits();
+                KernelMirrorStale = false;
                 telemetry.AddGatherTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
                 for (int s = 0; s < SubSteps; s++)
                 {
@@ -449,6 +469,7 @@ public sealed class CrowdSimSession
         catch (Nav.Pathing.PathServiceFaultException) when (!BlockOnDueReplies)
         {
             // 现场会话停摆,故障文案留给呈现。阻塞会话仍把异常抛出去。两条路都不在主线程补算。
+            SyncKernelMirror();
             telemetry.MarkPathWait();
             checksum = 0;
             return false;
