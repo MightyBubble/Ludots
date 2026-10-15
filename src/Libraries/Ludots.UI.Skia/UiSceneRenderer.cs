@@ -475,20 +475,20 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			if (shadowPaint != null)
 			{
 				UiShadow shadow = style.TextShadow!.Value;
-				DrawTextLine(canvas, lineText, line.HasEllipsis, startX + shadow.OffsetX, baselineY + shadow.OffsetY, style, shadowPaint);
+				DrawTextLine(canvas, lineText, in line, startX + shadow.OffsetX, baselineY + shadow.OffsetY, style, shadowPaint);
 			}
-			DrawTextLine(canvas, lineText, line.HasEllipsis, startX, baselineY, style, _textPaint);
+			DrawTextLine(canvas, lineText, in line, startX, baselineY, style, _textPaint);
 			DrawTextDecorations(canvas, line.Width, anchorX, baselineY, align, style);
 			baselineY += lineHeight;
 		}
 	}
 
-	private static void DrawTextLine(SKCanvas canvas, ReadOnlySpan<char> text, bool ellipsis, float x, float baselineY, UiStyle style, SKPaint paint)
+	private static void DrawTextLine(SKCanvas canvas, ReadOnlySpan<char> text, in UiTextLines.Line line, float x, float baselineY, UiStyle style, SKPaint paint)
 	{
-		float endX = UiTextLayout.DrawRun(canvas, text, x, baselineY, style, paint);
-		if (ellipsis)
+		UiTextLayout.DrawRun(canvas, text, x, baselineY, style, paint);
+		if (line.HasEllipsis)
 		{
-			UiTextLayout.DrawEllipsis(canvas, endX, baselineY, style, paint);
+			UiTextLayout.DrawEllipsis(canvas, x + line.ContentWidth, baselineY, style, paint);
 		}
 	}
 

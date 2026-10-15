@@ -36,6 +36,12 @@ public static class UiTextLayout
 	[ThreadStatic]
 	private static Dictionary<FontKey, SKFont>? t_fonts;
 
+	[ThreadStatic]
+	private static Dictionary<FontKey, GlyphTable>? t_glyphTables;
+
+	[ThreadStatic]
+	private static GlyphTable? t_lastGlyphs;
+
 	public static UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
 	{
 		if (string.IsNullOrEmpty(text))
@@ -207,6 +213,15 @@ public static class UiTextLayout
 	private static void WrapParagraph(UiTextLines lines, int start, int length, UiStyle style, float availableWidth)
 	{
 		ReadOnlySpan<char> p = lines.Chars(start, length);
+		if (!char.IsWhiteSpace(p[length - 1]))
+		{
+			float whole = MeasureRunWidth(p, style);
+			if (whole <= availableWidth)
+			{
+				lines.AddLine(start, length, whole, whole, ellipsis: false);
+				return;
+			}
+		}
 		int lineStart = 0;
 		float lineWidth = 0f;
 		int contentEnd = 0;
@@ -341,33 +356,53 @@ public static class UiTextLayout
 		lines.AddLine(start, contentEnd, contentWidth, contentWidth + ellipsisWidth, ellipsis: true);
 	}
 
-	/// <summary>不折行地量一段文字的宽度；按字素簇选字体，同字体的连续段合起来量。</summary>
+	/// <summary>
+	/// 不折行地量一段文字的宽度：逐字素簇按所选字体的步进相加，和 Skia 对同一段文字的 MeasureText 一致。
+	/// 常见字符的字体和步进按（首选字体，字号）缓存在本线程，命中时不进 Skia。
+	/// </summary>
 	internal static float MeasureRunWidth(ReadOnlySpan<char> text, UiStyle style)
 	{
 		if (text.IsEmpty)
 		{
 			return 0f;
 		}
-		var runs = new TypefaceRuns(text, style);
+		GlyphTable glyphs = Glyphs(style);
 		float width = 0f;
-		while (runs.MoveNext())
+		int position = 0;
+		while (position < text.Length)
 		{
-			width += GetFont(runs.Typeface, style.FontSize).MeasureText(runs.Current);
+			char c = text[position];
+			if (IsStandaloneAt(text, position))
+			{
+				width += glyphs.Get(c, style).Advance;
+				position++;
+				continue;
+			}
+			ReadOnlySpan<char> element = text.Slice(position, StringInfo.GetNextTextElementLength(text.Slice(position)));
+			width += GetFont(ResolveElementTypeface(element, style, glyphs.Preferred), style.FontSize).MeasureText(element);
+			position += element.Length;
 		}
 		return width;
 	}
 
-	/// <summary>从 <paramref name="x"/> 起画一段不折行的文字，返回画完后的横坐标。</summary>
-	internal static float DrawRun(SKCanvas canvas, ReadOnlySpan<char> text, float x, float baselineY, UiStyle style, SKPaint paint)
+	/// <summary>从 <paramref name="x"/> 起画一段不折行的文字。</summary>
+	internal static void DrawRun(SKCanvas canvas, ReadOnlySpan<char> text, float x, float baselineY, UiStyle style, SKPaint paint)
 	{
 		var runs = new TypefaceRuns(text, style);
-		while (runs.MoveNext())
+		if (!runs.MoveNext())
 		{
-			SKFont font = GetFont(runs.Typeface, style.FontSize);
-			canvas.DrawText(runs.Current, x, baselineY, font, paint);
-			x += font.MeasureText(runs.Current);
+			return;
 		}
-		return x;
+		while (true)
+		{
+			ReadOnlySpan<char> run = runs.Current;
+			canvas.DrawText(run, x, baselineY, GetFont(runs.Typeface, style.FontSize), paint);
+			if (!runs.MoveNext())
+			{
+				return;
+			}
+			x += MeasureRunWidth(run, style);
+		}
 	}
 
 	internal static void DrawEllipsis(SKCanvas canvas, float x, float baselineY, UiStyle style, SKPaint paint)
@@ -389,25 +424,164 @@ public static class UiTextLayout
 		return font;
 	}
 
+	private static GlyphTable Glyphs(UiStyle style)
+	{
+		GlyphTable? last = t_lastGlyphs;
+		if (last != null && last.Matches(style))
+		{
+			return last;
+		}
+		SKTypeface preferred = UiFontRegistry.ResolveTypeface(style.FontFamily, style.Bold, style.Italic);
+		Dictionary<FontKey, GlyphTable> tables = t_glyphTables ??= new Dictionary<FontKey, GlyphTable>(FontKeyComparer.Instance);
+		var key = new FontKey(preferred, style.FontSize);
+		if (!tables.TryGetValue(key, out GlyphTable? table))
+		{
+			table = new GlyphTable(preferred, style.FontSize);
+			tables[key] = table;
+		}
+		table.Remember(style);
+		t_lastGlyphs = table;
+		return table;
+	}
+
+	/// <summary>
+	/// 这些字符自成一个字素簇，且不会和前一个字符粘成簇（不是组合附标、ZWJ、变体选择符、代理项、CR），
+	/// 本字符和下一个字符都满足时可跳过 Unicode 分簇。
+	/// </summary>
+	private static bool IsStandaloneChar(char c)
+	{
+		return (c < '\u0300' && c != '\r')
+			|| (c >= '\u2010' && c <= '\u2027')
+			|| (c >= '\u2030' && c <= '\u205E')
+			|| (c >= '\u2190' && c <= '\u23FF')
+			|| (c >= '\u2500' && c <= '\u25FF')
+			|| (c >= '\u3000' && c <= '\u3029')
+			|| (c >= '\u4E00' && c <= '\u9FFF')
+			|| (c >= '\uFF01' && c <= '\uFF60');
+	}
+
+	private static bool IsStandaloneAt(ReadOnlySpan<char> text, int position)
+	{
+		return IsStandaloneChar(text[position]) && (position + 1 == text.Length || IsStandaloneChar(text[position + 1]));
+	}
+
+	private static SKTypeface ResolveElementTypeface(ReadOnlySpan<char> element, UiStyle style, SKTypeface preferred)
+	{
+		Rune.DecodeFromUtf16(element, out Rune rune, out int consumed);
+		return consumed == element.Length
+			? UiFontRegistry.ResolveTypefaceForCodePoint(style.FontFamily, style.Bold, style.Italic, preferred, rune.Value)
+			: UiFontRegistry.ResolveTypefaceForTextElement(style.FontFamily, style.Bold, new string(element), style.Italic);
+	}
+
+	private readonly struct Glyph
+	{
+		public readonly SKTypeface Typeface;
+		public readonly float Advance;
+
+		public Glyph(SKTypeface typeface, float advance)
+		{
+			Typeface = typeface;
+			Advance = advance;
+		}
+	}
+
+	/// <summary>
+	/// 一个（首选字体，字号）下单字符的字体和步进。字体注册表变了（<see cref="UiFontRegistry.Generation"/>）就整表作废，
+	/// 因为回退字体可能跟着换。
+	/// </summary>
+	private sealed class GlyphTable
+	{
+		private const int DirectCount = 0x300;
+
+		private const int OtherCapacity = 512;
+
+		private readonly Glyph[] _direct = new Glyph[DirectCount];
+
+		// 预留容量，界面里第一次出现的字符填缓存时不扩容。
+		private readonly Dictionary<char, Glyph> _other = new Dictionary<char, Glyph>(OtherCapacity);
+
+		private int _generation;
+
+		public GlyphTable(SKTypeface preferred, float size)
+		{
+			Preferred = preferred;
+			Size = size;
+			_generation = UiFontRegistry.Generation;
+		}
+
+		public SKTypeface Preferred { get; }
+
+		public float Size { get; }
+
+		private string? _lastFamily;
+		private bool _lastBold;
+		private bool _lastItalic;
+
+		/// <summary>同一个字体族串（按引用）、粗斜体、字号且注册表没变时直接命中，省掉按族名查首选字体。</summary>
+		public bool Matches(UiStyle style)
+		{
+			return ReferenceEquals(style.FontFamily, _lastFamily)
+				&& style.Bold == _lastBold
+				&& style.Italic == _lastItalic
+				&& style.FontSize == Size
+				&& _generation == UiFontRegistry.Generation;
+		}
+
+		public void Remember(UiStyle style)
+		{
+			_lastFamily = style.FontFamily;
+			_lastBold = style.Bold;
+			_lastItalic = style.Italic;
+		}
+
+		public Glyph Get(char c, UiStyle style)
+		{
+			int generation = UiFontRegistry.Generation;
+			if (generation != _generation)
+			{
+				Array.Clear(_direct);
+				_other.Clear();
+				_generation = generation;
+			}
+			if (c < DirectCount)
+			{
+				ref Glyph slot = ref _direct[c];
+				if (slot.Typeface == null)
+				{
+					slot = Resolve(c, style);
+				}
+				return slot;
+			}
+			if (!_other.TryGetValue(c, out Glyph glyph))
+			{
+				glyph = Resolve(c, style);
+				_other[c] = glyph;
+			}
+			return glyph;
+		}
+
+		private Glyph Resolve(char c, UiStyle style)
+		{
+			SKTypeface typeface = UiFontRegistry.ResolveTypefaceForCodePoint(style.FontFamily, style.Bold, style.Italic, Preferred, c);
+			return new Glyph(typeface, GetFont(typeface, Size).MeasureText(new ReadOnlySpan<char>(in c)));
+		}
+	}
+
 	private ref struct TypefaceRuns
 	{
 		private readonly ReadOnlySpan<char> _text;
-		private readonly string? _family;
-		private readonly bool _bold;
-		private readonly bool _italic;
-		private readonly SKTypeface _preferred;
+		private readonly UiStyle _style;
+		private readonly GlyphTable _glyphs;
 		private int _position;
 
 		public TypefaceRuns(ReadOnlySpan<char> text, UiStyle style)
 		{
 			_text = text;
-			_family = style.FontFamily;
-			_bold = style.Bold;
-			_italic = style.Italic;
-			_preferred = UiFontRegistry.ResolveTypeface(style.FontFamily, style.Bold, style.Italic);
+			_style = style;
+			_glyphs = Glyphs(style);
 			_position = 0;
 			Current = default;
-			Typeface = _preferred;
+			Typeface = _glyphs.Preferred;
 		}
 
 		public ReadOnlySpan<char> Current { get; private set; }
@@ -424,9 +598,19 @@ public static class UiTextLayout
 			SKTypeface? run = null;
 			while (_position < _text.Length)
 			{
-				ReadOnlySpan<char> rest = _text.Slice(_position);
-				int elementLength = StringInfo.GetNextTextElementLength(rest);
-				SKTypeface typeface = ResolveElementTypeface(rest.Slice(0, elementLength));
+				SKTypeface typeface;
+				int elementLength;
+				if (IsStandaloneAt(_text, _position))
+				{
+					elementLength = 1;
+					typeface = _glyphs.Get(_text[_position], _style).Typeface;
+				}
+				else
+				{
+					ReadOnlySpan<char> rest = _text.Slice(_position);
+					elementLength = StringInfo.GetNextTextElementLength(rest);
+					typeface = ResolveElementTypeface(rest.Slice(0, elementLength), _style, _glyphs.Preferred);
+				}
 				if (run != null && !ReferenceEquals(run, typeface))
 				{
 					break;
@@ -437,14 +621,6 @@ public static class UiTextLayout
 			Current = _text.Slice(start, _position - start);
 			Typeface = run!;
 			return true;
-		}
-
-		private SKTypeface ResolveElementTypeface(ReadOnlySpan<char> element)
-		{
-			Rune.DecodeFromUtf16(element, out Rune rune, out int consumed);
-			return consumed == element.Length
-				? UiFontRegistry.ResolveTypefaceForCodePoint(_family, _bold, _italic, _preferred, rune.Value)
-				: UiFontRegistry.ResolveTypefaceForTextElement(_family, _bold, new string(element), _italic);
 		}
 	}
 

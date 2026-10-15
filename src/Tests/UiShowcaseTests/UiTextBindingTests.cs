@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
@@ -210,6 +211,70 @@ public sealed class UiTextBindingTests
 		UiTextLayoutResult reference = UiTextLayout.Measure(new string(paragraph), style, 120f, constrainWidth: true);
 		Assert.That(size.Height, Is.EqualTo(reference.Height).Within(0.001f));
 		Assert.That(reference.Lines.Count, Is.GreaterThan(50));
+	}
+
+	[TestCase("HUD 50000 units · 12.5ms p95")]
+	[TestCase("群体仿真 寻路 12 帧（告警）")]
+	[TestCase("▁▂▃▄▅▆▇█ → ≤ ±")]
+	[TestCase("cafe\u0301 nai\u0308ve")]
+	public void SkiaTextLayout_MeasureWidth_EqualsSkiaAdvancesPerGrapheme(string text)
+	{
+		UiStyle style = UiStyle.Default with { FontSize = 12f };
+		float expected = 0f;
+		TextElementEnumerator elements = StringInfo.GetTextElementEnumerator(text);
+		while (elements.MoveNext())
+		{
+			string element = elements.GetTextElement();
+			SKTypeface typeface = UiFontRegistry.ResolveTypefaceForTextElement(style.FontFamily, style.Bold, element, style.Italic);
+			using var font = new SKFont(typeface, style.FontSize);
+			expected += font.MeasureText(element);
+		}
+
+		Assert.That(UiTextLayout.MeasureWidth(text, style), Is.EqualTo(expected).Within(0.01f));
+		Assert.That(UiTextLayout.MeasureWidth(text, style), Is.EqualTo(expected).Within(0.01f), "cached advances must give the same width");
+	}
+
+	[Test]
+	public void SkiaTextLayout_SingleFontRun_MatchesSkiaWholeRunMeasure()
+	{
+		UiStyle style = UiStyle.Default with { FontSize = 13f };
+		const string text = "Sim 12.5 ms | Avoid 3.25 ms | units 50000";
+		using var font = new SKFont(UiFontRegistry.ResolveTypeface(style.FontFamily, style.Bold, style.Italic), style.FontSize);
+
+		Assert.That(UiTextLayout.MeasureWidth(text, style), Is.EqualTo(font.MeasureText(text)).Within(0.01f));
+	}
+
+	[Test]
+	public void SkiaTextLayout_FittingParagraph_IsOneLineWithItsMeasuredWidth()
+	{
+		UiStyle style = UiStyle.Default with { FontSize = 12f };
+		const string text = "导航 12 帧 · 寻路 3 次 · ▃▅█";
+		float width = UiTextLayout.MeasureWidth(text, style);
+
+		UiTextLayoutResult exact = UiTextLayout.Measure(text, style, width, constrainWidth: true);
+		Assert.That(exact.Lines, Is.EqualTo(new[] { text }));
+		Assert.That(exact.Width, Is.EqualTo(width));
+
+		UiTextLayoutResult narrower = UiTextLayout.Measure(text, style, width - 1f, constrainWidth: true);
+		Assert.That(narrower.Lines.Count, Is.EqualTo(2), "one pixel short must fall back to word wrapping");
+	}
+
+	[Test]
+	public void SkiaTextLayout_MixedScriptMeasure_AllocatesNothingAfterFirstPass()
+	{
+		UiStyle style = UiStyle.Default with { FontSize = 11f };
+		char[] text = "遥测 Sim 12.5ms · 避让 3.2ms ▁▂▃▄▅▆▇█ → ≤ 告警".ToCharArray();
+		UiTextLayout.MeasureSize(text, style, 90f, constrainWidth: true);
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		for (int i = 0; i < 32; i++)
+		{
+			UiTextLayout.MeasureSize(text, style, 90f, constrainWidth: true);
+			UiTextLayout.MeasureSize(text, style, 1000f, constrainWidth: true);
+		}
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.That(allocated, Is.EqualTo(0), $"mixed-script MeasureSize allocated {allocated} bytes");
 	}
 
 	private static IEnumerable<string> Repeat(string value, int count)

@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using SkiaSharp;
 
 using Ludots.UI.Runtime;
@@ -17,9 +19,11 @@ public static class UiFontRegistry
 
 	private static readonly Dictionary<string, SKTypeface> CachedTypefaces = new Dictionary<string, SKTypeface>(StringComparer.OrdinalIgnoreCase);
 
-	private static readonly Dictionary<StyleKey, SKTypeface> StyleTypefaces = new Dictionary<StyleKey, SKTypeface>(StyleKeyComparer.Instance);
+	// 每量一段文字都要查一次，读路径不上锁；写入与清空仍在 Sync 内。
+	private static readonly ConcurrentDictionary<StyleKey, SKTypeface> StyleTypefaces = new ConcurrentDictionary<StyleKey, SKTypeface>(StyleKeyComparer.Instance);
 
-	private static readonly Dictionary<RuneKey, SKTypeface> RuneTypefaces = new Dictionary<RuneKey, SKTypeface>(RuneKeyComparer.Instance);
+	// 预留容量：新字符第一次出现时只填表不扩容，界面稳态下量字不分配。
+	private static readonly Dictionary<RuneKey, SKTypeface> RuneTypefaces = new Dictionary<RuneKey, SKTypeface>(2048, RuneKeyComparer.Instance);
 
 	private static readonly string[] GlyphFallbackFamilies =
 	{
@@ -31,6 +35,11 @@ public static class UiFontRegistry
 		"Segoe UI",
 		"Arial Unicode MS"
 	};
+
+	private static int _generation;
+
+	/// <summary>每次注册字体文件加一；按字缓存字体选择的调用方据此作废缓存。</summary>
+	public static int Generation => Volatile.Read(ref _generation);
 
 	public static void RegisterFile(string familyName, string fontPath)
 	{
@@ -53,18 +62,19 @@ public static class UiFontRegistry
 			}
 			StyleTypefaces.Clear();
 			RuneTypefaces.Clear();
+			Interlocked.Increment(ref _generation);
 		}
 	}
 
 	public static SKTypeface ResolveTypeface(string? familyList, bool bold, bool italic = false)
 	{
 		var styleKey = new StyleKey(familyList ?? string.Empty, bold, italic);
+		if (StyleTypefaces.TryGetValue(styleKey, out SKTypeface? cached))
+		{
+			return cached;
+		}
 		lock (Sync)
 		{
-			if (StyleTypefaces.TryGetValue(styleKey, out SKTypeface? cached))
-			{
-				return cached;
-			}
 			string key = $"{familyList ?? string.Empty}|{bold}|{italic}";
 			if (!CachedTypefaces.TryGetValue(key, out SKTypeface? value))
 			{
