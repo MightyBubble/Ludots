@@ -30,7 +30,7 @@ public class S2NavTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
@@ -101,7 +101,7 @@ public class S2NavTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface("s1337");
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface("s1337");
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir("s1337"), "terrain", "crowd_simulation_s1337.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);

@@ -272,10 +272,10 @@ public sealed class CrowdDebugCommandTests
         });
         Assert.That(session.Structures.EntityAt(Fix64.FromInt(blocker.XCm), Fix64.FromInt(blocker.YCm)), Is.EqualTo(-1));
 
-        Assert.That(surface.Bridges, Is.Not.Empty);
-        var span = surface.Bridges[0].Span;
-        int bx = (span.X0Cm + span.X1Cm) / 2;
-        int by = (span.Y0Cm + span.Y1Cm) / 2;
+        Assert.That(surface.LayeredPaths, Is.Not.Empty);
+        var span = surface.LayeredPaths[0].Span;
+        int bx = (span.FromXCm + span.ToXCm) / 2;
+        int by = (span.FromYCm + span.ToYCm) / 2;
         int bridge = session.Structures.EntityAt(Fix64.FromInt(bx), Fix64.FromInt(by));
         Assert.That(bridge, Is.GreaterThanOrEqualTo(0));
         Submit(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.RemoveStructureAt, XCm = bx, YCm = by });

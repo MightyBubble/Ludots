@@ -37,8 +37,8 @@ public class S3RegressionTests
             new[]
             {
                 new LayeredPathRecord(
-                    new CrowdSimulationBridgeSpan { X0Cm = 1078125, Y0Cm = 1321875, X1Cm = 1140625, Y1Cm = 1321875, WidthCm = 18750 },
-                    "deck"),
+                    new CrowdSimulationPathSpan { FromXCm = 1078125, FromYCm = 1321875, ToXCm = 1140625, ToYCm = 1321875, WidthCm = 18750 },
+                    "bridge"),
             },
             runtime);
 

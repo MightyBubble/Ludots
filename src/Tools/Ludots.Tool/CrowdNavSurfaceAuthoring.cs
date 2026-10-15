@@ -542,7 +542,7 @@ public static class CrowdNavSurfaceAuthoring
                 templatesById.Add(template.Id, template);
             }
 
-            bridges = CrowdSimulationMapSurfaceSource.Extract(map, templatesById).Bridges;
+            bridges = CrowdSimulationMapSurfaceSource.Extract(map, templatesById).LayeredPaths;
         }
 
         return new CrowdAuthoringBinding(runtime, mapNav, pipeline, catalog, report, bridges);

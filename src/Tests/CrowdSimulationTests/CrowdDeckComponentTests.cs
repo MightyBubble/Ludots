@@ -153,27 +153,22 @@ public class CrowdDeckComponentTests
             var nav = NavContextBaker.Bake(config, surface, heights, deck, foot, clearance, cache);
             var store = CrowdStructuresStore.Build(config, surface, System.Array.Empty<BlockerFootprint>());
             store.UseUpperLayer(deck);
-            int bridgeTpl = store.TemplateIndexOf("bridge");
-            store.InstallMapBridges(bridgeTpl, new[]
-            {
-                bridges[0].Span,
-                bridges[1].Span,
-            });
+            store.InstallMapLayeredPaths(bridges);
             var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
             var sources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);
             return new Baked(config, store, nav, navs, sources, cache, side, cell);
         }
 
         private static LayeredPathRecord Bridge(int x0, int x1, int cell) => new(
-            new CrowdSimulationBridgeSpan
+            new CrowdSimulationPathSpan
             {
-                X0Cm = Center(x0, cell),
-                Y0Cm = Center(BridgeRow, cell),
-                X1Cm = Center(x1, cell),
-                Y1Cm = Center(BridgeRow, cell),
+                FromXCm = Center(x0, cell),
+                FromYCm = Center(BridgeRow, cell),
+                ToXCm = Center(x1, cell),
+                ToYCm = Center(BridgeRow, cell),
                 WidthCm = cell,
             },
-            "deck");
+            "bridge");
 
         private static int ClearanceOf(CrowdSimulationRuntimeConfig config, string profileId)
         {

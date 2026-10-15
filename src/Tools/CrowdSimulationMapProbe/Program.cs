@@ -75,7 +75,7 @@ public static class Program
         RenderBlocked(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
         RenderFull(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
 
-        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.Bridges.Count} jumps={bundle.Surface.JumpCandidates.Length}");
+        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.LayeredPaths.Count} jumps={bundle.Surface.JumpCandidates.Length}");
         return 0;
     }
 
@@ -93,7 +93,7 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, demoDir);
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, bundle.Runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, bundle.Runtime);
 
         var seen = new HashSet<int>();
         for (int a = 0; a < bundle.Runtime.AgentTypes.Count; a++)
@@ -160,7 +160,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile, c = navCellsPerSide / t;
 
         // 步兵上下文(含桥面),缓存随烘焙填充
@@ -230,7 +230,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile;
 
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulation", "parity", "s3c-query-truth.json")))!;
@@ -344,7 +344,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -741,9 +741,9 @@ public static class Program
 
         // 桥面(路径足迹,带宽)
         float worldCm = (float)navCellsPerSide * grid.NavCellSizeCm;
-        foreach (var b in mapSurface.Bridges)
+        foreach (var b in mapSurface.LayeredPaths)
         {
-            RasterizePath(px, b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm, worldCm, (150, 110, 70));
+            RasterizePath(px, b.Span.FromXCm, b.Span.FromYCm, b.Span.ToXCm, b.Span.ToYCm, b.Span.WidthCm, worldCm, (150, 110, 70));
         }
 
         // 跳跃候选:双向(落差 ≤ 25 m)靛蓝,单向琥珀

@@ -95,17 +95,19 @@ public sealed class SurfaceGrid
     }
 }
 
-/// <summary>正方形阻挡足迹（Box、halfWidthCm = halfHeightCm，装载契约已校验）。</summary>
+/// <summary>地图上的正方形阻挡足迹（Box、halfWidthCm = halfHeightCm，装载契约已校验）和实体点名的结构模板 id。</summary>
 public readonly struct BlockerFootprint
 {
-    public BlockerFootprint(int xCm, int yCm, int halfSizeCm)
+    public BlockerFootprint(int xCm, int yCm, int halfSizeCm, string templateId)
     {
         XCm = xCm;
         YCm = yCm;
         HalfSizeCm = halfSizeCm;
+        TemplateId = templateId ?? throw new ArgumentNullException(nameof(templateId));
     }
 
     public int XCm { get; }
     public int YCm { get; }
     public int HalfSizeCm { get; }
+    public string TemplateId { get; }
 }

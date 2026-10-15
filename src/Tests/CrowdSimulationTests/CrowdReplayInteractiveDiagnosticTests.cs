@@ -251,7 +251,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Set(host, "_deck", sources.UpperLayer);
         Set(host, "_jumpCandidates", sources.JumpCandidates);
         Set(host, "_mapSurfaceBlockers", map.Blockers);
-        Set(host, "_mapSurfaceBridges", map.Bridges);
+        Set(host, "_mapSurfaceBridges", map.LayeredPaths);
     }
 
     private static void Set(CrowdSimulationRuntime host, string field, object value)

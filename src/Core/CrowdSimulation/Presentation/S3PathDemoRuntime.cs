@@ -104,7 +104,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             mapSurface.Blockers);
         var grid = ingested.Grid;
         var heights = ingested.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
 
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,

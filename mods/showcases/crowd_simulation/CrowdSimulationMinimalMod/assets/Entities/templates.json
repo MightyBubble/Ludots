@@ -36,6 +36,9 @@
         "navRadiusCm": 0,
         "localOffsetXCm": 0,
         "localOffsetYCm": 0
+      },
+      "CrowdSimulationStructure": {
+        "template": "building"
       }
     }
   },

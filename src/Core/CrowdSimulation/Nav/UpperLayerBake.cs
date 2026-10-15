@@ -32,9 +32,9 @@ public sealed class UpperLayerSurface
 /// </summary>
 public static class UpperLayerBake
 {
-    /// <summary>桥实体栅格化:逐格桥面区域下标(0 = 无桥面)与桥头 portal 标记,及首写 tile 序。</summary>
+    /// <summary>上层条带实体栅格化：逐格上层区域下标(0 = 无上层)与桥头 portal 标记,及首写 tile 序。区域取实体点名模板的区域。</summary>
     public static UpperLayerSurface RasterizeLayeredPaths(
-        IReadOnlyList<LayeredPathRecord> bridges,
+        IReadOnlyList<LayeredPathRecord> layeredPaths,
         CrowdSimulationRuntimeConfig config)
     {
         int navCellsPerSide = config.NavCellsPerSide;
@@ -45,12 +45,12 @@ public static class UpperLayerBake
         var tileOrder = new List<int>();
         int tileSize = config.Hpa.NavCellsPerTile;
         var portalReachM = CrowdReferenceMeters.TruncatedCmToM(config.Structures.PortalReachNavCells * navCellSizeCm);
-        foreach (var bridge in bridges)
+        foreach (var record in layeredPaths)
         {
-            int areaIndex = AreaIndexOf(config, bridge.AreaId);
-            var span = bridge.Span;
+            int areaIndex = AreaIndexOf(config, record.TemplateId);
+            var span = record.Span;
             var spanGeom = UpperLayerSpanGeometry.FromCentimeters(
-                span.X0Cm, span.Y0Cm, span.X1Cm, span.Y1Cm, span.WidthCm,
+                span.FromXCm, span.FromYCm, span.ToXCm, span.ToYCm, span.WidthCm,
                 navCellsPerSide, navCellSizeCm, portalReachM);
             for (int y = spanGeom.MinY; y <= spanGeom.MaxY; y++)
             {
@@ -70,14 +70,21 @@ public static class UpperLayerBake
 
         return new UpperLayerSurface { AreaIndex = upperAreaIndex, PortalFlag = portalFlag, TileOrder = tileOrder.ToArray() };
 
-        static int AreaIndexOf(CrowdSimulationRuntimeConfig config, string areaId)
+        static int AreaIndexOf(CrowdSimulationRuntimeConfig config, string templateId)
         {
-            for (int i = 0; i < config.NavAreas.Count; i++)
+            int index = config.Structures.TemplateIndexOf(templateId);
+            if (index < 0)
             {
-                if (config.NavAreas[i].Id == areaId) return i;
+                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 地图条带实体点名的结构模板 \"{templateId}\" 不存在。");
             }
 
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 桥实体引用了未定义的导航区域 \"{areaId}\"。");
+            var tpl = config.Structures.Templates[index];
+            if (!tpl.Layered || tpl.AreaIndex is not { } area)
+            {
+                throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 地图条带实体点名的结构模板 \"{templateId}\" 必须是带区域的分层模板。");
+            }
+
+            return area;
         }
     }
 

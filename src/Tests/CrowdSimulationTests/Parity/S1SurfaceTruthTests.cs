@@ -141,7 +141,7 @@ public class S1SurfaceTruthTests
         var runtime = LoadRuntime("s1337");
         var surface = ReadSurface("s1337");
         var (blockers, _) = LoadMapEntities("s1337");
-        var grown = blockers.Select(b => new BlockerFootprint(b.XCm, b.YCm, b.HalfSizeCm + 6250)).ToArray();
+        var grown = blockers.Select(b => new BlockerFootprint(b.XCm, b.YCm, b.HalfSizeCm + 6250, b.TemplateId)).ToArray();
         var baseline = SurfaceGrid.Build(runtime, surface, blockers);
         var resized = SurfaceGrid.Build(runtime, surface, grown);
         int delta = 0;
@@ -159,10 +159,10 @@ public class S1SurfaceTruthTests
         var runtime = TestDefaults.Assemble();
         var surface = EmptySurface(runtime);
         // 6250 cm 格：半宽 1562 cm（边长 3125 cm）居中于格心 → 覆盖 0.25 < 0.5 不阻挡
-        var small = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 1562) });
+        var small = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 1562, "building") });
         Assert.That(small.Blocked[0], Is.EqualTo(0));
         // 半宽 3125 cm（边长 = 格边长）居中 → 覆盖 1.0 ≥ 0.5 阻挡
-        var full = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 3125) });
+        var full = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 3125, "building") });
         Assert.That(full.Blocked[0], Is.EqualTo(1));
     }
 
@@ -226,7 +226,7 @@ public class S1SurfaceTruthTests
     {
         var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
-        var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
+        var bridges = surface.LayeredPaths.Select(b => (b.Span.FromXCm, b.Span.FromYCm, b.Span.ToXCm, b.Span.ToYCm, b.Span.WidthCm)).ToList();
         // 地图实体按抽取时的遍历序返回，这里不排序。
         return (blockers, bridges);
     }

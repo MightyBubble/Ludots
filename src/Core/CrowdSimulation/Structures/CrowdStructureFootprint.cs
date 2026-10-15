@@ -49,13 +49,13 @@ public readonly struct CrowdStructureFootprint
     };
 
     /// <summary>按 span 的厘米端点原样落成 path。本仓库不延长。</summary>
-    public static CrowdStructureFootprint Bridge(CrowdSimulationBridgeSpan span) => new()
+    public static CrowdStructureFootprint FromPathSpan(CrowdSimulationPathSpan span) => new()
     {
         Shape = CrowdStructureShape.Path,
-        X0 = Fix64.FromInt(span.X0Cm),
-        Y0 = Fix64.FromInt(span.Y0Cm),
-        X1 = Fix64.FromInt(span.X1Cm),
-        Y1 = Fix64.FromInt(span.Y1Cm),
+        X0 = Fix64.FromInt(span.FromXCm),
+        Y0 = Fix64.FromInt(span.FromYCm),
+        X1 = Fix64.FromInt(span.ToXCm),
+        Y1 = Fix64.FromInt(span.ToYCm),
         WidthCm = Fix64.FromInt(span.WidthCm),
     };
 

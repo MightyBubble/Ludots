@@ -516,10 +516,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _surfaceGrid = grid;
         _jumpCandidates = surface.JumpCandidates;
         _mapSurfaceBlockers = mapSurface.Blockers;
-        _mapSurfaceBridges = mapSurface.Bridges;
+        _mapSurfaceBridges = mapSurface.LayeredPaths;
         var heights = ingested.Heights;
         _heights = heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.Bridges, runtimeConfig);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtimeConfig);
         _deck = deck;
         var cache = new NavTileCache(
             runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.NavCellsPerTile,
@@ -619,7 +619,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         // 阻挡盒索引取仓的 CSR（外扩 ReachCm）。S5 对拍会话不装阻挡盒。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
         structures.UseUpperLayer(deck);
-        structures.InstallMapBridges(mapSurface.Bridges);
+        structures.InstallMapLayeredPaths(mapSurface.LayeredPaths);
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
@@ -899,7 +899,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
             replay.Structures.UseUpperLayer(replayDeck);
-            replay.Structures.InstallMapBridges(_mapSurfaceBridges);
+            replay.Structures.InstallMapLayeredPaths(_mapSurfaceBridges);
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, replayDeck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
             replay.NavTileCache = replayCache;

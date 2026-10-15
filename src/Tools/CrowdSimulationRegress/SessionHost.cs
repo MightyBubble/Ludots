@@ -75,7 +75,7 @@ static class SessionHost
         service = null;
         var runtime = bundle.Runtime;
         var started = Stopwatch.GetTimestamp();
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -112,7 +112,7 @@ static class SessionHost
         var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, demoDir, standardDir));
         session.Structures = CrowdStructuresStore.Build(runtime, bundle.Grid, bundle.MapSurface.Blockers);
         session.Structures.UseUpperLayer(deck);
-        session.Structures.InstallMapBridges(bundle.MapSurface.Bridges);
+        session.Structures.InstallMapLayeredPaths(bundle.MapSurface.LayeredPaths);
 
         session.RebakeSources = new CrowdRebakeSources(runtime, bundle.Heights, deck, bundle.Surface.JumpCandidates);
         session.NavTileCache = cache;

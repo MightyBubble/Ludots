@@ -352,6 +352,16 @@ public sealed class RuntimeStructuresSection
     public required bool[] SpanTerrain { get; init; }
     /// <summary>运行时表按下标排列，placeStructure 写的是模板 id 字符串，仓再用 TemplateIndexOf 换成下标。area 在装载时收成区域下标。</summary>
     public required IReadOnlyList<RuntimeStructureTemplate> Templates { get; init; }
+
+    public int TemplateIndexOf(string templateId)
+    {
+        for (int i = 0; i < Templates.Count; i++)
+        {
+            if (Templates[i].Id == templateId) return i;
+        }
+
+        return -1;
+    }
 }
 
 public sealed class RuntimeStructureTemplate

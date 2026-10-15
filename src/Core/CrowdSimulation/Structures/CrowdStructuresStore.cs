@@ -112,34 +112,19 @@ public sealed class CrowdStructuresStore
         _lifetime.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
     }
 
-    /// <summary>建仓。静态阻挡用模板 id building 的当前下标。模板表按 id 排序，下标不是常量 0。初始栅格取 SurfaceGrid 的既算结果。</summary>
+    /// <summary>建仓。地图阻挡按实体点名的模板入仓，模板必须是永久的 rect 阻挡。初始栅格取 SurfaceGrid 的既算结果。</summary>
     public static CrowdStructuresStore Build(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid grid,
         IReadOnlyList<BlockerFootprint> blockers)
     {
         var store = new CrowdStructuresStore(config, grid);
-        int buildingTemplate = -1;
-        var templates = config.Structures.Templates;
-        for (int i = 0; i < templates.Count; i++)
-        {
-            if (templates[i].Id == "building")
-            {
-                buildingTemplate = i;
-                break;
-            }
-        }
-
-        if (blockers.Count > 0 && buildingTemplate < 0)
-        {
-            throw new InvalidOperationException("地图阻挡物需要结构模板 building（rect 阻挡）。");
-        }
-
         foreach (var b in blockers)
         {
+            int tplIndex = store.RequireMapTemplate(b.TemplateId, "阻挡", layered: false);
             int id = store._nextId++;
             store._ids.Add(id);
-            store._tpl[id] = buildingTemplate;
+            store._tpl[id] = tplIndex;
             store._footprint[id] = new CrowdStructureFootprint
             {
                 Shape = CrowdStructureShape.Rect,
@@ -156,16 +141,35 @@ public sealed class CrowdStructuresStore
         return store;
     }
 
-    public int TemplateIndexOf(string templateId)
+    /// <summary>地图实体点名的模板：阻挡要 rect + blocker，条带要 path + layered，两者都不能有寿命。</summary>
+    private int RequireMapTemplate(string templateId, string role, bool layered)
     {
-        var templates = _config.Structures.Templates;
-        for (int i = 0; i < templates.Count; i++)
+        int index = TemplateIndexOf(templateId);
+        if (index < 0)
         {
-            if (templates[i].Id == templateId) return i;
+            throw new InvalidOperationException($"地图{role}实体点名的结构模板 \"{templateId}\" 不存在。");
         }
 
-        return -1;
+        var tpl = _config.Structures.Templates[index];
+        bool fits = layered
+            ? tpl.Layered && tpl.Footprint == "path"
+            : tpl.Blocker && !tpl.Layered && tpl.Footprint == "rect";
+        if (!fits)
+        {
+            throw new InvalidOperationException(layered
+                ? $"地图{role}实体点名的结构模板 \"{templateId}\" 必须是 path 足迹的分层模板。"
+                : $"地图{role}实体点名的结构模板 \"{templateId}\" 必须是 rect 足迹的阻挡模板。");
+        }
+
+        if (tpl.LifetimeSec != null)
+        {
+            throw new InvalidOperationException($"地图{role}实体点名的结构模板 \"{templateId}\" 带寿命；地图上的结构必须是永久的。");
+        }
+
+        return index;
     }
+
+    public int TemplateIndexOf(string templateId) => _config.Structures.TemplateIndexOf(templateId);
 
     /// <summary>实体 id 的放置序视图(索引与认知初始注入按此序遍历)。</summary>
     public IReadOnlyList<int> EntityIds => _ids;
@@ -317,30 +321,16 @@ public sealed class CrowdStructuresStore
     /// <summary>换掉区域数组。调用方要保证这是该仓私有的一份。</summary>
     public void ReplaceArea(byte[] area) => Area = area;
 
-    /// <summary>地图上的桥按模板 <c>bridge</c> 入仓，按列表顺序续号。</summary>
-    public void InstallMapBridges(IReadOnlyList<LayeredPathRecord> bridges)
+    /// <summary>地图上层条带实体入仓，按实体点名的模板、按列表顺序续号。条带进入认知，不进地面栅格与碰撞，栅格由 UpperLayerBake 烘焙。</summary>
+    public void InstallMapLayeredPaths(IReadOnlyList<LayeredPathRecord> layeredPaths)
     {
-        if (bridges.Count == 0) return;
-        int tpl = TemplateIndexOf("bridge");
-        if (tpl < 0)
+        foreach (var record in layeredPaths)
         {
-            throw new InvalidOperationException($"地图上有 {bridges.Count} 座桥，需要结构模板 bridge（path 分层）。");
-        }
-
-        var spans = new CrowdSimulationBridgeSpan[bridges.Count];
-        for (int i = 0; i < spans.Length; i++) spans[i] = bridges[i].Span;
-        InstallMapBridges(tpl, spans);
-    }
-
-    /// <summary>地图桥实体入仓。桥进入认知，不进地面栅格与碰撞。桥面由 UpperLayerBake 烘焙。按调用方给出的 span 顺序续号。</summary>
-    public void InstallMapBridges(int tplIndex, IReadOnlyList<CrowdSimulationBridgeSpan> spans)
-    {
-        foreach (var span in spans)
-        {
+            int tplIndex = RequireMapTemplate(record.TemplateId, "条带", layered: true);
             int id = _nextId++;
             _ids.Add(id);
             _tpl[id] = tplIndex;
-            _footprint[id] = CrowdStructureFootprint.Bridge(span);
+            _footprint[id] = CrowdStructureFootprint.FromPathSpan(record.Span);
         }
     }
 

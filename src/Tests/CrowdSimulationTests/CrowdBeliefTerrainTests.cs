@@ -163,7 +163,7 @@ public class CrowdBeliefTerrainTests
             int buildingCell = 2 * side + 2;
             int roadCell = 6 * side + 6;
             int fireCell = 12 * side + 12;
-            var blocker = new BlockerFootprint(cell / 2, cell / 2, cell / 2);
+            var blocker = new BlockerFootprint(cell / 2, cell / 2, cell / 2, "building");
             var surface = SurfaceGrid.Build(config, new NavSurfaceAsset
             {
                 NavCellsX = side,
@@ -174,15 +174,16 @@ public class CrowdBeliefTerrainTests
                 JumpCandidates = System.Array.Empty<NavSurfaceJumpCandidate>(),
             }, new[] { blocker });
 
-            var span = new CrowdSimulationBridgeSpan
+            var span = new CrowdSimulationPathSpan
             {
-                X0Cm = cell / 2,
-                Y0Cm = cell + cell / 2,
-                X1Cm = 3 * cell + cell / 2,
-                Y1Cm = cell + cell / 2,
+                FromXCm = cell / 2,
+                FromYCm = cell + cell / 2,
+                ToXCm = 3 * cell + cell / 2,
+                ToYCm = cell + cell / 2,
                 WidthCm = cell,
             };
-            var deck = UpperLayerBake.RasterizeLayeredPaths(new[] { new LayeredPathRecord(span, "deck") }, config);
+            var layeredPath = new LayeredPathRecord(span, "bridge");
+            var deck = UpperLayerBake.RasterizeLayeredPaths(new[] { layeredPath }, config);
             var heights = new NavHeightField
             {
                 NavCellsPerSide = side,
@@ -201,7 +202,7 @@ public class CrowdBeliefTerrainTests
             var nav = NavContextBaker.Bake(config, surface, heights, deck, foot, clearance, cache);
             var store = CrowdStructuresStore.Build(config, surface, new[] { blocker });
             store.UseUpperLayer(deck);
-            store.InstallMapBridges(store.TemplateIndexOf("bridge"), new[] { span });
+            store.InstallMapLayeredPaths(new[] { layeredPath });
             var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
             var sources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);
             var radiusClasses = CrowdDeployment.DistinctRadiusClasses(config);
