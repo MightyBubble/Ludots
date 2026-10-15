@@ -119,20 +119,17 @@ public sealed class CrowdTelemetryClampEvictPlanTests
                 PlaceBlocked = "不可放",
                 PlaceOffMap = "界外",
                 PendingNav = "待导航",
-                Structures = new[]
+                Palette = new[]
                 {
-                    new CrowdStructureTemplateDto
-                    {
-                        Id = "building", Label = "建筑", Shape = S4DeployDemoRuntime.ShapePoint, SizeCm = 14000, SelectAction = "t",
-                    },
+                    new CrowdPaletteSlotDto { Entry = "building", SelectAction = "t" },
                 },
             },
         };
         var demo = new S4DeployDemoRuntime(engine);
         demo.UseViewLabels(presentation.ViewLabels);
-        demo.UseStructures(new[]
+        demo.UsePalette(new[]
         {
-            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, 14000, 0, "t"),
+            new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, 14000, 0, 0, "t"),
         });
         return new CrowdHudFeed(demo, presentation, () => session, () => null, null);
     }

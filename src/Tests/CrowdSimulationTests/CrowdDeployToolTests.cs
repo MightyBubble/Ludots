@@ -232,12 +232,9 @@ public sealed class CrowdDeployToolTests
                 PlaceBlocked = "不可放",
                 PlaceOffMap = "界外",
                 PendingNav = "待导航",
-                Structures = new[]
+                Palette = new[]
                 {
-                    new CrowdStructureTemplateDto
-                    {
-                        Id = "building", Label = "建筑", Shape = S4DeployDemoRuntime.ShapePoint, SizeCm = 14000, SelectAction = "t",
-                    },
+                    new CrowdPaletteSlotDto { Entry = "building", SelectAction = "t" },
                 },
             },
         };
@@ -258,12 +255,12 @@ public sealed class CrowdDeployToolTests
         host.Demo.Tick();
         ui.FrameAfterAllPeriods(feed);
         string after = ui.AllText();
-        Assert.That(after, Does.Contain("工具 建筑"));
+        Assert.That(after, Does.Contain("工具 结构"));
         Assert.That(after, Does.Contain("脏 tile"));
         Assert.That(after, Does.Contain("仅代价"));
         Assert.That(after, Does.Contain("可通行"));
         Assert.That(after, Does.Contain("耗时"));
-        Assert.That(after, Does.Contain("左键 建筑"));
+        Assert.That(after, Does.Contain("左键 结构"));
         Assert.That(after, Does.Contain("切片"));
     }
 
@@ -426,10 +423,7 @@ public sealed class CrowdDeployToolTests
         SpawnCount = 24,
         SpawnUnitType = 0,
         SpawnRadiusClass = 0,
-        PlaceTemplate = "building",
-        RectSizeCm = 14000,
-        DiscRadiusCm = 8000,
-        PathWidthCm = 3000,
+        PlaceEntry = "building",
         SpeedStepsPermille = new[] { 500, 1000, 2000, 4000 },
     };
 
@@ -467,12 +461,12 @@ public sealed class CrowdDeployToolTests
 
         var demo = new S4DeployDemoRuntime(engine);
         demo.UseViewLabels(new[] { "路线" });
-        demo.UseStructures(new[]
+        demo.UsePalette(new[]
         {
-            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, 14000, 0, "t1"),
-            new S4DeployDemoRuntime.StructureChoice("flood", "泛洪", S4DeployDemoRuntime.ShapeDisc, 8000, 0, "t2"),
-            new S4DeployDemoRuntime.StructureChoice("road", "道路", S4DeployDemoRuntime.ShapeRoad, 3000, 25000, "t3"),
-            new S4DeployDemoRuntime.StructureChoice("road", "连线", S4DeployDemoRuntime.ShapeSpan, 3000, 0, "t4"),
+            new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, 14000, 0, 0, "t1"),
+            new S4DeployDemoRuntime.PaletteChoice("flood", "flood", "泛洪", CrowdPlacementGesture.Point, 8000, 0, 0, "t2"),
+            new S4DeployDemoRuntime.PaletteChoice("roadFixed", "road", "道路", CrowdPlacementGesture.FixedPath, 3000, 25000, 0, "t3"),
+            new S4DeployDemoRuntime.PaletteChoice("roadTwoPoint", "road", "连线", CrowdPlacementGesture.TwoPoint, 3000, 0, 0, "t4"),
         });
         demo.UseDebugTools(Tools(), Rates());
         demo.ArmSession(session);

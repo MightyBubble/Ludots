@@ -83,20 +83,20 @@ public static class CrowdFogAcceptance
         int unseenId = Place(session, Text(scene, "unseenTemplate"), Int(scene, "unseenXCm"), Int(scene, "unseenYCm"), Int(scene, "unseenSizeCm"));
         Step(session, visionTicks);
         if (fog.Belief[viewerGroup].ContainsKey(unseenId))
-            throw new InvalidOperationException("UAT-FOG-01: 未看见的新建筑进了认知。");
+            throw new InvalidOperationException("UAT-FOG-01: 未看见的新结构进了认知。");
         if (CrowdPlayerVisibility.StructureShown(session, viewerGroup, unseenId, hideFog: true))
             throw new InvalidOperationException("UAT-FOG-01: 未发现的新实体被画出来了。");
         if (session.Belief == null || session.Belief.Slot[viewerGroup] == 0)
-            throw new InvalidOperationException("UAT-FOG-01: 看不见的新建筑仍在用真实导航。");
+            throw new InvalidOperationException("UAT-FOG-01: 看不见的新结构仍在用真实导航。");
         if (VariantContains(session, unseenId))
-            throw new InvalidOperationException("UAT-FOG-01: 发现前的认知场包含这栋建筑。");
+            throw new InvalidOperationException("UAT-FOG-01: 发现前的认知场包含这个结构。");
 
         Order(session, viewer, Int(scene, "unseenXCm"), Int(scene, "unseenYCm"), shape);
         Order(session, ally, Int(scene, "unseenXCm"), Int(scene, "unseenYCm"), shape);
         StepUntil(session, travelTicks, () =>
             fog.CellVisibilityOf(viewerGroup, FogCell(fog, Int(scene, "unseenXCm"), Int(scene, "unseenYCm"))) == CellVisibility.Visible);
         if (!fog.Belief[viewerGroup].ContainsKey(unseenId))
-            throw new InvalidOperationException("UAT-FOG-01: 看见之后认知里没有这栋建筑。");
+            throw new InvalidOperationException("UAT-FOG-01: 看见之后认知里没有这个结构。");
         if (!CrowdPlayerVisibility.StructureShown(session, viewerGroup, unseenId, hideFog: true))
             throw new InvalidOperationException("UAT-FOG-01: 进入视野的实体没有显示。");
 
@@ -105,7 +105,7 @@ public static class CrowdFogAcceptance
         int memoryId = Place(session, Text(scene, "unseenTemplate"), memoryX, memoryY, Int(scene, "unseenSizeCm"));
         StepUntil(session, visionTicks * 2, () => fog.Belief[viewerGroup].ContainsKey(memoryId));
         if (!fog.Belief[viewerGroup].ContainsKey(memoryId))
-            throw new InvalidOperationException("UAT-FOG-02: 视野里的新建筑没有进入认知。");
+            throw new InvalidOperationException("UAT-FOG-02: 视野里的新结构没有进入认知。");
         uint goneBefore = fog.Gone[viewerGroup];
         uint enemyGone = fog.Gone[enemyGroup];
         int enemyGhosts = fog.GhostCount[enemyGroup];
@@ -114,7 +114,7 @@ public static class CrowdFogAcceptance
         int memoryCell = FogCell(fog, memoryX, memoryY);
         StepUntil(session, travelTicks, () => fog.CellVisibilityOf(viewerGroup, memoryCell) != CellVisibility.Visible);
         if (fog.CellVisibilityOf(viewerGroup, memoryCell) == CellVisibility.Visible)
-            throw new InvalidOperationException("UAT-FOG-02: 离开后建筑格仍可见。");
+            throw new InvalidOperationException("UAT-FOG-02: 离开后结构格仍可见。");
         Remove(session, memoryX, memoryY);
         Step(session, 1);
         if (fog.Gone[viewerGroup] != goneBefore)
@@ -126,7 +126,7 @@ public static class CrowdFogAcceptance
         Order(session, ally, memoryX, memoryY, shape);
         StepUntil(session, travelTicks, () => !fog.Belief[viewerGroup].ContainsKey(memoryId));
         if (fog.Belief[viewerGroup].ContainsKey(memoryId))
-            throw new InvalidOperationException("UAT-FOG-02: 重新看见地面后残影还在。");
+            throw new InvalidOperationException("UAT-FOG-02: 重新看见那几格后残影还在。");
         if (fog.Gone[viewerGroup] != goneBefore + 1)
             throw new InvalidOperationException("UAT-FOG-02: 重新看见后已消失计数没有加一。");
         if (fog.Belief[enemyGroup].ContainsKey(memoryId))
@@ -154,15 +154,15 @@ public static class CrowdFogAcceptance
         var nav = session.NavFor(layer, rIdx);
         int side = session.Config.NavCellsPerSide;
         int navCell = session.Config.NavCellSizeCm;
-        int cx = Int(scene, "waterXCm") / navCell;
-        int cy = Int(scene, "waterYCm") / navCell;
+        int cx = Int(scene, "probeXCm") / navCell;
+        int cy = Int(scene, "probeYCm") / navCell;
         int cell = cy * side + cx;
         if (nav.Passable[cell] != 0)
-            throw new InvalidOperationException("UAT-FOG-03: 场景里的水域格在真实导航上可通行。");
+            throw new InvalidOperationException("UAT-FOG-03: 场景里的探针格在真实导航上可通行。");
         int group = Group(session, viewer);
-        int fogCell = FogCell(fog, Int(scene, "waterXCm"), Int(scene, "waterYCm"));
+        int fogCell = FogCell(fog, Int(scene, "probeXCm"), Int(scene, "probeYCm"));
         if (fog.CellVisibilityOf(group, fogCell) != CellVisibility.Unseen)
-            throw new InvalidOperationException("UAT-FOG-03: 水域所在迷雾格在下令前已被探索。");
+            throw new InvalidOperationException("UAT-FOG-03: 探针格所在迷雾格在下令前已被探索。");
 
         int n = session.Units.CopyOwnHandles(viewer, session.MemberCapture);
         var members = new uint[n];
@@ -190,7 +190,7 @@ public static class CrowdFogAcceptance
         }
 
         if (slot == 0)
-            throw new InvalidOperationException("UAT-FOG-03: 未探索水域仍在用真实导航。");
+            throw new InvalidOperationException("UAT-FOG-03: 未探索探针格仍在用真实导航。");
         var built = new List<(Nav.NavContext Nav, CrowdStructuresStore Field)>();
         session.Beliefs!.CopyMaterialized(built);
         bool optimisticCell = false;
@@ -202,7 +202,7 @@ public static class CrowdFogAcceptance
         }
 
         if (!optimisticCell)
-            throw new InvalidOperationException("UAT-FOG-03: 乐观认知没有把未探索水域换成可通行假设。");
+            throw new InvalidOperationException("UAT-FOG-03: 乐观认知没有把未探索探针格换成可通行假设。");
     }
 
     private static bool VariantContains(CrowdSimSession session, int structureId)

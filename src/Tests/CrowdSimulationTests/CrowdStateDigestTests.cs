@@ -36,7 +36,7 @@ public sealed class CrowdStateDigestTests
     public void DiffDigest_ChainedAndDiagnostic_NamesChainedFirst()
     {
         var left = new CrowdSimStateDigest(4, 1, 1, 1, 1);
-        var right = new CrowdSimStateDigest(4, 2, 1, 1, 1, groups: 9, jump: 8);
+        var right = new CrowdSimStateDigest(4, 2, 1, 1, 1, groups: 9, link: 8);
         CrowdSimDigestDiff both = CrowdSimChecksum.DiffDigest(new[] { left }, new[] { right });
         TestContext.Out.WriteLine(
             $"both diff tick={both.Tick} section={both.Section} diag={CrowdSimChecksum.FormatDiagnostic(both.Diagnostic)}");
@@ -44,15 +44,15 @@ public sealed class CrowdStateDigestTests
         Assert.That(both.Tick, Is.EqualTo(4));
         Assert.That(both.Section, Is.EqualTo("position"));
         Assert.That(both.DiagnosticTick, Is.EqualTo(4));
-        Assert.That(both.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Groups | CrowdSimDiagnosticSection.Jump));
+        Assert.That(both.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Groups | CrowdSimDiagnosticSection.Link));
 
-        var jumpOnly = new CrowdSimStateDigest(4, 1, 1, 1, 1, jump: 8);
-        CrowdSimDigestDiff jump = CrowdSimChecksum.DiffDigest(new[] { left }, new[] { jumpOnly });
-        Assert.That(jump.Diverged, Is.False);
-        Assert.That(jump.Tick, Is.EqualTo(-1));
-        Assert.That(jump.Section, Is.EqualTo(""));
-        Assert.That(jump.DiagnosticTick, Is.EqualTo(4));
-        Assert.That(jump.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Jump));
+        var linkOnly = new CrowdSimStateDigest(4, 1, 1, 1, 1, link: 8);
+        CrowdSimDigestDiff link = CrowdSimChecksum.DiffDigest(new[] { left }, new[] { linkOnly });
+        Assert.That(link.Diverged, Is.False);
+        Assert.That(link.Tick, Is.EqualTo(-1));
+        Assert.That(link.Section, Is.EqualTo(""));
+        Assert.That(link.DiagnosticTick, Is.EqualTo(4));
+        Assert.That(link.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Link));
 
         var earlyLeft = new[]
         {

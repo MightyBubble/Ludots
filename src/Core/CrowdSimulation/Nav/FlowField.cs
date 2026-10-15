@@ -7,8 +7,8 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// 流场(双层):积分场(自终点的 Dijkstra,限于 HPA 走廊掩码)
 /// + 每格 8 向下降指针 + 拉直路点(按 Dijkstra 弹出序处理,父先子后 → 任意角绷紧路径)。
-/// 每个数组都是 2 × N²:下标 = 层 × N² + 格(层 0 地面,1 桥面);两层仅在双层可走的
-/// 桥头格相交(0 代价 0 长度边;经该边到达的格 wp = 另一层同格)。
+/// 每个数组都是 2 × N²:下标 = 层 × N² + 格(层 0 底层,1 上层);两层仅在双层可走的
+/// 入口格相交(0 代价 0 长度边;经该边到达的格 wp = 另一层同格)。
 /// len = 每格绷紧路线的几何长度(格),与地形代价无关,是所有到达阈值的长度单位。
 /// </summary>
 public sealed class FlowField
@@ -16,7 +16,7 @@ public sealed class FlowField
     public required Fix64[] Integ { get; set; }
     public required Fix64[] Len { get; set; }
     public required int[] Wp { get; set; }
-    /// <summary>跳跃链接的出路格 → 链接号(仅地面,N²;无链接能力为 null)。</summary>
+    /// <summary>链接的出路格 → 链接号(仅底层,N²;无链接能力为 null)。</summary>
     public int[]? Lk { get; set; }
     /// <summary>随池缓冲保留的 Lk 后备数组(避免反复分配)。</summary>
     public int[]? LkBuf { get; set; }
@@ -56,7 +56,7 @@ public sealed class FlowPool
     public FlowPool(int cellCount, int capacity)
     {
         LayeredCount = 2 * cellCount * cellCount;
-        GroundCount = cellCount * cellCount;
+        BaseCellCount = cellCount * cellCount;
         _capacity = capacity;
         Heap = new NavMinHeap(8192);
         Order = new int[LayeredCount];
@@ -64,8 +64,8 @@ public sealed class FlowPool
 
     /// <summary>2 × N²(双层数组长度)。</summary>
     public int LayeredCount { get; }
-    /// <summary>N²(地面层格数)。</summary>
-    public int GroundCount { get; }
+    /// <summary>N²(底层格数)。</summary>
+    public int BaseCellCount { get; }
     public NavMinHeap Heap { get; }
     public int[] Order { get; }
     public int Allocated { get; private set; }
@@ -289,7 +289,7 @@ public static class FlowFieldBuilder
         for (int i = 0; i < a.Length; i++) output[i] = (byte)(a[i] | b[i]);
     }
 
-    /// <summary>沿拉直路点链走(单位实际行走的绷紧路径),跳跃链接处跳接。</summary>
+    /// <summary>沿拉直路点链走(单位实际行走的绷紧路径),链接处接上链接。</summary>
     public static List<int> TracePath(FlowField flow, int start, int maxSteps)
     {
         var cells = new List<int>();

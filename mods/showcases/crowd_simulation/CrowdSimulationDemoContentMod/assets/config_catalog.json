@@ -15,6 +15,10 @@
     "IdField": "id"
   },
   {
+    "Path": "Presentation/crowd_structure_palette.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Presentation/host_assets.json",
     "Policy": "ArrayById",
     "IdField": "id"

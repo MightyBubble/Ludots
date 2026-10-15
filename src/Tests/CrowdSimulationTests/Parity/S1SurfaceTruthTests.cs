@@ -52,7 +52,7 @@ public class S1SurfaceTruthTests
             LinkKindIds = surface.LinkKindIds,
             BakeInputsDigest = surface.BakeInputsDigest,
             TerrainCells = surface.TerrainCells,
-            JumpCandidates = surface.JumpCandidates,
+            LinkCandidates = surface.LinkCandidates,
         };
 
         int boardCm = runtime.NavCellsPerSide * runtime.NavCellSizeCm;
@@ -95,7 +95,7 @@ public class S1SurfaceTruthTests
             $"S1 地表与 Web 导出逐格不一致（seed {seed}）");
         Assert.That(blockers.Count, Is.EqualTo(truth["blockers"]!.GetValue<int>()));
         Assert.That(bridges.Count, Is.EqualTo(truth["layeredPaths"]!.GetValue<int>()));
-        Assert.That(surface.JumpCandidates.Length, Is.EqualTo(truth["linkCandidates"]!.GetValue<int>()));
+        Assert.That(surface.LinkCandidates.Length, Is.EqualTo(truth["linkCandidates"]!.GetValue<int>()));
     }
 
     [Test]
@@ -250,7 +250,7 @@ public class S1SurfaceTruthTests
             LinkKindIds = runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray(),
             BakeInputsDigest = 0,
             TerrainCells = new byte[navCellsPerSide * navCellsPerSide], // 全部 water（下标 0）
-            JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
+            LinkCandidates = Array.Empty<NavSurfaceLinkCandidate>(),
         };
     }
 
@@ -259,7 +259,7 @@ public class S1SurfaceTruthTests
         SurfaceGrid grid,
         List<BlockerFootprint> blockers,
         List<(int x0, int y0, int x1, int y1, int width)> bridges,
-        IReadOnlyList<NavSurfaceJumpCandidate> jumpCandidates)
+        IReadOnlyList<NavSurfaceLinkCandidate> jumpCandidates)
     {
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);

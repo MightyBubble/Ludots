@@ -7,7 +7,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// 流场连续采样(Fix64 厘米域):
 /// routeLength = 从精确位置到终点的绷紧路线长(格)——所有到达阈值共用的长度单位,
 /// 量化量与连续量不混用;不可达 = Fix64.MaxValue,长度单位是格。
-/// 流场数组分层:下标 = 层 × N² + 格(0 地面 / 1 桥面);路点可指另一层(桥头跨层)。
+/// 流场数组分层:下标 = 层 × N² + 格(0 底层 / 1 上层);路点可指另一层(入口跨层)。
 /// </summary>
 public static class CrowdFlowSample
 {

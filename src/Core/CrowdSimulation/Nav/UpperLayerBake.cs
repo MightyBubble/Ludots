@@ -7,12 +7,12 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
-/// <summary>桥面层地表(每地图一份,与上下文无关):桥面格区域、桥头标记、首写 tile 序。</summary>
+/// <summary>上层地表(每地图一份,与上下文无关):上层格区域、入口标记、首写 tile 序。</summary>
 public sealed class UpperLayerSurface
 {
     public required byte[] AreaIndex { get; init; }
     public required byte[] PortalFlag { get; init; }
-    /// <summary>含桥面格的 tile 编号。全量栅格按首次写入序；增量重画只保证集合覆盖每个仍有桥面的 tile。</summary>
+    /// <summary>含上层格的 tile 编号。全量栅格按首次写入序；增量重画只保证集合覆盖每个仍有上层的 tile。</summary>
     public required int[] TileOrder { get; set; }
 
     public static UpperLayerSurface Empty(int cellsPerSide) => new()
@@ -24,15 +24,15 @@ public sealed class UpperLayerSurface
 }
 
 /// <summary>
-/// 桥面层烘焙：桥实体（路径足迹）栅格化为
-/// 桥面格 + 桥头 portal 标记;桥面层逐上下文烘焙 = 区域定价 ∩ 净空腐蚀,
-/// 桥面侧边封闭,只有桥头 portal 格与地面层相连。
-/// 连通域合并:桥面 4 连通洪泛 + portal 格与地面格双通时合并两域。
+/// 上层烘焙：上层条带实体（路径足迹）栅格化为
+/// 上层格 + 入口 portal 标记;上层逐上下文烘焙 = 区域定价 ∩ 净空腐蚀,
+/// 上层侧边封闭,只有入口 portal 格与底层相连。
+/// 连通域合并:上层 4 连通洪泛 + portal 格与底层格双通时合并两域。
 /// 路径几何在米制 Fix64 下计算(厘米平方会溢出 Q31.32)。
 /// </summary>
 public static class UpperLayerBake
 {
-    /// <summary>上层条带实体栅格化：逐格上层区域下标(0 = 无上层)与桥头 portal 标记,及首写 tile 序。区域和入口格数取实体点名模板的值。</summary>
+    /// <summary>上层条带实体栅格化：逐格上层区域下标(0 = 无上层)与入口 portal 标记,及首写 tile 序。区域和入口格数取实体点名模板的值。</summary>
     public static UpperLayerSurface RasterizeLayeredPaths(
         IReadOnlyList<LayeredPathRecord> layeredPaths,
         CrowdSimulationRuntimeConfig config)
@@ -59,7 +59,7 @@ public static class UpperLayerBake
                     if (!spanGeom.Hit(x, y, out Fix64 endDist)) continue;
 
                     int cell = y * navCellsPerSide + x;
-                    // 同格后放者胜（bridges 顺序即实体顺序）。portal 只置位，后写的非桥头不把它清掉。
+                    // 同格后放者胜（layeredPaths 顺序即实体顺序）。portal 只置位，后写的非入口不把它清掉。
                     upperAreaIndex[cell] = (byte)(areaIndex + 1);
                     if (spanGeom.IsPortal(endDist)) portalFlag[cell] = 1;
                     int tileId = (y / tileSize) * (navCellsPerSide / tileSize) + x / tileSize;
@@ -72,8 +72,8 @@ public static class UpperLayerBake
     }
 
     /// <summary>
-    /// 逐上下文桥面烘焙:桥面格 = 定价区域 ∩ 净空腐蚀。
-    /// 岸边格只临时并入腐蚀输入，让桥头在腐蚀后仍能留下；upPass 仍要求该格自己有定价桥面区域。
+    /// 逐上下文上层烘焙:上层格 = 定价区域 ∩ 净空腐蚀。
+    /// 入口旁的底层格只临时并入腐蚀输入，让入口在腐蚀后仍能留下；upPass 仍要求该格自己有定价上层区域。
     /// </summary>
     public static void BakeUpperLayer(
         CrowdSimulationRuntimeConfig config,
@@ -88,7 +88,7 @@ public static class UpperLayerBake
         int navCellsPerSide = config.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var row = config.AgentTypes[agentTypeIndex].CostByArea;
 
-        // 桥面可走意图:有桥面且该类型给该区域定了价
+        // 上层可走意图:有上层且该类型给该区域定了价
         var win = new byte[n2];
         var portals = new List<int>();
         for (int i = 0; i < n2; i++)
@@ -107,7 +107,7 @@ public static class UpperLayerBake
             return;
         }
 
-        // 岸边并入:portal 切比雪夫邻域内的地面可走格临时并入腐蚀输入
+        // 入口旁并入:portal 切比雪夫邻域内的底层可走格临时并入腐蚀输入
         int r = clearanceCells - 1;
         if (r > 0)
         {
@@ -138,9 +138,9 @@ public static class UpperLayerBake
     }
 
     /// <summary>
-    /// 连通域合并:地面洪泛结果 + 桥面 4 连通洪泛 + portal 合并。
-    /// 返回合并后的地面格连通域栅格与总数。
-    /// upperComp 留下桥面局部号（0 起，格号升序首见；-1 = 无桥面）。UpComp 把这份局部号接在地面编号之后，调用方要留住这块缓冲。
+    /// 连通域合并:底层洪泛结果 + 上层 4 连通洪泛 + portal 合并。
+    /// 返回合并后的底层格连通域栅格与总数。
+    /// upperComp 留下上层局部号（0 起，格号升序首见；-1 = 无上层）。UpComp 把这份局部号接在底层编号之后，调用方要留住这块缓冲。
     /// </summary>
     public static int MergeUpperLayerComponents(
         int[] baseComp,
@@ -156,7 +156,7 @@ public static class UpperLayerBake
         int[]? dense = null)
     {
         int n2 = navCellsPerSide * navCellsPerSide;
-        // 桥面 4 连通洪泛。缓冲由增量重烘传入;全量烘焙路径仍在这里分配。
+        // 上层 4 连通洪泛。缓冲由增量重烘传入;全量烘焙路径仍在这里分配。
         if (upperComp == null || upperComp.Length < n2) upperComp = new int[n2];
         Array.Fill(upperComp, -1);
         int upperCount = 0;
@@ -186,7 +186,7 @@ public static class UpperLayerBake
             return baseCount;
         }
 
-        // 并查集:0..baseCount-1 = 地面域,baseCount.. = 桥面域
+        // 并查集:0..baseCount-1 = 底层域,baseCount.. = 上层域
         int unionCount = baseCount + upperCount;
         if (parent == null || parent.Length < unionCount) parent = new int[unionCount];
         for (int i = 0; i < unionCount; i++) parent[i] = i;
@@ -201,7 +201,7 @@ public static class UpperLayerBake
             return i;
         }
 
-        // upperLayer ↔ baseLayer 只在桥头 portal 格合并
+        // upperLayer ↔ baseLayer 只在入口 portal 格合并
         for (int c = 0; c < n2; c++)
         {
             if (portal[c] != 0 && basePassable[c] != 0 && upPass[c] != 0)
@@ -210,7 +210,7 @@ public static class UpperLayerBake
             }
         }
 
-        // 稠密化:按地面域号序、再桥面域号序
+        // 稠密化:按底层域号序、再上层域号序
         if (dense == null || dense.Length < unionCount) dense = new int[unionCount];
         Array.Fill(dense, -1, 0, unionCount);
         int count = 0;
@@ -230,7 +230,7 @@ public static class UpperLayerBake
 }
 
 /// <summary>
-/// 桥 span 的米制栅格。轴对齐跨度不用 sqrt，避免端点格吃掉 1e-6 米容差。
+/// 上层条带的米制栅格。轴对齐跨度不用 sqrt，避免端点格吃掉 1e-6 米容差。
 /// 全量烘焙和放置判定共用这一份，端点格用朝负无穷取整。
 /// </summary>
 internal readonly struct UpperLayerSpanGeometry

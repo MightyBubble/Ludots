@@ -735,6 +735,8 @@ public struct CrowdSimulationPathSpan
 | 8 | `.navsurface` v2、候选烘焙改用推导掩码和每图几何参数、`linkBakeDigest`、重烘 4 个资产、truth 改键名 | 6b | 6b 之后即可，没有待合分支碰 `NavSurfaceAsset` 和烘焙工具 |
 | 9 | 棘轮清零，更新 `crowdsimulation-and-navsurface.md`、`crowdsimulation-minimal-mod.md`、`spatial-scale-and-resolution-ssot.md`、`gitbook/reference/spatial-scale-configuration.md` | 7、8 | 最后 |
 
+0–9 步都已做完。棘轮现在扫两处，上限都是 0：`src/Core/CrowdSimulation`，以及群体工具和编辑器文件（`Ludots.Tool/Crowd*.cs`、`CrowdSimulationMapProbe`、`CrowdSimulationRegress`、`CrowdConfigEditorPage.tsx`、`CrowdSimulationEditorEndpoints.cs`、`RaylibTerrainTypeOverlayBinding.cs`、AgentBridge 的 `CrowdConfigTools.cs`）。英文按驼峰分段数，中文按词数。豁免只给声明在扫描范围之外的共享 API 名字：`TryRaycastGround`、`LogicTerrainSurfaceFlags.Water`、`WaterHeightLevel`、`SnapToGround`，以及 `Ludots.Editor.Bridge`、`Ludots.AgentBridge` 两个工程命名空间。`src/Core/Navigation` 不在扫描范围里，那里的 cliff、water 是 Recast 通用术语，非群体系统也在用。JSON 里的数据 id（链接种类 `jump`，模板 `bridge`、`road`、`building`）和演示 Mod 的中文文案（例如 `(桥端不可锚)`、面板条目的 `label`）是数据，留着。
+
 和审计原计划的差别：
 
 - 第 5 步排到第 7 步之后，因为手势条目要引用新模板字段。

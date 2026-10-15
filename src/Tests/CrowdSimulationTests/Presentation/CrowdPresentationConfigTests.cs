@@ -26,18 +26,9 @@ public sealed class CrowdPresentationConfigTests
         var s4Debug = CrowdSimulationDebugConfig.Load(JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject());
         Assert.That(s4Debug.Fuzz!.SliceMs, Is.EqualTo(8));
         Assert.That(s4Debug.Fuzz.ToPlan(s4Debug.Tools!).BoomRadiusCm, Is.EqualTo(s4Debug.Tools!.BoomRadiusCm));
-        Assert.That(s4.Deploy!.Structures, Has.Length.EqualTo(6));
-        Assert.That(s4.Deploy.Structures[0].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapePoint));
-        Assert.That(s4.Deploy.Structures[0].RoadLengthCm, Is.Null);
-        Assert.That(s4.Deploy.Structures[2].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeRoad));
-        Assert.That(s4.Deploy.Structures[2].RoadLengthCm, Is.EqualTo(25000));
-        Assert.That(s4.Deploy.Structures[3].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeDisc));
-        Assert.That(s4.Deploy.Structures[3].SizeCm, Is.EqualTo(8000));
-        Assert.That(s4.Deploy.Structures[4].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeSpan));
-        Assert.That(s4.Deploy.Structures[4].SizeCm, Is.EqualTo(3000));
-        Assert.That(s4.Deploy.Structures[5].Id, Is.EqualTo("bridge"));
-        Assert.That(s4.Deploy.Structures[5].Shape, Is.EqualTo(S4DeployDemoRuntime.ShapeSpan));
-        Assert.That(s4.Deploy.Structures[5].SizeCm, Is.EqualTo(3000));
+        Assert.That(s4.Deploy!.Palette.Select(p => p.Entry),
+            Is.EqualTo(new[] { "building", "s7barrier", "roadFixed", "flood", "roadTwoPoint", "bridge" }));
+        Assert.That(s4Debug.Tools!.PlaceEntry, Is.EqualTo("building"));
         Assert.That(s4.Deploy.Actions.ToolBoom, Is.EqualTo("CrowdSimulation.S4.ToolBoom"));
         Assert.That(s4.Deploy.Actions.Stress, Is.EqualTo("CrowdSimulation.S4.Stress"));
     }
@@ -86,10 +77,7 @@ public sealed class CrowdPresentationConfigTests
         ["spawnCount"] = 24,
         ["spawnUnitType"] = 0,
         ["spawnRadiusClass"] = 0,
-        ["placeTemplate"] = "building",
-        ["rectSizeCm"] = 14000,
-        ["discRadiusCm"] = 8000,
-        ["pathWidthCm"] = 3000,
+        ["placeEntry"] = "building",
         ["speedStepsPermille"] = new JsonArray(500, 1000, 2000, 4000),
     };
 
@@ -132,14 +120,81 @@ public sealed class CrowdPresentationConfigTests
     }
 
     [Test]
-    public void PointWithRoadLength_IsRejected()
+    public void S4Palette_EveryEntryResolvesAgainstSessionTemplates()
     {
-        string json = File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod"));
-        json = json.Replace(
-            "\"shape\": \"point\",\n          \"sizeCm\": 14000,",
-            "\"shape\": \"point\",\n          \"sizeCm\": 14000,\n          \"roadLengthCm\": 1,",
-            StringComparison.Ordinal);
-        var debug = JsonNode.Parse(json)!.AsObject();
+        var entries = CrowdStructurePalette.Load(ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged(CrowdStructurePalette.RelativePath));
+        var (config, _) = Parity.S4DeployTruthTests.BuildSession("s7");
+        var s4 = ParseMod("CrowdSimulationS4DeployMod");
+        foreach (CrowdPaletteSlotDto slot in s4.Deploy!.Palette)
+        {
+            Assert.That(entries.TryGetValue(slot.Entry, out CrowdPaletteEntry? entry), Is.True, slot.Entry);
+            Assert.DoesNotThrow(() => CrowdStructurePalette.RequireTemplate(slot.Entry, entry!, config.Structures), slot.Entry);
+        }
+
+        Assert.That(entries["s7barrier"].Gesture, Is.EqualTo(CrowdPlacementGesture.Point));
+        Assert.That(entries["roadFixed"].Gesture, Is.EqualTo(CrowdPlacementGesture.FixedPath));
+        Assert.That((entries["roadFixed"].ToOffsetXCm, entries["roadFixed"].ToOffsetYCm), Is.EqualTo((25000, 0)));
+        Assert.That(entries["roadTwoPoint"].TemplateId, Is.EqualTo(entries["roadFixed"].TemplateId));
+    }
+
+    [Test]
+    public void PaletteGesture_MustMatchTemplateFootprint()
+    {
+        var (config, _) = Parity.S4DeployTruthTests.BuildSession("s7");
+        var entries = CrowdStructurePalette.Load(ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged(CrowdStructurePalette.RelativePath));
+        CrowdPaletteEntry point = entries["building"];
+        CrowdPaletteEntry path = entries["roadTwoPoint"];
+
+        var pathAsPoint = path with { Gesture = CrowdPlacementGesture.Point };
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.RequireTemplate("x", pathAsPoint, config.Structures));
+        Assert.That(ex!.Message, Does.Contain(CrowdStructurePalette.GestureTwoPoint));
+
+        var pointAsPath = point with { Gesture = CrowdPlacementGesture.TwoPoint };
+        ex = Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.RequireTemplate("x", pointAsPath, config.Structures));
+        Assert.That(ex!.Message, Does.Contain(CrowdStructurePalette.GesturePoint));
+
+        var missing = point with { TemplateId = "absent" };
+        ex = Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.RequireTemplate("x", missing, config.Structures));
+        Assert.That(ex!.Message, Does.Contain("absent"));
+    }
+
+    [TestCase("""{"kind":"fixedPath"}""", "toOffsetCm")]
+    [TestCase("""{"kind":"fixedPath","toOffsetCm":{"xCm":0,"yCm":0}}""", "toOffsetCm")]
+    [TestCase("""{"kind":"point","toOffsetCm":{"xCm":1,"yCm":0}}""", "toOffsetCm")]
+    [TestCase("""{"kind":"twoPoint","toOffsetCm":{"xCm":1,"yCm":0}}""", "toOffsetCm")]
+    [TestCase("""{"kind":"lasso"}""", "gesture.kind")]
+    public void PaletteGesture_BadShape_IsRejected(string gesture, string expected)
+    {
+        var root = JsonNode.Parse("""{"e":{"template":"t","label":"l","sizeCm":100,"gesture":""" + gesture + "}}")!.AsObject();
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.Load(root));
+        Assert.That(ex!.Message, Does.Contain(expected));
+    }
+
+    [Test]
+    public void PaletteEntry_UnknownKeyAndNonPositiveSize_AreRejected()
+    {
+        var unknown = JsonNode.Parse("""{"e":{"template":"t","label":"l","gesture":{"kind":"point"},"sizeCm":100,"roadLengthCm":1}}""")!.AsObject();
+        Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.Load(unknown));
+        var size = JsonNode.Parse("""{"e":{"template":"t","label":"l","gesture":{"kind":"point"},"sizeCm":0}}""")!.AsObject();
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.Load(size));
+        Assert.That(ex!.Message, Does.Contain("sizeCm"));
+    }
+
+    [Test]
+    public void ToolsPlaceEntry_MustNameAPaletteSlot()
+    {
+        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject();
+        debug["tools"]!["placeEntry"] = "absent";
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
+        Assert.That(ex!.Message, Does.Contain("absent"));
+    }
+
+    [Test]
+    public void PaletteSlot_DuplicateSelectAction_IsRejected()
+    {
+        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject();
+        var palette = debug["presentation"]!["deploy"]!["palette"]!.AsArray();
+        palette[1]!["selectAction"] = palette[0]!["selectAction"]!.GetValue<string>();
         Assert.Throws<InvalidOperationException>(() => CrowdPresentationConfig.ParseOptional(debug));
     }
 

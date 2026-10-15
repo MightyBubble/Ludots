@@ -97,14 +97,14 @@ internal static class CrowdDebugOverlayGeometry
         return changed.Count;
     }
 
-    public static int AppendJumps(NavLinkSet? links, int navCellsPerSide, int cellCm, CrowdDebugSegment[] dest, int offset)
+    public static int AppendLinks(NavLinkSet? links, int navCellsPerSide, int cellCm, CrowdDebugSegment[] dest, int offset)
     {
         if (links == null) return 0;
         int written = 0;
         for (int e = 0; e < links.Count; e++)
         {
             if (offset + written >= dest.Length)
-                throw new InvalidOperationException("CrowdSimulationDebugView.json: maxWorldSegments 装不下跳跃链接。");
+                throw new InvalidOperationException("CrowdSimulationDebugView.json: maxWorldSegments 装不下链接。");
             CellCenter(links.From[e], navCellsPerSide, cellCm, out float x0, out float y0);
             CellCenter(links.To[e], navCellsPerSide, cellCm, out float x1, out float y1);
             dest[offset + written++] = new CrowdDebugSegment

@@ -60,7 +60,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private bool _placeColorsReady;
     private Vector4 _placeLegal;
     private Vector4 _placeIllegal;
-    private Vector4 _placeAnchor;
+    private Vector4 _placeEndpoint;
     private Vector4 _placePortal;
     private static readonly RouteVisualId PreviewCellBase = new(4096);
 
@@ -92,7 +92,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         var session = _sessionSource();
-        var ground = _demo.HoverCm;
+        var pointer = _demo.HoverCm;
 
         // 路线通道是 gameplay 视觉。
         _routeVisuals.BeginFrame();
@@ -103,7 +103,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         }
 
         float navCellVisual = WorldUnits.CmToM(session.Config.NavCellSizeCm);
-        if (ground is { } hover)
+        if (pointer is { } hover)
         {
             _routeVisuals.AddMarker(HoverMarker, new Vector2(WorldUnits.CmToM((float)hover.X), WorldUnits.CmToM((float)hover.Y)), RouteVisualMarkerShape.Ring, navCellVisual * 0.8f, 1f, HoverWhite);
         }
@@ -125,7 +125,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
         bool previewValid = false, previewShown = false;
         var previewReason = CrowdPlacementReject.None;
-        if (ground is { } p)
+        if (pointer is { } p)
         {
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
             CrowdStructuresStore? store = session.Structures;
@@ -157,7 +157,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     break;
                 case CrowdClickTool.Structure when store != null:
                     previewShown = true;
-                    previewReason = JudgePreview(session, store, _demo.Template, px, py, out int painted);
+                    previewReason = JudgePreview(session, store, _demo.Choice, px, py, out int painted);
                     previewValid = previewReason == CrowdPlacementReject.None;
                     DrawPlacementCells(store, painted, navCellVisual * 0.5f);
                     DrawEntityOutline(store, px, py, navCellVisual);
@@ -173,37 +173,24 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
         _playerView?.Draw(session, _routeVisuals, _overlay);
         _debugView?.Draw(session, _overlay);
-        _feed.NotePreview(ground.HasValue, previewShown, previewValid, previewReason);
+        _feed.NotePreview(pointer.HasValue, previewShown, previewValid, previewReason);
     }
 
     /// <summary>预览足迹与 <see cref="S4DeployDemoRuntime"/> 提交的 placeStructure 同一形状。</summary>
     private CrowdPlacementReject JudgePreview(
         CrowdSimSession session,
         CrowdStructuresStore store,
-        S4DeployDemoRuntime.StructureChoice tpl,
+        S4DeployDemoRuntime.PaletteChoice choice,
         int xCm,
         int yCm,
         out int count)
     {
-        int index = store.TemplateIndexOf(tpl.Id);
-        if (index < 0) throw new InvalidOperationException($"未知结构模板 \"{tpl.Id}\"。");
+        int index = store.TemplateIndexOf(choice.TemplateId);
+        if (index < 0) throw new InvalidOperationException($"未知结构模板 \"{choice.TemplateId}\"。");
         var template = session.Config.Structures.Templates[index];
-        int x0 = xCm, y0 = yCm, x1 = 0, y1 = 0;
-        if (tpl.IsSpan)
-        {
-            x0 = _demo.HasSpanAnchor ? _demo.SpanAnchorX : xCm;
-            y0 = _demo.HasSpanAnchor ? _demo.SpanAnchorY : yCm;
-            x1 = xCm;
-            y1 = yCm;
-        }
-        else if (tpl.IsRoad)
-        {
-            x1 = xCm + tpl.RoadLengthCm;
-            y1 = yCm;
-        }
-
+        var (x0, y0, x1, y1) = _demo.FootprintEnds(choice, xCm, yCm);
         var footprint = CrowdStructureFootprint.Make(
-            template, Fix64.FromInt(x0), Fix64.FromInt(y0), Fix64.FromInt(tpl.SizeCm), Fix64.FromInt(x1), Fix64.FromInt(y1));
+            template, Fix64.FromInt(x0), Fix64.FromInt(y0), Fix64.FromInt(choice.SizeCm), Fix64.FromInt(x1), Fix64.FromInt(y1));
         return CrowdStructurePlacement.Judge(store, template, footprint, ref _previewCells, ref _previewFlags, out count);
     }
 
@@ -235,8 +222,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             byte flag = _previewFlags[i];
             Vector4 color = (flag & CrowdStructurePlacement.FlagIllegal) != 0
                 ? _placeIllegal
-                : (flag & CrowdStructurePlacement.FlagAnchor) != 0
-                    ? _placeAnchor
+                : (flag & CrowdStructurePlacement.FlagEndpoint) != 0
+                    ? _placeEndpoint
                     : (flag & CrowdStructurePlacement.FlagPortal) != 0
                         ? _placePortal
                         : _placeLegal;
@@ -250,7 +237,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         var deploy = _presentation.Deploy ?? throw new InvalidOperationException("部署演示缺少 deploy 配色。");
         _placeLegal = CrowdPresentationConfig.Rgba(deploy.PlaceLegal, "deploy.placeLegal");
         _placeIllegal = CrowdPresentationConfig.Rgba(deploy.PlaceIllegal, "deploy.placeIllegal");
-        _placeAnchor = CrowdPresentationConfig.Rgba(deploy.PlaceAnchor, "deploy.placeAnchor");
+        _placeEndpoint = CrowdPresentationConfig.Rgba(deploy.PlaceEndpoint, "deploy.placeEndpoint");
         _placePortal = CrowdPresentationConfig.Rgba(deploy.PlacePortal, "deploy.placePortal");
         _placeColorsReady = true;
     }
@@ -278,8 +265,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     }
 
     /// <summary>脏 tile 闪烁:报告 ReportTick 变化即起闪,FlashMs 内黄色轮廓线性淡出。
-    /// tile 轮廓按导航格逐格细分:路线渲染器只对折点采样地面高度,1km tile 的四角直边
-    /// 在丘陵地形会整段埋进山体(视野内又见不到角点),细分后贴地才可见。</summary>
+    /// tile 轮廓按导航格逐格细分:路线渲染器只对折点采样地表高度,1km tile 的四角直边
+    /// 在丘陵地形会整段埋进地形(视野内又见不到角点),细分后贴地才可见。</summary>
     private void CurrentFlash(CrowdSimSession session, float navCellVisual)
     {
         var report = session.LastRebakeReport;

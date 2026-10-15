@@ -11,7 +11,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// 导航上下文烘焙。分类读区域代价行、坡度、阻挡和 profile 坡度上限。
 /// traversal.json 每行列全全部区域，写 false 的格代价为 0、不可走；非 ignoresSlope 区域坡度超过该行 maxSlopeDeg 不可走；阻挡格不可走。
-/// Bake 在链接之后还做桥面、tile 缓存和 HPA。
+/// Bake 在链接之后还做上层、tile 缓存和 HPA。
 /// </summary>
 public static class NavContextBaker
 {
@@ -75,12 +75,12 @@ public static class NavContextBaker
             if (passable[i] != 0) cellList.Add(i);
         }
 
-        // 连通域:先 4 连通洪泛,有桥再并桥面块。跳跃链接不参与标号。
+        // 连通域:先 4 连通洪泛,有上层再并上层块。链接不参与标号。
         var comp = new int[n2];
         Array.Fill(comp, -1);
         int compCount = Components(passable, navCellsPerSide, comp);
 
-        // 桥面层:桥面格烘焙 + portal 合并进连通域
+        // 上层:上层格烘焙 + portal 合并进连通域
         var upPass = new byte[n2];
         var portal = new byte[n2];
         var upArea = new byte[n2];
@@ -92,7 +92,7 @@ public static class NavContextBaker
             UpperLayerBake.BakeUpperLayer(config, agentTypeIndex, clearanceCells, walk, upperLayer.AreaIndex, upperLayer.PortalFlag, upPass, portal);
             for (int i = 0; i < n2; i++)
             {
-                // UpperLayerSurface.AreaIndex 是 +1 编码(0 = 无桥面);UpArea 存 0 基区域下标供 tile 缓存输入
+                // UpperLayerSurface.AreaIndex 是 +1 编码(0 = 无上层);UpArea 存 0 基区域下标供 tile 缓存输入
                 if (upPass[i] != 0)
                 {
                     upArea[i] = (byte)(upperLayer.AreaIndex[i] - 1);
@@ -108,7 +108,7 @@ public static class NavContextBaker
             comp = merged;
         }
 
-        // tile 缓存填充:地面全部 tile + 有可走格的桥面 tile
+        // tile 缓存填充:底层全部 tile + 有可走格的上层 tile
         NavTileEntry?[]? tiles = null;
         Dictionary<int, UpperTileInfo>? upperTiles = null;
         if (tileCache != null)
@@ -217,9 +217,9 @@ public static class NavContextBaker
         return packed;
     }
 
-    /// <summary>跳跃链接过滤：候选端点都可走、格距 ≤ rangeCells、落差 ≤ downCm、
+    /// <summary>链接过滤：候选端点都可走、格距 ≤ rangeCells、落差 ≤ downCm、
     /// 高端格区域可出发且低端格区域可落地才成链;落差 ≤ upCm 且反向的出发 / 落地也成立的双向。
-    /// 区域取当前地面栅格。判定只读 .navsurface 里的量化候选值。
+    /// 区域取当前底层栅格。判定只读 .navsurface 里的量化候选值。
     /// 增量重烘在候选端点触到变更矩形时重建整表(与全量同码)。</summary>
     internal static NavLinkSet? BuildLinks(
         CrowdSimulationRuntimeConfig config,
@@ -228,9 +228,9 @@ public static class NavContextBaker
         byte[] passable,
         int[] comp)
     {
-        var jump = profile.Jump;
-        var candidates = surface.JumpCandidates;
-        if (jump == null || candidates.Length == 0)
+        var link = profile.Link;
+        var candidates = surface.LinkCandidates;
+        if (link == null || candidates.Length == 0)
         {
             return null;
         }
@@ -242,20 +242,20 @@ public static class NavContextBaker
         var two = new List<byte>();
         var len = new List<float>();
         var area = surface.Area;
-        var depart = jump.DepartByArea;
-        var arrive = jump.ArriveByArea;
+        var depart = link.DepartByArea;
+        var arrive = link.ArriveByArea;
         foreach (var cand in candidates)
         {
             int a = cand.FromY * navCellsPerSide + cand.FromX;
             int b = cand.ToY * navCellsPerSide + cand.ToX;
-            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeNavCells || cand.DropCm > jump.DownCm
+            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > link.RangeNavCells || cand.DropCm > link.DownCm
                 || !depart[area[a]] || !arrive[area[b]])
             {
                 continue;
             }
 
-            Fix64 c = Fix64.FromDouble(cand.LengthCells) * jump.Cost;
-            bool up = cand.DropCm <= jump.UpCm && depart[area[b]] && arrive[area[a]];
+            Fix64 c = Fix64.FromDouble(cand.LengthCells) * link.Cost;
+            bool up = cand.DropCm <= link.UpCm && depart[area[b]] && arrive[area[a]];
             from.Add(a); to.Add(b); cost.Add(c); two.Add(up ? (byte)1 : (byte)0); len.Add(cand.LengthCells);
             if (up)
             {
@@ -313,9 +313,9 @@ public static class NavContextBaker
     }
 
     /// <summary>
-    /// 桥面可达性。upperLocal 是 MergeUpperLayerComponents 写下的桥面 4 连通局部号（-1 = 无桥面），
-    /// 与地面洪泛同一邻接；这里只把局部号接到地面合并后的编号之后，不再按区域并块。
-    /// 桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向边。可达图 = 跳跃链接边 + 这些边。
+    /// 上层可达性。upperLocal 是 MergeUpperLayerComponents 写下的上层 4 连通局部号（-1 = 无上层），
+    /// 与底层洪泛同一邻接；这里只把局部号接到底层合并后的编号之后，不再按区域并块。
+    /// 入口格双层可走 ⇒ 该格底层域 ↔ 上层域双向边。可达图 = 链接边 + 这些边。
     /// </summary>
     internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildUpperLayerReachability(
         int navCellsPerSide, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, int[]? upperLocal)
@@ -347,8 +347,8 @@ public static class NavContextBaker
     }
 
     /// <summary>
-    /// 把桥面局部号写成全局号：全局号 = 地面合并后的连通域数 + 局部号。
-    /// 局部号按格号升序的首见块分配，所以全局号也是这个顺序，接在地面编号后面。
+    /// 把上层局部号写成全局号：全局号 = 底层合并后的连通域数 + 局部号。
+    /// 局部号按格号升序的首见块分配，所以全局号也是这个顺序，接在底层编号后面。
     /// </summary>
     internal static int WriteUpperLayerLabels(int[] upComp, byte[] upPass, int baseCount, int[]? upperLocal)
     {

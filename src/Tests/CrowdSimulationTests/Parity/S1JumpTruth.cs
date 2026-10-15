@@ -12,11 +12,11 @@ internal static class S1JumpTruth
 {
     public const string FileName = "s1-jump-truth.json";
 
-    public static NavSurfaceJumpCandidate[] Read(string seedAssetsDir)
+    public static NavSurfaceLinkCandidate[] Read(string seedAssetsDir)
     {
         string path = Path.Combine(seedAssetsDir, "CrowdSimulation", "parity", FileName);
         JsonArray rows = JsonNode.Parse(File.ReadAllText(path))!["linkCandidates"]!.AsArray();
-        var candidates = new NavSurfaceJumpCandidate[rows.Count];
+        var candidates = new NavSurfaceLinkCandidate[rows.Count];
         for (int i = 0; i < rows.Count; i++)
         {
             JsonArray row = rows[i]!.AsArray();
@@ -31,7 +31,7 @@ internal static class S1JumpTruth
                 throw new InvalidDataException($"{path}: 第 {i} 行位移 ({dx}, {dy}) 不在 8 个方向上。");
             }
 
-            var candidate = new NavSurfaceJumpCandidate
+            var candidate = new NavSurfaceLinkCandidate
             {
                 Steps = (ushort)Math.Max(dx, dy),
                 Diagonal = dx != 0 && dy != 0,

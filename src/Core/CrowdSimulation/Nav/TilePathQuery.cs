@@ -8,9 +8,9 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// TILE 寻址的 NavMesh 查询:
 /// 多边形 A* + 漏斗,直接跑在某上下文的 tile 条目上,不经过拼装全局网格:
-///   poly 引用 = (tile × 2 + 层) × navCellsPerTile² + 局部多边形号(层 0 地面 · 1 桥面)
+///   poly 引用 = (tile × 2 + 层) × navCellsPerTile² + 局部多边形号(层 0 底层 · 1 上层)
 ///   同层同 tile → 条目内部邻接;同层邻 tile → 两边界的重叠缝合(带记忆化)
-///   地面 ↔ 桥面 → 仅在桥头 portal 格,以格心点 portal 相连
+///   底层 ↔ 上层 → 仅在入口 portal 格,以格心点 portal 相连
 /// 侧边顺序(−y, −x, +x, +y)与拼装网格一致。
 /// </summary>
 public static class TilePathQuery
@@ -27,7 +27,7 @@ public static class TilePathQuery
         public Dictionary<int, Fix64> Ey = new(4096);
         public Dictionary<int, int> Parent = new(4096);
         public HashSet<int> Closed = new(4096);
-        /// <summary>逐 (navId, tile 条目) 的地面多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
+        /// <summary>逐 (navId, tile 条目) 的底层多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
         public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> BaseLayerCostMemo = new(1024);
         public List<Fix64> Portals = new();
         public List<Fix64> FunnelPoints = new();
@@ -137,7 +137,7 @@ public static class TilePathQuery
         public Fix64 Cost;
     }
 
-    /// <summary>返回 null = 起终点无多边形或不连通。layers = false 时不上桥面。</summary>
+    /// <summary>返回 null = 起终点无多边形或不连通。layers = false 时不进上层。</summary>
     public static Result? FindTilePath(
         NavContext nav,
         CrowdSimulationRuntimeConfig config,
@@ -238,7 +238,7 @@ public static class TilePathQuery
         for (int i = 0; i < polyCount; i++) mask[(polys[i] / l) >> 1] = 1;
     }
 
-    // 地面格的 poly 引用,-1 = 该格无多边形
+    // 底层格的 poly 引用,-1 = 该格无多边形
     private static int BaseLayerRef(NavContext nav, int navCellsPerTile, int cell)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
@@ -248,7 +248,7 @@ public static class TilePathQuery
         return p < 0 ? -1 : tile * 2 * navCellsPerTile * navCellsPerTile + p;
     }
 
-    // 地面 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
+    // 底层 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
     private static Fix64[] BaseLayerCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;

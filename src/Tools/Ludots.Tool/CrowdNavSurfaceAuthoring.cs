@@ -38,7 +38,7 @@ public readonly record struct CrowdNavSurfaceBakeSources(
 
 /// <summary>
 /// 把逻辑地形的 AreaId 烤成 .navsurface 的地形类型格。
-/// 传入 linkCandidateBake 时，用同一份高度场和桥面栅格逐种类生成链接候选，并写入它带的 bakeInputsDigest。
+/// 传入 linkCandidateBake 时，用同一份高度场和上层栅格逐种类生成链接候选，并写入它带的 bakeInputsDigest。
 /// 不传时没有链接种类，指纹只含导航格边长。
 /// </summary>
 public static class CrowdNavSurfaceAuthoring
@@ -136,7 +136,7 @@ public static class CrowdNavSurfaceAuthoring
         IReadOnlyList<RuntimeLinkCandidateBake> kinds =
             linkCandidateBake?.Kinds ?? Array.Empty<RuntimeLinkCandidateBake>();
         var kindIds = new string[kinds.Count];
-        var candidates = new List<NavSurfaceJumpCandidate>();
+        var candidates = new List<NavSurfaceLinkCandidate>();
         for (int k = 0; k < kinds.Count; k++)
         {
             kindIds[k] = kinds[k].KindId;
@@ -147,7 +147,7 @@ public static class CrowdNavSurfaceAuthoring
                 checked((byte)k),
                 kinds[k],
                 linkCandidateBake.Heights,
-                linkCandidateBake.Bridge,
+                linkCandidateBake.UpperLayerMask,
                 sources.CrowdCellSizeCm));
         }
 
@@ -160,7 +160,7 @@ public static class CrowdNavSurfaceAuthoring
             LinkKindIds = kindIds,
             BakeInputsDigest = linkCandidateBake?.BakeInputsDigest ?? NavSurfaceContract.BakeInputsDigestWithoutLinks(sources.CrowdCellSizeCm),
             TerrainCells = cells,
-            JumpCandidates = candidates.ToArray(),
+            LinkCandidates = candidates.ToArray(),
         };
     }
 
@@ -222,14 +222,14 @@ public static class CrowdNavSurfaceAuthoring
         if (binding.Runtime.LinkCandidateBakes.Count > 0)
         {
             NavHeightField heights = NavHeightField.FromHeightmap(height, binding.Runtime.NavCellsPerSide, binding.Runtime.NavCellSizeCm);
-            byte[] bridge = RasterizeBridgeMask(binding.Bridges, binding.Runtime);
+            byte[] upperMask = RasterizeUpperLayerMask(binding.LayeredPaths, binding.Runtime);
             linkCandidateBake = new CrowdLinkCandidateBakeInput
             {
                 MapId = mapId,
                 Kinds = binding.Runtime.LinkCandidateBakes,
                 Heights = heights,
-                Bridge = bridge,
-                BakeInputsDigest = NavSurfaceContract.BakeInputsDigest(binding.Runtime, binding.Bridges, heights),
+                UpperLayerMask = upperMask,
+                BakeInputsDigest = NavSurfaceContract.BakeInputsDigest(binding.Runtime, binding.LayeredPaths, heights),
             };
         }
 
@@ -237,15 +237,15 @@ public static class CrowdNavSurfaceAuthoring
     }
 
     /// <summary>
-    /// 桥面掩码。端点已经含岸上延伸（模板 effect.portalReachNavCells − 1），栅格化不再外扩。
+    /// 上层掩码。端点已经含入口外延伸（模板 effect.portalReachNavCells − 1），栅格化不再外扩。
     /// </summary>
-    public static byte[] RasterizeBridgeMask(IReadOnlyList<LayeredPathRecord> bridges, CrowdSimulationRuntimeConfig config)
+    public static byte[] RasterizeUpperLayerMask(IReadOnlyList<LayeredPathRecord> layeredPaths, CrowdSimulationRuntimeConfig config)
     {
-        UpperLayerSurface deck = UpperLayerBake.RasterizeLayeredPaths(bridges, config);
-        var mask = new byte[deck.AreaIndex.Length];
+        UpperLayerSurface upperLayer = UpperLayerBake.RasterizeLayeredPaths(layeredPaths, config);
+        var mask = new byte[upperLayer.AreaIndex.Length];
         for (int i = 0; i < mask.Length; i++)
         {
-            if (deck.AreaIndex[i] != 0)
+            if (upperLayer.AreaIndex[i] != 0)
             {
                 mask[i] = 1;
             }
@@ -498,7 +498,7 @@ public static class CrowdNavSurfaceAuthoring
         ConfigPipeline Pipeline,
         ConfigCatalog Catalog,
         ConfigConflictReport Report,
-        IReadOnlyList<LayeredPathRecord> Bridges);
+        IReadOnlyList<LayeredPathRecord> LayeredPaths);
 
     private static CrowdAuthoringBinding LoadRuntime(string repoRoot, string modId, MapConfig map)
     {
@@ -536,7 +536,7 @@ public static class CrowdNavSurfaceAuthoring
         CrowdPairRules rules = CrowdPairRules.Matrices(players, response, shares);
         CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(
             config, map, profiles, navmesh, traversal, facts, fixedHz, rules);
-        IReadOnlyList<LayeredPathRecord> bridges = Array.Empty<LayeredPathRecord>();
+        IReadOnlyList<LayeredPathRecord> layeredPaths = Array.Empty<LayeredPathRecord>();
         if (runtime.LinkCandidateBakes.Count > 0)
         {
             var templatesById = new Dictionary<string, EntityTemplate>(templates.Count, StringComparer.Ordinal);
@@ -546,10 +546,10 @@ public static class CrowdNavSurfaceAuthoring
                 templatesById.Add(template.Id, template);
             }
 
-            bridges = CrowdSimulationMapSurfaceSource.Extract(map, templatesById).LayeredPaths;
+            layeredPaths = CrowdSimulationMapSurfaceSource.Extract(map, templatesById).LayeredPaths;
         }
 
-        return new CrowdAuthoringBinding(runtime, mapNav, pipeline, catalog, report, bridges);
+        return new CrowdAuthoringBinding(runtime, mapNav, pipeline, catalog, report, layeredPaths);
     }
 
     public readonly record struct CrowdTerrainTypeColorRow(
@@ -688,13 +688,13 @@ public static class CrowdNavSurfaceAuthoring
         if (cell.WaterHeightLevel != 0)
         {
             throw new InvalidOperationException(
-                $"格（{col},{row}）的 WaterHeightLevel = {cell.WaterHeightLevel}。CrowdSimulation 地表不使用逻辑地形的水位。");
+                $"格（{col},{row}）的 WaterHeightLevel = {cell.WaterHeightLevel}。CrowdSimulation 地表不读这个逻辑地形通道。");
         }
 
         if ((cell.SurfaceFlags & LogicTerrainSurfaceFlags.Water) != 0)
         {
             throw new InvalidOperationException(
-                $"格（{col},{row}）的 Water 已设置。CrowdSimulation 地表不使用逻辑地形的水面标记。");
+                $"格（{col},{row}）的 SurfaceFlags 带 {nameof(LogicTerrainSurfaceFlags.Water)}。CrowdSimulation 地表不读这个逻辑地形标记。");
         }
 
         if ((cell.SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0)

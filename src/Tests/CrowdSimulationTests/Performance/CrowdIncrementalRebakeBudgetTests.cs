@@ -79,9 +79,9 @@ public sealed class CrowdIncrementalRebakeBudgetTests
     {
         var demo = new S4DeployDemoRuntime(null);
         demo.UseViewLabels(new[] { "路线", "可走", "线框" });
-        demo.UseStructures(new[]
+        demo.UsePalette(new[]
         {
-            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, SizeCm, 0, "CrowdSimulation.S4.Template1"),
+            new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, SizeCm, 0, 0, "CrowdSimulation.S4.Template1"),
         });
         var presentation = new CrowdPresentationConfig
         {
@@ -107,16 +107,9 @@ public sealed class CrowdIncrementalRebakeBudgetTests
                 PlaceBlocked = "(此处不可放)",
                 PlaceOffMap = "(光标不在地图上)",
                 PendingNav = " · 导航变体未就绪",
-                Structures = new[]
+                Palette = new[]
                 {
-                    new CrowdStructureTemplateDto
-                    {
-                        Id = "building",
-                        Label = "建筑",
-                        Shape = S4DeployDemoRuntime.ShapePoint,
-                        SizeCm = SizeCm,
-                        SelectAction = "CrowdSimulation.S4.Template1",
-                    },
+                    new CrowdPaletteSlotDto { Entry = "building", SelectAction = "CrowdSimulation.S4.Template1" },
                 },
             },
         };

@@ -35,7 +35,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     public bool Active { get; set; } = true;
     public int TickCounter { get; private set; }
     public int ContextIndex { get; private set; }
-    /// <summary>视图模式:0 路线(方向场+折线) · 1 可走区域(不可走红罩/桥面/portal) · 2 NavMesh+HPA 线框。</summary>
+    /// <summary>视图模式:0 路线(方向场+折线) · 1 可走区域(不可走红罩/上层/portal) · 2 NavMesh+HPA 线框。</summary>
     public int ViewMode { get; private set; }
     private string[]? _viewLabels;
     private int _viewModeCount = 3;
@@ -103,7 +103,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             mapSurface.LayeredPaths);
         var grid = ingested.Grid;
         var heights = ingested.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
 
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
@@ -118,7 +118,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         {
             foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
-                var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
+                var nav = NavContextBaker.Bake(runtime, grid, heights, upperLayer, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
                 contexts.Add(nav);
                 labels.Add($"{runtime.AgentTypes[a].Id} c{clearance}");

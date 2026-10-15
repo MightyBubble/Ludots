@@ -24,7 +24,7 @@ namespace CrowdSimulationMapProbe;
 
 /// <summary>
 /// S1 地图探针：用真实 Ludots 装载路径（CrowdSimulationConfig 合并、.navsurface 读取、
-/// 地图实体提取、.height 读取）渲染三张种子图的地形类型 / 阻挡格 / 桥梁 / 跳跃候选。
+/// 地图实体提取、.height 读取）渲染三张种子图的地形类型 / 阻挡格 / 上层路径 / 链接候选。
 /// 用法: CrowdSimulationMapProbe &lt;seedAssetsDir&gt; &lt;standardAssetsDir&gt; &lt;demoAssetsDir&gt; &lt;outDir&gt;
 /// 配置读标准参数 Mod，体型档案读能力 Mod，FixedHz 读种子目录的 Engine/clock.json。
 /// </summary>
@@ -42,14 +42,14 @@ public static class Program
 
         if (args.Length >= 1 && args[0] == "--s3")
         {
-            if (args.Length < 5) return Usage();
-            return RunS3(args[1], args[2], args[3], args[4]);
+            if (args.Length < 6) return Usage();
+            return RunS3(args[1], args[2], args[3], args[4], args[5]);
         }
 
         if (args.Length >= 1 && args[0] == "--s3c")
         {
-            if (args.Length < 5) return Usage();
-            return RunS3C(args[1], args[2], args[3], args[4]);
+            if (args.Length < 6) return Usage();
+            return RunS3C(args[1], args[2], args[3], args[4], args[5]);
         }
 
         if (args.Length >= 1 && args[0] == "--s4probe")
@@ -74,32 +74,34 @@ public static class Program
         RenderBlocked(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
         RenderFull(bundle.Surface, bundle.Height, bundle.TypeColors, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
 
-        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.LayeredPaths.Count} jumps={bundle.Surface.JumpCandidates.Length}");
+        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} layeredPaths={bundle.MapSurface.LayeredPaths.Count} linkCandidates={bundle.Surface.LinkCandidates.Length}");
         return 0;
     }
 
     private static int Usage()
     {
         Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir>");
-        Console.Error.WriteLine("       CrowdSimulationMapProbe --s2|--s3|--s3c <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s2 <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s3 <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir> <agentTypeId>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s3c <seedAssetsDir> <standardAssetsDir> <demoAssetsDir> <outDir> <agentTypeId[,agentTypeId...]>");
         Console.Error.WriteLine("       CrowdSimulationMapProbe --s4probe <seedAssetsDir> <standardAssetsDir> <demoAssetsDir>");
         return 2;
     }
 
-    /// <summary>S2:逐代理体型的可走区域视图(不可走 = 红色遮罩;桥 portal 高亮;跳跃链接叠画)。</summary>
+    /// <summary>S2:逐代理体型的可走区域视图(不可走 = 红色遮罩;上层 portal 高亮;链接叠画)。</summary>
     private static int RunS2(string seedDir, string standardDir, string demoDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, demoDir);
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, bundle.Runtime);
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, bundle.Runtime);
 
         var seen = new HashSet<int>();
         for (int a = 0; a < bundle.Runtime.AgentTypes.Count; a++)
         {
             foreach (int clearance in bundle.Runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
-                var nav = NavContextBaker.Bake(bundle.Runtime, bundle.Grid, heights, deck, a, clearance);
+                var nav = NavContextBaker.Bake(bundle.Runtime, bundle.Grid, heights, upperLayer, a, clearance);
                 if (!seen.Add(nav.Id)) continue;
                 string name = $"{bundle.Runtime.AgentTypes[a].Id}_c{clearance}";
                 RenderNav(bundle, nav, heights, Path.Combine(outDir, $"{bundle.MapId}_nav_{name}.png"));
@@ -123,7 +125,7 @@ public static class Program
             }
         }
 
-        // 桥面可走格与 portal
+        // 上层可走格与 portal
         for (int cy = 0; cy < navCellsPerSide; cy++)
         {
             for (int cx = 0; cx < navCellsPerSide; cx++)
@@ -133,7 +135,7 @@ public static class Program
             }
         }
 
-        // 跳跃链接:双向靛蓝 / 单向琥珀
+        // 链接:双向靛蓝 / 单向琥珀
         if (nav.Links != null)
         {
             float cs = bundle.Runtime.NavCellSizeCm;
@@ -152,22 +154,23 @@ public static class Program
         PngWriter.Write(path, RenderSize, RenderSize, px);
     }
 
-    /// <summary>S3:NavMesh 多边形网格视图(地面 tile 白色描边,桥面 tile 棕色)。</summary>
-    private static int RunS3(string seedDir, string standardDir, string demoDir, string outDir)
+    /// <summary>S3:一个代理体型 clearance 1 的 NavMesh 多边形网格视图(底层 tile 白色描边,上层 tile 黄色)。</summary>
+    private static int RunS3(string seedDir, string standardDir, string demoDir, string outDir, string agentTypeId)
     {
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile, c = navCellsPerSide / t;
+        int agent = AgentTypeIndex(runtime, agentTypeId);
 
-        // 步兵上下文(含桥面),缓存随烘焙填充
+        // 缓存随烘焙填充
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, t,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
             runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
-        var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, 0, 1, cache);
+        var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, upperLayer, agent, 1, cache);
 
         var px = BaseLayer(bundle.Surface, bundle.Height, bundle.TypeColors);
         float cellPx = (float)RenderSize / navCellsPerSide;
@@ -181,7 +184,7 @@ public static class Program
             }
         }
 
-        foreach (int tileId in deck.TileOrder)
+        foreach (int tileId in upperLayer.TileOrder)
         {
             bool any = false;
             int tx = tileId % c, ty = tileId / c;
@@ -214,22 +217,22 @@ public static class Program
             }
         }
 
-        Console.WriteLine($"[probe:s3] {bundle.MapId} foot: tiles={cache.Count} bakes={cache.Bakes} hpaNodes={flat.NodeCell.Length} hpaEdges={hpa.EdgeCount}");
+        Console.WriteLine($"[probe:s3] {bundle.MapId} {agentTypeId}: tiles={cache.Count} bakes={cache.Bakes} hpaNodes={flat.NodeCell.Length} hpaEdges={hpa.EdgeCount}");
 
-        string path = Path.Combine(outDir, $"{bundle.MapId}_navmesh_foot.png");
+        string path = Path.Combine(outDir, $"{bundle.MapId}_navmesh_{agentTypeId}.png");
         PngWriter.Write(path, RenderSize, RenderSize, px);
-        Console.WriteLine($"[probe:s3] {bundle.MapId} foot: tiles={cache.Count} bakes={cache.Bakes} hits={cache.Hits} comps={nav.CompCount}");
+        Console.WriteLine($"[probe:s3] {bundle.MapId} {agentTypeId}: tiles={cache.Count} bakes={cache.Bakes} hits={cache.Hits} comps={nav.CompCount}");
         return 0;
     }
 
-    /// <summary>S3-c:两点路径 + 方向图视图(前 6 组对子的流场箭头与折线;另含跳跃层 2 组)。</summary>
-    private static int RunS3C(string seedDir, string standardDir, string demoDir, string outDir)
+    /// <summary>S3-c:两点路径 + 方向图视图。逐个列出的代理体型画流场箭头与折线：第一个画前 6 组对子，其余各 2 组。</summary>
+    private static int RunS3C(string seedDir, string standardDir, string demoDir, string outDir, string agentTypeIds)
     {
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile;
 
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulation", "parity", "s3c-query-truth.json")))!;
@@ -240,18 +243,17 @@ public static class Program
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
             runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
-        // 逐移动类型(去重上下文):0 = 步兵(地面,含桥面),最后一个 = 跳跃层
-        var agentIndices = new[] { 0, runtime.AgentTypes.Count - 1 };
+        int[] agentIndices = agentTypeIds.Split(',').Select(id => AgentTypeIndex(runtime, id)).ToArray();
         foreach (int a in agentIndices)
         {
-            var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, a, 1, cache);
+            var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, upperLayer, a, 1, cache);
             string typeId = runtime.AgentTypes[a].Id;
             var scratch = new CorridorQuery.Scratch(t * t);
             var pool = new FlowPool(navCellsPerSide, runtime.Flowfield.PoolCapacity);
             int shown = 0;
             foreach (var (start, goal) in pairs)
             {
-                if (shown >= (a == 0 ? 6 : 2)) break;
+                if (shown >= (a == agentIndices[0] ? 6 : 2)) break;
                 var mask = new byte[(navCellsPerSide / t) * (navCellsPerSide / t)];
                 mask[NavGridSteps.TileOf(goal, navCellsPerSide, t, navCellsPerSide / t)] = 1;
                 var corridor = CorridorQuery.CorridorTo(nav, runtime, start, goal, mask, 0, scratch);
@@ -282,6 +284,16 @@ public static class Program
         }
 
         return 0;
+    }
+
+    private static int AgentTypeIndex(CrowdSimulationRuntimeConfig runtime, string id)
+    {
+        for (int i = 0; i < runtime.AgentTypes.Count; i++)
+        {
+            if (string.Equals(runtime.AgentTypes[i].Id, id, StringComparison.Ordinal)) return i;
+        }
+
+        throw new ArgumentException($"代理体型 \"{id}\" 不在 agentTypes：{string.Join(", ", runtime.AgentTypes.Select(t => t.Id))}。");
     }
 
     private static void RenderPath(SeedBundle bundle, NavContext nav, FlowField flow, List<int> trace, Fix64[]? pts, int pointCount, int start, int goal, string path)
@@ -343,7 +355,7 @@ public static class Program
         var bundle = Load(seedDir, standardDir, demoDir);
         var runtime = bundle.Runtime;
         var heights = bundle.Heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(bundle.MapSurface.LayeredPaths, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -357,7 +369,7 @@ public static class Program
         {
             foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
-                var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, a, clearance, cache);
+                var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, upperLayer, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
                 navs[nav.Id] = nav;
             }
@@ -758,19 +770,20 @@ public static class Program
             }
         }
 
-        // 桥面(路径足迹,带宽)
+        // 上层路径(足迹,带宽)
         float worldCm = (float)navCellsPerSide * grid.NavCellSizeCm;
         foreach (var b in mapSurface.LayeredPaths)
         {
             RasterizePath(px, b.Span.FromXCm, b.Span.FromYCm, b.Span.ToXCm, b.Span.ToYCm, b.Span.WidthCm, worldCm, (150, 110, 70));
         }
 
-        // 跳跃候选:双向(落差 ≤ 25 m)靛蓝,单向琥珀
-        foreach (var j in surface.JumpCandidates)
+        // 链接候选:落差不超过任一通行行 link.upCm 的画靛蓝(可能双向),其余琥珀
+        int twoWayUpCm = runtime.NavProfiles.Where(p => p.Link != null).Select(p => p.Link!.UpCm).DefaultIfEmpty(-1).Max();
+        foreach (var candidate in surface.LinkCandidates)
         {
             float cs = grid.NavCellSizeCm;
-            var color = j.DropCm <= 2500 ? (92, 107, 192) : (255, 179, 0);
-            DrawLine(px, (j.FromX + 0.5f) * cs, (j.FromY + 0.5f) * cs, (j.ToX + 0.5f) * cs, (j.ToY + 0.5f) * cs, worldCm, color);
+            var color = candidate.DropCm <= twoWayUpCm ? (92, 107, 192) : (255, 179, 0);
+            DrawLine(px, (candidate.FromX + 0.5f) * cs, (candidate.FromY + 0.5f) * cs, (candidate.ToX + 0.5f) * cs, (candidate.ToY + 0.5f) * cs, worldCm, color);
         }
 
         PngWriter.Write(path, RenderSize, RenderSize, px);

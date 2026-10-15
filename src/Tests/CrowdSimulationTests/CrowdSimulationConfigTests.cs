@@ -74,10 +74,10 @@ public class CrowdSimulationConfigTests
         Assert.That(runtime.Deploy.Bases[0].YCm, Is.EqualTo(560000));
 
         var leaper = runtime.NavProfiles[4];
-        Assert.That(leaper.Jump, Is.Not.Null);
-        Assert.That(leaper.Jump!.UpCm, Is.EqualTo(2500));
-        Assert.That(leaper.Jump.DownCm, Is.EqualTo(20000));
-        Assert.That(leaper.Jump.RangeNavCells, Is.EqualTo(7));
+        Assert.That(leaper.Link, Is.Not.Null);
+        Assert.That(leaper.Link!.UpCm, Is.EqualTo(2500));
+        Assert.That(leaper.Link.DownCm, Is.EqualTo(20000));
+        Assert.That(leaper.Link.RangeNavCells, Is.EqualTo(7));
     }
 
     [Test]
@@ -621,15 +621,6 @@ public class CrowdSimulationConfigTests
         {
             root["formations"]!["box"]!["spacing"] = 1;
             return "formations.box.spacing";
-        }
-
-        if (oldPath == "navProfiles[].jump.rangeCells")
-        {
-            root["navProfiles"] = new JsonArray
-            {
-                new JsonObject { ["jump"] = new JsonObject { ["rangeCells"] = 7 } },
-            };
-            return "navProfiles[0].jump.rangeCells";
         }
 
         const string templateKey = "structures.templates[].";

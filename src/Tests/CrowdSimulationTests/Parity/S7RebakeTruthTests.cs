@@ -177,7 +177,7 @@ public sealed class S7RebakeTruthTests
                 if (!placeExecTicks.Contains(t))
                 {
                     int cx = (int)(pos.X.ToDouble() / cellSize), cy = (int)(pos.Y.ToDouble() / cellSize);
-                    if (st.State != (byte)CrowdUnitState.Jump && st.Level == 0 &&
+                    if (st.State != (byte)CrowdUnitState.Traversing && st.Level == 0 &&
                         cx >= 0 && cy >= 0 && cx < gridN && cy < gridN && blockedGrid[cy * gridN + cx] != 0)
                     {
                         dwellMine++;
@@ -185,7 +185,7 @@ public sealed class S7RebakeTruthTests
                     }
 
                     int tcx = (int)(txCm / cellSize), tcy = (int)(tyCm / cellSize);
-                    if (tState != (byte)CrowdUnitState.Jump && tLevel == 0 &&
+                    if (tState != (byte)CrowdUnitState.Traversing && tLevel == 0 &&
                         tcx >= 0 && tcy >= 0 && tcx < gridN && tcy < gridN && blockedGrid[tcy * gridN + tcx] != 0)
                     {
                         dwellTruth++;

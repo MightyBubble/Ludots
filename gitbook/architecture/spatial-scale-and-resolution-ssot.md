@@ -158,8 +158,8 @@ Out of scope：
 | `hpa.maxEntranceWidth` | `maxEntranceWidthNavCells` | 边界扫描格数 |
 | `flowfield.corridorPadding` | `corridorPaddingNavTiles` | tile 掩码外扩 |
 | `movement.maxStepCells` | `maxStepNavCells` | 子步上限，导航格 |
-| `structures.portalCells` | `portalReachNavCells` | 桥头腐蚀格数 |
-| `jump.rangeCells` | `rangeNavCells` | 跳跃候选格距 |
+| `structures.portalCells` | `portalReachNavCells` | 上层入口腐蚀格数，现在写在各结构模板的 `effect` 里 |
+| `jump.rangeCells` | `rangeNavCells` | 链接候选格距，现在写在 `traversal.json` 的 `agentTypes.<id>.links.<kind>` 里 |
 | `formation.magicBoxPadCells` | `magicBoxPadCm` | 点选框外扩，世界厘米，与包围盒厘米坐标比较 |
 | `spawn.cellInset` | `navCellInsetFraction` | 格内比例 |
 | `formation.slotSightCells` / `slotArriveCells` / `goalArriveCells` / `settleRadiusCells` / `minClumpCells` | `slotSightCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 世界距离。装载时 `cm / navCellSizeCm` 再 `Fix64.FromDouble` |
@@ -222,8 +222,8 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | `hpa.maxEntranceWidthNavCells` | HPA 入口宽 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
 | `flowfield.corridorPaddingNavTiles` | 走廊外扩 | 导航 tile | 声明式范围 | `CrowdSimulationConfig.json` |
 | `movement.maxStepNavCells` | 子步上限 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
-| `structures.portalReachNavCells` | 桥头可达 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
-| `profiles[].jump.rangeNavCells` | 跳跃格距 | 导航格 | 与 `.navsurface` 候选比较 | `Navigation/navmesh.json` |
+| `structures.templates.<id>.effect.portalReachNavCells` | 上层入口可达 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
+| `agentTypes.<id>.links.<kind>.rangeNavCells` | 链接格距 | 导航格 | 与 `.navsurface` 候选比较 | `CrowdSimulation/traversal.json` |
 | `formation.magicBoxPadCm` | 点选框外扩 | cm | 直接当厘米用，标准 6250。与包围盒厘米坐标比较 | `CrowdSimulationConfig.json` |
 | `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0..1 | `CrowdSimulationConfig.json` |
 | `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 装载时除以 `profiles[].cellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |

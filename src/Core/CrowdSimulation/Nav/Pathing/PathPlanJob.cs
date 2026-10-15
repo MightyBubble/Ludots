@@ -25,7 +25,7 @@ internal class PathPlanGroup
     /// <summary>每 (tile, 层) 一个起点,(格, 层) 成对。</summary>
     public int[] Origins = Array.Empty<int>();
     public int OriginCount;
-    /// <summary>领队起点(地面层),只挂在桶里净空最严的组上。-1 = 无。</summary>
+    /// <summary>领队起点(底层),只挂在桶里净空最严的组上。-1 = 无。</summary>
     public int LeaderStart = -1;
     /// <summary>规划时钉住的同 (导航, 目标) 缓存场的掩码。null = 缓存里没有。</summary>
     public byte[]? CachedMask;

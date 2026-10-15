@@ -75,7 +75,7 @@ internal static class CrowdHudFormat
         }
 
         b.Append(Inv, $"tick {hud.Tick};单位 {hud.Units}(闲 {hud.Idle}/行 {hud.Moving}/达 {hud.Arrived}");
-        if (hud.Unreachable + hud.Jumping > 0) b.Append(Inv, $"/不可达 {hud.Unreachable}/跳跃 {hud.Jumping}");
+        if (hud.Unreachable + hud.Traversing > 0) b.Append(Inv, $"/不可达 {hud.Unreachable}/穿越 {hud.Traversing}");
         b.Append(");选中 ");
         if (hud.Selected < 0) b.Append('-');
         else b.Append(Inv, $"{hud.Selected}");
@@ -189,8 +189,8 @@ internal static class CrowdHudFormat
         CrowdPlacementReject.OutOfBounds => Required(text.PlaceOutOfBounds, "placeOutOfBounds"),
         CrowdPlacementReject.OverlapsStructure => Required(text.PlaceOverlapsStructure, "placeOverlapsStructure"),
         CrowdPlacementReject.OverlapsBlocked => Required(text.PlaceOverlapsBlocked, "placeOverlapsBlocked"),
-        CrowdPlacementReject.InteriorArea => Required(text.PlaceSpanTerrain, "placeSpanTerrain"),
-        CrowdPlacementReject.EndpointArea => Required(text.PlaceAnchorTerrain, "placeAnchorTerrain"),
+        CrowdPlacementReject.InteriorArea => Required(text.PlaceInteriorArea, "placeInteriorArea"),
+        CrowdPlacementReject.EndpointArea => Required(text.PlaceEndpointArea, "placeEndpointArea"),
         _ => throw new InvalidOperationException($"未知放置拒绝原因 {reason}。"),
     };
 
@@ -403,7 +403,7 @@ internal static class CrowdHudFormat
         else b.Append("走廊扩展 N/A · 端口未做走廊扩展");
 
         Begin(lines, 11).Append(Inv, $"规划 {Ms(r.PlanMs)} ms · 烘焙 {Ms(r.NavBakeMs)} ms · 重烘 {Ms(r.RebakeMs)} ms");
-        Begin(lines, 12).Append(Inv, $"状态 闲 {r.Idle} 行 {r.Moving} 达 {r.Arrived} · 不可达 {r.Unreachable} 跳跃 {r.Jumping}");
+        Begin(lines, 12).Append(Inv, $"状态 闲 {r.Idle} 行 {r.Moving} 达 {r.Arrived} · 不可达 {r.Unreachable} 穿越 {r.Traversing}");
 
         b = Begin(lines, 13);
         b.Append("分辨率 ");

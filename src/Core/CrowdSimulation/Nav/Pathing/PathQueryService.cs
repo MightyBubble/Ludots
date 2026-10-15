@@ -34,7 +34,7 @@ public sealed class PathResult
     /// <summary>拉直折线(格单位,x, y 平铺)。活前缀是 <see cref="PointCount"/>；链接层来自流场路点链。</summary>
     public Fix64[]? Points { get; set; }
     public int PointCount { get; set; }
-    /// <summary>逐路点层号(null = 全地面)。活前缀是 <see cref="LayerCount"/>。</summary>
+    /// <summary>逐路点层号(null = 全底层)。活前缀是 <see cref="LayerCount"/>。</summary>
     public int[]? PointLayers { get; set; }
     public int LayerCount { get; set; }
     /// <summary>方向图(调用方持有;弃用经 PathQueryService.Recycle 还池)。</summary>
@@ -402,7 +402,7 @@ public sealed class PathQueryService : IDisposable
         for (int i = 0; i < flowCapacity; i++)
         {
             flowStock[i] = pool.Take();
-            flowStock[i].LkBuf ??= new int[pool.GroundCount];
+            flowStock[i].LkBuf ??= new int[pool.BaseCellCount];
             flowStock[i].MaskBuf ??= new byte[tileCount];
         }
 

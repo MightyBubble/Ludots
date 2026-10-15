@@ -574,7 +574,7 @@ internal sealed class CrowdPlayerViewHost
             {
                 planning++;
             }
-            else if (unitState == (byte)CrowdUnitState.Moving || unitState == (byte)CrowdUnitState.Jump)
+            else if (unitState == (byte)CrowdUnitState.Moving || unitState == (byte)CrowdUnitState.Traversing)
             {
                 moving++;
             }

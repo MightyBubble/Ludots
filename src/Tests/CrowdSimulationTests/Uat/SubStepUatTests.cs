@@ -121,7 +121,7 @@ public sealed class SubStepUatTests
             CrowdUatKit.Step(sim);
             for (int i = 0; i < sim.Units.Count; i++)
             {
-                if (!pos.TryGetValue(sim.Units.HandleAt(i), out var p) || CrowdUatKit.StateAt(sim, i).State == (byte)CrowdUnitState.Jump) continue;
+                if (!pos.TryGetValue(sim.Units.HandleAt(i), out var p) || CrowdUatKit.StateAt(sim, i).State == (byte)CrowdUnitState.Traversing) continue;
                 var q = CrowdUatKit.PositionAt(sim, i);
                 if (Cheap(q.X, q.Y) && Cheap(p.X, p.Y)) peak = Fix64.Max(peak, CrowdFix.Hypot(q.X - p.X, q.Y - p.Y));
             }

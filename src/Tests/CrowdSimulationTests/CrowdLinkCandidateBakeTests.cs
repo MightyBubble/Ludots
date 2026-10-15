@@ -59,11 +59,11 @@ public sealed class CrowdLinkCandidateBakeTests
                     failures.AppendLine($"seed={seed} 入库的 {mapId}.navsurface 不是当前 Ludots 烘焙结果，重跑 Ludots.Tool nav bake-crowd-navsurface。");
                 }
 
-                NavSurfaceJumpCandidate[] web = S1JumpTruth.Read(modAssets);
+                NavSurfaceLinkCandidate[] web = S1JumpTruth.Read(modAssets);
 
-                string pairs = ComparePairs(name, baked.JumpCandidates, web, out int dropMax, out int dropDiffs);
+                string pairs = ComparePairs(name, baked.LinkCandidates, web, out int dropMax, out int dropDiffs);
                 TestContext.Out.WriteLine(
-                    $"seed={seed} baked={baked.JumpCandidates.Length} web={web.Length} dropMaxCm={dropMax} dropDiffs={dropDiffs} shortestHeightCm={shortestCm.ToString(CultureInfo.InvariantCulture)}");
+                    $"seed={seed} baked={baked.LinkCandidates.Length} web={web.Length} dropMaxCm={dropMax} dropDiffs={dropDiffs} shortestHeightCm={shortestCm.ToString(CultureInfo.InvariantCulture)}");
                 if (pairs.Length > 0)
                 {
                     failures.AppendLine(pairs);
@@ -77,13 +77,13 @@ public sealed class CrowdLinkCandidateBakeTests
                 int linkRows = 0;
                 foreach (RuntimeNavProfile profile in runtime.NavProfiles)
                 {
-                    if (profile.Jump == null)
+                    if (profile.Link == null)
                     {
                         continue;
                     }
 
                     linkRows++;
-                    string links = CompareLinks(name, profile, baked.JumpCandidates, web);
+                    string links = CompareLinks(name, profile, baked.LinkCandidates, web);
                     TestContext.Out.WriteLine($"seed={seed} profile={profile.Id} {links.Split('\n')[0]}");
                     if (links.Contains("不一致", StringComparison.Ordinal))
                     {
@@ -105,7 +105,7 @@ public sealed class CrowdLinkCandidateBakeTests
     }
 
     [Test]
-    public void CliffBand_GainsJumpCandidates_LandRemovesThem()
+    public void CliffBand_GainsLinkCandidates_LandRemovesThem()
     {
         const int cells = 16;
         const int cellCm = 100;
@@ -118,7 +118,7 @@ public sealed class CrowdLinkCandidateBakeTests
 
         NavSurfaceAsset withCliff = BakeFlat(terrain, cellCm);
         int crossing = 0;
-        foreach (NavSurfaceJumpCandidate jump in withCliff.JumpCandidates)
+        foreach (NavSurfaceLinkCandidate jump in withCliff.LinkCandidates)
         {
             int left = Math.Min(jump.FromX, jump.ToX);
             int right = Math.Max(jump.FromX, jump.ToX);
@@ -128,7 +128,7 @@ public sealed class CrowdLinkCandidateBakeTests
             }
         }
 
-        TestContext.Out.WriteLine($"cliffBand candidates={withCliff.JumpCandidates.Length} crossing={crossing}");
+        TestContext.Out.WriteLine($"cliffBand candidates={withCliff.LinkCandidates.Length} crossing={crossing}");
         Assert.That(crossing, Is.GreaterThan(0));
 
         for (int y = 0; y < cells; y++)
@@ -138,8 +138,8 @@ public sealed class CrowdLinkCandidateBakeTests
         }
 
         NavSurfaceAsset land = BakeFlat(terrain, cellCm);
-        TestContext.Out.WriteLine($"land candidates={land.JumpCandidates.Length}");
-        Assert.That(land.JumpCandidates, Is.Empty);
+        TestContext.Out.WriteLine($"land candidates={land.LinkCandidates.Length}");
+        Assert.That(land.LinkCandidates, Is.Empty);
     }
 
     [Test]
@@ -268,7 +268,7 @@ public sealed class CrowdLinkCandidateBakeTests
                 HeightsCm = heights,
                 Slope = new Fix64[cells * cells],
             },
-            Bridge = new byte[cells * cells],
+            UpperLayerMask = new byte[cells * cells],
             BakeInputsDigest = 0,
         };
         return CrowdNavSurfaceAuthoring.Bake(
@@ -290,8 +290,8 @@ public sealed class CrowdLinkCandidateBakeTests
 
     private static string ComparePairs(
         string seed,
-        NavSurfaceJumpCandidate[] baked,
-        NavSurfaceJumpCandidate[] web,
+        NavSurfaceLinkCandidate[] baked,
+        NavSurfaceLinkCandidate[] web,
         out int dropMax,
         out int dropDiffs)
     {
@@ -300,7 +300,7 @@ public sealed class CrowdLinkCandidateBakeTests
         var webAt = new Dictionary<(ushort X, ushort Y, ushort ToX, ushort ToY), int>();
         for (int i = 0; i < web.Length; i++)
         {
-            NavSurfaceJumpCandidate jump = web[i];
+            NavSurfaceLinkCandidate jump = web[i];
             webAt[(jump.FromX, jump.FromY, jump.ToX, jump.ToY)] = i;
         }
 
@@ -323,7 +323,7 @@ public sealed class CrowdLinkCandidateBakeTests
 
         for (int i = 0; i < baked.Length; i++)
         {
-            NavSurfaceJumpCandidate jump = baked[i];
+            NavSurfaceLinkCandidate jump = baked[i];
             var key = (jump.FromX, jump.FromY, jump.ToX, jump.ToY);
             if (!webAt.TryGetValue(key, out int at))
             {
@@ -332,7 +332,7 @@ public sealed class CrowdLinkCandidateBakeTests
             }
 
             seen.Add(key);
-            NavSurfaceJumpCandidate reference = web[at];
+            NavSurfaceLinkCandidate reference = web[at];
             if (jump.LengthCells != reference.LengthCells)
             {
                 report.AppendLine(
@@ -352,7 +352,7 @@ public sealed class CrowdLinkCandidateBakeTests
 
         for (int i = 0; i < web.Length; i++)
         {
-            NavSurfaceJumpCandidate jump = web[i];
+            NavSurfaceLinkCandidate jump = web[i];
             var key = (jump.FromX, jump.FromY, jump.ToX, jump.ToY);
             if (!seen.Contains(key) && !ContainsEnd(baked, jump))
             {
@@ -362,8 +362,8 @@ public sealed class CrowdLinkCandidateBakeTests
 
         if (orderBreak >= 0 && baked.Length == web.Length && report.ToString().IndexOf("只在", StringComparison.Ordinal) < 0)
         {
-            NavSurfaceJumpCandidate b = baked[orderBreak];
-            NavSurfaceJumpCandidate s = web[orderBreak];
+            NavSurfaceLinkCandidate b = baked[orderBreak];
+            NavSurfaceLinkCandidate s = web[orderBreak];
             report.AppendLine(
                 $"seed={seed} 顺序在下标 {orderBreak} 分叉：烘焙 ({b.FromX},{b.FromY})→({b.ToX},{b.ToY})，Web ({s.FromX},{s.FromY})→({s.ToX},{s.ToY})。集合相同则根因在桶的插入序。");
         }
@@ -374,10 +374,10 @@ public sealed class CrowdLinkCandidateBakeTests
     private static string CompareLinks(
         string seed,
         RuntimeNavProfile profile,
-        NavSurfaceJumpCandidate[] baked,
-        NavSurfaceJumpCandidate[] web)
+        NavSurfaceLinkCandidate[] baked,
+        NavSurfaceLinkCandidate[] web)
     {
-        RuntimeJumpCapability jump = profile.Jump!;
+        RuntimeLinkCapability jump = profile.Link!;
         LinkRow[] bakedLinks = Keep(baked, jump);
         LinkRow[] webLinks = Keep(web, jump);
         int bakedKept = bakedLinks.Length;
@@ -428,18 +428,18 @@ public sealed class CrowdLinkCandidateBakeTests
 
     private static string Cause(
         RuntimeNavProfile profile,
-        NavSurfaceJumpCandidate[] baked,
-        NavSurfaceJumpCandidate[] web,
+        NavSurfaceLinkCandidate[] baked,
+        NavSurfaceLinkCandidate[] web,
         LinkRow row)
     {
-        NavSurfaceJumpCandidate? b = Find(baked, row);
-        NavSurfaceJumpCandidate? s = Find(web, row);
+        NavSurfaceLinkCandidate? b = Find(baked, row);
+        NavSurfaceLinkCandidate? s = Find(web, row);
         if (b == null || s == null)
         {
             return "一侧没有这条格对，链接差是格对差带出来的。";
         }
 
-        RuntimeJumpCapability jump = profile.Jump!;
+        RuntimeLinkCapability jump = profile.Link!;
         int bd = b.Value.DropCm;
         int sd = s.Value.DropCm;
         if ((bd <= jump.UpCm) != (sd <= jump.UpCm))
@@ -460,12 +460,12 @@ public sealed class CrowdLinkCandidateBakeTests
         return "格对还在，过滤条件没有翻，顺序或端点方向不同。";
     }
 
-    private static LinkRow[] Keep(NavSurfaceJumpCandidate[] candidates, RuntimeJumpCapability jump)
+    private static LinkRow[] Keep(NavSurfaceLinkCandidate[] candidates, RuntimeLinkCapability jump)
     {
         var kept = new List<LinkRow>();
         for (int i = 0; i < candidates.Length; i++)
         {
-            NavSurfaceJumpCandidate cand = candidates[i];
+            NavSurfaceLinkCandidate cand = candidates[i];
             if (cand.LengthCells > jump.RangeNavCells || cand.DropCm > jump.DownCm)
             {
                 continue;
@@ -477,11 +477,11 @@ public sealed class CrowdLinkCandidateBakeTests
         return kept.ToArray();
     }
 
-    private static NavSurfaceJumpCandidate? Find(NavSurfaceJumpCandidate[] candidates, LinkRow row)
+    private static NavSurfaceLinkCandidate? Find(NavSurfaceLinkCandidate[] candidates, LinkRow row)
     {
         for (int i = 0; i < candidates.Length; i++)
         {
-            NavSurfaceJumpCandidate cand = candidates[i];
+            NavSurfaceLinkCandidate cand = candidates[i];
             if (cand.FromX == row.FromX && cand.FromY == row.FromY && cand.ToX == row.ToX && cand.ToY == row.ToY)
             {
                 return cand;
@@ -496,13 +496,13 @@ public sealed class CrowdLinkCandidateBakeTests
         return a.NavCellsX == b.NavCellsX && a.NavCellsY == b.NavCellsY && a.NavCellSizeCm == b.NavCellSizeCm
             && a.TerrainTypeIds.SequenceEqual(b.TerrainTypeIds) && a.LinkKindIds.SequenceEqual(b.LinkKindIds)
             && a.BakeInputsDigest == b.BakeInputsDigest && a.TerrainCells.SequenceEqual(b.TerrainCells)
-            && a.JumpCandidates.SequenceEqual(b.JumpCandidates);
+            && a.LinkCandidates.SequenceEqual(b.LinkCandidates);
     }
 
-    private static bool SameEnds(NavSurfaceJumpCandidate a, NavSurfaceJumpCandidate b)
+    private static bool SameEnds(NavSurfaceLinkCandidate a, NavSurfaceLinkCandidate b)
         => a.FromX == b.FromX && a.FromY == b.FromY && a.ToX == b.ToX && a.ToY == b.ToY;
 
-    private static bool ContainsEnd(NavSurfaceJumpCandidate[] candidates, NavSurfaceJumpCandidate jump)
+    private static bool ContainsEnd(NavSurfaceLinkCandidate[] candidates, NavSurfaceLinkCandidate jump)
     {
         for (int i = 0; i < candidates.Length; i++)
         {

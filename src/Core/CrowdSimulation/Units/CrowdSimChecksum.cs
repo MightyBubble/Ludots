@@ -11,7 +11,7 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// <summary>
 /// 一条 Mix 上的四个合计断面，外加三条独立的诊断链。
 /// 后一合计断面从前一断面的结果继续混。<see cref="Total"/> 等于 <see cref="Avoidance"/>。
-/// <see cref="Groups"/>、<see cref="Jump"/>、<see cref="Commands"/> 各自起混，不写进合计。
+/// <see cref="Groups"/>、<see cref="Link"/>、<see cref="Commands"/> 各自起混，不写进合计。
 /// 诊断开关关闭时这三个词为 0。
 /// </summary>
 public readonly struct CrowdSimStateDigest
@@ -22,12 +22,12 @@ public readonly struct CrowdSimStateDigest
     public readonly ulong State;
     public readonly ulong Avoidance;
     public readonly ulong Groups;
-    public readonly ulong Jump;
+    public readonly ulong Link;
     public readonly ulong Commands;
 
     public CrowdSimStateDigest(
         int tick, ulong position, ulong motion, ulong state, ulong avoidance,
-        ulong groups = 0, ulong jump = 0, ulong commands = 0)
+        ulong groups = 0, ulong link = 0, ulong commands = 0)
     {
         Tick = tick;
         Position = position;
@@ -35,20 +35,20 @@ public readonly struct CrowdSimStateDigest
         State = state;
         Avoidance = avoidance;
         Groups = groups;
-        Jump = jump;
+        Link = link;
         Commands = commands;
     }
 
     public ulong Total => Avoidance;
 }
 
-/// <summary>诊断断面掩码。只标记 groups / jump / commands，不含合计断面。</summary>
+/// <summary>诊断断面掩码。只标记 groups / link / commands，不含合计断面。</summary>
 [Flags]
 public enum CrowdSimDiagnosticSection : byte
 {
     None = 0,
     Groups = 1,
-    Jump = 2,
+    Link = 2,
     Commands = 4,
 }
 
@@ -85,7 +85,7 @@ public readonly struct CrowdSimDigestDiff
 /// blend、stall、state、group、句柄、order、mode、level，再分离两轴、calm、相位。
 /// 每个定点字段按原始 int64 的低 32 位再高 32 位混合。
 /// 有运动栈的会话在 tick 末从内核 SoA 读(scatter 后同值)；纯部署会话读组件。两条路径值等价——SoA 即 scatter 落回前的组件值。
-/// 诊断链（groups / jump / commands）用各自的域词起混，不接这条合计。默认不算。
+/// 诊断链（groups / link / commands）用各自的域词起混，不接这条合计。默认不算。
 /// 算出的诊断词若为 0，会和开关关闭撞车，这里把 0 挪到 32 位范围外，避免和算出的 1 相撞。
 /// </summary>
 public static class CrowdSimChecksum
@@ -95,7 +95,7 @@ public static class CrowdSimChecksum
     public const string StateSection = "state";
     public const string AvoidanceSection = "avoidance";
     public const string GroupsSection = "groups";
-    public const string JumpSection = "jump";
+    public const string LinkSection = "link";
     public const string CommandsSection = "commands";
 
     /// <summary>捕获和回放用的句柄断面。不进 <see cref="Compute"/> 的合计。</summary>
@@ -103,7 +103,7 @@ public static class CrowdSimChecksum
 
     private const uint Offset = 2166136261u, Prime = 16777619u;
     private const uint GroupsDomain = 0x67727073u;
-    private const uint JumpDomain = 0x6A756D70u;
+    private const uint LinkDomain = 0x6A756D70u;
     private const uint CommandsDomain = 0x636D6473u;
     private const uint HandlesDomain = 0x68646C73u;
 
@@ -178,21 +178,21 @@ public static class CrowdSimChecksum
 
         h = Mix(h, (uint)(movement?.Phase ?? 0));
         ulong avoidance = h;
-        ulong groups = 0, jump = 0, commands = 0;
+        ulong groups = 0, link = 0, commands = 0;
         if (sim.DiagnosticDigest)
         {
             groups = Seal(MixGroups(sim));
-            jump = Seal(MixJump(sim, movement, n));
+            link = Seal(MixLink(sim, movement, n));
             commands = Seal(MixCommands(sim));
         }
 
-        return new CrowdSimStateDigest(sim.TickCount, position, motion, state, avoidance, groups, jump, commands);
+        return new CrowdSimStateDigest(sim.TickCount, position, motion, state, avoidance, groups, link, commands);
     }
 
     /// <summary>
     /// 按 tick 对齐两串摘要，同时给出合计的第一处分歧和诊断的第一处分歧。
     /// 合计断面按 position、motion、state、avoidance 取第一个。
-    /// 诊断掩码是该诊断 tick 上有差的 groups / jump / commands。
+    /// 诊断掩码是该诊断 tick 上有差的 groups / link / commands。
     /// 共同前缀的合计一致但条数不同时，合计 Tick 为 -2，Section 为空。
     /// </summary>
     public static CrowdSimDigestDiff DiffDigest(
@@ -244,7 +244,7 @@ public static class CrowdSimChecksum
     {
         diagnostic = CrowdSimDiagnosticSection.None;
         if (left.Groups != right.Groups) diagnostic |= CrowdSimDiagnosticSection.Groups;
-        if (left.Jump != right.Jump) diagnostic |= CrowdSimDiagnosticSection.Jump;
+        if (left.Link != right.Link) diagnostic |= CrowdSimDiagnosticSection.Link;
         if (left.Commands != right.Commands) diagnostic |= CrowdSimDiagnosticSection.Commands;
 
         if (left.Position != right.Position) { section = PositionSection; return true; }
@@ -259,14 +259,14 @@ public static class CrowdSimChecksum
     public static string FormatDiagnostic(CrowdSimDiagnosticSection flags)
     {
         bool groups = (flags & CrowdSimDiagnosticSection.Groups) != 0;
-        bool jump = (flags & CrowdSimDiagnosticSection.Jump) != 0;
+        bool link = (flags & CrowdSimDiagnosticSection.Link) != 0;
         bool commands = (flags & CrowdSimDiagnosticSection.Commands) != 0;
-        if (groups && jump && commands) return "groups,jump,commands";
-        if (groups && jump) return "groups,jump";
+        if (groups && link && commands) return "groups,link,commands";
+        if (groups && link) return "groups,link";
         if (groups && commands) return "groups,commands";
-        if (jump && commands) return "jump,commands";
+        if (link && commands) return "link,commands";
         if (groups) return GroupsSection;
-        if (jump) return JumpSection;
+        if (link) return LinkSection;
         if (commands) return CommandsSection;
         return "";
     }
@@ -310,7 +310,7 @@ public static class CrowdSimChecksum
         if (left.State != right.State) names.Add(StateSection);
         if (left.Avoidance != right.Avoidance) names.Add(AvoidanceSection);
         if (left.Groups != right.Groups) names.Add(GroupsSection);
-        if (left.Jump != right.Jump) names.Add(JumpSection);
+        if (left.Link != right.Link) names.Add(LinkSection);
         if (left.Commands != right.Commands) names.Add(CommandsSection);
         if (leftHandles != rightHandles) names.Add(HandlesSection);
     }
@@ -425,9 +425,9 @@ public static class CrowdSimChecksum
         return h;
     }
 
-    internal static uint MixJump(CrowdSimSession sim, CrowdMovementKernel? movement, int n)
+    internal static uint MixLink(CrowdSimSession sim, CrowdMovementKernel? movement, int n)
     {
-        uint h = Mix(JumpDomain, (uint)n);
+        uint h = Mix(LinkDomain, (uint)n);
         for (int i = 0; i < n; i++)
         {
             CrowdSimulationKinematics kin;
@@ -454,10 +454,10 @@ public static class CrowdSimChecksum
 
             h = MixI64(h, kin.RestCm.X.RawValue);
             h = MixI64(h, kin.RestCm.Y.RawValue);
-            h = MixI64(h, kin.JumpToCm.X.RawValue);
-            h = MixI64(h, kin.JumpToCm.Y.RawValue);
-            h = MixI64(h, kin.JumpT.RawValue);
-            h = MixI64(h, kin.JumpLengthCm.RawValue);
+            h = MixI64(h, kin.LinkToCm.X.RawValue);
+            h = MixI64(h, kin.LinkToCm.Y.RawValue);
+            h = MixI64(h, kin.LinkT.RawValue);
+            h = MixI64(h, kin.LinkLengthCm.RawValue);
         }
 
         return h;

@@ -172,11 +172,11 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
     private CrowdSimulation.Nav.Pathing.PathQueryService? _pathService;
     /// <summary>地图烘焙输入(回放会话重建结构仓与全新导航用;与活会话的仓互不共享可变栅格)。</summary>
     private CrowdSimulation.World.SurfaceGrid? _surfaceGrid;
-    private CrowdSimulation.World.NavSurfaceJumpCandidate[]? _jumpCandidates;
+    private CrowdSimulation.World.NavSurfaceLinkCandidate[]? _linkCandidates;
     private CrowdSimulation.World.NavHeightField? _heights;
-    private CrowdSimulation.Nav.UpperLayerSurface? _deck;
+    private CrowdSimulation.Nav.UpperLayerSurface? _upperLayer;
     private IReadOnlyList<CrowdSimulation.World.BlockerFootprint>? _mapSurfaceBlockers;
-    private IReadOnlyList<CrowdSimulation.World.LayeredPathRecord>? _mapSurfaceBridges;
+    private IReadOnlyList<CrowdSimulation.World.LayeredPathRecord>? _mapLayeredPaths;
     private bool _stallLogged;
     private bool _pathReplyPending;
     private CrowdPlayerOrderPrefs? _orderPrefs;
@@ -452,7 +452,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             // 同步会让该判定恒为 false,成员格冻结在出生位置。
             engine.InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(
                 new CrowdSimulationSessionTickSystem(this), SystemGroup.PostMovement);
-            CrowdSimulationOrderBridge.Register(engine, this);
+            CrowdSimulationOrderAdapter.Register(engine, this);
         }
 
         // 装载只取单位模板点名的档案。全局注册表里的其它体型不进半径级。
@@ -516,13 +516,13 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             mapSurface.LayeredPaths);
         var grid = ingested.Grid;
         _surfaceGrid = grid;
-        _jumpCandidates = surface.JumpCandidates;
+        _linkCandidates = surface.LinkCandidates;
         _mapSurfaceBlockers = mapSurface.Blockers;
-        _mapSurfaceBridges = mapSurface.LayeredPaths;
+        _mapLayeredPaths = mapSurface.LayeredPaths;
         var heights = ingested.Heights;
         _heights = heights;
-        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtimeConfig);
-        _deck = deck;
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtimeConfig);
+        _upperLayer = upperLayer;
         var cache = new NavTileCache(
             runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.NavCellsPerTile,
             runtimeConfig.Navmesh.MinRegionNavCellArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -536,7 +536,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         {
             foreach (int clearance in runtimeConfig.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
-                var nav = NavContextBaker.Bake(runtimeConfig, grid, heights, deck, a, clearance, cache);
+                var nav = NavContextBaker.Bake(runtimeConfig, grid, heights, upperLayer, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
                 navs[nav.Id] = nav;
             }
@@ -620,11 +620,11 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
         // 阻挡盒索引取仓的 CSR（外扩 ReachCm）。S5 对拍会话不装阻挡盒。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
-        structures.UseUpperLayer(deck);
+        structures.UseUpperLayer(upperLayer);
         structures.InstallMapLayeredPaths(mapSurface.LayeredPaths);
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
-            runtimeConfig, heights, deck, surface.JumpCandidates);
+            runtimeConfig, heights, upperLayer, surface.LinkCandidates);
         _session.NavTileCache = cache;
         // 调试开关:每次结构变更后跑增量 vs 全量一致性检查。没有调试配置时不做。
         _session.VerifyIncrementalNav = _debug?.Session?.IncrementalNavVerify == true;
@@ -872,15 +872,15 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         // 回放是全新仿真:结构 op 会改写导航上下文,
         // 回放共享活会话的导航即带着已生效的结构变更从头跑(首个分歧恰在首个规划落地)。
         // 有结构仓的会话,回放用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存。
-        if (session.Structures != null && _surfaceGrid != null && _heights != null && _deck != null && _mapSurfaceBlockers != null)
+        if (session.Structures != null && _surfaceGrid != null && _heights != null && _upperLayer != null && _mapSurfaceBlockers != null)
         {
-            if (_mapSurfaceBridges == null)
+            if (_mapLayeredPaths == null)
             {
-                throw new InvalidOperationException("回放缺少地图桥列表，无法重建桥面层。");
+                throw new InvalidOperationException("回放缺少地图上层条带列表，无法重建上层。");
             }
 
-            // 活会话的桥面会被放桥改写。回放从地图桥重新栅格化，不复用那一份。
-            var replayDeck = UpperLayerBake.RasterizeLayeredPaths(_mapSurfaceBridges, session.Config);
+            // 活会话的上层会被放上层条带改写。回放从地图上层条带重新栅格化，不复用那一份。
+            var replayUpperLayer = UpperLayerBake.RasterizeLayeredPaths(_mapLayeredPaths, session.Config);
             var replayNavs = new Dictionary<int, NavContext>();
             var replayCache = new NavTileCache(
                 session.Config.NavtileCacheCapacity, session.Config.Hpa.NavCellsPerTile,
@@ -891,7 +891,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             {
                 foreach (int clearance in session.Config.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
                 {
-                    var nav = NavContextBaker.Bake(session.Config, _surfaceGrid, _heights, replayDeck, a, clearance, replayCache);
+                    var nav = NavContextBaker.Bake(session.Config, _surfaceGrid, _heights, replayUpperLayer, a, clearance, replayCache);
                     if (!seenIds.Add(nav.Id)) continue;
                     replayNavs[nav.Id] = nav;
                 }
@@ -900,10 +900,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             replay.ReplaceNavs(replayNavs);
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
-            replay.Structures.UseUpperLayer(replayDeck);
-            replay.Structures.InstallMapLayeredPaths(_mapSurfaceBridges);
+            replay.Structures.UseUpperLayer(replayUpperLayer);
+            replay.Structures.InstallMapLayeredPaths(_mapLayeredPaths);
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
-                session.Config, _heights, replayDeck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
+                session.Config, _heights, replayUpperLayer, _linkCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceLinkCandidate>());
             replay.NavTileCache = replayCache;
         }
         // 回放会话同样挂运动栈(一次性世界 + 自己的路径服务;不入引擎世界,不碰呈现)

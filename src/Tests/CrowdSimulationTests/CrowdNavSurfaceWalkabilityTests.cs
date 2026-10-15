@@ -78,7 +78,7 @@ public class CrowdNavSurfaceWalkabilityTests
             sources,
             linkCandidateBake: null);
 
-        Assert.That(baked.JumpCandidates, Is.Empty);
+        Assert.That(baked.LinkCandidates, Is.Empty);
         Assert.That(baked.TerrainTypeIds, Is.EqualTo(fixture.TerrainTypeIds.ToArray()));
         int cellDiffs = 0;
         for (int i = 0; i < fixture.TerrainCells.Length; i++)
@@ -102,7 +102,7 @@ public class CrowdNavSurfaceWalkabilityTests
             LinkKindIds = fixture.LinkKindIds,
             BakeInputsDigest = fixture.BakeInputsDigest,
             TerrainCells = baked.TerrainCells,
-            JumpCandidates = baked.JumpCandidates,
+            LinkCandidates = baked.LinkCandidates,
         };
         var (_, after) = S4DeployTruthTests.BuildSession(seed, withoutCandidates);
         foreach (int id in walkerNavIds)
@@ -134,7 +134,7 @@ public class CrowdNavSurfaceWalkabilityTests
         foreach (RuntimeAgentType agent in runtime.AgentTypes)
         {
             RuntimeNavProfile profile = runtime.NavProfiles[agent.NavProfileIndex];
-            if (profile.Jump != null) continue;
+            if (profile.Link != null) continue;
             if (agent.CostByArea[landArea] <= Fix64.Zero) continue;
             if (agent.CostByArea[waterArea] != Fix64.Zero) continue;
             foreach (NavContext nav in session.Navs.Values)

@@ -32,7 +32,7 @@ public class CrowdDebugViewSessionTests
 
         var frameOn = new CrowdDebugViewFrame(LoadView());
         frameOn.Funnel = frameOn.Corridor = frameOn.HpaGraph = frameOn.NavPolygons = frameOn.TileGrid = true;
-        frameOn.Flow = frameOn.Density = frameOn.Blocked = frameOn.JumpLinks = frameOn.Belief = true;
+        frameOn.Flow = frameOn.Density = frameOn.Blocked = frameOn.Links = frameOn.Belief = true;
         frameOn.UnitColorMode = CrowdSimulationDebugViewConfig.ColorTeam;
         frameOn.SetViewport(480000f, 540000f, 560000f, 620000f, 20f);
         frameOn.ControllingPlayer = 0;

@@ -34,9 +34,9 @@ public sealed class CrowdFuzzPlan
     public required int BoomRadiusCm { get; init; }
     public required Fix64 RingScale { get; init; }
     public required Fix64 Impulse { get; init; }
-    public string BridgeTemplate { get; init; } = "";
-    public int BridgeWidthCm { get; init; }
-    public int BridgeSpanCm { get; init; }
+    public string PathTemplate { get; init; } = "";
+    public int PathWidthCm { get; init; }
+    public int PathLengthCm { get; init; }
     public required IReadOnlyList<CrowdFuzzOp> Ops { get; init; }
 }
 
@@ -53,7 +53,7 @@ public sealed class CrowdFuzzResult
 public readonly record struct CrowdFuzzHandleProbe(uint Handle, int EntityId, int Version);
 
 /// <summary>
-/// 外加执行器。内建是生成、下令、放置、拆除、放桥、拆桥和爆炸。
+/// 外加执行器。内建是生成、下令、放置、拆除、放条带、拆条带和爆炸。
 /// 表里标了保留、又没有同名执行器的操作不抽中。
 /// </summary>
 public delegate void CrowdFuzzOpExecutor(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng);
@@ -318,11 +318,11 @@ public static class CrowdFuzzRunner
             case "remove":
                 ExecRemove(session, plan, rng);
                 return;
-            case "placeBridge":
-                ExecPlaceBridge(session, plan, rng);
+            case "placePath":
+                ExecPlacePath(session, plan, rng);
                 return;
-            case "removeBridge":
-                ExecRemoveBridge(session, plan, rng);
+            case "removePath":
+                ExecRemovePath(session, plan, rng);
                 return;
             case "kill":
                 ExecKill(session, plan, rng);
@@ -454,15 +454,15 @@ public static class CrowdFuzzRunner
         session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
     }
 
-    private static void ExecPlaceBridge(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng)
+    private static void ExecPlacePath(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng)
     {
-        if (plan.BridgeWidthCm <= 0 || plan.BridgeSpanCm <= 0 || string.IsNullOrWhiteSpace(plan.BridgeTemplate))
+        if (plan.PathWidthCm <= 0 || plan.PathLengthCm <= 0 || string.IsNullOrWhiteSpace(plan.PathTemplate))
         {
-            throw new InvalidOperationException("放桥需要 bridgeTemplate、bridgeWidthCm 和 bridgeSpanCm。");
+            throw new InvalidOperationException("放条带需要 pathTemplate、pathWidthCm 和 pathLengthCm。");
         }
 
         int side = WorldSideCm(session);
-        int half = plan.BridgeWidthCm / 2;
+        int half = plan.PathWidthCm / 2;
         int lo = half;
         int hi = side - half;
         int x0;
@@ -479,24 +479,24 @@ public static class CrowdFuzzRunner
             int room = hi - lo;
             x0 = lo + NextInt(rng, room);
             y = lo + NextInt(rng, room);
-            int span = Math.Min(plan.BridgeSpanCm, hi - x0);
+            int span = Math.Min(plan.PathLengthCm, hi - x0);
             x1 = x0 + span;
         }
 
         var cmd = new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
-            TemplateId = plan.BridgeTemplate,
+            TemplateId = plan.PathTemplate,
             XCm = x0,
             YCm = y,
-            SizeCm = plan.BridgeWidthCm,
+            SizeCm = plan.PathWidthCm,
             ToXCm = x1,
             ToYCm = y,
         };
         session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
     }
 
-    private static void ExecRemoveBridge(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng)
+    private static void ExecRemovePath(CrowdSimSession session, CrowdFuzzPlan plan, CrowdSimRng rng)
     {
         var store = session.Structures;
         if (store == null) return;

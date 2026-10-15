@@ -114,7 +114,7 @@ public sealed class CrowdMovementKernel
     public required Fix64 UnitTurnRate { get; init; }
     public required Fix64 StopSpeedRatio { get; init; }
     public required Fix64 SpeedCapRatio { get; init; }
-    public required Fix64 JumpSpeedRatio { get; init; }
+    public required Fix64 LinkSpeedRatio { get; init; }
     public required Fix64 LeaderSpeed { get; init; }
     public required Fix64 LeaderTurnRate { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
@@ -285,7 +285,7 @@ public sealed class CrowdMovementKernel
         var units = Session.Units;
         var world = Session.World;
         int n = units.Count;
-        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, traversing = 0;
         int contacts = 0;
         ushort[] contactCounts = Contacts;
         int contactN = contactCounts.Length;
@@ -298,7 +298,7 @@ public sealed class CrowdMovementKernel
                 case (byte)CrowdUnitState.Moving: moving++; break;
                 case (byte)CrowdUnitState.Arrived: arrived++; break;
                 case (byte)CrowdUnitState.Unreachable: unreachable++; break;
-                case (byte)CrowdUnitState.Jump: jumping++; break;
+                case (byte)CrowdUnitState.Traversing: traversing++; break;
             }
         }
 
@@ -330,7 +330,7 @@ public sealed class CrowdMovementKernel
         }
 
         ContactSum = contacts;
-        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
+        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, traversing);
     }
 
     /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>
@@ -706,8 +706,8 @@ public sealed class CrowdMovementKernel
             UnitTurnRate = mv.UnitTurnRateRadPerSec,
             StopSpeedRatio = mv.StopSpeedRatio,
             SpeedCapRatio = mv.SpeedCapRatio,
-            // 没有链接种类时没有单位会进入 Jump 状态，这个倍率不会被读。
-            JumpSpeedRatio = cfg.LinkKinds.Count > 0 ? cfg.LinkKinds[0].TraversalSpeedRatio : Fix64.Zero,
+            // 没有链接种类时没有单位会进入 Traversing 状态，这个倍率不会被读。
+            LinkSpeedRatio = cfg.LinkKinds.Count > 0 ? cfg.LinkKinds[0].TraversalSpeedRatio : Fix64.Zero,
             LeaderSpeed = fc.LeaderSpeed,
             LeaderTurnRate = fc.LeaderTurnRatePerSec,
             FaceTurnScale = fc.FaceTurnScale,

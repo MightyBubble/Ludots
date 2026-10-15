@@ -35,7 +35,7 @@ internal sealed class CrowdDebugViewFrame
     private int _cacheNav = int.MinValue;
     private int _cacheVersion = int.MinValue;
     private int _cacheFlags = -1;
-    private int _poly0, _polyN, _hpa0, _hpaN, _jump0, _jumpN, _nodeN;
+    private int _poly0, _polyN, _hpa0, _hpaN, _link0, _linkN, _nodeN;
     private int _diffCount;
     private int _ghostStat;
     private FlowField? _firstFlow;
@@ -62,7 +62,7 @@ internal sealed class CrowdDebugViewFrame
     internal bool Flow;
     internal bool Density;
     internal bool Blocked;
-    internal bool JumpLinks;
+    internal bool Links;
     internal bool Belief;
     internal int UnitColorMode;
     internal int LayerIndex;
@@ -85,7 +85,7 @@ internal sealed class CrowdDebugViewFrame
         Flow = config.Overlays.Flow;
         Density = config.Overlays.Density;
         Blocked = config.Overlays.Blocked;
-        JumpLinks = config.Overlays.JumpLinks;
+        Links = config.Overlays.Links;
         Belief = config.Overlays.Belief;
         UnitColorMode = config.UnitColorMode;
         LayerIndex = config.Inspect.LayerIndex;
@@ -101,7 +101,7 @@ internal sealed class CrowdDebugViewFrame
     }
 
     internal bool Visible =>
-        Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || JumpLinks || Belief
+        Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || Links || Belief
         || TerrainTypes
         || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff;
 
@@ -113,7 +113,7 @@ internal sealed class CrowdDebugViewFrame
 
     /// <summary>宿主只有一个流场或可走贴花槽。调试场层打开时占住它，不再叠演示流场。地形类型叠层占用同一槽。</summary>
     internal bool OwnsDecal =>
-        Corridor || Blocked || Density || Belief || Flow || NavPolygons || HpaGraph || JumpLinks || TerrainTypes;
+        Corridor || Blocked || Density || Belief || Flow || NavPolygons || HpaGraph || Links || TerrainTypes;
 
     internal static bool ArrowsAllowed(float cellPx, int minPx) => cellPx >= minPx;
 
@@ -148,7 +148,7 @@ internal sealed class CrowdDebugViewFrame
         if (actions.PressedThisTick(bindings.ToggleFlow)) Flow = !Flow;
         if (actions.PressedThisTick(bindings.ToggleDensity)) Density = !Density;
         if (actions.PressedThisTick(bindings.ToggleObstacles)) Blocked = !Blocked;
-        if (actions.PressedThisTick(bindings.ToggleJumpLinks)) JumpLinks = !JumpLinks;
+        if (actions.PressedThisTick(bindings.ToggleLinks)) Links = !Links;
         if (actions.PressedThisTick(bindings.ToggleBelief)) Belief = !Belief;
         if (actions.PressedThisTick(bindings.ToggleNavPanel)) NavPanel = !NavPanel;
         if (actions.PressedThisTick(bindings.ToggleTelemetryPanel)) TelemetryPanel = !TelemetryPanel;
@@ -193,7 +193,7 @@ internal sealed class CrowdDebugViewFrame
         int cell = session.Config.NavCellSizeCm;
         int n = session.Config.NavCellsPerSide;
         int tile = session.Config.Hpa.NavCellsPerTile;
-        if (NavPolygons || HpaGraph || JumpLinks)
+        if (NavPolygons || HpaGraph || Links)
             EmitCached(session, overlay, projector, height, ref used, budget);
         if (TileGrid)
             EmitGenerated(CrowdDebugOverlayGeometry.AppendTileGrid(n, tile, cell, Scratch(), 0), overlay, projector, height, ref used, budget, _config.Colors.Tile.ToVector4(), 1f);
@@ -217,7 +217,7 @@ internal sealed class CrowdDebugViewFrame
     /// <summary>分歧数与残影数是上一次 <see cref="Draw"/>/<see cref="Project"/> 准备视口时读到的值。</summary>
     internal void ReadInspect(ref CrowdInspectReadout readout)
     {
-        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid || Density || Blocked || TerrainTypes;
+        bool nav = Corridor || Flow || NavPolygons || HpaGraph || Links || TileGrid || Density || Blocked || TerrainTypes;
         readout.NavOverlays = nav;
         readout.LayerIndex = LayerIndex;
         readout.RadiusIndex = RadiusIndex;
@@ -241,7 +241,7 @@ internal sealed class CrowdDebugViewFrame
         int step = CrowdDebugOverlayGeometry.StepFor(spanX, spanY, _config.MaxFieldCells);
         int bw = (spanX + step - 1) / step;
         int bh = (spanY + step - 1) / step;
-        bool paper = NavPolygons || HpaGraph || JumpLinks;
+        bool paper = NavPolygons || HpaGraph || Links;
         if (paper)
             FillRect(buffer, _config.Layers.Paper, cell, step, bw, bh, _config.Colors.Paper.ToVector4());
         if (Corridor)
@@ -280,7 +280,7 @@ internal sealed class CrowdDebugViewFrame
         _firstFlow = null;
         if (Corridor || Flow)
             _firstFlow = FirstFlow(session);
-        int flags = (NavPolygons ? 1 : 0) | (HpaGraph ? 2 : 0) | (JumpLinks ? 4 : 0);
+        int flags = (NavPolygons ? 1 : 0) | (HpaGraph ? 2 : 0) | (Links ? 4 : 0);
         if (flags != 0 && TryInspectNav(session, out var nav))
             EnsureNavCache(nav, session.Config.NavCellsPerSide, session.Config.Hpa.NavCellsPerTile, session.Config.NavCellSizeCm, flags);
         else if (flags == 0)
@@ -305,7 +305,7 @@ internal sealed class CrowdDebugViewFrame
         if (_engine == null || !TryView(out var projector, out var rays, out var height, out var view)) return;
         float width = view.Resolution.X, heightPx = view.Resolution.Y;
         if (width <= 1f || heightPx <= 1f) return;
-        if (!TryGround(rays, height, width * 0.5f, heightPx * 0.5f, out float cx, out float cy, out float cz)) return;
+        if (!CrowdSurfacePick.TryRaycast(rays, height, width * 0.5f, heightPx * 0.5f, out float cx, out float cy, out float cz)) return;
         var origin = projector.WorldToScreen(ToWorld(cx, cy, cz));
         var stepped = projector.WorldToScreen(ToWorld(cx + cellCm, cy, cz));
         if (!float.IsNaN(origin.X) && !float.IsNaN(stepped.X))
@@ -318,7 +318,7 @@ internal sealed class CrowdDebugViewFrame
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
         for (int i = 0; i < corners.Length; i++)
         {
-            if (!TryGround(rays, height, corners[i].X, corners[i].Y, out float x, out float y, out _)) return;
+            if (!CrowdSurfacePick.TryRaycast(rays, height, corners[i].X, corners[i].Y, out float x, out float y, out _)) return;
             if (x < minX) minX = x;
             if (y < minY) minY = y;
             if (x > maxX) maxX = x;
@@ -343,21 +343,6 @@ internal sealed class CrowdDebugViewFrame
             && _engine.TryGetService(CoreServiceKeys.ScreenRayProvider, out rays!) && rays != null
             && _engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out height!) && height != null
             && _engine.TryGetService(CoreServiceKeys.ViewController, out view!) && view != null;
-    }
-
-    private static bool TryGround(IScreenRayProvider rays, IContinuousHeightmap height, float x, float y, out float worldX, out float worldY, out float heightCm)
-    {
-        var ray = rays.GetRay(new Vector2(x, y));
-        if (!height.TryRaycastGround(in ray, out var hit))
-        {
-            worldX = worldY = heightCm = 0f;
-            return false;
-        }
-
-        worldX = hit.WorldXCm;
-        worldY = hit.WorldYCm;
-        heightCm = hit.HeightCm;
-        return true;
     }
 
     private void SyncCells(CrowdSimSession session)
@@ -429,7 +414,7 @@ internal sealed class CrowdDebugViewFrame
         if (_world.Length < _config.MaxWorldSegments)
             _world = new CrowdDebugSegment[_config.MaxWorldSegments];
         int w = 0;
-        _poly0 = _polyN = _hpa0 = _hpaN = _jump0 = _jumpN = _nodeN = 0;
+        _poly0 = _polyN = _hpa0 = _hpaN = _link0 = _linkN = _nodeN = 0;
         if ((flags & 1) != 0)
         {
             _poly0 = 0;
@@ -448,8 +433,8 @@ internal sealed class CrowdDebugViewFrame
 
         if ((flags & 4) != 0)
         {
-            _jump0 = w;
-            _jumpN = CrowdDebugOverlayGeometry.AppendJumps(nav.Links, n, cellCm, _world, w);
+            _link0 = w;
+            _linkN = CrowdDebugOverlayGeometry.AppendLinks(nav.Links, n, cellCm, _world, w);
         }
 
         _cacheNav = nav.Id;
@@ -465,7 +450,7 @@ internal sealed class CrowdDebugViewFrame
         if (_world == null || _cacheFlags <= 0) return;
         if (NavPolygons) EmitRange(_poly0, _polyN, overlay, projector, height, ref used, budget, 1f);
         if (HpaGraph) EmitRange(_hpa0, _hpaN, overlay, projector, height, ref used, budget, 1f);
-        if (JumpLinks) EmitRange(_jump0, _jumpN, overlay, projector, height, ref used, budget, 1f);
+        if (Links) EmitRange(_link0, _linkN, overlay, projector, height, ref used, budget, 1f);
     }
 
     private void EmitRange(int offset, int count, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, float alphaScale)

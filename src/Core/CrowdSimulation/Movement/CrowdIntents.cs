@@ -143,7 +143,7 @@ public static class CrowdIntents
         int cx = CellCoord(px, s.NavCellSizeCm), cy = CellCoord(py, s.NavCellSizeCm);
         int cell = cy * s.NavN + cx;
 
-        // 桥头双层可走时比较 flow.Integ。等积分时用路点跨层打破平局。
+        // 入口双层可走时比较 flow.Integ。等积分时用路点跨层打破平局。
         if (nav.Portal[cell] != 0 && nav.Passable[cell] != 0 && nav.UpPass[cell] != 0)
         {
             Fix64 a = flow.Integ[cell], b = flow.Integ[s.N2 + cell];
@@ -157,11 +157,11 @@ public static class CrowdIntents
         int lv = state.Level;
         byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
 
-        // 到达优先于跳跃——已在目标可达范围内的单位不起跳
+        // 到达优先于穿越——已在目标可达范围内的单位不进入链接
         if (lv == 0 && flow.Lk != null && flow.Lk[cell] >= 0 &&
             !(CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, lv) <= k.GoalArriveNavCells))
         {
-            if (TryStartJump(ref state, ref kin, flow.Links!, flow.Lk[cell], nav, s.NavN, session.Config.NavCellSizeCm, pos))
+            if (TryStartLinkTraversal(ref state, ref kin, flow.Links!, flow.Lk[cell], nav, s.NavN, session.Config.NavCellSizeCm, pos))
             {
                 Store(ref p, state, kin, ix, iy);
                 return;
@@ -179,7 +179,7 @@ public static class CrowdIntents
         int sc = tx >= Fix64.Zero && ty >= Fix64.Zero && tx < s.WorldSizeCm && ty < s.WorldSizeCm
             ? CellCoord(ty, s.NavCellSizeCm) * s.NavN + CellCoord(tx, s.NavCellSizeCm)
             : -1;
-        // 槽位在地面(目标层)才算数;桥面上只跟流场
+        // 槽位在底层(目标层)才算数;在上层只跟流场
         bool slotOk = !converge && lv == 0 && sc >= 0 && pass[sc] == 1 && nav.Comp[sc] == g.GoalComp;
 
         if (!slotOk)
@@ -345,8 +345,8 @@ public static class CrowdIntents
 
     private static Fix64 Square(Fix64 v) => v * v;
 
-    /// <summary>落点保底是链接末端格心,且必须可走;保不住就不跳。</summary>
-    private static bool TryStartJump(
+    /// <summary>落点保底是链接末端格心,且必须可走;保不住就不穿越。</summary>
+    private static bool TryStartLinkTraversal(
         ref CrowdSimulationUnitState state, ref CrowdSimulationKinematics kin,
         NavLinkSet links, int linkIndex, NavContext nav, int navCellsPerSide, int navCellSizeCm, Fix64Vec2 pos)
     {
@@ -363,11 +363,11 @@ public static class CrowdIntents
             ty = (Fix64.FromInt(b / navCellsPerSide) + Fix64.HalfValue) * navCellCm;
         }
 
-        state.State = (byte)CrowdUnitState.Jump;
+        state.State = (byte)CrowdUnitState.Traversing;
         kin.RestCm = new Fix64Vec2(px, py);
-        kin.JumpToCm = new Fix64Vec2(tx, ty);
-        kin.JumpT = Fix64.Zero;
-        kin.JumpLengthCm = Fix64.Max(Fix64.FromFloat(1e-3f), Fix64Math.Sqrt(Square(tx - px) + Square(ty - py)));
+        kin.LinkToCm = new Fix64Vec2(tx, ty);
+        kin.LinkT = Fix64.Zero;
+        kin.LinkLengthCm = Fix64.Max(Fix64.FromFloat(1e-3f), Fix64Math.Sqrt(Square(tx - px) + Square(ty - py)));
         return true;
     }
 }

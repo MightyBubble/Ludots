@@ -1327,7 +1327,7 @@ app.MapPost("/api/mods/{modId}/maps/{mapId}/crowd-navsurface", async (string mod
             cellsX = asset.NavCellsX,
             cellsY = asset.NavCellsY,
             terrainCount = asset.TerrainTypeIds.Length,
-            jumpCount = asset.JumpCandidates.Length,
+            linkCandidateCount = asset.LinkCandidates.Length,
         });
     }
     catch (Exception ex)

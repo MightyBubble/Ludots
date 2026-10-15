@@ -10,13 +10,13 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
-/// <summary>增量重烘的烘焙输入(会话装载期的同源数据:配置 / 高度场 / 桥面 / 跳跃候选;
+/// <summary>增量重烘的烘焙输入(会话装载期的同源数据:配置 / 高度场 / 上层 / 链接候选;
 /// 区域与阻挡栅格的活数据在 CrowdStructuresStore 上,快照面经 SnapshotSurface 取)。</summary>
 public sealed record CrowdRebakeSources(
     CrowdSimulationRuntimeConfig Config,
     NavHeightField HeightS,
     UpperLayerSurface UpperLayer,
-    NavSurfaceJumpCandidate[] JumpCandidates)
+    NavSurfaceLinkCandidate[] LinkCandidates)
 {
     internal readonly CrowdRebakeResultScratch Results = new();
 }
@@ -27,7 +27,7 @@ public sealed class CrowdNavRebakeContextResult
     public int NavId { get; set; }
     /// <summary>脏 tile(tile id 升序);空表 = 该上下文什么都看不到,什么都不失效。</summary>
     public List<int> DirtyTiles { get; set; } = new();
-    /// <summary>0 = 无变化,2 = 可走位翻转。1 = 代价或速度除数变了,或可走位没变但 tile 条目换了。道路/泛洪/火场只对把这些区域标成可走的移动类型是 1；该行写 false 的区域铺上去是 2。</summary>
+    /// <summary>0 = 无变化,2 = 可走位翻转。1 = 代价或速度除数变了,或可走位没变但 tile 条目换了。改区域的结构只对把目标区域标成可走的移动类型是 1；该行写 false 的区域铺上去是 2。</summary>
     public int Kind { get; set; }
 }
 
@@ -54,7 +54,7 @@ internal sealed class CrowdRebakeResultScratch
 /// 结构变更后的导航增量重烘:
 /// 变更格矩形 → 逐上下文重分类(见 Kind)→
 /// 可走位翻转时净空腐蚀矩形重算、触到的 tile 重烘(内容键缓存命中即复用)、
-/// 连通域与跳跃链接重标、HPA 增量维护;仅代价时 tile 多边形与 HPA 块代价现读重算。
+/// 连通域与链接重标、HPA 增量维护;仅代价时 tile 多边形与 HPA 块代价现读重算。
 /// 与同栅格的全量烘焙按覆盖字段逐格一致(一致性检查见 VerifyAgainstFullBake)。
 /// </summary>
 public static class CrowdNavRebake
@@ -184,9 +184,9 @@ public static class CrowdNavRebake
     }
 
     /// <summary>
-    /// 桥面可走比足迹多出两倍腐蚀半径：岸边并入一圈，净空腐蚀再一圈。
-    /// 腐蚀输入比输出再大一圈，桥头检索再大一圈，窗口内的结果才和整图腐蚀一致。
-    /// 窗口里没有桥面也没有残留桥面可走时不碰缓冲。
+    /// 上层可走比足迹多出两倍腐蚀半径：入口旁的底层格并入一圈，净空腐蚀再一圈。
+    /// 腐蚀输入比输出再大一圈，入口检索再大一圈，窗口内的结果才和整图腐蚀一致。
+    /// 窗口里没有上层也没有残留上层可走时不碰缓冲。
     /// </summary>
     private static int RefreshUpper(
         NavContext nav,
@@ -403,7 +403,7 @@ public static class CrowdNavRebake
         return prev;
     }
 
-    /// <summary>变更矩形内重分类。0 = 本上下文看不到任何变化。1 = 代价或速度除数变了。2 = 有可走位翻转。道路/泛洪/火场只对把这些区域标成可走的移动类型是 1。</summary>
+    /// <summary>变更矩形内重分类。0 = 本上下文看不到任何变化。1 = 代价或速度除数变了。2 = 有可走位翻转。改区域的结构只对把目标区域标成可走的移动类型是 1。</summary>
     private static int Classify(
         NavContext nav,
         CrowdRebakeSources sources,
@@ -559,8 +559,8 @@ public static class CrowdNavRebake
     }
 
     /// <summary>可走位翻转的收尾:连通域重标(全格 4 连通洪泛,
-    /// 与全量烘焙同一份划分)+ 桥面合并 + 升序格表重扫 + 链接(端点触矩形才整表重建,否则只
-    /// 重导出连通域图)+ 桥面可达 + HPA 增量。</summary>
+    /// 与全量烘焙同一份划分)+ 上层合并 + 升序格表重扫 + 链接(端点触矩形才整表重建,否则只
+    /// 重导出连通域图)+ 上层可达 + HPA 增量。</summary>
     private static void FinishPassable(
         NavContext nav,
         CrowdRebakeSources sources,
@@ -591,9 +591,9 @@ public static class CrowdNavRebake
         nav.CompCount = compCount;
         ScanCells(nav);
 
-        // 链接:只有跳跃候选端点落在重算矩形里,可走位变化才可能改链表;否则链表保留、仅重导出域图
+        // 链接:只有链接候选端点落在重算矩形里,可走位变化才可能改链表;否则链表保留、仅重导出域图
         var profile = config.NavProfiles[config.AgentTypes[nav.LayerIndex].NavProfileIndex];
-        bool relink = profile.Jump != null && LinksTouch(sources.JumpCandidates, rect, navCellsPerSide);
+        bool relink = profile.Link != null && LinksTouch(sources.LinkCandidates, rect, navCellsPerSide);
         if (relink)
         {
             nav.Links = NavContextBaker.BuildLinks(config, store.SnapshotSurface(), profile, nav.Passable, comp);
@@ -663,8 +663,8 @@ public static class CrowdNavRebake
         set.Add(to);
     }
 
-    /// <summary>跳跃候选端点是否触到格矩形。</summary>
-    private static bool LinksTouch(NavSurfaceJumpCandidate[] candidates, (int X0, int Y0, int X1, int Y1) rect, int navCellsPerSide)
+    /// <summary>链接候选端点是否触到格矩形。</summary>
+    private static bool LinksTouch(NavSurfaceLinkCandidate[] candidates, (int X0, int Y0, int X1, int Y1) rect, int navCellsPerSide)
     {
         foreach (var cand in candidates)
         {
@@ -727,7 +727,7 @@ public static class CrowdNavRebake
         }
     }
 
-    /// <summary>一份导航与给定地表的全量烘焙逐字段比对。认知变体的跳跃链接只比数量。</summary>
+    /// <summary>一份导航与给定地表的全量烘焙逐字段比对。认知变体的链接只比数量。</summary>
     public static void VerifyAgainstField(
         NavContext nav,
         CrowdStructuresStore field,
@@ -770,14 +770,14 @@ public static class CrowdNavRebake
             if (inc.SpeedDivisor[i] != full.SpeedDivisor[i]) ThrowMismatch(tick, inc, i, -1, $"增量速度除数与全量不一致 @格 {i}");
             if (inc.Walk[i] != full.Walk[i]) ThrowMismatch(tick, inc, i, -1, $"增量可走与全量不一致 @格 {i}");
             if (inc.Passable[i] != full.Passable[i]) ThrowMismatch(tick, inc, i, -1, $"增量可通行与全量不一致 @格 {i}");
-            if (inc.UpPass[i] != full.UpPass[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面可通行与全量不一致 @格 {i}");
-            if (inc.Portal[i] != full.Portal[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥头与全量不一致 @格 {i}");
-            if (inc.UpArea[i] != full.UpArea[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面区域与全量不一致 @格 {i}");
-            if (inc.UpCost[i] != full.UpCost[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面代价与全量不一致 @格 {i}");
-            if (inc.UpSpeedDivisor[i] != full.UpSpeedDivisor[i]) ThrowMismatch(tick, inc, i, -1, $"增量桥面速度除数与全量不一致 @格 {i}");
+            if (inc.UpPass[i] != full.UpPass[i]) ThrowMismatch(tick, inc, i, -1, $"增量上层可通行与全量不一致 @格 {i}");
+            if (inc.Portal[i] != full.Portal[i]) ThrowMismatch(tick, inc, i, -1, $"增量入口与全量不一致 @格 {i}");
+            if (inc.UpArea[i] != full.UpArea[i]) ThrowMismatch(tick, inc, i, -1, $"增量上层区域与全量不一致 @格 {i}");
+            if (inc.UpCost[i] != full.UpCost[i]) ThrowMismatch(tick, inc, i, -1, $"增量上层代价与全量不一致 @格 {i}");
+            if (inc.UpSpeedDivisor[i] != full.UpSpeedDivisor[i]) ThrowMismatch(tick, inc, i, -1, $"增量上层速度除数与全量不一致 @格 {i}");
         }
 
-        VerifyPartition(inc, inc.Comp, full.Comp, tick, "地面连通域");
+        VerifyPartition(inc, inc.Comp, full.Comp, tick, "底层连通域");
         if (inc.CellCount != full.CellCount)
         {
             ThrowMismatch(tick, inc, -1, -1, $"增量格表长度 {inc.CellCount} ≠ 全量 {full.CellCount}");
@@ -787,12 +787,12 @@ public static class CrowdNavRebake
         {
             if (inc.UpComp != null || full.UpComp != null)
             {
-                ThrowMismatch(tick, inc, -1, -1, "桥面连通域存在性不一致");
+                ThrowMismatch(tick, inc, -1, -1, "上层连通域存在性不一致");
             }
         }
         else
         {
-            VerifyPartition(inc, inc.UpComp, full.UpComp, tick, "桥面连通域");
+            VerifyPartition(inc, inc.UpComp, full.UpComp, tick, "上层连通域");
         }
 
         if (inc.CompCountTotal != full.CompCountTotal)
@@ -812,7 +812,7 @@ public static class CrowdNavRebake
         VerifyHpa(inc, full.Hpa!, tick);
     }
 
-    /// <summary>桥面编号按同一套 4 连通划分比对；可达图按这个划分下的边集比对，边集相同则 CanReach 相同。</summary>
+    /// <summary>上层编号按同一套 4 连通划分比对；可达图按这个划分下的边集比对，边集相同则 CanReach 相同。</summary>
     private static void VerifyReach(NavContext inc, NavContext full, int tick)
     {
         var mapInc = CanonIds(inc);
@@ -958,18 +958,18 @@ public static class CrowdNavRebake
         var right = full.Tiles;
         if (left == null || right == null)
         {
-            if (left != null || right != null) ThrowMismatch(tick, inc, -1, -1, "地面 tile 表存在性不一致");
+            if (left != null || right != null) ThrowMismatch(tick, inc, -1, -1, "底层 tile 表存在性不一致");
             return;
         }
 
         if (left.Length != right.Length)
         {
-            ThrowMismatch(tick, inc, -1, -1, $"地面 tile 数 {left.Length} ≠ 全量 {right.Length}");
+            ThrowMismatch(tick, inc, -1, -1, $"底层 tile 数 {left.Length} ≠ 全量 {right.Length}");
         }
 
         for (int i = 0; i < left.Length; i++)
         {
-            CompareTile(inc, left[i], right[i], tick, i, "地面");
+            CompareTile(inc, left[i], right[i], tick, i, "底层");
         }
     }
 
@@ -979,25 +979,25 @@ public static class CrowdNavRebake
         var right = full.UpperTiles;
         if (left == null || right == null)
         {
-            if (left != null || right != null) ThrowMismatch(tick, inc, -1, -1, "桥面 tile 表存在性不一致");
+            if (left != null || right != null) ThrowMismatch(tick, inc, -1, -1, "上层 tile 表存在性不一致");
             return;
         }
 
         if (left.Count != right.Count)
         {
-            ThrowMismatch(tick, inc, -1, -1, $"桥面 tile 数 {left.Count} ≠ 全量 {right.Count}");
+            ThrowMismatch(tick, inc, -1, -1, $"上层 tile 数 {left.Count} ≠ 全量 {right.Count}");
         }
 
         foreach (var kv in left)
         {
             if (!right.TryGetValue(kv.Key, out var other))
             {
-                ThrowMismatch(tick, inc, -1, kv.Key, $"桥面 tile {kv.Key} 全量没有");
+                ThrowMismatch(tick, inc, -1, kv.Key, $"上层 tile {kv.Key} 全量没有");
             }
 
-            CompareTile(inc, kv.Value.Entry, other.Entry, tick, kv.Key, "桥面");
-            CompareInts(inc, kv.Value.Portals, kv.Value.Portals.Length, other.Portals, other.Portals.Length, tick, kv.Key, "桥面 portal");
-            CompareFix(inc, kv.Value.PolyCost, kv.Value.PolyCost.Length, other.PolyCost, other.PolyCost.Length, tick, kv.Key, "桥面多边形代价");
+            CompareTile(inc, kv.Value.Entry, other.Entry, tick, kv.Key, "上层");
+            CompareInts(inc, kv.Value.Portals, kv.Value.Portals.Length, other.Portals, other.Portals.Length, tick, kv.Key, "上层 portal");
+            CompareFix(inc, kv.Value.PolyCost, kv.Value.PolyCost.Length, other.PolyCost, other.PolyCost.Length, tick, kv.Key, "上层多边形代价");
         }
     }
 

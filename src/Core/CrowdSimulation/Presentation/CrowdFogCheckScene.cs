@@ -32,8 +32,8 @@ internal sealed class CrowdFogCheckScene
     [JsonRequired] public int UnseenSizeCm { get; init; }
     [JsonRequired] public int LeaveXCm { get; init; }
     [JsonRequired] public int LeaveYCm { get; init; }
-    [JsonRequired] public int WaterXCm { get; init; }
-    [JsonRequired] public int WaterYCm { get; init; }
+    [JsonRequired] public int ProbeXCm { get; init; }
+    [JsonRequired] public int ProbeYCm { get; init; }
     [JsonRequired] public int GoalXCm { get; init; }
     [JsonRequired] public int GoalYCm { get; init; }
     [JsonRequired] public string OrderShape { get; init; } = "";

@@ -26,10 +26,11 @@ T="dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -c Release --no
 ## 第 1 步：生成骨架
 
 ```bash
-$T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_minimal --dir mods/showcases/crowd_simulation
+$T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_minimal \
+  --terrainTypes land,water --navProfile foot --agentType foot --dir mods/showcases/crowd_simulation
 ```
 
-`--template crowd-data` 只写数据文件，不生成工程文件和入口类；`--mapId` 必填，目录已存在就拒绝。生成的文件：
+`--template crowd-data` 只写数据文件，不生成工程文件和入口类；`--mapId` 必填，目录已存在就拒绝。`--terrainTypes`、`--navProfile`、`--agentType` 也必填：骨架里不写死任何地形、通行行或移动类型的 id，这三个值原样写进 `navmesh.json` 的 `terrainTypes`、体型的 `navProfileId` 和单位模板的 `agentTypeId`，必须是依赖的标准参数 Mod 里已有的 id。`--terrainTypes` 用逗号分隔，按 `.navsurface` 格值的顺序，不能有空项或重复。生成的文件：
 
 | 文件 | 内容 |
 | --- | --- |
@@ -38,7 +39,7 @@ $T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_m
 | `assets/Engine/clock.json` | `{ "FixedHz": 30 }`。核心默认 20，群体地图的时钟由地图 Mod 自己写 |
 | `assets/Camera/virtual_cameras.json` | 虚拟相机 `<ModId>.Camera`，地图 `DefaultCamera` 引用它 |
 | `assets/Navigation/navmesh.json` | `maps.<mapId>`：`solver`、`logicTerrainAsset`、`navCellSizeCm`、`terrainTypes`（见第 2 步） |
-| `assets/Navigation/agent_profiles.json` | 体型 `<mapId>_unit`：`radiusCm` 150，`navProfileId` 是 `foot` |
+| `assets/Navigation/agent_profiles.json` | 体型 `<mapId>_unit`：`radiusCm` 150，`navProfileId` 是 `--navProfile` 给的值 |
 | `assets/Maps/<mapId>.json` | 一块 1,600,000 cm 的 `Grid` 板、高度图路径、相机、两个敌对队伍、两名玩家（见第 4 步） |
 | `assets/Entities/templates.json` | 队伍、玩家、单位三个模板（见第 6 步） |
 | `assets/Presentation/presenters.json`、`mesh_assets.json` | 单位的表现和网格（见第 6 步） |
@@ -151,7 +152,7 @@ dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Releas
 
 - `CrowdSimulationMinimalModTests.StoredNavSurface_IsFreshLudotsBake`：入库的 `.navsurface` 和现烤结果逐字节一致。
 - `CrowdSimulationMinimalModTests.TwoPlayers_GoAroundTheWall_StayOffBlockedAndWater_AndArriveSpread`：按真实的 Mod 装载和进图路径跑 2000 tick。每个 tick 检查没有单位站在阻挡格或水格上；到了墙东侧的单位，走过的行必须越过墙的南端或北端；至少 95% 的单位到达且在墙东侧；每名玩家的到达点最近两两距离不小于两个半径，外接半径不小于 150·√N 厘米，确认没有挤成一点。实测 399/400 到达，没到的那个卡在凹角里，原因见下面第 8 条。
-- `CrowdModScaffoldTests`：`mod init --template crowd-data` 的骨架跑完三条 nav 命令后能进图，两名玩家的单位朝对方走；目录已存在、缺 `--mapId` 时拒绝。
+- `CrowdModScaffoldTests`：`mod init --template crowd-data` 的骨架跑完三条 nav 命令后能进图，两名玩家的单位朝对方走；目录已存在、缺 `--mapId` 时拒绝；`--terrainTypes` 缺、有空项或重复，`--navProfile`、`--agentType` 缺时也拒绝。
 - `CrowdAuthoringStartTests`：`--rect` 的覆盖顺序和报错，平高度图解码回指定高度。
 
 验收截图在 `artifacts/acceptance/crowdsimulation-minimal/`：`crowd_minimal_around_wall.png` 是单位绕墙北端，`crowd_minimal_fog_aligned.png` 是关掉地形叠层后玩家 1 的迷雾。

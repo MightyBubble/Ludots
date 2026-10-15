@@ -10,7 +10,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
-/// 地形调色板加坡度暗部。只在安装路径注入时替换路线视图的地面；
+/// 地形调色板加坡度暗部。只在安装路径注入时替换路线视图的地表底色；
 /// 没有高度场的两参演示投影器仍写流场。
 /// </summary>
 internal sealed class CrowdTerrainPaletteProjector : IGlobalFieldVisualProjector

@@ -63,7 +63,7 @@ public static class CrowdSimPartitions
             ? CrowdSimChecksum.Mix(PlannerDomain, 0)
             : sim.Planner.MixInFlight(PlannerDomain);
         destination.Add(new CrowdSimPartition("planner", CrowdSimChecksum.Seal(planner)));
-        destination.Add(new CrowdSimPartition("jump", CrowdSimChecksum.Seal(CrowdSimChecksum.MixJump(sim, movement, n))));
+        destination.Add(new CrowdSimPartition(CrowdSimChecksum.LinkSection, CrowdSimChecksum.Seal(CrowdSimChecksum.MixLink(sim, movement, n))));
         destination.Add(new CrowdSimPartition("commands", CrowdSimChecksum.Seal(CrowdSimChecksum.MixCommands(sim))));
         destination.Add(new CrowdSimPartition("fog", CrowdSimChecksum.Seal(MixFog(sim))));
         destination.Add(new CrowdSimPartition("belief", CrowdSimChecksum.Seal(MixBelief(sim))));

@@ -15,7 +15,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// 指令规划器:指令 → 逐组(目标格/可达替代/成员/出发簇)→
 /// 路径服务请求(固定生效帧)→ 答复落帧时建领队 + 排阵型槽位 + 挂流场。
 /// 本层含重烘反应、认知重定向、原位揭示、流场缓存和走廊扩展。
-/// 答复未回则本 tick 停摆；领队路径答复不可达时，非跳跃成员标不可达。
+/// 答复未回则本 tick 停摆；领队路径答复不可达时，非穿越中成员标不可达。
 /// </summary>
 public sealed class CrowdSimPlanner
 {
@@ -365,7 +365,7 @@ public sealed class CrowdSimPlanner
             }
         }
 
-        // 逐单位:成员/可达性/状态;跳跃中的单位从落点出发规划
+        // 逐单位:成员/可达性/状态;穿越链接中的单位从落点出发规划
         var membersByGroup = _membersByGroup;
         ReturnMembers();
         for (int orderIndex = 0; orderIndex < orders.Count; orderIndex++)
@@ -385,8 +385,8 @@ public sealed class CrowdSimPlanner
             var st = session.World.Get<CrowdSimulationUnitState>(entity);
             if (!membersByGroup.TryGetValue(st.GroupId, out var mem)) continue;
             var g = session.Groups.Groups[st.GroupId]!;
-            bool jumping = st.State == (byte)CrowdUnitState.Jump;
-            if (!jumping)
+            bool traversing = st.State == (byte)CrowdUnitState.Traversing;
+            if (!traversing)
             {
                 var kin = session.World.Get<CrowdSimulationKinematics>(entity);
                 st.Mode = 0;
@@ -398,7 +398,7 @@ public sealed class CrowdSimPlanner
             int cell = CellOfUnit(session, i, st);
             if (g.Goal < 0 || !session.ResolveNavContext(g.NavId).CanReach(CompAtLevel(session, g, cell, st.Level), g.GoalComp))
             {
-                if (!jumping)
+                if (!traversing)
                 {
                     st.State = (byte)CrowdUnitState.Unreachable;
                     st.Order = 0;
@@ -408,7 +408,7 @@ public sealed class CrowdSimPlanner
                 continue;
             }
 
-            if (!jumping && st.State != (byte)CrowdUnitState.Arrived)
+            if (!traversing && st.State != (byte)CrowdUnitState.Arrived)
             {
                 st.State = (byte)CrowdUnitState.Moving;
             }
@@ -864,7 +864,7 @@ public sealed class CrowdSimPlanner
 
             if (!leaderResult.Reachable || leaderResult.Points == null)
             {
-                // 非跳跃成员标不可达并清掉指令号;跳跃中的单位保持跳跃。组目标清成 -1。
+                // 非穿越中成员标不可达并清掉指令号;穿越链接中的单位保持穿越。组目标清成 -1。
                 foreach (int gid in bucket)
                 {
                     if (!session.Groups.TryGet(gid, out var g)) continue;
@@ -872,7 +872,7 @@ public sealed class CrowdSimPlanner
                     {
                         var e = units.EntityAt(i);
                         var st = session.World.Get<CrowdSimulationUnitState>(e);
-                        if (st.State != (byte)CrowdUnitState.Jump)
+                        if (st.State != (byte)CrowdUnitState.Traversing)
                         {
                             st.State = (byte)CrowdUnitState.Unreachable;
                             st.Order = 0;
@@ -1138,7 +1138,7 @@ public sealed class CrowdSimPlanner
             var entity = units.EntityAt(i);
             var st = session.World.Get<CrowdSimulationUnitState>(entity);
             if (!session.Groups.TryGet(st.GroupId, out var g0)) continue;
-            if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Jump) underway.Add(g0.Id);
+            if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Traversing) underway.Add(g0.Id);
             if (g0.Flow == null) continue;
             int cell = CellOfUnit(session, i, st);
             var len = g0.Flow.Len[(st.Level != 0 ? navCellsPerSide * navCellsPerSide : 0) + cell];
@@ -1188,7 +1188,7 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>行进中成员(脚下格 / 跳跃落点格)的连通域不再可达目标 = 该组的路被切断。</summary>
+    /// <summary>行进中成员(脚下格 / 链接落点格)的连通域不再可达目标 = 该组的路被切断。</summary>
     private HashSet<int> ReachLost(CrowdSimSession session, List<CrowdNavGroupSet.Group> hit)
     {
         var want = _reachWant;
@@ -1204,7 +1204,7 @@ public sealed class CrowdSimPlanner
             var entity = units.EntityAt(i);
             var st = session.World.Get<CrowdSimulationUnitState>(entity);
             if (!want.Contains(st.GroupId) || lost.Contains(st.GroupId)) continue;
-            if (st.State != (byte)CrowdUnitState.Moving && st.State != (byte)CrowdUnitState.Jump) continue;
+            if (st.State != (byte)CrowdUnitState.Moving && st.State != (byte)CrowdUnitState.Traversing) continue;
             if (!session.Groups.TryGet(st.GroupId, out var g)) continue;
             var nav = session.ResolveNavContext(g.NavId);
             int cell = CellOfUnit(session, i, st);
@@ -1218,7 +1218,7 @@ public sealed class CrowdSimPlanner
         return lost;
     }
 
-    /// <summary>领队剩余路线是否被挡:沿线四角探边的坏格带。桥面托线由 upPass 覆盖;规划时已记下的基线墙格不算。</summary>
+    /// <summary>领队剩余路线是否被挡:沿线四角探边的坏格带。上层托线由 upPass 覆盖;规划时已记下的基线墙格不算。</summary>
     internal static bool LeaderPathBlocked(CrowdLeader? leader, NavContext nav, CrowdSimSession session)
     {
         if (leader == null || leader.Done) return false;
@@ -1421,7 +1421,7 @@ public sealed class CrowdSimPlanner
     }
 
     /// <summary>
-    /// 按成员顺序收起点:每个 (tile, 层) 留第一个成员的格,跳跃中的成员用落点格。不设上限,
+    /// 按成员顺序收起点:每个 (tile, 层) 留第一个成员的格,穿越链接中的成员用落点格。不设上限,
     /// 一组最多 tile 数 × 2 个。返回起点对数。
     /// </summary>
     private int CollectOrigins(CrowdSimSession session, List<int> members, int[] origins)
@@ -1452,7 +1452,7 @@ public sealed class CrowdSimPlanner
         return count;
     }
 
-    /// <summary>领队兜底起点:第一个地面层起点;没有地面起点才用第一个起点。</summary>
+    /// <summary>领队兜底起点:第一个底层起点;没有底层起点才用第一个起点。</summary>
     private static int RepresentativeStart(PendingGroup pg)
     {
         for (int k = 0; k < pg.OriginCount; k++)
@@ -1503,7 +1503,7 @@ public sealed class CrowdSimPlanner
         for (int i = 0; i < units.Count; i++)
         {
             var st = session.World.Get<CrowdSimulationUnitState>(units.EntityAt(i));
-            if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Jump) underway.Add(st.GroupId);
+            if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Traversing) underway.Add(st.GroupId);
         }
 
         var orders = _reactOrders;
@@ -1623,10 +1623,10 @@ public sealed class CrowdSimPlanner
     {
         var entity = session.Units.EntityAt(dense);
         int navCellsPerSide = session.Config.NavCellsPerSide, navCellSizeCm = session.Config.NavCellSizeCm;
-        if (st.State == (byte)CrowdUnitState.Jump)
+        if (st.State == (byte)CrowdUnitState.Traversing)
         {
             var kin = session.World.Get<CrowdSimulationKinematics>(entity);
-            return CrowdSimulationSpace.CellAtStrict(kin.JumpToCm.X, kin.JumpToCm.Y, navCellSizeCm, navCellsPerSide);
+            return CrowdSimulationSpace.CellAtStrict(kin.LinkToCm.X, kin.LinkToCm.Y, navCellSizeCm, navCellsPerSide);
         }
 
         var p = session.World.Get<Components.WorldPositionCm>(entity).Value;

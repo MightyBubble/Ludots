@@ -64,7 +64,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => Bake(terrain, TwoTypes, Sources()));
 
-        Assert.That(ex!.Message, Is.EqualTo("格（1,0）的 Water 已设置。CrowdSimulation 地表不使用逻辑地形的水面标记。"));
+        Assert.That(ex!.Message, Is.EqualTo("格（1,0）的 SurfaceFlags 带 Water。CrowdSimulation 地表不读这个逻辑地形标记。"));
     }
 
     [Test]
@@ -120,7 +120,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
     }
 
     [Test]
-    public void Rebake_ReplacesExistingTarget_EvenWithFewerJumpCandidates()
+    public void Rebake_ReplacesExistingTarget_EvenWithFewerLinkCandidates()
     {
         string path = Path.Combine(Path.GetTempPath(), "ludots-jump-" + Guid.NewGuid().ToString("N") + ".navsurface");
         try
@@ -135,9 +135,9 @@ public sealed class CrowdNavSurfaceAuthoringTests
                 LinkKindIds = ["jump"],
                 BakeInputsDigest = baked.BakeInputsDigest,
                 TerrainCells = baked.TerrainCells,
-                JumpCandidates =
+                LinkCandidates =
                 [
-                    new NavSurfaceJumpCandidate
+                    new NavSurfaceLinkCandidate
                     {
                         Steps = 1,
                         Diagonal = true,
@@ -154,7 +154,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
             CrowdNavSurfaceAuthoring.WriteNavSurface(path, baked);
 
             using FileStream replaced = File.OpenRead(path);
-            Assert.That(NavSurfaceAsset.Read(replaced).JumpCandidates, Is.Empty);
+            Assert.That(NavSurfaceAsset.Read(replaced).LinkCandidates, Is.Empty);
         }
         finally
         {
@@ -215,8 +215,8 @@ public sealed class CrowdNavSurfaceAuthoringTests
                 Assert.That(baked.NavCellSizeCm, Is.EqualTo(fixture.NavCellSizeCm), name);
                 Assert.That(baked.LinkKindIds, Is.EqualTo(fixture.LinkKindIds), name);
                 Assert.That(baked.BakeInputsDigest, Is.EqualTo(fixture.BakeInputsDigest), name);
-                Assert.That(baked.JumpCandidates, Is.EqualTo(fixture.JumpCandidates), name);
-                Assert.That(fixture.JumpCandidates, Is.Not.Empty, name);
+                Assert.That(baked.LinkCandidates, Is.EqualTo(fixture.LinkCandidates), name);
+                Assert.That(fixture.LinkCandidates, Is.Not.Empty, name);
             }
         });
     }

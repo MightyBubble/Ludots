@@ -42,7 +42,7 @@ public sealed class CrowdSimSession
         MemberStamp = new int[Units.Capacity];
         MemberCapture = new uint[Units.Capacity];
 
-        // 子步数取本图实际绑定模板的最快可能速度。马达按格的速度除数缩放速度，除数小于 1 的区域（道路）会更快，
+        // 子步数取本图实际绑定模板的最快可能速度。马达按格的速度除数缩放速度，除数小于 1 的区域会更快，
         // 所以每个模板按其移动类型最小的可走除数折算。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
         Fix64 maxSpeed = Fix64.Zero;
         for (int i = 0; i < config.Profiles.Count; i++)
@@ -320,7 +320,7 @@ public sealed class CrowdSimSession
     public CrowdSimStateDigest LastDigest { get; private set; }
 
     /// <summary>
-    /// 诊断分区（groups / jump / commands）。默认关，这三个词为 0，不进 <see cref="CrowdSimStateDigest.Total"/>。
+    /// 诊断分区（groups / link / commands）。默认关，这三个词为 0，不进 <see cref="CrowdSimStateDigest.Total"/>。
     /// 打开后每 tick 用各自的 Mix 计算。自动回放武装时运行时从第一 tick 打开，回放会话复制同一开关。
     /// </summary>
     public bool DiagnosticDigest { get; set; }
@@ -592,7 +592,7 @@ public sealed class CrowdSimSession
 
     private void RecountUnitStates()
     {
-        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, traversing = 0;
         int n = Units.Count;
         for (int i = 0; i < n; i++)
         {
@@ -602,11 +602,11 @@ public sealed class CrowdSimSession
                 case (byte)CrowdUnitState.Moving: moving++; break;
                 case (byte)CrowdUnitState.Arrived: arrived++; break;
                 case (byte)CrowdUnitState.Unreachable: unreachable++; break;
-                case (byte)CrowdUnitState.Jump: jumping++; break;
+                case (byte)CrowdUnitState.Traversing: traversing++; break;
             }
         }
 
-        Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
+        Telemetry.SetUnitStates(idle, moving, arrived, unreachable, traversing);
         _stateHistogramMembers = n;
     }
 }

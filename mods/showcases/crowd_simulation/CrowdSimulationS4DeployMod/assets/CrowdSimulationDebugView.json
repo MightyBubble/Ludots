@@ -23,7 +23,7 @@
     "tileGrid": false,
     "flow": false,
     "density": false,
-    "jumpLinks": false,
+    "links": false,
     "belief": false,
     "blocked": false
   },
@@ -430,7 +430,7 @@
     "toggleFlow": "CrowdSimulation.S4.ToggleFlow",
     "toggleDensity": "CrowdSimulation.S4.ToggleDensity",
     "toggleObstacles": "CrowdSimulation.S4.ToggleObstacles",
-    "toggleJumpLinks": "CrowdSimulation.S4.ToggleJumpLinks",
+    "toggleLinks": "CrowdSimulation.S4.ToggleLinks",
     "toggleBelief": "CrowdSimulation.S4.ToggleBelief",
     "cycleUnitColor": "CrowdSimulation.S4.CycleUnitColor",
     "cycleBeliefGroup": "CrowdSimulation.S4.CycleBeliefGroup",

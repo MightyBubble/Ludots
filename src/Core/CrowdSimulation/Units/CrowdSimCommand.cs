@@ -54,7 +54,7 @@ public readonly record struct CrowdSimCommand
     public int Ticks { get; init; }
     /// <summary>placeStructure 的尺寸。</summary>
     public int SizeCm { get; init; }
-    /// <summary>placeStructure 的终点(0 = 无终点,道路条带用)。</summary>
+    /// <summary>placeStructure 的终点(0 = 无终点,条带足迹用)。</summary>
     public int ToXCm { get; init; }
     public int ToYCm { get; init; }
     /// <summary>kill 的半径(厘米)。</summary>

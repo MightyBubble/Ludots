@@ -61,8 +61,8 @@ public class CrowdDynamicDeckTests
         for (int i = 0; i < painted; i++)
         {
             byte flag = judgeFlags[i];
-            if ((flag & CrowdStructurePlacement.FlagAnchor) != 0) anchor = true;
-            if ((flag & CrowdStructurePlacement.FlagPortal) != 0 && (flag & CrowdStructurePlacement.FlagAnchor) == 0)
+            if ((flag & CrowdStructurePlacement.FlagEndpoint) != 0) anchor = true;
+            if ((flag & CrowdStructurePlacement.FlagPortal) != 0 && (flag & CrowdStructurePlacement.FlagEndpoint) == 0)
             {
                 portalOnly = true;
             }
@@ -184,8 +184,8 @@ public class CrowdDynamicDeckTests
     public void FuzzPlaceAndRemoveBridge_KeepsInvariants()
     {
         using var world = RiverWorld.Open();
-        var place = new CrowdFuzzOp { Id = "placeBridge", Structure = true };
-        var remove = new CrowdFuzzOp { Id = "removeBridge", Structure = true };
+        var place = new CrowdFuzzOp { Id = "placePath", Structure = true };
+        var remove = new CrowdFuzzOp { Id = "removePath", Structure = true };
         var spawn = new CrowdFuzzOp { Id = "spawn" };
         var result = CrowdFuzzRunner.Run(world.Session, new CrowdFuzzPlan
         {
@@ -202,9 +202,9 @@ public class CrowdDynamicDeckTests
             BoomRadiusCm = world.Cell,
             RingScale = Fix64.FromInt(2),
             Impulse = Fix64.Zero,
-            BridgeTemplate = "bridge",
-            BridgeWidthCm = world.Cell,
-            BridgeSpanCm = world.Cell * 4,
+            PathTemplate = "bridge",
+            PathWidthCm = world.Cell,
+            PathLengthCm = world.Cell * 4,
             Ops = new[] { spawn, place, remove },
         });
         Assert.That(result.Passed, Is.True, $"step {result.Step} op {result.OpId}: {result.Error}");
@@ -314,7 +314,7 @@ public class CrowdDynamicDeckTests
                 LinkKindIds = TestDefaults.LinkKindIds(config),
                 BakeInputsDigest = 0,
                 TerrainCells = terrain,
-                JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
+                LinkCandidates = Array.Empty<NavSurfaceLinkCandidate>(),
             }, Array.Empty<BlockerFootprint>());
             var deck = UpperLayerBake.RasterizeLayeredPaths(Array.Empty<LayeredPathRecord>(), config);
             var heights = new NavHeightField
@@ -386,7 +386,7 @@ public class CrowdDynamicDeckTests
             var world = ArchWorld.Create();
             var session = new CrowdSimSession(config, world, navs, navBy, Wiring(config, world));
             session.Structures = store;
-            session.RebakeSources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);
+            session.RebakeSources = new CrowdRebakeSources(config, heights, deck, surface.LinkCandidates);
             session.NavTileCache = cache;
             session.BindVision(new FogLayerRegistry(), new FogFieldStore());
             var service = new PathQueryService(navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);

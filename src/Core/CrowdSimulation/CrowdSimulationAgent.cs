@@ -14,6 +14,6 @@ public struct CrowdSimulationAgent
     public Fix64 SpeedCmPerSecond;
     public Fix64 PersonalRadiusCm;
     public Fix64 PushPriority;
-    /// <summary>true 不参与批量部署。leaper 为 true，只能由生成工具点名。</summary>
+    /// <summary>true 不参与批量部署。为 true 的模板只能由生成工具点名。</summary>
     public bool Special;
 }

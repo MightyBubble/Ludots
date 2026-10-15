@@ -141,7 +141,7 @@ public class MapSizeAgreementTests
         LinkKindIds = Array.Empty<string>(),
         BakeInputsDigest = 0,
         TerrainCells = new byte[cellsX * cellsY],
-        JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
+        LinkCandidates = Array.Empty<NavSurfaceLinkCandidate>(),
     };
 
     private static ContinuousHeightmapAsset Height(int widthCm, int heightCm, int samples)

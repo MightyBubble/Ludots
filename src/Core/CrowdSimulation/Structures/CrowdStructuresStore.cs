@@ -55,7 +55,7 @@ public sealed class CrowdStructuresStore
 
     private readonly CrowdSimulationRuntimeConfig _config;
     private readonly byte[] _terrainType;
-    private readonly NavSurfaceJumpCandidate[] _jumpCandidates;
+    private readonly NavSurfaceLinkCandidate[] _linkCandidates;
     private readonly List<int> _ids = new();
     private readonly Dictionary<int, int> _tpl = new();
     private readonly Dictionary<int, CrowdStructureFootprint> _footprint = new();
@@ -73,10 +73,10 @@ public sealed class CrowdStructuresStore
     private byte[] _judgeFlags;
     private UpperLayerSurface? _upperLayer;
 
-    /// <summary>最近一次放上或拆除是否改了桥面。地面结构保持 false。</summary>
+    /// <summary>最近一次放上或拆除是否改了上层。底层结构保持 false。</summary>
     internal bool LastMutationTouchedUpperLayer { get; private set; }
 
-    /// <summary>挂上与重烘源同一份桥面。地图桥先栅格化再入仓，这里不重画。</summary>
+    /// <summary>挂上与重烘源同一份上层。地图上层条带先栅格化再入仓，这里不重画。</summary>
     public void UseUpperLayer(UpperLayerSurface upperLayer) => _upperLayer = upperLayer ?? throw new ArgumentNullException(nameof(upperLayer));
 
     private CrowdStructuresStore(CrowdSimulationRuntimeConfig config, SurfaceGrid grid)
@@ -86,7 +86,7 @@ public sealed class CrowdStructuresStore
         NavCellSizeCm = config.NavCellSizeCm;
         NavCellsPerTile = config.Hpa.NavCellsPerTile;
         _terrainType = grid.TerrainType;
-        _jumpCandidates = grid.JumpCandidates;
+        _linkCandidates = grid.LinkCandidates;
         int n2 = NavCellsPerSide * NavCellsPerSide;
         _terrainArea = (byte[])grid.Area.Clone();
         _terrainBlocked = (byte[])grid.Blocked.Clone();
@@ -151,7 +151,7 @@ public sealed class CrowdStructuresStore
         }
     }
 
-    /// <summary>模板、区域、阻挡、寿命与实体 id 互相覆盖。分层实体不进地面组件。</summary>
+    /// <summary>模板、区域、阻挡、寿命与实体 id 互相覆盖。分层实体不进底层组件。</summary>
     internal void VerifyComponentContract(int tick)
     {
         var templates = _config.Structures.Templates;
@@ -179,7 +179,7 @@ public sealed class CrowdStructuresStore
             {
                 if (_navArea.ContainsKey(id) || _blocker.Contains(id))
                 {
-                    throw Component(tick, id, $"分层实体 {id} 写进了地面区域或阻挡");
+                    throw Component(tick, id, $"分层实体 {id} 写进了底层区域或阻挡");
                 }
             }
             else if (tpl.AreaIndex is { } area)
@@ -237,7 +237,7 @@ public sealed class CrowdStructuresStore
 
     /// <summary>
     /// 认知场。区域与阻挡从传入的地形源起（建仓时的映射和阻挡，不含此后放上的实体），
-    /// 再按实体 id 序重标 believed 足迹。分层实体留在表里，不涂地面——桥面不走这张栅格。
+    /// 再按实体 id 序重标 believed 足迹。分层实体留在表里，不涂底层——上层不走这张栅格。
     /// 不读构建时的真相活栅格。不跑寿命。
     /// </summary>
     internal static CrowdStructuresStore BuildBeliefField(
@@ -288,7 +288,7 @@ public sealed class CrowdStructuresStore
     /// <summary>换掉区域数组。调用方要保证这是该仓私有的一份。</summary>
     public void ReplaceArea(byte[] area) => Area = area;
 
-    /// <summary>地图上层条带实体入仓，按实体点名的模板、按列表顺序续号。条带进入认知，不进地面栅格与碰撞，栅格由 UpperLayerBake 烘焙。</summary>
+    /// <summary>地图上层条带实体入仓，按实体点名的模板、按列表顺序续号。条带进入认知，不进底层栅格与碰撞，栅格由 UpperLayerBake 烘焙。</summary>
     public void InstallMapLayeredPaths(IReadOnlyList<LayeredPathRecord> layeredPaths)
     {
         foreach (var record in layeredPaths)
@@ -301,14 +301,14 @@ public sealed class CrowdStructuresStore
         }
     }
 
-    /// <summary>放置实体(组件自模板)并重标足迹格矩形;返回 (id, 格矩形)。分层实体只重画桥面。</summary>
+    /// <summary>放置实体(组件自模板)并重标足迹格矩形;返回 (id, 格矩形)。分层实体只重画上层。</summary>
     public (int Id, (int X0, int Y0, int X1, int Y1) Rect) PlaceEntity(int tplIndex, CrowdStructureFootprint fp, int expireTick)
     {
         LastMutationTouchedUpperLayer = false;
         var tpl = _config.Structures.Templates[tplIndex];
         if (tpl.OnUpperLayer && _upperLayer == null)
         {
-            throw new InvalidOperationException("结构仓没有桥面层。");
+            throw new InvalidOperationException("结构仓没有上层。");
         }
 
         int id = _nextId++;
@@ -336,7 +336,7 @@ public sealed class CrowdStructuresStore
         bool layered = _config.Structures.Templates[_tpl[id]].OnUpperLayer;
         if (layered && _upperLayer == null)
         {
-            throw new InvalidOperationException("结构仓没有桥面层。");
+            throw new InvalidOperationException("结构仓没有上层。");
         }
 
         LastMutationTouchedUpperLayer = false;
@@ -392,7 +392,7 @@ public sealed class CrowdStructuresStore
     internal CrowdPlacementReject JudgePlacement(RuntimeStructureTemplate template, CrowdStructureFootprint footprint) =>
         CrowdStructurePlacement.Judge(this, template, footprint, ref _judgeCells, ref _judgeFlags, out _);
 
-    /// <summary>地面模板写进这一格：区域看格心，阻挡看覆盖份额。</summary>
+    /// <summary>底层模板写进这一格：区域看格心，阻挡看覆盖份额。</summary>
     internal bool BaseLayerCellHit(RuntimeStructureTemplate tpl, CrowdStructureFootprint fp, int x, int y)
     {
         if (tpl.OnUpperLayer) return false;
@@ -422,7 +422,7 @@ public sealed class CrowdStructuresStore
         TerrainType = _terrainType,
         Area = _terrainArea,
         Blocked = _terrainBlocked,
-        JumpCandidates = _jumpCandidates,
+        LinkCandidates = _linkCandidates,
     };
 
     /// <summary>当前派生栅格的只读快照面(全量对拍烘焙用;Area/Blocked 引用本仓活数组)。</summary>
@@ -433,7 +433,7 @@ public sealed class CrowdStructuresStore
         TerrainType = _terrainType,
         Area = Area,
         Blocked = Blocked,
-        JumpCandidates = _jumpCandidates,
+        LinkCandidates = _linkCandidates,
     };
 
     /// <summary>寿命到期 tick:placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)。
@@ -560,7 +560,7 @@ public sealed class CrowdStructuresStore
         colliders.CommitRebuild(NavCellsPerSide, NavCellSizeCm, ReachCm);
     }
 
-    /// <summary>桥面格、桥头和含桥面的 tile 集合与按分层实体全量重画的结果一致。</summary>
+    /// <summary>上层格、入口和含上层的 tile 集合与按分层实体全量重画的结果一致。</summary>
     internal void VerifyUpperLayerContract(int tick)
     {
         int layered = 0;
@@ -572,7 +572,7 @@ public sealed class CrowdStructuresStore
         if (_upperLayer == null)
         {
             if (layered == 0) return;
-            throw Component(tick, -1, "结构仓没有桥面层。");
+            throw Component(tick, -1, "结构仓没有上层。");
         }
 
         int n2 = NavCellsPerSide * NavCellsPerSide;
@@ -583,7 +583,7 @@ public sealed class CrowdStructuresStore
         {
             if (_upperLayer.AreaIndex[i] == area[i] && _upperLayer.PortalFlag[i] == portal[i]) continue;
             throw Component(tick, -1,
-                $"桥面格与分层实体全量栅格不一致 @格 {i} 区域 {_upperLayer.AreaIndex[i]}/{area[i]} 桥头 {_upperLayer.PortalFlag[i]}/{portal[i]}");
+                $"上层格与分层实体全量栅格不一致 @格 {i} 区域 {_upperLayer.AreaIndex[i]}/{area[i]} 入口 {_upperLayer.PortalFlag[i]}/{portal[i]}");
         }
 
         int tileSize = NavCellsPerTile;
@@ -600,14 +600,14 @@ public sealed class CrowdStructuresStore
         var actual = new HashSet<int>(_upperLayer.TileOrder);
         if (actual.Count != _upperLayer.TileOrder.Length || !actual.SetEquals(expected))
         {
-            throw Component(tick, -1, $"桥面 tile 集合与分层实体不一致：仓内 {_upperLayer.TileOrder.Length}，全量 {expected.Count}。");
+            throw Component(tick, -1, $"上层 tile 集合与分层实体不一致：仓内 {_upperLayer.TileOrder.Length}，全量 {expected.Count}。");
         }
     }
 
     /// <summary>矩形内先清再按放置序重画。后放的区域盖住先放的，portal 只置位。</summary>
     private void RestampUpperLayer((int X0, int Y0, int X1, int Y1) rect)
     {
-        if (_upperLayer == null) throw new InvalidOperationException("结构仓没有桥面层。");
+        if (_upperLayer == null) throw new InvalidOperationException("结构仓没有上层。");
         if (rect.X1 <= rect.X0 || rect.Y1 <= rect.Y0) return;
         PaintLayered(_upperLayer.AreaIndex, _upperLayer.PortalFlag, rect, clear: true);
         RefreshTileOrder(rect);

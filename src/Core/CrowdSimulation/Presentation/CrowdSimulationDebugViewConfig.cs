@@ -119,7 +119,7 @@ internal sealed class CrowdDebugViewOverlays
     [JsonRequired] public bool Flow { get; init; }
     [JsonRequired] public bool Density { get; init; }
     [JsonRequired] public bool Blocked { get; init; }
-    [JsonRequired] public bool JumpLinks { get; init; }
+    [JsonRequired] public bool Links { get; init; }
     [JsonRequired] public bool Belief { get; init; }
 }
 
@@ -240,7 +240,7 @@ internal sealed class CrowdDebugViewActions
     [JsonRequired] public string ToggleFlow { get; init; } = "";
     [JsonRequired] public string ToggleDensity { get; init; } = "";
     [JsonRequired] public string ToggleObstacles { get; init; } = "";
-    [JsonRequired] public string ToggleJumpLinks { get; init; } = "";
+    [JsonRequired] public string ToggleLinks { get; init; } = "";
     [JsonRequired] public string ToggleBelief { get; init; } = "";
     [JsonRequired] public string CycleUnitColor { get; init; } = "";
     [JsonRequired] public string CycleBeliefGroup { get; init; } = "";
@@ -260,7 +260,7 @@ internal sealed class CrowdDebugViewActions
         Require(path, "actions.toggleFlow", ToggleFlow);
         Require(path, "actions.toggleDensity", ToggleDensity);
         Require(path, "actions.toggleObstacles", ToggleObstacles);
-        Require(path, "actions.toggleJumpLinks", ToggleJumpLinks);
+        Require(path, "actions.toggleLinks", ToggleLinks);
         Require(path, "actions.toggleBelief", ToggleBelief);
         Require(path, "actions.cycleUnitColor", CycleUnitColor);
         Require(path, "actions.cycleBeliefGroup", CycleBeliefGroup);

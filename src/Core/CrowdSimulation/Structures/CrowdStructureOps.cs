@@ -160,7 +160,7 @@ public static class CrowdStructureOps
         List<CrowdNavRebakeContextResult> dirty = sim.Planner is { } planner
             ? planner.Service.RunExclusive(call, RebakeExclusive)
             : RebakeExclusive(call);
-        // 地面变更不改认知变体的数组。桥面变更已在锁内重烘过。
+        // 底层变更不改认知变体的数组。上层变更已在锁内重烘过。
         sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;
         foreach (var r in dirty)
@@ -213,7 +213,7 @@ public static class CrowdStructureOps
             ?? throw new InvalidOperationException("导航表必须是 Dictionary，重烘按具体枚举器遍历。");
         var store = call.Sim.Structures!;
         var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, store, call.Rect, call.Cache);
-        // 桥面变更时，已物化的变体在这把锁里按各自的场重烘。RebakeContexts 会换掉重烘结果缓冲。
+        // 上层变更时，已物化的变体在这把锁里按各自的场重烘。RebakeContexts 会换掉重烘结果缓冲。
         if (store.LastMutationTouchedUpperLayer)
         {
             call.Sim.Beliefs?.RebakeMaterialized(call.Rect, call.Cache);
@@ -333,7 +333,7 @@ public static class CrowdStructureOps
         }
     }
 
-    /// <summary>站在刚变不可走地面上的单位挤到最近可走格中心。外扩 2 × 最大净空；跳跃单位改落点。无处可放计入 stuck。</summary>
+    /// <summary>站在刚变成不可走的底层格上的单位挤到最近可走格中心。外扩 2 × 最大净空；穿越中的单位改落点。无处可放计入 stuck。</summary>
     public static int EvictBlocked(CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect)
     {
         var kernel = sim.Movement;
@@ -355,9 +355,9 @@ public static class CrowdStructureOps
             var entity = units.EntityAt(i);
             var state = sim.World.Get<CrowdSimulationUnitState>(entity);
             var kin = sim.World.Get<CrowdSimulationKinematics>(entity);
-            bool jumping = state.State == (byte)CrowdUnitState.Jump;
-            var px = jumping ? kin.JumpToCm.X : sim.World.Get<Components.WorldPositionCm>(entity).Value.X;
-            var py = jumping ? kin.JumpToCm.Y : sim.World.Get<Components.WorldPositionCm>(entity).Value.Y;
+            bool traversing = state.State == (byte)CrowdUnitState.Traversing;
+            var px = traversing ? kin.LinkToCm.X : sim.World.Get<Components.WorldPositionCm>(entity).Value.X;
+            var py = traversing ? kin.LinkToCm.Y : sim.World.Get<Components.WorldPositionCm>(entity).Value.Y;
             if (px < ax || px >= bx || py < ay || py >= by) continue;
             if (!sim.Groups.TryGet(state.GroupId, out var g)) continue;
             var nav = sim.Navs[g.BodyNavId];
@@ -380,12 +380,12 @@ public static class CrowdStructureOps
 
             Fix64 x = Fix64.FromInt(c % navCellsPerSide * navCellSizeCm + navCellSizeCm / 2);
             Fix64 y = Fix64.FromInt(c / navCellsPerSide * navCellSizeCm + navCellSizeCm / 2);
-            if (jumping)
+            if (traversing)
             {
-                kin.JumpToCm = new Fix64Vec2(x, y);
+                kin.LinkToCm = new Fix64Vec2(x, y);
                 Fix64 len = CrowdFix.Hypot(x - kin.RestCm.X, y - kin.RestCm.Y);
                 // 下限 1e-3 米 = 0.1 厘米;Fix64 raw = 0.1 × 2^32 ≈ 429496730,有依据取整
-                kin.JumpLengthCm = Fix64.Max(Fix64.FromRaw(429496730), len);
+                kin.LinkLengthCm = Fix64.Max(Fix64.FromRaw(429496730), len);
                 sim.World.Set(entity, kin);
             }
             else
