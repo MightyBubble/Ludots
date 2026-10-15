@@ -42,11 +42,13 @@ public sealed class CrowdSimSession
         MemberStamp = new int[Units.Capacity];
         MemberCapture = new uint[Units.Capacity];
 
-        // 子步数取本图实际绑定模板的最大速度。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
+        // 子步数取本图实际绑定模板的最快可能速度。马达按格的速度除数缩放速度，除数小于 1 的区域（道路）会更快，
+        // 所以每个模板按其移动类型最小的可走除数折算。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
         Fix64 maxSpeed = Fix64.Zero;
         for (int i = 0; i < config.Profiles.Count; i++)
         {
-            maxSpeed = Fix64.Max(maxSpeed, config.Profiles[i].SpeedCmPerSecond);
+            var profile = config.Profiles[i];
+            maxSpeed = Fix64.Max(maxSpeed, profile.SpeedCmPerSecond / MinSpeedDivisor(config.AgentTypes[profile.AgentTypeIndex]));
         }
         Fix64 simDt = config.Sim.SimSecondsPerTickSecond / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;
@@ -58,6 +60,20 @@ public sealed class CrowdSimSession
         if (unclamped > cap) Telemetry.MarkSubStepClamped();
         SubStepDt = simDt / SubSteps;
         RebakeSliceCount = config.Planning.RebakeSlices;
+    }
+
+    /// <summary>可走区域里最小的速度除数（不可走区域的除数为 0，不计）。</summary>
+    private static Fix64 MinSpeedDivisor(RuntimeAgentType agent)
+    {
+        Fix64 min = Fix64.MaxValue;
+        var divisors = agent.SpeedDivisorByArea;
+        for (int a = 0; a < divisors.Length; a++)
+        {
+            if (divisors[a] > Fix64.Zero && divisors[a] < min) min = divisors[a];
+        }
+
+        if (min == Fix64.MaxValue) throw new InvalidOperationException($"移动类型 {agent.Id} 没有可走区域。");
+        return min;
     }
 
     /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>

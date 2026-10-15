@@ -176,12 +176,19 @@ public class S1SurfaceTruthTests
         => LoadRuntime(seed, lineOfSight: false, pairRules);
 
     internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight, CrowdPairRules? pairRules)
+        => LoadRuntime(seed, lineOfSight, pairRules, tuneConfig: null);
+
+    /// <param name="tuneConfig">在合并后的 CrowdSimulationConfig JSON 上改值，再交给加载器校验。</param>
+    /// <param name="bodies">换掉演示体型表与单位模板事实（null = 演示资产）。</param>
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, Action<JsonObject>? tuneConfig, CrowdTestBodies? bodies = null)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         if (lineOfSight) merged["fog"]!["lineOfSight"] = true;
+        tuneConfig?.Invoke(merged);
         var config = CrowdSimulationConfig.Load(merged);
 
         var navmeshJson = TestDefaults.StandardNavmeshJson();
@@ -193,10 +200,10 @@ public class S1SurfaceTruthTests
         return CrowdSimulationConfigLoader.Load(
             config,
             map,
-            TestDefaults.DemoProfiles(),
-            TestDefaults.ParseNavmesh(navmeshJson),
-            TestDefaults.DemoPathing(),
-            TestDefaults.DemoTemplates(),
+            bodies?.Profiles ?? TestDefaults.DemoProfiles(),
+            TestDefaults.ParseNavmesh(navmeshJson, bodies?.Profiles),
+            bodies?.Pathing ?? TestDefaults.DemoPathing(),
+            bodies?.Templates ?? TestDefaults.DemoTemplates(),
             TestDefaults.FixedHz,
             pairRules ?? TestDefaults.DemoPairRules());
     }
@@ -301,3 +308,9 @@ public class S1SurfaceTruthTests
         return h.ToString("x8");
     }
 }
+
+/// <summary>会话用的体型表与单位模板事实（两者须互相一致：模板的个人半径 = 体型半径 × 避让倍数），可另换寻路代价表（null = 演示资产）。</summary>
+internal sealed record CrowdTestBodies(
+    Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry Profiles,
+    List<CrowdUnitTemplateFacts> Templates,
+    Ludots.Core.Navigation.Pathing.Config.PathingConfig? Pathing = null);

@@ -427,7 +427,7 @@ public sealed class CrowdSimPlanner
                 CrowdLeader? prev = null;
                 foreach (int gid in bucket)
                 {
-                    if (prev == null && session.Groups.Groups[gid]!.Leader is { Done: false } l) prev = l;
+                    if (prev == null && session.Groups.Groups[gid]!.PrevLeader is { } l) prev = l;
                 }
 
                 foreach (int gid in bucket) session.Groups.Groups[gid]!.PrevLeader = null;
