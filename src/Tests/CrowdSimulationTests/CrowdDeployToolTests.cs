@@ -255,12 +255,12 @@ public sealed class CrowdDeployToolTests
         host.Demo.Tick();
         ui.FrameAfterAllPeriods(feed);
         string after = ui.AllText();
-        Assert.That(after, Does.Contain("工具 建筑"));
+        Assert.That(after, Does.Contain("工具 结构"));
         Assert.That(after, Does.Contain("脏 tile"));
         Assert.That(after, Does.Contain("仅代价"));
         Assert.That(after, Does.Contain("可通行"));
         Assert.That(after, Does.Contain("耗时"));
-        Assert.That(after, Does.Contain("左键 建筑"));
+        Assert.That(after, Does.Contain("左键 结构"));
         Assert.That(after, Does.Contain("切片"));
     }
 

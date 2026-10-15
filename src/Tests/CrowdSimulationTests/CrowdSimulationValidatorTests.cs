@@ -80,7 +80,7 @@ public sealed class CrowdSimulationValidatorTests
         TestContext.Out.WriteLine(ex!.Message);
         Assert.That(ex.Message, Does.Contain($"单位槽 {state.Slot}"));
         Assert.That(ex.Message, Does.Contain($"实体 {entity.Id}"));
-        Assert.That(ex.Message, Does.Contain($"停在桥面不可通行格 ({cx},{cy})"));
+        Assert.That(ex.Message, Does.Contain($"停在上层不可通行格 ({cx},{cy})"));
         Assert.That(ex.CellX, Is.EqualTo(cx));
         Assert.That(ex.CellY, Is.EqualTo(cy));
     }
