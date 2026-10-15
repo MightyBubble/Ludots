@@ -115,6 +115,7 @@ namespace Ludots.Core.Presentation.Systems
                         Vector4 fill = ResolveColor(work.Rect.FillColor, work.Rect.FillColorParamKey, hasVectorParams, hasVectorDefaults, in vectorParams, in vectorDefaults, i);
                         Vector4 border = ResolveColor(work.Rect.BorderColor, work.Rect.BorderColorParamKey, hasVectorParams, hasVectorDefaults, in vectorParams, in vectorDefaults, i);
                         _overlay.AddRect(
+                            PresentationOverlayLayer.TopMost,
                             (int)minX,
                             (int)minY,
                             (int)width,

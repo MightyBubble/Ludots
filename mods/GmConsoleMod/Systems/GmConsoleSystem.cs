@@ -219,19 +219,19 @@ namespace GmConsoleMod.Systems
             var textColor = new Vector4(0.85f, 0.9f, 0.85f, 1f);
             var inputColor = new Vector4(1f, 1f, 0.6f, 1f);
 
-            overlay.AddRect(PanelX, PanelY, PanelWidth, panelHeight, bg, border);
-            overlay.AddText(PanelX + padding, PanelY + padding, "[GM CONSOLE] type 'help' for commands", 14, titleColor);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, PanelX, PanelY, PanelWidth, panelHeight, bg, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, PanelX + padding, PanelY + padding, "[GM CONSOLE] type 'help' for commands", 14, titleColor);
 
             int y = PanelY + padding + lineHeight + 4;
             int startIdx = _logLines.Count > MaxLogLines ? _logLines.Count - MaxLogLines : 0;
             for (int i = startIdx; i < _logLines.Count; i++)
             {
-                overlay.AddText(PanelX + padding, y, _logLines[i], 13, textColor);
+                overlay.AddText(PresentationOverlayLayer.TopMost, PanelX + padding, y, _logLines[i], 13, textColor);
                 y += lineHeight;
             }
 
             y += 4;
-            overlay.AddText(PanelX + padding, y, $"> {_inputBuffer}_", 14, inputColor);
+            overlay.AddText(PresentationOverlayLayer.TopMost, PanelX + padding, y, $"> {_inputBuffer}_", 14, inputColor);
         }
 
         private RenderCameraDebugState ResolveCameraDebug()

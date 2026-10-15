@@ -1137,7 +1137,7 @@ internal sealed class CrowdPlayerViewHost
             height = 1;
         }
 
-        overlay.AddRect(left, top, width, height, _paper, _plan);
+        overlay.AddRect(PresentationOverlayLayer.TopMost, left, top, width, height, _paper, _plan);
     }
 
     private void DrawOrderFeedback(CrowdSimSession session, RouteVisualBuffer routes, int viewer, CrowdLeader leader, int goal, bool unfinished)

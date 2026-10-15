@@ -525,7 +525,7 @@ internal sealed class CrowdDebugViewFrame
             if (x < _x0 || x >= _x1 || y < _y0 || y >= _y1) continue;
             CrowdDebugOverlayGeometry.CellCenter(index, n, cell, out float wx, out float wy);
             if (!TryScreen(wx, wy, projector, height, out int sx, out int sy)) continue;
-            if (overlay.AddRect(sx - mark / 2, sy - mark / 2, mark, mark, color, color))
+            if (overlay.AddRect(PresentationOverlayLayer.UnderUi, sx - mark / 2, sy - mark / 2, mark, mark, color, color))
                 used = overlay.Count;
         }
     }
@@ -557,7 +557,7 @@ internal sealed class CrowdDebugViewFrame
                 continue;
             }
 
-            if (overlay.AddRect(sx - mark / 2, sy - mark / 2, mark, mark, color, color))
+            if (overlay.AddRect(PresentationOverlayLayer.UnderUi, sx - mark / 2, sy - mark / 2, mark, mark, color, color))
                 used = overlay.Count;
         }
     }
@@ -575,7 +575,7 @@ internal sealed class CrowdDebugViewFrame
         if (used >= budget) return;
         if (!TryScreen(segment.X0, segment.Y0, projector, height, out int x0, out int y0)) return;
         if (!TryScreen(segment.X1, segment.Y1, projector, height, out int x1, out int y1)) return;
-        if (overlay.AddLine(x0, y0, x1, y1, _config.LineThicknessPx, color))
+        if (overlay.AddLine(PresentationOverlayLayer.UnderUi, x0, y0, x1, y1, _config.LineThicknessPx, color))
             used = overlay.Count;
     }
 
@@ -711,7 +711,7 @@ internal sealed class CrowdDebugViewFrame
         if (used >= budget) return;
         float wx = (x + 0.5f) * cellCm, wy = (y + 0.5f) * cellCm;
         if (!TryScreen(wx, wy, projector, height, out int sx, out int sy)) return;
-        if (overlay.AddRect(sx - mark / 2, sy - mark / 2, mark, mark, color, color))
+        if (overlay.AddRect(PresentationOverlayLayer.UnderUi, sx - mark / 2, sy - mark / 2, mark, mark, color, color))
             used = overlay.Count;
     }
 

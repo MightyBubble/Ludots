@@ -659,10 +659,11 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         var yellow = new Vector4(1f, 0.86f, 0.42f, 1f);
         var green = new Vector4(0.55f, 0.95f, 0.70f, 1f);
         var cyan = new Vector4(0.45f, 0.90f, 1f, 1f);
-        _overlay.AddText(20, 18, "LSW Hot-Apply — LiveGasEditPipeline on Champion Skill", 20, white, 71001, 1);
-        _overlay.AddText(20, 46, "1) firebolt  2) editor NextCast hot-apply  3) icebolt + more damage + chill", 15, yellow, 71002, 1);
-        _overlay.AddText(20, 72, _status, 16, _hotApplied ? cyan : green, 71003, Hash(_status));
+        _overlay.AddText(PresentationOverlayLayer.TopMost, 20, 18, "LSW Hot-Apply — LiveGasEditPipeline on Champion Skill", 20, white, 71001, 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, 20, 46, "1) firebolt  2) editor NextCast hot-apply  3) icebolt + more damage + chill", 15, yellow, 71002, 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, 20, 72, _status, 16, _hotApplied ? cyan : green, 71003, Hash(_status));
         _overlay.AddText(
+            PresentationOverlayLayer.TopMost,
             20,
             98,
             $"Dummy HP {_lastTargetHp:F0}/{_lastTargetHpBase:F0}  |  chill {(_targetChilled ? $"{_chillRemainingSeconds:F1}s" : "off")}  |  casts={_castCount} hotApplied={_hotApplied} proj={_liveProjectileCount}",
@@ -673,6 +674,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         if (_targetChilled)
         {
             _overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 20,
                 126,
                 $"BUFF  CHILL  {_chillRemainingSeconds:F1}s  ({_chillRemainingRatio * 100f:F0}%)",
