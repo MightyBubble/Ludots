@@ -7,7 +7,7 @@
 ## 做出来的东西
 
 - Mod：`mods/showcases/crowd_simulation/CrowdSimulationMinimalMod`，纯数据，没有工程文件。只依赖能力 Mod `CrowdSimulationMod` 和标准参数 `CrowdSimulationStandardMod`，不依赖演示内容 Mod。
-- 地图 `crowd_minimal`：边长 1,600,000 cm。标准参数的 `profiles.cellSizeCm` 是 6250，所以导航格是 256×256。
+- 地图 `crowd_minimal`：边长 1,600,000 cm。`navmesh.json` 里这张图的 `navCellSizeCm` 是 6250，所以导航格是 256×256。
 - 地形：全图 `land`，墙南端外侧一块 `water`（列 116–140、行 96–111）。
 - 墙：31 个一格大小的方块阻挡物，列 128，行 112–142。南端贴着水，只能从北端绕。
 - 单位：`crowd_minimal.unit`，移动类型 `foot`，半径 150 cm。`foot` 不进 `deep`，所以不下水。
@@ -37,7 +37,7 @@ $T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_m
 | `assets/game.json` | `startupMapId`；`startupLocalSeats` 把 `seat.0` 绑到玩家 1 |
 | `assets/Engine/clock.json` | `{ "FixedHz": 30 }`。核心默认 20，群体地图的时钟由地图 Mod 自己写 |
 | `assets/Camera/virtual_cameras.json` | 虚拟相机 `<ModId>.Camera`，地图 `DefaultCamera` 引用它 |
-| `assets/Navigation/navmesh.json` | `maps.<mapId>`：`solver`、`logicTerrainAsset`、`navAreas`、`terrainAreas`（见第 2 步） |
+| `assets/Navigation/navmesh.json` | `maps.<mapId>`：`solver`、`logicTerrainAsset`、`navCellSizeCm`、`terrainTypes`（见第 2 步） |
 | `assets/Navigation/agent_profiles.json` | 体型 `<mapId>_unit`：`radiusCm` 150，`navProfileId` 是 `foot` |
 | `assets/Maps/<mapId>.json` | 一块 1,600,000 cm 的 `Grid` 板、高度图路径、相机、两个敌对队伍、两名玩家（见第 4 步） |
 | `assets/Entities/templates.json` | 队伍、玩家、单位三个模板（见第 6 步） |
@@ -56,10 +56,10 @@ $T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_m
 
 - `solver: crowd-simulation`。
 - `logicTerrainAsset: terrain/crowd_minimal.map_data.bin`，下一步的工具和烘焙都读它。
-- `terrainAreas`：`land → Default`，`water → deep`。数组下标就是地形编号，`land` 是 0，`water` 是 1。
-- `navAreas`：`Default`、`deep`。标准参数里只有 `building` 一个结构模板，它只挡格、不铺区域，所以不用再列别的区域。依赖演示内容 Mod 的地图才要加上 `road`、`deck`、`flooded`、`burning`。
+- `navCellSizeCm: 6250`，导航格边长。
+- `terrainTypes`：`land`、`water`。数组下标就是地形编号，`land` 是 0，`water` 是 1。地形到区域的对应在标准参数的 `CrowdSimulation/traversal.json`：`land → open`，`water → deep`。标准参数里只有 `building` 一个结构模板，它只挡格、不铺区域，所以不用加区域。
 
-移动类型 `foot` 和它的 `areaCosts` 已经在标准参数的 `pathing.json` 里，不用重写。
+移动类型 `foot` 那一行代价和可走区域已经在标准参数的 `CrowdSimulation/traversal.json` 里，不用重写。
 
 ## 第 3 步：地编网格和高度图
 
@@ -72,7 +72,7 @@ $T nav init-crowd-heightmap --mapId crowd_minimal --modId CrowdSimulationMinimal
 
 两条命令都先读地图 json、`navmesh.json` 和群体配置，算出板边长、导航格数和格边长；`--mapId` 和 `--modId` 对不上就报错。
 
-- `init-crowd-terrain` 写 `logicTerrainAsset` 指向的 React 网格。每格按导航格大小，`AreaId` 是 `terrainAreas` 下标。`--fill` 先铺满一种地形；`--rect 地形:minCol,minRow,maxCol,maxRow` 可以写多次，按顺序覆盖，边界包含两端。行号按世界 Y 从小到大数，行 0 是最南一行。越界、颠倒、未知地形 id 都会报错。
+- `init-crowd-terrain` 写 `logicTerrainAsset` 指向的 React 网格。每格按导航格大小，`AreaId` 是 `terrainTypes` 下标。`--fill` 先铺满一种地形；`--rect 地形:minCol,minRow,maxCol,maxRow` 可以写多次，按顺序覆盖，边界包含两端。行号按世界 Y 从小到大数，行 0 是最南一行。越界、颠倒、未知地形 id 都会报错。
 - `init-crowd-heightmap` 写 `ContinuousHeightmap.Asset` 指向的 `.height`：uint16 全 0，比例是 `(heightCm, 1, 1)`，所以整张图平在 `heightCm` 厘米。
 - 文件已存在时两条命令都拒绝，要覆盖加 `--overwrite`。
 
@@ -100,7 +100,7 @@ $T nav init-crowd-heightmap --mapId crowd_minimal --modId CrowdSimulationMinimal
 $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinimalMod --out mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/terrain/crowd_minimal.navsurface
 ```
 
-输出 `256x256, types=2, jumps=0`。这张图没写 `jumpLinkBake`，所以没有跳跃候选。改了地编网格或 `.height` 就重跑这条命令（已有文件要加 `--overwrite`），再提交。测试会拿入库文件和现烤结果逐字节比较。
+输出 `256x256, types=2, linkKinds=[], linkCandidates=0, linkBakeDigest=0x8227BA97`。这张图没写 `linkCandidateBake`，所以链接种类表是空的，没有候选，摘要只含导航格边长。改了地编网格或 `.height` 就重跑这条命令（已有文件要加 `--overwrite`），再提交。测试会拿入库文件和现烤结果逐字节比较。
 
 ## 第 6 步：单位和表现
 
@@ -123,9 +123,7 @@ $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinima
 - `world.seed: 1`。
 - `deploy.initialUnits: 0`。开局不撒单位，单位由脚本生成。
 - `deploy.bases`：这张图改成玩家 1 在 (715625, 828125)，颜色 `#4DB2FF`；玩家 2 在 (715625, 765625)，颜色 `#FFC53D`。
-- `structures.anchorTerrain: ["land"]`、`structures.spanTerrain: ["water"]`：桥两端锚在陆地，桥身跨水。
-
-`initialUnits`、`bases`、`anchorTerrain`、`spanTerrain` 都没有标准值，地图不写就加载失败。
+`initialUnits`、`bases` 没有标准值，地图不写就加载失败。桥能落在哪类区域写在结构模板的 `placement`（`endpointAreas`、`interiorAreas`），这张图不放桥，不用写。
 
 `assets/CrowdSimulationDebug.json` 的开场脚本 `session.script` 改成：tick 0 两条 `spawnAt`（各 200 个，`unitType 0`，`rIdx 0`），tick 1 两条 `order`，目标是 (890625, 828125) 和 (890625, 765625)。
 
@@ -188,7 +186,7 @@ dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Releas
 2. 没有工具生成新图的 `.height`。新增 `nav init-crowd-heightmap`。
 3. 标准参数原来写死了 S1 的桥锚点地形 `["shore", "land"]`，只有陆地和水的图必须自己覆盖。现在锚点地形和跨越地形是地图事实，S1 系列的那份在演示内容 Mod，别的地图自己写。
 4. `CrowdSimulationMod` 原来带着 20 个演示单位模板、演示表现和网格，运行时又要求“移动类型 × 半径级”填满，只想要一种单位就得用 `__delete` 一条条删掉。现在演示单位挪到 `CrowdSimulationDemoContentMod`，能力 Mod 只剩会话模板和选中圈，这个 Mod 里不再有删除条目。
-5. 标准参数原来写着 `deploy.initialUnits: 12000` 和道路、桥、洪水、火灾结构模板，每张新图都要覆盖人数，`navAreas` 还要列上这四种结构区域。现在开局人数是地图事实，这四个模板跟着演示内容 Mod 走，`navAreas` 只列地图自己用到的区域。
+5. 标准参数原来写着 `deploy.initialUnits: 12000` 和道路、桥、洪水、火灾结构模板，每张新图都要覆盖人数，地图还要列上这四种结构区域。现在开局人数是地图事实，这四个模板和它们的区域都跟着演示内容 Mod 走，地图不再列区域。
 6. `mod init` 原来只会生成带 C# 工程的 Mod，地图格式也旧，对纯数据的群体地图没用。现在加了 `--template crowd-data`，第 1 步就是这条命令。
 7. 迷雾贴花的四色原来只在调试配置的 `presentation.fogDecal` 里，没写调试配置的群体地图一出单位，Raylib 就因为缺调色板报错。现在四色在 `Presentation/crowd_fog_decal.json`，标准参数给默认值，群体会话每次激活都发布 `FogDecalPalette`。
 8. 有一个单位会卡在墙南端和水面之间的凹角格 (127, 112)。它先跟着阵型槽位顺着墙西侧往南走，换回流场后，北边人群的分离推力大过朝北的意图，把它推到角里。到了角里，`CrowdWalls.ResolveWalls` 先把它推出水格、再推出墙格，只交回墙的法线，马达只去掉朝墙的速度，朝水的速度留着；转向限速每步只把这个速度转一点，下一步又顶回水里，速度一直停在 (0, −670) cm/s。Web 参考的 `walls.js` / `motor.js` 是同一算法。改成每个接触都去速度，这个单位能走出来，但 S5 轨迹对拍超出带宽，所以没改，要和 Web 一起改。验收按 2000 tick、95% 到达写。

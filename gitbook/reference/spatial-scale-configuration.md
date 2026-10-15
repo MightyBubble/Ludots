@@ -110,7 +110,7 @@ flowchart TD
 | `hpa.maxEntranceWidthNavCells` | HPA 入口 | 导航格 | 6 | 边界扫描格数。旧键 `hpa.clusterSize` 已删除，边长改 `navtile.sizeCm`。 |
 | `flowfield.corridorPaddingNavTiles` | 走廊外扩 | 导航 tile | 1 | tile 掩码外扩。 |
 | `movement.maxStepNavCells` | 子步上限 | 导航格 | 0.45 | 防穿格。 |
-| `structures.portalReachNavCells` | 桥头 | 导航格 | 4 | 腐蚀半径。 |
+| `structures.templates.<id>.effect.portalReachNavCells` | 桥头 | 导航格 | 4 | `surface` 效果的入口格数，每个模板各写各的。 |
 | `profiles[].jump.rangeNavCells` | 跳跃 | 导航格 | 按能力档 | 写在 `Navigation/navmesh.json`。与 `.navsurface` 候选的格距比较。 |
 | `formation.magicBoxPadCm` | 点选框外扩 | cm | 6250 | 世界厘米，与包围盒厘米坐标比较。 |
 | `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0.02 | 0..1。 |
