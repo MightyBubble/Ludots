@@ -17,13 +17,13 @@ internal static class CrowdHudView
     private static readonly string[] NavIds = Ids("crowd-nav-", CrowdHudState.NavLineCount);
     private static readonly string[] TelemetryIds = Ids("crowd-tel-", CrowdHudState.TelemetryLineCount);
 
-    public static UiElementBuilder Build(ReactiveContext<CrowdHudState> context, CrowdSparkCanvas[] sparks)
+    public static UiElementBuilder Build(ReactiveContext<CrowdHudState> context)
     {
         CrowdHudState s = context.State;
         var root = Box("div").Id(RootId);
         root.Child(LeftRail(s));
         root.Child(Center(s));
-        root.Child(RightRail(s, sparks));
+        root.Child(RightRail(s));
         return root;
     }
 
@@ -34,9 +34,9 @@ internal static class CrowdHudView
         if (s.ShowPlayer)
         {
             var player = Panel("crowd-player");
-            player.Child(Line(s.ModeLine).Id("crowd-mode-line"));
-            player.Child(Line(s.ClickLine).Id("crowd-click-line"));
-            player.Child(Line(s.DeployLine).Id("crowd-deploy-line"));
+            player.Child(Chips(s.ModeLine).Id("crowd-mode-line"));
+            player.Child(Chips(s.ClickLine).Id("crowd-click-line"));
+            player.Child(Chips(s.DeployLine).Id("crowd-deploy-line"));
             rail.Child(player);
         }
 
@@ -46,8 +46,8 @@ internal static class CrowdHudView
             if (s.ShowInspect)
             {
                 var inspect = Section("crowd-inspect");
-                if (s.Inspect.Length > 0) inspect.Child(Line(s.Inspect).Id("crowd-inspect-line"));
-                if (s.Belief.Length > 0) inspect.Child(Line(s.Belief).Id("crowd-belief-line"));
+                if (s.Inspect.Length > 0) inspect.Child(Chips(s.Inspect).Id("crowd-inspect-line"));
+                if (s.Belief.Length > 0) inspect.Child(Chips(s.Belief).Id("crowd-belief-line"));
                 view.Child(inspect);
             }
 
@@ -56,7 +56,7 @@ internal static class CrowdHudView
                 var nav = Section("crowd-nav");
                 for (int i = 0; i < s.NavLines.Length; i++)
                 {
-                    nav.Child(Line(s.NavLines[i]).Id(NavIds[i]).Class(i == 0 ? "crowd-heading" : "crowd-line"));
+                    nav.Child((i == 0 ? Ui.Text(s.NavLines[i]).Class("crowd-heading") : Chips(s.NavLines[i])).Id(NavIds[i]));
                 }
 
                 view.Child(nav);
@@ -118,7 +118,7 @@ internal static class CrowdHudView
         return bar;
     }
 
-    private static UiElementBuilder RightRail(CrowdHudState s, CrowdSparkCanvas[] sparks)
+    private static UiElementBuilder RightRail(CrowdHudState s)
     {
         var rail = Box("div").Id("crowd-right").Class("crowd-rail");
         if (!s.ShowTelemetry) return rail;
@@ -128,9 +128,9 @@ internal static class CrowdHudView
         {
             var row = Box("div").Id(TelemetryIds[i]).Class("crowd-tel-row");
             if (s.TelemetryHot[i]) row.Class("hot");
-            row.Child(Line(s.TelemetryLines[i]).Class(i == 0 ? "crowd-heading" : "crowd-line"));
+            row.Child(i == 0 ? Ui.Text(s.TelemetryLines[i]).Class("crowd-heading") : Chips(s.TelemetryLines[i]));
             int series = CrowdHudState.SparkSeriesOf(i);
-            if (series >= 0 && s.SparkCount >= 2) row.Child(Ui.Canvas(sparks[series].Content).Class("crowd-spark").PointerEvents(UiPointerEvents.None));
+            if (series >= 0 && s.SparkCount >= 2) row.Child(Ui.Text(s.SparkText[series]).Class("crowd-spark"));
             tel.Child(row);
         }
 

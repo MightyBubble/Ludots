@@ -14,10 +14,8 @@ internal sealed class CrowdHudState
     public const int FlipLine = 8;
     public const int SparkSeries = 5;
 
-    public CrowdHudState(int history, int maxPlayers)
+    public CrowdHudState(int maxPlayers)
     {
-        Spark = new float[SparkSeries][];
-        for (int i = 0; i < SparkSeries; i++) Spark[i] = new float[history];
         Swatches = new string?[maxPlayers + 1];
     }
 
@@ -57,8 +55,8 @@ internal sealed class CrowdHudState
     public bool ShowTelemetry;
     public readonly string[] TelemetryLines = Filled(TelemetryLineCount);
     public readonly bool[] TelemetryHot = new bool[TelemetryLineCount];
-    /// <summary>曲线按时间先后排列，已归一到 0..1；只有前 <see cref="SparkCount"/> 项有效。</summary>
-    public readonly float[][] Spark;
+    /// <summary>曲线按时间先后排成一串块字符，一个样本一个字，高度按零基线占比分八档。</summary>
+    public readonly string[] SparkText = Filled(SparkSeries);
     public int SparkCount;
 
     public bool ShowFault;

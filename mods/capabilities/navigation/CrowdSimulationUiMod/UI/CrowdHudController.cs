@@ -34,8 +34,9 @@ internal sealed class CrowdHudController
     private readonly long _telemetryPeriod;
     private readonly int[] _units = new int[MaxPlayers + 1];
     private readonly int[] _unitsShown = new int[MaxPlayers + 1];
+    private const string SparkBlocks = "▁▂▃▄▅▆▇█";
     private readonly double[][] _rings;
-    private readonly CrowdSparkCanvas[] _sparks;
+    private readonly char[] _sparkChars;
 
     private ReactivePage<CrowdHudState>? _page;
     private IUiSurfaceHost? _host;
@@ -73,7 +74,8 @@ internal sealed class CrowdHudController
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _styleSheet = styleSheet ?? throw new ArgumentNullException(nameof(styleSheet));
-        _state = new CrowdHudState(settings.History, MaxPlayers);
+        _state = new CrowdHudState(MaxPlayers);
+        _sparkChars = new char[settings.History];
         _statusPeriod = Ticks(settings.SampleMs.Status);
         _playerPeriod = Ticks(settings.SampleMs.Player);
         _inspectPeriod = Ticks(settings.SampleMs.Inspect);
@@ -81,12 +83,6 @@ internal sealed class CrowdHudController
         _telemetryPeriod = Ticks(settings.SampleMs.Telemetry);
         _rings = new double[CrowdHudState.SparkSeries][];
         for (int i = 0; i < _rings.Length; i++) _rings[i] = new double[settings.History];
-        _sparks = new CrowdSparkCanvas[CrowdHudState.SparkSeries];
-        for (int line = 0; line < CrowdHudState.TelemetryLineCount; line++)
-        {
-            int series = CrowdHudState.SparkSeriesOf(line);
-            if (series >= 0) _sparks[series] = new CrowdSparkCanvas(_state, series, line, settings.SparkColor, settings.SparkHotColor);
-        }
     }
 
     public bool Mounted => _lease.IsValid;
@@ -209,7 +205,7 @@ internal sealed class CrowdHudController
             textMeasurer,
             imageSizeProvider,
             _state,
-            context => CrowdHudView.Build(context, _sparks),
+            context => CrowdHudView.Build(context),
             null,
             _styleSheet);
         _host!.PublishReactivePage(ref _lease, new UiSurfaceLeaseRequest(OwnerId, UiSurfaceSegment.Overlay, priority: 30), _page);
@@ -398,13 +394,13 @@ internal sealed class CrowdHudController
             }
 
             double span = max - min;
-            float[] dst = _state.Spark[s];
             for (int age = 0; age < _histCount; age++)
             {
-                double v = ring[(start + age) % n];
-                double t = (v - min) / span;
-                dst[age] = (float)Math.Clamp(t, 0d, 1d);
+                double t = Math.Clamp((ring[(start + age) % n] - min) / span, 0d, 1d);
+                _sparkChars[age] = SparkBlocks[(int)Math.Round(t * (SparkBlocks.Length - 1))];
             }
+
+            _state.SparkText[s] = new string(_sparkChars, 0, _histCount);
         }
 
         _state.SparkCount = _histCount;

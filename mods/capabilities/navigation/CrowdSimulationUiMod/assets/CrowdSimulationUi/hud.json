@@ -8,8 +8,6 @@
     "telemetry": 250
   },
   "history": 48,
-  "sparkColor": [132, 31, 48, 255],
-  "sparkHotColor": [181, 62, 48, 255],
   "alerts": {
     "lowFps": 90,
     "simMs": 12,

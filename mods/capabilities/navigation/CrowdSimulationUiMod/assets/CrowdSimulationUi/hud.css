@@ -66,11 +66,6 @@
   white-space: nowrap;
 }
 
-/* 栏宽固定，栏里的短行允许折行；长句不进栏。 */
-.crowd-rail .crowd-line {
-  white-space: normal;
-}
-
 .crowd-heading {
   font-size: 12px;
   font-weight: bold;
@@ -106,6 +101,15 @@
   font-size: 12px;
   color: rgba(130, 124, 115, 1);
   white-space: nowrap;
+}
+
+.crowd-rail .crowd-chip {
+  color: rgba(60, 57, 52, 1);
+}
+
+.crowd-rail .crowd-chips {
+  column-gap: 8px;
+  row-gap: 0px;
 }
 
 /* 左栏：标题卡、玩家显示、调试视图（检视 + 导航缓存 F9）。 */
@@ -236,12 +240,20 @@
   gap: 1px;
 }
 
-.crowd-tel-row.hot .crowd-line {
+.crowd-tel-row.hot .crowd-chip {
   color: rgba(181, 62, 48, 1);
 }
 
-/* 曲线是画布节点，线色在 hud.json。 */
+/*
+ * 曲线是一行块字符（▁..█），一个样本一个字。Ludots.UI 没有不绑渲染后端的矢量画布，
+ * 用节点画柱子每个样本一个节点，采样帧的排版和重绘开销按样本数涨。
+ */
 .crowd-spark {
-  width: 100%;
-  height: 18px;
+  font-size: 9px;
+  color: rgba(132, 31, 48, 1);
+  white-space: nowrap;
+}
+
+.crowd-tel-row.hot .crowd-spark {
+  color: rgba(181, 62, 48, 1);
 }

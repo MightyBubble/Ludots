@@ -13,8 +13,6 @@ internal sealed class CrowdHudSettings
     [JsonRequired] public int Version { get; init; }
     [JsonRequired] public CrowdHudSampleRates SampleMs { get; init; } = null!;
     [JsonRequired] public int History { get; init; }
-    [JsonRequired] public int[] SparkColor { get; init; } = null!;
-    [JsonRequired] public int[] SparkHotColor { get; init; } = null!;
     [JsonRequired] public CrowdHudAlerts Alerts { get; init; } = null!;
 
     public static CrowdHudSettings Parse(string json, string path)
@@ -40,16 +38,9 @@ internal sealed class CrowdHudSettings
         SampleMs.Validate(path);
         if (History < 2 || History > MaxHistory)
             throw new InvalidOperationException($"{path}: history 需为 2..{MaxHistory} 的整数。");
-        Rgba(path, "sparkColor", SparkColor);
-        Rgba(path, "sparkHotColor", SparkHotColor);
         Alerts.Validate(path);
     }
 
-    private static void Rgba(string path, string field, int[] value)
-    {
-        if (value.Length != 4 || Array.Exists(value, c => c < 0 || c > 255))
-            throw new InvalidOperationException($"{path}: {field} 需为 4 个 0..255 的整数 [r, g, b, a]。");
-    }
 }
 
 internal sealed class CrowdHudSampleRates

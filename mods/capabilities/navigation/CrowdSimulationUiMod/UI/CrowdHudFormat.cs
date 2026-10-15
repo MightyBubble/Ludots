@@ -183,18 +183,18 @@ internal static class CrowdHudFormat
     {
         lines[0] = "导航缓存 / 路径服务";
         lines[1] = r.HasTileCache
-            ? $"tile 容量 {r.TileCapacity} 在册 {r.TileCount} 命中率 {HitRate(r.TileHits, r.TileMisses)} hit {r.TileHits} miss {r.TileMisses} evict {r.TileEvicts}"
-            : "tile 容量 N/A 在册 N/A 命中率 N/A hit/miss/evict N/A";
+            ? $"tile 容量 {r.TileCapacity} 在册 {r.TileCount} · 命中率 {HitRate(r.TileHits, r.TileMisses)} · hit {r.TileHits} miss {r.TileMisses} evict {r.TileEvicts}"
+            : "tile 容量 N/A 在册 N/A · 命中率 N/A · hit/miss/evict N/A";
         lines[2] = r.HasFlowCache
-            ? $"流场容量 {r.FlowCapacity} 在册 {r.FlowCount} 命中率 {HitRate(r.FlowHits, r.FlowMisses)} hit {r.FlowHits} miss {r.FlowMisses} evict {r.FlowEvicts}"
-            : $"流场容量 {r.FlowCapacity} 命中率 N/A hit/miss/evict N/A（无结果缓存）";
+            ? $"流场容量 {r.FlowCapacity} 在册 {r.FlowCount} · 命中率 {HitRate(r.FlowHits, r.FlowMisses)} · hit {r.FlowHits} miss {r.FlowMisses} evict {r.FlowEvicts}"
+            : $"流场容量 {r.FlowCapacity} · 命中率 N/A · hit/miss/evict N/A · 无结果缓存";
         lines[3] = $"常驻导航 {r.ResidentNavs}";
         lines[4] = r.HasPath
-            ? $"规划请求 {r.PlanRequests} 待回 {r.PendingReplies} 超时 {Ms(r.PlanTimeoutMs)} ms"
-            : "规划请求 N/A 待回 N/A 超时 N/A";
-        lines[5] = $"往返 {Ms(r.RoundTripLastMs)}/{Ms(r.RoundTripMeanMs)} ms 工人 {Ms(r.WorkerLastMs)}/{Ms(r.WorkerMeanMs)} ms";
+            ? $"规划请求 {r.PlanRequests} 待回 {r.PendingReplies} · 超时 {Ms(r.PlanTimeoutMs)} ms"
+            : "规划请求 N/A 待回 N/A · 超时 N/A";
+        lines[5] = $"往返 {Ms(r.RoundTripLastMs)}/{Ms(r.RoundTripMeanMs)} ms · 工人 {Ms(r.WorkerLastMs)}/{Ms(r.WorkerMeanMs)} ms";
         lines[6] = $"等待 worker {r.WaitTicks} tick";
-        lines[7] = $"tick {r.Tick} 命令日志 {r.CommandLog}";
+        lines[7] = $"tick {r.Tick} · 命令日志 {r.CommandLog}";
     }
 
     /// <summary>遥测行。<paramref name="host"/> 是呈现端自己量的帧率、UI 重绘、编排、堆增长、分辨率，不来自仿真。</summary>
@@ -207,24 +207,24 @@ internal static class CrowdHudFormat
         string world = r.WorldBakeRecorded
             ? $"{Ms(r.WorldBakeMs)} ms 缓存 {r.WorldCacheHits}/{r.WorldCacheHits + r.WorldCacheMisses}"
             : "N/A";
-        lines[0] = $"遥测 采样 {sampleMs} ms 曲线 {history} 固定 {r.FixedHz} Hz";
+        lines[0] = $"遥测 采样 {sampleMs} ms · 曲线 {history} · 固定 {r.FixedHz} Hz";
         lines[1] = $"FPS {Ms(host.Fps)}";
         lines[2] = $"Sim {Ms(r.SimMs)} ms";
         lines[3] = $"避让 {Ms(r.AvoidMs)} ms";
         lines[4] = $"空间哈希 {Ms(r.HashMs)} ms";
-        lines[5] = $"UI 重绘峰值 {Ms(host.UiRedrawPeakMs)} ms  面板编排 {Ms(host.ComposeMs)} ms";
+        lines[5] = $"UI 重绘峰值 {Ms(host.UiRedrawPeakMs)} ms · 面板编排 {Ms(host.ComposeMs)} ms";
         lines[6] = $"堆增长 {heap}";
         lines[7] = r.HasHeading ? $"航向 {Ms(r.HeadingDeg)}°" : "航向 N/A";
         lines[8] = r.HasFlip ? $"反复 {r.FlipPct}%" : "反复 N/A";
-        lines[9] = $"NavMesh {Ms(r.NavMeshMs)} ms  HPA* {Ms(r.HpaMs)} ms  流场 {Ms(r.FlowMs)} ms";
+        lines[9] = $"NavMesh {Ms(r.NavMeshMs)} ms · HPA* {Ms(r.HpaMs)} ms · 流场 {Ms(r.FlowMs)} ms";
         lines[10] = r.HasExtend
             ? $"走廊扩展 {r.ExtendCount} 次 {Ms(r.ExtendMs)} ms"
-            : "走廊扩展 N/A（端口未做走廊扩展）";
-        lines[11] = $"规划 {Ms(r.PlanMs)} ms  烘焙 {Ms(r.NavBakeMs)} ms  重烘 {Ms(r.RebakeMs)} ms";
-        lines[12] = $"状态 闲 {r.Idle} 行 {r.Moving} 达 {r.Arrived} 不可达 {r.Unreachable} 跳跃 {r.Jumping}";
-        lines[13] = $"分辨率 {resolution}  nav格 {r.NavCellCm} cm  tile {r.TileCount}";
+            : "走廊扩展 N/A · 端口未做走廊扩展";
+        lines[11] = $"规划 {Ms(r.PlanMs)} ms · 烘焙 {Ms(r.NavBakeMs)} ms · 重烘 {Ms(r.RebakeMs)} ms";
+        lines[12] = $"状态 闲 {r.Idle} 行 {r.Moving} 达 {r.Arrived} · 不可达 {r.Unreachable} 跳跃 {r.Jumping}";
+        lines[13] = $"分辨率 {resolution} · nav格 {r.NavCellCm} cm · tile {r.TileCount}";
         lines[14] = $"世界生成 {world}";
-        lines[15] = "烘焙超时 N/A  仿真Worker/宿主RPC N/A（同进程，烘焙在激活线程）";
+        lines[15] = "烘焙超时 N/A · 仿真Worker/宿主RPC N/A · 同进程，烘焙在激活线程";
     }
 
     /// <summary>读数缺失（NaN 或没有样本）不告警。</summary>

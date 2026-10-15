@@ -161,11 +161,11 @@ public class CrowdTelemetryPanelTests
         var lines = new string[CrowdHudState.TelemetryLineCount];
         CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
         var text = string.Join('\n', lines);
-        Assert.That(text, Does.Contain("采样 250 ms 曲线 48"));
+        Assert.That(text, Does.Contain("采样 250 ms · 曲线 48"));
         Assert.That(text, Does.Contain("FPS N/A"));
         Assert.That(text, Does.Contain("堆增长 N/A"));
         Assert.That(text, Does.Contain("走廊扩展 N/A"));
-        Assert.That(text, Does.Contain("UI 重绘峰值 N/A ms  面板编排 N/A ms"));
+        Assert.That(text, Does.Contain("UI 重绘峰值 N/A ms · 面板编排 N/A ms"));
         Assert.That(text, Does.Not.Contain("渲染"), "旧的“渲染”只量叠层文字，已改名为 UI 重绘峰值");
         Assert.That(text, Does.Contain("分辨率 N/A"));
         Assert.That(text, Does.Contain("NavMesh 8.0"));
