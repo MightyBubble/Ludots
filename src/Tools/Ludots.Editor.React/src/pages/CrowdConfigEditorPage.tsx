@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
+import { TraversalMatrixEditor } from './crowd-config/TraversalMatrixEditor';
+import { cloneTraversal, type CostMatrixView, type Traversal } from './crowd-config/traversalMatrix';
 import { UnitTemplateInspector } from './crowd-config/UnitTemplateInspector';
 import type { UnitTemplatesView } from './crowd-config/unitTemplates';
 
@@ -8,9 +10,6 @@ type ModInfo = { id: string; name?: string };
 type Issue = { path?: string; message?: string; sourceMod?: string; sourceFile?: string };
 type Owner = { file: string; path: string; sourceMod?: string; sourceFile?: string };
 type HelpItem = { topic: string; text: string };
-type Area = { id: number; name: string };
-type CellRow = Record<string, number | null>;
-type CostMatrix = { areas?: Area[]; agentTypes?: string[]; cells?: Record<string, CellRow> };
 type Snapshot = {
   ok?: boolean;
   modId?: string;
@@ -27,7 +26,7 @@ type Snapshot = {
   defaults?: Record<string, unknown>;
   owners?: Owner[];
   unitTemplates?: UnitTemplatesView;
-  costMatrix?: CostMatrix;
+  costMatrix?: CostMatrixView;
   help?: HelpItem[];
   issues?: Issue[];
 };
@@ -82,7 +81,7 @@ export function CrowdConfigEditorPage() {
   const [tab, setTab] = useState<TabId>('scenario');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [texts, setTexts] = useState<Record<string, string>>({});
-  const [cells, setCells] = useState<Record<string, CellRow>>({});
+  const [traversal, setTraversal] = useState<Traversal | null>(null);
   const [bundleText, setBundleText] = useState('');
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loadedIssues, setLoadedIssues] = useState<Issue[]>([]);
@@ -132,7 +131,7 @@ export function CrowdConfigEditorPage() {
           debug: pretty(json.debug),
           debugView: pretty(json.debugView),
         });
-        setCells(json.costMatrix?.cells ?? {});
+        setTraversal(cloneTraversal(json.costMatrix?.traversal));
         const loaded = [...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])];
         setIssues(loaded);
         setLoadedIssues(loaded);
@@ -166,11 +165,7 @@ export function CrowdConfigEditorPage() {
 
   function parseLayer(layer: TabId): unknown {
     if (layer === 'costMatrix') {
-      return {
-        areas: snapshot?.costMatrix?.areas ?? [],
-        agentTypes: snapshot?.costMatrix?.agentTypes ?? [],
-        cells,
-      };
+      return { traversal };
     }
     return JSON.parse(texts[layer] || '{}');
   }
@@ -188,7 +183,7 @@ export function CrowdConfigEditorPage() {
     const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/crowd-config`);
     const json = (await res.json()) as Snapshot;
     setSnapshot(json);
-    setCells(json.costMatrix?.cells ?? {});
+    setTraversal(cloneTraversal(json.costMatrix?.traversal));
     setLoadedIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
   }
 
@@ -268,8 +263,8 @@ export function CrowdConfigEditorPage() {
 
   function resetDraft() {
     if (tab === 'costMatrix') {
-      const defaults = snapshot?.defaults?.costMatrix as CostMatrix | undefined;
-      setCells(defaults?.cells ?? snapshot?.costMatrix?.cells ?? {});
+      const defaults = snapshot?.defaults?.costMatrix as CostMatrixView | undefined;
+      setTraversal(cloneTraversal(defaults?.traversal ?? snapshot?.costMatrix?.traversal));
       setStatus('草稿已回到默认。文件还没改。');
       return;
     }
@@ -308,15 +303,14 @@ export function CrowdConfigEditorPage() {
   }
 
   const defaultsText = tab === 'bundle' || tab === 'costMatrix' ? '' : pretty(snapshot?.defaults?.[tab]);
-  const areas = snapshot?.costMatrix?.areas ?? [];
-  const agentTypes = snapshot?.costMatrix?.agentTypes ?? Object.keys(cells);
+  const traversalDefaults = cloneTraversal((snapshot?.defaults?.costMatrix as CostMatrixView | undefined)?.traversal);
 
   return (
     <div className="h-full overflow-auto bg-studio-bg px-6 py-6 text-studio-label">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-2xl font-semibold">群体配置</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-studio-secondary">
-          场景、全局、模板来自加载顺序里的合并结果。写入只落在当前选中的 Mod。空的代价格子是不可通行。完整包的 version 必须正好等于 {snapshot?.bundleVersion ?? '…'}，没有迁移。
+          场景、全局、模板来自加载顺序里的合并结果。写入只落在当前选中的 Mod。通行矩阵来自 CrowdSimulation/traversal.json，每一格都写明，不可走是 false。完整包的 version 必须正好等于 {snapshot?.bundleVersion ?? '…'}，没有迁移。
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -412,53 +406,13 @@ export function CrowdConfigEditorPage() {
           />
         ) : null}
 
-        {tab === 'costMatrix' ? (
-          <div className="mt-4 overflow-auto rounded-xl border border-studio-elevated bg-studio-surface p-4">
-            <h2 className="text-sm font-semibold">移动类型 × 区域</h2>
-            <p className="mt-1 text-xs text-studio-muted">格子留空就是不可通行。写入时仍会带上 cost，因为装载器不接受缺行。</p>
-            <table data-cost-matrix="" className="mt-3 w-full text-left text-xs">
-              <thead>
-                <tr className="text-studio-muted">
-                  <th className="py-1 pr-3 font-normal">agentType</th>
-                  {areas.map((area) => (
-                    <th key={area.id} className="py-1 pr-3 font-normal">
-                      {area.name}
-                      <span className="block font-mono">{area.id}</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {agentTypes.map((agentType) => (
-                  <tr key={agentType} className="border-t border-studio-elevated">
-                    <td className="py-1 pr-3 font-mono">{agentType}</td>
-                    {areas.map((area) => {
-                      const raw = cells[agentType]?.[String(area.id)];
-                      return (
-                        <td key={area.id} className="py-1 pr-3">
-                          <input
-                            className="w-16 rounded border border-studio-elevated bg-studio-bg px-1 py-0.5 font-mono"
-                            value={raw == null ? '' : String(raw)}
-                            placeholder="不可通行"
-                            onChange={(event) => {
-                              const next = event.target.value.trim();
-                              setCells((current) => ({
-                                ...current,
-                                [agentType]: {
-                                  ...(current[agentType] ?? {}),
-                                  [String(area.id)]: next === '' ? null : Number(next),
-                                },
-                              }));
-                            }}
-                          />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {tab === 'costMatrix' && traversal ? (
+          <TraversalMatrixEditor
+            traversal={traversal}
+            defaults={traversalDefaults}
+            mapAreas={snapshot?.costMatrix?.mapAreas ?? []}
+            onChange={setTraversal}
+          />
         ) : null}
 
         {tab === 'bundle' ? (
