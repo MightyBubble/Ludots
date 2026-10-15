@@ -5,7 +5,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// 流场结果缓存。键 = 导航号 × N² + 目标格。
-/// 命中还要求已有掩码覆盖这次要的走廊。
+/// 只按键取；掩码盖不盖得住由路径服务按钉住的场判定。
 /// 容量按条目计。引用（跟随的组与在途请求）和缓存标记都放开才回池。
 /// </summary>
 public sealed class FlowFieldCache
@@ -53,28 +53,19 @@ public sealed class FlowFieldCache
 
     public long KeyOf(int navId, int goal) => (long)navId * _n2 + goal;
 
-    public bool TryHit(long key, byte[] needed, out FlowField field)
+    /// <summary>按键取，计命中 / 未命中，并把条目挪到最新。</summary>
+    public FlowField? Get(long key)
     {
         int slot = Find(key);
         if (slot < 0)
         {
             Misses++;
-            field = null!;
-            return false;
-        }
-
-        var found = _fields[slot];
-        if (found?.Mask == null || found.Mask.Length != needed.Length || !FlowFieldBuilder.MaskSubset(needed, found.Mask))
-        {
-            Misses++;
-            field = null!;
-            return false;
+            return null;
         }
 
         Hits++;
         Touch(slot);
-        field = found;
-        return true;
+        return _fields[slot];
     }
 
     public void Admit(FlowField field)

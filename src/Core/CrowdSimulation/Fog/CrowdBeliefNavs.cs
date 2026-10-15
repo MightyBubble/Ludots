@@ -20,6 +20,7 @@ public sealed class CrowdBeliefNavs
     private readonly Dictionary<int, Slot> _slots = new();
     private readonly HashSet<int> _revealGone = new();
     private readonly List<(int X0, int Y0, int X1, int Y1)> _revealRects = new();
+    private readonly List<(int X0, int Y0, int X1, int Y1)> _divergenceRects = new();
     private BeliefRank[] _beliefRanks = Array.Empty<BeliefRank>();
 
     public int Epoch { get; private set; }
@@ -33,7 +34,15 @@ public sealed class CrowdBeliefNavs
         public required Dictionary<int, CrowdStructuresStore> Layers;
         public required Dictionary<int, NavContext> Navs;
         /// <summary>变体号 → 分歧掩码(epoch 缓存)。</summary>
-        public required Dictionary<int, (int Epoch, byte[] Mask)> Masks;
+        public required Dictionary<int, DivergenceMemo> Masks;
+    }
+
+    /// <summary>掩码数组随变体常驻,epoch 变了或揭示过就原地重算。</summary>
+    private sealed class DivergenceMemo
+    {
+        public int Epoch;
+        public bool Stale;
+        public required byte[] Mask;
     }
 
     public CrowdBeliefNavs(CrowdSimSession sim) => _sim = sim;
@@ -60,7 +69,7 @@ public sealed class CrowdBeliefNavs
                 Unknown = unknown is { Count: > 0 } ? unknown : null,
                 Layers = new Dictionary<int, CrowdStructuresStore>(),
                 Navs = new Dictionary<int, NavContext>(),
-                Masks = new Dictionary<int, (int, byte[])>(),
+                Masks = new Dictionary<int, DivergenceMemo>(),
             };
         });
     }
@@ -186,7 +195,7 @@ public sealed class CrowdBeliefNavs
                 }
             }
 
-            b.Masks.Clear();
+            foreach (var memo in b.Masks.Values) memo.Stale = true;
             var dirty = new Dictionary<int, List<int>>();
             foreach (var (id, v) in b.Navs)
             {
@@ -253,26 +262,26 @@ public sealed class CrowdBeliefNavs
     private Slot SlotOf(int slot) =>
         _slots.TryGetValue(slot, out var b) ? b : throw new InvalidOperationException($"认知 slot {slot} 未注册");
 
-    /// <summary>分歧矩形:单侧已知的实体足迹格矩形 + 未探索 tile 的行段合并矩形。</summary>
+    /// <summary>分歧矩形:单侧已知的实体足迹格矩形 + 未探索 tile 的行段合并矩形。
+    /// 写进共用列表,下一次调用就被覆盖。</summary>
     private List<(int X0, int Y0, int X1, int Y1)> DivergenceRects(Slot b)
     {
         var truth = _sim.Structures!;
         int navCellsPerSide = b.Field.NavCellsPerSide, navCellSizeCm = b.Field.NavCellSizeCm;
-        var res = new List<(int, int, int, int)>();
-        void Add(CrowdStructureFootprint fp)
+        var res = _divergenceRects;
+        res.Clear();
+        var truthIds = truth.EntityIds;
+        for (int i = 0; i < truthIds.Count; i++)
         {
-            var r = fp.CellRectOf(navCellSizeCm, navCellsPerSide);
-            if (r.X1 > r.X0 && r.Y1 > r.Y0) res.Add(r);
+            int id = truthIds[i];
+            if (!b.Field.TryGetFootprint(id, out _)) AddRect(res, truth.FootprintOf(id), navCellSizeCm, navCellsPerSide);
         }
 
-        foreach (int id in truth.EntityIds)
+        var beliefIds = b.Field.EntityIds;
+        for (int i = 0; i < beliefIds.Count; i++)
         {
-            if (!b.Field.TryGetFootprint(id, out _)) Add(truth.FootprintOf(id));
-        }
-
-        foreach (int id in b.Field.EntityIds)
-        {
-            if (!truth.TryGetFootprint(id, out _)) Add(b.Field.FootprintOf(id));
+            int id = beliefIds[i];
+            if (!truth.TryGetFootprint(id, out _)) AddRect(res, b.Field.FootprintOf(id), navCellSizeCm, navCellsPerSide);
         }
 
         if (b.Unknown != null)
@@ -289,6 +298,12 @@ public sealed class CrowdBeliefNavs
         }
 
         return res;
+    }
+
+    private static void AddRect(List<(int X0, int Y0, int X1, int Y1)> res, CrowdStructureFootprint fp, int navCellSizeCm, int navCellsPerSide)
+    {
+        var r = fp.CellRectOf(navCellSizeCm, navCellsPerSide);
+        if (r.X1 > r.X0 && r.Y1 > r.Y0) res.Add(r);
     }
 
     /// <summary>未注册槽（含从未建过的槽 0）差集为空。残影 = 认知挡、真相不挡。</summary>
@@ -364,11 +379,20 @@ public sealed class CrowdBeliefNavs
     /// 对角步要读两个正交邻)。epoch 缓存——真相实体变更后统一失效。</summary>
     private byte[] DivergenceMask(Slot b, int id, NavContext truth)
     {
-        if (b.Masks.TryGetValue(id, out var cached) && cached.Epoch == Epoch) return cached.Mask;
+        if (b.Masks.TryGetValue(id, out var memo) && memo.Epoch == Epoch && !memo.Stale) return memo.Mask;
         int navCellsPerSide = truth.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile, r = truth.ClearanceNavCells;
-        var mask = new byte[navTilesPerSide * navTilesPerSide];
-        foreach (var (x0, y0, x1, y1) in DivergenceRects(b))
+        if (memo == null)
         {
+            memo = new DivergenceMemo { Mask = new byte[navTilesPerSide * navTilesPerSide] };
+            b.Masks[id] = memo;
+        }
+
+        var mask = memo.Mask;
+        Array.Clear(mask);
+        var rects = DivergenceRects(b);
+        for (int i = 0; i < rects.Count; i++)
+        {
+            var (x0, y0, x1, y1) = rects[i];
             int gx0 = Math.Max(0, x0 - r), gy0 = Math.Max(0, y0 - r);
             int gx1 = Math.Min(navCellsPerSide, x1 + r), gy1 = Math.Min(navCellsPerSide, y1 + r);
             for (int ty = gy0 / navCellsPerTile; ty < (gy1 + navCellsPerTile - 1) / navCellsPerTile; ty++)
@@ -380,7 +404,8 @@ public sealed class CrowdBeliefNavs
             }
         }
 
-        b.Masks[id] = (Epoch, mask);
+        memo.Epoch = Epoch;
+        memo.Stale = false;
         return mask;
     }
 

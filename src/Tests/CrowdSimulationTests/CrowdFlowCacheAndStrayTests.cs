@@ -17,22 +17,21 @@ namespace CrowdSimulationTests;
 public sealed class CrowdFlowCacheAndStrayTests
 {
     [Test]
-    public void Cache_HitRequiresKeyAndMaskCoverage_LruEvictsOldest()
+    public void Cache_GetsByKey_AdmitReplacesTheEntry_LruEvictsOldest()
     {
         var cache = new FlowFieldCache(2, 4);
         var wide = Field(3, 1, new byte[] { 1, 1, 1, 0 });
         var narrow = Field(3, 1, new byte[] { 1, 1, 0, 0 });
-        cache.Admit(narrow);
-        Assert.That(cache.TryHit(cache.KeyOf(3, 1), new byte[] { 1, 1, 1, 0 }, out _), Is.False);
+        Assert.That(cache.Get(cache.KeyOf(3, 1)), Is.Null);
         Assert.That(cache.Misses, Is.EqualTo(1));
-        Assert.That(cache.TryHit(cache.KeyOf(3, 1), new byte[] { 1, 0, 0, 0 }, out var hit), Is.True);
-        Assert.That(hit, Is.SameAs(narrow));
-        Assert.That(cache.TryHit(cache.KeyOf(9, 1), new byte[] { 1, 0, 0, 0 }, out _), Is.False);
+        cache.Admit(narrow);
+        Assert.That(cache.Get(cache.KeyOf(3, 1)), Is.SameAs(narrow));
+        Assert.That(cache.Get(cache.KeyOf(9, 1)), Is.Null);
 
         cache.Admit(wide);
-        Assert.That(cache.TryHit(cache.KeyOf(3, 1), new byte[] { 1, 1, 1, 0 }, out hit), Is.True);
-        Assert.That(hit, Is.SameAs(wide));
+        Assert.That(cache.Get(cache.KeyOf(3, 1)), Is.SameAs(wide));
         Assert.That(narrow.Cached, Is.False);
+        Assert.That(cache.Hits, Is.EqualTo(2));
 
         var a = Field(1, 0, new byte[] { 1, 0, 0, 0 });
         var b = Field(1, 1, new byte[] { 1, 0, 0, 0 });
@@ -44,7 +43,7 @@ public sealed class CrowdFlowCacheAndStrayTests
         lru.Admit(c);
         Assert.That(a.Cached, Is.False);
         Assert.That(lru.Evicts, Is.EqualTo(1));
-        Assert.That(lru.TryHit(lru.KeyOf(1, 1), new byte[] { 1, 0, 0, 0 }, out _), Is.True);
+        Assert.That(lru.Get(lru.KeyOf(1, 1)), Is.SameAs(b));
         lru.Admit(d);
         Assert.That(c.Cached, Is.False, "命中过的条目留到最后才被逐出");
         Assert.That(b.Cached, Is.True);
@@ -120,7 +119,7 @@ public sealed class CrowdFlowCacheAndStrayTests
     }
 
     [Test]
-    public void RefreshHit_DoesNotSpendThePerTickBudget()
+    public void Refresh_SameNavGoalGroupsRideOneJob_ReusingACoveringCachedFieldOrJoiningIt()
     {
         using var harness = Open();
         var session = harness.Session;
@@ -138,14 +137,46 @@ public sealed class CrowdFlowCacheAndStrayTests
         mask[tile] = 1;
         var a = Dummy(session, nav, goal, mask);
         var b = Dummy(session, nav, goal, (byte[])mask.Clone());
-        harness.Planner.RefreshFlow(a);
-        harness.Planner.RefreshFlow(b);
-        harness.Planner.ProcessRefreshes(1);
-        Assert.That(harness.Planner.FlowRefreshSubmits, Is.EqualTo(0));
+        var planner = harness.Planner;
+        int latency = session.Config.Planning.RefreshLatencyTicks;
+        planner.RefreshFlow(a);
+        planner.RefreshFlow(b);
+        planner.ProcessRefreshes(1);
+        Assert.That(planner.FlowRefreshSubmits, Is.EqualTo(1));
+        Assert.That(planner.RefreshRiders, Is.EqualTo(1));
+        Assert.That(a.Extending && b.Extending, Is.True);
+        Assert.That(cached.Refs, Is.EqualTo(1), "请求在途时钉住缓存场");
+        Assert.That(planner.ApplyDue(1 + latency, true), Is.True);
+        Assert.That(planner.RefreshCachedReplies, Is.EqualTo(1));
         Assert.That(a.Flow, Is.SameAs(cached));
         Assert.That(b.Flow, Is.SameAs(cached));
         Assert.That(cached.Refs, Is.EqualTo(2));
-        Assert.That(harness.Planner.FlowCacheHits, Is.GreaterThan(0));
+        Assert.That(a.Extending || b.Extending, Is.False);
+
+        int other = NextPassable(nav, goal);
+        int otherTile = NavGridSteps.TileOf(other, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, nav.Hpa.NavTilesPerSide);
+        var otherMask = new byte[tiles];
+        otherMask[otherTile] = 1;
+        int farTile = FarthestTile(otherMask, nav.Hpa.NavTilesPerSide);
+        var farMask = new byte[tiles];
+        farMask[farTile] = 1;
+        var narrow = Field(nav.Id, other, farMask);
+        planner.FlowCache.Admit(narrow);
+        var c = Dummy(session, nav, other, otherMask);
+        var d = Dummy(session, nav, other, (byte[])otherMask.Clone());
+        planner.RefreshFlow(c);
+        planner.RefreshFlow(d);
+        planner.ProcessRefreshes(2);
+        Assert.That(planner.FlowRefreshSubmits, Is.EqualTo(2));
+        Assert.That(planner.ApplyDue(2 + latency, true), Is.True);
+        Assert.That(planner.RefreshCachedReplies, Is.EqualTo(1));
+        Assert.That(c.Flow, Is.Not.SameAs(narrow));
+        Assert.That(d.Flow, Is.SameAs(c.Flow));
+        Assert.That(c.Flow!.Mask![farTile], Is.EqualTo(1), "新场要盖住钉住缓存场的掩码");
+        Assert.That(c.Flow.Mask[otherTile], Is.EqualTo(1));
+        Assert.That(planner.FlowCacheContains(c.Flow), Is.True);
+        Assert.That(narrow.Cached, Is.False);
+        Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -193,7 +224,7 @@ public sealed class CrowdFlowCacheAndStrayTests
     }
 
     [Test]
-    public void StrayReply_RejectsStaleSeqAndStaleVersion_RebakeClearsExtending()
+    public void StrayReply_SkipsStaleSeq_RequeuesStaleVersion_RebakeSupersedes()
     {
         using var harness = Open();
         var session = harness.Session;
@@ -224,17 +255,17 @@ public sealed class CrowdFlowCacheAndStrayTests
         Assert.That(staleVersion.Flow, Is.SameAs(keptVersion));
         Assert.That(harness.Planner.FlowCacheContains(keptVersion!), Is.False);
 
-        // 版本失配只把刷新放进队列。先消化掉，重烘用例只剩这一次扩展。
+        Assert.That(harness.Planner.RefreshQueueCount, Is.EqualTo(1), "版本失配的组重新排刷新");
         harness.Planner.ProcessRefreshes(2);
         Assert.That(harness.Planner.ApplyDue(2 + session.Config.Planning.RefreshLatencyTicks, true), Is.True);
         Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
 
-        // 上一次刷新已经按原目标准入。换一个目标，扩展才会未命中并留下在途请求。
         int other = NextPassable(nav, goal);
         int otherTile = NavGridSteps.TileOf(other, nav.NavCellsPerSide, nav.Hpa.NavCellsPerTile, nav.Hpa.NavTilesPerSide);
         var otherMask = new byte[tiles];
         otherMask[otherTile] = 1;
         var rebaked = Dummy(session, nav, other, otherMask);
+        rebaked.OrderId = 1;
         var keptRebake = rebaked.Flow;
         harness.Planner.NoteStray(rebaked.Id, CellInNeighborTile(nav, otherTile));
         harness.Planner.ProcessRefreshes(3);
@@ -246,6 +277,9 @@ public sealed class CrowdFlowCacheAndStrayTests
         harness.Planner.ReactRebake(dirty);
         Assert.That(rebaked.Extending, Is.False);
         Assert.That(rebaked.Flow, Is.SameAs(keptRebake));
+        Assert.That(harness.Planner.ApplyDue(3 + session.Config.Planning.LatencyTicks, true), Is.True);
+        Assert.That(rebaked.Flow, Is.SameAs(keptRebake), "被取代的扩展答复不挂场");
+        Assert.That(harness.Planner.RefreshQueueCount, Is.EqualTo(0), "被取代的扩展答复不再排刷新");
         Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
     }
 
@@ -318,7 +352,7 @@ public sealed class CrowdFlowCacheAndStrayTests
     }
 
     [Test]
-    public void FlowRevision_FollowsRequestId_OnPlanRefreshExtendAndCacheHit()
+    public void FlowRevision_FollowsRequestId_OnPlanRefreshExtend_CachedReplyKeepsIt()
     {
         using var harness = Open();
         var session = harness.Session;
@@ -354,18 +388,73 @@ public sealed class CrowdFlowCacheAndStrayTests
         if (ReferenceEquals(group.Flow, poisoned))
             Assert.That(group.Flow.BuildRevision, Is.Not.EqualTo(99991));
 
-        int tiles = harness.PlannerTiles;
-        var covered = new byte[tiles];
-        for (int i = 0; i < covered.Length; i++) covered[i] = 1;
-        var cached = Field(group.NavId, group.Goal, covered);
+        var groupNav = session.ResolveNavContext(group.NavId);
+        var cached = FlowFieldBuilder.Build(groupNav, group.Goal, Full(harness.PlannerTiles), new FlowPool(groupNav.NavCellsPerSide, 1));
         cached.BuildRevision = 4242;
         harness.Planner.FlowCache.Admit(cached);
         int seqBeforeHit = ServiceSeq(harness.Service);
         harness.Planner.RefreshFlow(group);
         harness.Planner.ProcessRefreshes(session.TickCount);
+        Assert.That(ServiceSeq(harness.Service), Is.EqualTo(seqBeforeHit + 1));
+        session.Advance(session.Config.Planning.RefreshLatencyTicks + 1);
         Assert.That(group.Flow, Is.SameAs(cached));
         Assert.That(group.Flow.BuildRevision, Is.EqualTo(4242));
-        Assert.That(ServiceSeq(harness.Service), Is.EqualTo(seqBeforeHit));
+    }
+
+    [Test]
+    public void Plan_ReusesAPinnedCachedFieldThatCovers_OtherwiseBuildsOverItsMask()
+    {
+        using var harness = Open();
+        var session = harness.Session;
+        var planner = harness.Planner;
+        session.Movement!.OnStray = null;
+        var group = OrderOne(session, 480000, 560000, 700000, 700000);
+        var corridor = group.Flow!.Mask!;
+        var nav = session.ResolveNavContext(group.NavId);
+        int tiles = harness.PlannerTiles;
+        var full = FlowFieldBuilder.Build(nav, group.Goal, Full(tiles), new FlowPool(nav.NavCellsPerSide, 1));
+        planner.FlowCache.Admit(full);
+
+        int hits = planner.FlowCacheHits;
+        group = Reorder(session, 700000, 700000);
+        Assert.That(planner.FlowCacheHits, Is.EqualTo(hits + 1), "规划时要按键钉住缓存场");
+        Assert.That(planner.PlanCachedReplies, Is.EqualTo(1));
+        Assert.That(group.Flow, Is.SameAs(full));
+        Assert.That(full.Refs, Is.EqualTo(1), "规划时的钉住在应用后要放开");
+
+        int farTile = FarthestTile(corridor, nav.Hpa!.NavTilesPerSide);
+        var far = new byte[tiles];
+        far[farTile] = 1;
+        var narrow = Field(group.NavId, group.Goal, far);
+        planner.FlowCache.Admit(narrow);
+
+        // 同成员同目标格同参数的指令会直接复用，换个行宽才重新规划。
+        group = Reorder(session, 700000, 700000, widthCm: 100);
+        var built = group.Flow!;
+        Assert.That(planner.PlanCachedReplies, Is.EqualTo(1));
+        Assert.That(built, Is.Not.SameAs(full).And.Not.SameAs(narrow));
+        Assert.That(built.Mask![farTile], Is.EqualTo(1), "新场要按 垫过的走廊 ∪ 缓存场掩码 建");
+        Assert.That(planner.FlowCacheContains(built), Is.True);
+        Assert.That(narrow.Cached, Is.False);
+        Assert.That(narrow.Refs, Is.EqualTo(0));
+    }
+
+    private static int FarthestTile(byte[] mask, int side)
+    {
+        int best = -1, bestD = -1;
+        for (int t = 0; t < mask.Length; t++)
+        {
+            int d = int.MaxValue;
+            for (int m = 0; m < mask.Length; m++)
+            {
+                if (mask[m] != 0) d = Math.Min(d, Math.Max(Math.Abs(t % side - m % side), Math.Abs(t / side - m / side)));
+            }
+
+            if (d > bestD) { bestD = d; best = t; }
+        }
+
+        Assert.That(bestD, Is.GreaterThan(2), "场景无效：走廊盖满了全图");
+        return best;
     }
 
     private static int ServiceSeq(PathQueryService service) =>
@@ -542,6 +631,32 @@ public sealed class CrowdFlowCacheAndStrayTests
         for (int i = 0; i < session.Groups.Groups.Count; i++)
         {
             if (session.Groups.Groups[i] is { Flow: not null, Leader: not null } group) return group;
+        }
+
+        Assert.Fail("指令没有挂上流场");
+        return null!;
+    }
+
+    private static CrowdNavGroupSet.Group Reorder(CrowdSimSession session, int goalX, int goalY, int widthCm = 0)
+    {
+        var members = new uint[1];
+        int n = session.Units.CopyOwnHandles(1, members);
+        session.Commands.Submit(session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.Order,
+            Player = 1,
+            XCm = goalX,
+            YCm = goalY,
+            ShapeId = "box",
+            HasAuto = true,
+            Auto = false,
+            WidthCm = widthCm,
+            Members = members.AsSpan(0, n).ToArray(),
+        }, CrowdSimCommands.Exec);
+        session.Advance(session.Config.Planning.LatencyTicks + 2);
+        for (int i = 0; i < session.Groups.Groups.Count; i++)
+        {
+            if (session.Groups.Groups[i] is { Flow: not null, Leader: not null, Planning: false } group) return group;
         }
 
         Assert.Fail("指令没有挂上流场");

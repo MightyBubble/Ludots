@@ -42,7 +42,8 @@ public sealed class CrowdCommandQueue
         return exec(sim, cmd);
     }
 
-    /// <summary>脚本入队(须按 tick 升序;与未执行的存量按 tick 归并,同 tick 先到先执行)。</summary>
+    /// <summary>脚本入队(须按 tick 升序;与未执行的存量按 tick 归并,同 tick 先到先执行)。
+    /// 条目按 <see cref="CrowdSimCommand.Detached"/> 入队，与调用方的数组脱钩。</summary>
     public void Schedule(CrowdSimSession sim, IReadOnlyList<CrowdCommand> entries)
     {
         for (int k = 1; k < entries.Count; k++)
@@ -61,7 +62,7 @@ public sealed class CrowdCommandQueue
         while (a < rest.Count || b < entries.Count)
         {
             if (b >= entries.Count || (a < rest.Count && rest[a].Tick <= entries[b].Tick)) merged.Add(rest[a++]);
-            else merged.Add((entries[b].Tick, entries[b++].Cmd));
+            else merged.Add((entries[b].Tick, entries[b++].Cmd.Detached()));
         }
 
         _queue = merged;

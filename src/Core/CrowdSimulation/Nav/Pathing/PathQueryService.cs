@@ -9,12 +9,19 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
 
 /// <summary>一次两点路径请求(格号 + 上下文 + 起端层)。
-/// CorridorMask 非空 = 同走廊刷新(S7 队伍反应):不重推走廊,按 padMask ∪ 该掩码建流场。</summary>
+/// CorridorMask 非空 = 刷新或扩展:不重推走廊,掩码(并上走失 tile 和它到目标的 HPA tile)垫一圈;
+/// CachedMask 盖住垫后的掩码就答复沿用缓存,否则按 垫后掩码 ∪ CachedMask 新建。
+/// Plan 非空 = 一条指令的组规划,结果写回 Plan 里的各组,答复本身不带场。</summary>
 public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level)
 {
     public byte[]? CorridorMask { get; init; }
-    /// <summary>走廊扩展：统计进扩展次数和耗时。建场仍是 padMask ∪ 原掩码。</summary>
+    /// <summary>请求时钉住的同 (导航, 目标) 缓存场的掩码。</summary>
+    public byte[]? CachedMask { get; init; }
+    /// <summary>走失格,-1 表示没有。</summary>
+    public int StrayCell { get; init; } = -1;
+    /// <summary>走廊扩展：统计进扩展次数和耗时。</summary>
     public bool Extension { get; init; }
+    internal PathPlanJob? Plan { get; init; }
 }
 
 /// <summary>路径答复:折线 + 方向图(流场);不可达时 Points 为 null。</summary>
@@ -32,6 +39,8 @@ public sealed class PathResult
     /// <summary>方向图(调用方持有;弃用经 PathQueryService.Recycle 还池)。</summary>
     public FlowField? Flow { get; set; }
     public byte[]? CorridorMask { get; set; }
+    /// <summary>刷新或扩展的答复:请求时钉住的缓存场已经盖住,没有新建场。</summary>
+    public bool Cached { get; set; }
 }
 
 /// <summary>路径服务故障:请求超过 planTimeoutMs 未返回(报错,绝不重试或换算法)。</summary>
@@ -105,6 +114,9 @@ public sealed class PathQueryService : IDisposable
     /// <summary>测试钩:每个任务计算前注入的额外耗时(模拟后台变慢)。</summary>
     public TimeSpan TestDelayPerJob { get; set; } = TimeSpan.Zero;
 
+    /// <summary>测试钩:两点请求和组规划里的领队走廊按失败处理(模拟 HPA 图与连通域不一致)。</summary>
+    public bool TestCorridorFails { get; set; }
+
     public int Waits { get; private set; }
 
     /// <summary>还没取走的请求数。组消失或状态序对不上时也要取走，否则这里会涨。</summary>
@@ -173,7 +185,7 @@ public sealed class PathQueryService : IDisposable
     private static int ReplySlotCapacity(CrowdSimulationRuntimeConfig config)
     {
         return InFlightWindow(config.Planning.MaxRefreshesPerTick, config.Planning.RefreshLatencyTicks)
-            + InFlightWindow(config.Flowfield.MaxRebuildsPerTick, config.Planning.RefreshLatencyTicks)
+            + InFlightWindow(config.Flowfield.MaxRebuildsPerTick, config.Planning.LatencyTicks)
             + Ludots.Core.CrowdSimulation.CrowdSimulationLimits.HotPathSlotReserve;
     }
 
@@ -373,7 +385,7 @@ public sealed class PathQueryService : IDisposable
     {
         int workerIndex = (int)state!;
         int refreshInFlight = InFlightWindow(_config.Planning.MaxRefreshesPerTick, _config.Planning.RefreshLatencyTicks);
-        int extendInFlight = InFlightWindow(_config.Flowfield.MaxRebuildsPerTick, _config.Planning.RefreshLatencyTicks);
+        int extendInFlight = InFlightWindow(_config.Flowfield.MaxRebuildsPerTick, _config.Planning.LatencyTicks);
         // 缓存里的场不回空闲栈。把缓存容量一起备上，换目标时从栈里取，tick 里不再新分配。
         // 配置的 poolCapacity 是这份工作集之外的空闲余量，不是活场数量的上限。
         int flowCapacity = _config.Flowfield.PoolCapacity
@@ -497,12 +509,15 @@ public sealed class PathQueryService : IDisposable
         lock (_navGate) return action(state);
     }
 
+    // 变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)
+    private NavContext NavOf(int navId) => navId < Fog.CrowdBeliefNavs.BeliefStride
+        ? _navs[navId]
+        : _variantResolver!(navId);
+
     private PathResult Compute(PathQuery q, FlowPool pool, WorkerBuffers buffers)
     {
-        // 变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)
-        var nav = q.NavContextId < Fog.CrowdBeliefNavs.BeliefStride
-            ? _navs[q.NavContextId]
-            : _variantResolver!(q.NavContextId);
+        if (q.Plan != null) return ComputePlan(q, pool, buffers);
+        var nav = NavOf(q.NavContextId);
         int navCellsPerSide = nav.NavCellsPerSide;
         int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
         int tiles = navTilesPerSide * navTilesPerSide;
@@ -511,11 +526,37 @@ public sealed class PathQueryService : IDisposable
         Track(slot);
         if (q.CorridorMask != null)
         {
-            // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
-            FlowFieldBuilder.PadMaskInto(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
-            FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CorridorMask, buffers.Union);
+            // 走廊不重推,领队折线不产出(领队与槽位不动)
+            Array.Copy(q.CorridorMask, buffers.Corridor, tiles);
+            if (q.StrayCell >= 0)
+            {
+                buffers.Corridor[NavGridSteps.TileOf(q.StrayCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
+                long hpaMark = Stopwatch.GetTimestamp();
+                var strayPath = HpaQuery.FindPath(nav, q.StrayCell, q.GoalCell, buffers.Scratch.Hpa);
+                Interlocked.Add(ref _hpaTicks, Stopwatch.GetTimestamp() - hpaMark);
+                if (strayPath != null)
+                {
+                    for (int i = 0; i < strayPath.TileCount; i++) buffers.Corridor[strayPath.TileIds[i]] = 1;
+                }
+            }
+
+            FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+            if (q.CachedMask != null && FlowFieldBuilder.MaskSubset(buffers.Pad, q.CachedMask))
+            {
+                Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, null, q.CorridorMask);
+                slot.Result.Cached = true;
+                return slot.Result;
+            }
+
+            var buildMask = buffers.Pad;
+            if (q.CachedMask != null)
+            {
+                FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CachedMask, buffers.Union);
+                buildMask = buffers.Union;
+            }
+
             long refreshMark = Stopwatch.GetTimestamp();
-            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
+            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buildMask, pool);
             long built = Stopwatch.GetTimestamp() - refreshMark;
             Interlocked.Add(ref _flowTicks, built);
             if (q.Extension)
@@ -530,7 +571,9 @@ public sealed class PathQueryService : IDisposable
         Array.Clear(buffers.Corridor, 0, tiles);
         buffers.Corridor[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
         var stages = default(CorridorQuery.CorridorStageTicks);
-        var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch, ref stages);
+        var corridor = TestCorridorFails
+            ? buffers.Scratch.Publish(CorridorQuery.Branch.None, 0, null, 0, null, null, 0, default)
+            : CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch, ref stages);
         if (stages.NavMesh != 0) Interlocked.Add(ref _navTicks, stages.NavMesh);
         if (stages.Hpa != 0) Interlocked.Add(ref _hpaTicks, stages.Hpa);
         FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
@@ -560,6 +603,19 @@ public sealed class PathQueryService : IDisposable
             }
         }
 
+        if (points == null && nav.CanReach(nav.CompAt(q.StartCell, q.Level), nav.Comp[q.GoalCell]))
+        {
+            flow = RebuildWithStartTile(nav, q.StartCell, q.GoalCell, flow, pool, buffers);
+            var retry = CorridorQuery.FlowPoints(flow, q.StartCell, buffers.Scratch);
+            if (retry != null)
+            {
+                points = retry.Value.Points;
+                pointCount = retry.Value.PointCount;
+                layers = retry.Value.Layers;
+                layerCount = retry.Value.LayerCount;
+            }
+        }
+
         if (points == null)
         {
             pool.Give(flow);
@@ -573,6 +629,149 @@ public sealed class PathQueryService : IDisposable
         Array.Copy(buffers.Corridor, slot.Mask, tiles);
         Fill(slot, q, points != null, corridor.Kind, points, pointCount, layers, layerCount, flow, slot.Mask);
         return slot.Result;
+    }
+
+    /// <summary>
+    /// 一条指令的组规划。每组的走廊 = 目标 tile + 各起点走廊 + 领队走廊。
+    /// 先走领队:领队走廊推不出或导航有链接时,领队要描组场,组的场此时就得定下来;
+    /// 描不到而目标可达,并入领队 tile 重建一次。再按组表顺序给其余组定场。
+    /// 组总能拿到场;成员可不可达在规划时逐个按连通域判过。
+    /// </summary>
+    private PathResult ComputePlan(PathQuery q, FlowPool pool, WorkerBuffers buffers)
+    {
+        var job = q.Plan!;
+        var groups = job.Groups;
+        int count = groups.Count;
+        buffers.BuiltCount = 0;
+        var stages = default(CorridorQuery.CorridorStageTicks);
+        for (int i = 0; i < count; i++)
+        {
+            var g = groups[i];
+            var nav = NavOf(g.NavId);
+            int navTilesPerSide = nav.Hpa!.NavTilesPerSide;
+            int tiles = navTilesPerSide * navTilesPerSide;
+            if (g.Corridor.Length != tiles) g.Corridor = new byte[tiles];
+            Array.Clear(g.Corridor, 0, tiles);
+            g.Corridor[NavGridSteps.TileOf(g.Goal, nav.NavCellsPerSide, nav.Hpa.NavCellsPerTile, navTilesPerSide)] = 1;
+            for (int k = 0; k < g.OriginCount; k++)
+            {
+                CorridorQuery.CorridorTo(nav, _config, g.Origins[2 * k], g.Goal, g.Corridor, g.Origins[2 * k + 1], buffers.Scratch, ref stages);
+            }
+
+            g.Reply = PathPlanReply.None;
+            g.SameAs = -1;
+            g.Flow = null;
+        }
+
+        for (int li = 0; li < job.LeaderCount; li++)
+        {
+            int gi = job.Leaders[li];
+            var g = groups[gi];
+            var nav = NavOf(g.NavId);
+            bool found = !TestCorridorFails &&
+                CorridorQuery.CorridorTo(nav, _config, g.LeaderStart, g.Goal, g.Corridor, 0, buffers.Scratch, ref stages).Points != null;
+            if (found && nav.Links == null) continue;
+            var traced = FlowOf(job, gi, true, nav, pool, buffers);
+            if (CorridorQuery.FlowPoints(traced!, g.LeaderStart, buffers.Scratch) != null) continue;
+            if (!nav.CanReach(nav.CompAt(g.LeaderStart, 0), nav.Comp[g.Goal])) continue;
+            RetryLeader(job, gi, nav, pool, buffers);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            if (groups[i].Reply == PathPlanReply.None) FlowOf(job, i, false, NavOf(groups[i].NavId), pool, buffers);
+        }
+
+        if (stages.NavMesh != 0) Interlocked.Add(ref _navTicks, stages.NavMesh);
+        if (stages.Hpa != 0) Interlocked.Add(ref _hpaTicks, stages.Hpa);
+        var slot = buffers.Rent();
+        Track(slot);
+        Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, null, null);
+        return slot.Result;
+    }
+
+    /// <summary>
+    /// 组的场:同指令里先定下的同 (导航, 目标) 场盖住垫过的走廊就共用;
+    /// 否则钉住的缓存场盖住就用缓存(要描场的领队不收这个答复);再不行按 垫过的走廊 ∪ 那张场的掩码 新建。
+    /// </summary>
+    private FlowField? FlowOf(PathPlanJob job, int gi, bool trace, NavContext nav, FlowPool pool, WorkerBuffers buffers)
+    {
+        var g = job.Groups[gi];
+        if (g.Reply == PathPlanReply.New) return g.Flow;
+        if (g.Reply == PathPlanReply.Same) return job.Groups[g.SameAs].Flow;
+        if (g.Reply == PathPlanReply.Cached) return null;
+        int navTilesPerSide = nav.Hpa!.NavTilesPerSide;
+        buffers.EnsureMasks(navTilesPerSide * navTilesPerSide);
+        FlowFieldBuilder.PadMaskInto(g.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+        long key = (long)g.NavId * nav.NavCellsPerSide * nav.NavCellsPerSide + g.Goal;
+        int baseIndex = buffers.BuiltOf(key);
+        var baseFlow = baseIndex >= 0 ? job.Groups[baseIndex].Flow : null;
+        if (baseFlow != null && FlowFieldBuilder.MaskSubset(buffers.Pad, baseFlow.Mask!))
+        {
+            g.Reply = PathPlanReply.Same;
+            g.SameAs = baseIndex;
+            return baseFlow;
+        }
+
+        if (baseFlow == null && !trace && g.CachedMask != null && FlowFieldBuilder.MaskSubset(buffers.Pad, g.CachedMask))
+        {
+            g.Reply = PathPlanReply.Cached;
+            return null;
+        }
+
+        var prev = baseFlow != null ? baseFlow.Mask : g.CachedMask;
+        var buildMask = buffers.Pad;
+        if (prev != null)
+        {
+            FlowFieldBuilder.OrMaskInto(buffers.Pad, prev, buffers.Union);
+            buildMask = buffers.Union;
+        }
+
+        long flowMark = Stopwatch.GetTimestamp();
+        var flow = FlowFieldBuilder.Build(nav, g.Goal, buildMask, pool);
+        Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - flowMark);
+        buffers.SetBuilt(key, gi);
+        g.Reply = PathPlanReply.New;
+        g.Flow = flow;
+        return flow;
+    }
+
+    /// <summary>领队描不到组场而目标可达:按 pad(垫过的走廊 ∪ 现有场掩码 ∪ 领队 tile) 重建,领队 tile 记进走廊。</summary>
+    private void RetryLeader(PathPlanJob job, int gi, NavContext nav, FlowPool pool, WorkerBuffers buffers)
+    {
+        var g = job.Groups[gi];
+        var old = g.Reply == PathPlanReply.New ? g.Flow! : job.Groups[g.SameAs].Flow!;
+        int navTilesPerSide = nav.Hpa!.NavTilesPerSide;
+        int startTile = NavGridSteps.TileOf(g.LeaderStart, nav.NavCellsPerSide, nav.Hpa.NavCellsPerTile, navTilesPerSide);
+        int pad = _config.Flowfield.CorridorPaddingNavTiles;
+        FlowFieldBuilder.PadMaskInto(g.Corridor, navTilesPerSide, pad, buffers.Pad);
+        FlowFieldBuilder.OrMaskInto(buffers.Pad, old.Mask!, buffers.Union);
+        buffers.Union[startTile] = 1;
+        FlowFieldBuilder.PadMaskInto(buffers.Union, navTilesPerSide, pad, buffers.Pad);
+        if (g.Reply == PathPlanReply.New) pool.Give(old);
+        long retryMark = Stopwatch.GetTimestamp();
+        var rebuilt = FlowFieldBuilder.Build(nav, g.Goal, buffers.Pad, pool);
+        Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - retryMark);
+        g.Corridor[startTile] = 1;
+        buffers.SetBuilt((long)g.NavId * nav.NavCellsPerSide * nav.NavCellsPerSide + g.Goal, gi);
+        g.Reply = PathPlanReply.New;
+        g.SameAs = -1;
+        g.Flow = rebuilt;
+    }
+
+    /// <summary>起点落在走廊掩码外时流场描不到起点，目标却可达:并入起点 tile,按 pad(已垫掩码 ∪ 起点) 重建一次。</summary>
+    private FlowField RebuildWithStartTile(NavContext nav, int startCell, int goalCell, FlowField flow, FlowPool pool, WorkerBuffers buffers)
+    {
+        int navTilesPerSide = nav.Hpa!.NavTilesPerSide;
+        int startTile = NavGridSteps.TileOf(startCell, nav.NavCellsPerSide, nav.Hpa.NavCellsPerTile, navTilesPerSide);
+        buffers.Corridor[startTile] = 1;
+        buffers.Pad[startTile] = 1;
+        FlowFieldBuilder.PadMaskInto(buffers.Pad, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Union);
+        pool.Give(flow);
+        long retryMark = Stopwatch.GetTimestamp();
+        var rebuilt = FlowFieldBuilder.Build(nav, goalCell, buffers.Union, pool);
+        Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - retryMark);
+        return rebuilt;
     }
 
     private void Fill(
@@ -615,6 +814,7 @@ public sealed class PathQueryService : IDisposable
         result.PointLayers = layerCount == 0 ? null : slot.Layers;
         result.Flow = flow;
         result.CorridorMask = mask;
+        result.Cached = false;
     }
 
     /// <summary>一份 worker 私有暂存。答复槽跨线程交回主线程，算完即与暂存脱开。</summary>
@@ -631,6 +831,40 @@ public sealed class PathQueryService : IDisposable
         public byte[] Corridor = Array.Empty<byte>();
         public byte[] Pad = Array.Empty<byte>();
         public byte[] Union = Array.Empty<byte>();
+        /// <summary>本条指令里每个 (导航, 目标) 最近新建场的组下标。一条指令只有几组,线性找。</summary>
+        public long[] BuiltKeys = new long[8];
+        public int[] BuiltGroups = new int[8];
+        public int BuiltCount;
+
+        public int BuiltOf(long key)
+        {
+            for (int i = 0; i < BuiltCount; i++)
+            {
+                if (BuiltKeys[i] == key) return BuiltGroups[i];
+            }
+
+            return -1;
+        }
+
+        public void SetBuilt(long key, int groupIndex)
+        {
+            for (int i = 0; i < BuiltCount; i++)
+            {
+                if (BuiltKeys[i] != key) continue;
+                BuiltGroups[i] = groupIndex;
+                return;
+            }
+
+            if (BuiltCount == BuiltKeys.Length)
+            {
+                Array.Resize(ref BuiltKeys, BuiltKeys.Length * 2);
+                Array.Resize(ref BuiltGroups, BuiltGroups.Length * 2);
+            }
+
+            BuiltKeys[BuiltCount] = key;
+            BuiltGroups[BuiltCount] = groupIndex;
+            BuiltCount++;
+        }
 
         public void EnsureMasks(int tiles)
         {

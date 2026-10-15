@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests.Uat;
 
-/// <summary>同一导航上的两个组共用一条指令；答复在途时第一个组被清空、导航版本被结构放置顶起。答复落地后每个存活组都有流场或仍在规划，300 tick 后没有单位原地永久站立。</summary>
+/// <summary>同一导航上的两个组共用一条指令，第二组的答复是 same（指向第一组新建的场）。答复在途时第一个组被清空、导航版本被结构放置顶起，那张场回池。答复落地后每个存活组都有流场或仍在规划，300 tick 后没有单位原地永久站立。</summary>
 [TestFixture]
 public sealed class SameDropUatTests
 {
@@ -101,7 +101,10 @@ public sealed class SameDropUatTests
         Assert.That(nav.Version, Is.Not.EqualTo(v0), "场景无效：放置结构未使导航版本递增");
         Assert.That(GroupsOf().Count, Is.EqualTo(1), "场景无效：清空后应剩 1 个组");
 
+        var planner = sim.Planner!;
+        int sameBefore = planner.PlanSameReplies;
         CrowdUatKit.Step(sim, sim.Config.Planning.LatencyTicks + 1);
+        Assert.That(planner.PlanSameReplies - sameBefore, Is.EqualTo(1), "场景无效：存活组没有收到 same 答复");
         int bare = GroupsOf().Count(g => sim.Groups.Groups[g]!.Flow == null && !sim.Groups.Groups[g]!.Planning);
         if (bare > 0) errors.Add($"回复应用后有 {bare} 个存活组既无流场也不在规划中");
 
