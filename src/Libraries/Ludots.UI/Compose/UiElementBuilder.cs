@@ -28,6 +28,8 @@ public sealed class UiElementBuilder
 
 	private IReadOnlyList<UiStyledTextRun>? _textRuns;
 
+	private UiTextBinding? _textBinding;
+
 	public UiNodeKind Kind { get; }
 
 	public string? TagName { get; }
@@ -225,6 +227,13 @@ public sealed class UiElementBuilder
 	public UiElementBuilder Text(string text)
 	{
 		_textContent = text;
+		return this;
+	}
+
+	/// <summary>文字由 <paramref name="binding"/> 提供；改写绑定不需要重组页面。</summary>
+	public UiElementBuilder Text(UiTextBinding binding)
+	{
+		_textBinding = binding ?? throw new ArgumentNullException(nameof(binding));
 		return this;
 	}
 
@@ -832,7 +841,7 @@ public sealed class UiElementBuilder
 		{
 			Id = _elementId,
 			ClassName = string.Join(' ', _classNames)
-		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent, UiPseudoElement.None, _textRuns);
+		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent, UiPseudoElement.None, _textRuns, _textBinding);
 	}
 
 	public static UiElementBuilder FromElement(UiElement element)

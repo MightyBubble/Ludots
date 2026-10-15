@@ -57,7 +57,26 @@ public sealed class UiNode
 
 	public float ScrollContentHeight { get; private set; }
 
-	public string? TextContent { get; private set; }
+	private string? _textContent;
+
+	/// <summary>绑定的文字取 <see cref="UiTextBinding.ToString"/>；排版与绘制走 <see cref="Text"/>，不建字符串。</summary>
+	public string? TextContent => TextBinding != null ? TextBinding.ToString() : _textContent;
+
+	public UiTextBinding? TextBinding { get; private set; }
+
+	public ReadOnlySpan<char> Text => TextBinding != null ? TextBinding.Span : _textContent.AsSpan();
+
+	public bool HasText => !Text.IsWhiteSpace();
+
+	/// <summary>上次排版量过的绑定版本。</summary>
+	internal int MeasuredTextVersion { get; set; }
+
+	/// <summary>上次完整排版时这个节点对应的 flex 节点；文字变了靠它只标脏这一条链。</summary>
+	internal FlexLayoutSharp.Node? FlexNode { get; set; }
+
+	internal int LayoutGeneration { get; set; }
+
+	internal UiLeafMeasureLog? MeasureLog { get; set; }
 
 	public IReadOnlyList<UiStyledTextRun>? TextRuns { get; private set; }
 
@@ -77,7 +96,7 @@ public sealed class UiNode
 
 	public bool CanScrollVertically => Style.Overflow == UiOverflow.Scroll && MaxScrollY > 0.01f;
 
-	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null, UiPseudoElement pseudoElement = UiPseudoElement.None, IReadOnlyList<UiStyledTextRun>? textRuns = null)
+	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null, UiPseudoElement pseudoElement = UiPseudoElement.None, IReadOnlyList<UiStyledTextRun>? textRuns = null, UiTextBinding? textBinding = null)
 	{
 		if (!id.IsValid)
 		{
@@ -89,7 +108,13 @@ public sealed class UiNode
 		LocalStyle = style ?? UiStyle.Default;
 		Style = LocalStyle;
 		RenderStyle = LocalStyle;
-		TextContent = textContent;
+		if (textBinding != null && (textContent != null || textRuns != null))
+		{
+			throw new ArgumentException("A bound text node cannot also carry static text or text runs.", nameof(textBinding));
+		}
+		_textContent = textContent;
+		TextBinding = textBinding;
+		MeasuredTextVersion = textBinding?.Version ?? 0;
 		TextRuns = textRuns;
 		TagName = (string.IsNullOrWhiteSpace(tagName) ? GetDefaultTagName(kind) : tagName);
 		ElementId = ((!string.IsNullOrWhiteSpace(elementId)) ? elementId : LocalStyle.Id);
@@ -122,7 +147,12 @@ public sealed class UiNode
 		Attributes = template.Attributes;
 		InlineStyle = template.InlineStyle;
 		LocalStyle = template.LocalStyle;
-		TextContent = template.TextContent;
+		_textContent = template._textContent;
+		if (!ReferenceEquals(TextBinding, template.TextBinding))
+		{
+			TextBinding = template.TextBinding;
+			MeasuredTextVersion = TextBinding?.Version ?? 0;
+		}
 		TextRuns = template.TextRuns;
 		CanvasContent = template.CanvasContent;
 		PseudoElement = template.PseudoElement;
@@ -169,6 +199,10 @@ public sealed class UiNode
 	internal bool AdvanceTransitions(float deltaSeconds)
 	{
 		if (deltaSeconds <= 0f)
+		{
+			return false;
+		}
+		if (_transitionChannels.Count == 0 && _animationChannels.Count == 0 && ReferenceEquals(RenderStyle, Style))
 		{
 			return false;
 		}
@@ -313,7 +347,8 @@ public sealed class UiNode
 			string.Equals(ElementId, other.ElementId, StringComparison.Ordinal) &&
 			PseudoElement == other.PseudoElement &&
 			object.Equals(LocalStyle, other.LocalStyle) &&
-			string.Equals(TextContent, other.TextContent, StringComparison.Ordinal) &&
+			string.Equals(_textContent, other._textContent, StringComparison.Ordinal) &&
+			ReferenceEquals(TextBinding, other.TextBinding) &&
 			TextRunsEqual(TextRuns, other.TextRuns) &&
 			object.ReferenceEquals(CanvasContent, other.CanvasContent) &&
 			SequenceEqual(_classNames, other._classNames) &&

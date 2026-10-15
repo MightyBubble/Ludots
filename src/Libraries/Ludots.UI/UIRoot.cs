@@ -21,7 +21,14 @@ public class UIRoot
 
 	public float Height { get; private set; }
 
-	public bool IsDirty { get; set; } = true;
+	private bool _isDirty = true;
+
+	/// <summary>需要重渲染：有人显式置脏，或者场景里挂着的文字绑定改过内容。</summary>
+	public bool IsDirty
+	{
+		get => _isDirty || (Scene?.HasPendingTextChanges ?? false);
+		set => _isDirty = value;
+	}
 
 	public bool HasFocusedCanvas => _focusedCanvasNodeId.HasValue;
 
