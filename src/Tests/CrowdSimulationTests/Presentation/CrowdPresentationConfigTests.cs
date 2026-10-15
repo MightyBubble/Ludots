@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
 using NUnit.Framework;
@@ -95,17 +96,39 @@ public sealed class CrowdPresentationConfigTests
     [Test]
     public void EveryDebugFile_LoadsStrictly()
     {
-        string mods = Path.Combine(FindRepoRoot(), "mods");
-        var files = Directory.EnumerateFiles(mods, "CrowdSimulationDebug.json", SearchOption.AllDirectories)
-            .Where(path => path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") == false
-                && path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") == false)
-            .ToList();
-        Assert.That(files, Is.Not.Empty);
-        foreach (string file in files)
+        var mods = ModConfigChain.ModsShipping("CrowdSimulationDebug.json");
+        Assert.That(mods, Is.Not.Empty);
+        foreach (string modId in mods)
         {
-            var debug = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
-            Assert.DoesNotThrow(() => CrowdSimulationDebugConfig.Load(debug), file);
+            Assert.DoesNotThrow(
+                () => CrowdSimulationDebugConfig.Load(ModConfigChain.Open(modId).Merged("CrowdSimulationDebug.json")),
+                modId);
         }
+    }
+
+    [Test]
+    public void SessionScript_AssetRowsComeBeforeInlineRows()
+    {
+        var debug = CrowdSimulationDebugConfig.Load(JsonNode.Parse("""
+            {"session":{"scriptAsset":"assets/opening.json","script":[{"tick":5,"cmd":{"type":"spawn","count":2}}]}}
+            """)!.AsObject());
+        string? opened = null;
+        var rows = CrowdSimulationDebugConfig.SessionScript(debug.Session, rel =>
+        {
+            opened = rel;
+            return new MemoryStream(System.Text.Encoding.UTF8.GetBytes("""{"units":1,"script":[{"tick":0,"cmd":{"type":"spawn","count":1}}]}"""));
+        })!;
+
+        Assert.That(opened, Is.EqualTo("assets/opening.json"));
+        Assert.That(rows.Select(r => r.Tick), Is.EqualTo(new[] { 0, 5 }));
+        Assert.That(rows.Select(r => r.Cmd["count"]!.GetValue<int>()), Is.EqualTo(new[] { 1, 2 }));
+    }
+
+    [Test]
+    public void SessionScriptAsset_Blank_IsRejected()
+    {
+        var debug = JsonNode.Parse("""{"session":{"scriptAsset":" "}}""")!.AsObject();
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
     }
 
     [Test]
@@ -129,20 +152,9 @@ public sealed class CrowdPresentationConfigTests
     private static string DebugPath(string mod)
     {
         string path = Path.Combine(
-            FindRepoRoot(),
+            ModConfigChain.RepoRoot(),
             "mods", "showcases", "crowd_simulation", mod, "assets", "CrowdSimulationDebug.json");
         Assert.That(File.Exists(path), Is.True, path);
         return path;
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
     }
 }

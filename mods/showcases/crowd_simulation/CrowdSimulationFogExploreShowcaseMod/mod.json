@@ -1,0 +1,23 @@
+{
+  "name": "CrowdSimulationFogExploreShowcaseMod",
+  "version": "0.1.0",
+  "description": "迷雾探索演示：玩家 1 的 30 人小队在地图西侧，玩家 2 的 30 人在东侧并开往东北，地图南边新放一栋建筑，都在玩家 1 视野外，画面上不显示。随后 5 个敌人出现在小队身边，进入视野就显示。接着小队向南探索，看见建筑后它才进认知、才画出来，已探索的迷雾格一路增加。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationS4DeployMod": "^0.4.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c03",
+    "fog",
+    "explore"
+  ]
+}

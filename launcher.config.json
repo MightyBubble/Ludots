@@ -2789,6 +2789,55 @@
         "type": "path",
         "value": "mods/showcases/crowd_simulation/CrowdSimulationMinimalMod"
       }
+    },
+    {
+      "name": "crowd_simulation_showcase_march",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationMarchShowcaseMod"
+      }
+    },
+    {
+      "name": "crowd_simulation_showcase_reversal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationReversalShowcaseMod"
+      }
+    },
+    {
+      "name": "crowd_simulation_showcase_repeat_click",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationRepeatClickShowcaseMod"
+      }
+    },
+    {
+      "name": "crowd_simulation_showcase_fog_explore",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationFogExploreShowcaseMod"
+      }
+    },
+    {
+      "name": "crowd_simulation_showcase_fog_reroute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationFogRerouteShowcaseMod"
+      }
+    },
+    {
+      "name": "crowd_simulation_showcase_fog_shared_vision",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationFogAllyVisionShowcaseMod"
+      }
+    },
+    {
+      "name": "crowd_simulation_showcase_stress_50k",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationStress50kShowcaseMod"
+      }
     }
   ],
   "adapters": {

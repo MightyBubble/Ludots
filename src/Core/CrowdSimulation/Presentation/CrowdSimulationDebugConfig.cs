@@ -52,6 +52,8 @@ internal sealed class CrowdSimulationDebugConfig
             CrowdPresentationConfig.Validate(cfg.Presentation);
         }
 
+        if (cfg.Session?.ScriptAsset is { } scriptAsset && string.IsNullOrWhiteSpace(scriptAsset))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: session.scriptAsset 不能为空串。");
         if (cfg.Tools != null) ValidateTools(cfg.Tools);
         if (cfg.Rates != null) ValidateRates(cfg.Rates);
         if (cfg.Fuzz != null) ValidateFuzz(cfg.Fuzz);
@@ -66,6 +68,40 @@ internal sealed class CrowdSimulationDebugConfig
         }
 
         return cfg;
+    }
+
+    /// <summary>
+    /// 会话脚本：先是 <c>session.scriptAsset</c> 指向文档根 <c>script</c> 的行(与回归场景同形)，再接 <c>session.script</c>。
+    /// 资产按 mod 内相对路径经 <paramref name="openAsset"/> 打开。
+    /// </summary>
+    public static CrowdDebugScriptEntry[]? SessionScript(CrowdDebugSession? session, Func<string, Stream> openAsset)
+    {
+        ArgumentNullException.ThrowIfNull(openAsset);
+        if (session?.ScriptAsset == null) return session?.Script;
+
+        JsonObject document;
+        using (Stream stream = openAsset(session.ScriptAsset))
+        {
+            document = JsonNode.Parse(stream) as JsonObject
+                ?? throw new InvalidOperationException($"{session.ScriptAsset}: 根必须是对象。");
+        }
+
+        CrowdDebugScriptEntry[] assetRows;
+        try
+        {
+            assetRows = CrowdSimRegressCatalog.Script(document).Deserialize<CrowdDebugScriptEntry[]>(StrictJsonOptions.CreateCamelCase())
+                ?? throw new InvalidOperationException($"{session.ScriptAsset}: script 反序列化为空。");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"{session.ScriptAsset}: {ex.Message}", ex);
+        }
+
+        if (session.Script is not { Length: > 0 } inline) return assetRows;
+        var rows = new CrowdDebugScriptEntry[assetRows.Length + inline.Length];
+        assetRows.CopyTo(rows, 0);
+        inline.CopyTo(rows, assetRows.Length);
+        return rows;
     }
 
     private static void ValidateTools(CrowdDebugTools tools)
@@ -319,6 +355,7 @@ internal sealed class CrowdDebugRates
 internal sealed class CrowdDebugSession
 {
     public CrowdDebugScriptEntry[]? Script { get; init; }
+    public string? ScriptAsset { get; init; }
     public int? AutoReplayAtTick { get; init; }
     public string? CameraId { get; init; }
     public bool IncrementalNavVerify { get; init; }

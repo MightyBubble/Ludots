@@ -172,6 +172,8 @@ internal sealed class CrowdPlayerViewHost
 
     public CrowdPlayerOrderPrefs Prefs { get; }
 
+    internal bool FogHide => _fogHide;
+
     public void Bind(CrowdSimSession session)
     {
         ArgumentNullException.ThrowIfNull(session);

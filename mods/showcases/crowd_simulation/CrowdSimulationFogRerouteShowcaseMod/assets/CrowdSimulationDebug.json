@@ -1,0 +1,53 @@
+{
+  "session": {
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 1,
+          "xCm": 304000,
+          "yCm": 800000,
+          "count": 60,
+          "unitType": 0,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 1296000,
+          "yCm": 800000,
+          "shape": "box",
+          "auto": false,
+          "fogTerrain": false
+        }
+      },
+      {
+        "tick": 10,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "building",
+          "xCm": 1221778,
+          "yCm": 697781,
+          "sizeCm": 68750
+        }
+      },
+      {
+        "tick": 12,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "building",
+          "xCm": 1421778,
+          "yCm": 897781,
+          "sizeCm": 68750
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "title": "CrowdSimulation 演示 · 看见建筑后改道（迷雾里放到路线上的建筑先穿过，看见再绕开）"
+  }
+}

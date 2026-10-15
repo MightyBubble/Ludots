@@ -21,18 +21,23 @@ internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
     private readonly CrowdWalkableVisualProjector _walkable;
     private readonly Func<NavContext?> _navSource;
     private readonly CrowdTerrainPaletteProjector? _terrain;
+    private readonly Func<bool>? _fogOwnsGround;
 
     /// <summary>可走视图本帧的认知变体尚未物化(仿真还没 Build)。场不提交。</summary>
     internal bool WalkableNavPending { get; private set; }
 
+    /// <param name="fogOwnsGround">为真时路线和 NavMesh 视图不写地形调色板。贴花槽只有一个，调色板和可走遮罩同属 Walkable，
+    /// 会先于迷雾被选中；让出后本机座位的迷雾才贴得上地形。</param>
     public S4DeployDemoViewProjector(
         S4DeployDemoRuntime demo,
         Func<CrowdSimSession?> sessionSource,
-        CrowdTerrainPaletteProjector? terrain = null)
+        CrowdTerrainPaletteProjector? terrain = null,
+        Func<bool>? fogOwnsGround = null)
     {
         _demo = demo;
         _sessionSource = sessionSource;
         _terrain = terrain;
+        _fogOwnsGround = fogOwnsGround;
         _flow = new CrowdFlowFieldVisualProjector(_flowSource);
         _navSource = () =>
         {
@@ -58,7 +63,11 @@ internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
         _flowSource.Flow = group?.Flow;
         if (_terrain != null && (_demo.ViewMode == 0 || _demo.ViewMode == 2))
         {
-            _terrain.Project(buffer);
+            if (_fogOwnsGround?.Invoke() != true)
+            {
+                _terrain.Project(buffer);
+            }
+
             return;
         }
 

@@ -1,0 +1,84 @@
+{
+  "session": {
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "fogSight",
+          "on": false
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 1,
+          "xCm": 320000,
+          "yCm": 800000,
+          "count": 30,
+          "unitType": 0,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 2,
+          "xCm": 1280000,
+          "yCm": 800000,
+          "count": 30,
+          "unitType": 0,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "order",
+          "player": 2,
+          "xCm": 1280000,
+          "yCm": 400000,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "building",
+          "xCm": 800000,
+          "yCm": 1360000,
+          "sizeCm": 40000
+        }
+      },
+      {
+        "tick": 80,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 2,
+          "xCm": 340000,
+          "yCm": 800000,
+          "count": 5,
+          "unitType": 0,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 110,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 859375,
+          "yCm": 1365625,
+          "shape": "box",
+          "auto": false
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "title": "CrowdSimulation 演示 · 迷雾探索（视野外的敌人和新建筑不显示，走过去才看见）"
+  }
+}

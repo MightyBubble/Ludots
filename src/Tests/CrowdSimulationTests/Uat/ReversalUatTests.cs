@@ -9,14 +9,13 @@ namespace CrowdSimulationTests.Uat;
 [TestFixture]
 public sealed class ReversalUatTests
 {
-    private const int Count = 120, Watch = 40, TolCells = 1, MinDepth = 4, MarchMax = 300;
+    internal const int Count = 120, Watch = 40, TolCells = 1, MinDepth = 4, MarchMax = 300;
 
     [Test]
     public void AboutFace_KeepsPlaceInBlock_AndMirrorIsInherited()
     {
         using var scene = CrowdUatKit.Block(Count);
         var sim = scene.Session;
-        double cs = scene.CellCm;
 
         var (ex, ey) = CrowdUatKit.Spot(sim, scene.Nav, scene.Sx + scene.Cells(60), scene.Sy);
         CrowdUatKit.Order(sim, ex, ey);
@@ -24,37 +23,8 @@ public sealed class ReversalUatTests
         Assert.That(first, Is.Not.Null, "场景无效：首令路径未落地");
         Fix64 hx = first!.Leader.Hx, hy = first.Leader.Hy;
 
-        Dictionary<uint, Fix64> Proj()
-        {
-            var m = new Dictionary<uint, Fix64>(sim.Units.Count);
-            Fix64 c = Fix64.Zero;
-            for (int i = 0; i < sim.Units.Count; i++)
-            {
-                var p = CrowdUatKit.PositionAt(sim, i);
-                c += p.X * hx + p.Y * hy;
-            }
-
-            c /= Math.Max(1, sim.Units.Count);
-            for (int i = 0; i < sim.Units.Count; i++)
-            {
-                var p = CrowdUatKit.PositionAt(sim, i);
-                m[sim.Units.HandleAt(i)] = p.X * hx + p.Y * hy - c;
-            }
-
-            return m;
-        }
-
-        double DepthOf(Dictionary<uint, Fix64> s)
-        {
-            Fix64 lo = Fix64.MaxValue, hi = Fix64.MinValue;
-            foreach (var v in s.Values)
-            {
-                if (v < lo) lo = v;
-                if (v > hi) hi = v;
-            }
-
-            return (hi - lo).ToDouble() / cs;
-        }
+        Dictionary<uint, Fix64> Proj() => CrowdMotionInvariants.HeadingProjection(sim, hx, hy);
+        double DepthOf(Dictionary<uint, Fix64> s) => CrowdMotionInvariants.DepthCells(s, scene.CellCm);
 
         var s0 = Proj();
         double depth = DepthOf(s0);
@@ -82,10 +52,7 @@ public sealed class ReversalUatTests
         for (int t = 0; t < Watch; t++)
         {
             CrowdUatKit.Step(sim);
-            foreach (var (id, v) in Proj())
-            {
-                if (s0.TryGetValue(id, out var p)) worst = Math.Max(worst, Fix64.Abs(v - p).ToDouble() / cs);
-            }
+            worst = Math.Max(worst, CrowdMotionInvariants.WorstShiftCells(s0, Proj(), scene.CellCm));
         }
 
         double lim = depth / 2 + TolCells;

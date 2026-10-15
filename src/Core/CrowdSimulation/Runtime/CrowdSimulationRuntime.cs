@@ -22,6 +22,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Modding;
 using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -676,7 +677,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         // 脚本与自动回放都是指令流。开局人数取 deploy.initialUnits，排在调试脚本之前，成为 tick 0 的 spawn。
         // 对拍和回归自己带指令表，直接建 CrowdSimSession，不经过会话宿主。
         _pendingScript.Clear();
-        JsonArray rows = ComposeDemoScript(runtimeConfig.Deploy.InitialUnits, _debug?.Session?.Script);
+        JsonArray rows = ComposeDemoScript(
+            runtimeConfig.Deploy.InitialUnits,
+            CrowdSimulationDebugConfig.SessionScript(_debug?.Session, rel => OpenAsset(engine, rel)));
         if (rows.Count > 0)
         {
             _demoScript = CrowdDemoScript.Load(rows);
@@ -1027,14 +1030,17 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
 
     /// <summary>VFS 跨 mod 解析(与 GameEngine.TryResolveSingleExistingUri 同一约定:多 mod 命中即冲突)。</summary>
     internal static Stream OpenAsset(GameEngine engine, string relPath)
+        => OpenAsset(engine.VFS, engine.ModLoader.LoadedModIds, relPath);
+
+    internal static Stream OpenAsset(IVirtualFileSystem vfs, IReadOnlyList<string> loadedModIds, string relPath)
     {
         string rel = relPath.Replace('\\', '/');
         string? found = null;
         int hits = 0;
-        for (int i = 0; i < engine.ModLoader.LoadedModIds.Count; i++)
+        for (int i = 0; i < loadedModIds.Count; i++)
         {
-            string modId = engine.ModLoader.LoadedModIds[i];
-            if (!engine.VFS.TryResolveFullPath($"{modId}:{rel}", out string? full) || !File.Exists(full)) continue;
+            string modId = loadedModIds[i];
+            if (!vfs.TryResolveFullPath($"{modId}:{rel}", out string? full) || !File.Exists(full)) continue;
             hits++;
             found = full;
         }
