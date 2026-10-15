@@ -64,7 +64,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => Bake(terrain, TwoTypes, Sources()));
 
-        Assert.That(ex!.Message, Is.EqualTo("格（1,0）的 Water 已设置。CrowdSimulation 地表不使用逻辑地形的水面标记。"));
+        Assert.That(ex!.Message, Is.EqualTo("格（1,0）的 SurfaceFlags 带 Water。CrowdSimulation 地表不读这个逻辑地形标记。"));
     }
 
     [Test]
