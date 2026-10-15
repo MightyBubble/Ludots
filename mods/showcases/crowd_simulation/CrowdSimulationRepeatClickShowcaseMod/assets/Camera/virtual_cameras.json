@@ -2,9 +2,11 @@
   {
     "id": "CrowdSimulation.Camera.S4Deploy",
     "fixedTargetCm": {
-      "x": 928125,
-      "y": 803125
+      "x": 919000,
+      "y": 790700
     },
-    "distanceCm": 60000
+    "distanceCm": 60000,
+    "pitch": 80,
+    "yaw": 180
   }
 ]
