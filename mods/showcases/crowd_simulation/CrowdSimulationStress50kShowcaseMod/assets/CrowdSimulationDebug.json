@@ -1,54 +1,6 @@
 {
   "session": {
-    "script": [
-      {
-        "tick": 0,
-        "cmd": {
-          "type": "spawn",
-          "count": 50000
-        }
-      },
-      {
-        "tick": 2,
-        "cmd": {
-          "type": "order",
-          "player": 1,
-          "xCm": 1200000,
-          "yCm": 800000,
-          "shape": "box"
-        }
-      },
-      {
-        "tick": 2,
-        "cmd": {
-          "type": "order",
-          "player": 2,
-          "xCm": 1200000,
-          "yCm": 800000,
-          "shape": "box"
-        }
-      },
-      {
-        "tick": 2,
-        "cmd": {
-          "type": "order",
-          "player": 3,
-          "xCm": 1200000,
-          "yCm": 800000,
-          "shape": "box"
-        }
-      },
-      {
-        "tick": 2,
-        "cmd": {
-          "type": "order",
-          "player": 4,
-          "xCm": 1200000,
-          "yCm": 800000,
-          "shape": "box"
-        }
-      }
-    ]
+    "scriptAsset": "assets/CrowdSimulation/regress/stress-50k.json"
   },
   "presentation": {
     "title": "CrowdSimulation 演示 · 5 万单位压力场景（与 50k 门禁同一场景，F10 遥测面板）"

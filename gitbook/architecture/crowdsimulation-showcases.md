@@ -31,7 +31,8 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 
 - `CrowdSimulationShowcaseStageMod`：所有场景共用的舞台。依赖 S4 部署演示，把开局部署人数设为 0，清空 S4 的演示脚本，关掉自动回放，玩家视图按迷雾隐藏敌方。
 - 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
-- 脚本数组整段替换，不追加，所以行军、折返、连点三个场景各自写一遍 tick 0 的 `spawnAt`。5 万单位场景的脚本与 `CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json` 相同，验收测试逐条比对两边。
+- 脚本可以引用文件：`session.scriptAsset` 写 mod 内相对路径，指向根上有 `script` 数组的文档（和回归场景同一种格式）。会话先跑这份文件里的行，再跑 `session.script`，合起来仍须按 tick 升序。行军、折返、连点三个场景共用的 120 人开局写在舞台 Mod 的 `assets/CrowdSimulation/showcase/formation-120.json`，三个场景只写自己的指令。5 万单位场景直接引用 50k 门禁读的 `assets/CrowdSimulation/regress/stress-50k.json`，演示和门禁是同一个文件。
+- 行军和连点的第一条指令都是 tick 0 走到 A 点，这一行没有抽出来：它是各自场景的第一步，连点场景后面八次点击也是同一个 A 点，抽成共享文件反而要拆成两层引用。
 
 ## 验收
 
@@ -39,7 +40,7 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 
 - `FormationShowcaseTests`：行进 UAT（连点逆向单位-tick ≤ 3%、人均翻转 ≤ 2 次；转向逆向 ≤ 2%）和折返 UAT（纵深 ≥ 4 格时掉头，单位相对位移 ≤ 纵深/2 + 1 格，mirror 继承）。场景坐标按 UAT 的格数在本会话导航上重算后与脚本比对。
 - `FogShowcaseTests`：隐藏 UAT、迷雾改道 UAT、UAT-FOG-01/02。共享视野场景每 tick 跑一次仿真校验。
-- `Stress50kShowcaseTests`：合并后的脚本等于门禁脚本，推过 40 tick 预热后单位数、迷雾刷新和遥测读数正常。不计时，不替代门禁。
+- `Stress50kShowcaseTests`：场景引用的文件就是回归目录里 stress 场景登记的那份，推过 40 tick 预热后单位数、迷雾刷新和遥测读数正常。不计时，不替代门禁。
 
 ```bash
 dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedName~CrowdSimulationTests.Showcases"

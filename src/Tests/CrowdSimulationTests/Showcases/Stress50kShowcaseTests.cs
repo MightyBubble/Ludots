@@ -1,13 +1,14 @@
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Presentation;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Showcases;
 
 /// <summary>
-/// 5 万单位演示 Mod 走真实进图：合并后的脚本与 50k 门禁的 stress-50k.json 逐条相同，tick 2 的四条行军令都成形，
+/// 5 万单位演示 Mod 走真实进图：脚本经 session.scriptAsset 读回归目录 stress 场景登记的同一份 stress-50k.json，tick 2 的四条行军令都成形，
 /// 推过门禁预热窗后单位数不变、迷雾在刷新、遥测有逐 tick 的模拟耗时；遥测面板默认打开，玩家视图不按迷雾隐藏。
 /// 不计时，不替代门禁。
 /// </summary>
@@ -19,16 +20,18 @@ public sealed class Stress50kShowcaseTests
     [Test]
     public void SameScenarioAsGate_RunsThroughWarmup_WithTelemetryPanelOpen()
     {
-        var gate = JsonNode.Parse(File.ReadAllText(Path.Combine(
-            CrowdShowcaseHost.RepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod",
-            "assets", "CrowdSimulation", "regress", "stress-50k.json")))!.AsObject();
+        const string S4Root = "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/";
+        var catalog = CrowdSimRegressCatalog.Parse(JsonNode.Parse(File.ReadAllText(Path.Combine(
+            CrowdShowcaseHost.RepoRoot(), S4Root + "assets/CrowdSimulation/regress/catalog.json")))!.AsObject());
+        string gateScript = catalog.Scenarios["stress"].ScriptAsset!;
+        string? sceneScript = CrowdSimulationDebugConfig.Load(ModConfigChain.Open(Scene).Merged("CrowdSimulationDebug.json")).Session?.ScriptAsset;
+        Assert.That(S4Root + sceneScript, Is.EqualTo(gateScript), "演示应引用回归目录 stress 场景登记的那份文件，不另存脚本");
+        var gate = JsonNode.Parse(File.ReadAllText(Path.Combine(CrowdShowcaseHost.RepoRoot(), gateScript)))!.AsObject();
         int units = gate["units"]!.GetValue<int>();
         int warmup = gate["warmupTicks"]!.GetValue<int>();
 
         using var host = CrowdShowcaseHost.Start(Scene);
         var s = host.Session;
-        Assert.That(JsonNode.DeepEquals(host.Script, gate["script"]), Is.True,
-            $"演示脚本与门禁脚本不一致：\n{host.Script.ToJsonString()}\n{gate["script"]!.ToJsonString()}");
         var view = CrowdSimulationDebugViewConfig.Load(CrowdShowcaseHost.MergedConfig(host.Engine, "CrowdSimulationDebugView.json"), "CrowdSimulationDebugView.json");
         Assert.That(view.Panels.Telemetry, Is.True, "遥测面板应默认打开");
         var player = CrowdPlayerViewConfig.Load(CrowdShowcaseHost.MergedConfig(host.Engine, "CrowdSimulationPlayerView.json"), "CrowdSimulationPlayerView.json");

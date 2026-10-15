@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.Hosting;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -17,12 +18,16 @@ namespace CrowdSimulationTests;
 /// </summary>
 internal sealed class ModConfigChain
 {
+    private readonly VirtualFileSystem _vfs;
+    private readonly ModLoader _mods;
     private readonly ConfigPipeline _pipeline;
     private readonly ConfigCatalog _catalog;
 
-    private ModConfigChain(string modId, ConfigPipeline pipeline, ConfigCatalog catalog)
+    private ModConfigChain(string modId, VirtualFileSystem vfs, ModLoader mods, ConfigPipeline pipeline, ConfigCatalog catalog)
     {
         ModId = modId;
+        _vfs = vfs;
+        _mods = mods;
         _pipeline = pipeline;
         _catalog = catalog;
     }
@@ -43,7 +48,7 @@ internal sealed class ModConfigChain
         }
 
         var pipeline = new ConfigPipeline(vfs, mods);
-        return new ModConfigChain(modId, pipeline, ConfigCatalogLoader.Load(pipeline));
+        return new ModConfigChain(modId, vfs, mods, pipeline, ConfigCatalogLoader.Load(pipeline));
     }
 
     /// <summary>repo mods/ 下自带 <paramref name="relativePath"/> 的 mod(按 mod id 排序)。</summary>
@@ -65,6 +70,9 @@ internal sealed class ModConfigChain
         return _pipeline.MergeDeepObjectFromCatalog(in entry, new ConfigConflictReport())
             ?? throw new InvalidOperationException($"{ModId}: {relativePath} 合并为空");
     }
+
+    /// <summary>与运行时同一条按 mod 内相对路径找资产的规则。</summary>
+    public Stream OpenAsset(string relPath) => CrowdSimulationRuntime.OpenAsset(_vfs, _mods.LoadedModIds, relPath);
 
     public string StartupMapId() =>
         _pipeline.MergeGameConfig().StartupMapId

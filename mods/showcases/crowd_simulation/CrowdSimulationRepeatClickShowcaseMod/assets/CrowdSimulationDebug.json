@@ -1,18 +1,7 @@
 {
   "session": {
+    "scriptAsset": "assets/CrowdSimulation/showcase/formation-120.json",
     "script": [
-      {
-        "tick": 0,
-        "cmd": {
-          "type": "spawnAt",
-          "player": 1,
-          "xCm": 803125,
-          "yCm": 803125,
-          "count": 120,
-          "unitType": 0,
-          "rIdx": 0
-        }
-      },
       {
         "tick": 0,
         "cmd": {

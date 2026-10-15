@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Fields;
@@ -62,8 +64,10 @@ internal sealed class CrowdShowcaseHost : IDisposable
             var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
                 ?? throw new InvalidOperationException($"{sceneMod}: 进图后没有群体会话。");
             if (session.TickCount != 0) throw new InvalidOperationException($"{sceneMod}: 进图时会话已在 tick {session.TickCount}。");
-            var script = MergedConfig(engine, "CrowdSimulationDebug.json")["session"]?["script"]?.AsArray()
-                ?? throw new InvalidOperationException($"{sceneMod}: 合并后的 CrowdSimulationDebug.json 没有 session.script。");
+            var debug = CrowdSimulationDebugConfig.Load(MergedConfig(engine, "CrowdSimulationDebug.json"));
+            var rows = CrowdSimulationDebugConfig.SessionScript(debug.Session, rel => CrowdSimulationRuntime.OpenAsset(engine, rel))
+                ?? throw new InvalidOperationException($"{sceneMod}: 合并后的 CrowdSimulationDebug.json 没有会话脚本。");
+            var script = CrowdSimulationRuntime.ComposeDemoScript(session.Config.Deploy.InitialUnits, rows);
             return new CrowdShowcaseHost(engine, session, script);
         }
         catch

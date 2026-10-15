@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
 using NUnit.Framework;
@@ -103,6 +104,31 @@ public sealed class CrowdPresentationConfigTests
                 () => CrowdSimulationDebugConfig.Load(ModConfigChain.Open(modId).Merged("CrowdSimulationDebug.json")),
                 modId);
         }
+    }
+
+    [Test]
+    public void SessionScript_AssetRowsComeBeforeInlineRows()
+    {
+        var debug = CrowdSimulationDebugConfig.Load(JsonNode.Parse("""
+            {"session":{"scriptAsset":"assets/opening.json","script":[{"tick":5,"cmd":{"type":"spawn","count":2}}]}}
+            """)!.AsObject());
+        string? opened = null;
+        var rows = CrowdSimulationDebugConfig.SessionScript(debug.Session, rel =>
+        {
+            opened = rel;
+            return new MemoryStream(System.Text.Encoding.UTF8.GetBytes("""{"units":1,"script":[{"tick":0,"cmd":{"type":"spawn","count":1}}]}"""));
+        })!;
+
+        Assert.That(opened, Is.EqualTo("assets/opening.json"));
+        Assert.That(rows.Select(r => r.Tick), Is.EqualTo(new[] { 0, 5 }));
+        Assert.That(rows.Select(r => r.Cmd["count"]!.GetValue<int>()), Is.EqualTo(new[] { 1, 2 }));
+    }
+
+    [Test]
+    public void SessionScriptAsset_Blank_IsRejected()
+    {
+        var debug = JsonNode.Parse("""{"session":{"scriptAsset":" "}}""")!.AsObject();
+        Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
     }
 
     [Test]
