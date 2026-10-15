@@ -23,7 +23,7 @@ public sealed class CrowdSimPlanner
     private const int LeaderPoolCount = 32;
     private const int PathCapacity = CrowdSimulationLimits.HotPathSpanReserve;
     private const int OriginBufferCount = 16;
-    private const int StrayRecordCapacity = 64;
+    private const int StrayRecordCapacity = CrowdSimulationLimits.HotPathSlotReserve;
 
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
