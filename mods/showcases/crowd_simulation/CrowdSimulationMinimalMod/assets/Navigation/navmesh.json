@@ -1,0 +1,26 @@
+{
+  "maps": {
+    "crowd_minimal": {
+      "solver": "crowd-simulation",
+      "logicTerrainAsset": "terrain/crowd_minimal.map_data.bin",
+      "navAreas": [
+        "Default",
+        "deep",
+        "road",
+        "deck",
+        "flooded",
+        "burning"
+      ],
+      "terrainAreas": [
+        {
+          "terrainId": "land",
+          "areaId": "Default"
+        },
+        {
+          "terrainId": "water",
+          "areaId": "deep"
+        }
+      ]
+    }
+  }
+}

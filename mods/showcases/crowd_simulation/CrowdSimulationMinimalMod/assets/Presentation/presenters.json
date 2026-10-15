@@ -1,0 +1,66 @@
+[
+  {
+    "id": "crowd_minimal.units.bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "crowd_minimal.scout" },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_minimal.scout",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "crowd_minimal.scout" },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "crowd_minimal.scout",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0, 4, 0],
+          "localScale": [12, 8, 12],
+          "colorParamKey": "crowd_minimal.scout.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_minimal.scout.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_minimal.scout.color",
+        "lane": "Vector",
+        "vectorValue": [1, 1, 1, 1]
+      }
+    ]
+  }
+]

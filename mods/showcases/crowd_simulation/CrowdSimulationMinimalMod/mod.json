@@ -1,0 +1,17 @@
+{
+  "name": "CrowdSimulationMinimalMod",
+  "version": "0.1.0",
+  "description": "CrowdSimulation 最小样板：一种单位、一个表现、一张 256×256 导航格的小图（陆地 + 水面 + 方块墙）。",
+  "priority": 0,
+  "dependencies": {
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "navsurface",
+    "minimal"
+  ]
+}

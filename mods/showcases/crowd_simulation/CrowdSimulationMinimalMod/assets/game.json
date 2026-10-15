@@ -1,0 +1,10 @@
+{
+  "startupMapId": "crowd_minimal",
+  "windowTitle": "Ludots - CrowdSimulation Minimal",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}
