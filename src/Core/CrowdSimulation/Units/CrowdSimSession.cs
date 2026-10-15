@@ -133,11 +133,6 @@ public sealed class CrowdSimSession
     public Fix64 AvoidHz { get; private set; }
     /// <summary>为真时冲刷队列里 tick 已到的指令，不推进运动，也不增加 TickCount。现场 Submit 不受影响。</summary>
     public bool PlaybackHeld { get; set; }
-    /// <summary>
-    /// 冲刷前后调用。返回 true 表示刚排入了新指令，调用方再冲刷一次。
-    /// 演示脚本用它把尚未到点的行放进队列，诊断断面才能和回放对上。
-    /// </summary>
-    internal Func<CrowdSimSession, bool>? StageDeferredCommands { get; set; }
     public int ScatterSeq { get; set; }
 
     internal void SetAvoidHz(Fix64 hz) => AvoidHz = hz;
@@ -326,6 +321,8 @@ public sealed class CrowdSimSession
     public bool DiagnosticDigest { get; set; }
     public int SpawnSeq { get; set; }
     public int SpawnSkippedTotal { get; private set; }
+    /// <summary>执行时该玩家没有单位、因而没有改任何组的全体己方下令条数。</summary>
+    public int EmptyOrderSelectionTotal { get; private set; }
 
     /// <summary>会话事件(spawnSkip 等,演示层显示用;不进校验)。</summary>
     public event Action<string>? Notified;
@@ -384,7 +381,7 @@ public sealed class CrowdSimSession
     public NavContext NavFor(int layer, int r) => NavByLayerRadius[(layer, r)];
 
     /// <summary>
-    /// 推进一个 tick:先把已能成形的演示脚本行排进队列 → 冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
+    /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
     /// → tickCount+1 → 流场刷新排队 → 校验码。TruthNavFrozen 跳过迷雾和认知同步。
@@ -398,14 +395,8 @@ public sealed class CrowdSimSession
         long mark = Stopwatch.GetTimestamp();
         try
         {
-            StageDeferredCommands?.Invoke(this);
             Commands.Flush(this, ExecCommand);
             Units.MaterializePending();
-            while (StageDeferredCommands?.Invoke(this) == true)
-            {
-                Commands.Flush(this, ExecCommand);
-                Units.MaterializePending();
-            }
 
             telemetry.AddCommandTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
             if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
@@ -517,6 +508,7 @@ public sealed class CrowdSimSession
         }
 
         SpawnSkippedTotal = 0;
+        EmptyOrderSelectionTotal = 0;
         _stateHistogramMembers = 0;
         Movement?.ClearMotionMemory();
         Telemetry.SetUnitStates(0, 0, 0, 0, 0);
@@ -578,6 +570,12 @@ public sealed class CrowdSimSession
     {
         SpawnSkippedTotal += skipped;
         Notified?.Invoke($"spawnSkip: 请求 {requested} 个,该玩家没有可用的类型×半径组合,跳过 {skipped} 个");
+    }
+
+    internal void NotifyEmptyOrderSelection(int player)
+    {
+        EmptyOrderSelectionTotal++;
+        Notified?.Invoke($"order: tick {TickCount} 玩家 {player} 没有单位，全体己方下令不改任何组");
     }
     /// <summary>把本 tick 的接触读数交给遥测。停摆帧传 0,不把上一成功帧再写一遍。</summary>
     internal void PublishTelemetryFrame(bool stalled, double tickMs)

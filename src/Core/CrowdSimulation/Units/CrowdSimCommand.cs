@@ -82,8 +82,13 @@ public readonly record struct CrowdSimCommand
     public bool FogTerrain { get; init; }
     /// <summary>order 的阵型 id(开放词表,聚合键原样透传;缺省 "box")。</summary>
     public string? ShapeId { get; init; }
-    /// <summary>order 的成员句柄(稳定单位 id)。入队后数组只读,拷贝 struct 共享同一份;非 order 为 null。</summary>
+    /// <summary>order 的成员句柄(稳定单位 id)。入队后数组只读,拷贝 struct 共享同一份;非 order 与 <see cref="AllOwnMembers"/> 为 null。</summary>
     public uint[]? Members { get; init; }
+    /// <summary>
+    /// order 的成员选择:执行那一刻该玩家的全部单位。日志和队列存选择本身，不存句柄，
+    /// 中途重新部署换掉的单位不会留在未执行的指令里。只有脚本行能这样写。
+    /// </summary>
+    public bool AllOwnMembers { get; init; }
     /// <summary>placeStructure 的模板 id。</summary>
     public string? TemplateId { get; init; }
     /// <summary>reveal/obscure/forget 的区域形状(Parse 经 CrowdFogShape 恰一校验)。</summary>
@@ -142,7 +147,7 @@ public readonly record struct CrowdSimCommand
     /// </summary>
     public static CrowdSimCommand Parse(JsonNode cmd) => Parse(cmd, requireOrderMembers: true);
 
-    /// <summary>参考脚本的 order 可以不带 members(由翻译器在入日志前补上)。显式空数组仍拒收。</summary>
+    /// <summary>脚本的 order 可以不带 members，解析成 <see cref="CrowdSimCommand.AllOwnMembers"/>。显式空数组仍拒收。</summary>
     internal static CrowdSimCommand Parse(JsonNode cmd, bool requireOrderMembers)
     {
         string type = cmd["type"]?.GetValue<string>() ?? throw new InvalidOperationException("指令缺少 type 字段。");
@@ -181,6 +186,7 @@ public readonly record struct CrowdSimCommand
                     HasFogTerrain = cmd["fogTerrain"] is { },
                     FogTerrain = OptionalBool(cmd, type, "fogTerrain", false),
                     Members = ParseMembers(cmd, requireOrderMembers),
+                    AllOwnMembers = cmd["members"] is null,
                 };
             }
 
@@ -275,13 +281,13 @@ public readonly record struct CrowdSimCommand
     }
 
     /// <summary>句柄可以超过 int 上限(代 &lt;&lt; 18),按 long 读再收进 uint。</summary>
-    private static uint[] ParseMembers(JsonNode cmd, bool required)
+    private static uint[]? ParseMembers(JsonNode cmd, bool required)
     {
         if (cmd["members"] is null)
         {
             return required
                 ? throw new InvalidOperationException("order: 成员集为空。")
-                : Array.Empty<uint>();
+                : null;
         }
 
         if (cmd["members"] is not JsonArray arr || arr.Count == 0)

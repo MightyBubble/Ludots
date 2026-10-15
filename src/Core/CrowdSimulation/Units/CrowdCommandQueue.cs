@@ -36,8 +36,12 @@ public sealed class CrowdCommandQueue
     public T Submit<T>(CrowdSimSession sim, CrowdSimCommand cmd, Func<CrowdSimSession, CrowdSimCommand, T> exec)
     {
         CrowdSimCommands.Validate(sim, cmd);
-        // 现场提交时单位已经在。脚本入队只查成员数组非空，句柄留到执行 tick 再解析。
-        if (cmd.Kind == CrowdSimCommandKind.Order) sim.BindMemberSet(cmd.Members!, cmd.Player);
+        // 现场提交时单位已经在，句柄当场核对。脚本入队的句柄和全体己方选择都留到执行 tick 再解析。
+        if (cmd.Kind == CrowdSimCommandKind.Order)
+        {
+            if (cmd.AllOwnMembers) throw new InvalidOperationException("order: 现场下令要给成员句柄，全体己方选择只用于脚本。");
+            sim.BindMemberSet(cmd.Members!, cmd.Player);
+        }
         _log.Add((sim.TickCount, cmd));
         T result = exec(sim, cmd);
         sim.SyncKernelMirror();

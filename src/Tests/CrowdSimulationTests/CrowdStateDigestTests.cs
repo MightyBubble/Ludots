@@ -291,7 +291,7 @@ public sealed class CrowdStateDigestTests
             },
         });
         script.ValidateStructure(session);
-        session.StageDeferredCommands = script.StageFormable;
+        script.Schedule(session);
         var host = new CrowdSimulationRuntime();
         Bind(host, session);
         Set(host, "_planTimeout", TimeSpan.FromSeconds(30));
@@ -307,6 +307,52 @@ public sealed class CrowdStateDigestTests
         Assert.That(host.ReplayDivergenceTick, Is.EqualTo(-1));
         Assert.That(host.ReplayDiagnosticTick, Is.EqualTo(-1));
         Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
+    }
+
+    /// <summary>全体己方下令执行时该玩家没有单位：照常进日志，不改任何组，会话计数并发通知；回放同样对齐。</summary>
+    [Test]
+    public void ScriptedAllOwnOrder_PlayerWithoutUnits_IsLoggedAndNotified()
+    {
+        var (config, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        session.Structures = null;
+        session.DiagnosticDigest = true;
+        using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        session.BlockOnDueReplies = true;
+        var script = CrowdDemoScript.Load(new JsonArray
+        {
+            new JsonObject
+            {
+                ["tick"] = 0,
+                ["cmd"] = new JsonObject
+                {
+                    ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
+                    ["count"] = 4, ["unitType"] = 0, ["rIdx"] = 0,
+                },
+            },
+            new JsonObject
+            {
+                ["tick"] = 3,
+                ["cmd"] = new JsonObject { ["type"] = "order", ["player"] = 2, ["xCm"] = 700000, ["yCm"] = 700000, ["shape"] = "box" },
+            },
+        });
+        script.ValidateStructure(session);
+        script.Schedule(session);
+        var notices = new List<string>();
+        session.Notified += notices.Add;
+        var host = new CrowdSimulationRuntime();
+        Bind(host, session);
+        Set(host, "_planTimeout", TimeSpan.FromSeconds(30));
+        for (int i = 0; i < 6; i++) host.Tick();
+
+        Assert.That(session.TickCount, Is.EqualTo(6));
+        Assert.That(session.Commands.Log.Count(e => e.Cmd.Kind == CrowdSimCommandKind.Order), Is.EqualTo(1));
+        Assert.That(session.EmptyOrderSelectionTotal, Is.EqualTo(1));
+        Assert.That(notices, Has.Some.Contains("玩家 2 没有单位"));
+        Assert.That(session.Orders.List, Is.Empty);
+        host.RunReplay();
+        Assert.That(host.ReplayStatus, Is.EqualTo(1));
+        Assert.That(host.ReplayDiagnosticTick, Is.EqualTo(-1));
     }
 
     private static CrowdSimDigestDiff DiffAgainstCurrent(

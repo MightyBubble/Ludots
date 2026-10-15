@@ -7,6 +7,9 @@ using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
 
@@ -30,7 +33,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         var script = CrowdDemoScript.Load(Script());
         script.ValidateStructure(session);
-        session.StageDeferredCommands = script.StageFormable;
+        script.Schedule(session);
 
         var host = new CrowdSimulationRuntime();
         Bind(host, session, Seed);
@@ -77,7 +80,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
         var script = LoadS4Script();
         script.ValidateStructure(session);
-        session.StageDeferredCommands = script.StageFormable;
+        script.Schedule(session);
 
         var host = new CrowdSimulationRuntime();
         Bind(host, session, Seed);
@@ -111,6 +114,82 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
     }
 
+    /// <summary>
+    /// S4 演示脚本跑到 tick 150 时按压测键（Y）重新部署满员，脚本 tick 200 / 240 的下令还没执行。
+    /// 重新部署清掉旧单位，这两条下令要落到新单位上，日志存全体己方选择，回放合计逐 tick 对齐。
+    /// </summary>
+    [Test]
+    public void S4Script_StressRespawnBeforeScriptedOrders_OrdersBindRespawnedUnits()
+    {
+        const string Seed = "s1337";
+        const int StressTick = 150;
+        const int Ticks = 245;
+        var (config, session) = Parity.S4DeployTruthTests.BuildSession(Seed);
+        session.DiagnosticDigest = true;
+        session.VerifyIncrementalNav = false;
+        using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        var script = LoadS4Script();
+        script.ValidateStructure(session);
+        script.Schedule(session);
+
+        var host = new CrowdSimulationRuntime();
+        Bind(host, session, Seed);
+        using var engine = new GameEngine();
+        engine.SetService(CoreServiceKeys.CrowdSimulationSession, session);
+        engine.SetService(CoreServiceKeys.CrowdSimulationRuntime, host);
+        var demo = new S4DeployDemoRuntime(engine);
+        int unitsBeforeStress = -1;
+        int guard = Ticks * 4000;
+        while (session.TickCount < Ticks)
+        {
+            if (session.TickCount == StressTick && unitsBeforeStress < 0)
+            {
+                unitsBeforeStress = session.Units.Count;
+                demo.EnqueueStress();
+                demo.Tick();
+            }
+
+            int before = session.TickCount;
+            host.Tick();
+            if (session.TickCount != before) continue;
+            if (service.Faulted) Assert.Fail($"path fault at tick {session.TickCount}: {service.FaultMessage}");
+            if (guard-- <= 0) Assert.Fail($"stalled at tick {session.TickCount}");
+            Thread.Sleep(1);
+        }
+
+        var log = session.Commands.Log;
+        Assert.That(log.Any(e => e.Tick == StressTick && e.Cmd.Kind == CrowdSimCommandKind.Spawn), Is.True, "压测部署没有进日志");
+        Assert.That(session.Units.Count, Is.GreaterThan(unitsBeforeStress), "压测没有把单位补到上限");
+        var orders = log.Where(e => e.Cmd.Kind == CrowdSimCommandKind.Order).ToArray();
+        Assert.That(orders.Select(e => e.Tick), Is.EqualTo(new[] { 40, 90, 200, 240 }));
+        Assert.That(orders.All(e => e.Cmd.AllOwnMembers && e.Cmd.Members == null), Is.True, "日志里的脚本下令应存全体己方选择");
+        Assert.That(session.EmptyOrderSelectionTotal, Is.Zero);
+
+        int playerOne = 0, playerOneOrdered = 0;
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            var entity = session.Units.EntityAt(i);
+            if (session.World.Get<PlayerOwner>(entity).PlayerId != 1) continue;
+            playerOne++;
+            var group = session.Groups.Groups[session.World.Get<CrowdSimulationUnitState>(entity).GroupId];
+            if (group is { OrderId: > 0 }) playerOneOrdered++;
+        }
+
+        Assert.That(playerOne, Is.GreaterThan(0));
+        Assert.That(playerOneOrdered, Is.EqualTo(playerOne), "tick 240 的下令没有落到重新部署后的全部玩家 1 单位");
+
+        host.RunReplay();
+        TestContext.Out.WriteLine(
+            $"replay status={host.ReplayStatus} divTick={host.ReplayDivergenceTick} section={host.ReplayDivergenceSection} diagTick={host.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(host.ReplayDivergenceDiagnostic)}");
+        Assert.That(host.ReplayStatus, Is.EqualTo(1));
+        Assert.That(host.ReplayDivergenceTick, Is.EqualTo(-1));
+        // 压测是现场 Submit，活会话的未执行队列里从来没有它；回放把它连同脚本从 tick 0 排进队列，
+        // 所以只有 commands 诊断从 tick 1 起不同，其余断面逐段对齐。
+        Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Commands));
+        Assert.That(host.ReplayDiagnosticTick, Is.EqualTo(1));
+    }
+
     [Test]
     [Explicit]
     public void S4Script_ReportsStrayExtensionDistribution()
@@ -124,7 +203,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
         var script = LoadS4Script();
         script.ValidateStructure(session);
-        session.StageDeferredCommands = script.StageFormable;
+        script.Schedule(session);
         var host = new CrowdSimulationRuntime();
         Bind(host, session, Seed);
         int guard = Ticks * 8000;
