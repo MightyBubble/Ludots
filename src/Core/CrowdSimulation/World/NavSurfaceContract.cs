@@ -108,13 +108,8 @@ public static class NavSurfaceContract
 
     private static uint MixInt64(uint hash, long value)
     {
-        ulong bits = unchecked((ulong)value);
-        for (int shift = 0; shift < 64; shift += 8)
-        {
-            hash = MixByte(hash, (byte)(bits >> shift));
-        }
-
-        return hash;
+        hash = MixInt32(hash, unchecked((int)value));
+        return MixInt32(hash, unchecked((int)(value >> 32)));
     }
 
     private static string KindList(IReadOnlyList<RuntimeLinkCandidateBake> bakes)
