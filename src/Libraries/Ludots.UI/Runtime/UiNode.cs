@@ -225,12 +225,10 @@ public sealed class UiNode
 			}
 		}
 		UiStyle uiStyle = ComposeRenderStyle();
-		if (object.Equals(RenderStyle, uiStyle))
-		{
-			return false;
-		}
+		bool changed = !object.Equals(RenderStyle, uiStyle);
+		// Adopt the equal instance too: once channels drain it is Style itself, so later frames hit the reference fast path.
 		RenderStyle = uiStyle;
-		return true;
+		return changed;
 	}
 
 	internal void ResetVisualState()
