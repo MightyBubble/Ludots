@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Engine;
@@ -446,8 +447,6 @@ public static partial class CrowdSimulationEditorApi
             PathingConfig pathing = new PathingConfigLoader(pipeline).Load(catalog, report);
             MapConfig map = opened.LoadMap(MapId) ?? throw new InvalidOperationException($"Maps/{MapId}.json 没有装载出来。");
             List<EntityTemplate> templates = opened.LoadTemplates(report);
-            CrowdSimulationAuthoringContract.Validate(templates, config, map, profiles);
-            List<CrowdUnitTemplateFacts> facts = CrowdUnitTemplateFacts.FromTemplates(templates);
             int players = Math.Max(1, map.Players.Count);
             var rules = CrowdPairRules.Matrices(players, new CrowdPushResponse[players * players], new bool[players * players]);
             for (int i = 0; i < rules.ResponseByPair.Length; i++)
@@ -458,17 +457,21 @@ public static partial class CrowdSimulationEditorApi
             // 编辑器没有活着的代表实体。关系类型登记在 Mod 代码里，会话重建前由运行中的投影再查一次。
             try
             {
+                CrowdSimulationAuthoringContract.Validate(templates, config, map, profiles);
+                List<CrowdUnitTemplateFacts> facts = CrowdUnitTemplateFacts.FromTemplates(templates);
                 CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, pathing, facts, FixedHz, rules);
             }
             catch (InvalidOperationException ex) when (!ex.Message.Contains("配置路径:", StringComparison.Ordinal))
             {
                 // 关系检查发生在装载器的 Wrap 之外。补上同一份报告里的路径和胜出，编辑器才能标来源。
                 string relative = GuessProvenanceFile(ex.Message);
-                throw new InvalidOperationException(ex.Message + ProvenanceSuffix(relative, report), ex);
+                throw new InvalidOperationException(ex.Message + ProvenanceSuffix(relative, report, ex.Message), ex);
             }
         }
 
-        private static string ProvenanceSuffix(string relative, ConfigConflictReport report)
+        private static readonly Regex QuotedToken = new("\"([^\"]+)\"", RegexOptions.CultureInvariant);
+
+        private static string ProvenanceSuffix(string relative, ConfigConflictReport report, string message)
         {
             var text = new System.Text.StringBuilder();
             text.Append("\n配置路径: ");
@@ -493,7 +496,11 @@ public static partial class CrowdSimulationEditorApi
             }
 
             text.Append("\n胜出: ");
-            if (report.TryGetFileWinner(relative, out string winner, out _) && !string.IsNullOrEmpty(winner))
+            if (NamedEntryWinner(relative, report, message) is string entryWinner)
+            {
+                text.Append(entryWinner);
+            }
+            else if (report.TryGetFileWinner(relative, out string winner, out _) && !string.IsNullOrEmpty(winner))
             {
                 text.Append(winner);
             }
@@ -503,6 +510,20 @@ public static partial class CrowdSimulationEditorApi
             }
 
             return text.ToString();
+        }
+
+        /// <summary>ArrayById 文件没有整文件胜出。报错用引号点名了某个条目 id 时，取这个 id 最后一次被写入的片段。</summary>
+        private static string? NamedEntryWinner(string relative, ConfigConflictReport report, string message)
+        {
+            foreach (Match match in QuotedToken.Matches(message))
+            {
+                if (report.TryGetWinner(relative, match.Groups[1].Value, out string sourceUri) && !string.IsNullOrEmpty(sourceUri))
+                {
+                    return sourceUri;
+                }
+            }
+
+            return null;
         }
 
         private static string GuessProvenanceFile(string message)
