@@ -36,7 +36,4 @@ public static class CrowdSimulationLimits
     /// 这是抽样预算，不是导航尺度。
     /// </summary>
     public const int MotionQualitySamplesPerTick = 256;
-
-    /// <summary>调试视图遥测曲线长度上限。配置超过它就拒绝装载。</summary>
-    public const int MaxTelemetryHistory = 120;
 }

@@ -1136,6 +1136,7 @@ namespace Ludots.Adapter.Raylib
                                 {
                                     // Window-anchored overlay text is composited once for the whole frame.
                                     screenOverlayBuffer?.AddText(
+                                        PresentationOverlayLayer.TopMost,
                                         10,
                                         40,
                                         navMeshPresentationBuffer.FormatMetadataLine(),

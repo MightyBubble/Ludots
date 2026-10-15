@@ -131,16 +131,16 @@ public static class GraphShowcaseStagePresenter
             ? Array.Empty<string>()
             : SplitCaptionLines(detail).ToArray();
         int height = 48 + Math.Max(1, lines.Length) * 22;
-        overlay.AddRect(16, 16, 1568, height, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        overlay.AddRect(PresentationOverlayLayer.TopMost, 16, 16, 1568, height, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         if (!string.IsNullOrEmpty(title))
         {
-            overlay.AddText(32, 24, title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
+            overlay.AddText(PresentationOverlayLayer.TopMost, 32, 24, title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         }
 
         int lineY = 54;
         for (int i = 0; i < lines.Length; i++)
         {
-            overlay.AddText(32, lineY, lines[i], 18, new Vector4(1f, 1f, 1f, 1f));
+            overlay.AddText(PresentationOverlayLayer.TopMost, 32, lineY, lines[i], 18, new Vector4(1f, 1f, 1f, 1f));
             lineY += 22;
         }
     }

@@ -13,7 +13,8 @@ public sealed class S14LayeringRatchetTests
     public const int MaxGetEngineCalls = 205;
     public const int MaxUndeclaredModRegisterSystemCalls = 100;
     public const int MaxProductionStaticRegistryClearCalls = 9;
-    public const int MaxModProjectsReferencingFacadeGameEngine = 153;
+    // 153 -> 154: CrowdSimulationUiMod，群体模拟 HUD 走 UiSurfaceHost + ReactivePage，需要引用 Core 的工程。
+    public const int MaxModProjectsReferencingFacadeGameEngine = 154;
     public const int MaxModGraphIdRegistryClearCalls = 5;
 
     private static readonly Regex GetEngineCall = new(@"\.GetEngine\s*\(", RegexOptions.Compiled);

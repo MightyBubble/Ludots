@@ -33,6 +33,9 @@ public sealed partial class CrowdSimulationRuntime
     private ISystem<float>? _terrainOverlayInput;
     private string? _terrainOverlayAction;
 
+    /// <summary>当前焦点演示的 HUD 数据口；没有装演示呈现时为 null。</summary>
+    public CrowdHudFeed? HudFeed { get; private set; }
+
     internal void BindProjectorSlot(GlobalFieldVisualProjectorRegistry registry)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -76,6 +79,7 @@ public sealed partial class CrowdSimulationRuntime
         UnregisterFixed(engine, ref _pathInput, SystemGroup.PostMovement);
         UnregisterFixed(engine, ref _pathSimulation, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _pathPresentation);
+        if (HudFeed is { Kind: CrowdHudKind.Path }) HudFeed = null;
         _pathPresentationInstalled = false;
     }
 
@@ -92,6 +96,7 @@ public sealed partial class CrowdSimulationRuntime
         _deployViewProjector = null;
         UnregisterFixed(engine, ref _deployInput, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _deployPresentation);
+        if (HudFeed is { Kind: CrowdHudKind.Deploy }) HudFeed = null;
         _deployPresentationInstalled = false;
     }
 
@@ -140,14 +145,18 @@ public sealed partial class CrowdSimulationRuntime
             demo,
             new CrowdFlowFieldVisualProjector(flow),
             new CrowdWalkableVisualProjector(flow, () => demo.Nav));
-        var overlay = RequireOverlay(engine);
-        _pathInput = new S3PathInputSystem(engine, demo, bindings, presentation.Hud);
+        _pathInput = new S3PathInputSystem(engine, demo, bindings);
         _pathSimulation = new S3PathDemoSimulationSystem(demo);
-        _pathPresentation = new S3PathDemoPresentationSystem(demo, routes, overlay, presentation);
+        _pathPresentation = new S3PathDemoPresentationSystem(demo, routes);
         engine.RegisterSystem(_pathInput, SystemGroup.PostMovement);
         engine.RegisterSystem(_pathSimulation, SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(_pathPresentation);
         _pathDemo = demo;
+        HudFeed = new CrowdHudFeed(
+            demo,
+            presentation,
+            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null,
+            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null);
         _pathPresentationInstalled = true;
     }
 
@@ -234,20 +243,20 @@ public sealed partial class CrowdSimulationRuntime
             ? demoProjector
             : new S4DeployFrameProjector(demoProjector, debugView, sessionSource);
         var overlay = RequireOverlay(engine);
-        var input = new S4DeployInputSystem(engine, demo, bindings, presentation.Hud);
-        var presented = new S4DeployDemoPresentationSystem(
+        var input = new S4DeployInputSystem(engine, demo, bindings);
+        var feed = new CrowdHudFeed(
             demo,
-            routes,
-            overlay,
-            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null,
-            sessionSource,
             presentation,
+            sessionSource,
+            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null,
             () => ResolveLocalSeatVisionScope(engine));
+        var presented = new S4DeployDemoPresentationSystem(demo, routes, overlay, sessionSource, presentation, feed);
         if (debugView != null)
         {
             debugView.BindEngine(engine);
             input.UseDebugView(debugView);
             presented.UseDebugView(debugView);
+            feed.UseDebugView(debugView);
         }
 
         if (playerView != null)
@@ -255,6 +264,7 @@ public sealed partial class CrowdSimulationRuntime
             input.UsePlayerView(playerView);
             presented.UsePlayerView(playerView);
             presented.SuppressDominantGoal = () => true;
+            feed.UsePlayerView(playerView);
         }
 
         _deployInput = input;
@@ -262,6 +272,7 @@ public sealed partial class CrowdSimulationRuntime
         engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(_deployInput, SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(_deployPresentation);
         _deployDemo = demo;
+        HudFeed = feed;
         _deployPresentationInstalled = true;
     }
 
@@ -311,6 +322,7 @@ public sealed partial class CrowdSimulationRuntime
         return (routes, slot);
     }
 
+    /// <summary>屏幕覆盖层只承载世界投影的调试线、单位标记和框选矩形。</summary>
     private static ScreenOverlayBuffer RequireOverlay(GameEngine engine) =>
         engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
         ?? throw new InvalidOperationException("群体演示需要 ScreenOverlayBuffer。");

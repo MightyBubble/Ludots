@@ -25,14 +25,6 @@
   "routeThicknessCm": 300,
   "markerRadiusCm": 2000,
   "crossArmCm": 3000,
-  "statusCardX": 16,
-  "statusCardY": 290,
-  "statusCardW": 560,
-  "statusCardH": 100,
-  "teamBarX": 16,
-  "teamBarY": 250,
-  "fontSize": 18,
-  "linePx": 2,
   "killRadiusCm": 1300000,
   "killRingScale": 2,
   "killImpulse": 0,
@@ -111,8 +103,6 @@
     "terrainShade": { "red": 36, "green": 32, "blue": 48, "alpha": 255 },
     "goal": { "red": 236, "green": 220, "blue": 160, "alpha": 230 },
     "ripple": { "red": 150, "green": 42, "blue": 72, "alpha": 160 },
-    "card": { "red": 24, "green": 18, "blue": 28, "alpha": 210 },
-    "text": { "red": 236, "green": 230, "blue": 214, "alpha": 255 },
     "enemyMark": { "red": 255, "green": 96, "blue": 32, "alpha": 255 }
   }
 }

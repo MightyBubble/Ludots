@@ -28,6 +28,12 @@ public sealed class UiScene
 
 	private Func<bool>? _reactiveRuntimeRefresh;
 
+	private readonly List<UiNode> _boundTextNodes = new List<UiNode>();
+
+	private readonly List<UiNode> _changedTextNodes = new List<UiNode>();
+
+	private bool _boundTextIndexDirty = true;
+
 	private UiNodeId? _hoveredNodeId;
 
 	/// <summary>
@@ -102,6 +108,37 @@ public sealed class UiScene
 
 	public bool IsDirty { get; private set; }
 
+	/// <summary>完整排版次数（结构、样式、尺寸变化）。</summary>
+	public int FullLayoutCount => _layoutEngine.FullLayoutCount;
+
+	/// <summary>只因绑定文字变化做的排版次数；不重算样式，不重建 flex 树。</summary>
+	public int TextRelayoutCount => _layoutEngine.TextRelayoutCount;
+
+	/// <summary>最近一次文字排版里尺寸变了、标脏重排的叶子数。</summary>
+	public int LastTextRelayoutDirtyLeaves => _layoutEngine.LastTextRelayoutDirtyLeaves;
+
+	/// <summary>有挂着的 <see cref="UiTextBinding"/> 在上次排版后改过内容。</summary>
+	public bool HasPendingTextChanges
+	{
+		get
+		{
+			if (Root == null)
+			{
+				return false;
+			}
+			EnsureBoundTextIndex();
+			for (int i = 0; i < _boundTextNodes.Count; i++)
+			{
+				UiNode node = _boundTextNodes[i];
+				if (node.TextBinding!.Version != node.MeasuredTextVersion)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
 	public UiReactiveUpdateMetrics LastReactiveUpdateMetrics { get; internal set; } = UiReactiveUpdateMetrics.None;
 
 	public UiScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiDispatcher? dispatcher = null)
@@ -115,6 +152,7 @@ public sealed class UiScene
 	public void Mount(UiNode root)
 	{
 		Root = root ?? throw new ArgumentNullException("root");
+		_boundTextIndexDirty = true;
 		Document = null;
 		TrackNextNodeId(root);
 		ResetInteractionState();
@@ -133,6 +171,7 @@ public sealed class UiScene
 		_effectiveStyleSheetsDirty = true;
 		_nextNodeId = 1;
 		Root = BuildNode(document.Root);
+		_boundTextIndexDirty = true;
 		TrackNextNodeId(Root);
 		ResetInteractionState();
 		InitializeRuntimeState(Root);
@@ -169,6 +208,7 @@ public sealed class UiScene
 		bool sizeChanged = Math.Abs(_layoutWidth - width) >= 0.01f || Math.Abs(_layoutHeight - height) >= 0.01f;
 		if (!IsDirty && !sizeChanged)
 		{
+			LayoutChangedText(width, height);
 			return;
 		}
 		_layoutWidth = width;
@@ -178,7 +218,73 @@ public sealed class UiScene
 			_styleResolver.ResolveTree(Root, GetEffectiveStyleSheets());
 		}
 		_layoutEngine.Layout(Root, width, height);
+		MarkBoundTextMeasured();
 		IsDirty = false;
+	}
+
+	private void LayoutChangedText(float width, float height)
+	{
+		EnsureBoundTextIndex();
+		_changedTextNodes.Clear();
+		for (int i = 0; i < _boundTextNodes.Count; i++)
+		{
+			UiNode node = _boundTextNodes[i];
+			if (node.TextBinding!.Version != node.MeasuredTextVersion)
+			{
+				_changedTextNodes.Add(node);
+			}
+		}
+		if (_changedTextNodes.Count == 0)
+		{
+			return;
+		}
+		if (!_layoutEngine.TryRelayoutText(Root!, width, height, _changedTextNodes))
+		{
+			_layoutEngine.Layout(Root!, width, height);
+		}
+		for (int i = 0; i < _changedTextNodes.Count; i++)
+		{
+			UiNode node = _changedTextNodes[i];
+			node.MeasuredTextVersion = node.TextBinding!.Version;
+		}
+		_changedTextNodes.Clear();
+		Version++;
+	}
+
+	private void MarkBoundTextMeasured()
+	{
+		EnsureBoundTextIndex();
+		for (int i = 0; i < _boundTextNodes.Count; i++)
+		{
+			UiNode node = _boundTextNodes[i];
+			node.MeasuredTextVersion = node.TextBinding!.Version;
+		}
+	}
+
+	private void EnsureBoundTextIndex()
+	{
+		if (!_boundTextIndexDirty)
+		{
+			return;
+		}
+		_boundTextNodes.Clear();
+		if (Root != null)
+		{
+			CollectBoundTextNodes(Root);
+		}
+		_boundTextIndexDirty = false;
+	}
+
+	private void CollectBoundTextNodes(UiNode node)
+	{
+		if (node.TextBinding != null)
+		{
+			_boundTextNodes.Add(node);
+		}
+		for (int i = 0; i < node.Children.Count; i++)
+		{
+			CollectBoundTextNodes(node.Children[i]);
+		}
 	}
 
 	public bool AdvanceTime(float deltaSeconds)
@@ -187,16 +293,22 @@ public sealed class UiScene
 		{
 			return false;
 		}
-		bool flag = false;
-		foreach (UiNode item in EnumerateNodes(Root))
-		{
-			flag |= item.AdvanceTransitions(deltaSeconds);
-		}
+		bool flag = AdvanceTransitions(Root, deltaSeconds);
 		if (flag)
 		{
 			Version++;
 		}
 		return flag;
+	}
+
+	private static bool AdvanceTransitions(UiNode node, float deltaSeconds)
+	{
+		bool changed = node.AdvanceTransitions(deltaSeconds);
+		for (int i = 0; i < node.Children.Count; i++)
+		{
+			changed |= AdvanceTransitions(node.Children[i], deltaSeconds);
+		}
+		return changed;
 	}
 
 	public UiEventResult Dispatch(UiEvent evt)
@@ -401,6 +513,7 @@ public sealed class UiScene
 		TrackNextNodeId(Root);
 		if (stats.HasChanges)
 		{
+			_boundTextIndexDirty = true;
 			RefreshRetainedRuntimeState(Root);
 			ClearStaleInteractionState();
 			Version++;

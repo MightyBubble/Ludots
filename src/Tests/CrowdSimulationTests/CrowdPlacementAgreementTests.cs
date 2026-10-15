@@ -4,6 +4,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
+using CrowdSimulationTests.Presentation;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -59,7 +60,9 @@ public sealed class CrowdPlacementAgreementTests
         demo.HoverCm = (hoverX, hoverY);
         var routes = new RouteVisualBuffer();
         var overlay = new ScreenOverlayBuffer();
-        var system = new S4DeployDemoPresentationSystem(demo, routes, overlay, () => null, () => session, Presentation());
+        var presentation = Presentation();
+        var feed = new CrowdHudFeed(demo, presentation, () => session, () => null, null);
+        var system = new S4DeployDemoPresentationSystem(demo, routes, overlay, () => session, presentation, feed);
         system.Update(0f);
 
         var template = session.Config.Structures.Templates[store.TemplateIndexOf("building")];
@@ -90,15 +93,16 @@ public sealed class CrowdPlacementAgreementTests
         }
 
         Assert.That(illegalCells, Is.EqualTo(count));
-        bool sawReason = false;
-        foreach (var item in overlay.GetSpan())
+        var hud = default(CrowdDeployHud);
+        Assert.That(feed.ReadDeploy(ref hud), Is.True);
+        Assert.That(hud.PreviewShown, Is.True);
+        Assert.That(hud.PreviewValid, Is.False);
+        Assert.That(hud.PreviewReason, Is.EqualTo(CrowdPlacementReject.OverlapsBlocked));
+        using (var ui = new CrowdHudTestHost())
         {
-            if (item.Kind != Ludots.Core.Presentation.Hud.ScreenOverlayItemKind.Text) continue;
-            string? text = overlay.GetString(item.StringId);
-            if (text != null && text.Contains("(压到阻挡格)", StringComparison.Ordinal)) sawReason = true;
+            ui.Frame(feed);
+            Assert.That(ui.Text("crowd-keys"), Does.Contain("(压到阻挡格)"));
         }
-
-        Assert.That(sawReason, Is.True);
 
         for (int i = 0; i < 4; i++)
         {
@@ -209,12 +213,8 @@ public sealed class CrowdPlacementAgreementTests
         Kind = CrowdPresentationConfig.KindDeploy,
         Title = "放置",
         ViewLabels = new[] { "路线" },
-        Hud = new CrowdHudPanel
+        Hud = new CrowdHudConfig
         {
-            OriginXPx = 16,
-            OriginYPx = 16,
-            WidthPx = 640,
-            HeightPx = 148,
             Keys = "{activity}",
         },
         Deploy = new CrowdDeployPresentation

@@ -91,15 +91,15 @@ namespace CoreInputMod.Systems
                 var slot = abilityBuffer.Get(index);
                 bool hasAbility = slot.AbilityId > 0 || slot.TemplateEntityId > 0;
 
-                overlay.AddRect(x, y0, SlotWidth, SlotHeight, SlotBackground, SlotBorder);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, x, y0, SlotWidth, SlotHeight, SlotBackground, SlotBorder);
                 if (hasAbility)
                 {
-                    overlay.AddRect(x + 1, y0 + 1, SlotWidth - 2, SlotHeight - 2, SlotActive, default);
+                    overlay.AddRect(PresentationOverlayLayer.TopMost, x + 1, y0 + 1, SlotWidth - 2, SlotHeight - 2, SlotActive, default);
                 }
 
                 string keyLabel = keyLabels != null && index < keyLabels.Length ? keyLabels[index] : (index + 1).ToString();
-                overlay.AddText(x + 4, y0 + SlotHeight - 18, keyLabel, 14, KeyColor);
-                overlay.AddText(x + 6, y0 + 6, hasAbility ? $"{index + 1}" : "-", 18, AbilityColor);
+                overlay.AddText(PresentationOverlayLayer.TopMost, x + 4, y0 + SlotHeight - 18, keyLabel, 14, KeyColor);
+                overlay.AddText(PresentationOverlayLayer.TopMost, x + 6, y0 + 6, hasAbility ? $"{index + 1}" : "-", 18, AbilityColor);
             }
         }
 

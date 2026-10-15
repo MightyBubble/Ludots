@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Platform.Abstractions;
+using CrowdSimulationUiMod.UI;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -177,22 +178,19 @@ public sealed class CrowdPlayerViewTests
         var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(ViewJson(), "player-view"));
         host.Bind(session);
         var routes = new RouteVisualBuffer();
-        var overlay = new ScreenOverlayBuffer();
-        host.Draw(session, routes, overlay);
-        var texts = new System.Collections.Generic.List<string>();
-        foreach (ScreenOverlayItem item in overlay.GetSpan())
+        host.Draw(session, routes, new ScreenOverlayBuffer());
+        var hud = default(CrowdPlayerHud);
+        var units = new int[9];
+        host.ReadPanel(ref hud, units);
+        var labels = host.Labels;
+        var texts = new System.Collections.Generic.List<string>
         {
-            if (item.Kind != ScreenOverlayItemKind.Text)
-            {
-                continue;
-            }
-
-            string? text = overlay.GetString(item.StringId);
-            if (text != null)
-            {
-                texts.Add(text);
-            }
-        }
+            Write(b => CrowdHudFormat.TeamLine(b, in hud, units, labels)),
+            Write(b => CrowdHudFormat.CardLine(b, in hud, labels)),
+            Write(b => CrowdHudFormat.ModeLine(b, in hud, labels)),
+            Write(b => CrowdHudFormat.ClickLine(b, in hud, labels)),
+            Write(b => CrowdHudFormat.DeployLine(b, in hud, labels)),
+        };
 
         Assert.That(texts, Does.Contain("idle · countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
         Assert.That(texts, Does.Contain("clickSpawn unitType 0 · radius 0 · count 8"));
@@ -249,6 +247,13 @@ public sealed class CrowdPlayerViewTests
         Assert.That(ReadAlpha(world), Is.EqualTo(1f).Within(0.0001f));
     }
 
+    private static string Write(Action<Ludots.UI.Runtime.UiTextBuffer> write)
+    {
+        var buffer = new Ludots.UI.Runtime.UiTextBuffer();
+        write(buffer);
+        return buffer.ToString();
+    }
+
     private static CrowdOrderMode Choose(
         int minX, int minY, int maxX, int maxY, int clickX, int clickY, Fix64 pad, Fix64 spread, bool drag, bool autoOff)
         => CrowdOrderModeChooser.Choose(
@@ -303,7 +308,7 @@ public sealed class CrowdPlayerViewTests
         var colors = new JsonObject();
         foreach (var name in new[]
         {
-            "plan", "ink", "paper", "selected", "terrainLow", "terrainHigh", "terrainShade", "goal", "ripple", "card", "text", "enemyMark",
+            "plan", "ink", "paper", "selected", "terrainLow", "terrainHigh", "terrainShade", "goal", "ripple", "enemyMark",
         })
         {
             colors[name] = new JsonObject { ["red"] = 10, ["green"] = 20, ["blue"] = 30, ["alpha"] = 40 };
@@ -337,14 +342,6 @@ public sealed class CrowdPlayerViewTests
             ["routeThicknessCm"] = 300,
             ["markerRadiusCm"] = 2000,
             ["crossArmCm"] = 3000,
-            ["statusCardX"] = 16,
-            ["statusCardY"] = 290,
-            ["statusCardW"] = 560,
-            ["statusCardH"] = 100,
-            ["teamBarX"] = 16,
-            ["teamBarY"] = 250,
-            ["fontSize"] = 18,
-            ["linePx"] = 2,
             ["killRadiusCm"] = 1300000,
             ["killRingScale"] = 2,
             ["killImpulse"] = 0,

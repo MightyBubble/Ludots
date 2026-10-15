@@ -21,7 +21,19 @@ public class UIRoot
 
 	public float Height { get; private set; }
 
-	public bool IsDirty { get; set; } = true;
+	private bool _isDirty = true;
+
+	private long _renderedSceneVersion = -1;
+
+	/// <summary>
+	/// 需要重渲染：有人显式置脏，场景版本比上次渲染新，或者挂着的文字绑定改过内容还没排版。
+	/// 输入、查询都会先排版，文字改动在渲染前就可能被吃掉，所以要比版本而不是只看待排版。
+	/// </summary>
+	public bool IsDirty
+	{
+		get => _isDirty || (Scene is { } scene && (scene.Version != _renderedSceneVersion || scene.HasPendingTextChanges));
+		set => _isDirty = value;
+	}
 
 	public bool HasFocusedCanvas => _focusedCanvasNodeId.HasValue;
 
@@ -64,6 +76,7 @@ public class UIRoot
 		}
 		RefreshReactiveSceneRuntime();
 		_renderer.Render(Scene, Width, Height);
+		_renderedSceneVersion = Scene.Version;
 		IsDirty = false;
 	}
 

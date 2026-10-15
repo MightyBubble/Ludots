@@ -2,13 +2,12 @@ using System;
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.CrowdSimulation.Nav;
-using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
-/// S3 两点路径覆盖层:起点/终点/悬停标记、折线、NavMesh 线框、HUD。
+/// S3 两点路径世界层:起点/终点/悬停标记、折线、NavMesh 线框。文字面板由界面 mod 经 <see cref="CrowdHudFeed"/> 读取。
 /// 键鼠由 <see cref="S3PathInputSystem"/> 写入运行时队列,这里只读状态。
 /// </summary>
 public sealed class S3PathDemoPresentationSystem : ISystem<float>
@@ -25,24 +24,17 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
 
     private readonly S3PathDemoRuntime _runtime;
     private readonly RouteVisualBuffer _routeVisuals;
-    private readonly ScreenOverlayBuffer _overlay;
-    private readonly CrowdPresentationConfig _presentation;
 
     private int _wireNavId = -1;
-    private readonly CaptionCache _caption = new();
     private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
     private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
 
     internal S3PathDemoPresentationSystem(
         S3PathDemoRuntime runtime,
-        RouteVisualBuffer routeVisuals,
-        ScreenOverlayBuffer overlay,
-        CrowdPresentationConfig presentation)
+        RouteVisualBuffer routeVisuals)
     {
         _runtime = runtime;
         _routeVisuals = routeVisuals;
-        _overlay = overlay;
-        _presentation = presentation;
     }
 
     public void Initialize() { }
@@ -99,79 +91,6 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
 
             // 视觉尺寸跟导航格走(本图 62.5 m/格),不写死米数
             _routeVisuals.AddPolyline(RouteLine, pts, navCellVisual * 0.35f, Magenta);
-        }
-
-        if (!_caption.Matches(_runtime)) _caption.Rebuild(_presentation, _runtime);
-        DrawCaption(_overlay, _presentation.Hud, _presentation.Title, _caption.Detail, _caption.Keys);
-    }
-
-    private sealed class CaptionCache
-    {
-        public bool Ready;
-        public int RequestTick, DueTick, Tick, Waits, Threads, ViewMode, Branch, FlowReached;
-        public bool HasCurrent, Reachable, Slow;
-        public string ContextLabel = string.Empty;
-        public string ViewLabel = string.Empty;
-        public string? Fault;
-        public string Detail = string.Empty;
-        public string Keys = string.Empty;
-
-        public bool Matches(S3PathDemoRuntime runtime)
-        {
-            if (!Ready) return false;
-            if (RequestTick != runtime.RequestTick || DueTick != runtime.DueTick || Tick != runtime.TickCounter) return false;
-            if (Waits != runtime.TotalWaits || Threads != runtime.ThreadCount) return false;
-            if (ViewMode != runtime.ViewMode || Slow != runtime.SlowInjected) return false;
-            if (!string.Equals(ContextLabel, runtime.ContextLabel, StringComparison.Ordinal)
-                || !string.Equals(ViewLabel, runtime.ViewLabel, StringComparison.Ordinal)
-                || !string.Equals(Fault, runtime.Fault, StringComparison.Ordinal)) return false;
-            var current = runtime.Current;
-            if ((current != null) != HasCurrent) return false;
-            if (current == null) return true;
-            int reached = current.Flow?.Reached ?? 0;
-            return Reachable == current.Reachable && Branch == (int)current.Branch && FlowReached == reached;
-        }
-
-        public void Rebuild(CrowdPresentationConfig presentation, S3PathDemoRuntime runtime)
-        {
-            Ready = true;
-            RequestTick = runtime.RequestTick;
-            DueTick = runtime.DueTick;
-            Tick = runtime.TickCounter;
-            Waits = runtime.TotalWaits;
-            Threads = runtime.ThreadCount;
-            ViewMode = runtime.ViewMode;
-            Slow = runtime.SlowInjected;
-            ContextLabel = runtime.ContextLabel;
-            ViewLabel = runtime.ViewLabel;
-            Fault = runtime.Fault;
-            var current = runtime.Current;
-            HasCurrent = current != null;
-            string branch;
-            if (current == null)
-            {
-                branch = "-";
-            }
-            else
-            {
-                Reachable = current.Reachable;
-                Branch = (int)current.Branch;
-                FlowReached = current.Flow?.Reached ?? 0;
-                branch = current.Branch switch
-                {
-                    CorridorQuery.Branch.Tile => "NavMesh A*+漏斗",
-                    CorridorQuery.Branch.Hpa => "HPA* 走廊",
-                    _ => "不可达",
-                };
-            }
-
-            Detail =
-                $"请求帧 {RequestTick}；生效帧 {DueTick}；当前帧 {Tick}；等待次数 {Waits}" +
-                $"；体型 {ContextLabel}；后台线程 {Threads}；分支 {branch}" +
-                (current == null ? "" : $"；可达 {(Reachable ? "是" : "否")}；流场到达 {FlowReached} 格") +
-                (Slow ? "；后台慢注入中——仿真暂停等待,绝不使用半成品" : "") +
-                (Fault != null ? $"；服务故障 {Fault}" : "");
-            Keys = presentation.Hud.Keys.Replace("{view}", ViewLabel, StringComparison.Ordinal);
         }
     }
 
@@ -252,13 +171,5 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
             pts[count] = pts[0];
             _wireLines.Add((pts, navCellVisual * 0.12f, color));
         }
-    }
-
-    private static void DrawCaption(ScreenOverlayBuffer overlay, CrowdHudPanel hud, string title, string detail, string keys)
-    {
-        overlay.AddRect(hud.OriginXPx, hud.OriginYPx, hud.WidthPx, hud.HeightPx, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
-        overlay.AddText(32, 24, title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
-        overlay.AddText(32, 56, detail, 18, new Vector4(1f, 1f, 1f, 1f));
-        overlay.AddText(32, 84, keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));
     }
 }

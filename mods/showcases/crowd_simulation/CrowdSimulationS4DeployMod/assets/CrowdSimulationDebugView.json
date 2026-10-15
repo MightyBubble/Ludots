@@ -112,18 +112,6 @@
       "blue": 90,
       "alpha": 240
     },
-    "panelText": {
-      "red": 236,
-      "green": 232,
-      "blue": 220,
-      "alpha": 255
-    },
-    "alert": {
-      "red": 255,
-      "green": 72,
-      "blue": 56,
-      "alpha": 255
-    },
     "teams": [
       {
         "red": 229,
@@ -452,34 +440,8 @@
     "toggleTelemetryPanel": "CrowdSimulation.S4.ToggleTelemetryPanel",
     "probePathFault": "CrowdSimulation.S4.ProbePathFault"
   },
-  "panel": {
-    "fontSize": 18,
-    "originXPx": 16,
-    "originYPx": 264
-  },
-  "telemetry": {
-    "sampleMs": 250,
-    "history": 48,
-    "alerts": {
-      "lowFps": 90,
-      "simMs": 12,
-      "avoidMs": 6,
-      "headingDeg": 25,
-      "flipPct": 30
-    }
-  },
   "panels": {
     "nav": false,
-    "telemetry": false,
-    "navOriginXPx": 16,
-    "navOriginYPx": 240,
-    "telemetryOriginXPx": 16,
-    "telemetryOriginYPx": 400,
-    "faultOriginXPx": 16,
-    "faultOriginYPx": 698,
-    "widthPx": 1248,
-    "linePx": 18,
-    "sparkHeightPx": 16,
-    "sparkWidthPx": 180
+    "telemetry": false
   }
 }

@@ -180,9 +180,9 @@ public sealed class CrowdKernel50KBenchmarkTests
 #endif
     }
 
-    private readonly record struct StressScenario(int Units, int WarmupTicks, int MeasuredTicks, double BudgetMs, JsonArray Script);
+    internal readonly record struct StressScenario(int Units, int WarmupTicks, int MeasuredTicks, double BudgetMs, JsonArray Script);
 
-    private static StressScenario LoadScenario()
+    internal static StressScenario LoadScenario()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         string relative = Path.Combine(
@@ -212,7 +212,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         return CrowdTerrainTypeColors.Load(JsonNode.Parse(File.ReadAllText(Path.Combine(dir.FullName, relative)))!.AsObject());
     }
 
-    private static void Advance(
+    internal static void Advance(
         CrowdSimSession session,
         CrowdReferenceScript reference,
         Stopwatch watch,
@@ -259,7 +259,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         }
     }
 
-    private struct TickNote
+    internal struct TickNote
     {
         public int Gc0;
         public int Gc1;

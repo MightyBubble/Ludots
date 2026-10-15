@@ -1,0 +1,262 @@
+/*
+ * 群体演示 HUD。分区与配色照 Web 沙盒（Sandbox.jsx / index.css）：
+ * 左右两栏贴边全高，宽 15%、至少 272px；顶部居中队伍条与按键提示；
+ * 指令卡在右栏左侧；底部指令坞夹在两栏之间。战场中间不放面板。
+ * 纸色主题：卡片 hsl(43 30% 97%)、墨色 hsl(40 7% 22%)、灰字 hsl(36 6% 48%)、
+ * 边线 hsl(39 16% 84%)、强调 hsl(350 62% 32%)、告警 hsl(6 58% 45%)、正常 hsl(95 22% 38%)。
+ */
+
+#crowd-hud {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  pointer-events: none;
+  color: rgba(60, 57, 52, 1);
+  font-size: 12px;
+}
+
+.crowd-rail {
+  width: 15%;
+  min-width: 272px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* 边距写在栏上而不是根上：栏宽的百分比按根的内宽算，Web 是按视口宽。 */
+#crowd-left {
+  margin: 12px 0px 12px 12px;
+}
+
+#crowd-right {
+  margin: 12px 12px 12px 0px;
+}
+
+.crowd-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background-color: rgba(250, 248, 245, 0.95);
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(221, 216, 208, 1);
+  border-radius: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.crowd-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crowd-line {
+  font-size: 12px;
+  color: rgba(60, 57, 52, 1);
+  white-space: nowrap;
+}
+
+.crowd-heading {
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(60, 57, 52, 0.8);
+  white-space: nowrap;
+}
+
+.crowd-dim {
+  color: rgba(130, 124, 115, 1);
+}
+
+.crowd-ok {
+  color: rgba(93, 118, 76, 1);
+}
+
+.crowd-bad {
+  color: rgba(181, 62, 48, 1);
+}
+
+.crowd-warn {
+  color: rgba(185, 137, 70, 1);
+}
+
+.crowd-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 2px;
+}
+
+.crowd-chip {
+  font-size: 12px;
+  color: rgba(130, 124, 115, 1);
+  white-space: nowrap;
+}
+
+.crowd-rail .crowd-chip {
+  color: rgba(60, 57, 52, 1);
+}
+
+.crowd-rail .crowd-chips {
+  column-gap: 8px;
+  row-gap: 0px;
+}
+
+/* 左栏：标题卡、玩家显示、调试视图（检视 + 导航缓存 F9）。 */
+#crowd-header {
+  padding: 14px 16px;
+}
+
+#crowd-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: rgba(60, 57, 52, 1);
+}
+
+#crowd-debugview {
+  gap: 10px;
+}
+
+/*
+ * 顶部居中：队伍条、按键提示、路径故障条，中列在两栏之间居中即在屏幕中线上。
+ * 指令卡 Web 放在右栏左侧顶部；1280 宽时中列只剩约 690px，和居中的队伍条、按键提示放不进同一行，
+ * 所以排在它们下面、贴右栏。
+ */
+#crowd-center {
+  margin: 12px 0px;
+  flex-grow: 1;
+  flex-shrink: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+#crowd-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#crowd-playerbar {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+#crowd-team-swatches {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+.crowd-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+#crowd-legend {
+  padding: 4px 12px;
+  max-width: 62%;
+}
+
+#crowd-keys {
+  justify-content: center;
+}
+
+#crowd-fault {
+  max-width: 62%;
+  border-color: rgba(181, 62, 48, 0.5);
+}
+
+#crowd-fault .crowd-chip {
+  color: rgba(181, 62, 48, 1);
+}
+
+/* 样式解析器没有 align-self，靠整宽的行把订单卡推到右边。 */
+#crowd-order-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+#crowd-order {
+  width: 240px;
+}
+
+#crowd-order .crowd-chip {
+  color: rgba(60, 57, 52, 1);
+}
+
+/* 底部指令坞：会话状态在上，工具条（工具/步进/避让/倍速/切片）在下。 */
+#crowd-dock {
+  gap: 0px;
+  padding: 0px;
+}
+
+#crowd-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+}
+
+#crowd-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: rgba(239, 236, 230, 1);
+}
+
+#crowd-tools {
+  color: rgba(132, 31, 48, 1);
+}
+
+/* 右栏：遥测（F10），占满栏高。 */
+#crowd-telemetry {
+  flex-grow: 1;
+  gap: 4px;
+}
+
+.crowd-tel-row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 告警角标常驻、文字由绑定切换；改成给行加类会让每次越线都整页重组。 */
+.crowd-alert {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(181, 62, 48, 1);
+  white-space: nowrap;
+}
+
+/*
+ * 曲线是一行块字符（▁..█），一个样本一个字。Ludots.UI 没有不绑渲染后端的矢量画布，
+ * 用节点画柱子每个样本一个节点，采样帧的排版和重绘开销按样本数涨。
+ */
+.crowd-spark {
+  font-size: 9px;
+  color: rgba(132, 31, 48, 1);
+  white-space: nowrap;
+}
