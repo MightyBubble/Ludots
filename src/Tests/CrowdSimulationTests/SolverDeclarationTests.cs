@@ -130,7 +130,10 @@ public sealed class SolverDeclarationTests
             Is.False);
 
         JsonObject json = TestDefaults.DefaultNavmeshJson();
-        json["maps"]!["crowd_simulation_demo"]!["solver"] = NavSolverDeclaration.MassNavigation;
+        JsonObject mapNav = json["maps"]!["crowd_simulation_demo"]!.AsObject();
+        mapNav["solver"] = NavSolverDeclaration.MassNavigation;
+        mapNav.Remove("navCellSizeCm");
+        mapNav.Remove("terrainTypes");
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(json), pairRules: TestDefaults.DemoPairRules()))!;
         Assert.That(ex.Message, Does.Contain(NavSolverDeclaration.MassNavigation));
