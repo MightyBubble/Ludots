@@ -517,6 +517,18 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 `VisualTerrainEditorDocument.PaintWorld` 仍只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 仍写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。
 
+### 单位模板检视器
+
+React 编辑器的群体配置页有一块「单位模板」。数据来自 `GET /api/mods/{modId}/crowd-config` 返回的 `unitTemplates`，由 Core 的 `EditorSession.UnitTemplatesView` 生成。列出的是打开的 Mod 和它整条依赖链合并、展开 `extends` 之后带 `CrowdSimulationAgent` 的模板。字段表就是 `CrowdUnitTemplateFacts.AuthoredFields`：`profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。半径不在模板上，在模板引用的体型档案里，所以检视器同时列出 `Navigation/agent_profiles.json` 里这份档案的 `radiusCm` 和 `heightCm`，并写出还有哪些模板用这份档案。每个字段旁边写最后一次写它的 Mod 和文件。字段继承自父模板时，写的是父模板那一份的来源。
+
+改字段只是改 `templates` 层草稿，停手 600 ms 后调 `POST /api/mods/{modId}/crowd-config/validate`。校验在 Core 里跑和装载时一样的检查：`CrowdSimulationAuthoringContract.Validate`、`CrowdUnitTemplateFacts.FromTemplates`、`CrowdSimulationConfigLoader.Load`。前端没有自己的规则。报错原文显示在对应字段下，后面带赢家 Mod 和文件。例如速度写 -5，报的是 `模板 "crowd_minimal.unit" 的 CrowdSimulationAgent.speedCmPerSecond 需为 > 0 的数值。`；半径改了而 `personalRadiusCm` 没跟着改成 `radiusCm × agents.avoidanceRadiusScale`，报不一致。
+
+「应用并重建世界」走 `POST /api/mods/{modId}/crowd-config/apply`。校验不过就不写文件。通过时只写打开的 Mod 自己的 `Entities/templates.json` 和 `Navigation/agent_profiles.json`。模板来自依赖 Mod 时，写进去的是覆盖项，只有 id 和改了的键，依赖 Mod 的文件不动。改回原值后覆盖项删掉。草稿不能删掉依赖给出的键，否则拒绝。数字按值比较：`30.0` 和 `30` 算同一个值，不会因为浏览器把数字写回成 `30` 就把依赖里的条目抄进当前 Mod。
+
+表现只读。检视器列出 `rules[]` 里按 `EntitySpawned` 建表现、或 `bindSpawn.template` 指到这个模板的表现定义，标出规则在哪个 Mod、定义有没有找到。群体装载不检查表现，缺表现不会报错。
+
+验收截图和录屏在 `artifacts/acceptance/crowdsimulation-e02/`。测试是 `CrowdSimulationEditorApiTests` 里 `UnitTemplates_` 开头的几条和 `Templates_DraftRoundTrippedThroughBrowserJson_WritesNothing`，前端是 `scripts/assert-crowd-unit-templates.mts`。
+
 ## 不变量抽查
 
 校验不进 tick。`CrowdSimSession.Step` 不扫描这些不变量。部署演示的输入动作 `deploy.actions.validate` 在会话步进之前调用 `CrowdSimulationValidator.RunAll`，S4 的 `default_input.json` 把这个动作绑在 F8。结果写到调试面板：通过带 tick，失败带异常里的 tick、槽位、实体、格、nav、tile 或组。
