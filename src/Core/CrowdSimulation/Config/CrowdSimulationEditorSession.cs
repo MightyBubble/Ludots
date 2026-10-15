@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -519,6 +520,13 @@ public static partial class CrowdSimulationEditorApi
 
             if (left is JsonValue && right is JsonValue)
             {
+                // 浏览器 JSON.parse / stringify 会把 30.0 写回成 30。数值按值比，不按字面。
+                if (left.GetValueKind() == JsonValueKind.Number && right.GetValueKind() == JsonValueKind.Number)
+                {
+                    return double.Parse(left.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture)
+                        == double.Parse(right.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture);
+                }
+
                 return left.ToJsonString() == right.ToJsonString();
             }
 

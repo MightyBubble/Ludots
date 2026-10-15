@@ -366,9 +366,14 @@ public class CrowdSimulationEditorApiTests
             Profile(draft, "crowd_minimal_unit")["radiusCm"] = 200;
             JsonObject result = CrowdSimulationEditorApi.Apply(repo, Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
-            string written = result["written"]!.ToJsonString();
-            Assert.That(written, Does.Contain(Minimal + "/assets/Entities/templates.json"));
-            Assert.That(written, Does.Contain(Minimal + "/assets/Navigation/agent_profiles.json"));
+            string[] written = ((JsonArray)result["written"]!).Select(node => node!.GetValue<string>()).ToArray();
+            Assert.That(written, Is.EqualTo(new[]
+            {
+                Minimal + "/assets/Entities/templates.json",
+                Minimal + "/assets/Navigation/agent_profiles.json",
+            }));
+            var ownProfiles = (JsonArray)JsonNode.Parse(File.ReadAllText(Path.Combine(copy, "assets", "Navigation", "agent_profiles.json")))!;
+            Assert.That(ownProfiles.Select(node => node!["id"]!.GetValue<string>()), Is.EqualTo(new[] { "crowd_minimal_unit" }));
 
             string templatesText = File.ReadAllText(Path.Combine(copy, "assets", "Entities", "templates.json"));
             Assert.That(templatesText, Does.Contain("\n  {\n    \"id\": \"crowd_minimal.team\""), "两格缩进，和其他编辑器写回一致");
@@ -378,6 +383,26 @@ public class CrowdSimulationEditorApiTests
             Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1650));
             Assert.That(unit["agent"]!["personalRadiusCm"]!.GetValue<int>(), Is.EqualTo(1200));
             Assert.That(unit["profile"]!["values"]!["radiusCm"]!.GetValue<int>(), Is.EqualTo(200));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void Templates_DraftRoundTrippedThroughBrowserJson_WritesNothing()
+    {
+        string copy = CopyMod(Minimal);
+        try
+        {
+            string text = CrowdSimulationEditorApi.Load(FindRepoRoot(), Minimal, copy)["templates"]!.ToJsonString();
+            Assert.That(text, Does.Contain("\"radiusCm\":30.0"), "Core 的档案写成 30.0，这条用例才有意义");
+            string browser = System.Text.RegularExpressions.Regex.Replace(text, @"(?<=[:\[,]-?\d+)\.0(?=[,\]}])", "");
+            JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", JsonNode.Parse(browser)!, copy);
+            Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
+            Assert.That(((JsonArray)result["written"]!).Count, Is.EqualTo(0), result.ToJsonString());
+            Assert.That(File.Exists(Path.Combine(copy, "assets", "Navigation", "pathing.json")), Is.False);
         }
         finally
         {
