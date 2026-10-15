@@ -176,12 +176,18 @@ public class S1SurfaceTruthTests
         => LoadRuntime(seed, lineOfSight: false, pairRules);
 
     internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight, CrowdPairRules? pairRules)
+        => LoadRuntime(seed, lineOfSight, pairRules, tuneConfig: null);
+
+    /// <param name="tuneConfig">在合并后的 CrowdSimulationConfig JSON 上改值，再交给加载器校验。</param>
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, Action<JsonObject>? tuneConfig)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         if (lineOfSight) merged["fog"]!["lineOfSight"] = true;
+        tuneConfig?.Invoke(merged);
         var config = CrowdSimulationConfig.Load(merged);
 
         var navmeshJson = TestDefaults.StandardNavmeshJson();
