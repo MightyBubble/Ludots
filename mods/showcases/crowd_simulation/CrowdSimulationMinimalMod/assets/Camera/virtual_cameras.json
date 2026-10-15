@@ -1,7 +1,7 @@
 [
   {
-    "id": "CrowdSimulationMinimal.Camera",
-    "displayName": "CrowdSimulation Minimal Orbit",
+    "id": "CrowdSimulationMinimalMod.Camera",
+    "displayName": "CrowdSimulationMinimalMod Orbit",
     "priority": 0,
     "facingMode": "none",
     "distanceCm": 320000,

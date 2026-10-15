@@ -1,6 +1,6 @@
 [
   {
-    "id": "crowd_minimal.scout.body",
+    "id": "crowd_minimal.unit.body",
     "type": "Primitive",
     "primitiveKind": "Cube"
   }

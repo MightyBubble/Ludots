@@ -3,7 +3,7 @@
     "id": "crowd_minimal.team",
     "components": {
       "Name": {
-        "Value": "CrowdSimulationMinimal.Team"
+        "Value": "crowd_minimal.team"
       }
     }
   },
@@ -11,7 +11,7 @@
     "id": "crowd_minimal.player",
     "components": {
       "Name": {
-        "Value": "CrowdSimulationMinimal.Player"
+        "Value": "crowd_minimal.player"
       }
     }
   },
@@ -19,7 +19,7 @@
     "id": "crowd_minimal.wall_block",
     "components": {
       "Name": {
-        "Value": "CrowdSimulationMinimal.WallBlock"
+        "Value": "crowd_minimal.wall_block"
       },
       "WorldPositionCm": {
         "Value": {
@@ -40,13 +40,13 @@
     }
   },
   {
-    "id": "crowd_minimal.scout",
+    "id": "crowd_minimal.unit",
     "components": {
       "Name": {
-        "Value": "CrowdSimulationMinimal.Scout"
+        "Value": "crowd_minimal.unit"
       },
       "CrowdSimulationAgent": {
-        "profileId": "crowd_minimal_scout",
+        "profileId": "crowd_minimal_unit",
         "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 900,

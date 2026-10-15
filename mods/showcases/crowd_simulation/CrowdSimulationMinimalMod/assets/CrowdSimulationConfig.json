@@ -20,7 +20,11 @@
     ]
   },
   "structures": {
-    "anchorTerrain": ["land"],
-    "spanTerrain": ["water"]
+    "anchorTerrain": [
+      "land"
+    ],
+    "spanTerrain": [
+      "water"
+    ]
   }
 }
