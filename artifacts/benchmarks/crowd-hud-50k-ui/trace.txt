@@ -1,2 +1,2 @@
-50k HUD ui-path: tickMedian hidden=24.108ms visible=24.360ms noise=2.411ms hudFrame median=0.002ms p95=4.727ms max=7.644ms nonSampleFrames=112 nonSampleAlloc=0 sampleFrames=8 sampleAllocAvg=1878838 composes=8 renders=8 lastComposeMs=0.339 reads status=12 player=12 inspect=12 nav=6 telemetry=12
-load 6.04 4.82 4.93 1/1356 1623916
+50k HUD ui-path: tickMedian hidden=21.267ms visible=21.235ms noise=2.914ms hudFrame median=0.002ms p95=6.383ms max=6.964ms nonSampleFrames=112 nonSampleAlloc=0 sampleFrames=8 sampleAllocAvg=1875237 composes=8 renders=8 lastComposeMs=0.637 reads status=12 player=12 inspect=12 nav=6 telemetry=12
+load 1.16 1.55 3.10 1/890 1634978
