@@ -1416,7 +1416,7 @@ internal sealed class CrowdPlayerViewHost
         return found;
     }
 
-    private static CrowdOrder? LatestOrder(CrowdSimSession session, int playerId)
+    internal static CrowdOrder? LatestOrder(CrowdSimSession session, int playerId)
     {
         CrowdOrder? best = null;
         int bestId = -1;
