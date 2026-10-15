@@ -7,9 +7,37 @@ using SkiaSharp;
 
 namespace Ludots.UI.Skia;
 
+/// <summary>
+/// 直接画进目标画布。画笔、裁剪路径、模糊滤镜、折行缓冲和子节点排序表都由实例持有并反复使用，
+/// 只有渐变、虚线边框首次出现这类少见样式才会分配；同一实例不能跨线程并发渲染。
+/// </summary>
 public sealed class SkiaUiRenderer : IUiRenderer
 {
 	private SKCanvas? _canvas;
+
+	private readonly SKPaint _fillPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+
+	private readonly SKPaint _strokePaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
+
+	private readonly SKPaint _layerPaint = new SKPaint();
+
+	private readonly SKPaint _textPaint = new SKPaint { IsAntialias = true };
+
+	private readonly SKPaint _textShadowPaint = new SKPaint { IsAntialias = true };
+
+	private readonly SKPaint _imagePaint = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.High };
+
+	private readonly SKPath _clipPath = new SKPath();
+
+	private readonly UiTextLines _textLines = new UiTextLines();
+
+	private readonly Dictionary<float, SKImageFilter> _blurFilters = new Dictionary<float, SKImageFilter>();
+
+	private readonly Dictionary<(UiBorderStyle Style, float Width), SKPathEffect> _borderDashes = new Dictionary<(UiBorderStyle, float), SKPathEffect>();
+
+	private readonly List<List<UiNode>> _orderedChildren = new List<List<UiNode>>();
+
+	private int _depth;
 
 	public void SetCanvas(SKCanvas canvas) => _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
 
@@ -29,14 +57,11 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		{
 			return;
 		}
-		int width2 = Math.Max(1, (int)Math.Ceiling(width));
-		int height2 = Math.Max(1, (int)Math.Ceiling(height));
-		using SKSurface sKSurface = SKSurface.Create(new SKImageInfo(width2, height2));
-		SKCanvas canvas2 = sKSurface.Canvas;
-		canvas2.Clear(SKColors.Transparent);
-		RenderNode(scene.Root, canvas2, sKSurface);
-		using SKImage image = sKSurface.Snapshot();
-		canvas.DrawImage(image, 0f, 0f);
+		int count = canvas.Save();
+		canvas.ClipRect(new SKRect(0f, 0f, width, height));
+		_depth = 0;
+		RenderNode(scene.Root, canvas);
+		canvas.RestoreToCount(count);
 	}
 
 	public void ExportPng(UiScene scene, string outputPath, int width, int height)
@@ -51,7 +76,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		sKData.SaveTo(target);
 	}
 
-	private void RenderNode(UiNode node, SKCanvas canvas, SKSurface surface)
+	private void RenderNode(UiNode node, SKCanvas canvas)
 	{
 		UiStyle renderStyle = node.RenderStyle;
 		if (renderStyle.Visible && renderStyle.Display != UiDisplay.None)
@@ -62,12 +87,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			}
 			else
 			{
-				RenderNodeCore(node, canvas, surface);
+				RenderNodeCore(node, canvas);
 			}
 		}
 	}
 
-	private void RenderNodeCore(UiNode node, SKCanvas canvas, SKSurface surface)
+	private void RenderNodeCore(UiNode node, SKCanvas canvas)
 	{
 		UiStyle renderStyle = node.RenderStyle;
 		if (!renderStyle.Visible || renderStyle.Display == UiDisplay.None)
@@ -91,10 +116,9 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		}
 		if (renderStyle.Opacity < 1f)
 		{
-			num = canvas.SaveLayer(new SKPaint
-			{
-				Color = SKColors.White.WithAlpha((byte)Math.Clamp(renderStyle.Opacity * 255f, 0f, 255f))
-			});
+			_layerPaint.ImageFilter = null;
+			_layerPaint.Color = SKColors.White.WithAlpha((byte)Math.Clamp(renderStyle.Opacity * 255f, 0f, 255f));
+			num = canvas.SaveLayer(_layerPaint);
 		}
 		if (renderStyle.MaskGradient != null)
 		{
@@ -105,26 +129,18 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			num3 = canvas.Save();
 			ClipNodeBounds(canvas, sKRect, renderStyle);
 		}
-		DrawBackdropBlur(canvas, surface, sKRect, renderStyle);
+		DrawBackdropBlur(canvas, sKRect, renderStyle);
 		DrawBoxShadows(canvas, sKRect, renderStyle);
 		DrawBackgrounds(canvas, sKRect, renderStyle);
 		if (renderStyle.BorderWidth > 0f && renderStyle.BorderColor != UiColor.Transparent)
 		{
-			using SKPaint paint = CreateBorderPaint(renderStyle);
-			DrawRect(canvas, sKRect, renderStyle.BorderRadius, paint);
+			DrawRect(canvas, sKRect, renderStyle.BorderRadius, BorderPaint(renderStyle));
 		}
 		if (renderStyle.OutlineWidth > 0f && renderStyle.OutlineColor != UiColor.Transparent)
 		{
-			using SKPaint paint2 = new SKPaint
-			{
-				Color = renderStyle.OutlineColor.ToSKColor(),
-				IsAntialias = true,
-				Style = SKPaintStyle.Stroke,
-				StrokeWidth = renderStyle.OutlineWidth
-			};
 			SKRect rect = sKRect;
 			rect.Inflate(renderStyle.OutlineWidth * 0.5f, renderStyle.OutlineWidth * 0.5f);
-			DrawRect(canvas, rect, renderStyle.BorderRadius + renderStyle.OutlineWidth * 0.5f, paint2);
+			DrawRect(canvas, rect, renderStyle.BorderRadius + renderStyle.OutlineWidth * 0.5f, Stroke(renderStyle.OutlineColor, renderStyle.OutlineWidth));
 		}
 		if (flag)
 		{
@@ -135,8 +151,8 @@ public sealed class SkiaUiRenderer : IUiRenderer
 				canvas.Translate(0f - node.ScrollOffsetX, 0f - node.ScrollOffsetY);
 			}
 		}
-		string text = ResolveRenderableText(node);
-		if (!string.IsNullOrWhiteSpace(text))
+		ReadOnlySpan<char> text = ResolveRenderableText(node);
+		if (!text.IsWhiteSpace())
 		{
 			DrawText(text, node, sKRect, renderStyle, canvas);
 		}
@@ -148,10 +164,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		{
 			DrawCanvas(node, sKRect, renderStyle, canvas);
 		}
-		foreach (UiNode item in UiVisualTreeOrdering.BackToFront(node.Children))
-		{
-			RenderNode(item, canvas, surface);
-		}
+		RenderChildren(node.Children, canvas);
 		if (num4 >= 0)
 		{
 			canvas.RestoreToCount(num4);
@@ -178,25 +191,73 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private void RenderFilteredNode(UiNode node, SKCanvas canvas)
 	{
-		UiStyle renderStyle = node.RenderStyle;
-		SKRect sKRect = new SKRect(node.LayoutRect.X, node.LayoutRect.Y, node.LayoutRect.Right, node.LayoutRect.Bottom);
-		int num = (int)Math.Ceiling(Math.Max(2f, renderStyle.FilterBlurRadius * 3f));
-		int num2 = (int)Math.Floor(sKRect.Left) - num;
-		int num3 = (int)Math.Floor(sKRect.Top) - num;
-		int width = Math.Max(1, (int)Math.Ceiling(sKRect.Width) + num * 2);
-		int height = Math.Max(1, (int)Math.Ceiling(sKRect.Height) + num * 2);
-		using SKSurface sKSurface = SKSurface.Create(new SKImageInfo(width, height));
-		SKCanvas canvas2 = sKSurface.Canvas;
-		canvas2.Clear(SKColors.Transparent);
-		canvas2.Translate(-num2, -num3);
-		RenderNodeCore(node, canvas2, sKSurface);
-		using SKImage image = sKSurface.Snapshot();
-		using SKPaint paint = new SKPaint
+		_layerPaint.Color = SKColors.White;
+		_layerPaint.ImageFilter = BlurFilter(node.RenderStyle.FilterBlurRadius);
+		int count = canvas.SaveLayer(_layerPaint);
+		_layerPaint.ImageFilter = null;
+		RenderNodeCore(node, canvas);
+		canvas.RestoreToCount(count);
+	}
+
+	private void RenderChildren(IReadOnlyList<UiNode> children, SKCanvas canvas)
+	{
+		if (UiVisualTreeOrdering.IsBackToFront(children))
 		{
-			IsAntialias = true,
-			ImageFilter = SKImageFilter.CreateBlur(ToSigma(renderStyle.FilterBlurRadius), ToSigma(renderStyle.FilterBlurRadius))
-		};
-		canvas.DrawImage(image, num2, num3, paint);
+			for (int i = 0; i < children.Count; i++)
+			{
+				RenderNode(children[i], canvas);
+			}
+			return;
+		}
+
+		if (_depth == _orderedChildren.Count)
+		{
+			_orderedChildren.Add(new List<UiNode>());
+		}
+		List<UiNode> ordered = _orderedChildren[_depth++];
+		UiVisualTreeOrdering.CopyBackToFront(children, ordered);
+		for (int i = 0; i < ordered.Count; i++)
+		{
+			RenderNode(ordered[i], canvas);
+		}
+		ordered.Clear();
+		_depth--;
+	}
+
+	private SKPaint Fill(UiColor color)
+	{
+		_fillPaint.Shader = null;
+		_fillPaint.ImageFilter = null;
+		_fillPaint.BlendMode = SKBlendMode.SrcOver;
+		_fillPaint.Color = color.ToSKColor();
+		return _fillPaint;
+	}
+
+	private SKPaint Fill(SKColor color)
+	{
+		SKPaint paint = Fill(UiColor.Transparent);
+		paint.Color = color;
+		return paint;
+	}
+
+	private SKPaint Stroke(UiColor color, float width)
+	{
+		_strokePaint.PathEffect = null;
+		_strokePaint.StrokeCap = SKStrokeCap.Butt;
+		_strokePaint.Color = color.ToSKColor();
+		_strokePaint.StrokeWidth = width;
+		return _strokePaint;
+	}
+
+	private SKImageFilter BlurFilter(float blurRadius)
+	{
+		float sigma = ToSigma(blurRadius);
+		if (!_blurFilters.TryGetValue(sigma, out SKImageFilter? filter))
+		{
+			filter = SKImageFilter.CreateBlur(sigma, sigma);
+			_blurFilters[sigma] = filter;
+		}
+		return filter;
 	}
 
 	private static void DrawRect(SKCanvas canvas, SKRect rect, float radius, SKPaint paint)
@@ -211,17 +272,11 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		}
 	}
 
-	private static void DrawBackgrounds(SKCanvas canvas, SKRect rect, UiStyle style)
+	private void DrawBackgrounds(SKCanvas canvas, SKRect rect, UiStyle style)
 	{
 		if (style.BackgroundColor != UiColor.Transparent)
 		{
-			using SKPaint paint = new SKPaint
-			{
-				Color = style.BackgroundColor.ToSKColor(),
-				IsAntialias = true,
-				Style = SKPaintStyle.Fill
-			};
-			DrawRect(canvas, rect, style.BorderRadius, paint);
+			DrawRect(canvas, rect, style.BorderRadius, Fill(style.BackgroundColor));
 		}
 		if (style.BackgroundLayers.Count > 0)
 		{
@@ -232,23 +287,11 @@ public sealed class SkiaUiRenderer : IUiRenderer
 				{
 					if (uiBackgroundLayer.Color != UiColor.Transparent)
 					{
-						using SKPaint paint2 = new SKPaint
-						{
-							Color = uiBackgroundLayer.Color.ToSKColor(),
-							IsAntialias = true,
-							Style = SKPaintStyle.Fill
-						};
-						DrawRect(canvas, rect, style.BorderRadius, paint2);
+						DrawRect(canvas, rect, style.BorderRadius, Fill(uiBackgroundLayer.Color));
 					}
 					if (uiBackgroundLayer.Gradient != null)
 					{
-						using SKPaint paint3 = new SKPaint
-						{
-							IsAntialias = true,
-							Style = SKPaintStyle.Fill,
-							Shader = CreateGradientShader(rect, uiBackgroundLayer.Gradient)
-						};
-						DrawRect(canvas, rect, style.BorderRadius, paint3);
+						DrawGradientRect(canvas, rect, style.BorderRadius, uiBackgroundLayer.Gradient);
 					}
 					if (!string.IsNullOrWhiteSpace(uiBackgroundLayer.ImageSource))
 					{
@@ -259,140 +302,104 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		}
 		else if (style.BackgroundGradient != null)
 		{
-			using (SKPaint paint4 = new SKPaint
-			{
-				IsAntialias = true,
-				Style = SKPaintStyle.Fill,
-				Shader = CreateGradientShader(rect, style.BackgroundGradient)
-			})
-			{
-				DrawRect(canvas, rect, style.BorderRadius, paint4);
-			}
+			DrawGradientRect(canvas, rect, style.BorderRadius, style.BackgroundGradient);
 		}
 	}
 
-	private static SKPaint CreateBorderPaint(UiStyle style)
+	private void DrawGradientRect(SKCanvas canvas, SKRect rect, float radius, UiLinearGradient gradient)
 	{
-		SKPaint sKPaint = new SKPaint
-		{
-			Color = style.BorderColor.ToSKColor(),
-			IsAntialias = true,
-			Style = SKPaintStyle.Stroke,
-			StrokeWidth = style.BorderWidth
-		};
+		using SKShader shader = CreateGradientShader(rect, gradient);
+		SKPaint paint = Fill(SKColors.White);
+		paint.Shader = shader;
+		DrawRect(canvas, rect, radius, paint);
+		paint.Shader = null;
+	}
+
+	private SKPaint BorderPaint(UiStyle style)
+	{
+		SKPaint paint = Stroke(style.BorderColor, style.BorderWidth);
 		switch (style.BorderStyle)
 		{
 		case UiBorderStyle.Dashed:
-			sKPaint.PathEffect = SKPathEffect.CreateDash(new float[2]
-			{
-				Math.Max(4f, style.BorderWidth * 3f),
-				Math.Max(2f, style.BorderWidth * 2f)
-			}, 0f);
+			paint.PathEffect = BorderDash(UiBorderStyle.Dashed, style.BorderWidth, Math.Max(4f, style.BorderWidth * 3f), Math.Max(2f, style.BorderWidth * 2f));
 			break;
 		case UiBorderStyle.Dotted:
-			sKPaint.StrokeCap = SKStrokeCap.Round;
-			sKPaint.PathEffect = SKPathEffect.CreateDash(new float[2]
-			{
-				Math.Max(1f, style.BorderWidth),
-				Math.Max(2f, style.BorderWidth * 1.8f)
-			}, 0f);
+			paint.StrokeCap = SKStrokeCap.Round;
+			paint.PathEffect = BorderDash(UiBorderStyle.Dotted, style.BorderWidth, Math.Max(1f, style.BorderWidth), Math.Max(2f, style.BorderWidth * 1.8f));
 			break;
 		}
-		return sKPaint;
+		return paint;
 	}
 
-	private static void DrawBoxShadows(SKCanvas canvas, SKRect rect, UiStyle style)
+	private SKPathEffect BorderDash(UiBorderStyle borderStyle, float borderWidth, float on, float off)
 	{
-		IReadOnlyList<UiShadow> readOnlyList2;
-		if (style.BoxShadows.Count <= 0)
+		if (!_borderDashes.TryGetValue((borderStyle, borderWidth), out SKPathEffect? effect))
 		{
-			IReadOnlyList<UiShadow> readOnlyList = ((!style.BoxShadow.HasValue) ? ((IReadOnlyList<UiShadow>)Array.Empty<UiShadow>()) : ((IReadOnlyList<UiShadow>)new UiShadow[1] { style.BoxShadow.Value }));
-			readOnlyList2 = readOnlyList;
+			effect = SKPathEffect.CreateDash(new float[2] { on, off }, 0f);
+			_borderDashes[(borderStyle, borderWidth)] = effect;
 		}
-		else
+		return effect;
+	}
+
+	private void DrawBoxShadows(SKCanvas canvas, SKRect rect, UiStyle style)
+	{
+		if (style.BoxShadows.Count > 0)
 		{
-			readOnlyList2 = style.BoxShadows;
+			for (int i = 0; i < style.BoxShadows.Count; i++)
+			{
+				DrawBoxShadow(canvas, rect, style, style.BoxShadows[i]);
+			}
 		}
-		IReadOnlyList<UiShadow> readOnlyList3 = readOnlyList2;
-		if (readOnlyList3.Count == 0)
+		else if (style.BoxShadow is { } shadow)
+		{
+			DrawBoxShadow(canvas, rect, style, shadow);
+		}
+	}
+
+	private void DrawBoxShadow(SKCanvas canvas, SKRect rect, UiStyle style, UiShadow shadow)
+	{
+		if (!shadow.IsVisible)
 		{
 			return;
 		}
-		for (int i = 0; i < readOnlyList3.Count; i++)
-		{
-			UiShadow uiShadow = readOnlyList3[i];
-			if (uiShadow.IsVisible)
-			{
-				using SKPaint paint = new SKPaint
-				{
-					Color = uiShadow.Color.ToSKColor(),
-					IsAntialias = true,
-					Style = SKPaintStyle.Fill,
-					ImageFilter = ((uiShadow.BlurRadius > 0.01f) ? SKImageFilter.CreateBlur(ToSigma(uiShadow.BlurRadius), ToSigma(uiShadow.BlurRadius)) : null)
-				};
-				SKRect rect2 = rect;
-				rect2.Offset(uiShadow.OffsetX, uiShadow.OffsetY);
-				rect2.Inflate(uiShadow.SpreadRadius, uiShadow.SpreadRadius);
-				DrawRect(canvas, rect2, style.BorderRadius + uiShadow.SpreadRadius, paint);
-			}
-		}
+		SKPaint paint = Fill(shadow.Color);
+		paint.ImageFilter = shadow.BlurRadius > 0.01f ? BlurFilter(shadow.BlurRadius) : null;
+		SKRect shadowRect = rect;
+		shadowRect.Offset(shadow.OffsetX, shadow.OffsetY);
+		shadowRect.Inflate(shadow.SpreadRadius, shadow.SpreadRadius);
+		DrawRect(canvas, shadowRect, style.BorderRadius + shadow.SpreadRadius, paint);
+		paint.ImageFilter = null;
 	}
 
-	private static void DrawBackdropBlur(SKCanvas canvas, SKSurface surface, SKRect rect, UiStyle style)
+	private void DrawBackdropBlur(SKCanvas canvas, SKRect rect, UiStyle style)
 	{
 		if (style.BackdropBlurRadius <= 0.01f || rect.Width <= 0.01f || rect.Height <= 0.01f)
 		{
 			return;
 		}
-		int num = (int)Math.Floor(rect.Left);
-		int num2 = (int)Math.Floor(rect.Top);
-		int num3 = Math.Max(1, (int)Math.Ceiling(rect.Width));
-		int num4 = Math.Max(1, (int)Math.Ceiling(rect.Height));
-		SKRectI sKRectI = new SKRectI(num, num2, num + num3, num2 + num4);
-		SKRectI deviceClipBounds = surface.Canvas.DeviceClipBounds;
-		int num5 = Math.Max(sKRectI.Left, deviceClipBounds.Left);
-		int num6 = Math.Max(sKRectI.Top, deviceClipBounds.Top);
-		int num7 = Math.Min(sKRectI.Right, deviceClipBounds.Right);
-		int num8 = Math.Min(sKRectI.Bottom, deviceClipBounds.Bottom);
-		if (num5 >= num7 || num6 >= num8)
-		{
-			return;
-		}
-		sKRectI = new SKRectI(num5, num6, num7, num8);
-		using SKImage sKImage = surface.Snapshot(sKRectI);
-		if (sKImage == null)
-		{
-			return;
-		}
 		int count = canvas.Save();
 		ClipNodeBounds(canvas, rect, style);
-		using SKPaint paint = new SKPaint
-		{
-			IsAntialias = true,
-			BlendMode = SKBlendMode.Src,
-			ImageFilter = SKImageFilter.CreateBlur(ToSigma(style.BackdropBlurRadius), ToSigma(style.BackdropBlurRadius))
-		};
-		canvas.DrawImage(sKImage, sKRectI.Left, sKRectI.Top, paint);
+		// Bounds 不能填：SKCanvasSaveLayerRec.ToNative 取的是局部变量地址，传进原生层时已经失效。
+		canvas.SaveLayer(new SKCanvasSaveLayerRec { Backdrop = BlurFilter(style.BackdropBlurRadius) });
 		canvas.RestoreToCount(count);
 	}
 
-	private static void DrawMask(SKCanvas canvas, SKRect rect, UiStyle style)
+	private void DrawMask(SKCanvas canvas, SKRect rect, UiStyle style)
 	{
 		if (style.MaskGradient == null)
 		{
 			return;
 		}
-		using SKPaint paint = new SKPaint
-		{
-			IsAntialias = true,
-			BlendMode = SKBlendMode.DstIn,
-			Shader = CreateGradientShader(rect, style.MaskGradient)
-		};
-		using SKPath path = CreateClipPath(rect, style);
-		canvas.DrawPath(path, paint);
+		using SKShader shader = CreateGradientShader(rect, style.MaskGradient);
+		SKPaint paint = Fill(SKColors.White);
+		paint.BlendMode = SKBlendMode.DstIn;
+		paint.Shader = shader;
+		canvas.DrawPath(BuildClipPath(rect, style), paint);
+		paint.Shader = null;
+		paint.BlendMode = SKBlendMode.SrcOver;
 	}
 
-	private static void DrawScrollbars(SKCanvas canvas, UiNode node)
+	private void DrawScrollbars(SKCanvas canvas, UiNode node)
 	{
 		if (node.Style.Overflow != UiOverflow.Scroll)
 		{
@@ -401,27 +408,15 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		UiStyle renderStyle = node.RenderStyle;
 		SKColor color = ((renderStyle.BorderColor.Alpha > 0) ? renderStyle.BorderColor.WithAlpha((byte)Math.Max((int)renderStyle.BorderColor.Alpha, 72)).ToSKColor() : new SKColor(byte.MaxValue, byte.MaxValue, byte.MaxValue, 56));
 		SKColor color2 = ((renderStyle.OutlineColor.Alpha > 0) ? renderStyle.OutlineColor.WithAlpha((byte)Math.Max((int)renderStyle.OutlineColor.Alpha, 172)).ToSKColor() : ((renderStyle.Color.Alpha > 0) ? renderStyle.Color.WithAlpha(180).ToSKColor() : new SKColor(byte.MaxValue, byte.MaxValue, byte.MaxValue, 180)));
-		using SKPaint paint = new SKPaint
-		{
-			IsAntialias = true,
-			Style = SKPaintStyle.Fill,
-			Color = color
-		};
-		using SKPaint paint2 = new SKPaint
-		{
-			IsAntialias = true,
-			Style = SKPaintStyle.Fill,
-			Color = color2
-		};
 		if (UiScrollGeometry.HasVerticalScrollbar(node))
 		{
-			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetVerticalTrackRect(node)), 5f, paint);
-			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetVerticalThumbRect(node)), 5f, paint2);
+			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetVerticalTrackRect(node)), 5f, Fill(color));
+			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetVerticalThumbRect(node)), 5f, Fill(color2));
 		}
 		if (UiScrollGeometry.HasHorizontalScrollbar(node))
 		{
-			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetHorizontalTrackRect(node)), 5f, paint);
-			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetHorizontalThumbRect(node)), 5f, paint2);
+			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetHorizontalTrackRect(node)), 5f, Fill(color));
+			DrawRect(canvas, ToSkRect(UiScrollGeometry.GetHorizontalThumbRect(node)), 5f, Fill(color2));
 		}
 	}
 
@@ -430,85 +425,143 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		return new SKRect(rect.X, rect.Y, rect.Right, rect.Bottom);
 	}
 
-	private static string? ResolveRenderableText(UiNode node)
+	private static ReadOnlySpan<char> ResolveRenderableText(UiNode node)
 	{
-		if (!string.IsNullOrWhiteSpace(node.TextContent))
+		if (node.HasText)
 		{
-			return node.TextContent;
+			return node.Text;
 		}
 		UiNodeKind kind = node.Kind;
 		if ((kind == UiNodeKind.Input || kind - 12 <= UiNodeKind.Text) ? true : false)
 		{
-			string text = node.Attributes["value"];
+			string? text = node.Attributes["value"];
 			if (!string.IsNullOrWhiteSpace(text))
 			{
 				return text;
 			}
-			string text2 = node.Attributes["placeholder"];
+			string? text2 = node.Attributes["placeholder"];
 			if (!string.IsNullOrWhiteSpace(text2))
 			{
 				return text2;
 			}
 		}
-		return null;
+		return default;
 	}
 
-	private static void DrawText(string text, UiNode node, SKRect borderBox, UiStyle style, SKCanvas canvas)
+	private void DrawText(ReadOnlySpan<char> text, UiNode node, SKRect borderBox, UiStyle style, SKCanvas canvas)
+	{
+		if (node.TextRuns is { Count: > 0 } styledRuns)
+		{
+			DrawStyledText(styledRuns, node, borderBox, style, canvas);
+			return;
+		}
+
+		SKRect content = ContentBox(borderBox, style);
+		UiTextLines lines = _textLines;
+		UiTextLayout.LayoutLines(text, style, Math.Max(0f, content.Width), constrainWidth: true, lines);
+		float lineHeight = style.FontSize * style.LineHeight;
+		SKRect textBox = AlignTextBox(node, content, borderBox, style, lines.MaxWidth, lineHeight * lines.Count);
+		_textPaint.Color = style.Color.ToSKColor();
+		SKPaint? shadowPaint = ConfigureTextShadowPaint(style.TextShadow);
+		float baselineY = textBox.Top + style.FontSize;
+		for (int i = 0; i < lines.Count; i++)
+		{
+			ref readonly UiTextLines.Line line = ref lines[i];
+			ReadOnlySpan<char> lineText = lines.Text(i);
+			UiTextDirection direction = UiTextLayout.ResolveDirection(lineText, style.Direction);
+			SKTextAlign align = ResolveTextAlign(style, direction);
+			float anchorX = ResolveTextAnchor(textBox, style, align);
+			float startX = AlignStart(anchorX, line.Width, align);
+			if (shadowPaint != null)
+			{
+				UiShadow shadow = style.TextShadow!.Value;
+				DrawTextLine(canvas, lineText, line.HasEllipsis, startX + shadow.OffsetX, baselineY + shadow.OffsetY, style, shadowPaint);
+			}
+			DrawTextLine(canvas, lineText, line.HasEllipsis, startX, baselineY, style, _textPaint);
+			DrawTextDecorations(canvas, line.Width, anchorX, baselineY, align, style);
+			baselineY += lineHeight;
+		}
+	}
+
+	private static void DrawTextLine(SKCanvas canvas, ReadOnlySpan<char> text, bool ellipsis, float x, float baselineY, UiStyle style, SKPaint paint)
+	{
+		float endX = UiTextLayout.DrawRun(canvas, text, x, baselineY, style, paint);
+		if (ellipsis)
+		{
+			UiTextLayout.DrawEllipsis(canvas, endX, baselineY, style, paint);
+		}
+	}
+
+	private static SKRect AlignTextBox(UiNode node, SKRect content, SKRect borderBox, UiStyle style, float textWidth, float textHeight)
+	{
+		if (!UiFlexAnonymousText.ShouldAlignAsAnonymousFlexItem(node))
+		{
+			return content;
+		}
+		UiRect aligned = UiFlexAnonymousText.ResolveTextBox(
+			style,
+			new UiRect(borderBox.Left, borderBox.Top, borderBox.Width, borderBox.Height),
+			textWidth,
+			textHeight);
+		return new SKRect(aligned.X, aligned.Y, aligned.Right, aligned.Bottom);
+	}
+
+	private static float AlignStart(float anchorX, float width, SKTextAlign align)
+	{
+		return align switch
+		{
+			SKTextAlign.Right => anchorX - width,
+			SKTextAlign.Center => anchorX - width * 0.5f,
+			_ => anchorX,
+		};
+	}
+
+	private SKPaint? ConfigureTextShadowPaint(UiShadow? shadow)
+	{
+		if (shadow is not { IsVisible: true } visible)
+		{
+			return null;
+		}
+		_textShadowPaint.Color = visible.Color.ToSKColor();
+		_textShadowPaint.ImageFilter = visible.BlurRadius > 0.01f ? BlurFilter(visible.BlurRadius) : null;
+		return _textShadowPaint;
+	}
+
+	private void DrawStyledText(IReadOnlyList<UiStyledTextRun> styledRuns, UiNode node, SKRect borderBox, UiStyle style, SKCanvas canvas)
 	{
 		SKRect content = ContentBox(borderBox, style);
 		float availableWidth = Math.Max(0f, content.Width);
-		IReadOnlyList<UiStyledTextRun>? styledRuns = node.TextRuns;
-		UiTextLayoutResult uiTextLayoutResult = styledRuns is { Count: > 0 }
-			? UiTextLayout.Measure(styledRuns, style, availableWidth, constrainWidth: true)
-			: UiTextLayout.Measure(text, style, availableWidth, constrainWidth: true);
-		SKRect textBox = content;
-		if (UiFlexAnonymousText.ShouldAlignAsAnonymousFlexItem(node))
+		UiTextLayoutResult layout = UiTextLayout.Measure(styledRuns, style, availableWidth, constrainWidth: true);
+		SKRect textBox = AlignTextBox(node, content, borderBox, style, layout.Width, layout.Height);
+		_textPaint.Color = style.Color.ToSKColor();
+		SKPaint? shadowPaint = ConfigureTextShadowPaint(style.TextShadow);
+		float baselineY = textBox.Top + style.FontSize;
+		using SKPaint measurePaint = UiTextLayout.CreatePaint(style);
+		IReadOnlyList<IReadOnlyList<UiStyledTextRun>> styledLines = UiTextLayout.BreakStyledLines(
+			UiStyledTextRunNormalization.NormalizeWordBoundaries(styledRuns),
+			style,
+			measurePaint,
+			availableWidth,
+			constrainWidth: true);
+		for (int i = 0; i < layout.Lines.Count; i++)
 		{
-			UiRect aligned = UiFlexAnonymousText.ResolveTextBox(
-				style,
-				new UiRect(borderBox.Left, borderBox.Top, borderBox.Width, borderBox.Height),
-				uiTextLayoutResult.Width,
-				uiTextLayoutResult.Height);
-			textBox = new SKRect(aligned.X, aligned.Y, aligned.Right, aligned.Bottom);
-		}
-		using SKPaint paint = UiTextLayout.CreatePaint(style);
-		using SKPaint sKPaint = CreateShadowPaint(style.TextShadow, style);
-		float num = textBox.Top + style.FontSize;
-		IReadOnlyList<IReadOnlyList<UiStyledTextRun>>? styledLines = null;
-		if (styledRuns is { Count: > 0 })
-		{
-			using SKPaint measurePaint = UiTextLayout.CreatePaint(style);
-			styledLines = UiTextLayout.BreakStyledLines(
-				UiStyledTextRunNormalization.NormalizeWordBoundaries(styledRuns),
-				style,
-				measurePaint,
-				availableWidth,
-				constrainWidth: true);
-		}
-
-		for (int i = 0; i < uiTextLayoutResult.Lines.Count; i++)
-		{
-			string text2 = uiTextLayoutResult.Lines[i];
-			UiTextDirection direction = UiTextLayout.ResolveDirection(text2, style.Direction);
-			string text3 = UiTextLayout.PrepareForRendering(text2, direction);
+			string lineText = layout.Lines[i];
+			UiTextDirection direction = UiTextLayout.ResolveDirection(lineText, style.Direction);
 			SKTextAlign align = ResolveTextAlign(style, direction);
 			float anchorX = ResolveTextAnchor(textBox, style, align);
-			float num2 = ResolveTextStartX(text3, textBox, style, align);
-			IReadOnlyList<UiTextRun> runs = styledLines != null && i < styledLines.Count
+			float lineWidth = UiTextLayout.MeasureWidth(lineText, style);
+			float startX = AlignStart(anchorX, lineWidth, align);
+			IReadOnlyList<UiTextRun> runs = i < styledLines.Count
 				? UiTextLayout.CreateRuns(styledLines[i], style)
-				: UiTextLayout.CreateRuns(text3, style);
-			if (sKPaint != null)
+				: UiTextLayout.CreateRuns(lineText, style);
+			if (shadowPaint != null)
 			{
-				UiShadow? textShadow = style.TextShadow;
-				if (textShadow.HasValue)
-				{
-					UiShadow valueOrDefault = textShadow.GetValueOrDefault();
-					DrawTextRuns(canvas, runs, num2 + valueOrDefault.OffsetX, num + valueOrDefault.OffsetY, style, sKPaint);
-				}
+				UiShadow shadow = style.TextShadow!.Value;
+				DrawTextRuns(canvas, runs, startX + shadow.OffsetX, baselineY + shadow.OffsetY, style, shadowPaint);
 			}
-			DrawTextRuns(canvas, runs, num2, num, style, paint);
-			DrawTextDecorations(canvas, text3, anchorX, num, align, style);
-			num += uiTextLayoutResult.LineHeight;
+			DrawTextRuns(canvas, runs, startX, baselineY, style, _textPaint);
+			DrawTextDecorations(canvas, lineWidth, anchorX, baselineY, align, style);
+			baselineY += layout.LineHeight;
 		}
 	}
 
@@ -522,7 +575,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			borderBox.Bottom - inset - style.Padding.Bottom);
 	}
 
-	private static void DrawImage(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
+	private void DrawImage(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
 	{
 		if (!UiImageSourceCache.TryGetResource(node.Attributes["src"], out UiImageSourceCache.UiImageResource resource) || resource == null)
 		{
@@ -554,7 +607,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		}
 	}
 
-	private static void DrawCanvas(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
+	private void DrawCanvas(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
 	{
 		if (node.CanvasContent is ISkiaUiCanvasContent skiaCanvas)
 		{
@@ -609,17 +662,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		return true;
 	}
 
-	private static void DrawNineSliceImage(SKCanvas canvas, SKImage image, NineSlicePatchSet patches)
+	private void DrawNineSliceImage(SKCanvas canvas, SKImage image, NineSlicePatchSet patches)
 	{
-		using SKPaint paint = new SKPaint
-		{
-			IsAntialias = true,
-			FilterQuality = SKFilterQuality.High
-		};
 		for (int i = 0; i < patches.Count; i++)
 		{
 			NineSlicePatch patch = patches[i];
-			DrawImagePatch(canvas, image, patch.Source, patch.Destination, paint);
+			DrawImagePatch(canvas, image, patch.Source, patch.Destination, _imagePaint);
 		}
 	}
 
@@ -711,7 +759,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		};
 	}
 
-	private static void DrawBackgroundImageLayer(SKCanvas canvas, SKRect rect, UiStyle style, string imageSource, int layerIndex)
+	private void DrawBackgroundImageLayer(SKCanvas canvas, SKRect rect, UiStyle style, string imageSource, int layerIndex)
 	{
 		if (UiImageSourceCache.TryGetResource(imageSource, out UiImageSourceCache.UiImageResource resource) && resource != null)
 		{
@@ -729,7 +777,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		}
 	}
 
-	private static void DrawRepeatedBackground(SKCanvas canvas, UiImageSourceCache.UiImageResource resource, SKRect area, SKSize tileSize, UiBackgroundPosition position, UiBackgroundRepeat repeat)
+	private void DrawRepeatedBackground(SKCanvas canvas, UiImageSourceCache.UiImageResource resource, SKRect area, SKSize tileSize, UiBackgroundPosition position, UiBackgroundRepeat repeat)
 	{
 		bool flag = ((repeat == UiBackgroundRepeat.Repeat || repeat == UiBackgroundRepeat.RepeatX) ? true : false);
 		bool flag2 = flag;
@@ -854,19 +902,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		return result;
 	}
 
-	private static void DrawImageResource(SKCanvas canvas, UiImageSourceCache.UiImageResource resource, SKRect destination)
+	private void DrawImageResource(SKCanvas canvas, UiImageSourceCache.UiImageResource resource, SKRect destination)
 	{
 		if (resource.RasterImage != null)
 		{
-			using (SKPaint paint = new SKPaint
-			{
-				IsAntialias = true,
-				FilterQuality = SKFilterQuality.High
-			})
-			{
-				canvas.DrawImage(resource.RasterImage, destination, paint);
-				return;
-			}
+			canvas.DrawImage(resource.RasterImage, destination, _imagePaint);
+			return;
 		}
 		if (resource.SvgPicture != null)
 		{
@@ -880,15 +921,20 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		}
 	}
 
-	private static void ClipNodeBounds(SKCanvas canvas, SKRect rect, UiStyle style)
+	private void ClipNodeBounds(SKCanvas canvas, SKRect rect, UiStyle style)
 	{
-		using SKPath path = CreateClipPath(rect, style);
-		canvas.ClipPath(path, SKClipOperation.Intersect, antialias: true);
+		if (style.ClipPath == null && style.BorderRadius <= 0.01f)
+		{
+			canvas.ClipRect(rect, SKClipOperation.Intersect, antialias: true);
+			return;
+		}
+		canvas.ClipPath(BuildClipPath(rect, style), SKClipOperation.Intersect, antialias: true);
 	}
 
-	private static SKPath CreateClipPath(SKRect rect, UiStyle style)
+	private SKPath BuildClipPath(SKRect rect, UiStyle style)
 	{
-		SKPath sKPath = new SKPath();
+		SKPath sKPath = _clipPath;
+		sKPath.Reset();
 		if (style.ClipPath != null)
 		{
 			switch (style.ClipPath.Kind)
@@ -998,18 +1044,6 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		};
 	}
 
-	private static float ResolveTextStartX(string line, SKRect contentRect, UiStyle style, SKTextAlign align)
-	{
-		float num = ResolveTextAnchor(contentRect, style, align);
-		float num2 = UiTextLayout.MeasureWidth(line, style);
-		return align switch
-		{
-			SKTextAlign.Right => num - num2,
-			SKTextAlign.Center => num - num2 * 0.5f,
-			_ => num,
-		};
-	}
-
 	private static void DrawTextRuns(SKCanvas canvas, IReadOnlyList<UiTextRun> runs, float startX, float baselineY, UiStyle style, SKPaint paint)
 	{
 		float num = startX;
@@ -1033,67 +1067,25 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		paint.Color = baseColor;
 	}
 
-	private static void DrawTextDecorations(SKCanvas canvas, string line, float anchorX, float baselineY, SKTextAlign align, UiStyle style)
+	private void DrawTextDecorations(SKCanvas canvas, float lineWidth, float anchorX, float baselineY, SKTextAlign align, UiStyle style)
 	{
-		if (style.TextDecorationLine == UiTextDecorationLine.None || string.IsNullOrEmpty(line))
+		if (style.TextDecorationLine == UiTextDecorationLine.None || lineWidth <= 0.01f)
 		{
 			return;
 		}
-		float num = UiTextLayout.MeasureWidth(line, style);
-		if (num <= 0.01f)
-		{
-			return;
-		}
-		if (1 == 0)
-		{
-		}
-		float num2 = align switch
-		{
-			SKTextAlign.Right => anchorX - num, 
-			SKTextAlign.Center => anchorX - num * 0.5f, 
-			_ => anchorX, 
-		};
-		if (1 == 0)
-		{
-		}
-		float num3 = num2;
-		float x = num3 + num;
-		float strokeWidth = Math.Max(1f, style.FontSize * 0.06f);
-		using SKPaint paint = new SKPaint
-		{
-			IsAntialias = true,
-			Style = SKPaintStyle.Stroke,
-			StrokeWidth = strokeWidth,
-			Color = style.Color.ToSKColor()
-		};
+		float startX = AlignStart(anchorX, lineWidth, align);
+		float endX = startX + lineWidth;
+		SKPaint paint = Stroke(style.Color, Math.Max(1f, style.FontSize * 0.06f));
 		if ((style.TextDecorationLine & UiTextDecorationLine.Underline) != UiTextDecorationLine.None)
 		{
-			float num4 = baselineY + Math.Max(1.5f, style.FontSize * 0.12f);
-			canvas.DrawLine(num3, num4, x, num4, paint);
+			float y = baselineY + Math.Max(1.5f, style.FontSize * 0.12f);
+			canvas.DrawLine(startX, y, endX, y, paint);
 		}
 		if ((style.TextDecorationLine & UiTextDecorationLine.LineThrough) != UiTextDecorationLine.None)
 		{
-			float num5 = baselineY - style.FontSize * 0.32f;
-			canvas.DrawLine(num3, num5, x, num5, paint);
+			float y = baselineY - style.FontSize * 0.32f;
+			canvas.DrawLine(startX, y, endX, y, paint);
 		}
-	}
-
-	private static SKPaint? CreateShadowPaint(UiShadow? shadow, UiStyle style)
-	{
-		if (shadow.HasValue)
-		{
-			UiShadow valueOrDefault = shadow.GetValueOrDefault();
-			if (valueOrDefault.IsVisible)
-			{
-				return new SKPaint
-				{
-					Color = valueOrDefault.Color.ToSKColor(),
-					IsAntialias = true,
-					ImageFilter = ((valueOrDefault.BlurRadius > 0.01f) ? SKImageFilter.CreateBlur(ToSigma(valueOrDefault.BlurRadius), ToSigma(valueOrDefault.BlurRadius)) : null)
-				};
-			}
-		}
-		return null;
 	}
 
 	private static SKShader CreateGradientShader(SKRect rect, UiLinearGradient gradient)
