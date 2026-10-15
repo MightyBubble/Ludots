@@ -132,8 +132,19 @@ export function CrowdConfigEditorPage() {
           debugView: pretty(json.debugView),
         });
         setCells(json.costMatrix?.cells ?? {});
-        setIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
-        if (json.ok === false) setStatus('这份配置没有读出来');
+        const loaded = [...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])];
+        setIssues(loaded);
+        if (json.ok === false) {
+          setStatus('这份配置没有读出来');
+          return;
+        }
+        const checked = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/validate`, {
+          layer: 'templates',
+          draft: json.templates,
+        });
+        if (cancelled || checked.ok !== false) return;
+        const known = new Set(loaded.map((issue) => issue.message));
+        setIssues([...loaded, ...(checked.issues ?? []).filter((issue) => !known.has(issue.message))]);
       } catch (err) {
         if (!cancelled) setStatus(err instanceof Error ? err.message : '群体配置没有读出来');
       } finally {

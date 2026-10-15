@@ -11,6 +11,8 @@ using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -462,7 +464,8 @@ public static partial class CrowdSimulationEditorApi
             {
                 CrowdSimulationAuthoringContract.Validate(templates, config, map, profiles);
                 List<CrowdUnitTemplateFacts> facts = CrowdUnitTemplateFacts.FromTemplates(templates);
-                CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, pathing, facts, FixedHz, rules);
+                CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, pathing, facts, FixedHz, rules);
+                CrowdUnitPresenterContract.Require(runtime, LoadSpawnLinks(opened, templates, report), report);
             }
             catch (InvalidOperationException ex) when (!ex.Message.Contains("配置路径:", StringComparison.Ordinal))
             {
@@ -472,7 +475,20 @@ public static partial class CrowdSimulationEditorApi
             }
         }
 
-        private static readonly Regex QuotedToken = new("\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        private static PresenterSpawnLinks LoadSpawnLinks(Opened opened, IReadOnlyList<EntityTemplate> templates, ConfigConflictReport report)
+        {
+            var ids = new HashSet<string>(templates.Select(template => template.Id), StringComparer.Ordinal);
+            try
+            {
+                return PresenterDefinitionConfigLoader.LoadSpawnLinks(opened.Pipeline, opened.Catalog, report, ids.Contains);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(ex.Message + ProvenanceSuffix(PresentersFile, report, ex.Message), ex);
+            }
+        }
+
+        private static readonly Regex QuotedToken = new("\"([^\"]+)\"|'([^']+)'", RegexOptions.CultureInvariant);
 
         private static string ProvenanceSuffix(string relative, ConfigConflictReport report, string message)
         {
@@ -520,7 +536,8 @@ public static partial class CrowdSimulationEditorApi
         {
             foreach (Match match in QuotedToken.Matches(message))
             {
-                if (report.TryGetWinner(relative, match.Groups[1].Value, out string sourceUri) && !string.IsNullOrEmpty(sourceUri))
+                string token = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
+                if (report.TryGetWinner(relative, token, out string sourceUri) && !string.IsNullOrEmpty(sourceUri))
                 {
                     return sourceUri;
                 }

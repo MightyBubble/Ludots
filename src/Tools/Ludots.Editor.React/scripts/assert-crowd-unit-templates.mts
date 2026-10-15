@@ -5,6 +5,7 @@ import {
   draftProfile,
   issueForField,
   issuesFor,
+  presenterIssues,
   setAgentField,
   setProfileField,
   type Issue,
@@ -100,5 +101,27 @@ assert(
   'inherited fields name the template that wrote them',
 );
 assert(describeSource(undefined) === '没有片段写过', 'missing source is said plainly');
+
+const presenterProblems: Issue[] = [
+  {
+    path: '',
+    message:
+      'CrowdSimulation 会话绑定的单位模板缺表现。\n单位模板 "crowd_minimal.unit"（CrowdSimulationMinimalMod:assets/Entities/templates.json）生成时没有表现：Presentation/presenters.json 里没有 EntitySpawned 键为 "crowd_minimal.unit" 或 "*" 的 CreatePresenter 规则，也没有表现定义用 bindSpawn.template 指向它。',
+    sourceMod: 'CrowdSimulationMinimalMod',
+    sourceFile: 'CrowdSimulationMinimalMod:assets/Entities/templates.json',
+  },
+  {
+    path: 'rules[0]',
+    message:
+      "Presenter 'crowd_minimal.units.bootstrap' rules[0]: EntitySpawned 'crowd_minimal.unit' creates unknown presenter definition 'crowd_minimal.unit_typo'. Written by CrowdSimulationMinimalMod:assets/Presentation/presenters.json.",
+  },
+  ...issues,
+];
+const unitProblems = issuesFor(presenterProblems, 'crowd_minimal.unit', 'crowd_minimal_unit');
+assert(presenterIssues(unitProblems).length === 2, 'both presenter checks are shown in the presenter section');
+for (const field of ['profileId', 'agentTypeId', 'pushPriority', 'special']) {
+  assert(issueForField(presenterIssues(unitProblems), field) === undefined, `presenter issues do not attach to ${field}`);
+}
+assert(presenterIssues(mine).length === 0, 'field issues stay out of the presenter section');
 
 console.log('crowd unit templates assert passed');

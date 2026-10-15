@@ -159,7 +159,7 @@ public static class CrowdSimulationAuthoringIssues
             }
 
             // 装载器把 id 和取值写在引号里（模板 "crowd_minimal.unit"），引号里的不是字段路径。
-            if (match.Index > 0 && body[match.Index - 1] == '"')
+            if (match.Index > 0 && body[match.Index - 1] is '"' or '\'')
             {
                 continue;
             }
