@@ -14,7 +14,7 @@
 | `crowd_simulation_showcase_fog_shared_vision_raylib` | `CrowdSimulationFogAllyVisionShowcaseMod` | 玩家 1 原地不动，盟友玩家 3 去看东边的建筑（约 tick 185 看见）、再往西路过敌人（约 tick 609）；tick 800 拆掉建筑，玩家 1 这边留残影，盟友回去后约 tick 1281 残影消失 |
 | `crowd_simulation_showcase_stress_50k_raylib` | `CrowdSimulationStress50kShowcaseMod` | 和 50k 门禁同一场景：开局 5 万步兵，tick 2 四方都开往 (1200000, 800000)；遥测面板默认打开 |
 
-迷雾场景的玩家视图按玩家 1 的视野组隐藏敌方，地面贴迷雾。5 万单位场景不隐藏，四方都画出来。
+迷雾场景的玩家视图按玩家 1 的视野组隐藏敌方。迷雾开着时（0 键切换），路线视图和 NavMesh 视图不画地形调色板，地面只贴本机座位的迷雾：没去过的格子黑，去过的格子蓝灰，看得见的格子是原地形色。迷雾贴花只铺到已经写过迷雾格的矩形范围，矩形外的地面照常显示。5 万单位场景不隐藏，四方都画出来。
 
 ## 启动
 
@@ -25,12 +25,12 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 
 换成表里的其它预设名即可。启动器界面里按标题“CrowdSimulation 演示 · …”找。
 
-常用键沿用 S4：左键框选，右键下令，P 暂停，PgUp / PgDn 倍速，F10 开关遥测面板（模拟耗时和渲染耗时分两行），0 开关迷雾隐藏。完整键位在 HUD 第一行。
+常用键沿用 S4：左键框选，右键下令，P 暂停，PgUp / PgDn 倍速，F10 开关遥测面板（Sim 一行是每 tick 的模拟耗时；渲染一行只计界面层，不含三维场景），0 开关迷雾隐藏。完整键位在 HUD 第一行。
 
 ## 组成
 
 - `CrowdSimulationShowcaseStageMod`：所有场景共用的舞台。依赖 S4 部署演示，把开局部署人数设为 0，清空 S4 的演示脚本，关掉自动回放，玩家视图按迷雾隐藏敌方。
-- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置，`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
+- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
 - 脚本数组整段替换，不追加，所以行军、折返、连点三个场景各自写一遍 tick 0 的 `spawnAt`。5 万单位场景的脚本与 `CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json` 相同，验收测试逐条比对两边。
 
 ## 验收
@@ -45,4 +45,16 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedName~CrowdSimulationTests.Showcases"
 ```
 
-真实窗口截图在 `artifacts/acceptance/crowdsimulation-showcases/`。
+真实窗口截图和录像在 `artifacts/acceptance/crowdsimulation-showcases/`，用 Raylib 客户端加 `mod:AgentBridgeMod` 拍：进图后暂停，每次步进 10 tick，到点截图。图里 HUD 第三行的 tick 是会话 tick。
+
+| 场景 | 文件（会话 tick） |
+|---|---|
+| 折返 | `reversal.png`（16，已掉头）、`reversal_leg2_final_order.png`（48）、`reversal_leg3_march_max.png`（288）、`reversal.mp4`（0–300，10 帧/秒） |
+| 行军 | `march_leg1_a.png`（300）、`march_leg2_b.png`（472）、`march.png`（712，转向后） |
+| 连点 | `repeat_click_leg1_settling.png`（300）、`repeat_click_leg2_clicks.png`（480）、`repeat_click.png`（630） |
+| 迷雾探索 | `fog_explore_before.png`（60）、`fog_explore_enemy_in_view.png`（150）、`fog_explore_seen.png`（2760） |
+| 看见改道 | `fog_reroute_before.png`（60）、`fog_reroute_seen.png`（2248）、`fog_reroute_replanned.png`（2696） |
+| 共享视野 | `fog_shared_vision_before.png`（20）、`fog_shared_vision_seen.png`（226）、`fog_shared_vision_enemy_shown.png`（642）、`fog_shared_vision_ghost_kept.png`（1032）、`fog_shared_vision_ghost_cleared.png`（1332） |
+| 5 万单位 | `stress_50k_hud_paused.png`（134，暂停步进）、`stress_50k_hud.png`（149，实时） |
+
+5 万单位场景在 Mesa llvmpipe 软件渲染下，遥测面板的 Sim 读数是 21.0–25.5 ms，FPS 0.6，也就是一帧约 1.7 s，几乎全花在软件渲染上。这个数不代表 50k 门禁的计时。
