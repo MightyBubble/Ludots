@@ -38,7 +38,8 @@ public readonly record struct CrowdNavSurfaceBakeSources(
 
 /// <summary>
 /// 把逻辑地形的 AreaId 烤成 .navsurface 的地形类型格。
-/// 传入 linkCandidateBake 时，用同一份高度场和桥面栅格逐种类生成链接候选，并写入 linkBakeDigest。
+/// 传入 linkCandidateBake 时，用同一份高度场和桥面栅格逐种类生成链接候选，并写入它带的 bakeInputsDigest。
+/// 不传时没有链接种类，指纹只含导航格边长。
 /// </summary>
 public static class CrowdNavSurfaceAuthoring
 {
@@ -157,7 +158,7 @@ public static class CrowdNavSurfaceAuthoring
             NavCellSizeCm = sources.CrowdCellSizeCm,
             TerrainTypeIds = typeIds,
             LinkKindIds = kindIds,
-            LinkBakeDigest = NavSurfaceContract.LinkBakeDigest(sources.CrowdCellSizeCm, kinds),
+            BakeInputsDigest = linkCandidateBake?.BakeInputsDigest ?? NavSurfaceContract.BakeInputsDigestWithoutLinks(sources.CrowdCellSizeCm),
             TerrainCells = cells,
             JumpCandidates = candidates.ToArray(),
         };
@@ -228,6 +229,7 @@ public static class CrowdNavSurfaceAuthoring
                 Kinds = binding.Runtime.LinkCandidateBakes,
                 Heights = heights,
                 Bridge = bridge,
+                BakeInputsDigest = NavSurfaceContract.BakeInputsDigest(binding.Runtime, binding.Bridges, heights),
             };
         }
 

@@ -153,7 +153,6 @@ public sealed class CrowdLinkCandidateBakeTests
         Assert.That((jump.MaxGapCm, jump.LinkSpacingCm, jump.EndpointMaxSlopeDeg), Is.EqualTo((37500, 31250, 22d)));
         Assert.That(Pick(jump.EndpointTerrain), Is.EquivalentTo(new[] { "shore", "land", "mountain" }));
         Assert.That(Pick(jump.HardGapTerrain), Is.EquivalentTo(new[] { "cliff", "water" }));
-        Assert.That(runtime.LinkBakeDigest, Is.EqualTo(NavSurfaceContract.LinkBakeDigest(runtime.NavCellSizeCm, runtime.LinkCandidateBakes)));
     }
 
     [Test]
@@ -161,7 +160,6 @@ public sealed class CrowdLinkCandidateBakeTests
     {
         CrowdSimulationRuntimeConfig runtime = TestDefaults.Assemble();
         Assert.That(runtime.LinkCandidateBakes, Is.Empty);
-        Assert.That(runtime.LinkBakeDigest, Is.EqualTo(NavSurfaceContract.LinkBakeDigest(runtime.NavCellSizeCm, [])));
     }
 
     [Test]
@@ -271,6 +269,7 @@ public sealed class CrowdLinkCandidateBakeTests
                 Slope = new Fix64[cells * cells],
             },
             Bridge = new byte[cells * cells],
+            BakeInputsDigest = 0,
         };
         return CrowdNavSurfaceAuthoring.Bake(
             terrain,
@@ -496,7 +495,7 @@ public sealed class CrowdLinkCandidateBakeTests
     {
         return a.NavCellsX == b.NavCellsX && a.NavCellsY == b.NavCellsY && a.NavCellSizeCm == b.NavCellSizeCm
             && a.TerrainTypeIds.SequenceEqual(b.TerrainTypeIds) && a.LinkKindIds.SequenceEqual(b.LinkKindIds)
-            && a.LinkBakeDigest == b.LinkBakeDigest && a.TerrainCells.SequenceEqual(b.TerrainCells)
+            && a.BakeInputsDigest == b.BakeInputsDigest && a.TerrainCells.SequenceEqual(b.TerrainCells)
             && a.JumpCandidates.SequenceEqual(b.JumpCandidates);
     }
 

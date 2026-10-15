@@ -1635,7 +1635,7 @@ namespace {modId}
             {
                 NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthoredFile(FindAssetsRoot(), modId, mapId, outFile, overwrite);
                 Console.WriteLine(
-                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, linkKinds=[{string.Join(",", asset.LinkKindIds)}], linkCandidates={asset.JumpCandidates.Length}, linkBakeDigest=0x{asset.LinkBakeDigest:X8})");
+                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, linkKinds=[{string.Join(",", asset.LinkKindIds)}], linkCandidates={asset.JumpCandidates.Length}, bakeInputsDigest=0x{asset.BakeInputsDigest:X8})");
                 return 0;
             }
             catch (Exception ex)

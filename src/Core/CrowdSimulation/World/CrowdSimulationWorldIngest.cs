@@ -6,7 +6,7 @@ using Ludots.Core.Presentation.Terrain;
 namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
-/// 群体进图读入 .navsurface 和 .height 之后的唯一装配：先做尺寸对照，再生成地表栅格和高度场。
+/// 群体进图读入 .navsurface 和 .height 之后的唯一装配：先做尺寸对照，再生成地表栅格和高度场，最后对照烘焙输入指纹。
 /// 板是否正方形、宽高能否被 maps.&lt;mapId&gt;.navCellSizeCm 整除，在 <see cref="CrowdSimulationConfigLoader"/> 里检查，那时资产还不存在。
 /// </summary>
 public static class CrowdSimulationWorldIngest
@@ -21,7 +21,8 @@ public static class CrowdSimulationWorldIngest
         string surfaceAssetPath,
         ContinuousHeightmapAsset height,
         string heightAssetPath,
-        IReadOnlyList<BlockerFootprint> blockers)
+        IReadOnlyList<BlockerFootprint> blockers,
+        IReadOnlyList<LayeredPathRecord> layeredPaths)
     {
         ArgumentNullException.ThrowIfNull(config);
         NavSurfaceContract.ValidateWorldSize(
@@ -33,8 +34,9 @@ public static class CrowdSimulationWorldIngest
             surfaceAssetPath,
             height,
             heightAssetPath);
-        return new Assets(
-            SurfaceGrid.Build(config, surface, blockers),
-            NavHeightField.FromHeightmap(height, config.NavCellsPerSide, config.NavCellSizeCm));
+        SurfaceGrid grid = SurfaceGrid.Build(config, surface, blockers);
+        NavHeightField heights = NavHeightField.FromHeightmap(height, config.NavCellsPerSide, config.NavCellSizeCm);
+        NavSurfaceContract.ValidateBakeInputs(surface, config, layeredPaths, heights);
+        return new Assets(grid, heights);
     }
 }

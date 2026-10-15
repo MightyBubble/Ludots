@@ -194,11 +194,11 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ maps.<mapId>.navCellSizeC
 
 ## .navsurface v2 格式要点
 
-小端二进制。32 字节头：`magic "LNSF"`、版本 2、头长 32、格数 X/Y、格边长厘米、地形类型数、链接种类数（不超过 255）、候选数、`linkBakeDigest`。头后依次是地形类型表、链接种类表（都是 id 字符串，格值和候选里的种类编号就是表下标）、逐格 u8 地形编号、每条 16 字节的链接候选。候选记录是种类编号、标志（位 0 = 斜向）、步数、起点格、终点格、落差厘米。直向候选长度就是步数，斜向是 `(float)(步数 × √2)`，文件里不存浮点长度。候选按种类编号升序分组。
+小端二进制。32 字节头：`magic "LNSF"`、版本 2、头长 32、格数 X/Y、格边长厘米、地形类型数、链接种类数（不超过 255）、候选数、`bakeInputsDigest`。头后依次是地形类型表、链接种类表（都是 id 字符串，格值和候选里的种类编号就是表下标）、逐格 u8 地形编号、每条 16 字节的链接候选。候选记录是种类编号、标志（位 0 = 斜向）、步数、起点格、终点格、落差厘米。直向候选长度就是步数，斜向是 `(float)(步数 × √2)`，文件里不存浮点长度。候选按种类编号升序分组。
 
 读取侧做精确长度校验，多一字节少一字节都拒绝。编号越界、端点越界、端点位移和步数或斜向标志对不上、种类不升序、落差为负，都拒绝。版本 1 的文件直接拒绝，报文要求重烘。
 
-激活时 `NavSurfaceContract.Validate` 核对三件事。地形类型表必须和 `maps.<mapId>.terrainTypes` 逐字同序，因为格值是表下标，顺序错一位全图错位。链接种类表必须和这张图 `linkCandidateBake` 的种类同序。`linkBakeDigest` 必须等于按当前配置算出的值，不等就报“链接候选和配置不一致，重烘”。字段的完整说明见 [CrowdSimulation 数据结构](crowdsimulation-data-schema.md) 第 6 节。
+进图时核对三件事。`NavSurfaceContract.Validate` 查前两件：地形类型表必须和 `maps.<mapId>.terrainTypes` 逐字同序，因为格值是表下标，顺序错一位全图错位；链接种类表必须和这张图 `linkCandidateBake` 的种类同序。第三件在 `CrowdSimulationWorldIngest.Build` 里，那里才同时有配置、地图实体和高度场：`bakeInputsDigest` 必须等于按当前烘焙输入算出的值，不等就报“烘焙输入和当前配置不一致，重烘”。字段的完整说明见 [CrowdSimulation 数据结构](crowdsimulation-data-schema.md) 第 6 节。
 
 ## 阶段路线（来自 Web 规格第三部分）
 
@@ -522,7 +522,7 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 地图写了 `linkCandidateBake` 却没有 `ContinuousHeightmap.asset` 时，烘焙报错。高度和坡度用 `NavHeightField.FromHeightmap`。
 
-`linkBakeDigest` 是 FNV-1a 32 位摘要，算的是格边长和每个种类的几何参数、推出的起落地形和硬断地形。激活时用当前配置重算一遍和文件比，不等就报错要求重烘。所以改了 `linkCandidateBake`、`traversal.json` 里影响起落和硬断的格、`terrainTypes` 的区域映射，都要重烘。桥不在摘要里，桥的变化靠下面的逐字节测试兜住。
+`bakeInputsDigest` 是烘焙输入的 FNV-1a 32 位指纹，由 `NavSurfaceContract.BakeInputsDigest` 计算，烘焙器写入，进图时重算比对，不等就报错要求重烘。地图没有链接种类时，格字节只来自地编网格，指纹只含格边长。有链接种类时，指纹还包括：每个种类的几何参数和推出的起落、硬断地形；地图上每条上层条带实体（按实体顺序）的模板 id、两端端点、宽度；条带模板里栅格化读的效果、区域 id 和 `portalReachNavCells`；逐格高度和坡度。所以改了 `linkCandidateBake`、`traversal.json` 里影响起落和硬断的格、`terrainAreas` 的区域映射、地图上的桥实体、桥模板、`.height`，都要重烘。指纹不含地编网格本身：格值就存在 `.navsurface` 里，运行时不读地编网格。`NavSurfaceBakeInputsStalenessTests` 逐项改这些输入，要求进图报重烘；什么都不改时能进图。
 
 仓库里三张 S1 图的 `.navsurface` 就是这条命令烤的。Web 浮点版的候选留在各种子的 `CrowdSimulation/parity/s1-jump-truth.json`，键名是 `linkCandidates`，只作对拍参照：格对的集合和顺序相同，有这种链接的行过滤出的链接和单双向相同，落差是 Fix64 厘米四舍五入到整厘米，和 Web 相差不超过 1 厘米，长度由步数和斜向标志算出，和快照里的浮点逐位相等。`CrowdLinkCandidateBakeTests` 同时要求入库文件和现烤结果逐字节一致，改了地编网格、`.height`、`linkCandidateBake` 或桥就要重烤再提交。
 

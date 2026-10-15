@@ -512,7 +512,8 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             surfaceAssetPath,
             heightAsset,
             heightAssetPath,
-            mapSurface.Blockers);
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
         var grid = ingested.Grid;
         _surfaceGrid = grid;
         _jumpCandidates = surface.JumpCandidates;

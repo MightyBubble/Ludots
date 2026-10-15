@@ -31,8 +31,6 @@ public sealed class CrowdSimulationRuntimeConfig
     public required IReadOnlyList<RuntimeLinkKind> LinkKinds { get; init; }
     /// <summary>本图写了 linkCandidateBake 的种类，按 linkKinds 合并顺序；就是 .navsurface 的链接种类表。</summary>
     public required IReadOnlyList<RuntimeLinkCandidateBake> LinkCandidateBakes { get; init; }
-    /// <summary>按当前配置算出的 .navsurface linkBakeDigest。</summary>
-    public required uint LinkBakeDigest { get; init; }
     public required IReadOnlyList<RuntimeNavProfile> NavProfiles { get; init; }
     public required IReadOnlyList<RuntimeAgentType> AgentTypes { get; init; }
     public required IReadOnlyList<RuntimeUnitType> UnitTypes { get; init; }

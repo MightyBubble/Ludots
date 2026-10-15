@@ -694,7 +694,8 @@ public static class Program
             surfacePath,
             height,
             heightPath,
-            mapSurface.Blockers);
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
 
         return new SeedBundle(mapId, runtime, surface, height, mapSurface, ingested.Grid, ingested.Heights, TypeColorsOf(standardDir, runtime));
     }

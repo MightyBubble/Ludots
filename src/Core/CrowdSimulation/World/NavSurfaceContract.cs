@@ -11,7 +11,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 /// （栅格编号 = 表中下标，顺序错一位全图错位）。
 /// 板是否正方形、宽高能否被 地图 navCellSizeCm 整除，在配置装载时检查，那时 .navsurface 和 .height 还不存在。
 /// <see cref="ValidateWorldSize"/> 只对照装载结果里的导航格、.navsurface 和 .height。
-/// 链接种类表和 linkBakeDigest 对照当前配置：矩阵或几何参数改了而资产没重烘，装载就报错。
+/// 链接种类表对照当前配置；烘焙输入指纹在 <see cref="ValidateBakeInputs"/> 里对照，那里才有地图条带和高度场。
 /// </summary>
 public static class NavSurfaceContract
 {
@@ -47,36 +47,60 @@ public static class NavSurfaceContract
             throw new InvalidOperationException(
                 $"{assetPath(config)}: 链接种类表 [{string.Join(", ", asset.LinkKindIds)}] 与 maps.{config.MapId}.linkCandidateBake 按 linkKinds 顺序得出的 [{KindList(bakes)}] 不一致，重烘。");
         }
+    }
 
-        if (asset.LinkBakeDigest != config.LinkBakeDigest)
+    /// <summary>
+    /// 进图时用当前配置、地图上层条带实体和高度场重算 <see cref="BakeInputsDigest"/>，和资产头比。
+    /// 任何一项烘焙输入改了而资产没重烘，都在这里报错。
+    /// </summary>
+    public static void ValidateBakeInputs(
+        NavSurfaceAsset asset,
+        CrowdSimulationRuntimeConfig config,
+        IReadOnlyList<LayeredPathRecord> layeredPaths,
+        NavHeightField heights)
+    {
+        ArgumentNullException.ThrowIfNull(asset);
+        uint current = BakeInputsDigest(config, layeredPaths, heights);
+        if (asset.BakeInputsDigest != current)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: 链接候选和配置不一致，重烘（linkBakeDigest 资产 0x{asset.LinkBakeDigest:X8}，按当前配置 0x{config.LinkBakeDigest:X8}）。");
+                $"{assetPath(config)}: 烘焙输入和当前配置不一致，重烘（bakeInputsDigest 资产 0x{asset.BakeInputsDigest:X8}，按当前输入 0x{current:X8}）。");
         }
     }
 
     /// <summary>
-    /// FNV-1a 32：i32 navCellSizeCm；每个种类按表序写 utf8 id、0x00、i32 maxGapCm、i32 linkSpacingCm、
-    /// endpointMaxSlopeDeg 的 IEEE 754 双精度位、再按地形表序每地形一字节（bit0 端点，bit1 硬缝）。整数一律小端。
+    /// .navsurface 烘焙输入的 FNV-1a 32 指纹，整数一律小端。先写 i32 navCellSizeCm。
+    /// 没有链接种类时到此为止：格字节只来自地编网格，条带和高度不影响产物。
+    /// 有链接种类时依次写：
+    /// 每个种类按表序 utf8 id、0x00、i32 maxGapCm、i32 linkSpacingCm、endpointMaxSlopeDeg 的 IEEE 754 双精度位、
+    /// 按地形表序每地形一字节（bit0 端点，bit1 硬缝）；
+    /// i32 条带数，每条按地图实体序 utf8 模板 id、0x00、i32 fromXCm、fromYCm、toXCm、toYCm、widthCm，
+    /// 再写模板效果一字节、utf8 区域 id、0x00、i32 portalReachNavCells；
+    /// 最后按格序每格 i64 高度、i64 坡度（Fix64 原始值）。
     /// </summary>
-    public static uint LinkBakeDigest(int navCellSizeCm, IReadOnlyList<RuntimeLinkCandidateBake> bakes)
+    public static uint BakeInputsDigest(
+        CrowdSimulationRuntimeConfig config,
+        IReadOnlyList<LayeredPathRecord> layeredPaths,
+        NavHeightField heights)
     {
-        ArgumentNullException.ThrowIfNull(bakes);
-        uint hash = FnvOffset;
-        hash = MixInt32(hash, navCellSizeCm);
+        ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(layeredPaths);
+        ArgumentNullException.ThrowIfNull(heights);
+        uint hash = BakeInputsDigestWithoutLinks(config.NavCellSizeCm);
+        var bakes = config.LinkCandidateBakes;
+        if (bakes.Count == 0)
+        {
+            return hash;
+        }
+
         foreach (RuntimeLinkCandidateBake bake in bakes)
         {
             if (bake.EndpointTerrain.Length != bake.HardGapTerrain.Length)
             {
-                throw new ArgumentException($"链接种类 \"{bake.KindId}\" 的端点掩码和硬缝掩码长度不同。", nameof(bakes));
+                throw new ArgumentException($"链接种类 \"{bake.KindId}\" 的端点掩码和硬缝掩码长度不同。", nameof(config));
             }
 
-            foreach (byte b in Encoding.UTF8.GetBytes(bake.KindId))
-            {
-                hash = MixByte(hash, b);
-            }
-
-            hash = MixByte(hash, 0);
+            hash = MixString(hash, bake.KindId);
             hash = MixInt32(hash, bake.MaxGapCm);
             hash = MixInt32(hash, bake.LinkSpacingCm);
             hash = MixInt64(hash, BitConverter.DoubleToInt64Bits(bake.EndpointMaxSlopeDeg));
@@ -87,8 +111,41 @@ public static class NavSurfaceContract
             }
         }
 
+        hash = MixInt32(hash, layeredPaths.Count);
+        foreach (LayeredPathRecord path in layeredPaths)
+        {
+            RuntimeStructureTemplate template = config.Structures.Templates[
+                config.Structures.RequireMapTemplate(path.TemplateId, CrowdStructureEffectKind.Surface)];
+            CrowdSimulationPathSpan span = path.Span;
+            hash = MixString(hash, path.TemplateId);
+            hash = MixInt32(hash, span.FromXCm);
+            hash = MixInt32(hash, span.FromYCm);
+            hash = MixInt32(hash, span.ToXCm);
+            hash = MixInt32(hash, span.ToYCm);
+            hash = MixInt32(hash, span.WidthCm);
+            hash = MixByte(hash, (byte)template.Effect);
+            hash = MixString(hash, config.NavAreas[template.AreaIndex!.Value].Id);
+            hash = MixInt32(hash, template.PortalReachNavCells);
+        }
+
+        int cells = config.NavCellsPerSide * config.NavCellsPerSide;
+        if (heights.NavCellsPerSide != config.NavCellsPerSide || heights.HeightsCm.Length != cells || heights.Slope.Length != cells)
+        {
+            throw new ArgumentException(
+                $"高度场 {heights.NavCellsPerSide} 格每边，导航格 {config.NavCellsPerSide} 格每边。", nameof(heights));
+        }
+
+        for (int i = 0; i < cells; i++)
+        {
+            hash = MixInt64(hash, heights.HeightsCm[i].RawValue);
+            hash = MixInt64(hash, heights.Slope[i].RawValue);
+        }
+
         return hash;
     }
+
+    /// <summary>没有链接种类的地图的指纹：只含 i32 navCellSizeCm。</summary>
+    public static uint BakeInputsDigestWithoutLinks(int navCellSizeCm) => MixInt32(FnvOffset, navCellSizeCm);
 
     private const uint FnvOffset = 2166136261u;
     private const uint FnvPrime = 16777619u;
@@ -104,6 +161,16 @@ public static class NavSurfaceContract
         }
 
         return hash;
+    }
+
+    private static uint MixString(uint hash, string value)
+    {
+        foreach (byte b in Encoding.UTF8.GetBytes(value))
+        {
+            hash = MixByte(hash, b);
+        }
+
+        return MixByte(hash, 0);
     }
 
     private static uint MixInt64(uint hash, long value)
