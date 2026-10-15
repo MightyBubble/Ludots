@@ -105,6 +105,9 @@ public sealed class PathQueryService : IDisposable
     /// <summary>测试钩:每个任务计算前注入的额外耗时(模拟后台变慢)。</summary>
     public TimeSpan TestDelayPerJob { get; set; } = TimeSpan.Zero;
 
+    /// <summary>测试钩:走廊查询一律按失败处理(模拟 HPA 图与连通域不一致)。</summary>
+    public bool TestCorridorFails { get; set; }
+
     public int Waits { get; private set; }
 
     /// <summary>还没取走的请求数。组消失或状态序对不上时也要取走，否则这里会涨。</summary>
@@ -530,7 +533,9 @@ public sealed class PathQueryService : IDisposable
         Array.Clear(buffers.Corridor, 0, tiles);
         buffers.Corridor[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
         var stages = default(CorridorQuery.CorridorStageTicks);
-        var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch, ref stages);
+        var corridor = TestCorridorFails
+            ? buffers.Scratch.Publish(CorridorQuery.Branch.None, 0, null, 0, null, null, 0, default)
+            : CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, buffers.Corridor, q.Level, buffers.Scratch, ref stages);
         if (stages.NavMesh != 0) Interlocked.Add(ref _navTicks, stages.NavMesh);
         if (stages.Hpa != 0) Interlocked.Add(ref _hpaTicks, stages.Hpa);
         FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
@@ -557,6 +562,27 @@ public sealed class PathQueryService : IDisposable
                 pointCount = fp.Value.PointCount;
                 layers = fp.Value.Layers;
                 layerCount = fp.Value.LayerCount;
+            }
+        }
+
+        if (points == null && nav.CanReach(nav.CompAt(q.StartCell, q.Level), nav.Comp[q.GoalCell]))
+        {
+            // 起点落在走廊掩码外时流场描不到起点，目标却可达:并入起点 tile 重建一次
+            int startTile = NavGridSteps.TileOf(q.StartCell, navCellsPerSide, navCellsPerTile, navTilesPerSide);
+            buffers.Corridor[startTile] = 1;
+            buffers.Pad[startTile] = 1;
+            FlowFieldBuilder.PadMaskInto(buffers.Pad, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Union);
+            pool.Give(flow);
+            long retryMark = Stopwatch.GetTimestamp();
+            flow = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
+            Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - retryMark);
+            var retry = CorridorQuery.FlowPoints(flow, q.StartCell, buffers.Scratch);
+            if (retry != null)
+            {
+                points = retry.Value.Points;
+                pointCount = retry.Value.PointCount;
+                layers = retry.Value.Layers;
+                layerCount = retry.Value.LayerCount;
             }
         }
 
