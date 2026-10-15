@@ -527,9 +527,26 @@ React 编辑器的群体配置页有一块「单位模板」。数据来自 `GET
 
 「应用并重建世界」走 `POST /api/mods/{modId}/crowd-config/apply`。校验不过就不写文件。通过时只写打开的 Mod 自己的 `Entities/templates.json` 和 `Navigation/agent_profiles.json`。模板来自依赖 Mod 时，写进去的是覆盖项，只有 id 和改了的键，依赖 Mod 的文件不动。改回原值后覆盖项删掉。草稿不能删掉依赖给出的键，否则拒绝。数字按值比较：`30.0` 和 `30` 算同一个值，不会因为浏览器把数字写回成 `30` 就把依赖里的条目抄进当前 Mod。
 
-表现只读。检视器列出 `rules[]` 里按 `EntitySpawned` 建表现、或 `bindSpawn.template` 指到这个模板的表现定义，标出规则在哪个 Mod、定义有没有找到。群体装载不检查表现，缺表现不会报错。
+表现只读。检视器列出指到这个模板的每条生成链接：表现定义 id、写规则的表现（`rules[i]` 或 `bindSpawn`）、`EntitySpawned` 键，以及规则在哪个 Mod、哪个文件。链接和 Core 装载用的是同一份解析，见下一节。打开页面时编辑器用磁盘上的模板跑一次 validate，下一节的两类报错显示在「表现」下面，带模板或表现文件的来源。
 
 验收截图和录屏在 `artifacts/acceptance/crowdsimulation-e02/`。测试是 `CrowdSimulationEditorApiTests` 里 `UnitTemplates_` 开头的几条和 `Templates_DraftRoundTrippedThroughBrowserJson_WritesNothing`，前端是 `scripts/assert-crowd-unit-templates.mts`。
+
+### 单位模板的表现合同
+
+模板本身不写表现。模板和表现的链接写在 `Presentation/presenters.json`：某个表现的 `rules[]` 里有 `EntitySpawned` 事件、键是模板 id、命令是 `CreatePresenter` 的规则，或者表现定义的 `bindSpawn.template` 指向模板。键写 `"*"` 的规则对所有模板都算链接。`extends` 合并后的规则也算。`PresenterDefinitionConfigLoader` 装载时把这些链接收成 `PresenterSpawnLinks`，挂在 `PresenterDefinitionRegistry.SpawnLinks` 上。
+
+查两处，都不降级：
+
+- 表现装载（引擎 Initialize）：生成规则的 `definitionId` 不是已登记的表现定义，或 `EntitySpawned` 键不是已登记的实体模板，装载失败。报错写表现 id、规则位置、模板、定义，以及胜出片段，例如 `Presenter 'crowd_minimal.units.bootstrap' rules[0]: EntitySpawned 'crowd_minimal.unit' creates unknown presenter definition 'crowd_minimal.unit_typo'. Written by CrowdSimulationMinimalMod:assets/Presentation/presenters.json.`
+- 群体激活（`CrowdSimulationRuntime.Activate`，地图装载时）：`CrowdUnitPresenterContract.Require` 逐个查本图绑定的单位模板。没有任何链接的模板列出来，激活失败。报错写模板 id、写模板的片段，以及 `Presentation/presenters.json` 的合并顺序，例如 `单位模板 "crowd_minimal.unit"（CrowdSimulationMinimalMod:assets/Entities/templates.json）生成时没有表现：……`。
+
+修之前，这两种错的表现不一样。定义 id 写错时，引擎 Initialize 抛错，但报错不写模板，也不写 Mod 和文件。没有链接时什么都不报：无头引擎测试里 400 个单位全部生成，带表现的是 0 个；Raylib 宿主里地图正常进，画面上没有单位，日志也没有错误。
+
+不要表现只在一种情况下成立：直接建 `CrowdSimSession` 的无头会话（对拍、回归、基准）。它没有引擎的生成系统，自己调用 `PresentationLifecycleConsumption.DeclareNoConsumer`，声明这个世界没有表现消费者，所以不走 `Require`。凡是经引擎装载地图、由 `CrowdSimulationRuntime` 激活的会话，包括 Raylib、Web 和引擎无头测试，每个绑定模板都要有链接。
+
+编辑器的 validate 跑的是同一段代码：先用打开的 Mod 链跑 `PresenterDefinitionConfigLoader.LoadSpawnLinks`，再对草稿模板跑 `Require`。前端只按报错原文里有没有 `Presentation/presenters.json` 决定把报错放在「表现」下面，没有自己的规则。
+
+测试在 `CrowdUnitPresenterContractTests`（拷一份最小样板 Mod 改 presenters.json：定义 id 写错、键写成不存在的模板、没有链接、键指向别的模板、`bindSpawn`、通配键、原样装载），以及 `CrowdSimulationEditorApiTests` 里 `UnitTemplates_UnitWithoutPresenter_…` 和 `UnitTemplates_SpawnRuleCreatingUnknownDefinition_…`。截图和日志在 `artifacts/acceptance/crowdsimulation-presenter-contract/`。
 
 ## 不变量抽查
 

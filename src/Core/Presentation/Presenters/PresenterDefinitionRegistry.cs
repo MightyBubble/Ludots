@@ -29,6 +29,14 @@ namespace Ludots.Core.Presentation.Presenters
         public CompiledPresenterBootstrapRegistry BootstrapRegistry => _bootstrapRegistry;
         public bool HasPresenterCreatedRules => _hasPresenterCreatedRules;
 
+        /// <summary>EntitySpawned → CreatePresenter links of the last presenters.json load; resolved and validated by the loader.</summary>
+        public PresenterSpawnLinks SpawnLinks { get; private set; } = PresenterSpawnLinks.Empty;
+
+        public void SetSpawnLinks(PresenterSpawnLinks links)
+        {
+            SpawnLinks = links ?? throw new ArgumentNullException(nameof(links));
+        }
+
         public PresenterDefinitionRegistry(int capacity = 1024)
         {
             _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);

@@ -1,0 +1,117 @@
+adapter=raylib
+pid=1482533
+bootstrap=/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/launcher.runtime.json
+process=primary role= pid=1482533 bootstrap=/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/launcher.runtime.json
+rootMods=CrowdSimulationMinimalMod
+orderedMods=LudotsCoreMod, CrowdSimulationMod, CrowdSimulationStandardMod, CrowdSimulationMinimalMod
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=crowd_minimal @ mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    * mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/game.json -> crowd_minimal
+  startupInputContexts=[Default_Gameplay] @ mods/LudotsCoreMod/assets/game.json
+  browserRuntime=(unset) @ (unset)
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=e5217825b679d347ecfb50d8630cd65baecb2b608d8653e546d2ab781d328ce8, schema=1, mods=4
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+[INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+System.InvalidOperationException: Presenter command references unknown definition 'crowd_minimal.unit_typo'.
+   at Ludots.Core.Presentation.Config.PresenterDefinitionConfigLoader.ResolveRequiredPresenterDefinitionId(JsonNode node, String context) in /tmp/wt/presenter/src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:line 2161
+   at Ludots.Core.Presentation.Config.PresenterDefinitionConfigLoader.ParseCommandDefinitionId(JsonObject obj, PresenterCommandKind commandKind, String context) in /tmp/wt/presenter/src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:line 2117
+   at Ludots.Core.Presentation.Config.PresenterDefinitionConfigLoader.ParsePresenterCommand(JsonNode node, String context) in /tmp/wt/presenter/src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:line 1571
+   at Ludots.Core.Presentation.Config.PresenterDefinitionConfigLoader.ParseRules(JsonNode node, String owner, String path) in /tmp/wt/presenter/src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:line 1423
+   at Ludots.Core.Presentation.Config.PresenterDefinitionConfigLoader.ParseDefinition(JsonNode node) in /tmp/wt/presenter/src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:line 677
+   at Ludots.Core.Presentation.Config.PresenterDefinitionConfigLoader.Load(ConfigCatalog catalog, ConfigConflictReport report) in /tmp/wt/presenter/src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:line 134
+   at Ludots.Core.Engine.GameEngine.InitializeCoreSystems(GameConfig config) in /tmp/wt/presenter/src/Core/Engine/GameEngine.cs:line 1556
+   at Ludots.Core.Engine.GameEngine.InitializeWithConfigPipelineInternal(List`1 modPaths, ResolvedModLoadPlan modPlan, String assetsRoot) in /tmp/wt/presenter/src/Core/Engine/GameEngine.cs:line 608
+   at Ludots.Core.Engine.GameEngine.InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, String assetsRoot) in /tmp/wt/presenter/src/Core/Engine/GameEngine.cs:line 448
+   at Ludots.Core.Hosting.GameBootstrapper.InitializeFromBaseDirectory(String baseDirectory, String gameConfigFile) in /tmp/wt/presenter/src/Core/Hosting/GameBootstrapper.cs:line 102
+   at Ludots.Adapter.Raylib.RaylibHostComposer.Compose(String baseDir, String gameConfigFile, Action`1 configure) in /tmp/wt/presenter/src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostComposer.cs:line 47
+   at Ludots.Adapter.Raylib.RaylibAppHost.Initialize(AppInitContext context) in /tmp/wt/presenter/src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibAppHost.cs:line 61
+   at Program.<Main>$(String[] args) in /tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/Program.cs:line 24

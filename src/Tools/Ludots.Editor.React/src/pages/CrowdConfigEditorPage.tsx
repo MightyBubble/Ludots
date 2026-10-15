@@ -85,6 +85,7 @@ export function CrowdConfigEditorPage() {
   const [cells, setCells] = useState<Record<string, CellRow>>({});
   const [bundleText, setBundleText] = useState('');
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [loadedIssues, setLoadedIssues] = useState<Issue[]>([]);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -132,8 +133,22 @@ export function CrowdConfigEditorPage() {
           debugView: pretty(json.debugView),
         });
         setCells(json.costMatrix?.cells ?? {});
-        setIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
-        if (json.ok === false) setStatus('这份配置没有读出来');
+        const loaded = [...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])];
+        setIssues(loaded);
+        setLoadedIssues(loaded);
+        if (json.ok === false) {
+          setStatus('这份配置没有读出来');
+          return;
+        }
+        const checked = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/validate`, {
+          layer: 'templates',
+          draft: json.templates,
+        });
+        if (cancelled || checked.ok !== false) return;
+        const known = new Set(loaded.map((issue) => issue.message));
+        const merged = [...loaded, ...(checked.issues ?? []).filter((issue) => !known.has(issue.message))];
+        setIssues(merged);
+        setLoadedIssues(merged);
       } catch (err) {
         if (!cancelled) setStatus(err instanceof Error ? err.message : '群体配置没有读出来');
       } finally {
@@ -174,6 +189,7 @@ export function CrowdConfigEditorPage() {
     const json = (await res.json()) as Snapshot;
     setSnapshot(json);
     setCells(json.costMatrix?.cells ?? {});
+    setLoadedIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
   }
 
   async function validate() {
@@ -347,7 +363,7 @@ export function CrowdConfigEditorPage() {
                 className={tab === item.id ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff}
                 onClick={() => {
                   setTab(item.id);
-                  setIssues([]);
+                  setIssues(loadedIssues);
                   setStatus('');
                 }}
               >
