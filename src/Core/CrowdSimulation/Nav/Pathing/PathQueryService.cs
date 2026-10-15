@@ -9,7 +9,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
 
 /// <summary>一次两点路径请求(格号 + 上下文 + 起端层)。
-/// CorridorMask 非空 = 刷新或扩展:不重推走廊,掩码(并上走失 tile 和它到目标的 HPA tile)垫一圈;
+/// CorridorMask 非空 = 刷新或扩展:不重推走廊,掩码(并上每个走失格的 tile 和它到目标的 HPA tile)垫一圈;
 /// CachedMask 盖住垫后的掩码就答复沿用缓存,否则按 垫后掩码 ∪ CachedMask 新建。
 /// Plan 非空 = 一条指令的组规划,结果写回 Plan 里的各组,答复本身不带场。</summary>
 public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level)
@@ -17,8 +17,9 @@ public readonly record struct PathQuery(int NavContextId, int StartCell, int Goa
     public byte[]? CorridorMask { get; init; }
     /// <summary>请求时钉住的同 (导航, 目标) 缓存场的掩码。</summary>
     public byte[]? CachedMask { get; init; }
-    /// <summary>走失格,-1 表示没有。</summary>
-    public int StrayCell { get; init; } = -1;
+    /// <summary>走失格,前 <see cref="StrayCount"/> 个有效,每个 tile 一格。</summary>
+    public int[]? StrayCells { get; init; }
+    public int StrayCount { get; init; }
     /// <summary>走廊扩展：统计进扩展次数和耗时。</summary>
     public bool Extension { get; init; }
     internal PathPlanJob? Plan { get; init; }
@@ -528,11 +529,12 @@ public sealed class PathQueryService : IDisposable
         {
             // 走廊不重推,领队折线不产出(领队与槽位不动)
             Array.Copy(q.CorridorMask, buffers.Corridor, tiles);
-            if (q.StrayCell >= 0)
+            for (int k = 0; k < q.StrayCount; k++)
             {
-                buffers.Corridor[NavGridSteps.TileOf(q.StrayCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
+                int strayCell = q.StrayCells![k];
+                buffers.Corridor[NavGridSteps.TileOf(strayCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
                 long hpaMark = Stopwatch.GetTimestamp();
-                var strayPath = HpaQuery.FindPath(nav, q.StrayCell, q.GoalCell, buffers.Scratch.Hpa);
+                var strayPath = HpaQuery.FindPath(nav, strayCell, q.GoalCell, buffers.Scratch.Hpa);
                 Interlocked.Add(ref _hpaTicks, Stopwatch.GetTimestamp() - hpaMark);
                 if (strayPath != null)
                 {
