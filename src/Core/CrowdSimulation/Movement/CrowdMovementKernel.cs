@@ -670,7 +670,7 @@ public sealed class CrowdMovementKernel
         Log.Info(in LogChannels.Engine,
             $"CrowdSimulation avoidance: configured {avoidHz.ToString(CultureInfo.InvariantCulture)} Hz, stride {stride} substeps, actual {actualHz.ToString("0.###", CultureInfo.InvariantCulture)} Hz.");
         int hashCells = hash.CellsPerSide * hash.CellsPerSide;
-        return new CrowdMovementKernel
+        var kernel = new CrowdMovementKernel
         {
             Session = session,
             Hash = hash,
@@ -712,6 +712,9 @@ public sealed class CrowdMovementKernel
             FaceTurnScale = fc.FaceTurnScale,
             TurnEpsRad = cfg.Telemetry.TurnEpsRad,
         };
+        // 结构重烘的唤醒可能早于首次收拢，按稠密下标读这些行。
+        kernel.EnsureCapacity(session.Units.Capacity);
+        return kernel;
     }
 }
 
