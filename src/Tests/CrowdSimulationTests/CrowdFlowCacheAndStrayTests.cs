@@ -120,7 +120,7 @@ public sealed class CrowdFlowCacheAndStrayTests
     }
 
     [Test]
-    public void RefreshHit_DoesNotSpendThePerTickBudget()
+    public void Refresh_SameNavGoalGroupsRideOneJob_ReusingACoveringCachedFieldOrJoiningIt()
     {
         using var harness = Open();
         var session = harness.Session;
@@ -138,14 +138,46 @@ public sealed class CrowdFlowCacheAndStrayTests
         mask[tile] = 1;
         var a = Dummy(session, nav, goal, mask);
         var b = Dummy(session, nav, goal, (byte[])mask.Clone());
-        harness.Planner.RefreshFlow(a);
-        harness.Planner.RefreshFlow(b);
-        harness.Planner.ProcessRefreshes(1);
-        Assert.That(harness.Planner.FlowRefreshSubmits, Is.EqualTo(0));
+        var planner = harness.Planner;
+        int latency = session.Config.Planning.RefreshLatencyTicks;
+        planner.RefreshFlow(a);
+        planner.RefreshFlow(b);
+        planner.ProcessRefreshes(1);
+        Assert.That(planner.FlowRefreshSubmits, Is.EqualTo(1));
+        Assert.That(planner.RefreshRiders, Is.EqualTo(1));
+        Assert.That(a.Extending && b.Extending, Is.True);
+        Assert.That(cached.Refs, Is.EqualTo(1), "请求在途时钉住缓存场");
+        Assert.That(planner.ApplyDue(1 + latency, true), Is.True);
+        Assert.That(planner.RefreshCachedReplies, Is.EqualTo(1));
         Assert.That(a.Flow, Is.SameAs(cached));
         Assert.That(b.Flow, Is.SameAs(cached));
         Assert.That(cached.Refs, Is.EqualTo(2));
-        Assert.That(harness.Planner.FlowCacheHits, Is.GreaterThan(0));
+        Assert.That(a.Extending || b.Extending, Is.False);
+
+        int other = NextPassable(nav, goal);
+        int otherTile = NavGridSteps.TileOf(other, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, nav.Hpa.NavTilesPerSide);
+        var otherMask = new byte[tiles];
+        otherMask[otherTile] = 1;
+        int farTile = FarthestTile(otherMask, nav.Hpa.NavTilesPerSide);
+        var farMask = new byte[tiles];
+        farMask[farTile] = 1;
+        var narrow = Field(nav.Id, other, farMask);
+        planner.FlowCache.Admit(narrow);
+        var c = Dummy(session, nav, other, otherMask);
+        var d = Dummy(session, nav, other, (byte[])otherMask.Clone());
+        planner.RefreshFlow(c);
+        planner.RefreshFlow(d);
+        planner.ProcessRefreshes(2);
+        Assert.That(planner.FlowRefreshSubmits, Is.EqualTo(2));
+        Assert.That(planner.ApplyDue(2 + latency, true), Is.True);
+        Assert.That(planner.RefreshCachedReplies, Is.EqualTo(1));
+        Assert.That(c.Flow, Is.Not.SameAs(narrow));
+        Assert.That(d.Flow, Is.SameAs(c.Flow));
+        Assert.That(c.Flow!.Mask![farTile], Is.EqualTo(1), "新场要盖住钉住缓存场的掩码");
+        Assert.That(c.Flow.Mask[otherTile], Is.EqualTo(1));
+        Assert.That(planner.FlowCacheContains(c.Flow), Is.True);
+        Assert.That(narrow.Cached, Is.False);
+        Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
     }
 
     [Test]
@@ -193,7 +225,7 @@ public sealed class CrowdFlowCacheAndStrayTests
     }
 
     [Test]
-    public void StrayReply_RejectsStaleSeqAndStaleVersion_RebakeClearsExtending()
+    public void StrayReply_SkipsStaleSeq_RequeuesStaleVersion_RebakeSupersedes()
     {
         using var harness = Open();
         var session = harness.Session;
@@ -224,17 +256,17 @@ public sealed class CrowdFlowCacheAndStrayTests
         Assert.That(staleVersion.Flow, Is.SameAs(keptVersion));
         Assert.That(harness.Planner.FlowCacheContains(keptVersion!), Is.False);
 
-        // 版本失配只把刷新放进队列。先消化掉，重烘用例只剩这一次扩展。
+        Assert.That(harness.Planner.RefreshQueueCount, Is.EqualTo(1), "版本失配的组重新排刷新");
         harness.Planner.ProcessRefreshes(2);
         Assert.That(harness.Planner.ApplyDue(2 + session.Config.Planning.RefreshLatencyTicks, true), Is.True);
         Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
 
-        // 上一次刷新已经按原目标准入。换一个目标，扩展才会未命中并留下在途请求。
         int other = NextPassable(nav, goal);
         int otherTile = NavGridSteps.TileOf(other, nav.NavCellsPerSide, nav.Hpa.NavCellsPerTile, nav.Hpa.NavTilesPerSide);
         var otherMask = new byte[tiles];
         otherMask[otherTile] = 1;
         var rebaked = Dummy(session, nav, other, otherMask);
+        rebaked.OrderId = 1;
         var keptRebake = rebaked.Flow;
         harness.Planner.NoteStray(rebaked.Id, CellInNeighborTile(nav, otherTile));
         harness.Planner.ProcessRefreshes(3);
@@ -246,6 +278,9 @@ public sealed class CrowdFlowCacheAndStrayTests
         harness.Planner.ReactRebake(dirty);
         Assert.That(rebaked.Extending, Is.False);
         Assert.That(rebaked.Flow, Is.SameAs(keptRebake));
+        Assert.That(harness.Planner.ApplyDue(3 + session.Config.Planning.LatencyTicks, true), Is.True);
+        Assert.That(rebaked.Flow, Is.SameAs(keptRebake), "被取代的扩展答复不挂场");
+        Assert.That(harness.Planner.RefreshQueueCount, Is.EqualTo(0), "被取代的扩展答复不再排刷新");
         Assert.That(harness.Service.OutstandingReplyCount, Is.EqualTo(0));
     }
 
@@ -318,7 +353,7 @@ public sealed class CrowdFlowCacheAndStrayTests
     }
 
     [Test]
-    public void FlowRevision_FollowsRequestId_OnPlanRefreshExtendAndCacheHit()
+    public void FlowRevision_FollowsRequestId_OnPlanRefreshExtend_CachedReplyKeepsIt()
     {
         using var harness = Open();
         var session = harness.Session;
@@ -354,18 +389,17 @@ public sealed class CrowdFlowCacheAndStrayTests
         if (ReferenceEquals(group.Flow, poisoned))
             Assert.That(group.Flow.BuildRevision, Is.Not.EqualTo(99991));
 
-        int tiles = harness.PlannerTiles;
-        var covered = new byte[tiles];
-        for (int i = 0; i < covered.Length; i++) covered[i] = 1;
-        var cached = Field(group.NavId, group.Goal, covered);
+        var groupNav = session.ResolveNavContext(group.NavId);
+        var cached = FlowFieldBuilder.Build(groupNav, group.Goal, Full(harness.PlannerTiles), new FlowPool(groupNav.NavCellsPerSide, 1));
         cached.BuildRevision = 4242;
         harness.Planner.FlowCache.Admit(cached);
         int seqBeforeHit = ServiceSeq(harness.Service);
         harness.Planner.RefreshFlow(group);
         harness.Planner.ProcessRefreshes(session.TickCount);
+        Assert.That(ServiceSeq(harness.Service), Is.EqualTo(seqBeforeHit + 1));
+        session.Advance(session.Config.Planning.RefreshLatencyTicks + 1);
         Assert.That(group.Flow, Is.SameAs(cached));
         Assert.That(group.Flow.BuildRevision, Is.EqualTo(4242));
-        Assert.That(ServiceSeq(harness.Service), Is.EqualTo(seqBeforeHit));
     }
 
     [Test]

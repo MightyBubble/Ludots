@@ -32,13 +32,13 @@ public sealed class CrowdNavGroupSet
         public int GoalComp { get; set; } = -2;
         /// <summary>路径答复在途(重发指令途中单位保持当前速度,不刹车)。</summary>
         public bool Planning { get; set; }
-        /// <summary>走廊扩展答复在途。重烘或版本对不上时必须清掉，否则组不再接受新的扩展。</summary>
+        /// <summary>流场刷新或走廊扩展答复在途。在途时组不再搭新的刷新,也不另提扩展。</summary>
         public bool Extending { get; set; }
         /// <summary>槽位视线全员判定(规划器在阵型落定帧置位一次,意图层读后清零)。</summary>
         public bool LosAll { get; set; }
         /// <summary>上一任未完成的领队(重发指令时供反转/朝向继承;答复落帧后清空)。</summary>
         public Movement.CrowdLeader? PrevLeader { get; set; }
-        /// <summary>组状态序:每次规划 / 流场刷新提交时 +1;到点答复按它判陈旧(被更新请求取代的静默丢弃)。</summary>
+        /// <summary>组状态序:每次规划,或反应取代在途刷新时 +1;到点答复按它判陈旧(被取代的静默丢弃)。</summary>
         public int StateSeq { get; set; }
     }
 

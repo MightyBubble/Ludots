@@ -9,12 +9,17 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
 
 /// <summary>一次两点路径请求(格号 + 上下文 + 起端层)。
-/// CorridorMask 非空 = 同走廊刷新(S7 队伍反应):不重推走廊,按 padMask ∪ 该掩码建流场。
+/// CorridorMask 非空 = 刷新或扩展:不重推走廊,掩码(并上走失 tile 和它到目标的 HPA tile)垫一圈;
+/// CachedMask 盖住垫后的掩码就答复沿用缓存,否则按 垫后掩码 ∪ CachedMask 新建。
 /// Plan 非空 = 一条指令的组规划,结果写回 Plan 里的各组,答复本身不带场。</summary>
 public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level)
 {
     public byte[]? CorridorMask { get; init; }
-    /// <summary>走廊扩展：统计进扩展次数和耗时。建场仍是 padMask ∪ 原掩码。</summary>
+    /// <summary>请求时钉住的同 (导航, 目标) 缓存场的掩码。</summary>
+    public byte[]? CachedMask { get; init; }
+    /// <summary>走失格,-1 表示没有。</summary>
+    public int StrayCell { get; init; } = -1;
+    /// <summary>走廊扩展：统计进扩展次数和耗时。</summary>
     public bool Extension { get; init; }
     internal PathPlanJob? Plan { get; init; }
 }
@@ -34,6 +39,8 @@ public sealed class PathResult
     /// <summary>方向图(调用方持有;弃用经 PathQueryService.Recycle 还池)。</summary>
     public FlowField? Flow { get; set; }
     public byte[]? CorridorMask { get; set; }
+    /// <summary>刷新或扩展的答复:请求时钉住的缓存场已经盖住,没有新建场。</summary>
+    public bool Cached { get; set; }
 }
 
 /// <summary>路径服务故障:请求超过 planTimeoutMs 未返回(报错,绝不重试或换算法)。</summary>
@@ -178,7 +185,7 @@ public sealed class PathQueryService : IDisposable
     private static int ReplySlotCapacity(CrowdSimulationRuntimeConfig config)
     {
         return InFlightWindow(config.Planning.MaxRefreshesPerTick, config.Planning.RefreshLatencyTicks)
-            + InFlightWindow(config.Flowfield.MaxRebuildsPerTick, config.Planning.RefreshLatencyTicks)
+            + InFlightWindow(config.Flowfield.MaxRebuildsPerTick, config.Planning.LatencyTicks)
             + Ludots.Core.CrowdSimulation.CrowdSimulationLimits.HotPathSlotReserve;
     }
 
@@ -378,7 +385,7 @@ public sealed class PathQueryService : IDisposable
     {
         int workerIndex = (int)state!;
         int refreshInFlight = InFlightWindow(_config.Planning.MaxRefreshesPerTick, _config.Planning.RefreshLatencyTicks);
-        int extendInFlight = InFlightWindow(_config.Flowfield.MaxRebuildsPerTick, _config.Planning.RefreshLatencyTicks);
+        int extendInFlight = InFlightWindow(_config.Flowfield.MaxRebuildsPerTick, _config.Planning.LatencyTicks);
         // 缓存里的场不回空闲栈。把缓存容量一起备上，换目标时从栈里取，tick 里不再新分配。
         // 配置的 poolCapacity 是这份工作集之外的空闲余量，不是活场数量的上限。
         int flowCapacity = _config.Flowfield.PoolCapacity
@@ -519,11 +526,37 @@ public sealed class PathQueryService : IDisposable
         Track(slot);
         if (q.CorridorMask != null)
         {
-            // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
-            FlowFieldBuilder.PadMaskInto(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
-            FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CorridorMask, buffers.Union);
+            // 走廊不重推,领队折线不产出(领队与槽位不动)
+            Array.Copy(q.CorridorMask, buffers.Corridor, tiles);
+            if (q.StrayCell >= 0)
+            {
+                buffers.Corridor[NavGridSteps.TileOf(q.StrayCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
+                long hpaMark = Stopwatch.GetTimestamp();
+                var strayPath = HpaQuery.FindPath(nav, q.StrayCell, q.GoalCell, buffers.Scratch.Hpa);
+                Interlocked.Add(ref _hpaTicks, Stopwatch.GetTimestamp() - hpaMark);
+                if (strayPath != null)
+                {
+                    for (int i = 0; i < strayPath.TileCount; i++) buffers.Corridor[strayPath.TileIds[i]] = 1;
+                }
+            }
+
+            FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+            if (q.CachedMask != null && FlowFieldBuilder.MaskSubset(buffers.Pad, q.CachedMask))
+            {
+                Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, null, q.CorridorMask);
+                slot.Result.Cached = true;
+                return slot.Result;
+            }
+
+            var buildMask = buffers.Pad;
+            if (q.CachedMask != null)
+            {
+                FlowFieldBuilder.OrMaskInto(buffers.Pad, q.CachedMask, buffers.Union);
+                buildMask = buffers.Union;
+            }
+
             long refreshMark = Stopwatch.GetTimestamp();
-            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
+            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, buildMask, pool);
             long built = Stopwatch.GetTimestamp() - refreshMark;
             Interlocked.Add(ref _flowTicks, built);
             if (q.Extension)
@@ -781,6 +814,7 @@ public sealed class PathQueryService : IDisposable
         result.PointLayers = layerCount == 0 ? null : slot.Layers;
         result.Flow = flow;
         result.CorridorMask = mask;
+        result.Cached = false;
     }
 
     /// <summary>一份 worker 私有暂存。答复槽跨线程交回主线程，算完即与暂存脱开。</summary>
