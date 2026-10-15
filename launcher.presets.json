@@ -3781,6 +3781,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_minimal_raylib",
+      "name": "CrowdSimulation Minimal Raylib",
+      "selectors": [
+        "$crowd_simulation_minimal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

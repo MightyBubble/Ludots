@@ -40,6 +40,12 @@ public sealed class DemoScriptSmokeTests
                 continue;
             }
 
+            if (ScriptsRunByOwnAcceptance.TryGetValue(modDir, out string? coveredBy))
+            {
+                TestContext.Out.WriteLine($"{modDir}: 地图不是种子图，脚本由 {coveredBy} 整段跑过");
+                continue;
+            }
+
             string seed = DemoSeedOf(file);
             var (runtime, session) = S4DeployTruthTests.BuildSession(seed);
             using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
@@ -53,6 +59,12 @@ public sealed class DemoScriptSmokeTests
     }
 
     private const string CrowdMapPrefix = "crowd_simulation_";
+
+    // 这里的会话只能从种子资产建。地图不是种子图的演示，必须有自己的验收测试按真实进图路径跑完整段脚本，并在此登记。
+    private static readonly Dictionary<string, string> ScriptsRunByOwnAcceptance = new(StringComparer.Ordinal)
+    {
+        ["CrowdSimulationMinimalMod"] = "CrowdSimulationTests.Authoring.CrowdSimulationMinimalModTests",
+    };
 
     private static string DemoSeedOf(string scriptPath)
     {

@@ -81,10 +81,6 @@ public sealed partial class CrowdSimulationRuntime
         if (loaded.Presentation != null)
         {
             _presentation = loaded.Presentation;
-            if (_engine != null && loaded.Presentation.FogDecal != null)
-            {
-                _engine.SetService(CoreServiceKeys.FogDecalPalette, loaded.Presentation.FogDecal.ToPalette());
-            }
         }
 
         if (loaded.Tools != null && loaded.Rates != null && _deployDemo != null)

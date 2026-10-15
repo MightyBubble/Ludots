@@ -512,6 +512,48 @@ namespace Ludots.Tool
             });
             navCommand.AddCommand(bakeCrowdNavSurfaceCommand);
 
+            var initCrowdTerrainCommand = new Command(
+                "init-crowd-terrain",
+                "Write the map's logicTerrainAsset for a new CrowdSimulation map: fill every nav cell with one terrain type, then paint inclusive nav-cell rectangles in order.");
+            var initTerrainFillOption = new Option<string>("--fill", "Terrain id (from terrainAreas) for every cell") { IsRequired = true };
+            var initTerrainRectOption = new Option<string[]>("--rect", () => Array.Empty<string>(), "terrainId:minCol,minRow,maxCol,maxRow (repeatable)")
+            {
+                Arity = ArgumentArity.ZeroOrMore,
+            };
+            initCrowdTerrainCommand.AddOption(mapIdOption);
+            initCrowdTerrainCommand.AddOption(crowdModIdOption);
+            initCrowdTerrainCommand.AddOption(initTerrainFillOption);
+            initCrowdTerrainCommand.AddOption(initTerrainRectOption);
+            initCrowdTerrainCommand.AddOption(crowdOverwriteOption);
+            initCrowdTerrainCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(crowdModIdOption);
+                var fill = ctx.ParseResult.GetValueForOption(initTerrainFillOption);
+                var rects = ctx.ParseResult.GetValueForOption(initTerrainRectOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(crowdOverwriteOption);
+                ctx.ExitCode = InitCrowdTerrain(mapId, modId, fill, rects, overwrite);
+            });
+            navCommand.AddCommand(initCrowdTerrainCommand);
+
+            var initCrowdHeightmapCommand = new Command(
+                "init-crowd-heightmap",
+                "Write a flat ContinuousHeightmap.asset (uint16 scaled, one sample per nav cell) for a new CrowdSimulation map.");
+            var initHeightCmOption = new Option<int>("--heightCm", () => 0, "Height of every sample in cm");
+            initCrowdHeightmapCommand.AddOption(mapIdOption);
+            initCrowdHeightmapCommand.AddOption(crowdModIdOption);
+            initCrowdHeightmapCommand.AddOption(initHeightCmOption);
+            initCrowdHeightmapCommand.AddOption(crowdOverwriteOption);
+            initCrowdHeightmapCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(crowdModIdOption);
+                var heightCm = ctx.ParseResult.GetValueForOption(initHeightCmOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(crowdOverwriteOption);
+                ctx.ExitCode = InitCrowdHeightmap(mapId, modId, heightCm, overwrite);
+            });
+            navCommand.AddCommand(initCrowdHeightmapCommand);
+
             var importNavSurfaceReactCommand = new Command(
                 "import-navsurface-react",
                 "Write a React terrain bin whose AreaId equals each .navsurface cell. Jump candidates are not copied.");
@@ -1579,6 +1621,74 @@ namespace {modId}
 
                 Console.WriteLine(
                     $"Wrote {fullOut} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int InitCrowdTerrain(string mapId, string modId, string fill, string[] rectTexts, bool overwrite)
+        {
+            try
+            {
+                string repoRoot = FindAssetsRoot();
+                CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
+                    CrowdNavSurfaceAuthoring.ResolveAuthoringStart(repoRoot, modId, mapId);
+                if (File.Exists(start.TerrainFullPath) && !overwrite)
+                {
+                    throw new IOException($"File exists: {start.TerrainFullPath}");
+                }
+
+                var rects = new CrowdNavSurfaceAuthoring.CrowdTerrainRect[rectTexts.Length];
+                for (int i = 0; i < rectTexts.Length; i++)
+                {
+                    rects[i] = CrowdNavSurfaceAuthoring.CrowdTerrainRect.Parse(rectTexts[i]);
+                }
+
+                byte[] cells = CrowdNavSurfaceAuthoring.PaintTerrainAreas(
+                    start.NavCellsPerSide, start.TerrainTypeIds, fill, rects);
+                Directory.CreateDirectory(Path.GetDirectoryName(start.TerrainFullPath)!);
+                using (FileStream output = File.Create(start.TerrainFullPath))
+                {
+                    ReactGridTerrainBinary.WriteAreaGrid(output, start.NavCellsPerSide, start.NavCellsPerSide, cells);
+                }
+
+                Console.WriteLine(
+                    $"Wrote {start.TerrainFullPath} ({start.NavCellsPerSide}x{start.NavCellsPerSide}, fill={fill}, rects={rects.Length})");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int InitCrowdHeightmap(string mapId, string modId, int heightCm, bool overwrite)
+        {
+            try
+            {
+                string repoRoot = FindAssetsRoot();
+                CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
+                    CrowdNavSurfaceAuthoring.ResolveAuthoringStart(repoRoot, modId, mapId);
+                if (File.Exists(start.HeightFullPath) && !overwrite)
+                {
+                    throw new IOException($"File exists: {start.HeightFullPath}");
+                }
+
+                ContinuousHeightmapAsset height = CrowdNavSurfaceAuthoring.CreateFlatHeightmap(
+                    start.BoardSizeCm, start.NavCellsPerSide, heightCm);
+                Directory.CreateDirectory(Path.GetDirectoryName(start.HeightFullPath)!);
+                using (FileStream output = File.Create(start.HeightFullPath))
+                {
+                    ContinuousHeightmapBinary.Write(output, height);
+                }
+
+                Console.WriteLine(
+                    $"Wrote {start.HeightFullPath} ({height.SampleColumns}x{height.SampleRows} samples, {heightCm} cm)");
                 return 0;
             }
             catch (Exception ex)

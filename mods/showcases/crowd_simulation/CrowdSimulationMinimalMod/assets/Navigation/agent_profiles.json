@@ -1,0 +1,13 @@
+[
+  {
+    "id": "crowd_minimal_scout",
+    "radiusCm": 150,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 2,
+    "layer": 0,
+    "navProfileId": "foot"
+  }
+]

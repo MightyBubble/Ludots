@@ -388,11 +388,11 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             });
             _debug = debug;
             _presentation = debug.Presentation;
-            if (_presentation?.FogDecal != null)
-            {
-                engine.SetService(CoreServiceKeys.FogDecalPalette, _presentation.FogDecal.ToPalette());
-            }
         }
+
+        engine.SetService(
+            CoreServiceKeys.FogDecalPalette,
+            CrowdFogDecalSettings.LoadMerged(engine.ConfigPipeline, catalog, engine.ConfigConflictReport));
 
         if (!catalog.TryGet(CrowdSimulationDebugViewPath, out var viewEntry))
         {

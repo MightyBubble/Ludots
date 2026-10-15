@@ -2782,6 +2782,13 @@
         "type": "path",
         "value": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod"
       }
+    },
+    {
+      "name": "crowd_simulation_minimal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationMinimalMod"
+      }
     }
   ],
   "adapters": {

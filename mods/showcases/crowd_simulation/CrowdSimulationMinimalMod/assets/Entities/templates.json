@@ -1,0 +1,78 @@
+[
+  {"id": "crowd_simulation.unit.infantry.r100", "__delete": true},
+  {"id": "crowd_simulation.unit.infantry.r200", "__delete": true},
+  {"id": "crowd_simulation.unit.infantry.r300", "__delete": true},
+  {"id": "crowd_simulation.unit.infantry.r400", "__delete": true},
+  {"id": "crowd_simulation.unit.navy.r100", "__delete": true},
+  {"id": "crowd_simulation.unit.navy.r200", "__delete": true},
+  {"id": "crowd_simulation.unit.navy.r300", "__delete": true},
+  {"id": "crowd_simulation.unit.navy.r400", "__delete": true},
+  {"id": "crowd_simulation.unit.mountaineer.r100", "__delete": true},
+  {"id": "crowd_simulation.unit.mountaineer.r200", "__delete": true},
+  {"id": "crowd_simulation.unit.mountaineer.r300", "__delete": true},
+  {"id": "crowd_simulation.unit.mountaineer.r400", "__delete": true},
+  {"id": "crowd_simulation.unit.amphibious.r100", "__delete": true},
+  {"id": "crowd_simulation.unit.amphibious.r200", "__delete": true},
+  {"id": "crowd_simulation.unit.amphibious.r300", "__delete": true},
+  {"id": "crowd_simulation.unit.amphibious.r400", "__delete": true},
+  {"id": "crowd_simulation.unit.jumper.r100", "__delete": true},
+  {"id": "crowd_simulation.unit.jumper.r200", "__delete": true},
+  {"id": "crowd_simulation.unit.jumper.r300", "__delete": true},
+  {"id": "crowd_simulation.unit.jumper.r400", "__delete": true},
+  {
+    "id": "crowd_minimal.team",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulationMinimal.Team"
+      }
+    }
+  },
+  {
+    "id": "crowd_minimal.player",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulationMinimal.Player"
+      }
+    }
+  },
+  {
+    "id": "crowd_minimal.wall_block",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulationMinimal.WallBlock"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Box",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "halfWidthCm": 3125,
+        "halfHeightCm": 3125,
+        "navRadiusCm": 0,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
+    }
+  },
+  {
+    "id": "crowd_minimal.scout",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulationMinimal.Scout"
+      },
+      "CrowdSimulationAgent": {
+        "profileId": "crowd_minimal_scout",
+        "agentTypeId": "foot",
+        "speedCmPerSecond": 1400,
+        "personalRadiusCm": 900,
+        "pushPriority": 2,
+        "special": false
+      }
+    }
+  }
+]
