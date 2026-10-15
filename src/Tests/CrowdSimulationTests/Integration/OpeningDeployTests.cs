@@ -150,6 +150,7 @@ public sealed class OpeningDeployTests
         {
             Path.Combine(repo, "mods", "LudotsCoreMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
+            Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationUiMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
             Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
             Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),

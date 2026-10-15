@@ -9,6 +9,7 @@ using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
+using CrowdSimulationUiMod.UI;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Presentation;
@@ -17,67 +18,85 @@ namespace CrowdSimulationTests.Presentation;
 public class CrowdTelemetryPanelTests
 {
     [Test]
-    public void ShippedView_LoadsTelemetrySection()
+    public void ShippedView_KeepsOnlyPanelTogglesAndActions()
     {
         var cfg = LoadShipped();
-        Assert.That(cfg.Telemetry.SampleMs, Is.EqualTo(250));
-        Assert.That(cfg.Telemetry.History, Is.EqualTo(48));
-        Assert.That(cfg.Telemetry.Alerts.LowFps, Is.EqualTo(90));
         Assert.That(cfg.Panels.Nav, Is.False);
         Assert.That(cfg.Panels.Telemetry, Is.False);
         Assert.That(cfg.Actions.ToggleNavPanel, Is.EqualTo("CrowdSimulation.S4.ToggleNavPanel"));
         Assert.That(cfg.Actions.ProbePathFault, Is.EqualTo("CrowdSimulation.S4.ProbePathFault"));
+        Assert.That(Shipped().ContainsKey("telemetry"), Is.False, "采样与告警归 UI mod 的 hud.json");
     }
 
     [Test]
-    public void MissingTelemetryField_NamesPathAndField()
+    public void ShippedHudSettings_LoadSampleRatesHistoryAndAlerts()
     {
-        var node = Shipped();
-        node["telemetry"]!.AsObject().Remove("sampleMs");
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
-        Assert.That(ex!.Message, Does.Contain("CrowdSimulationDebugView.json"));
-        Assert.That(ex.Message, Does.Contain("sampleMs"));
+        var settings = ParseHud(Hud());
+        Assert.That(settings.SampleMs.Telemetry, Is.EqualTo(250));
+        Assert.That(settings.SampleMs.Nav, Is.EqualTo(500));
+        Assert.That(settings.SampleMs.Status, Is.EqualTo(250));
+        Assert.That(settings.History, Is.EqualTo(48));
+        Assert.That(settings.Alerts.LowFps, Is.EqualTo(90));
     }
 
     [Test]
-    public void UnknownTelemetryKey_NamesPathAndField()
+    public void MissingHudField_NamesPathAndField()
     {
-        var node = Shipped();
-        node["telemetry"]!.AsObject()["extra"] = 1;
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
+        var node = Hud();
+        node["sampleMs"]!.AsObject().Remove("telemetry");
+        var ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
+        Assert.That(ex!.Message, Does.Contain(CrowdHudSettings.RelativePath));
+        Assert.That(ex.Message, Does.Contain("telemetry"));
+    }
+
+    [Test]
+    public void UnknownHudKey_NamesField()
+    {
+        var node = Hud();
+        node["sampleMs"]!.AsObject()["extra"] = 1;
+        var ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
         Assert.That(ex!.Message, Does.Contain("extra"));
     }
 
     [Test]
     public void HistoryOutOfRange_NamesField()
     {
-        var node = Shipped();
-        node["telemetry"]!.AsObject()["history"] = 0;
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
-        Assert.That(ex!.Message, Does.Contain("telemetry.history"));
+        var node = Hud();
+        node["history"] = 1;
+        var ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
+        Assert.That(ex!.Message, Does.Contain("history"));
 
-        node = Shipped();
-        node["telemetry"]!.AsObject()["history"] = CrowdSimulationLimits.MaxTelemetryHistory + 1;
-        ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
-        Assert.That(ex!.Message, Does.Contain("telemetry.history"));
+        node = Hud();
+        node["history"] = CrowdHudSettings.MaxHistory + 1;
+        ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
+        Assert.That(ex!.Message, Does.Contain("history"));
+    }
+
+    [Test]
+    public void SampleRateOutOfRange_NamesField()
+    {
+        var node = Hud();
+        node["sampleMs"]!["nav"] = 0;
+        var ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
+        Assert.That(ex!.Message, Does.Contain("sampleMs.nav"));
     }
 
     [Test]
     public void AlertOutOfRange_NamesField()
     {
-        var node = Shipped();
-        node["telemetry"]!["alerts"]!["flipPct"] = 0;
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
+        var node = Hud();
+        node["alerts"]!["flipPct"] = 0;
+        var ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
         Assert.That(ex!.Message, Does.Contain("flipPct"));
 
-        node = Shipped();
-        node["telemetry"]!["alerts"]!["headingDeg"] = 181;
-        ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
+        node = Hud();
+        node["alerts"]!["headingDeg"] = 181;
+        ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
         Assert.That(ex!.Message, Does.Contain("headingDeg"));
 
-        node = Shipped();
-        node["telemetry"]!["alerts"]!["simMs"] = -1;
-        ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(node, "CrowdSimulationDebugView.json"));
+        node = Hud();
+        node["alerts"]!["simMs"] = -1;
+        ex = Assert.Throws<InvalidOperationException>(() => ParseHud(node));
         Assert.That(ex!.Message, Does.Contain("simMs"));
     }
 
@@ -106,8 +125,8 @@ public class CrowdTelemetryPanelTests
             CommandLog = 4,
             PlanTimeoutMs = 500,
         };
-        var lines = new string[CrowdNavReadout.Lines];
-        reading.Write(lines);
+        var lines = new string[CrowdHudState.NavLineCount];
+        CrowdHudFormat.WriteNav(in reading, lines);
         Assert.That(lines[1], Does.Contain("容量 32").And.Contain("在册 7").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
         Assert.That(lines[1], Does.Contain("75%"));
         Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("N/A").And.Contain("无结果缓存"));
@@ -123,17 +142,12 @@ public class CrowdTelemetryPanelTests
     {
         var reading = new CrowdTelemetryReadout
         {
-            Fps = double.NaN,
             SimMs = 1,
             AvoidMs = 2,
             HashMs = 3,
-            RenderMs = double.NaN,
-            HeapBytesPerSec = double.NaN,
             HasHeading = false,
             HasFlip = false,
             FixedHz = 20,
-            SampleMs = 250,
-            History = 48,
             NavMeshMs = 8,
             HpaMs = 0,
             FlowMs = 1.5,
@@ -142,16 +156,17 @@ public class CrowdTelemetryPanelTests
             RebakeMs = 0,
             NavCellCm = 100,
             TileCount = 16,
-            ViewWidth = 0,
-            ViewHeight = 0,
         };
-        var lines = new string[CrowdTelemetryReadout.Lines];
-        reading.Write(lines);
+        var host = new CrowdHostReadout(double.NaN, double.NaN, double.NaN, double.NaN, 0, 0);
+        var lines = new string[CrowdHudState.TelemetryLineCount];
+        CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
         var text = string.Join('\n', lines);
+        Assert.That(text, Does.Contain("采样 250 ms 曲线 48"));
         Assert.That(text, Does.Contain("FPS N/A"));
         Assert.That(text, Does.Contain("堆增长 N/A"));
         Assert.That(text, Does.Contain("走廊扩展 N/A"));
-        Assert.That(text, Does.Contain("渲染 N/A"));
+        Assert.That(text, Does.Contain("UI 重绘峰值 N/A ms  面板编排 N/A ms"));
+        Assert.That(text, Does.Not.Contain("渲染"), "旧的“渲染”只量叠层文字，已改名为 UI 重绘峰值");
         Assert.That(text, Does.Contain("分辨率 N/A"));
         Assert.That(text, Does.Contain("NavMesh 8.0"));
         Assert.That(text, Does.Contain("nav格 100 cm"));
@@ -171,8 +186,8 @@ public class CrowdTelemetryPanelTests
             FlowMisses = 1,
             FlowEvicts = 2,
         };
-        var lines = new string[CrowdNavReadout.Lines];
-        reading.Write(lines);
+        var lines = new string[CrowdHudState.NavLineCount];
+        CrowdHudFormat.WriteNav(in reading, lines);
         Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("在册 4").And.Contain("75%").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
         Assert.That(lines[2], Does.Not.Contain("无结果缓存"));
     }
@@ -185,30 +200,27 @@ public class CrowdTelemetryPanelTests
             HasExtend = true,
             ExtendCount = 6,
             ExtendMs = 1.2,
-            Fps = 1,
             SimMs = 1,
             AvoidMs = 1,
             HashMs = 1,
-            RenderMs = 1,
-            HeapBytesPerSec = 1,
             HasHeading = true,
             HasFlip = true,
             FixedHz = 20,
-            SampleMs = 250,
-            History = 48,
         };
-        var lines = new string[CrowdTelemetryReadout.Lines];
-        reading.Write(lines);
+        var host = new CrowdHostReadout(1, 1, 1, 1, 1920, 1080);
+        var lines = new string[CrowdHudState.TelemetryLineCount];
+        CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
         Assert.That(lines[10], Is.EqualTo("走廊扩展 6 次 1.2 ms"));
+        Assert.That(lines[13], Does.StartWith("分辨率 1920x1080"));
     }
 
     [Test]
     public void Alerts_FireOnlyWhenTheReadingCrossesItsThreshold()
     {
-        var alerts = LoadShipped().Telemetry.Alerts;
+        var alerts = ParseHud(Hud()).Alerts;
+        var hot = new bool[CrowdHudState.TelemetryLineCount];
         var quiet = new CrowdTelemetryReadout
         {
-            Fps = 120,
             SimMs = 1,
             AvoidMs = 1,
             HeadingDeg = 1,
@@ -216,31 +228,35 @@ public class CrowdTelemetryPanelTests
             FlipPct = 1,
             HasFlip = true,
         };
-        var state = CrowdTelemetryAlertState.Evaluate(in quiet, alerts);
-        Assert.That(state.Fps || state.Sim || state.Avoid || state.Heading || state.Flip, Is.False);
+        CrowdHudFormat.MarkAlerts(in quiet, 120, alerts, hot);
+        Assert.That(hot, Has.None.True);
 
-        var hot = quiet;
-        hot.Fps = 10;
-        hot.SimMs = 40;
-        hot.AvoidMs = 20;
-        hot.HeadingDeg = 40;
-        hot.FlipPct = 80;
-        state = CrowdTelemetryAlertState.Evaluate(in hot, alerts);
-        Assert.That(state.Fps, Is.True);
-        Assert.That(state.Sim, Is.True);
-        Assert.That(state.Avoid, Is.True);
-        Assert.That(state.Heading, Is.True);
-        Assert.That(state.Flip, Is.True);
+        var loud = quiet;
+        loud.SimMs = 40;
+        loud.AvoidMs = 20;
+        loud.HeadingDeg = 40;
+        loud.FlipPct = 80;
+        CrowdHudFormat.MarkAlerts(in loud, 10, alerts, hot);
+        Assert.That(hot[CrowdHudState.FpsLine], Is.True);
+        Assert.That(hot[CrowdHudState.SimLine], Is.True);
+        Assert.That(hot[CrowdHudState.AvoidLine], Is.True);
+        Assert.That(hot[CrowdHudState.HeadingLine], Is.True);
+        Assert.That(hot[CrowdHudState.FlipLine], Is.True);
 
-        var missing = hot;
-        missing.Fps = double.NaN;
+        var missing = loud;
         missing.HasHeading = false;
         missing.HasFlip = false;
-        state = CrowdTelemetryAlertState.Evaluate(in missing, alerts);
-        Assert.That(state.Fps, Is.False);
-        Assert.That(state.Heading, Is.False);
-        Assert.That(state.Flip, Is.False);
-        Assert.That(state.Sim, Is.True);
+        CrowdHudFormat.MarkAlerts(in missing, double.NaN, alerts, hot);
+        Assert.That(hot[CrowdHudState.FpsLine], Is.False);
+        Assert.That(hot[CrowdHudState.HeadingLine], Is.False);
+        Assert.That(hot[CrowdHudState.FlipLine], Is.False);
+        Assert.That(hot[CrowdHudState.SimLine], Is.True);
+
+        var lines = new string[CrowdHudState.TelemetryLineCount];
+        Array.Fill(lines, "x");
+        CrowdHudFormat.PrefixAlerts(lines, hot);
+        Assert.That(lines[CrowdHudState.SimLine], Is.EqualTo(CrowdHudFormat.AlertPrefix + "x"));
+        Assert.That(lines[0], Is.EqualTo("x"));
     }
 
     [Test]
@@ -364,8 +380,8 @@ public class CrowdTelemetryPanelTests
         Assert.That(stats.Requests, Is.GreaterThan(0));
         Assert.That(double.IsNaN(stats.RoundTripLastMs), Is.True);
         var nav = CrowdNavReadout.From(session);
-        var lines = new string[CrowdNavReadout.Lines];
-        nav.Write(lines);
+        var lines = new string[CrowdHudState.NavLineCount];
+        CrowdHudFormat.WriteNav(in nav, lines);
         Assert.That(lines[1], Does.Contain("容量"));
         Assert.That(lines[2], Does.Contain("流场容量").And.Contain("在册").And.Contain("hit").And.Contain("miss").And.Contain("evict"));
         Assert.That(lines[4], Does.Contain("规划请求"));
@@ -406,12 +422,20 @@ public class CrowdTelemetryPanelTests
 
     private static JsonObject Shipped() => JsonNode.Parse(File.ReadAllText(ShippedPath()))!.AsObject();
 
-    private static string ShippedPath()
+    private static JsonObject Hud() => JsonNode.Parse(File.ReadAllText(Path.Combine(
+        RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", CrowdHudSettings.RelativePath)))!.AsObject();
+
+    private static CrowdHudSettings ParseHud(JsonObject node) =>
+        CrowdHudSettings.Parse(node.ToJsonString(), CrowdHudSettings.RelativePath);
+
+    private static string ShippedPath() => Path.Combine(
+        RepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+
+    private static string RepoRoot()
     {
         var dir = AppContext.BaseDirectory;
         while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
             dir = Path.GetDirectoryName(dir);
-        return Path.Combine(dir ?? throw new InvalidOperationException("找不到仓库根"),
-            "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        return dir ?? throw new InvalidOperationException("找不到仓库根");
     }
 }

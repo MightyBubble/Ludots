@@ -88,12 +88,8 @@ public sealed class CrowdIncrementalRebakeBudgetTests
             Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
             ViewLabels = new[] { "路线", "可走", "线框" },
-            Hud = new CrowdHudPanel
+            Hud = new CrowdHudConfig
             {
-                OriginXPx = 16,
-                OriginYPx = 16,
-                WidthPx = 640,
-                HeightPx = 148,
                 Keys = "V 视图 {view} · 模板[{templateIndex}] · {activity}{pending}",
             },
             Deploy = new CrowdDeployPresentation
@@ -126,7 +122,8 @@ public sealed class CrowdIncrementalRebakeBudgetTests
         };
         var routes = new RouteVisualBuffer();
         var overlay = new ScreenOverlayBuffer();
-        var system = new S4DeployDemoPresentationSystem(demo, routes, overlay, () => null, () => session, presentation);
+        var feed = new CrowdHudFeed(demo, presentation, () => session, () => null, null);
+        var system = new S4DeployDemoPresentationSystem(demo, routes, overlay, () => session, presentation, feed);
         for (int i = 0; i < 2; i++)
         {
             overlay.Clear();

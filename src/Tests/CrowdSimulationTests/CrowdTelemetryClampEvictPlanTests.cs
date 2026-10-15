@@ -13,6 +13,7 @@ using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
+using CrowdSimulationTests.Presentation;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -78,33 +79,34 @@ public sealed class CrowdTelemetryClampEvictPlanTests
         using var engine = new GameEngine();
         var chunkDebug = new ChunkDebugPanelRuntime();
         engine.SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebug);
-        var (_, system, overlay) = HudFixture(engine);
+        var feed = HudFeed(engine, session);
+        using var ui = new CrowdHudTestHost(engine);
 
-        system.DrawHud(session, null, null);
-        string collapsed = JoinText(overlay);
+        ui.Frame(feed);
+        string collapsed = ui.Text("crowd-status");
         Assert.That(collapsed, Does.Contain("subStepClamped 1"));
         Assert.That(collapsed, Does.Contain("evictStuck 3"));
         Assert.That(collapsed, Does.Contain("plans 2"));
         Assert.That(collapsed, Does.Not.Contain("contacts"));
         Assert.That(collapsed, Does.Not.Contain("pathWait"));
+        Assert.That(ui.Has("crowd-counter-detail-line"), Is.False);
 
         chunkDebug.Visible = true;
-        overlay.Clear();
-        system.DrawHud(session, null, null);
-        string expanded = JoinText(overlay);
+        ui.FrameAfterAllPeriods(feed);
+        string expanded = ui.Text("crowd-counter-detail-line");
         Assert.That(expanded, Does.Contain("contacts 7"));
         Assert.That(expanded, Does.Contain("pathWait 1"));
         Assert.That(expanded, Does.Contain("fogCells"));
     }
 
-    private static (S4DeployDemoRuntime Demo, S4DeployDemoPresentationSystem System, ScreenOverlayBuffer Overlay) HudFixture(GameEngine engine)
+    private static CrowdHudFeed HudFeed(GameEngine engine, CrowdSimSession session)
     {
         var presentation = new CrowdPresentationConfig
         {
             Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
             ViewLabels = new[] { "路线", "可走", "线框" },
-            Hud = new CrowdHudPanel { OriginXPx = 16, OriginYPx = 16, WidthPx = 640, HeightPx = 148, Keys = "k {view}" },
+            Hud = new CrowdHudConfig { Keys = "k {view}" },
             Deploy = new CrowdDeployPresentation
             {
                 Actions = new CrowdDeployActions
@@ -132,22 +134,7 @@ public sealed class CrowdTelemetryClampEvictPlanTests
         {
             new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, 14000, 0, "t"),
         });
-        var overlay = new ScreenOverlayBuffer();
-        var system = new S4DeployDemoPresentationSystem(demo, new RouteVisualBuffer(), overlay, () => null, () => null, presentation);
-        return (demo, system, overlay);
-    }
-
-    private static string JoinText(ScreenOverlayBuffer overlay)
-    {
-        var parts = new List<string>();
-        foreach (var item in overlay.GetSpan())
-        {
-            if (item.Kind != ScreenOverlayItemKind.Text) continue;
-            string? text = overlay.GetString(item.StringId);
-            if (text != null) parts.Add(text);
-        }
-
-        return string.Join('\n', parts);
+        return new CrowdHudFeed(demo, presentation, () => session, () => null, null);
     }
 
     private static JsonObject MoveOrder(CrowdSimSession session, int player, int xCm, int yCm)

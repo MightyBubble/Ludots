@@ -14,6 +14,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
+using CrowdSimulationTests.Presentation;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -212,12 +213,8 @@ public sealed class CrowdDeployToolTests
             Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
             ViewLabels = new[] { "路线" },
-            Hud = new CrowdHudPanel
+            Hud = new CrowdHudConfig
             {
-                OriginXPx = 16,
-                OriginYPx = 16,
-                WidthPx = 640,
-                HeightPx = 176,
                 Keys = "左键 {tool} · {activity}{pending}",
             },
             Deploy = new CrowdDeployPresentation
@@ -244,12 +241,10 @@ public sealed class CrowdDeployToolTests
                 },
             },
         };
-        var overlay = new ScreenOverlayBuffer();
-        var system = new S4DeployDemoPresentationSystem(
-            host.Demo, new RouteVisualBuffer(), overlay, () => null, () => session, presentation);
-        overlay.Clear();
-        system.DrawHud(session, null, null);
-        string idle = Join(overlay);
+        var feed = new CrowdHudFeed(host.Demo, presentation, () => session, () => null, null);
+        using var ui = new CrowdHudTestHost();
+        ui.Frame(feed);
+        string idle = ui.AllText();
         Assert.That(idle, Does.Contain("工具 关闭"));
         Assert.That(idle, Does.Contain(host.Demo.TickHzWindow));
         Assert.That(idle, Does.Contain("×1"));
@@ -261,9 +256,8 @@ public sealed class CrowdDeployToolTests
         var (x, y) = LegalCluster(session, nav);
         host.Demo.EnqueueMapClick(x, y);
         host.Demo.Tick();
-        overlay.Clear();
-        system.DrawHud(session, null, null);
-        string after = Join(overlay);
+        ui.FrameAfterAllPeriods(feed);
+        string after = ui.AllText();
         Assert.That(after, Does.Contain("工具 建筑"));
         Assert.That(after, Does.Contain("脏 tile"));
         Assert.That(after, Does.Contain("仅代价"));
@@ -422,19 +416,6 @@ public sealed class CrowdDeployToolTests
         }
 
         return false;
-    }
-
-    private static string Join(ScreenOverlayBuffer overlay)
-    {
-        var parts = new List<string>();
-        foreach (var item in overlay.GetSpan())
-        {
-            if (item.Kind != ScreenOverlayItemKind.Text) continue;
-            string? text = overlay.GetString(item.StringId);
-            if (text != null) parts.Add(text);
-        }
-
-        return string.Join('\n', parts);
     }
 
     private static CrowdDebugTools Tools() => new()
