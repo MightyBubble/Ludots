@@ -81,9 +81,11 @@ namespace Ludots.Core.Presentation.Config
             _behaviorKinds = behaviorKinds;
         }
 
+        public const string PresentersFile = "Presentation/presenters.json";
+
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/presenters.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, PresentersFile, ConfigMergePolicy.ArrayById, "id");
             var fragments = _configs.CollectFragmentsWithSources(in entry);
             ValidateRawDefinitionIds(fragments, entry.RelativePath);
             var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
@@ -98,25 +100,15 @@ namespace Ludots.Core.Presentation.Config
 
             if (merged.Count == 0)
             {
+                _registry.SetSpawnLinks(PresenterSpawnLinks.Empty);
                 return;
             }
 
-            var mergedByKey = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+            Dictionary<string, JsonObject> mergedByKey = IndexMerged(merged);
             var parsedByKey = new Dictionary<string, PresenterDefinition>(StringComparer.Ordinal);
             var parsedOrder = new List<string>(merged.Count);
-            for (int i = 0; i < merged.Count; i++)
+            foreach (string key in mergedByKey.Keys)
             {
-                if (merged[i].Node is not JsonObject obj)
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation/presenters.json entry '{merged[i].Id}' must merge to a JSON object.");
-                }
-
-                string key = RequireCanonicalString(
-                    obj["id"]?.GetValue<string>() ?? string.Empty,
-                    "Presentation/presenters.json entry id");
-
-                mergedByKey[key] = obj;
                 _registry.GetOrRegisterId(key);
             }
 
@@ -127,10 +119,11 @@ namespace Ludots.Core.Presentation.Config
                 RejectUnknownFields(obj, DefinitionPath(key), DefinitionFields);
             }
 
+            var spawnLinks = new List<PresenterSpawnLink>();
+            Func<string, bool> templateExists = template => _resolveEntityTemplateKey(template) > 0;
             foreach ((string key, JsonObject _) in mergedByKey)
             {
-                JsonObject expanded = ExpandDefinition(key, mergedByKey, new HashSet<string>(StringComparer.Ordinal));
-                ExpandBindSpawn(key, expanded);
+                JsonObject expanded = ExpandForSpawnLinks(key, mergedByKey, entry.RelativePath, report, templateExists, spawnLinks);
                 var (_, def) = ParseDefinition(expanded);
                 if (def == null)
                 {
@@ -158,8 +151,125 @@ namespace Ludots.Core.Presentation.Config
                 _registry.Register(key, validByKey[key]);
             }
 
+            _registry.SetSpawnLinks(new PresenterSpawnLinks(spawnLinks));
             _registry.CompileAllCreatePlans();
         }
+
+        /// <summary>
+        /// Resolves the EntitySpawned → CreatePresenter links of the merged presenters.json with the same expansion
+        /// and checks as <see cref="Load"/>, without parsing assets. For tools that only need to know which
+        /// templates get a presenter when they spawn.
+        /// </summary>
+        public static PresenterSpawnLinks LoadSpawnLinks(
+            ConfigPipeline configs,
+            ConfigCatalog catalog,
+            ConfigConflictReport report,
+            Func<string, bool> templateExists)
+        {
+            ArgumentNullException.ThrowIfNull(configs);
+            ArgumentNullException.ThrowIfNull(templateExists);
+            var entry = ConfigPipeline.RequireEntry(catalog, PresentersFile, ConfigMergePolicy.ArrayById, "id");
+            var fragments = configs.CollectFragmentsWithSources(in entry);
+            ValidateRawDefinitionIds(fragments, entry.RelativePath);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
+            Dictionary<string, JsonObject> mergedByKey = IndexMerged(merged);
+            var links = new List<PresenterSpawnLink>();
+            foreach (string key in mergedByKey.Keys)
+            {
+                ExpandForSpawnLinks(key, mergedByKey, entry.RelativePath, report, templateExists, links);
+            }
+
+            return new PresenterSpawnLinks(links);
+        }
+
+        private static Dictionary<string, JsonObject> IndexMerged(IReadOnlyList<MergedConfigEntry> merged)
+        {
+            var mergedByKey = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+            for (int i = 0; i < merged.Count; i++)
+            {
+                if (merged[i].Node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException(
+                        $"{PresentersFile} entry '{merged[i].Id}' must merge to a JSON object.");
+                }
+
+                string key = RequireCanonicalString(
+                    obj["id"]?.GetValue<string>() ?? string.Empty,
+                    $"{PresentersFile} entry id");
+                mergedByKey[key] = obj;
+            }
+
+            return mergedByKey;
+        }
+
+        private static JsonObject ExpandForSpawnLinks(
+            string key,
+            IReadOnlyDictionary<string, JsonObject> mergedByKey,
+            string relativePath,
+            ConfigConflictReport? report,
+            Func<string, bool> templateExists,
+            List<PresenterSpawnLink> links)
+        {
+            JsonObject expanded = ExpandDefinition(key, mergedByKey, new HashSet<string>(StringComparer.Ordinal));
+            int authoredRules = expanded["rules"] is JsonArray authored ? authored.Count : 0;
+            ExpandBindSpawn(key, expanded);
+            CollectSpawnLinks(key, expanded, authoredRules, mergedByKey, relativePath, report, templateExists, links);
+            return expanded;
+        }
+
+        /// <summary>
+        /// Malformed rules are skipped here and rejected by <see cref="ParseDefinition"/>; this pass only owns the
+        /// cross-reference errors, so they carry the template, the definition and the writing fragment.
+        /// </summary>
+        private static void CollectSpawnLinks(
+            string key,
+            JsonObject expanded,
+            int authoredRules,
+            IReadOnlyDictionary<string, JsonObject> mergedByKey,
+            string relativePath,
+            ConfigConflictReport? report,
+            Func<string, bool> templateExists,
+            List<PresenterSpawnLink> links)
+        {
+            if (expanded["rules"] is not JsonArray rules)
+            {
+                return;
+            }
+
+            string source = report != null && report.TryGetWinner(relativePath, key, out string winner) ? winner : string.Empty;
+            for (int i = 0; i < rules.Count; i++)
+            {
+                if (rules[i] is not JsonObject rule ||
+                    rule["event"] is not JsonObject ruleEvent ||
+                    rule["command"] is not JsonObject command ||
+                    TextOf(ruleEvent["kind"]) != nameof(PresentationEventKind.EntitySpawned) ||
+                    TextOf(command["kind"]) != nameof(PresenterCommandKind.CreatePresenter) ||
+                    (TextOf(ruleEvent["key"]) ?? TextOf(ruleEvent["keyId"])) is not { Length: > 0 } template ||
+                    TextOf(command["definitionId"]) is not { Length: > 0 } definitionId)
+                {
+                    continue;
+                }
+
+                string ruleName = i < authoredRules ? $"rules[{i}]" : "bindSpawn";
+                string from = source.Length == 0 ? string.Empty : $" Written by {source}.";
+                if (!mergedByKey.ContainsKey(definitionId))
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{key}' {ruleName}: EntitySpawned '{template}' creates unknown presenter definition '{definitionId}'.{from}");
+                }
+
+                if (!string.Equals(template, PresenterSpawnLinks.WildcardTemplate, StringComparison.Ordinal) && !templateExists(template))
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{key}' {ruleName}: EntitySpawned key '{template}' is not a registered entity template (creates '{definitionId}').{from}");
+                }
+
+                links.Add(new PresenterSpawnLink(key, ruleName, template, definitionId, source));
+            }
+        }
+
+        private static string? TextOf(JsonNode? node)
+            => node is JsonValue value && value.TryGetValue(out string? text) ? text : null;
 
         private static void ValidateRawDefinitionIds(IReadOnlyList<ConfigFragment> fragments, string relativePath)
         {
@@ -190,7 +300,7 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private JsonObject ExpandDefinition(
+        private static JsonObject ExpandDefinition(
             string key,
             IReadOnlyDictionary<string, JsonObject> mergedByKey,
             HashSet<string> expansionStack)
