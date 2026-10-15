@@ -1,0 +1,1215 @@
+Test run for /tmp/wt/presenter/src/Tests/CrowdSimulationTests/bin/Release/net9.0/CrowdSimulationTests.dll (.NETCoreApp,Version=v9.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+/tmp/wt/presenter/src/Tests/CrowdSimulationTests/bin/Release/net9.0/CrowdSimulationTests.dll
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in /tmp/wt/presenter/src/Tests/CrowdSimulationTests/bin/Release/net9.0/CrowdSimulationTests.dll
+   NUnit3TestExecutor discovered 4 of 4 NUnit test cases using Current Discovery mode, Explicit run
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+[INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] Loading Map: crowd_minimal
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+[INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+[INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+[INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+[INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+[INF][Engine] Firing MapLoaded event for crowd_minimal...
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).
+[INF][Engine] CrowdSimulation stalled at tick 3: waiting for path reply (planner pending=2, serviceFault=False).
+[INF][Engine] CrowdSimulation first plan applied at tick 3.
+[baseline] loaded OK; ticks=103 units=400 unitsWithPresenter=400 presenterEntities=400
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+[INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+[unknown-definition] threw InvalidOperationException: Presenter command references unknown definition 'crowd_minimal.unit_typo'.
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+  Passed Probe("baseline") [1 s]
+  Standard Output Messages:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+ [INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Input/collection_keys.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Calendar/calendars.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Engine] Loading Map: crowd_minimal
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+ [INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+ [INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+ [INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+ [INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+ [INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+ [INF][Engine] Firing MapLoaded event for crowd_minimal...
+ [WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).
+ [INF][Engine] CrowdSimulation stalled at tick 3: waiting for path reply (planner pending=2, serviceFault=False).
+ [INF][Engine] CrowdSimulation first plan applied at tick 3.
+ [baseline] loaded OK; ticks=103 units=400 unitsWithPresenter=400 presenterEntities=400
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+  Passed Probe("unknown-definition") [117 ms]
+  Standard Output Messages:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+ [INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Input/collection_keys.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+ [unknown-definition] threw InvalidOperationException: Presenter command references unknown definition 'crowd_minimal.unit_typo'.
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+[INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] Loading Map: crowd_minimal
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+[INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+[INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+[INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+[INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+[INF][Engine] Firing MapLoaded event for crowd_minimal...
+[INF][Engine] CrowdSimulation stalled at tick 3: waiting for path reply (planner pending=2, serviceFault=False).
+[no-link] loaded OK; ticks=3 units=400 unitsWithPresenter=0 presenterEntities=0
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+[INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] Loading Map: crowd_minimal
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+[INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+[INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+[INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+[INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+[INF][Engine] Firing MapLoaded event for crowd_minimal...
+[INF][Engine] CrowdSimulation stalled at tick 3: waiting for path reply (planner pending=2, serviceFault=False).
+[INF][Engine] CrowdSimulation first plan applied at tick 3.
+[link-to-other-template] loaded OK; ticks=87 units=400 unitsWithPresenter=0 presenterEntities=2
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+NUnit Adapter 4.6.0.0: Test execution complete
+  Passed Probe("no-link") [1 s]
+  Standard Output Messages:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+ [INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Input/collection_keys.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Calendar/calendars.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Engine] Loading Map: crowd_minimal
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+ [INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+ [INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+ [INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+ [INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+ [INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+ [INF][Engine] Firing MapLoaded event for crowd_minimal...
+ [INF][Engine] CrowdSimulation stalled at tick 3: waiting for path reply (planner pending=2, serviceFault=False).
+ [no-link] loaded OK; ticks=3 units=400 unitsWithPresenter=0 presenterEntities=0
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+  Passed Probe("link-to-other-template") [566 ms]
+  Standard Output Messages:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CrowdSimulationMod (P:0)
+ [INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+ [INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+ [INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+ [INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Input/collection_keys.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Calendar/calendars.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Engine] Loading Map: crowd_minimal
+ [INF][Map] Loading Map: crowd_minimal
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+ [INF][Map] Map 'crowd_minimal' loaded.
+ [INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+ [INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+ [INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+ [INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+ [INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+ [INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+ [INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+ [INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+ [INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+ [INF][Engine] Firing MapLoaded event for crowd_minimal...
+ [INF][Engine] CrowdSimulation stalled at tick 3: waiting for path reply (planner pending=2, serviceFault=False).
+ [INF][Engine] CrowdSimulation first plan applied at tick 3.
+ [link-to-other-template] loaded OK; ticks=87 units=400 unitsWithPresenter=0 presenterEntities=2
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+
+Test Run Successful.
+Total tests: 4
+     Passed: 4
+ Total time: 4.1066 Seconds
