@@ -57,8 +57,12 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Assert.That(host.ReplayDivergenceDiagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
     }
 
+    /// <summary>
+    /// S4 开局单位散在全图，每组按 (tile, 层) 收起点，走廊并集盖住全部成员的去路：
+    /// 整段脚本没有成员走出本组流场，也就没有走廊扩展。回放诊断仍须逐段对齐。
+    /// </summary>
     [Test]
-    public void StrayAndCacheHit_ReplayDiagnosticsMatch()
+    public void S4Script_MembersStayInsideTheirUnionMasks_ReplayDiagnosticsMatch()
     {
         const string Seed = "s1337";
         const int Ticks = 260;
@@ -86,9 +90,9 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         }
 
         WriteStrayDistribution(planner, service, session.TickCount);
-        Assert.That(planner.ExtendSubmits, Is.GreaterThan(0));
-        Assert.That(planner.FlowCacheHits, Is.GreaterThan(0));
-        Assert.That(planner.ExtendWithinPad + planner.ExtendBeyondPad, Is.EqualTo(planner.ExtendSubmits));
+        Assert.That(session.Telemetry.Plans, Is.GreaterThan(0), "场景无效：脚本没有落地任何规划");
+        Assert.That(planner.StrayGroupTicks, Is.EqualTo(0), "成员走出了本组走廊并集");
+        Assert.That(planner.ExtendSubmits, Is.EqualTo(0));
         host.RunReplay();
         TestContext.Out.WriteLine(
             $"replay status={host.ReplayStatus} divTick={host.ReplayDivergenceTick} section={host.ReplayDivergenceSection} diagTick={host.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(host.ReplayDivergenceDiagnostic)}");
