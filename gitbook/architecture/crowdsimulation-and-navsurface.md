@@ -123,6 +123,8 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 参数、地图事实、时钟分三处写。从空目录做一张新群体地图的完整步骤见 [CrowdSimulation 最小样板](crowdsimulation-minimal-mod.md)。
 
+通行矩阵、结构模板和 `.navsurface` v2 的新数据结构见 [CrowdSimulation 数据结构](crowdsimulation-data-schema.md)。那一页是设计稿；本节描述的仍是现在仓库里的格式，实现按那页第 10 节逐步切换。
+
 `CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`，部署散布参数 `deploy.spreadCm` / `baseJitterCm` / `centersPerGroup`，以及运行时按 id 认的结构模板 `building`（地图阻挡物用它）。导航格边长、能力档、区域、移动类型和 20 个体型档案写在同目录的 `Navigation/navmesh.json`、`Navigation/pathing.json` 和 `Navigation/agent_profiles.json`；能力档的 `agentProfileId` 和移动类型的 `profileId` 都指向这些档案，所以档案和它们放在一起。地形颜色和迷雾贴花四色也在这里。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的地表、开局人数、出生点和桥锚点地形。
 
 `CrowdSimulationMod` 只放能力本身：`config_catalog.json`、会话模板、选中圈 presenter、指令类型、地形类型叠层开关和键位。它不带单位。S1 三张种子图、S3、S4 共用的演示单位放在 `mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod`：5 种移动类型 × 4 个半径级的单位模板、对应的 presenter 和网格，以及只有 S1 地形才有意义的桥锚点地形和桥、限时桥、道路、洪水、火灾结构模板。新地图不依赖它，自己写单位，见 [最小样板](crowdsimulation-minimal-mod.md)。单位模板上的 `CrowdSimulationAgent` 必写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。这些字符串留在模板和配置里。生成时把档案下标、移动类型下标，以及模板上已经写成定点数的速度、个人半径、推挤优先级，写进实体上的 `CrowdSimulationAgent`。组件没有字符串字段，tick 里不再解析 id。速度按模板各写各的。领队步速取本组已生成成员的模板速度最小值；子步数取本图绑定模板里的最大速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 不写时等于 `cost`，两者都必须大于 0。本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` 里的每一个区域；排除写 `passable: false`，不能省略行，缺行也不当成代价 1 或不可通行。`areas` 为 null 直接报错。绑定集是体型 `navProfileId` 落在这张图 `navProfiles` 里的 pathing 类型，加上本图群体单位模板点名的 `agentTypeId`。没进绑定集的类型不校验，也不建网格查询。核心 `Humanoid` 保持 `PreferMesh`，Mod 的 pathing 不要再写它。`passable` 为 false 时群体代价记 0，Detour 过滤掉这一区域。`special` 为 true 的模板不参与批量部署。群体运行时只绑定被单位模板引用的 agent type，pathing 里没有模板的类型不进运行时表。只加载能力 Mod、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
@@ -192,7 +194,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 ## .navsurface v1 格式要点
 
-小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产的地形类型表必须与 `maps.<mapId>.terrainAreas` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。
+小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产的地形类型表必须与 `maps.<mapId>.terrainAreas` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。v2 格式（链接种类表、整数步长记录、`linkBakeDigest`）见 [CrowdSimulation 数据结构](crowdsimulation-data-schema.md) 第 6 节。
 
 ## 阶段路线（来自 Web 规格第三部分）
 

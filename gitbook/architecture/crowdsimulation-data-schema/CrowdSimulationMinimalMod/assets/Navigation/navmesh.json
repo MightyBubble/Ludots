@@ -1,0 +1,10 @@
+{
+  "maps": {
+    "crowd_minimal": {
+      "solver": "crowd-simulation",
+      "logicTerrainAsset": "terrain/crowd_minimal.map_data.bin",
+      "navCellSizeCm": 6250,
+      "terrainTypes": ["land", "water"]
+    }
+  }
+}
