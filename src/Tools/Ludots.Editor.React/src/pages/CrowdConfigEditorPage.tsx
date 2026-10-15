@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
+import { UnitTemplateInspector } from './crowd-config/UnitTemplateInspector';
+import type { UnitTemplatesView } from './crowd-config/unitTemplates';
 
 type ModInfo = { id: string; name?: string };
 type Issue = { path?: string; message?: string; sourceMod?: string; sourceFile?: string };
@@ -24,6 +26,7 @@ type Snapshot = {
   debugView?: unknown;
   defaults?: Record<string, unknown>;
   owners?: Owner[];
+  unitTemplates?: UnitTemplatesView;
   costMatrix?: CostMatrix;
   help?: HelpItem[];
   issues?: Issue[];
@@ -71,18 +74,6 @@ function applyLabel(tab: TabId): string {
   return '应用并重建世界';
 }
 
-type AgentComponent = {
-  profileId?: string;
-  speedCmPerSecond?: number;
-  personalRadiusCm?: number;
-  pushPriority?: number;
-};
-
-type UnitDraft = {
-  id?: string;
-  components?: { CrowdSimulationAgent?: AgentComponent };
-};
-
 export function CrowdConfigEditorPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedMod = searchParams.get('mod') ?? 'CrowdSimulationS4DeployMod';
@@ -97,7 +88,7 @@ export function CrowdConfigEditorPage() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [templateId, setTemplateId] = useState('');
+  const validateTimer = useRef<number | undefined>(undefined);
   const [bridgePort, setBridgePort] = useState('47921');
 
   useEffect(() => {
@@ -141,11 +132,7 @@ export function CrowdConfigEditorPage() {
           debugView: pretty(json.debugView),
         });
         setCells(json.costMatrix?.cells ?? {});
-        setIssues(json.issues ?? []);
-        const units = ((json.templates as { unitTypes?: UnitDraft[] } | undefined)?.unitTypes ?? []).filter(
-          (unit) => unit.components?.CrowdSimulationAgent,
-        );
-        setTemplateId(units[0]?.id ?? '');
+        setIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
         if (json.ok === false) setStatus('这份配置没有读出来');
       } catch (err) {
         if (!cancelled) setStatus(err instanceof Error ? err.message : '群体配置没有读出来');
@@ -157,18 +144,6 @@ export function CrowdConfigEditorPage() {
       cancelled = true;
     };
   }, [modId]);
-
-  const units = useMemo(() => {
-    try {
-      const parsed = JSON.parse(texts.templates || '{}') as { unitTypes?: UnitDraft[] };
-      return (parsed.unitTypes ?? []).filter((unit) => unit.id && unit.components?.CrowdSimulationAgent);
-    } catch {
-      return [];
-    }
-  }, [texts.templates]);
-
-  const selectedUnit = units.find((unit) => unit.id === templateId) ?? units[0];
-  const agent = selectedUnit?.components?.CrowdSimulationAgent;
 
   function setText(layer: string, value: string) {
     setTexts((current) => ({ ...current, [layer]: value }));
@@ -202,18 +177,31 @@ export function CrowdConfigEditorPage() {
   }
 
   async function validate() {
+    try {
+      await check(tab, parseLayer(tab));
+    } catch (err) {
+      setIssues([{ path: '', message: err instanceof Error ? err.message : '草稿不是 JSON' }]);
+    }
+  }
+
+  async function check(layer: TabId, draft: unknown) {
     setBusy(true);
     setStatus('');
     try {
-      const draft = parseLayer(tab);
-      const json = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/validate`, { layer: tab, draft });
+      const json = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/validate`, { layer, draft });
       setIssues(json.issues ?? []);
       setStatus(json.ok ? '校验通过' : '校验没有通过，没有写文件，也没有重建。');
     } catch (err) {
-      setIssues([{ path: '', message: err instanceof Error ? err.message : '草稿不是 JSON' }]);
+      setIssues([{ path: '', message: err instanceof Error ? err.message : '校验请求失败' }]);
     } finally {
       setBusy(false);
     }
+  }
+
+  function editTemplates(text: string) {
+    setText('templates', text);
+    window.clearTimeout(validateTimer.current);
+    validateTimer.current = window.setTimeout(() => void check('templates', JSON.parse(text)), 600);
   }
 
   async function apply() {
@@ -273,24 +261,6 @@ export function CrowdConfigEditorPage() {
     const defaults = snapshot?.defaults?.[tab];
     setText(tab, pretty(defaults));
     setStatus('草稿已回到默认。文件还没改。');
-  }
-
-  function updateAgent(field: keyof AgentComponent, raw: string) {
-    if (!selectedUnit?.id) return;
-    let parsed: { unitTypes?: UnitDraft[] };
-    try {
-      parsed = JSON.parse(texts.templates || '{}') as { unitTypes?: UnitDraft[] };
-    } catch {
-      setIssues([{ path: 'unitTypes', message: '实体模板草稿不是 JSON，检查器写不回去。' }]);
-      return;
-    }
-    const list = parsed.unitTypes ?? [];
-    const unit = list.find((item) => item.id === selectedUnit.id);
-    const component = unit?.components?.CrowdSimulationAgent;
-    if (!component) return;
-    if (field === 'profileId') component.profileId = raw;
-    else component[field] = Number(raw);
-    setText('templates', pretty(parsed));
   }
 
   async function exportBundle() {
@@ -415,38 +385,15 @@ export function CrowdConfigEditorPage() {
         ) : null}
 
         {tab === 'templates' ? (
-          <div data-template-inspector="" className="mt-4 rounded-xl border border-studio-elevated bg-studio-surface p-4">
-            <h2 className="text-sm font-semibold">单位模板</h2>
-            <p className="mt-1 text-xs text-studio-muted">速度、个人半径、体型写在 CrowdSimulationAgent。数值规则由装载器校验，这里只改草稿。</p>
-            <label className={STUDIO_CHROME.label}>
-              模板
-              <select className={STUDIO_CHROME.field} value={selectedUnit?.id ?? ''} onChange={(event) => setTemplateId(event.target.value)}>
-                {units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {agent ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className={STUDIO_CHROME.label}>
-                  speedCmPerSecond
-                  <input className={STUDIO_CHROME.field} value={agent.speedCmPerSecond ?? ''} onChange={(event) => updateAgent('speedCmPerSecond', event.target.value)} />
-                </label>
-                <label className={STUDIO_CHROME.label}>
-                  personalRadiusCm
-                  <input className={STUDIO_CHROME.field} value={agent.personalRadiusCm ?? ''} onChange={(event) => updateAgent('personalRadiusCm', event.target.value)} />
-                </label>
-                <label className={STUDIO_CHROME.label}>
-                  体型 profileId
-                  <input className={STUDIO_CHROME.field} value={agent.profileId ?? ''} onChange={(event) => updateAgent('profileId', event.target.value)} />
-                </label>
-              </div>
-            ) : (
-              <p className="mt-2 text-xs text-studio-muted">这份草稿里没有带 CrowdSimulationAgent 的模板。</p>
-            )}
-          </div>
+          <UnitTemplateInspector
+            key={modId}
+            modId={modId}
+            view={snapshot?.unitTemplates}
+            draftText={texts.templates ?? ''}
+            issues={issues}
+            onDraftChange={editTemplates}
+            onDraftError={(message) => setIssues([{ path: 'unitTypes', message }])}
+          />
         ) : null}
 
         {tab === 'costMatrix' ? (
