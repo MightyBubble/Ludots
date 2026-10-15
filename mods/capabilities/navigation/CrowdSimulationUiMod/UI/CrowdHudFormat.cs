@@ -189,8 +189,8 @@ internal static class CrowdHudFormat
         CrowdPlacementReject.OutOfBounds => Required(text.PlaceOutOfBounds, "placeOutOfBounds"),
         CrowdPlacementReject.OverlapsStructure => Required(text.PlaceOverlapsStructure, "placeOverlapsStructure"),
         CrowdPlacementReject.OverlapsBlocked => Required(text.PlaceOverlapsBlocked, "placeOverlapsBlocked"),
-        CrowdPlacementReject.SpanTerrain => Required(text.PlaceSpanTerrain, "placeSpanTerrain"),
-        CrowdPlacementReject.AnchorTerrain => Required(text.PlaceAnchorTerrain, "placeAnchorTerrain"),
+        CrowdPlacementReject.InteriorArea => Required(text.PlaceSpanTerrain, "placeSpanTerrain"),
+        CrowdPlacementReject.EndpointArea => Required(text.PlaceAnchorTerrain, "placeAnchorTerrain"),
         _ => throw new InvalidOperationException($"未知放置拒绝原因 {reason}。"),
     };
 
