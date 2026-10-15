@@ -61,8 +61,8 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
     /// S4 脚本里一条指令带多组同导航同目标，玩家 1 也会对同一目标再下指令：
     /// 规划会共用同指令另一组新建的场，也会沿用规划时钉住的缓存场；
     /// 结构变更后同导航同目标的组搭同一次刷新。
-    /// 走廊并集盖住成员的去路，成员只在拆掉建筑后、旧场等刷新落地的那几 tick 采到场外，
-    /// 那时刷新已在排队或在途，不另提扩展。回放诊断仍须逐段对齐。
+    /// 拆掉建筑后、旧场等刷新落地的那几 tick 成员采到场外，走失记录留到刷新落帧，
+    /// 再整份交给一次扩展，走失 tile 都在旧走廊一圈垫层内。回放诊断仍须逐段对齐。
     /// </summary>
     [Test]
     public void S4Script_PlansReuseCachedFields_ReplayDiagnosticsMatch()
@@ -97,8 +97,10 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Assert.That(planner.PlanCachedReplies, Is.GreaterThan(0), "规划没有沿用缓存场");
         Assert.That(planner.PlanSameReplies, Is.GreaterThan(0), "规划没有共用同指令的场");
         Assert.That(planner.RefreshRiders, Is.GreaterThan(0), "刷新没有合并同导航同目标的组");
-        Assert.That(planner.StraySkipInFlight, Is.EqualTo(planner.StrayGroupTicks), "成员在没有刷新等着的时候走出了本组流场");
-        Assert.That(planner.ExtendSubmits, Is.EqualTo(0));
+        Assert.That(planner.StraySkipInFlight, Is.GreaterThan(0), "刷新在途时成员没有采到场外");
+        Assert.That(planner.ExtendSubmits, Is.GreaterThan(0), "刷新落帧后攒下的走失记录没有提交扩展");
+        Assert.That(planner.ExtendSubmits, Is.LessThanOrEqualTo(planner.StrayGroupTicks - planner.StraySkipInFlight));
+        Assert.That(planner.ExtendBeyondPad, Is.EqualTo(0), "走失 tile 离旧走廊超过一圈垫层");
         host.RunReplay();
         TestContext.Out.WriteLine(
             $"replay status={host.ReplayStatus} divTick={host.ReplayDivergenceTick} section={host.ReplayDivergenceSection} diagTick={host.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(host.ReplayDivergenceDiagnostic)}");
@@ -163,8 +165,8 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
             $"hits {planner.FlowCacheHits} misses {planner.FlowCacheMisses} evict {planner.FlowCacheEvicts} " +
             $"planCached {planner.PlanCachedReplies} planSame {planner.PlanSameReplies} " +
             $"refreshes {planner.FlowRefreshSubmits} riders {planner.RefreshRiders} refreshCached {planner.RefreshCachedReplies} " +
-            $"notes {planner.StrayGroupTicks} skipFlight {planner.StraySkipInFlight} skipClosed {planner.StraySkipNoGrowth} " +
-            $"skipCovered {planner.StraySkipCovered} inPad {planner.ExtendWithinPad} beyond {planner.ExtendBeyondPad} " +
+            $"pendingTicks {planner.StrayGroupTicks} skipFlight {planner.StraySkipInFlight} strayTiles {planner.ExtendStrayTiles} " +
+            $"inPad {planner.ExtendWithinPad} beyond {planner.ExtendBeyondPad} " +
             $"extendMs {stats.ExtendMs:F1} extendJobs {stats.ExtendJobs}");
         TestContext.Out.WriteLine("per-group histogram (index = count, last = that many or more): " + string.Join(",", hist));
         TestContext.Out.WriteLine("tile distance histogram: " + string.Join(",", planner.ExtendDistance));

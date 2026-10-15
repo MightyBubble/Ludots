@@ -23,6 +23,7 @@ public sealed class CrowdSimPlanner
     private const int LeaderPoolCount = 32;
     private const int PathCapacity = CrowdSimulationLimits.HotPathSpanReserve;
     private const int OriginBufferCount = 16;
+    private const int StrayRecordCapacity = CrowdSimulationLimits.HotPathSlotReserve;
 
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
@@ -39,9 +40,8 @@ public sealed class CrowdSimPlanner
     private readonly FlowFieldCache _cache;
     private readonly long[] _lruKeys;
     private readonly byte[] _maskA;
-    private readonly byte[] _maskUnion;
-    private readonly byte[] _strayStamp;
-    private readonly int[] _strayCell;
+    private readonly StrayRecord?[] _strays = new StrayRecord?[CrowdNavGroupSet.MaxGroups];
+    private readonly Stack<StrayRecord> _strayPool;
     private readonly int[] _extendByGroup;
     private readonly int[] _extendDist;
     private readonly Stack<byte[]> _maskCopies;
@@ -156,6 +156,43 @@ public sealed class CrowdSimPlanner
         public FlowField? Cached;
         /// <summary>交给工人的走廊副本。工人退休前不能回到池里。</summary>
         public byte[]? MaskCopy;
+        /// <summary>交给工人的走失记录,和走廊副本同时回池。</summary>
+        public StrayRecord? Strays;
+    }
+
+    /// <summary>一组待扩展的走失格:每个 tile 记第一次碰到的格,按记下的先后排。
+    /// 记录跨 tick 累积,下一次扩展整份带走。</summary>
+    private sealed class StrayRecord
+    {
+        public StrayRecord(int tileCount) => Has = new byte[tileCount];
+
+        public CrowdNavGroupSet.Group? Owner;
+        public readonly byte[] Has;
+        public int[] Cells = new int[StrayRecordCapacity];
+        public int[] Tiles = new int[StrayRecordCapacity];
+        public int Count;
+
+        public void Add(int tile, int cell)
+        {
+            if ((uint)tile >= (uint)Has.Length || Has[tile] != 0) return;
+            if (Count == Cells.Length)
+            {
+                Array.Resize(ref Cells, Count * 2);
+                Array.Resize(ref Tiles, Count * 2);
+            }
+
+            Has[tile] = 1;
+            Cells[Count] = cell;
+            Tiles[Count] = tile;
+            Count++;
+        }
+
+        public void Clear()
+        {
+            for (int i = 0; i < Count; i++) Has[Tiles[i]] = 0;
+            Count = 0;
+            Owner = null;
+        }
     }
 
     private struct Rider
@@ -219,10 +256,9 @@ public sealed class CrowdSimPlanner
         int tileCount = _tilesPerSide * _tilesPerSide;
         if (tileCount < 1) tileCount = 1;
         _maskA = new byte[tileCount];
-        _maskUnion = new byte[tileCount];
         foreach (var pooled in _groupPool) pooled.Corridor = new byte[tileCount];
-        _strayStamp = new byte[CrowdNavGroupSet.MaxGroups];
-        _strayCell = new int[CrowdNavGroupSet.MaxGroups];
+        _strayPool = new Stack<StrayRecord>(GroupScratch + extendInFlight);
+        for (int i = 0; i < GroupScratch + extendInFlight; i++) _strayPool.Push(new StrayRecord(tileCount));
         _extendByGroup = new int[CrowdNavGroupSet.MaxGroups];
         _extendDist = new int[_tilesPerSide + 1];
         _maskCopies = new Stack<byte[]>(pendingSlots);
@@ -232,7 +268,7 @@ public sealed class CrowdSimPlanner
         _originStamp = new int[tileCount * 2];
         _originBuffers = new Stack<int[]>(GroupScratch);
         for (int i = 0; i < OriginBufferCount; i++) _originBuffers.Push(new int[tileCount * 4]);
-        session.Groups.ReleaseFlow = ReleaseGroupFlow;
+        session.Groups.OnRelease = ReleaseGroup;
     }
 
     private static int InFlight(int perTick, int latencyTicks)
@@ -284,6 +320,7 @@ public sealed class CrowdSimPlanner
                 g.Goal = CrowdDeployment.NearestPassable(session.ResolveNavContext(g.NavId), link.GoalCell);
                 g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
                 if (g.Flow != null) RecycleFlow(g);
+                DropStrays(g);
                 g.Leader = null;
                 g.Planning = true;
                 g.Extending = false;
@@ -846,6 +883,7 @@ public sealed class CrowdSimPlanner
                     RecycleFlow(g);
                     g.Goal = -1;
                     g.GoalComp = -2;
+                    DropStrays(g);
                 }
 
                 Recycle(leaderResult);
@@ -1250,17 +1288,15 @@ public sealed class CrowdSimPlanner
     public int FlowRefreshSubmits { get; private set; }
     /// <summary>已提交的走廊扩展次数。</summary>
     public int ExtendSubmits { get; private set; }
-    /// <summary>场外组·tick。同一组同一 tick 只计一次。</summary>
+    /// <summary>带着走失记录进入扩展轮转的组·tick。</summary>
     internal int StrayGroupTicks { get; private set; }
-    /// <summary>扩展标记还在，或上一次答复还占着槽，本次不另提。</summary>
+    /// <summary>轮到时刷新或扩展还在途,记录留到答复落帧后。</summary>
     internal int StraySkipInFlight { get; private set; }
-    /// <summary>垫一圈也不会变大，掩码已经包住这次走廊。</summary>
-    internal int StraySkipNoGrowth { get; private set; }
-    /// <summary>走失格所在 tile 已经在当前掩码里。不再为它垫外圈。</summary>
-    internal int StraySkipCovered { get; private set; }
-    /// <summary>走失 tile 落在一圈垫层内。</summary>
+    /// <summary>扩展带走的走失 tile 总数。</summary>
+    internal int ExtendStrayTiles { get; private set; }
+    /// <summary>一次扩展里最远的走失 tile 落在一圈垫层内。</summary>
     internal int ExtendWithinPad { get; private set; }
-    /// <summary>走失 tile 比一圈垫层更远，这一次重建盖不住它。</summary>
+    /// <summary>一次扩展里最远的走失 tile 比一圈垫层更远。</summary>
     internal int ExtendBeyondPad { get; private set; }
     internal int[] ExtendByGroup => _extendByGroup;
     internal int[] ExtendDistance => _extendDist;
@@ -1337,7 +1373,7 @@ public sealed class CrowdSimPlanner
                 for (int t = 0; t < mask.Length; t++) mask[t] |= other[t];
             }
 
-            Submit(pr, g, mask, -1, tick, false);
+            Submit(pr, g, mask, null, tick, false);
             FlowRefreshSubmits++;
             served++;
         }
@@ -1574,13 +1610,13 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>反应取代组的在途刷新和这一 tick 记下的走失:答复落帧时这一组被跳过,
+    /// <summary>反应取代组的在途刷新和攒下的走失记录:答复落帧时这一组被跳过,
     /// 不清新请求的标记,也不再排一次刷新。</summary>
     private void Supersede(CrowdNavGroupSet.Group g)
     {
         if (g.Extending) g.StateSeq++;
         g.Extending = false;
-        if ((uint)g.Id < (uint)_strayStamp.Length) _strayStamp[g.Id] = 0;
+        DropStrays(g);
     }
 
     private static int CellOfUnit(CrowdSimSession session, int dense, CrowdSimulationUnitState st)
@@ -1824,6 +1860,13 @@ public sealed class CrowdSimPlanner
         h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue.Count);
         for (int i = 0; i < _refreshQueue.Count; i++)
             h = CrowdSimChecksum.Mix(h, (uint)_refreshQueue[i].Id);
+        h = CrowdSimChecksum.Mix(h, (uint)_strayCursor);
+        var groups = _session.Groups.Groups;
+        for (int i = 0; i < groups.Count; i++)
+        {
+            if (groups[i] is { } g) h = CrowdSimChecksum.Mix(h, (uint)PendingStrays(g));
+        }
+
         h = CrowdSimChecksum.Mix(h, (uint)_seq);
         int lru = _cache.CopyOldestFirst(_lruKeys);
         h = CrowdSimChecksum.Mix(h, (uint)lru);
@@ -1831,13 +1874,52 @@ public sealed class CrowdSimPlanner
         return h;
     }
 
-    /// <summary>场外采样。同一组一 tick 只记第一次,处理在 <see cref="ProcessRefreshes"/>。</summary>
+    /// <summary>场外采样。每组每个 tile 记第一次碰到的格,跨 tick 累积到下一次扩展,处理在 <see cref="ProcessRefreshes"/>。</summary>
     public void NoteStray(int groupId, int cell)
     {
-        if ((uint)groupId >= (uint)_strayStamp.Length) return;
-        if (_strayStamp[groupId] != 0) return;
-        _strayStamp[groupId] = 1;
-        _strayCell[groupId] = cell;
+        if (!_session.Groups.TryGet(groupId, out var g)) return;
+        var cfg = _session.Config;
+        int tile = NavGridSteps.TileOf(cell, cfg.NavCellsPerSide, cfg.Hpa.NavCellsPerTile, _tilesPerSide);
+        StraysOf(g, true)!.Add(tile, cell);
+    }
+
+    private StrayRecord? StraysOf(CrowdNavGroupSet.Group g, bool create)
+    {
+        var rec = _strays[g.Id];
+        if (rec != null && rec.Owner != g)
+        {
+            ReturnStrays(rec);
+            _strays[g.Id] = rec = null;
+        }
+
+        if (rec == null && create)
+        {
+            if (!_strayPool.TryPop(out rec)) rec = new StrayRecord(_maskA.Length);
+            rec.Owner = g;
+            _strays[g.Id] = rec;
+        }
+
+        return rec;
+    }
+
+    private void DropStrays(CrowdNavGroupSet.Group g)
+    {
+        var rec = _strays[g.Id];
+        if (rec == null) return;
+        _strays[g.Id] = null;
+        ReturnStrays(rec);
+    }
+
+    private void ReturnStrays(StrayRecord rec)
+    {
+        rec.Clear();
+        _strayPool.Push(rec);
+    }
+
+    private int PendingStrays(CrowdNavGroupSet.Group g)
+    {
+        var rec = _strays[g.Id];
+        return rec != null && rec.Owner == g && rec.Count > 0 ? rec.Count : -1;
     }
 
     /// <param name="buildRevision">非 0 时写成该答复的路径请求号。0 表示沿用场上已有的号：缓存命中复用的就是当初挂上的那份。</param>
@@ -1858,85 +1940,75 @@ public sealed class CrowdSimPlanner
         if (old != null) _cache.Release(old);
     }
 
-    private void ReleaseGroupFlow(CrowdNavGroupSet.Group g) => SetFlow(g, null, false, 0);
+    private void ReleaseGroup(CrowdNavGroupSet.Group g)
+    {
+        SetFlow(g, null, false, 0);
+        DropStrays(g);
+    }
 
+    /// <summary>从上一次服务过的下一组起轮转,有走失记录、有场、没有刷新或扩展在途的组提交扩展,每 tick 预算 maxRebuildsPerTick。
+    /// 在途的组记录留着,答复落帧后再提。</summary>
     private void ProcessExtensions(int tick)
     {
         int budget = _session.Config.Flowfield.MaxRebuildsPerTick;
         var groups = _session.Groups.Groups;
         int count = groups.Count;
-        int served = 0;
-        int scanned = 0;
         for (int i = 0; i < count; i++)
         {
             var noted = groups[i];
-            if (noted != null && (uint)noted.Id < (uint)_strayStamp.Length && _strayStamp[noted.Id] != 0)
-                StrayGroupTicks++;
+            if (noted != null && PendingStrays(noted) > 0) StrayGroupTicks++;
         }
 
-        if (count > 0 && budget > 0)
+        int start = count > 0 ? _strayCursor % count : 0;
+        for (int k = 0; k < count && budget > 0; k++)
         {
-            if (_strayCursor >= count) _strayCursor = 0;
-            for (; scanned < count && served < budget; scanned++)
+            int gi = (start + k) % count;
+            var g = groups[gi];
+            if (g == null) continue;
+            var rec = StraysOf(g, false);
+            if (rec == null || rec.Count == 0 || g.Flow?.Mask == null) continue;
+            if (g.Extending)
             {
-                int index = _strayCursor + scanned;
-                if (index >= count) index -= count;
-                var g = groups[index];
-                if (g == null || (uint)g.Id >= (uint)_strayStamp.Length || _strayStamp[g.Id] == 0) continue;
-                if (SubmitExtension(g, _strayCell[g.Id], tick)) served++;
+                StraySkipInFlight++;
+                continue;
             }
 
-            _strayCursor += scanned;
-            if (_strayCursor >= count) _strayCursor -= count;
+            _strayCursor = gi + 1;
+            SubmitExtension(g, rec, tick);
+            budget--;
         }
-
-        Array.Clear(_strayStamp, 0, _strayStamp.Length);
     }
 
-    private bool SubmitExtension(CrowdNavGroupSet.Group g, int cell, int tick)
+    private void SubmitExtension(CrowdNavGroupSet.Group g, StrayRecord rec, int tick)
     {
-        if (g.Planning || g.Flow?.Mask == null || g.Goal < 0) return false;
-        if (Refreshing(g))
+        var mask = g.Flow!.Mask!;
+        int dist = 0;
+        for (int i = 0; i < rec.Count; i++)
         {
-            StraySkipInFlight++;
-            return false;
+            int d = TileDistance(mask, rec.Tiles[i]);
+            if (d > dist) dist = d;
         }
 
-        if (!FillServiceMask(g.Flow.Mask)) return false;
-        if (FlowFieldBuilder.MaskSubset(_maskUnion, g.Flow.Mask))
-        {
-            StraySkipNoGrowth++;
-            return false;
-        }
-
-        var nav = _session.ResolveNavContext(g.NavId);
-        int tile = NavGridSteps.TileOf(cell, nav.NavCellsPerSide, nav.Hpa!.NavCellsPerTile, _tilesPerSide);
-        var mask = g.Flow.Mask;
-        // 走失格所在 tile 已经在掩码里。再垫外圈不会把这块 tile 新标进来。
-        if ((uint)tile < (uint)mask.Length && mask[tile] != 0)
-        {
-            StraySkipCovered++;
-            return false;
-        }
-
-        int dist = TileDistance(mask, tile);
         int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
         if (dist <= pad) ExtendWithinPad++;
         else ExtendBeyondPad++;
         if ((uint)dist < (uint)_extendDist.Length) _extendDist[dist]++;
 
+        _strays[g.Id] = null;
         var pr = RentRefresh();
         AddRider(pr, g);
-        Submit(pr, g, RentMask(mask), cell, tick, true);
+        pr.Strays = rec;
+        Submit(pr, g, RentMask(mask), rec, tick, true);
         ExtendSubmits++;
+        ExtendStrayTiles += rec.Count;
         if ((uint)g.Id < (uint)_extendByGroup.Length) _extendByGroup[g.Id]++;
-        return true;
     }
 
     private int TileDistance(byte[] mask, int tile)
     {
         int side = _tilesPerSide;
         if (side < 1 || (uint)tile >= (uint)mask.Length) return side;
+        if (mask[tile] != 0) return 0;
         int tx = tile % side, ty = tile / side;
         int best = side;
         for (int i = 0; i < mask.Length; i++)
@@ -1989,7 +2061,7 @@ public sealed class CrowdSimPlanner
     /// 钉住同 (导航, 目标) 的缓存场,把它的掩码交给工人。搭车的组都标成刷新中。
     /// 在途表按生效帧排序,同帧保持提交顺序。
     /// </summary>
-    private void Submit(PendingRefresh pr, CrowdNavGroupSet.Group g, byte[] mask, int strayCell, int tick, bool extend)
+    private void Submit(PendingRefresh pr, CrowdNavGroupSet.Group g, byte[] mask, StrayRecord? strays, int tick, bool extend)
     {
         var nav = _session.ResolveNavContext(g.NavId);
         var cached = PinCached(g.NavId, g.Goal);
@@ -1997,7 +2069,8 @@ public sealed class CrowdSimPlanner
         {
             CorridorMask = mask,
             CachedMask = cached?.Mask,
-            StrayCell = strayCell,
+            StrayCells = strays?.Cells,
+            StrayCount = strays?.Count ?? 0,
             Extension = extend,
         };
         pr.RequestId = _service.Request(req, tick);
@@ -2014,15 +2087,6 @@ public sealed class CrowdSimPlanner
         _pendingRefreshes.Insert(at, pr);
     }
 
-    private bool FillServiceMask(byte[] mask)
-    {
-        if (mask.Length != _maskA.Length) return false;
-        int pad = _session.Config.Flowfield.CorridorPaddingNavTiles;
-        FlowFieldBuilder.PadMaskInto(mask, _tilesPerSide, pad, _maskA);
-        FlowFieldBuilder.OrMaskInto(_maskA, mask, _maskUnion);
-        return true;
-    }
-
     private byte[] RentMask(byte[] source)
     {
         if (!_maskCopies.TryPop(out var copy) || copy.Length != source.Length) copy = new byte[source.Length];
@@ -2032,6 +2096,12 @@ public sealed class CrowdSimPlanner
 
     private void ReleaseMask(PendingRefresh pr)
     {
+        if (pr.Strays != null)
+        {
+            ReturnStrays(pr.Strays);
+            pr.Strays = null;
+        }
+
         if (pr.MaskCopy == null) return;
         _maskCopies.Push(pr.MaskCopy);
         pr.MaskCopy = null;
