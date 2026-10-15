@@ -36,7 +36,7 @@ public sealed class NavSurfaceAsset
     public required int NavCellsX { get; init; }
     public required int NavCellsY { get; init; }
     public required int NavCellSizeCm { get; init; }
-    /// <summary>地形类型 id 表；格值 = 本表下标。顺序与 maps.&lt;mapId&gt;.terrainAreas 的键序一致。</summary>
+    /// <summary>地形类型 id 表；格值 = 本表下标。顺序与 maps.&lt;mapId&gt;.terrainTypes 一致。</summary>
     public required string[] TerrainTypeIds { get; init; }
     /// <summary>逐格地形类型编号（行优先，长度 = NavCellsX × NavCellsY）。</summary>
     public required byte[] TerrainCells { get; init; }

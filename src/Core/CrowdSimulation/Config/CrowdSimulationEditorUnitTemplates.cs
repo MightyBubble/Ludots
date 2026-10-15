@@ -121,7 +121,7 @@ public static partial class CrowdSimulationEditorApi
             string modId,
             JsonArray mergedTemplates,
             JsonArray mergedProfiles,
-            JsonObject pathing)
+            JsonObject traversal)
         {
             var schema = new JsonArray();
             foreach (CrowdUnitTemplateField field in CrowdUnitTemplateFacts.AuthoredFields)
@@ -141,7 +141,7 @@ public static partial class CrowdSimulationEditorApi
             }
 
             var agentTypes = new JsonArray();
-            if (pathing["agentTypes"] is JsonObject agents)
+            if (traversal["agentTypes"] is JsonObject agents)
             {
                 foreach (KeyValuePair<string, JsonNode?> agent in agents)
                 {

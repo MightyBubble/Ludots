@@ -25,10 +25,20 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private static readonly string[] NavMeshMapKeys = { "boards", "navProfiles", "navAreas" };
         private static readonly string[] MassNavigationMapKeys = { "boards", "navProfiles", "navAreas" };
-        private static readonly string[] CrowdSimulationMapKeys = { "boards", "terrainAreas", "navAreas", "logicTerrainAsset", "jumpLinkBake" };
+        private static readonly string[] CrowdSimulationMapKeys = { "boards", "logicTerrainAsset", "jumpLinkBake" };
+        private static readonly string[] CrowdSimulationRequiredMapKeys = { "solver", "navCellSizeCm", "terrainTypes" };
+        private static readonly string[] SolverOnly = { "solver" };
+
+        /// <summary>maps.&lt;mapId&gt; 必须写的键。</summary>
+        public static IReadOnlyList<string> RequiredMapKeys(string solver) => solver switch
+        {
+            CrowdSimulation => CrowdSimulationRequiredMapKeys,
+            NavMesh or MassNavigation => SolverOnly,
+            _ => throw new InvalidOperationException($"maps.<mapId>.solver 必须是 {AllowedList}，当前是 \"{solver}\"。"),
+        };
 
         /// <summary>
-        /// maps.&lt;mapId&gt; 除 solver 外可以写的键。每种求解器只收自己读的键，别的求解器的键写在这张图上是装载错误。
+        /// maps.&lt;mapId&gt; 另外可以写的键。每种求解器只收自己读的键，别的求解器的键写在这张图上是装载错误。
         /// </summary>
         public static IReadOnlyList<string> OptionalMapKeys(string solver) => solver switch
         {

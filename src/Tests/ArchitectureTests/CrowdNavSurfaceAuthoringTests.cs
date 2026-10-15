@@ -53,7 +53,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => Bake(terrain, TwoTypes, Sources()));
 
-        Assert.That(ex!.Message, Is.EqualTo("格（0,0）的 AreaId = 2，超出 terrainAreas（2 项）。"));
+        Assert.That(ex!.Message, Is.EqualTo("格（0,0）的 AreaId = 2，超出 terrainTypes（2 项）。"));
     }
 
     [Test]

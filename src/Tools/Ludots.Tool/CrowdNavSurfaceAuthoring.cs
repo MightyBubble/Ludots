@@ -14,7 +14,6 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -58,7 +57,7 @@ public static class CrowdNavSurfaceAuthoring
         if (terrainTypeIds.Count < 1 || terrainTypeIds.Count > CrowdSimulationLimits.MaxTerrainTypeIds)
         {
             throw new InvalidOperationException(
-                $"{sources.CrowdSource}: terrainAreas 有 {terrainTypeIds.Count} 项，需为 1~{CrowdSimulationLimits.MaxTerrainTypeIds}。");
+                $"{sources.CrowdSource}: terrainTypes 有 {terrainTypeIds.Count} 项，需为 1~{CrowdSimulationLimits.MaxTerrainTypeIds}。");
         }
 
         var typeIds = new string[terrainTypeIds.Count];
@@ -68,12 +67,12 @@ public static class CrowdNavSurfaceAuthoring
             string id = terrainTypeIds[i];
             if (string.IsNullOrWhiteSpace(id))
             {
-                throw new InvalidOperationException($"{sources.CrowdSource}: terrainAreas[{i}].terrainId 为空。");
+                throw new InvalidOperationException($"{sources.CrowdSource}: terrainTypes[{i}] 为空。");
             }
 
             if (!seen.Add(id))
             {
-                throw new InvalidOperationException($"{sources.CrowdSource}: terrainAreas 的 terrainId \"{id}\" 重复。");
+                throw new InvalidOperationException($"{sources.CrowdSource}: terrainTypes 的 \"{id}\" 重复。");
             }
 
             typeIds[i] = id;
@@ -88,13 +87,13 @@ public static class CrowdNavSurfaceAuthoring
         if (sources.CrowdCellSizeCm <= 0)
         {
             throw new InvalidOperationException(
-                $"{sources.CrowdSource}: profiles.cellSizeCm = {sources.CrowdCellSizeCm}，需为 > 0。");
+                $"{sources.CrowdSource}: navCellSizeCm = {sources.CrowdCellSizeCm}，需为 > 0。");
         }
 
         if (sources.MapWidthCm % sources.CrowdCellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"{sources.MapSource}: WidthCm（{sources.MapWidthCm}）不能被 {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 整除。");
+                $"{sources.MapSource}: WidthCm（{sources.MapWidthCm}）不能被 {sources.CrowdSource} 的 navCellSizeCm {sources.CrowdCellSizeCm} cm 整除。");
         }
 
         int navCells = sources.MapWidthCm / sources.CrowdCellSizeCm;
@@ -105,7 +104,7 @@ public static class CrowdNavSurfaceAuthoring
         {
             throw new InvalidOperationException(
                 $"{sources.MapSource}: 逻辑地形是 {terrain.WidthCells}×{terrain.HeightCells} 格、步长 {terrain.HorizontalStepCm}×{terrain.VerticalStepCm} cm，" +
-                $"地图 {sources.MapWidthCm}×{sources.MapHeightCm} cm / {sources.CrowdSource} 的 profiles.cellSizeCm {sources.CrowdCellSizeCm} cm 推出 {navCells}×{navCells} 格。");
+                $"地图 {sources.MapWidthCm}×{sources.MapHeightCm} cm / {sources.CrowdSource} 的 navCellSizeCm {sources.CrowdCellSizeCm} cm 推出 {navCells}×{navCells} 格。");
         }
 
         if (sources.HeightBoundsWidthCm != sources.MapWidthCm || sources.HeightBoundsHeightCm != sources.MapHeightCm)
@@ -340,7 +339,7 @@ public static class CrowdNavSurfaceAuthoring
     }
 
     /// <summary>
-    /// 先整张填 <paramref name="fillTerrainId"/>，再按顺序盖矩形，后写的覆盖先写的。返回逐格 AreaId（terrainAreas 下标）。
+    /// 先整张填 <paramref name="fillTerrainId"/>，再按顺序盖矩形，后写的覆盖先写的。返回逐格 AreaId（terrainTypes 下标）。
     /// </summary>
     public static byte[] PaintTerrainAreas(
         int navCellsPerSide,
@@ -467,7 +466,7 @@ public static class CrowdNavSurfaceAuthoring
         }
 
         throw new InvalidOperationException(
-            $"地形类型 \"{terrainId}\" 不在 terrainAreas（{string.Join(", ", terrainTypeIds)}）里。");
+            $"地形类型 \"{terrainId}\" 不在 maps.<mapId>.terrainTypes（{string.Join(", ", terrainTypeIds)}）里。");
     }
 
     public static void WriteNavSurface(string targetPath, NavSurfaceAsset asset)
@@ -520,7 +519,7 @@ public static class CrowdNavSurfaceAuthoring
                 $"地图 \"{map.Id}\" 的 solver 是 \"{mapNav.Solver}\"，烘焙 CrowdSimulation 地表只接受 {NavSolverDeclaration.CrowdSimulation}。");
         }
 
-        PathingConfig pathing = new PathingConfigLoader(pipeline).Load(catalog, report);
+        CrowdTraversalConfig traversal = CrowdTraversalConfig.Load(pipeline, catalog, report);
         CrowdSimulationConfig config = new CrowdSimulationConfigLoader(pipeline).LoadConfig(catalog, report);
         int fixedHz = new EngineClockConfigLoader(pipeline).Load(catalog, report).FixedHz;
         List<EntityTemplate> templates = LoadTemplates(pipeline, catalog, report);
@@ -531,7 +530,7 @@ public static class CrowdNavSurfaceAuthoring
         var shares = new bool[players * players];
         CrowdPairRules rules = CrowdPairRules.Matrices(players, response, shares);
         CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(
-            config, map, profiles, navmesh, pathing, facts, fixedHz, rules);
+            config, map, profiles, navmesh, traversal, facts, fixedHz, rules);
         IReadOnlyList<LayeredPathRecord> bridges = Array.Empty<LayeredPathRecord>();
         if (mapNav.JumpLinkBake != null)
         {
@@ -563,7 +562,7 @@ public static class CrowdNavSurfaceAuthoring
         IReadOnlyList<string> terrainIds = binding.Runtime.TerrainTypeIds;
         if (terrainIds.Count == 0)
         {
-            throw new InvalidOperationException($"Navigation/navmesh.json: maps.{mapId}.terrainAreas 为空。");
+            throw new InvalidOperationException($"Navigation/navmesh.json: maps.{mapId}.terrainTypes 为空。");
         }
 
         CrowdTerrainTypeColorTable table = CrowdTerrainTypeColors.LoadMerged(
@@ -708,7 +707,7 @@ public static class CrowdNavSurfaceAuthoring
         if (cell.AreaId >= terrainCount)
         {
             throw new InvalidOperationException(
-                $"格（{col},{row}）的 AreaId = {cell.AreaId}，超出 terrainAreas（{terrainCount} 项）。");
+                $"格（{col},{row}）的 AreaId = {cell.AreaId}，超出 terrainTypes（{terrainCount} 项）。");
         }
     }
 

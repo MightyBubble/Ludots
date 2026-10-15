@@ -8,14 +8,13 @@ using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 
 namespace CrowdSimulationTests;
 
 /// <summary>
 /// S0 测试夹具：标准参数 Mod 的全量参数，叠上演示内容 Mod 的桥锚地形和结构模板，
-/// 再叠无头演示图的地图事实（开局单位数、出生点、s7barrier）。导航区域、能力档、移动类型和单位模板分别来自
-/// navmesh.json、pathing.json 与演示内容 Mod 的模板。
+/// 再叠无头演示图的地图事实（开局单位数、出生点、s7barrier）。通行矩阵是标准参数 Mod 与演示内容 Mod 两份
+/// traversal.json 的合并，地图的导航格边长和地形顺序在 fixtures/demo-navmesh.json，单位模板来自演示内容 Mod。
 /// </summary>
 public static class TestDefaults
 {
@@ -45,20 +44,24 @@ public static class TestDefaults
         return merged;
     }
 
-    public static JsonObject DefaultPathingJson()
-        => (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "pathing.json")))!;
+    public static JsonObject DefaultTraversalJson()
+    {
+        var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "traversal.json")))!;
+        ConfigPipeline.DeepMerge(merged, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "crowddemo", "CrowdSimulation", "traversal.json")))!);
+        return merged;
+    }
 
     public static NavMeshBakeConfig ParseNavmesh(JsonObject json, AgentProfileRegistry? profiles = null)
         => NavMeshBakeConfigLoader.Parse(json, profiles ?? DemoProfiles());
 
-    public static PathingConfig ParsePathing(JsonObject json)
-        => PathingConfigLoader.Parse(json);
+    public static CrowdTraversalConfig ParseTraversal(JsonObject json)
+        => CrowdTraversalConfig.Parse(json);
 
     public static NavMeshBakeConfig DemoNavmesh()
         => ParseNavmesh(DefaultNavmeshJson());
 
-    public static PathingConfig DemoPathing()
-        => ParsePathing(DefaultPathingJson());
+    public static CrowdTraversalConfig DemoTraversal()
+        => ParseTraversal(DefaultTraversalJson());
 
     public static List<CrowdUnitTemplateFacts> DemoTemplates()
     {
@@ -68,13 +71,13 @@ public static class TestDefaults
         return CrowdUnitTemplateFacts.FromTemplates(templates);
     }
 
-    public static void SetCapabilityCellSizeCm(JsonObject navmesh, int cellSizeCm)
+    public static void SetNavCellSizeCm(JsonObject navmesh, int navCellSizeCm)
     {
-        foreach (var node in navmesh["profiles"]!.AsObject())
+        foreach (var node in navmesh["maps"]!.AsObject())
         {
-            if (node.Value?["cellSizeCm"] != null)
+            if (node.Value?["navCellSizeCm"] != null)
             {
-                node.Value["cellSizeCm"] = cellSizeCm;
+                node.Value["navCellSizeCm"] = navCellSizeCm;
             }
         }
     }
@@ -154,7 +157,7 @@ public static class TestDefaults
         AgentProfileRegistry? profiles = null,
         CrowdPairRules? pairRules = null,
         NavMeshBakeConfig? navmesh = null,
-        PathingConfig? pathing = null,
+        CrowdTraversalConfig? traversal = null,
         IReadOnlyList<CrowdUnitTemplateFacts>? templates = null)
     {
         bool implicitDemoMap = map == null;
@@ -176,7 +179,7 @@ public static class TestDefaults
             map,
             profiles,
             navmesh ?? DemoNavmesh(),
-            pathing ?? DemoPathing(),
+            traversal ?? DemoTraversal(),
             templates ?? DemoTemplates(),
             FixedHz,
             pairRules);

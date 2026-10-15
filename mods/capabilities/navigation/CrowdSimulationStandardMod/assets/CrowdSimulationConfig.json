@@ -103,7 +103,6 @@
     "speedCapRatio": 1.5,
     "restAccelScale": 2,
     "restSeparationScale": 0.6,
-    "jumpSpeedRatio": 1.3,
     "slotTimeConstantSec": 1.5
   },
   "avoidance": {

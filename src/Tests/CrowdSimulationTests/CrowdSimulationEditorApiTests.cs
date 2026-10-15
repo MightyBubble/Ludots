@@ -164,7 +164,7 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void CostMatrix_RoundTrip_WritesPassableFalseForEmptyCell()
+    public void CostMatrix_RoundTrip_WritesOnlyChangedCellsToTraversal()
     {
         string repo = FindRepoRoot();
         string copy = CopyS4();
@@ -172,18 +172,44 @@ public class CrowdSimulationEditorApiTests
         {
             JsonObject snapshot = CrowdSimulationEditorApi.Load(repo, S4, copy);
             JsonObject matrix = (JsonObject)snapshot["costMatrix"]!.DeepClone()!;
-            JsonObject cells = (JsonObject)matrix["cells"]!;
-            JsonObject foot = (JsonObject)cells["foot"]!;
-            foot["0"] = 7;
-            foot["8"] = null;
+            Assert.That(matrix["mapAreas"]!.ToJsonString(), Is.EqualTo("[\"deep\",\"shallow\",\"open\",\"rough\",\"sheer\"]"));
+            matrix.Remove("mapAreas");
+            JsonObject footCells = (JsonObject)matrix["traversal"]!["agentTypes"]!["foot"]!["cells"]!;
+            footCells["open"]!["cost"] = 7;
+            footCells["burning"] = false;
             JsonObject applied = CrowdSimulationEditorApi.Apply(repo, S4, "costMatrix", matrix, copy);
             Assert.That(Flag(applied, "ok"), Is.True, applied.ToJsonString());
+            Assert.That(applied["written"]!.ToJsonString(), Does.Contain(S4 + "/assets/CrowdSimulation/traversal.json"));
+
             JsonObject again = CrowdSimulationEditorApi.Load(repo, S4, copy);
-            JsonObject footAgain = (JsonObject)((JsonObject)((JsonObject)again["costMatrix"]!)["cells"]!)["foot"]!;
-            Assert.That(footAgain["0"]!.GetValue<int>(), Is.EqualTo(7));
-            Assert.That(footAgain["8"], Is.Null);
-            string pathing = File.ReadAllText(Path.Combine(copy, "assets", "Navigation", "pathing.json"));
-            Assert.That(pathing, Does.Contain("\"passable\": false").Or.Contain("\"passable\":false"));
+            JsonObject footAgain = (JsonObject)again["costMatrix"]!["traversal"]!["agentTypes"]!["foot"]!["cells"]!;
+            Assert.That(footAgain["open"]!["cost"]!.GetValue<double>(), Is.EqualTo(7));
+            Assert.That(footAgain["burning"]!.GetValue<bool>(), Is.False);
+
+            JsonObject own = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(copy, "assets", "CrowdSimulation", "traversal.json")))!;
+            Assert.That(own.ToJsonString(), Is.EqualTo(
+                "{\"agentTypes\":{\"foot\":{\"cells\":{\"open\":{\"cost\":7},\"burning\":false}}}}"));
+        }
+        finally
+        {
+            Directory.Delete(copy, recursive: true);
+        }
+    }
+
+    [Test]
+    public void CostMatrix_DroppingACellTheDependencyGives_IsRejected()
+    {
+        string copy = CopyS4();
+        try
+        {
+            JsonObject snapshot = CrowdSimulationEditorApi.Load(FindRepoRoot(), S4, copy);
+            JsonObject traversal = (JsonObject)snapshot["costMatrix"]!["traversal"]!.DeepClone()!;
+            ((JsonObject)traversal["agentTypes"]!["foot"]!["cells"]!).Remove("road");
+            JsonObject result = CrowdSimulationEditorApi.Validate(
+                FindRepoRoot(), S4, "costMatrix", new JsonObject { ["traversal"] = traversal }, copy);
+            Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("traversal.agentTypes.foot.cells.road"));
+            Assert.That(File.Exists(Path.Combine(copy, "assets", "CrowdSimulation", "traversal.json")), Is.False);
         }
         finally
         {
@@ -378,7 +404,7 @@ public class CrowdSimulationEditorApiTests
             JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
             Assert.That(result["issues"]!.ToJsonString(), Does.Contain("agentTypeId \\u0022hover\\u0022").Or.Contain("agentTypeId \"hover\""));
-            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("Navigation/pathing.json"));
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("CrowdSimulation/traversal.json"));
         }
         finally
         {
@@ -456,7 +482,7 @@ public class CrowdSimulationEditorApiTests
             JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", JsonNode.Parse(browser)!, copy);
             Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
             Assert.That(((JsonArray)result["written"]!).Count, Is.EqualTo(0), result.ToJsonString());
-            Assert.That(File.Exists(Path.Combine(copy, "assets", "Navigation", "pathing.json")), Is.False);
+            Assert.That(File.Exists(Path.Combine(copy, "assets", "CrowdSimulation", "traversal.json")), Is.False);
         }
         finally
         {

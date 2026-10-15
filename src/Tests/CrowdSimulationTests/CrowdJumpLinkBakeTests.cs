@@ -149,7 +149,7 @@ public sealed class CrowdJumpLinkBakeTests
             NavMeshBakeConfigLoader.Parse(navmesh, Bodies()))!;
         Assert.That(ex.Message, Does.Contain("maps.flat.jumpLinkBake.endpointTerrain"));
         Assert.That(ex.Message, Does.Contain("marsh"));
-        Assert.That(ex.Message, Does.Contain("terrainAreas"));
+        Assert.That(ex.Message, Does.Contain("terrainTypes"));
     }
 
     [Test]
@@ -477,11 +477,8 @@ public sealed class CrowdJumpLinkBakeTests
               "maps": {
                 "flat": {
                   "solver": "crowd-simulation",
-                  "navAreas": ["Default"],
-                  "terrainAreas": [
-                    { "terrainId": "land", "areaId": "Default" },
-                    { "terrainId": "cliff", "areaId": "Default" }
-                  ],
+                  "navCellSizeCm": 100,
+                  "terrainTypes": ["land", "cliff"],
                   {{jumpJson}}
                 }
               },

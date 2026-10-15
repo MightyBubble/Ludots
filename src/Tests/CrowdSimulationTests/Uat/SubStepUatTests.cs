@@ -17,7 +17,8 @@ namespace CrowdSimulationTests.Uat;
 public sealed class SubStepUatTests
 {
     private const double RoadCost = 0.2, ClampRoadCost = 0.01, Tol = 1.25;
-    private const int RoadCells = 60, Count = 30, Ticks = 240, RoadAreaId = 5, StartSearchRings = 40;
+    private const int RoadCells = 60, Count = 30, Ticks = 240, StartSearchRings = 40;
+    private const string RoadArea = "road";
 
     [Test]
     public void CheapRoad_StepDisplacementStaysUnderMaxStep()
@@ -155,7 +156,7 @@ public sealed class SubStepUatTests
         Assert.That(sim.Telemetry.SubStepClamped, Is.GreaterThanOrEqualTo(1), "截断未计入遥测 SubStepClamped——截断静默");
     }
 
-    /// <summary>所有单位模板取只按速度推导正好 1 个子步的速度，所有能走道路的移动类型把道路代价改成 <paramref name="roadCost"/>。</summary>
+    /// <summary>所有单位模板取只按速度推导正好 1 个子步的速度，所有能走道路的移动类型把道路代价和速度除数都改成 <paramref name="roadCost"/>。</summary>
     private static Parity.CrowdTestBodies Bodies(double roadCost)
     {
         var runtime = Parity.S1SurfaceTruthTests.LoadRuntime(CrowdUatKit.DefaultSeed);
@@ -166,9 +167,10 @@ public sealed class SubStepUatTests
         {
             foreach (var agent in json["agentTypes"]!.AsObject())
             {
-                foreach (var entry in agent.Value!["navMesh"]!["areaCosts"]!.AsArray())
+                if (agent.Value!["cells"]![RoadArea] is JsonObject road)
                 {
-                    if (entry!["areaId"]!.GetValue<int>() == RoadAreaId && entry["passable"]?.GetValue<bool>() != false) entry["cost"] = roadCost;
+                    road["cost"] = roadCost;
+                    road["speedDivisor"] = roadCost;
                 }
             }
         });

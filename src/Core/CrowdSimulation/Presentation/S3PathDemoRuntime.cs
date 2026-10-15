@@ -13,7 +13,6 @@ using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Terrain;
 
@@ -67,8 +66,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             ?? throw new InvalidOperationException("S3 路径演示需要 AgentProfiles 服务。");
         var navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
             .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
-        var pathing = new PathingConfigLoader(engine.ConfigPipeline)
-            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var traversal = CrowdTraversalConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
         var templateFacts = CrowdUnitTemplateFacts.FromTemplates(engine.MapLoader.TemplateRegistry.GetAll());
         int fixedHz = (int)MathF.Round(1f / Time.FixedDeltaTime);
         var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
@@ -77,7 +75,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             ?? throw new InvalidOperationException("S3 路径演示需要 PlayerEntityLookup。");
         var projected = CrowdPairRulesProjection.Project(configDto, map, teamRelations, players, engine.World);
         var runtime = CrowdSimulationConfigLoader.Load(
-            configDto, map, agentProfiles, navmesh, pathing, templateFacts, fixedHz, projected.Rules);
+            configDto, map, agentProfiles, navmesh, traversal, templateFacts, fixedHz, projected.Rules);
         var templatesById = engine.MapLoader.TemplateRegistry.GetAll()
             .Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);

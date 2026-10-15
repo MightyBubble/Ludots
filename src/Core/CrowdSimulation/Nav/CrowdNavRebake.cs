@@ -27,7 +27,7 @@ public sealed class CrowdNavRebakeContextResult
     public int NavId { get; set; }
     /// <summary>脏 tile(tile id 升序);空表 = 该上下文什么都看不到,什么都不失效。</summary>
     public List<int> DirtyTiles { get; set; } = new();
-    /// <summary>0 = 无变化,2 = 可走位翻转。1 = 代价或速度除数变了,或可走位没变但 tile 条目换了。道路/泛洪/火场只对把这些区域标成可走的移动类型是 1；passable 为 false 的区域铺上去是 2。</summary>
+    /// <summary>0 = 无变化,2 = 可走位翻转。1 = 代价或速度除数变了,或可走位没变但 tile 条目换了。道路/泛洪/火场只对把这些区域标成可走的移动类型是 1；该行写 false 的区域铺上去是 2。</summary>
     public int Kind { get; set; }
 }
 
@@ -417,7 +417,7 @@ public static class CrowdNavRebake
         Fix64 maxSlope = profile.MaxSlopeDeg is { } deg ? Fix64Math.Tan(deg * Fix64.Deg2Rad) : Fix64.MaxValue;
         var row = agent.CostByArea;
         var speedRow = agent.SpeedDivisorByArea;
-        var slopeFree = config.NavAreas;
+        var navAreas = config.NavAreas;
         var area = store.Area;
         var blocked = store.Blocked;
         var slope = sources.HeightS.Slope;
@@ -433,7 +433,7 @@ public static class CrowdNavRebake
                 int a = area[i];
                 Fix64 cell = row[a];
                 Fix64 div = speedRow[a];
-                if (cell > Fix64.Zero && !slopeFree[a].SlopeFree && slope[i] > maxSlope)
+                if (cell > Fix64.Zero && !navAreas[a].IgnoresSlope && slope[i] > maxSlope)
                 {
                     cell = Fix64.Zero;
                     div = Fix64.Zero;

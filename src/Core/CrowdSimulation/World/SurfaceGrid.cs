@@ -15,7 +15,7 @@ public sealed class SurfaceGrid
     public required int NavCellSizeCm { get; init; }
     /// <summary>逐格地形类型编号（= .navsurface 栅格，类型表下标）。</summary>
     public required byte[] TerrainType { get; init; }
-    /// <summary>逐格导航区域编号（terrainAreas 映射结果）。</summary>
+    /// <summary>逐格导航区域编号（地形经 traversal.json 的 terrainAreas 映射的结果）。</summary>
     public required byte[] Area { get; init; }
     /// <summary>逐格阻挡：阻挡足迹覆盖率 ≥ structures.blockCoverage。</summary>
     public required byte[] Blocked { get; init; }

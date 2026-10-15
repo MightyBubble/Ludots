@@ -10,8 +10,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// 导航上下文烘焙。分类读区域代价行、坡度、阻挡和 profile 坡度上限。
-/// 区域行必须列全，省略在装载时抛，不是默认可走代价 1。
-/// passable 为 false 的区域代价为 0、不可走；非 slopeFree 区域坡度超过 profile 上限不可走；阻挡格不可走。
+/// traversal.json 每行列全全部区域，写 false 的格代价为 0、不可走；非 ignoresSlope 区域坡度超过该行 maxSlopeDeg 不可走；阻挡格不可走。
 /// Bake 在链接之后还做桥面、tile 缓存和 HPA。
 /// </summary>
 public static class NavContextBaker
@@ -55,7 +54,7 @@ public static class NavContextBaker
             int areaIndex = area[i];
             Fix64 c = row[areaIndex];
             Fix64 d = speedRow[areaIndex];
-            if (c > Fix64.Zero && !config.NavAreas[areaIndex].SlopeFree && slope[i] > maxSlope)
+            if (c > Fix64.Zero && !config.NavAreas[areaIndex].IgnoresSlope && slope[i] > maxSlope)
             {
                 c = Fix64.Zero;
                 d = Fix64.Zero;
@@ -218,8 +217,9 @@ public static class NavContextBaker
         return packed;
     }
 
-    /// <summary>跳跃链接过滤：候选端点都可走、格距 ≤ rangeCells、
-    /// 落差 ≤ downCm 才成链;落差 ≤ upCm 的双向。判定只读 .navsurface 里的量化候选值。
+    /// <summary>跳跃链接过滤：候选端点都可走、格距 ≤ rangeCells、落差 ≤ downCm、
+    /// 高端格区域可出发且低端格区域可落地才成链;落差 ≤ upCm 且反向的出发 / 落地也成立的双向。
+    /// 区域取当前地面栅格。判定只读 .navsurface 里的量化候选值。
     /// 增量重烘在候选端点触到变更矩形时重建整表(与全量同码)。</summary>
     internal static NavLinkSet? BuildLinks(
         CrowdSimulationRuntimeConfig config,
@@ -241,17 +241,21 @@ public static class NavContextBaker
         var cost = new List<Fix64>();
         var two = new List<byte>();
         var len = new List<float>();
+        var area = surface.Area;
+        var depart = jump.DepartByArea;
+        var arrive = jump.ArriveByArea;
         foreach (var cand in candidates)
         {
             int a = cand.FromY * navCellsPerSide + cand.FromX;
             int b = cand.ToY * navCellsPerSide + cand.ToX;
-            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeNavCells || cand.DropCm > jump.DownCm)
+            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeNavCells || cand.DropCm > jump.DownCm
+                || !depart[area[a]] || !arrive[area[b]])
             {
                 continue;
             }
 
             Fix64 c = Fix64.FromDouble(cand.LengthCells) * jump.Cost;
-            bool up = cand.DropCm <= jump.UpCm;
+            bool up = cand.DropCm <= jump.UpCm && depart[area[b]] && arrive[area[a]];
             from.Add(a); to.Add(b); cost.Add(c); two.Add(up ? (byte)1 : (byte)0); len.Add(cand.LengthCells);
             if (up)
             {

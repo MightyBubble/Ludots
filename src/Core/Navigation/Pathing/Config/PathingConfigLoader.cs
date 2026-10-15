@@ -261,16 +261,16 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 }
 
                 string areaPath = $"{path}.areaCosts[{i}]";
-                RequireOnlyProperties(area, areaPath, new[] { "areaId", "cost" }, new[] { "speedDivisor", "passable" });
-                RequireNumber(area, "areaId", areaPath);
-                RequireNumber(area, "cost", areaPath);
                 if (area.ContainsKey("speedDivisor"))
                 {
-                    RequireNumber(area, "speedDivisor", areaPath);
+                    throw new InvalidOperationException(
+                        $"{areaPath}.speedDivisor 已删除。navmesh 与 mass-navigation 不读速度除数；群体的速度除数在 CrowdSimulation/traversal.json 的 cells.<areaId>.speedDivisor。");
                 }
 
-                if (area.ContainsKey("passable") &&
-                    (area["passable"] is not JsonValue passable || !passable.TryGetValue<bool>(out _)))
+                RequireOnlyProperties(area, areaPath, "areaId", "cost", "passable");
+                RequireNumber(area, "areaId", areaPath);
+                RequireNumber(area, "cost", areaPath);
+                if (area["passable"] is not JsonValue passable || !passable.TryGetValue<bool>(out _))
                 {
                     throw new InvalidOperationException($"{areaPath}.passable must be a boolean.");
                 }

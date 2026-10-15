@@ -531,7 +531,7 @@ namespace Ludots.Tool
             var initCrowdTerrainCommand = new Command(
                 "init-crowd-terrain",
                 "Write the map's logicTerrainAsset for a new CrowdSimulation map: fill every nav cell with one terrain type, then paint inclusive nav-cell rectangles in order.");
-            var initTerrainFillOption = new Option<string>("--fill", "Terrain id (from terrainAreas) for every cell") { IsRequired = true };
+            var initTerrainFillOption = new Option<string>("--fill", "Terrain id (from maps.<mapId>.terrainTypes) for every cell") { IsRequired = true };
             var initTerrainRectOption = new Option<string[]>("--rect", () => Array.Empty<string>(), "terrainId:minCol,minRow,maxCol,maxRow (repeatable)")
             {
                 Arity = ArgumentArity.ZeroOrMore,

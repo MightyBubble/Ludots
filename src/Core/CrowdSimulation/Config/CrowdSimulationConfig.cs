@@ -96,16 +96,17 @@ public sealed class CrowdSimulationConfig
         ("movement.maxStepCells", "movement.maxStepNavCells"),
         ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
         ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
-        ("agentTypes", "Navigation/pathing.json 的 agentTypes"),
+        ("agentTypes", "CrowdSimulation/traversal.json 的 agentTypes"),
         ("agents.radiusClasses", "单位模板 CrowdSimulationAgent.pushPriority"),
         ("agents.profilesUri", "Navigation/agent_profiles.json"),
         ("unitTypes", "单位模板 CrowdSimulationAgent"),
-        ("navAreas", "Navigation/navmesh.json 的 areas"),
-        ("terrainAreas", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas"),
-        ("navProfiles", "Navigation/navmesh.json 的 profiles"),
-        ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas 数组顺序"),
+        ("navAreas", "CrowdSimulation/traversal.json 的 areas"),
+        ("terrainAreas", "CrowdSimulation/traversal.json 的 terrainAreas"),
+        ("navProfiles", "CrowdSimulation/traversal.json 的 agentTypes.<id>.maxSlopeDeg / links"),
+        ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainTypes"),
         ("world.surfaceAsset", "地图 ContinuousHeightmap.asset（同主干 .navsurface）"),
-        ("world.navCellSizeCm", "Navigation/navmesh.json 的 profiles[].cellSizeCm"),
+        ("world.navCellSizeCm", "Navigation/navmesh.json 的 maps.<mapId>.navCellSizeCm"),
+        ("movement.jumpSpeedRatio", "CrowdSimulation/traversal.json 的 linkKinds.<kind>.traversalSpeedRatio"),
         ("world.mapId", "当前聚焦的地图"),
         ("mapId", "当前聚焦的地图"),
         ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
@@ -370,7 +371,6 @@ public sealed class CrowdSimulationConfig
         public required double SpeedCapRatio { get; init; }
         public required double RestAccelScale { get; init; }
         public required double RestSeparationScale { get; init; }
-        public required double JumpSpeedRatio { get; init; }
     }
 
     public sealed class AvoidanceSection

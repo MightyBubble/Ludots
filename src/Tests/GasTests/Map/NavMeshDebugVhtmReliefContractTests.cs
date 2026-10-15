@@ -54,9 +54,9 @@ namespace Ludots.Tests.Gas
                   "profileId": "Small",
                   "navMesh": {
                     "areaCosts": [
-                      { "areaId": 0, "cost": 1.0 },
-                      { "areaId": 1, "cost": 1.0 },
-                      { "areaId": 2, "cost": 1.0 }
+                      { "areaId": 0, "cost": 1.0, "passable": true },
+                      { "areaId": 1, "cost": 1.0, "passable": true },
+                      { "areaId": 2, "cost": 1.0, "passable": true }
                     ]
                   }
                 }

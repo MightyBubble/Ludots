@@ -26,7 +26,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Client;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Rendering;
@@ -460,8 +459,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         var agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
         var navmesh = RequireLoadedNavmesh(engine);
-        var pathing = new PathingConfigLoader(engine.ConfigPipeline)
-            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var traversal = CrowdTraversalConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
         var templateFacts = CrowdUnitTemplateFacts.FromTemplates(engine.MapLoader.TemplateRegistry.GetAll());
 
         var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
@@ -471,7 +469,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         var projected = CrowdPairRulesProjection.Project(_configDto!, mapConfig, teamRelations, players, engine.World);
         _pairRulesGuard = projected.Guard;
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
-            _configDto!, mapConfig, agentProfiles, navmesh, pathing, templateFacts,
+            _configDto!, mapConfig, agentProfiles, navmesh, traversal, templateFacts,
             (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
         var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
             ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 PresenterDefinitionRegistry 服务。");

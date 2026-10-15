@@ -26,6 +26,8 @@ public sealed class CrowdSimulationRuntimeConfig
     public required IReadOnlyList<RuntimeNavArea> NavAreas { get; init; }
     /// <summary>terrainIdx → navAreaIdx，长度 = TerrainTypeIds.Count。</summary>
     public required IReadOnlyList<int> TerrainToArea { get; init; }
+    /// <summary>链接种类，按 traversal.json linkKinds 合并顺序。内核目前最多消费一种。</summary>
+    public required IReadOnlyList<RuntimeLinkKind> LinkKinds { get; init; }
     public required IReadOnlyList<RuntimeNavProfile> NavProfiles { get; init; }
     public required IReadOnlyList<RuntimeAgentType> AgentTypes { get; init; }
     public required IReadOnlyList<RuntimeUnitType> UnitTypes { get; init; }
@@ -66,13 +68,20 @@ public enum CrowdPushResponse
 public sealed class RuntimeNavArea
 {
     public required string Id { get; init; }
-    public required bool SlopeFree { get; init; }
+    public required bool IgnoresSlope { get; init; }
 }
 
+public sealed class RuntimeLinkKind
+{
+    public required string Id { get; init; }
+    public required Fix64 TraversalSpeedRatio { get; init; }
+}
+
+/// <summary>移动类型的坡度与链接参数，和 <see cref="RuntimeAgentType"/> 一一对应。</summary>
 public sealed class RuntimeNavProfile
 {
     public required string Id { get; init; }
-    /// <summary>坡度上限（度）；null = 不限坡度。slopeFree 区域不适用。</summary>
+    /// <summary>坡度上限（度）；null = 不限坡度。ignoresSlope 区域不适用。</summary>
     public required Fix64? MaxSlopeDeg { get; init; }
     public required RuntimeJumpCapability? Jump { get; init; }
 }
@@ -83,20 +92,24 @@ public sealed class RuntimeJumpCapability
     public required int DownCm { get; init; }
     public required int RangeNavCells { get; init; }
     public required Fix64 Cost { get; init; }
+    /// <summary>按区域下标：这一行能从这种区域出发走链接。</summary>
+    public required bool[] DepartByArea { get; init; }
+    /// <summary>按区域下标：这一行能经链接落到这种区域。</summary>
+    public required bool[] ArriveByArea { get; init; }
 }
 
 public sealed class RuntimeAgentType
 {
     public required string Id { get; init; }
     /// <summary>
-    /// 被单位模板引用的 pathing agent type，按合并后的属性顺序编号。
+    /// 被单位模板引用的 traversal.json 移动类型，按合并后的属性顺序编号。
     /// 体型档案的 layer 是 NavTile 层，不参与这个编号。
     /// </summary>
     public required int AgentTypeIndex { get; init; }
     public required int NavProfileIndex { get; init; }
-    /// <summary>按下标 = areaId 的通行代价。passable 为 false 时为 0。</summary>
+    /// <summary>按区域下标的通行代价。不可通行为 0。</summary>
     public required Fix64[] CostByArea { get; init; }
-    /// <summary>按下标 = areaId 的速度除数。未写 speedDivisor 时与代价相同；不可通行为 0。</summary>
+    /// <summary>按区域下标的速度除数。不可通行为 0。</summary>
     public required Fix64[] SpeedDivisorByArea { get; init; }
 }
 
@@ -221,7 +234,6 @@ public sealed class RuntimeMovementSection
     public required Fix64 SpeedCapRatio { get; init; }
     public required Fix64 RestAccelScale { get; init; }
     public required Fix64 RestSeparationScale { get; init; }
-    public required Fix64 JumpSpeedRatio { get; init; }
 }
 
 public sealed class RuntimeAvoidanceSection

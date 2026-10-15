@@ -21,7 +21,6 @@ using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
@@ -152,6 +151,24 @@ static class SessionHost
         };
     }
 
+    /// <summary>Core 的 assets 目录：从 standardDir 往上找同时有 mods/ 和 assets/Navigation/navmesh.json 的仓库根。</summary>
+    private static string CoreAssetsDir(string standardDir)
+    {
+        var dir = new DirectoryInfo(Path.GetFullPath(standardDir));
+        while (dir != null)
+        {
+            string assets = Path.Combine(dir.FullName, "assets");
+            if (Directory.Exists(Path.Combine(dir.FullName, "mods")) && File.Exists(Path.Combine(assets, "Navigation", "navmesh.json")))
+            {
+                return assets;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException($"从 {standardDir} 往上找不到带 assets/Navigation/navmesh.json 的仓库根。");
+    }
+
     private static SeedBundle Load(string seedDir, string standardDir, string demoDir)
     {
         string[] maps = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json");
@@ -182,15 +199,16 @@ static class SessionHost
             File.ReadAllText(Path.Combine(standardDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
         var profiles = new AgentProfileRegistry(profileList);
-        var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "navmesh.json")))!;
+        var navmeshJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(CoreAssetsDir(standardDir), "Navigation", "navmesh.json")))!;
         string seedNavPath = Path.Combine(seedDir, "Navigation", "navmesh.json");
         if (File.Exists(seedNavPath))
         {
             ConfigPipeline.DeepMerge(navmeshJson, (JsonObject)JsonNode.Parse(File.ReadAllText(seedNavPath))!);
         }
 
-        var pathing = PathingConfigLoader.Parse(
-            (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "Navigation", "pathing.json")))!);
+        var traversalJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "CrowdSimulation", "traversal.json")))!;
+        ConfigPipeline.DeepMerge(traversalJson, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(demoDir, "CrowdSimulation", "traversal.json")))!);
+        var traversal = CrowdTraversalConfig.Parse(traversalJson);
         var unitTemplates = JsonSerializer.Deserialize<List<EntityTemplate>>(
             File.ReadAllText(Path.Combine(demoDir, "Entities", "templates.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
@@ -200,7 +218,7 @@ static class SessionHost
             map,
             profiles,
             bake,
-            pathing,
+            traversal,
             CrowdUnitTemplateFacts.FromTemplates(unitTemplates),
             ReadSeedFixedHz(seedDir),
             ProjectSeedMap(seedDir, config, map));

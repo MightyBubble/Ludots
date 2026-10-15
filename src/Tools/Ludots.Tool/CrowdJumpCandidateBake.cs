@@ -197,7 +197,7 @@ public static class CrowdJumpCandidateBake
             if (index < 0)
             {
                 throw new InvalidOperationException(
-                    $"地图 \"{mapId}\" 的 jumpLinkBake.{field} 的地形 id \"{id}\" 不在 terrainAreas 里。");
+                    $"地图 \"{mapId}\" 的 jumpLinkBake.{field} 的地形 id \"{id}\" 不在 terrainTypes 里。");
             }
 
             mask[index] = true;

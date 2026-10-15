@@ -202,7 +202,7 @@ public class S1SurfaceTruthTests
             map,
             bodies?.Profiles ?? TestDefaults.DemoProfiles(),
             TestDefaults.ParseNavmesh(navmeshJson, bodies?.Profiles),
-            bodies?.Pathing ?? TestDefaults.DemoPathing(),
+            bodies?.Traversal ?? TestDefaults.DemoTraversal(),
             bodies?.Templates ?? TestDefaults.DemoTemplates(),
             TestDefaults.FixedHz,
             pairRules ?? TestDefaults.DemoPairRules());
@@ -309,8 +309,8 @@ public class S1SurfaceTruthTests
     }
 }
 
-/// <summary>会话用的体型表与单位模板事实（两者须互相一致：模板的个人半径 = 体型半径 × 避让倍数），可另换寻路代价表（null = 演示资产）。</summary>
+/// <summary>会话用的体型表与单位模板事实（两者须互相一致：模板的个人半径 = 体型半径 × 避让倍数），可另换通行矩阵（null = 演示资产）。</summary>
 internal sealed record CrowdTestBodies(
     Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry Profiles,
     List<CrowdUnitTemplateFacts> Templates,
-    Ludots.Core.Navigation.Pathing.Config.PathingConfig? Pathing = null);
+    CrowdTraversalConfig? Traversal = null);

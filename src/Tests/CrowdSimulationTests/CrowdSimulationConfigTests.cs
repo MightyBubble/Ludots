@@ -59,9 +59,9 @@ public class CrowdSimulationConfigTests
         var foot = runtime.AgentTypes[0];
         Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSecond),
             Is.All.EqualTo(Fix64.FromInt(1400)));
-        // road 的 areaId 是 5；foot 对 road 代价 0.7。
+        // road 是合并后第 5 个区域；foot 对 road 代价 0.7。
         Assert.That(foot.CostByArea[5], Is.EqualTo(Fix64.FromDouble(0.7)));
-        // deep 的 areaId 是 4，pathing 写了 passable:false，代价为 0。
+        // deep 是第 4 个区域，foot 这一格写 false，代价为 0。
         Assert.That(foot.CostByArea[4], Is.EqualTo(Fix64.Zero));
 
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
@@ -186,13 +186,11 @@ public class CrowdSimulationConfigTests
     [Test]
     public void AreaCost_ReferencingUnknownArea_IsRejected()
     {
-        var pathingJson = TestDefaults.DefaultPathingJson();
-        pathingJson["agentTypes"]!["foot"]!["navMesh"]!["areaCosts"]!.AsArray().Add(
-            JsonNode.Parse("""{"areaId":99,"cost":1}""")!);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => TestDefaults.Assemble(pathing: TestDefaults.ParsePathing(pathingJson)));
-        Assert.That(ex!.Message, Does.Contain("agentTypes.foot.areaCosts areaId 99"));
-        Assert.That(ex.Message, Does.Contain("未知导航区域"));
+        var traversalJson = TestDefaults.DefaultTraversalJson();
+        traversalJson["agentTypes"]!["foot"]!["cells"]!["lava"] = JsonNode.Parse(
+            """{"cost":1,"speedDivisor":1,"depart":[],"arrive":[]}""");
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.ParseTraversal(traversalJson));
+        Assert.That(ex!.Message, Does.Contain("agentTypes.foot.cells.lava 不是 areas 里的 id"));
     }
 
     [Test]
@@ -248,26 +246,30 @@ public class CrowdSimulationConfigTests
     [Test]
     public void TerrainAreas_UnknownArea_IsRejected()
     {
+        var traversalJson = TestDefaults.DefaultTraversalJson();
+        traversalJson["terrainAreas"]!["cliff"] = "lava";
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.ParseTraversal(traversalJson));
+        Assert.That(ex!.Message, Does.Contain("terrainAreas.cliff = \"lava\" 不是 areas 里的区域"));
+    }
+
+    [Test]
+    public void MapTerrainType_WithoutTerrainArea_IsRejected()
+    {
         var navmesh = TestDefaults.DefaultNavmeshJson();
-        var terrainAreas = navmesh["maps"]!["crowd_simulation_demo"]!["terrainAreas"]!.AsArray();
-        JsonObject cliff = terrainAreas.Select(n => n!.AsObject()).Single(row => row["terrainId"]!.GetValue<string>() == "cliff");
-        cliff["areaId"] = "lava";
+        navmesh["maps"]!["crowd_simulation_demo"]!["terrainTypes"]!.AsArray().Add("lava");
         var ex = Assert.Throws<InvalidOperationException>(
             () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));
-        Assert.That(ex!.Message, Does.Contain("terrainAreas[4]"));
-        Assert.That(ex.Message, Does.Contain("cliff"));
-        Assert.That(ex.Message, Does.Contain("lava"));
+        Assert.That(ex!.Message, Does.Contain("terrainTypes[5] = \"lava\" 不在 CrowdSimulation/traversal.json 的 terrainAreas 里"));
     }
 
     [Test]
     public void JumpCost_BelowMinAreaCost_IsRejected()
     {
-        var navmesh = TestDefaults.DefaultNavmeshJson();
-        navmesh["profiles"]!["leaper"]!["jump"]!["cost"] = 0.5;
+        var traversalJson = TestDefaults.DefaultTraversalJson();
+        traversalJson["agentTypes"]!["leaper"]!["links"]!["jump"]!["costPerNavCell"] = 0.5;
 
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)));
-        Assert.That(ex!.Message, Does.Contain("profiles.leaper.jump.cost 不能低于该类型最低区域代价"));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.ParseTraversal(traversalJson));
+        Assert.That(ex!.Message, Does.Contain("agentTypes.leaper.links.jump.costPerNavCell = 0.5，低于本行可通行格的最低 cost 0.8"));
     }
 
     [Test]
@@ -651,7 +653,7 @@ public class CrowdSimulationConfigTests
         // 16 个导航格恰好一块 tile,派生格数落在 4..128。
         json["navtile"]!["sizeCm"] = navCellSizeCm * 16;
         var navmesh = TestDefaults.DefaultNavmeshJson();
-        TestDefaults.SetCapabilityCellSizeCm(navmesh, navCellSizeCm);
+        TestDefaults.SetNavCellSizeCm(navmesh, navCellSizeCm);
         var map = TestDefaults.DemoMap();
         int widthCm = navCellSizeCm * 16;
         map.Boards[0].WidthCm = widthCm;

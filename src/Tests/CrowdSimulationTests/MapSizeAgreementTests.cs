@@ -78,7 +78,7 @@ public class MapSizeAgreementTests
 
         Assert.That(ex!.Message, Does.StartWith(SurfacePath));
         Assert.That(ex.Message, Does.Contain("navCellSizeCm = 200"));
-        Assert.That(ex.Message, Does.Contain("profiles.cellSizeCm = 100"));
+        Assert.That(ex.Message, Does.Contain("地图 navCellSizeCm = 100"));
         Assert.That(ex.Message, Does.Contain("推出 16×16 格"));
         Assert.That(ex.Message, Does.Contain(HeightPath));
         Assert.That(ex.Message, Does.Contain("采样 16×16"));

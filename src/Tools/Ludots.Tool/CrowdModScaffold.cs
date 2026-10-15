@@ -14,6 +14,7 @@ namespace Ludots.Tool;
 public static class CrowdModScaffold
 {
     public const int BoardSizeCm = 1_600_000;
+    public const int NavCellSizeCm = 6250;
     public const int UnitRadiusCm = 150;
     public const int UnitsPerPlayer = 100;
     public const int BaseYCm = 800_000;
@@ -96,10 +97,8 @@ public static class CrowdModScaffold
                 {
                     ["solver"] = "crowd-simulation",
                     ["logicTerrainAsset"] = $"terrain/{mapId}.map_data.bin",
-                    ["navAreas"] = new JsonArray("Default", "deep"),
-                    ["terrainAreas"] = new JsonArray(
-                        new JsonObject { ["terrainId"] = "land", ["areaId"] = "Default" },
-                        new JsonObject { ["terrainId"] = "water", ["areaId"] = "deep" }),
+                    ["navCellSizeCm"] = NavCellSizeCm,
+                    ["terrainTypes"] = new JsonArray("land", "water"),
                 },
             },
         });

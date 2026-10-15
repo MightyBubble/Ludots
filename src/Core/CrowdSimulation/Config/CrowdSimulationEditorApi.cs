@@ -10,7 +10,6 @@ using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
@@ -25,7 +24,7 @@ public static partial class CrowdSimulationEditorApi
 {
     public const string ConfigFile = CrowdSimulationConfigLoader.RelativePath;
     public const string NavmeshFile = NavMeshConfigPaths.BakeConfigPath;
-    public const string PathingFile = "Navigation/pathing.json";
+    public const string TraversalFile = CrowdTraversalConfig.RelativePath;
     public const string AgentProfilesFile = AgentProfileConfigLoader.RelativePath;
     public const string TemplatesFile = ConfigMergeProvenance.TemplatesRelativePath;
     public const string DebugFile = "CrowdSimulationDebug.json";
@@ -85,6 +84,7 @@ public static partial class CrowdSimulationEditorApi
             [CrowdSimulationAuthoringBundle.ScenarioKey] = snapshot["scenario"]?.DeepClone(),
             [CrowdSimulationAuthoringBundle.GlobalsKey] = snapshot["globals"]?.DeepClone(),
             [CrowdSimulationAuthoringBundle.TemplatesKey] = snapshot["templates"]?.DeepClone(),
+            [CrowdSimulationAuthoringBundle.CostMatrixKey] = new JsonObject { ["traversal"] = snapshot["costMatrix"]?["traversal"]?.DeepClone() },
             [CrowdSimulationAuthoringBundle.VersionKey] = CrowdSimulationAuthoringBundle.SchemaVersion,
         };
     }
@@ -106,11 +106,12 @@ public static partial class CrowdSimulationEditorApi
 
         if (bundle[CrowdSimulationAuthoringBundle.ScenarioKey] is not JsonObject scenario
             || bundle[CrowdSimulationAuthoringBundle.GlobalsKey] is not JsonObject globals
-            || bundle[CrowdSimulationAuthoringBundle.TemplatesKey] is not JsonObject templates)
+            || bundle[CrowdSimulationAuthoringBundle.TemplatesKey] is not JsonObject templates
+            || bundle[CrowdSimulationAuthoringBundle.CostMatrixKey] is not JsonObject costMatrix)
         {
             return CrowdSimulationEditorResult.Failed(CrowdSimulationAuthoringIssues.One(
                 "bundle",
-                "完整包必须是 { scenario, globals, templates, version }。")).ToJson();
+                "完整包必须是 { scenario, globals, templates, costMatrix, version }。")).ToJson();
         }
 
         try
@@ -121,6 +122,7 @@ public static partial class CrowdSimulationEditorApi
             patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.ScenarioLayer, scenario, issues));
             patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.GlobalsLayer, globals, issues));
             patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.TemplatesLayer, templates, issues));
+            patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.CostMatrixLayer, costMatrix, issues));
             if (issues.Count > 0)
             {
                 return CrowdSimulationEditorResult.Failed(issues).ToJson();
@@ -191,8 +193,8 @@ public static partial class CrowdSimulationEditorApi
         public required JsonObject BaselineConfig { get; init; }
         public required JsonObject Navmesh { get; init; }
         public required JsonObject BaselineNavmesh { get; init; }
-        public required JsonObject Pathing { get; init; }
-        public required JsonObject BaselinePathing { get; init; }
+        public required JsonObject Traversal { get; init; }
+        public required JsonObject BaselineTraversal { get; init; }
         public required JsonArray AgentProfiles { get; init; }
         public required JsonArray BaselineAgentProfiles { get; init; }
         public required JsonArray Templates { get; init; }
@@ -250,7 +252,7 @@ public static partial class CrowdSimulationEditorApi
             var report = new ConfigConflictReport();
             JsonObject config = full.ReadObject(ConfigFile, report);
             JsonObject navmesh = full.ReadObject(NavmeshFile, report);
-            JsonObject pathing = full.ReadObject(PathingFile, report);
+            JsonObject traversal = full.ReadObject(TraversalFile, report);
             JsonArray profiles = full.ReadArray(AgentProfilesFile, report);
             JsonArray templates = full.ReadArray(TemplatesFile, report);
             JsonObject? debug = full.ReadOptionalObject(DebugFile, report);
@@ -258,7 +260,7 @@ public static partial class CrowdSimulationEditorApi
 
             JsonObject baselineConfig = lower?.ReadObject(ConfigFile, new ConfigConflictReport()) ?? new JsonObject();
             JsonObject baselineNav = lower?.ReadObject(NavmeshFile, new ConfigConflictReport()) ?? new JsonObject();
-            JsonObject baselinePathing = lower?.ReadObject(PathingFile, new ConfigConflictReport()) ?? new JsonObject();
+            JsonObject baselineTraversal = lower?.ReadOptionalObject(TraversalFile, new ConfigConflictReport()) ?? new JsonObject();
             JsonArray baselineProfiles = lower?.ReadArray(AgentProfilesFile, new ConfigConflictReport()) ?? new JsonArray();
             JsonArray baselineTemplates = lower?.ReadArray(TemplatesFile, new ConfigConflictReport()) ?? new JsonArray();
             JsonObject? baselineDebug = lower?.ReadOptionalObject(DebugFile, new ConfigConflictReport());
@@ -278,8 +280,8 @@ public static partial class CrowdSimulationEditorApi
                 BaselineConfig = baselineConfig,
                 Navmesh = navmesh,
                 BaselineNavmesh = baselineNav,
-                Pathing = pathing,
-                BaselinePathing = baselinePathing,
+                Traversal = traversal,
+                BaselineTraversal = baselineTraversal,
                 AgentProfiles = profiles,
                 BaselineAgentProfiles = baselineProfiles,
                 Templates = templates,
@@ -290,7 +292,7 @@ public static partial class CrowdSimulationEditorApi
                 DebugView = debugView,
                 BaselineDebugView = baselineDebugView,
                 Owners = full.Owners(report),
-                UnitTemplates = UnitTemplatesView(full, modId, templates, profiles, pathing),
+                UnitTemplates = UnitTemplatesView(full, modId, templates, profiles, traversal),
                 DisplayDefaults = new JsonObject(),
             };
         }
@@ -299,7 +301,7 @@ public static partial class CrowdSimulationEditorApi
         {
             JsonObject scenario = ScenarioDocument(Config, Navmesh, MapJson, MapId);
             JsonObject globals = Pick(Config, GlobalsKeys);
-            JsonObject templates = TemplatesDocument(Templates, Pathing, Navmesh, AgentProfiles, Config);
+            JsonObject templates = TemplatesDocument(Templates, AgentProfiles, Config);
             JsonObject scenarioDefaults = ScenarioDocument(BaselineConfig, BaselineNavmesh, SelectedOwnsMap ? null : MapJson, MapId);
             if (SelectedOwnsMap)
             {
@@ -307,9 +309,9 @@ public static partial class CrowdSimulationEditorApi
             }
 
             JsonObject globalsDefaults = BaselineConfig.Count == 0 ? Pick(Config, GlobalsKeys) : Pick(BaselineConfig, GlobalsKeys);
-            JsonObject templatesDefaults = BaselineTemplates.Count == 0 && BaselinePathing.Count == 0
+            JsonObject templatesDefaults = BaselineTemplates.Count == 0
                 ? templates.DeepClone().AsObject()
-                : TemplatesDocument(BaselineTemplates, BaselinePathing, BaselineNavmesh, BaselineAgentProfiles, BaselineConfig);
+                : TemplatesDocument(BaselineTemplates, BaselineAgentProfiles, BaselineConfig);
 
             var node = new JsonObject
             {
@@ -332,14 +334,11 @@ public static partial class CrowdSimulationEditorApi
                     ["templates"] = templatesDefaults,
                     ["debug"] = (BaselineDebug ?? Debug)?.DeepClone(),
                     ["debugView"] = (BaselineDebugView ?? DebugView)?.DeepClone(),
-                    ["costMatrix"] = CostMatrix(
-                        BaselinePathing.Count == 0 ? Pathing : BaselinePathing,
-                        BaselineNavmesh.Count == 0 ? Navmesh : BaselineNavmesh,
-                        MapId),
+                    ["costMatrix"] = CostMatrix(BaselineTraversal.Count == 0 ? Traversal : BaselineTraversal, Navmesh, MapId),
                 },
                 ["owners"] = Owners.DeepClone(),
                 ["unitTemplates"] = UnitTemplates.DeepClone(),
-                ["costMatrix"] = CostMatrix(Pathing, Navmesh, MapId),
+                ["costMatrix"] = CostMatrix(Traversal, Navmesh, MapId),
                 ["help"] = Help(),
                 ["issues"] = new JsonArray(),
             };
@@ -449,7 +448,7 @@ public static partial class CrowdSimulationEditorApi
             CrowdSimulationConfig config = new CrowdSimulationConfigLoader(pipeline).LoadConfig(catalog, report);
             AgentProfileRegistry profiles = new AgentProfileConfigLoader(pipeline).Load(catalog, report);
             NavMeshBakeConfig navmesh = new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog, report);
-            PathingConfig pathing = new PathingConfigLoader(pipeline).Load(catalog, report);
+            CrowdTraversalConfig traversal = CrowdTraversalConfig.Load(pipeline, catalog, report);
             MapConfig map = opened.LoadMap(MapId) ?? throw new InvalidOperationException($"Maps/{MapId}.json 没有装载出来。");
             List<EntityTemplate> templates = opened.LoadTemplates(report);
             int players = Math.Max(1, map.Players.Count);
@@ -464,7 +463,7 @@ public static partial class CrowdSimulationEditorApi
             {
                 CrowdSimulationAuthoringContract.Validate(templates, config, map, profiles);
                 List<CrowdUnitTemplateFacts> facts = CrowdUnitTemplateFacts.FromTemplates(templates);
-                CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, pathing, facts, FixedHz, rules);
+                CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(config, map, profiles, navmesh, traversal, facts, FixedHz, rules);
                 CrowdUnitPresenterContract.Require(runtime, LoadSpawnLinks(opened, templates, report), report);
             }
             catch (InvalidOperationException ex) when (!ex.Message.Contains("配置路径:", StringComparison.Ordinal))
@@ -548,9 +547,9 @@ public static partial class CrowdSimulationEditorApi
 
         private static string GuessProvenanceFile(string message)
         {
-            if (message.Contains("pathing.json", StringComparison.Ordinal) || message.Contains("areaCosts", StringComparison.Ordinal))
+            if (message.Contains(TraversalFile, StringComparison.Ordinal))
             {
-                return PathingFile;
+                return TraversalFile;
             }
 
             if (message.Contains("navmesh.json", StringComparison.Ordinal))
@@ -634,23 +633,11 @@ public static partial class CrowdSimulationEditorApi
 
         private void PatchTemplates(JsonObject draft, PatchSet patches, List<CrowdSimulationAuthoringIssue> issues)
         {
-            RejectForeign(draft, ["structures", "agentTypes", "navProfiles", "unitTypes", "agentProfiles"], "templates", issues);
+            RejectForeign(draft, ["structures", "unitTypes", "agentProfiles"], "templates", issues);
             if (draft["structures"] is JsonNode structures)
             {
                 var carrier = new JsonObject { ["structures"] = structures.DeepClone() };
                 PatchConfigKeys(["structures"], carrier, BaselineConfig, patches, issues);
-            }
-
-            if (draft["agentTypes"] is JsonObject agentTypes)
-            {
-                RejectOmissions(agentTypes, BaselinePathing["agentTypes"], "agentTypes", issues);
-                PatchObjectFile(PathingFile, "agentTypes", agentTypes, BaselinePathing["agentTypes"], patches);
-            }
-
-            if (draft["navProfiles"] is JsonObject profiles)
-            {
-                RejectOmissions(profiles, BaselineNavmesh["profiles"], "navProfiles", issues);
-                PatchObjectFile(NavmeshFile, "profiles", profiles, BaselineNavmesh["profiles"], patches);
             }
 
             if (draft["unitTypes"] is JsonArray units)
@@ -676,57 +663,16 @@ public static partial class CrowdSimulationEditorApi
 
         private void PatchCostMatrix(JsonObject draft, PatchSet patches, List<CrowdSimulationAuthoringIssue> issues)
         {
-            if (draft["cells"] is not JsonObject cells)
+            RejectForeign(draft, ["traversal", "mapAreas"], "costMatrix", issues);
+            if (draft["traversal"] is not JsonObject traversal)
             {
-                issues.Add(Issue("cells", "代价矩阵缺少 cells。"));
+                issues.Add(Issue("traversal", $"代价矩阵缺少 traversal（{TraversalFile} 合并后的全文）。"));
                 return;
             }
 
-            var agentTypes = new JsonObject();
-            foreach (var agent in cells)
-            {
-                if (agent.Value is not JsonObject row)
-                {
-                    continue;
-                }
-
-                var costs = new JsonArray();
-                foreach (var cell in row)
-                {
-                    if (!int.TryParse(cell.Key, out int areaId))
-                    {
-                        issues.Add(Issue($"cells.{agent.Key}", $"区域 id \"{cell.Key}\" 不是整数。"));
-                        continue;
-                    }
-
-                    var entry = new JsonObject { ["areaId"] = areaId };
-                    JsonObject? previous = PreviousCost(Pathing, agent.Key, areaId);
-                    if (cell.Value is null)
-                    {
-                        entry["passable"] = false;
-                        entry["cost"] = PreviousNumber(previous, "cost");
-                    }
-                    else
-                    {
-                        entry["cost"] = cell.Value.DeepClone();
-                    }
-
-                    if (previous?["speedDivisor"] is JsonNode divisor)
-                    {
-                        entry["speedDivisor"] = divisor.DeepClone();
-                    }
-
-                    costs.Add(entry);
-                }
-
-                agentTypes[agent.Key] = new JsonObject
-                {
-                    ["navMesh"] = new JsonObject { ["areaCosts"] = costs },
-                };
-            }
-
-            var mergedAgents = DeepMergeObject(BaselinePathing["agentTypes"] as JsonObject, agentTypes);
-            PatchObjectFile(PathingFile, "agentTypes", mergedAgents, BaselinePathing["agentTypes"], patches);
+            RejectOmissions(traversal, BaselineTraversal, "traversal", issues);
+            JsonObject file = OverrideOf(traversal, BaselineTraversal) as JsonObject ?? new JsonObject();
+            PutIfPresent(patches, TraversalFile, file);
         }
 
         private void PatchWholeFile(string relative, JsonObject draft, JsonObject baseline, bool missingCatalog, PatchSet patches, List<CrowdSimulationAuthoringIssue> issues)

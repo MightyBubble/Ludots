@@ -50,7 +50,6 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.maxStepNavCells", config.Movement.MaxStepNavCells, gt: 0, lt: 1);
         Rule("movement.slotTimeConstantSec", config.Movement.SlotTimeConstantSec, gt: 0);
         Rule("movement.unitTurnRateRadPerSec", config.Movement.UnitTurnRateRadPerSec, gt: 0);
-        Rule("movement.jumpSpeedRatio", config.Movement.JumpSpeedRatio, gt: 0);
         Rule("movement.blendRatePerSec", config.Movement.BlendRatePerSec, gt: 0);
         Rule("movement.speedCapRatio", config.Movement.SpeedCapRatio, gt: 0);
         Rule("movement.stopSpeedRatio", config.Movement.StopSpeedRatio, gt: 0);

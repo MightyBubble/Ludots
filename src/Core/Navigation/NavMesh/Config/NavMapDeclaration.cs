@@ -113,7 +113,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
     /// <summary>
     /// 一张地图绑定的移动类型，以及这些类型要列全的 navAreas。
-    /// 绑定集 = 体型 navProfileId 落在 maps.&lt;map&gt;.navProfiles 里的 pathing 类型，加上本图群体单位模板点名的 agentTypeId。
+    /// 绑定集 = 体型 navProfileId 落在 maps.&lt;map&gt;.navProfiles 里的 pathing 类型。群体地图的移动类型在 CrowdSimulation/traversal.json，不经这里绑定。
     /// 网格查询更窄：地图有 nav 标签，且选择是 PreferMesh / AutoCheapest，且体型 navProfileId 在 navProfiles 里。
     /// </summary>
     public sealed class NavMapAgentBinding
@@ -180,8 +180,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             bool navTagged,
             NavMeshBakeConfig navmesh,
             PathingConfig pathing,
-            AgentProfileRegistry agentProfiles,
-            IReadOnlyCollection<string> crowdAgentTypeIds)
+            AgentProfileRegistry agentProfiles)
         {
             if (string.IsNullOrWhiteSpace(mapId))
             {
@@ -205,27 +204,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 }
             }
 
-            bool hasTerrain = mapNav?.TerrainAreas != null && mapNav.TerrainAreas.Count > 0;
-            bool hasCrowd = crowdAgentTypeIds != null && crowdAgentTypeIds.Count > 0;
-            bool mustDeclareAreas = navProfileIds.Count > 0 || hasTerrain || hasCrowd;
-            List<NavMeshAreaConfig> navAreas = ResolveNavAreas(navmesh, mapNav, mapId, mustDeclareAreas);
+            List<NavMeshAreaConfig> navAreas = ResolveNavAreas(navmesh, mapNav, mapId, navProfileIds.Count > 0);
             var navAreaIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < navAreas.Count; i++)
             {
                 navAreaIds.Add(navAreas[i].Id);
-            }
-
-            if (hasTerrain)
-            {
-                for (int i = 0; i < mapNav.TerrainAreas.Count; i++)
-                {
-                    NavTerrainAreaBinding terrain = mapNav.TerrainAreas[i];
-                    if (terrain == null || !navAreaIds.Contains(terrain.AreaId))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapId}.terrainAreas[{i}] 的 areaId \"{terrain?.AreaId}\" 不在 maps.{mapId}.navAreas 里。");
-                    }
-                }
             }
 
             var pathingById = new Dictionary<string, PathingAgentTypeConfig>(StringComparer.Ordinal);
@@ -257,25 +240,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 if (navTagged && SelectsMesh(agent))
                 {
                     requiresMeshQueries = true;
-                }
-            }
-
-            if (crowdAgentTypeIds != null)
-            {
-                foreach (string crowdId in crowdAgentTypeIds)
-                {
-                    if (string.IsNullOrWhiteSpace(crowdId) || !boundIds.Add(crowdId))
-                    {
-                        continue;
-                    }
-
-                    if (!pathingById.TryGetValue(crowdId, out PathingAgentTypeConfig agent))
-                    {
-                        throw new InvalidOperationException(
-                            $"地图 {mapId} 的群体单位引用了移动类型 \"{crowdId}\"，但它不在 Navigation/pathing.json 的 agentTypes 里。");
-                    }
-
-                    boundAgents.Add(agent);
                 }
             }
 

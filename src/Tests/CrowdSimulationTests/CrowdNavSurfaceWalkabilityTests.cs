@@ -173,6 +173,6 @@ public class CrowdNavSurfaceWalkabilityTests
             }
         }
 
-        throw new InvalidOperationException($"terrainAreas 没有 {terrainId}。");
+        throw new InvalidOperationException($"terrainTypes 没有 {terrainId}。");
     }
 }

@@ -4,9 +4,9 @@ using Ludots.Core.Presentation.Terrain;
 namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
-/// .navsurface 与 CrowdSimulationConfig 的地形类型表逐字对齐
+/// .navsurface 与 maps.&lt;mapId&gt;.terrainTypes 逐字对齐
 /// （栅格编号 = 表中下标，顺序错一位全图错位）。
-/// 板是否正方形、宽高能否被 profiles.cellSizeCm 整除，在配置装载时检查，那时 .navsurface 和 .height 还不存在。
+/// 板是否正方形、宽高能否被 地图 navCellSizeCm 整除，在配置装载时检查，那时 .navsurface 和 .height 还不存在。
 /// <see cref="ValidateWorldSize"/> 只对照装载结果里的导航格、.navsurface 和 .height。
 /// </summary>
 public static class NavSurfaceContract
@@ -19,7 +19,7 @@ public static class NavSurfaceContract
         if (asset.TerrainTypeIds.Length != config.TerrainTypeIds.Count)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: 地形类型表 {asset.TerrainTypeIds.Length} 项，与 maps.{config.MapId}.terrainAreas（{config.TerrainTypeIds.Count} 项）不一致。");
+                $"{assetPath(config)}: 地形类型表 {asset.TerrainTypeIds.Length} 项，与 maps.{config.MapId}.terrainTypes（{config.TerrainTypeIds.Count} 项）不一致。");
         }
 
         for (int i = 0; i < asset.TerrainTypeIds.Length; i++)
@@ -49,20 +49,20 @@ public static class NavSurfaceContract
 
         string derived = $"{navCellsPerSide}×{navCellsPerSide}";
         string facts =
-            $"板 {boardWidthCm}×{boardHeightCm} cm，profiles.cellSizeCm {navCellSizeCm} 推出 {derived} 格，" +
+            $"板 {boardWidthCm}×{boardHeightCm} cm，地图 navCellSizeCm {navCellSizeCm} 推出 {derived} 格，" +
             $"{surfaceAssetPath} 头 {surface.NavCellsX}×{surface.NavCellsY}，" +
             $"{heightAssetPath} 包围盒 {height.Bounds.Width}×{height.Bounds.Height} cm、采样 {height.SampleColumns}×{height.SampleRows}";
 
         if (surface.NavCellsX != navCellsPerSide || surface.NavCellsY != navCellsPerSide)
         {
             throw new InvalidOperationException(
-                $"{surfaceAssetPath}: 格数 {surface.NavCellsX}×{surface.NavCellsY} 与板 {boardWidthCm}×{boardHeightCm} cm / profiles.cellSizeCm {navCellSizeCm} 推出的 {derived} 格不符。{facts}。");
+                $"{surfaceAssetPath}: 格数 {surface.NavCellsX}×{surface.NavCellsY} 与板 {boardWidthCm}×{boardHeightCm} cm / 地图 navCellSizeCm {navCellSizeCm} 推出的 {derived} 格不符。{facts}。");
         }
 
         if (surface.NavCellSizeCm != navCellSizeCm)
         {
             throw new InvalidOperationException(
-                $"{surfaceAssetPath}: navCellSizeCm = {surface.NavCellSizeCm}，与 profiles.cellSizeCm = {navCellSizeCm} 不符。{facts}。");
+                $"{surfaceAssetPath}: navCellSizeCm = {surface.NavCellSizeCm}，与 地图 navCellSizeCm = {navCellSizeCm} 不符。{facts}。");
         }
 
         if (height.Bounds.Width != boardWidthCm || height.Bounds.Height != boardHeightCm)

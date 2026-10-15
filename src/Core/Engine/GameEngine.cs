@@ -4597,8 +4597,7 @@ namespace Ludots.Core.Engine
                 IsNavTagged(session.MapConfig),
                 bakeForPathing,
                 pathingConfig,
-                agentProfiles,
-                CrowdAgentTypeIds(bakeForPathing, mapId));
+                agentProfiles);
             NavSessionBinding.Set(mapBinding);
             if (mapBinding.BoundAgents.Count > 0)
             {
@@ -4721,33 +4720,6 @@ namespace Ludots.Core.Engine
             }
 
             return false;
-        }
-
-        private List<string> CrowdAgentTypeIds(NavMeshBakeConfig bake, string mapId)
-        {
-            var ids = new List<string>();
-            if (bake?.Maps == null ||
-                !bake.Maps.TryGetValue(mapId, out NavMapNavBoardsConfig mapNav) ||
-                mapNav?.TerrainAreas == null ||
-                mapNav.TerrainAreas.Count == 0 ||
-                MapLoader?.TemplateRegistry == null)
-            {
-                return ids;
-            }
-
-            foreach (EntityTemplate template in MapLoader.TemplateRegistry.GetAll())
-            {
-                if (template?.Components == null ||
-                    !template.Components.TryGetValue("CrowdSimulationAgent", out JsonNode node) ||
-                    node is not JsonObject obj)
-                {
-                    continue;
-                }
-
-                ids.Add(CrowdUnitTemplateFacts.Parse(template.Id, obj).AgentTypeId);
-            }
-
-            return ids;
         }
 
         private static bool RequiresOnlyDirectPathing(PathingConfig pathingConfig)
