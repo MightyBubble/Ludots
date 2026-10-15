@@ -96,6 +96,8 @@ public sealed class CrowdSimPlanner
     public PathQueryService Service => _service;
     /// <summary>当前待刷新流场的队列长度(重烘报告字段)。</summary>
     public int RefreshQueueCount => _refreshQueue.Count;
+    /// <summary>组的流场刷新或走廊扩展排队中或在途:答复落帧前组仍持旧场。</summary>
+    public bool Refreshing(CrowdNavGroupSet.Group g) => g.Extending || _refreshQueue.Contains(g) || HasPending(g);
 
     private struct LiveGroup
     {

@@ -305,7 +305,8 @@ public static class CrowdSimulationValidator
                 session.TickCount, -1, -1, -1, -1, flow.NavId, -1, group.Id);
         }
 
-        if (flow.NavId != group.NavId || !NavExists(session, flow.NavId))
+        bool refreshing = session.Planner != null && session.Planner.Refreshing(group);
+        if ((flow.NavId != group.NavId && !refreshing) || !NavExists(session, flow.NavId))
         {
             throw new CrowdSimulationInvariantException(
                 $"tick {session.TickCount} 组 {group.Id} 流场导航 {flow.NavId} 不属于本组 {group.NavId}",
