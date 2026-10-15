@@ -53,7 +53,7 @@ public sealed class CrowdHud50KUiPathTests
             ui.Frame(feed, FrameMs);
         }
 
-        foreach (string id in new[] { "crowd-toolbar", "crowd-player", "crowd-inspect", "crowd-nav", "crowd-telemetry", "crowd-status", "crowd-legend" })
+        foreach (string id in new[] { "crowd-left", "crowd-right", "crowd-dock", "crowd-toolbar", "crowd-player", "crowd-playerbar", "crowd-order", "crowd-inspect", "crowd-nav", "crowd-telemetry", "crowd-status", "crowd-legend" })
             Assert.That(ui.Has(id), Is.True, $"#{id} 应在 UI 文档里");
         Assert.That(ui.Text("crowd-status-line"), Does.Contain(scenario.Units.ToString(CultureInfo.InvariantCulture)));
 

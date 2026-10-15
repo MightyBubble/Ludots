@@ -389,7 +389,7 @@ internal sealed class CrowdHudController
         for (int s = 0; s < _rings.Length; s++)
         {
             double[] ring = _rings[s];
-            double min = double.MaxValue, max = double.MinValue;
+            double min = 0d, max = 1e-6;
             for (int age = 0; age < _histCount; age++)
             {
                 double v = ring[(start + age) % n];
@@ -402,7 +402,7 @@ internal sealed class CrowdHudController
             for (int age = 0; age < _histCount; age++)
             {
                 double v = ring[(start + age) % n];
-                double t = span <= 0 ? 0.5 : (v - min) / span;
+                double t = (v - min) / span;
                 dst[age] = (float)Math.Clamp(t, 0d, 1d);
             }
         }

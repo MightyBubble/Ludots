@@ -1,4 +1,10 @@
-/* 群体演示 HUD。四周贴边，中间留给战场；1280×720 下右栏与左下状态区不重叠。 */
+/*
+ * 群体演示 HUD。分区与配色照 Web 沙盒（Sandbox.jsx / index.css）：
+ * 左右两栏贴边全高，宽 15%、至少 272px；顶部居中队伍条与按键提示；
+ * 指令卡在右栏左侧；底部指令坞夹在两栏之间。战场中间不放面板。
+ * 纸色主题：卡片 hsl(43 30% 97%)、墨色 hsl(40 7% 22%)、灰字 hsl(36 6% 48%)、
+ * 边线 hsl(39 16% 84%)、强调 hsl(350 62% 32%)、告警 hsl(6 58% 45%)、正常 hsl(95 22% 38%)。
+ */
 
 #crowd-hud {
   position: absolute;
@@ -6,79 +12,158 @@
   top: 0px;
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
   pointer-events: none;
-  color: rgba(236, 230, 214, 1);
+  color: rgba(60, 57, 52, 1);
   font-size: 12px;
+}
+
+.crowd-rail {
+  width: 15%;
+  min-width: 272px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* 边距写在栏上而不是根上：栏宽的百分比按根的内宽算，Web 是按视口宽。 */
+#crowd-left {
+  margin: 12px 0px 12px 12px;
+}
+
+#crowd-right {
+  margin: 12px 12px 12px 0px;
 }
 
 .crowd-panel {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 10px;
-  background-color: rgba(24, 18, 28, 0.82);
+  padding: 8px 12px;
+  background-color: rgba(250, 248, 245, 0.95);
   border-width: 1px;
   border-style: solid;
-  border-color: rgba(236, 230, 214, 0.19);
-  border-radius: 4px;
+  border-color: rgba(221, 216, 208, 1);
+  border-radius: 3px;
+  overflow: hidden;
   pointer-events: none;
 }
 
-/* 不换行：Skia 换行逐前缀量宽，长行每次重绘都是平方级开销。 */
+.crowd-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .crowd-line {
   font-size: 12px;
-  color: rgba(236, 230, 214, 1);
+  color: rgba(60, 57, 52, 1);
   white-space: nowrap;
 }
 
-.crowd-dim {
-  color: rgba(190, 196, 206, 1);
-}
-
-.crowd-ok {
-  color: rgba(115, 255, 140, 1);
-}
-
-.crowd-bad {
-  color: rgba(255, 90, 76, 1);
-}
-
-.crowd-warn {
-  color: rgba(255, 150, 110, 1);
+/* 栏宽固定，栏里的短行允许折行；长句不进栏。 */
+.crowd-rail .crowd-line {
+  white-space: normal;
 }
 
 .crowd-heading {
   font-size: 12px;
   font-weight: bold;
-  color: rgba(255, 214, 120, 1);
+  color: rgba(60, 57, 52, 0.8);
+  white-space: nowrap;
 }
 
-/* 顶部工具条：标题 + 当前工具/步进/倍速一行。 */
-#crowd-toolbar {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 12px;
-  border-color: rgba(255, 217, 51, 0.7);
+.crowd-dim {
+  color: rgba(130, 124, 115, 1);
+}
+
+.crowd-ok {
+  color: rgba(93, 118, 76, 1);
+}
+
+.crowd-bad {
+  color: rgba(181, 62, 48, 1);
+}
+
+.crowd-warn {
+  color: rgba(185, 137, 70, 1);
+}
+
+.crowd-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 2px;
+}
+
+.crowd-chip {
+  font-size: 12px;
+  color: rgba(130, 124, 115, 1);
+  white-space: nowrap;
+}
+
+/* 左栏：标题卡、玩家显示、调试视图（检视 + 导航缓存 F9）。 */
+#crowd-header {
+  padding: 14px 16px;
 }
 
 #crowd-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: bold;
-  color: rgba(255, 235, 89, 1);
+  color: rgba(60, 57, 52, 1);
 }
 
-#crowd-tools {
-  color: rgba(255, 219, 115, 1);
+#crowd-debugview {
+  gap: 10px;
 }
 
-/* 左上：玩家视图队伍条与指令状态卡。 */
-#crowd-player {
-  position: absolute;
-  left: 12px;
-  top: 76px;
-  width: 400px;
-  border-color: rgba(150, 42, 72, 0.7);
+/* 顶部居中：队伍条、按键提示、路径故障条；两侧等宽留白让中列落在屏幕中线上。 */
+#crowd-center {
+  margin: 12px 0px;
+  flex-grow: 1;
+  flex-shrink: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+#crowd-top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.crowd-top-side {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+#crowd-top-middle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 62%;
+}
+
+#crowd-playerbar {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
 }
 
 #crowd-team-swatches {
@@ -88,69 +173,75 @@
 }
 
 .crowd-swatch {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 2px;
 }
 
-/* 右栏：检视行、导航面板(F9)在上、遥测面板(F10)在下。 */
-#crowd-debug-column {
-  position: absolute;
-  right: 12px;
-  top: 76px;
-  width: 520px;
+#crowd-legend {
+  padding: 4px 12px;
+}
+
+#crowd-keys {
+  justify-content: center;
+}
+
+#crowd-fault {
+  border-color: rgba(181, 62, 48, 0.5);
+}
+
+#crowd-fault-line {
+  color: rgba(181, 62, 48, 1);
+}
+
+/* 右上指令卡：贴着右栏左侧，宽 240px。 */
+#crowd-order {
+  min-width: 240px;
+}
+
+/* 底部指令坞：会话状态在上，工具条（工具/步进/避让/倍速/切片）在下。 */
+#crowd-dock {
+  gap: 0px;
+  padding: 0px;
+}
+
+#crowd-status {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  pointer-events: none;
+  gap: 2px;
+  padding: 8px 12px;
+}
+
+#crowd-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: rgba(239, 236, 230, 1);
+}
+
+#crowd-tools {
+  color: rgba(132, 31, 48, 1);
+}
+
+/* 右栏：遥测（F10），占满栏高。 */
+#crowd-telemetry {
+  flex-grow: 1;
+  gap: 4px;
 }
 
 .crowd-tel-row {
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 6px;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .crowd-tel-row.hot .crowd-line {
-  color: rgba(255, 72, 56, 1);
+  color: rgba(181, 62, 48, 1);
 }
 
-/* 曲线是画布节点，柱子在 hud.json 的颜色下画满这个框。 */
+/* 曲线是画布节点，线色在 hud.json。 */
 .crowd-spark {
-  width: 144px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-/* 左下：路径故障条、会话状态、键位说明自下而上堆叠。 */
-#crowd-bottom {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  pointer-events: none;
-}
-
-#crowd-fault {
-  border-color: rgba(255, 72, 56, 1);
-}
-
-#crowd-fault-line {
-  color: rgba(255, 72, 56, 1);
-}
-
-#crowd-legend {
-  padding: 4px 10px;
-}
-
-#crowd-keys {
-  font-size: 11px;
-  color: rgba(191, 230, 255, 1);
-  white-space: nowrap;
+  width: 100%;
+  height: 18px;
 }

@@ -23,14 +23,13 @@ namespace CrowdSimulationTests.Presentation;
 /// </summary>
 internal sealed class CrowdHudTestHost : IDisposable
 {
-    public const float Width = 1920f;
-    public const float Height = 1080f;
-
     private readonly SKSurface _surface;
     private long _clock;
 
-    public CrowdHudTestHost(GameEngine? engine = null)
+    public CrowdHudTestHost(GameEngine? engine = null, int width = 1920, int height = 1080)
     {
+        Width = width;
+        Height = height;
         string modRoot = Path.Combine(RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod");
         Settings = CrowdHudSettings.Parse(
             File.ReadAllText(Path.Combine(modRoot, CrowdHudSettings.RelativePath)),
@@ -45,6 +44,7 @@ internal sealed class CrowdHudTestHost : IDisposable
         Root = new UIRoot(renderer);
         Root.Resize(Width, Height);
         var textMeasurer = new SkiaTextMeasurer();
+        TextMeasurer = textMeasurer;
         var imageSizeProvider = new SkiaImageSizeProvider();
         Host = new UiSurfaceHost(Root, textMeasurer, imageSizeProvider);
         Engine.SetService(CoreServiceKeys.UIRoot, Root);
@@ -53,13 +53,16 @@ internal sealed class CrowdHudTestHost : IDisposable
         Engine.SetService(CoreServiceKeys.UiSurfaceHost, Host);
         if (!Engine.TryGetService(CoreServiceKeys.ViewController, out IViewController? _))
         {
-            Engine.SetService(CoreServiceKeys.ViewController, new FixedView());
+            Engine.SetService(CoreServiceKeys.ViewController, new FixedView(width, height));
         }
 
         Controller = new CrowdHudController(Settings, styleSheet);
         _clock = Stopwatch.Frequency;
     }
 
+    public IUiTextMeasurer TextMeasurer { get; }
+    public float Width { get; }
+    public float Height { get; }
     public GameEngine Engine { get; }
     public bool OwnsEngine { get; }
     public UIRoot Root { get; }
@@ -95,6 +98,8 @@ internal sealed class CrowdHudTestHost : IDisposable
 
     public UiNode? Find(string id) => Host.Scene?.FindByElementId(id);
 
+    public UiRect Rect(string id) => (Find(id) ?? throw new AssertionException($"UI 文档里没有 #{id}")).LayoutRect;
+
     public bool Has(string id) => Find(id) != null;
 
     /// <summary>节点及其子孙的文字，按文档顺序用换行拼起来。</summary>
@@ -107,6 +112,19 @@ internal sealed class CrowdHudTestHost : IDisposable
     }
 
     public string AllText() => Text(CrowdHudView.RootId);
+
+    /// <summary>把最后一次渲染的 HUD 叠在战场底色上存成 PNG。</summary>
+    public void SavePng(string path)
+    {
+        using var image = _surface.Snapshot();
+        using var composed = SKSurface.Create(new SKImageInfo((int)Width, (int)Height));
+        composed.Canvas.Clear(new SKColor(96, 104, 88));
+        composed.Canvas.DrawImage(image, 0, 0);
+        using var snapshot = composed.Snapshot();
+        using var png = snapshot.Encode(SKEncodedImageFormat.Png, 100);
+        using var file = File.Create(path);
+        png.SaveTo(file);
+    }
 
     public void Dispose()
     {
@@ -133,10 +151,10 @@ internal sealed class CrowdHudTestHost : IDisposable
         return dir?.FullName ?? throw new DirectoryNotFoundException("repo root");
     }
 
-    private sealed class FixedView : IViewController
+    private sealed class FixedView(int width, int height) : IViewController
     {
-        public Vector2 Resolution { get; } = new(Width, Height);
+        public Vector2 Resolution { get; } = new(width, height);
         public float Fov => 60f;
-        public float AspectRatio => Width / Height;
+        public float AspectRatio => (float)width / height;
     }
 }
