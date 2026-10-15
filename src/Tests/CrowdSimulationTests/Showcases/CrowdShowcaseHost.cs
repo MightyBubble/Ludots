@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
@@ -39,7 +40,7 @@ internal sealed class CrowdShowcaseHost : IDisposable
 
     public GameEngine Engine { get; }
     public CrowdSimSession Session { get; }
-    /// <summary>场景 Mod 自己的 session.script（舞台把 S4 脚本清空，场景脚本整段替换）。</summary>
+    /// <summary>合并后的 session.script。舞台清空 S4 的脚本，场景 Mod 整段替换。</summary>
     public JsonArray Script { get; }
 
     public static CrowdShowcaseHost Start(string sceneMod)
@@ -58,7 +59,9 @@ internal sealed class CrowdShowcaseHost : IDisposable
             var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
                 ?? throw new InvalidOperationException($"{sceneMod}: 进图后没有群体会话。");
             if (session.TickCount != 0) throw new InvalidOperationException($"{sceneMod}: 进图时会话已在 tick {session.TickCount}。");
-            return new CrowdShowcaseHost(engine, session, ReadScript(repo, sceneMod));
+            var script = MergedConfig(engine, "CrowdSimulationDebug.json")["session"]?["script"]?.AsArray()
+                ?? throw new InvalidOperationException($"{sceneMod}: 合并后的 CrowdSimulationDebug.json 没有 session.script。");
+            return new CrowdShowcaseHost(engine, session, script);
         }
         catch
         {
@@ -67,8 +70,13 @@ internal sealed class CrowdShowcaseHost : IDisposable
         }
     }
 
-    public static JsonObject ReadDebug(string sceneMod)
-        => JsonNode.Parse(File.ReadAllText(Path.Combine(SceneDir(RepoRoot(), sceneMod), "assets", "CrowdSimulationDebug.json")))!.AsObject();
+    /// <summary>按目录登记的 DeepObject 合并读出本次 Mod 链上的配置。</summary>
+    public static JsonObject MergedConfig(GameEngine engine, string path)
+    {
+        var entry = ConfigPipeline.RequireEntry(engine.ConfigCatalog, path, ConfigMergePolicy.DeepObject);
+        return engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
+            ?? throw new InvalidOperationException($"{path} 合并为空。");
+    }
 
     /// <summary>脚本里 <paramref name="type"/> 行（可选按玩家）的 tick，按脚本顺序。</summary>
     public int[] TicksOf(string type, int? player = null)
@@ -123,10 +131,6 @@ internal sealed class CrowdShowcaseHost : IDisposable
     }
 
     public void Dispose() => Engine.Dispose();
-
-    private static JsonArray ReadScript(string repo, string sceneMod)
-        => ReadDebug(sceneMod)["session"]?["script"]?.AsArray()
-            ?? throw new InvalidOperationException($"{sceneMod}: CrowdSimulationDebug.json 没有 session.script。");
 
     private static string SceneDir(string repo, string sceneMod)
         => Path.Combine(repo, "mods", "showcases", "crowd_simulation", sceneMod);
