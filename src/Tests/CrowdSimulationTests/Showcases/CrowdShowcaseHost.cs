@@ -6,7 +6,10 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Fields;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Vision;
 
 namespace CrowdSimulationTests.Showcases;
 
@@ -128,6 +131,31 @@ internal sealed class CrowdShowcaseHost : IDisposable
         }
 
         return done();
+    }
+
+    /// <summary>按宿主每帧的顺序写全场视觉缓冲（视野迷雾、登记的投影器），再按本机座位选地形贴花。</summary>
+    public GlobalFieldVisualDescriptor? GroundDecal(string seatId = "seat.0")
+    {
+        var buffer = new GlobalFieldVisualBuffer(recordCapacity: 16, cellCapacity: 1 << 20, dirtyRectCapacity: 16);
+        buffer.BeginFrame();
+        if (Engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFields))
+        {
+            new FogGlobalFieldVisualProjector().Project(fogFields, buffer);
+        }
+
+        if (Engine.TryGetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry, out GlobalFieldVisualProjectorRegistry? registry) && registry != null)
+        {
+            foreach (var projector in registry.Projectors) projector.Project(buffer);
+        }
+
+        bool seatResolved = false;
+        int scope = 0;
+        if (Engine.TryGetService(CoreServiceKeys.SeatVisionScope, out ISeatVisionScope? seats) && seats != null)
+        {
+            seatResolved = seats.TryGetScopeKeyId(seatId, out scope);
+        }
+
+        return TerrainDecalSelection.TrySelect(buffer, seatResolved, scope, out var decal) ? decal : null;
     }
 
     public void Dispose() => Engine.Dispose();

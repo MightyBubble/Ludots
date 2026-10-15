@@ -8,6 +8,7 @@ using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Vision;
 using NUnit.Framework;
 using static CrowdSimulationTests.Uat.CrowdFogUatTools;
@@ -69,6 +70,10 @@ public sealed class FogShowcaseTests
         Assert.That(drawn == null || drawn.Player == Me, Is.True, "敌方目标被显示");
         Assert.That(CrowdPlayerVisibility.StructureShown(s, viewer, bid, hideFog: true), Is.False, "视野外的新建筑被显示");
         Assert.That(fog.Belief[viewer].ContainsKey(bid), Is.False, "视野外的新建筑进了认知");
+        var playerView = CrowdPlayerViewConfig.Load(CrowdShowcaseHost.MergedConfig(host.Engine, "CrowdSimulationPlayerView.json"), "CrowdSimulationPlayerView.json");
+        Assert.That(playerView.FogHide, Is.True, "场景无效：玩家视图没开迷雾");
+        var decal = host.GroundDecal();
+        Assert.That(decal?.Id.Kind, Is.EqualTo(GlobalFieldVisualKind.Fog), "迷雾开时地形贴花应是本机座位的迷雾");
 
         host.AdvanceTo(nearTick + 2 + wait);
         var (nearShown, _) = Shown(s, viewer, foe);
