@@ -6,55 +6,54 @@ using System.Text.Json.Nodes;
 using NUnit.Framework;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
 
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// 演示 Mod 调试脚本装载冒烟:逐一加载 crowd_simulation 全部 showcase mod 的
-/// CrowdSimulationDebug.json——tick 读取、演示脚本结构校验(无成员 order 留到执行 tick 再补成员，
+/// 演示 Mod 调试脚本装载冒烟:逐一按 crowd_simulation 每个自带 CrowdSimulationDebug.json 的 mod
+/// 的加载序合并配置后解析——tick 读取、演示脚本结构校验(无成员 order 留到执行 tick 再补成员，
 /// select 记录会被拒绝)、升序合同、玩家号表外 / 迷雾面 / area 恰一形状 / 字段类型
-/// 全过即绿。玩家号与迷雾面是否合法取决于演示自己的地图,会话按同目录 game.json 的
-/// startupMapId 建立。脚本与 game.json 经 csproj 内容链接进 assets/debug(通配,新增演示自动纳入)。
+/// 脚本按运行时同一规则拼出(session.scriptAsset 引用的行在前,session.script 在后)。全过即绿。玩家号与迷雾面是否合法取决于演示自己的地图，会话按合并后 game.json 的
+/// startupMapId 建立。新增演示自动纳入。
 /// </summary>
 public sealed class DemoScriptSmokeTests
 {
     [Test]
     public void AllShowcaseDebugScripts_LoadAndEnqueueValidate()
     {
-        string root = Path.Combine(TestContext.CurrentContext.TestDirectory, "assets", "debug");
-        var files = Directory.EnumerateFiles(root, "CrowdSimulationDebug.json", SearchOption.AllDirectories)
-            .OrderBy(p => p, StringComparer.Ordinal).ToList();
-        Assert.That(files, Is.Not.Empty, "assets/debug 下未发现任何 CrowdSimulationDebug.json(内容链接失效或演示资产缺失)");
-        TestContext.Out.WriteLine($"发现 {files.Count} 份演示调试脚本");
+        var mods = ModConfigChain.ModsShipping("CrowdSimulationDebug.json", Path.Combine("showcases", "crowd_simulation"));
+        Assert.That(mods, Is.Not.Empty, "mods/showcases/crowd_simulation 下未发现任何 CrowdSimulationDebug.json");
+        TestContext.Out.WriteLine($"发现 {mods.Count} 份演示调试脚本");
 
-        foreach (string file in files)
+        foreach (string modId in mods)
         {
-            string modDir = Path.GetRelativePath(root, file).Split(Path.DirectorySeparatorChar)[0];
-            var debug = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
-            CrowdSimulationDebugConfig.Load(debug);
-            if (debug["session"]?["script"] is not JsonArray script || script.Count == 0)
+            var chain = ModConfigChain.Open(modId);
+            var debug = CrowdSimulationDebugConfig.Load(chain.Merged("CrowdSimulationDebug.json"));
+            var rows = CrowdSimulationDebugConfig.SessionScript(debug.Session, chain.OpenAsset);
+            if (rows is not { Length: > 0 })
             {
-                TestContext.Out.WriteLine($"{modDir}: 无 session.script,跳过");
+                TestContext.Out.WriteLine($"{modId}: 无会话脚本，跳过");
                 continue;
             }
 
-            if (ScriptsRunByOwnAcceptance.TryGetValue(modDir, out string? coveredBy))
+            if (ScriptsRunByOwnAcceptance.TryGetValue(modId, out string? coveredBy))
             {
-                TestContext.Out.WriteLine($"{modDir}: 地图不是种子图，脚本由 {coveredBy} 整段跑过");
+                TestContext.Out.WriteLine($"{modId}: 地图不是种子图，脚本由 {coveredBy} 整段跑过");
                 continue;
             }
 
-            string seed = DemoSeedOf(file);
+            string seed = DemoSeedOf(chain);
             var (runtime, session) = S4DeployTruthTests.BuildSession(seed);
             using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
 
-            var demo = CrowdDemoScript.Load(script);
+            var demo = CrowdDemoScript.Load(CrowdSimulationRuntime.ComposeDemoScript(0, rows));
             Assert.DoesNotThrow(() => demo.ValidateStructure(session),
-                $"{modDir}: 脚本结构校验失败(升序/玩家号/迷雾面/恰一形状/字段类型)");
-            TestContext.Out.WriteLine($"{modDir}: 种子 {seed}, {demo.Count} 条演示指令结构校验通过");
+                $"{modId}: 脚本结构校验失败(升序/玩家号/迷雾面/恰一形状/字段类型)");
+            TestContext.Out.WriteLine($"{modId}: 种子 {seed}, {demo.Count} 条演示指令结构校验通过");
         }
     }
 
@@ -66,17 +65,14 @@ public sealed class DemoScriptSmokeTests
         ["CrowdSimulationMinimalMod"] = "CrowdSimulationTests.Authoring.CrowdSimulationMinimalModTests",
     };
 
-    private static string DemoSeedOf(string scriptPath)
+    private static string DemoSeedOf(ModConfigChain chain)
     {
-        string gamePath = Path.Combine(Path.GetDirectoryName(scriptPath)!, "game.json");
-        if (!File.Exists(gamePath))
-            throw new InvalidOperationException($"{scriptPath}: 同目录缺少 game.json,无法确定演示地图");
-        string? mapId = JsonNode.Parse(File.ReadAllText(gamePath))!["startupMapId"]?.GetValue<string>();
-        if (mapId is null || !mapId.StartsWith(CrowdMapPrefix, StringComparison.Ordinal))
-            throw new InvalidOperationException($"{gamePath}: startupMapId={mapId ?? "<缺失>"} 不是 {CrowdMapPrefix}<种子> 地图");
+        string mapId = chain.StartupMapId();
+        if (!mapId.StartsWith(CrowdMapPrefix, StringComparison.Ordinal))
+            throw new InvalidOperationException($"{chain.ModId}: startupMapId={mapId} 不是 {CrowdMapPrefix}<种子> 地图");
         string seed = mapId.Substring(CrowdMapPrefix.Length);
         if (!Directory.Exists(S1SurfaceTruthTests.SeedDir(seed)))
-            throw new InvalidOperationException($"{gamePath}: 地图 {mapId} 没有对应的种子资产 {S1SurfaceTruthTests.SeedDir(seed)}");
+            throw new InvalidOperationException($"{chain.ModId}: 地图 {mapId} 没有对应的种子资产 {S1SurfaceTruthTests.SeedDir(seed)}");
         return seed;
     }
 }

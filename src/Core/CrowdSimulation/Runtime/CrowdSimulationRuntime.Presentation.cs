@@ -223,7 +223,11 @@ public sealed partial class CrowdSimulationRuntime
             playerView.Bind(liveSession);
         }
 
-        var demoProjector = new S4DeployDemoViewProjector(demo, sessionSource, terrain);
+        var demoProjector = new S4DeployDemoViewProjector(
+            demo,
+            sessionSource,
+            terrain,
+            playerView == null ? null : () => playerView.FogHide);
         _deployViewProjector = demoProjector;
         CrowdDebugViewFrame? debugView = _debugView == null ? null : new CrowdDebugViewFrame(_debugView);
         slot.Current = debugView == null

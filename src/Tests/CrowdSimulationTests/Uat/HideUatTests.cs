@@ -90,30 +90,5 @@ public sealed class HideUatTests
     private static void FogSight(CrowdSimSession s, bool on)
         => s.Commands.Submit(s, new JsonObject { ["type"] = "fogSight", ["on"] = on }, CrowdSimCommands.Exec);
 
-    private static void Wait(CrowdSimSession s) => CrowdUatKit.Step(s, s.Fog!.Period * s.Fog.VisionGroupCount + 2);
-
-    private static int EnemyOf(CrowdSimSession s, int player)
-    {
-        int g = Group(s, player);
-        var rules = s.Config.PairRules;
-        for (int id = 1; id <= rules.PlayerCount; id++)
-        {
-            if (Group(s, id) != g) return id;
-        }
-
-        throw new System.InvalidOperationException("场景无效：所有玩家同一视野组。");
-    }
-
-    private static (int Shown, int Total) Shown(CrowdSimSession s, int viewerGroup, int player)
-    {
-        int shown = 0, total = 0;
-        for (int i = 0; i < s.Units.Count; i++)
-        {
-            if (s.World.Get<PlayerOwner>(s.Units.EntityAt(i)).PlayerId != player) continue;
-            total++;
-            if (CrowdPlayerVisibility.UnitShown(s, viewerGroup, i, hideFog: true)) shown++;
-        }
-
-        return (shown, total);
-    }
+    private static void Wait(CrowdSimSession s) => CrowdUatKit.Step(s, ShowWaitTicks(s));
 }

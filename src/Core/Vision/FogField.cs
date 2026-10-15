@@ -52,6 +52,8 @@ namespace Ludots.Core.Vision
         public int NonDefaultCount => _cells.NonDefaultCount;
         public int VisibleCount => _visibleCount;
         public int ExploredInclusiveCount => _exploredInclusiveCount;
+        /// <summary><see cref="EnsureCellBlock"/> 建立的 [0, side)² 格块边长;没建块为 0。</summary>
+        public int CellBlockSide => _blockSide;
 
         public FogCell WorldToCell(WorldCmInt2 world)
         {

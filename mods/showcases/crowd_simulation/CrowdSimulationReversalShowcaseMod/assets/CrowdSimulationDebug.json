@@ -1,0 +1,43 @@
+{
+  "session": {
+    "scriptAsset": "assets/CrowdSimulation/showcase/formation-120.json",
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 1178125,
+          "yCm": 790625,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 3,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 428125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 46,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 365625,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "title": "CrowdSimulation 演示 · 折返（行进中 180° 掉头，队形镜像不穿队）"
+  }
+}

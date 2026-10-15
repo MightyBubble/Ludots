@@ -58,6 +58,42 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void BuildTexturePlan_CellBlockFog_TextureCoversWholeBlockAndNeverSeenFarCornerIsUnseen()
+    {
+        const int Side = 64;
+        var registry = new FogLayerRegistry();
+        FogLayerId layerId = registry.Register("ground", cellSizeCm: 100, updateHz: 10);
+        var store = new FogFieldStore(initialCapacity: 2, chunkSizeCells: 16);
+        FogField field = store.GetOrCreate(1, registry.Get(layerId));
+        field.EnsureCellBlock(Side);
+        field.SetVisible(new FogCell(2, 2));
+        field.SetExplored(new FogCell(3, 2));
+
+        var buffer = new GlobalFieldVisualBuffer(recordCapacity: 4, cellCapacity: Side * Side, dirtyRectCapacity: 4);
+        var projector = new FogGlobalFieldVisualProjector();
+        buffer.BeginFrame();
+        projector.Project(store, buffer);
+        var palette = MarketPalette();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = palette };
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(plans[0].BoundsCells, Is.EqualTo(new Ludots.Core.Mathematics.IntRect(0, 0, Side, Side)),
+            "贴花的世界范围取 BoundsCells × 格边长，必须是整块地图");
+        Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(Side - 1, Side - 1), out Color corner), Is.True);
+        Assert.That(corner, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Unseen, palette)));
+        Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(2, 2), out Color seen), Is.True);
+        Assert.That(seen, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, palette)));
+
+        field.SetVisible(new FogCell(40, 40));
+        buffer.BeginFrame();
+        projector.Project(store, buffer);
+        plans = presenter.BuildTexturePlan(buffer);
+        Assert.That(plans[0].BoundsCells, Is.EqualTo(new Ludots.Core.Mathematics.IntRect(0, 0, Side, Side)));
+        Assert.That(plans[0].FullUpload, Is.False, "边界不变，纹理不重建，只传脏格");
+    }
+
+    [Test]
     public void ResolveFogColor_MatchesMarketThreeStateFogContract()
     {
         GlobalFieldVisualBuffer buffer = CreateBuffer(out _, out FogField field);

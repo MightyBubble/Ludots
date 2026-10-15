@@ -1,0 +1,109 @@
+{
+  "session": {
+    "scriptAsset": "assets/CrowdSimulation/showcase/formation-120.json",
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 441,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 451,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 461,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 471,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 481,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 491,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 501,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 511,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "title": "CrowdSimulation 演示 · 连点（已集结方块被同一目标连点 8 次）"
+  }
+}

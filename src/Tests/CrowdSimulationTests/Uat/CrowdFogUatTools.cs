@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Vision;
 
@@ -185,4 +189,61 @@ internal static class CrowdFogUatTools
 
     public static bool SameSet(IEnumerable<int> a, IEnumerable<int> b)
         => a.Distinct().OrderBy(v => v).SequenceEqual(b.Distinct().OrderBy(v => v));
+
+    /// <summary>该玩家有领队、已规划完的第一个导航组。</summary>
+    public static CrowdNavGroupSet.Group? ReadyGroup(CrowdSimSession session, int player)
+    {
+        int index = session.Config.PairRules.IndexByPlayerId[player];
+        return session.Groups.Groups.FirstOrDefault(g =>
+            g != null && g.Count > 0 && g.Player == index && g.OrderId != 0 && g.Leader != null && !g.Planning);
+    }
+
+    public static bool LeaderBlocked(CrowdSimSession session, CrowdNavGroupSet.Group group, int navId)
+        => CrowdSimPlanner.LeaderPathBlocked(group.Leader, session.ResolveNavContext(navId), session);
+
+    public static Fix64Vec2[] PathOf(CrowdLeader leader) =>
+        Enumerable.Range(0, leader.PathCount).Select(leader.PathAt).ToArray();
+
+    /// <summary>认知变体逐个对它自己认知场的全量烘焙核对，不一致记进 <paramref name="errors"/>。</summary>
+    public static void CheckBeliefs(CrowdSimSession session, string when, List<string> errors)
+    {
+        try
+        {
+            CrowdSimulationValidator.ValidateNav(session);
+        }
+        catch (CrowdSimulationInvariantException ex)
+        {
+            errors.Add($"{when}：{ex.Message}");
+        }
+    }
+
+    /// <summary>让每个视野组都至少刷新一轮迷雾所需的 tick 数。</summary>
+    public static int ShowWaitTicks(CrowdSimSession session) => session.Fog!.Period * session.Fog.VisionGroupCount + 2;
+
+    /// <summary>和 <paramref name="player"/> 不在同一视野组的第一个玩家。</summary>
+    public static int EnemyOf(CrowdSimSession session, int player)
+    {
+        int g = Group(session, player);
+        var rules = session.Config.PairRules;
+        for (int id = 1; id <= rules.PlayerCount; id++)
+        {
+            if (Group(session, id) != g) return id;
+        }
+
+        throw new InvalidOperationException("场景无效：所有玩家同一视野组。");
+    }
+
+    /// <summary>玩家视图（按迷雾隐藏）对 <paramref name="viewerGroup"/> 画出的 <paramref name="player"/> 单位数和该玩家单位总数。</summary>
+    public static (int Shown, int Total) Shown(CrowdSimSession session, int viewerGroup, int player)
+    {
+        int shown = 0, total = 0;
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            if (session.World.Get<PlayerOwner>(session.Units.EntityAt(i)).PlayerId != player) continue;
+            total++;
+            if (CrowdPlayerVisibility.UnitShown(session, viewerGroup, i, hideFog: true)) shown++;
+        }
+
+        return (shown, total);
+    }
 }
