@@ -66,7 +66,7 @@ public sealed class RaylibFieldRenderPresenterTests
         var missing = new RaylibFieldRenderPresenter();
         InvalidOperationException absent = Assert.Throws<InvalidOperationException>(
             () => missing.BuildTexturePlan(buffer))!;
-        Assert.That(absent.Message, Does.Contain("presentation.fogDecal"));
+        Assert.That(absent.Message, Does.Contain("FogDecalPalette"));
 
         FogDecalPalette palette = MarketPalette();
         Color visible = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, palette);

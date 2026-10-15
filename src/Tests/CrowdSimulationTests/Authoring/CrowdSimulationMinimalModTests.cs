@@ -72,6 +72,7 @@ public sealed class CrowdSimulationMinimalModTests
         using GameEngine engine = StartEngine(repo);
         CrowdSimSession session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
             ?? throw new InvalidOperationException("没有群体会话。");
+        Assert.That(engine.GetService(CoreServiceKeys.FogDecalPalette), Is.Not.Null, "群体会话没有发布迷雾贴花调色板。");
         int n = session.Config.NavCellsPerSide;
         int cellCm = session.Config.NavCellSizeCm;
         Assert.That(n, Is.EqualTo(256));

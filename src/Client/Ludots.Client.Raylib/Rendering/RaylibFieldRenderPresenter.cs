@@ -760,7 +760,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (palette == null)
             {
-                throw new InvalidOperationException("迷雾贴花缺少调色板，需要 presentation.fogDecal。");
+                throw new InvalidOperationException("迷雾贴花缺少调色板：没有模块发布 FogDecalPalette 服务。");
             }
 
             FogDecalColor color = palette.For(visibility);
