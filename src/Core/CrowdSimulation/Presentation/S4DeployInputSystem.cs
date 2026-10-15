@@ -17,16 +17,14 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly S4DeployDemoRuntime _demo;
     private readonly CrowdDeployBindings _bindings;
-    private readonly CrowdHudPanel _hud;
     private CrowdDebugViewFrame? _debugView;
     private CrowdPlayerViewHost? _playerView;
 
-    public S4DeployInputSystem(GameEngine engine, S4DeployDemoRuntime demo, CrowdDeployBindings bindings, CrowdHudPanel hud)
+    public S4DeployInputSystem(GameEngine engine, S4DeployDemoRuntime demo, CrowdDeployBindings bindings)
     {
         _engine = engine;
         _demo = demo;
         _bindings = bindings;
-        _hud = hud;
     }
 
     internal void UseDebugView(CrowdDebugViewFrame frame) => _debugView = frame;
@@ -49,7 +47,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
             _demo.ArmSession(session);
         }
 
-        bool picked = CrowdPointerGround.TryPick(_engine, actions, _hud.OriginXPx, _hud.OriginYPx, _hud.WidthPx, _hud.HeightPx, out double xCm, out double yCm);
+        bool picked = CrowdPointerGround.TryPick(_engine, actions, out double xCm, out double yCm);
         _demo.HoverCm = picked ? (xCm, yCm) : null;
 
         if (actions.PressedThisTick(_bindings.CycleView)) _demo.EnqueueCycleView();

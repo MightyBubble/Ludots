@@ -53,16 +53,6 @@ internal sealed class CrowdDebugViewFrame
     private int[] _beliefCells = Array.Empty<int>();
     private byte[] _beliefGhost = Array.Empty<byte>();
     private CrowdLeader?[]? _seen;
-    private readonly CrowdDebugPanels _panels;
-    private string _inspectText = "";
-    private string _beliefText = "";
-    private int _shownLayer = int.MinValue;
-    private int _shownRadius = int.MinValue;
-    private int _shownColor = int.MinValue;
-    private int _shownGroup = int.MinValue;
-    private int _shownDiff = int.MinValue;
-    private int _shownGhost = int.MinValue;
-    private int _shownTerrain = int.MinValue;
 
     internal bool Funnel;
     internal bool Corridor;
@@ -103,7 +93,6 @@ internal sealed class CrowdDebugViewFrame
         BeliefGroup = config.BeliefGroup;
         NavPanel = config.Panels.Nav;
         TelemetryPanel = config.Panels.Telemetry;
-        _panels = new CrowdDebugPanels(config);
         _flow = new CrowdFlowFieldVisualProjector(_flowSource)
         {
             LimitToRect = true,
@@ -195,7 +184,6 @@ internal sealed class CrowdDebugViewFrame
 
     public void Draw(CrowdSimSession session, ScreenOverlayBuffer overlay)
     {
-        DrawReadouts(session, overlay);
         if (!Visible) return;
         Prepare(session);
         if (!_viewValid) return;
@@ -224,7 +212,21 @@ internal sealed class CrowdDebugViewFrame
         if (UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff)
             EmitUnits(session, overlay, projector, height, ref used, budget);
         EmitScreenFields(session, overlay, projector, height, ref used, budget);
-        EmitPanel(session, overlay, ref used, budget);
+    }
+
+    /// <summary>分歧数与残影数是上一次 <see cref="Draw"/>/<see cref="Project"/> 准备视口时读到的值。</summary>
+    internal void ReadInspect(ref CrowdInspectReadout readout)
+    {
+        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid || Density || Blocked || TerrainTypes;
+        readout.NavOverlays = nav;
+        readout.LayerIndex = LayerIndex;
+        readout.RadiusIndex = RadiusIndex;
+        readout.UnitColor = (CrowdUnitColorMode)UnitColorMode;
+        readout.TerrainTypes = TerrainTypes;
+        readout.Belief = Belief;
+        readout.BeliefGroup = BeliefGroup;
+        readout.DivergentCells = Belief ? _diffCount : 0;
+        readout.Ghosts = Belief ? _ghostStat : 0;
     }
 
     public void Project(GlobalFieldVisualBuffer buffer, CrowdSimSession? session)
@@ -294,25 +296,6 @@ internal sealed class CrowdDebugViewFrame
             return;
         if (!runtime.TryLocalSeatPlayerId(out int playerId)) return;
         ControllingPlayer = ControllingIndex(session.Config.PairRules.IndexByPlayerId, playerId);
-    }
-
-    private void DrawReadouts(CrowdSimSession session, ScreenOverlayBuffer overlay)
-    {
-        int width = 0, height = 0;
-        if (TryView(out _, out _, out _, out var view))
-        {
-            width = (int)view.Resolution.X;
-            height = (int)view.Resolution.Y;
-        }
-
-        PresentationTimingDiagnostics? timing = null;
-        CrowdSimulationRuntime? runtime = null;
-        if (_engine != null)
-        {
-            _engine.TryGetService(CoreServiceKeys.PresentationTimingDiagnostics, out timing);
-            _engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out runtime);
-        }
-        _panels.Draw(session, runtime, timing, width, height, NavPanel, TelemetryPanel, overlay);
     }
 
     private void Measure(int cellCm)
@@ -586,55 +569,6 @@ internal sealed class CrowdDebugViewFrame
         int index = CrowdDebugOverlayGeometry.TemplateIndex(group.LayerIdx, group.RIdx, radii);
         return CrowdDebugViewColors.At(_config.Colors.Templates, index, path, "colors.templates");
     }
-
-    private void EmitPanel(CrowdSimSession session, ScreenOverlayBuffer overlay, ref int used, int budget)
-    {
-        bool nav = Corridor || Flow || NavPolygons || HpaGraph || JumpLinks || TileGrid || Density || Blocked || TerrainTypes;
-        if (!nav && !Belief && UnitColorMode == CrowdSimulationDebugViewConfig.ColorOff) return;
-        if (used >= budget) return;
-        var color = _config.Colors.PanelText.ToVector4();
-        int font = _config.Panel.FontSize;
-        int y = _config.Panel.OriginYPx;
-        if (nav || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff)
-        {
-            int terrainFlag = TerrainTypes ? 1 : 0;
-            if (_shownLayer != LayerIndex || _shownRadius != RadiusIndex || _shownColor != UnitColorMode || _shownTerrain != terrainFlag)
-            {
-                _shownLayer = LayerIndex;
-                _shownRadius = RadiusIndex;
-                _shownColor = UnitColorMode;
-                _shownTerrain = terrainFlag;
-                _inspectText = UnitColorMode == CrowdSimulationDebugViewConfig.ColorOff
-                    ? $"检视 移动 {LayerIndex} 半径 {RadiusIndex}"
-                    : $"检视 移动 {LayerIndex} 半径 {RadiusIndex} 着色 {ColorLabel(UnitColorMode)}";
-                if (TerrainTypes) _inspectText += " 地形类型";
-            }
-
-            if (overlay.AddText(_config.Panel.OriginXPx, y, _inspectText, font, color))
-                used = overlay.Count;
-            y += font + 4;
-        }
-
-        if (!Belief || used >= budget) return;
-        if (_shownGroup != BeliefGroup || _shownDiff != _diffCount || _shownGhost != _ghostStat)
-        {
-            _shownGroup = BeliefGroup;
-            _shownDiff = _diffCount;
-            _shownGhost = _ghostStat;
-            _beliefText = $"视野组 {BeliefGroup} 分歧 {_diffCount} 残影 {_ghostStat}";
-        }
-
-        if (overlay.AddText(_config.Panel.OriginXPx, y, _beliefText, font, color))
-            used = overlay.Count;
-    }
-
-    private static string ColorLabel(int mode) => mode switch
-    {
-        CrowdSimulationDebugViewConfig.ColorTeam => "队伍",
-        CrowdSimulationDebugViewConfig.ColorTemplate => "模板",
-        CrowdSimulationDebugViewConfig.ColorPriority => "优先级",
-        _ => "关",
-    };
 
     private void EmitSegment(CrowdDebugSegment segment, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, Vector4 color)
     {

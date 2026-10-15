@@ -15,7 +15,7 @@ internal sealed class CrowdPresentationConfig
     [JsonRequired] public string Kind { get; set; } = string.Empty;
     [JsonRequired] public string Title { get; set; } = string.Empty;
     [JsonRequired] public string[] ViewLabels { get; set; } = Array.Empty<string>();
-    [JsonRequired] public CrowdHudPanel Hud { get; set; } = new();
+    [JsonRequired] public CrowdHudConfig Hud { get; set; } = new();
     public CrowdPathPresentation? Path { get; set; }
     public CrowdDeployPresentation? Deploy { get; set; }
 
@@ -211,12 +211,9 @@ internal sealed class CrowdPresentationConfig
     }
 }
 
-internal sealed class CrowdHudPanel
+/// <summary>键位说明模板。HUD 面板的布局与样式属于群体界面 mod。</summary>
+internal sealed class CrowdHudConfig
 {
-    [JsonRequired] public int OriginXPx { get; set; }
-    [JsonRequired] public int OriginYPx { get; set; }
-    [JsonRequired] public int WidthPx { get; set; }
-    [JsonRequired] public int HeightPx { get; set; }
     [JsonRequired] public string Keys { get; set; } = string.Empty;
 }
 

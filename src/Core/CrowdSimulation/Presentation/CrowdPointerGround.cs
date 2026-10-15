@@ -9,28 +9,19 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
 /// 群体演示的地面拾取:指针位置走已绑定的 PointerPos 动作,射线走 ScreenRayProvider 与高度图。
-/// HUD 矩形内不算世界点选。
+/// 群体 HUD 面板只显示不收指针，被界面捕获的点击在输入层就已拦下。
 /// </summary>
 internal static class CrowdPointerGround
 {
     public static bool TryPick(
         GameEngine engine,
         IInputActionReader actions,
-        int hudX,
-        int hudY,
-        int hudW,
-        int hudH,
         out double xCm,
         out double yCm)
     {
         xCm = 0;
         yCm = 0;
         Vector3 pointer = actions.ReadAction<Vector3>(ReservedInputActionIds.PointerPos);
-        if (pointer.X >= hudX && pointer.X <= hudX + hudW &&
-            pointer.Y >= hudY && pointer.Y <= hudY + hudH)
-        {
-            return false;
-        }
 
         if (!engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? heightmap) ||
             heightmap == null ||

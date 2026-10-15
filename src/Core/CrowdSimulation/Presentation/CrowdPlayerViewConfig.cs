@@ -38,14 +38,6 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int RouteThicknessCm { get; init; }
     [JsonRequired] public int MarkerRadiusCm { get; init; }
     [JsonRequired] public int CrossArmCm { get; init; }
-    [JsonRequired] public int StatusCardX { get; init; }
-    [JsonRequired] public int StatusCardY { get; init; }
-    [JsonRequired] public int StatusCardW { get; init; }
-    [JsonRequired] public int StatusCardH { get; init; }
-    [JsonRequired] public int TeamBarX { get; init; }
-    [JsonRequired] public int TeamBarY { get; init; }
-    [JsonRequired] public int FontSize { get; init; }
-    [JsonRequired] public int LinePx { get; init; }
     [JsonRequired] public int KillRadiusCm { get; init; }
     [JsonRequired] public double KillRingScale { get; init; }
     [JsonRequired] public double KillImpulse { get; init; }
@@ -114,8 +106,6 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
         if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1 || EnemyMarkRadiusCm < 1)
             throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm、crossArmCm 与 enemyMarkRadiusCm 需为 ≥ 1 的整数。");
-        if (StatusCardW < 1 || StatusCardH < 1 || FontSize < 1 || LinePx < 1)
-            throw new InvalidOperationException($"{path}: 状态卡尺寸、字号和线宽需为 ≥ 1 的整数。");
         if (KillRadiusCm < 1)
             throw new InvalidOperationException($"{path}: killRadiusCm 需为 ≥ 1 的整数。");
         if (!(KillRingScale > 1d) || !double.IsFinite(KillRingScale))
@@ -211,7 +201,8 @@ internal sealed class CrowdPlayerViewActions
         => CrowdPlayerViewConfig.RequireText($"{path}.actions", field, value);
 }
 
-internal sealed class CrowdPlayerViewLabels
+/// <summary>玩家视图状态卡文案，来自 CrowdSimulationPlayerView.json labels。</summary>
+public sealed class CrowdPlayerViewLabels
 {
     [JsonRequired] public string Planning { get; init; } = "";
     [JsonRequired] public string Moving { get; init; } = "";
@@ -242,7 +233,7 @@ internal sealed class CrowdPlayerViewLabels
     [JsonRequired] public string Layer { get; init; } = "";
     [JsonRequired] public string Self { get; init; } = "";
 
-    public void Validate(string path)
+    internal void Validate(string path)
     {
         string prefix = $"{path}.labels";
         CrowdPlayerViewConfig.RequireText(prefix, "planning", Planning);
@@ -287,8 +278,6 @@ internal sealed class CrowdPlayerViewColors
     [JsonRequired] public CrowdDebugRgba TerrainShade { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Goal { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Ripple { get; init; } = null!;
-    [JsonRequired] public CrowdDebugRgba Card { get; init; } = null!;
-    [JsonRequired] public CrowdDebugRgba Text { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba EnemyMark { get; init; } = null!;
 
     public void Validate(string path)
@@ -302,8 +291,6 @@ internal sealed class CrowdPlayerViewColors
         TerrainShade.Validate(path, "colors.terrainShade");
         Goal.Validate(path, "colors.goal");
         Ripple.Validate(path, "colors.ripple");
-        Card.Validate(path, "colors.card");
-        Text.Validate(path, "colors.text");
         EnemyMark.Validate(path, "colors.enemyMark");
     }
 }

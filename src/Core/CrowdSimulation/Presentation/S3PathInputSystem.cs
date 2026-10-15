@@ -14,14 +14,12 @@ internal sealed class S3PathInputSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly S3PathDemoRuntime _runtime;
     private readonly CrowdPathBindings _bindings;
-    private readonly CrowdHudPanel _hud;
 
-    public S3PathInputSystem(GameEngine engine, S3PathDemoRuntime runtime, CrowdPathBindings bindings, CrowdHudPanel hud)
+    public S3PathInputSystem(GameEngine engine, S3PathDemoRuntime runtime, CrowdPathBindings bindings)
     {
         _engine = engine;
         _runtime = runtime;
         _bindings = bindings;
-        _hud = hud;
     }
 
     public void Initialize() { }
@@ -36,7 +34,7 @@ internal sealed class S3PathInputSystem : ISystem<float>
         int navCellsPerSide = _runtime.Nav.NavCellsPerSide;
         float csCm = _runtime.Config.NavCellSizeCm;
         int hovered = -1;
-        if (CrowdPointerGround.TryPick(_engine, actions, _hud.OriginXPx, _hud.OriginYPx, _hud.WidthPx, _hud.HeightPx, out double xCm, out double yCm))
+        if (CrowdPointerGround.TryPick(_engine, actions, out double xCm, out double yCm))
         {
             int cx = (int)MathF.Floor((float)xCm / csCm);
             int cy = (int)MathF.Floor((float)yCm / csCm);

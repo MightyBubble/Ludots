@@ -1,6 +1,5 @@
 using System;
 using System.Numerics;
-using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Client;
@@ -47,10 +46,7 @@ internal sealed class CrowdPlayerViewHost
     private readonly Vector4 _paper;
     private readonly Vector4 _goal;
     private readonly Vector4 _ripple;
-    private readonly Vector4 _card;
-    private readonly Vector4 _text;
     private readonly Vector4 _enemyMark;
-    private readonly StringBuilder _sb = new(512);
     private readonly float _dashVisual;
     private readonly float _gapVisual;
     private readonly float _routeThicknessVisual;
@@ -72,9 +68,6 @@ internal sealed class CrowdPlayerViewHost
     private readonly Vector2[] _crossH = new Vector2[2];
     private readonly Vector2[] _crossV = new Vector2[2];
     private readonly int[] _counts = new int[MaxPlayers + 1];
-    private readonly int[] _sigCounts = new int[MaxPlayers + 1];
-    private readonly Vector4[] _teamColors = new Vector4[MaxPlayers + 1];
-    private readonly bool[] _teamKnown = new bool[MaxPlayers + 1];
 
     private int _playerCount;
     private int _radiusLast;
@@ -113,26 +106,13 @@ internal sealed class CrowdPlayerViewHost
     private long _rippleStart = long.MinValue;
     private int _rippleX;
     private int _rippleY;
-    private bool _textReady;
-    private int _sigPlayer = int.MinValue;
-    private int _sigOrder = int.MinValue;
-    private int _sigMode = int.MinValue;
-    private int _sigShape = int.MinValue;
-    private int _sigPlanning = int.MinValue;
-    private int _sigMoving = int.MinValue;
-    private int _sigArrived = int.MinValue;
-    private int _sigOther = int.MinValue;
-    private int _sigFlags = int.MinValue;
-    private int _sigDeploy = int.MinValue;
-    private int _sigRadius = int.MinValue;
-    private int _sigClick = int.MinValue;
-    private int _sigScene = int.MinValue;
-    private int _sigFocus = int.MinValue;
-    private string _teamBar = "";
-    private string _statusLine = "";
-    private string _modeLine = "";
-    private string _clickLine = "";
-    private string _deployLine = "";
+    private int _planning;
+    private int _moving;
+    private int _arrived;
+    private int _other;
+    private CrowdCommandCardState _card;
+    private string? _latestShapeId;
+    private CrowdOrderMode? _latestMode;
 
     public CrowdPlayerViewHost(GameEngine? engine, CrowdPlayerViewConfig config)
     {
@@ -144,8 +124,6 @@ internal sealed class CrowdPlayerViewHost
         _paper = config.Colors.Paper.ToVector4();
         _goal = config.Colors.Goal.ToVector4();
         _ripple = config.Colors.Ripple.ToVector4();
-        _card = config.Colors.Card.ToVector4();
-        _text = config.Colors.Text.ToVector4();
         _enemyMark = config.Colors.EnemyMark.ToVector4();
         _dashVisual = WorldUnits.CmToM(config.DashCm);
         _gapVisual = WorldUnits.CmToM(config.GapCm);
@@ -253,9 +231,7 @@ internal sealed class CrowdPlayerViewHost
         _clickRadius = _config.ClickRadiusClass;
         Prefs.ShapeId = _config.DefaultShapeId;
         Prefs.MagicBox = _config.MagicBox;
-        CacheTeamColors(session);
         _boundSession = session;
-        _textReady = false;
         _logArmed = false;
     }
 
@@ -643,9 +619,44 @@ internal sealed class CrowdPlayerViewHost
             DrawOrderFeedback(session, routes, viewer, leader, goal, unfinished);
         }
 
-        var card = CrowdCommandStatusCard.Classify(planning, moving, arrived, other);
-        PublishText(latest, card, planning, moving, arrived, other);
-        DrawChrome(overlay);
+        _planning = planning;
+        _moving = moving;
+        _arrived = arrived;
+        _other = other;
+        _card = CrowdCommandStatusCard.Classify(planning, moving, arrived, other);
+        _latestShapeId = latest?.ShapeId;
+        _latestMode = latest?.Mode;
+    }
+
+    internal CrowdPlayerViewLabels Labels => _config.Labels;
+
+    /// <summary>读上一次 <see cref="Draw"/> 统计的计数。各玩家单位数按玩家号写入 <paramref name="unitsByPlayer"/>，下标 0 不用。</summary>
+    internal void ReadPanel(ref CrowdPlayerHud hud, Span<int> unitsByPlayer)
+    {
+        int shape = _latestShapeId == null ? -1 : ShapeIndex(_latestShapeId);
+        hud.PlayerCount = _playerCount;
+        hud.LocalPlayer = _player;
+        hud.Card = _card;
+        hud.Planning = _planning;
+        hud.Moving = _moving;
+        hud.Arrived = _arrived;
+        hud.Other = _other;
+        hud.ShapeLabel = shape >= 0 ? _shapeLabels[shape] : Prefs.ShapeId;
+        hud.Mode = _latestMode;
+        hud.MagicBox = Prefs.MagicBox;
+        hud.FogHide = _fogHide;
+        hud.Route = _route;
+        hud.LineOfSight = _lineOfSight;
+        hud.ClickUnitType = _clickUnitType;
+        hud.ClickRadius = _clickRadius;
+        hud.ClickCount = _clickCount;
+        hud.DeployCount = _deployCount;
+        hud.RadiusMin = _radiusMin;
+        hud.RadiusMax = _radiusMax;
+        hud.Layer = _focus;
+        hud.SceneKind = _sceneKind;
+        int n = Math.Min(unitsByPlayer.Length, _counts.Length);
+        _counts.AsSpan(0, n).CopyTo(unitsByPlayer);
     }
 
     private void ApplyLayers(CrowdSimSession session)
@@ -1196,203 +1207,6 @@ internal sealed class CrowdPlayerViewHost
             _goal);
     }
 
-    private void PublishText(CrowdOrder? latest, CrowdCommandCardState card, int planning, int moving, int arrived, int other)
-    {
-        int shape = latest == null ? -1 : ShapeIndex(latest.ShapeId);
-        int mode = latest == null ? -1 : (int)latest.Mode;
-        int orderId = latest?.Id ?? 0;
-        int flags = (_fogHide ? 1 : 0) | (_route ? 2 : 0) | (_lineOfSight ? 4 : 0) | (Prefs.MagicBox ? 8 : 0);
-        int radius = (_radiusMin << 16) | _radiusMax;
-        int click = (_clickCount << 16) ^ (_clickUnitType << 8) ^ _clickRadius;
-        if (_textReady &&
-            _sigPlayer == _player &&
-            _sigOrder == orderId &&
-            _sigMode == mode &&
-            _sigShape == shape &&
-            _sigPlanning == planning &&
-            _sigMoving == moving &&
-            _sigArrived == arrived &&
-            _sigOther == other &&
-            _sigFlags == flags &&
-            _sigDeploy == _deployCount &&
-            _sigRadius == radius &&
-            _sigClick == click &&
-            _sigScene == _sceneKind &&
-            _sigFocus == _focus &&
-            CountsSame())
-        {
-            return;
-        }
-
-        _sigPlayer = _player;
-        _sigOrder = orderId;
-        _sigMode = mode;
-        _sigShape = shape;
-        _sigPlanning = planning;
-        _sigMoving = moving;
-        _sigArrived = arrived;
-        _sigOther = other;
-        _sigFlags = flags;
-        _sigDeploy = _deployCount;
-        _sigRadius = radius;
-        _sigClick = click;
-        _sigScene = _sceneKind;
-        _sigFocus = _focus;
-        Array.Copy(_counts, _sigCounts, _counts.Length);
-        _textReady = true;
-
-        _sb.Clear();
-        for (int p = 1; p <= _playerCount; p++)
-        {
-            if (p > 1)
-            {
-                _sb.Append(' ');
-            }
-
-            _sb.Append('P');
-            _sb.Append(p);
-            _sb.Append(' ');
-            _sb.Append(_counts[p]);
-            if (p == _player)
-            {
-                _sb.Append(' ');
-                _sb.Append(_config.Labels.Self);
-            }
-        }
-
-        _teamBar = _sb.ToString();
-        _sb.Clear();
-        var labels = _config.Labels;
-        _sb.Append(CardLabel(card));
-        AppendSep();
-        AppendLabeled(labels.CountPlanning, planning);
-        AppendSep();
-        AppendLabeled(labels.CountMoving, moving);
-        AppendSep();
-        AppendLabeled(labels.Arrived, arrived);
-        AppendSep();
-        AppendLabeled(labels.CountOther, other);
-        _statusLine = _sb.ToString();
-
-        _sb.Clear();
-        _sb.Append(shape >= 0 ? _shapeLabels[shape] : Prefs.ShapeId);
-        _sb.Append(' ');
-        _sb.Append(ModeLabel(mode));
-        _sb.Append(' ');
-        _sb.Append(Prefs.MagicBox ? _config.Labels.MagicOn : _config.Labels.MagicOff);
-        _sb.Append(' ');
-        _sb.Append(_fogHide ? _config.Labels.FogOn : _config.Labels.FogOff);
-        _sb.Append(' ');
-        _sb.Append(_route ? _config.Labels.RouteOn : _config.Labels.RouteOff);
-        _sb.Append(' ');
-        _sb.Append(_lineOfSight ? _config.Labels.LosOn : _config.Labels.LosOff);
-        _modeLine = _sb.ToString();
-
-        _sb.Clear();
-        _sb.Append(labels.ClickSpawn);
-        _sb.Append(' ');
-        AppendLabeled(labels.UnitType, _clickUnitType);
-        AppendSep();
-        AppendLabeled(labels.Radius, _clickRadius);
-        AppendSep();
-        AppendLabeled(labels.Count, _clickCount);
-        _clickLine = _sb.ToString();
-
-        _sb.Clear();
-        AppendLabeled(labels.Deploy, _deployCount);
-        AppendSep();
-        _sb.Append(labels.Radius);
-        _sb.Append(' ');
-        _sb.Append(_radiusMin);
-        _sb.Append('-');
-        _sb.Append(_radiusMax);
-        AppendSep();
-        AppendLabeled(labels.Layer, _focus);
-        if (_sceneKind == 1)
-        {
-            AppendSep();
-            _sb.Append(labels.SceneOutside);
-        }
-        else if (_sceneKind == 2)
-        {
-            AppendSep();
-            _sb.Append(labels.SceneBehind);
-        }
-
-        _deployLine = _sb.ToString();
-    }
-
-    private bool CountsSame()
-    {
-        for (int p = 1; p <= _playerCount; p++)
-        {
-            if (_counts[p] != _sigCounts[p])
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private void DrawChrome(ScreenOverlayBuffer overlay)
-    {
-        int swatch = _config.FontSize;
-        int x = _config.TeamBarX;
-        int y = _config.TeamBarY;
-        for (int p = 1; p <= _playerCount; p++)
-        {
-            if (!_teamKnown[p])
-            {
-                continue;
-            }
-
-            overlay.AddRect(x, y, swatch, swatch, _teamColors[p], _teamColors[p]);
-            x += swatch + _config.LinePx;
-        }
-
-        overlay.AddText(_config.TeamBarX, _config.TeamBarY + swatch + _config.LinePx, _teamBar, _config.FontSize, _text);
-        overlay.AddRect(_config.StatusCardX, _config.StatusCardY, _config.StatusCardW, _config.StatusCardH, _card, _plan);
-        int textX = _config.StatusCardX + _config.LinePx;
-        int textY = _config.StatusCardY + _config.LinePx;
-        int step = _config.FontSize + _config.LinePx;
-        overlay.AddText(textX, textY, _statusLine, _config.FontSize, _text);
-        overlay.AddText(textX, textY + step, _modeLine, _config.FontSize, _text);
-        overlay.AddText(textX, textY + (step * 2), _clickLine, _config.FontSize, _text);
-        overlay.AddText(textX, textY + (step * 3), _deployLine, _config.FontSize, _text);
-    }
-
-    private string CardLabel(CrowdCommandCardState card) => card switch
-    {
-        CrowdCommandCardState.Planning => _config.Labels.Planning,
-        CrowdCommandCardState.Moving => _config.Labels.Moving,
-        CrowdCommandCardState.Arrived => _config.Labels.Arrived,
-        CrowdCommandCardState.Partial => _config.Labels.Partial,
-        _ => _config.Labels.Idle,
-    };
-
-    private void AppendSep()
-    {
-        _sb.Append(' ');
-        _sb.Append('\u00B7');
-        _sb.Append(' ');
-    }
-
-    private void AppendLabeled(string label, int value)
-    {
-        _sb.Append(label);
-        _sb.Append(' ');
-        _sb.Append(value);
-    }
-
-    private string ModeLabel(int mode) => mode switch
-    {
-        (int)CrowdOrderMode.Formation => _config.Labels.Formation,
-        (int)CrowdOrderMode.Converge => _config.Labels.Converge,
-        (int)CrowdOrderMode.Preserve => _config.Labels.Preserve,
-        _ => _config.Labels.Idle,
-    };
-
     private static bool TryLeader(CrowdSimSession session, CrowdOrder order, out CrowdLeader leader, out int goal, out bool unfinished)
     {
         leader = null!;
@@ -1459,27 +1273,6 @@ internal sealed class CrowdPlayerViewHost
         }
 
         return fog.GroupOf[index];
-    }
-
-    private void CacheTeamColors(CrowdSimSession session)
-    {
-        Array.Clear(_teamKnown);
-        if (_engine == null ||
-            !_engine.TryGetService(CoreServiceKeys.TeamColorPalette, out TeamColorPalette? palette) ||
-            palette == null)
-        {
-            return;
-        }
-
-        int count = session.Config.PairRules.PlayerCount;
-        for (int p = 1; p <= count && p < _teamColors.Length; p++)
-        {
-            if (palette.TryGet(p, out Vector4 color))
-            {
-                _teamColors[p] = color;
-                _teamKnown[p] = true;
-            }
-        }
     }
 
     private int ShapeIndex(string? id)
