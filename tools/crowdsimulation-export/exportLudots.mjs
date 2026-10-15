@@ -262,7 +262,7 @@ function fnv1a(buf) {
   const bytes = w.build();
   writeFileSync(join(outRoot, 'parity', 's1-truth.json'), JSON.stringify(stamp({
     mapId, seed, navCellsPerSide: N, navCellSizeCm: cellSizeCm,
-    blockers: blockers.length, bridges: bridges.length, jumpCandidates: world.jumps.count,
+    blockers: blockers.length, layeredPaths: bridges.length, linkCandidates: world.jumps.count,
     fnv1a: fnv1a(bytes),
   }), null, 2));
 }

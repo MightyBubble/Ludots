@@ -36,10 +36,10 @@ public sealed class SpatialVocabularyContractTests
 
     private static readonly HashSet<string> ParityStructuralKeys = new(StringComparer.Ordinal)
     {
-        "additive", "agentType", "bakes", "blockers", "box", "bridges", "cases", "cells",
+        "additive", "agentType", "bakes", "blockers", "box", "cases", "cells",
         "clearance", "cmd", "contexts", "count", "entryHashes", "expect", "fnv1a",
         "fogCellsPerSide", "fogTerrain", "frames", "fromFogCell", "got", "hAvgTRaw", "hMaxRaw",
-        "hits", "hpaEdges", "hpaNodes", "jumpCandidates", "kind", "mapId", "misses", "name",
+        "hits", "hpaEdges", "hpaNodes", "kind", "layeredPaths", "linkCandidates", "mapId", "misses", "name",
         "navCellsPerFogCell", "navCellsPerSide", "navId", "navTileEntries", "note", "opaque",
         "pairs", "player", "polys", "rIdx", "reachable", "rect", "script", "seed", "shape",
         "spawnSeq", "template", "tick", "ticks", "toFogCell", "type", "unitType", "value", "with",

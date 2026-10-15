@@ -49,6 +49,8 @@ public class S1SurfaceTruthTests
             NavCellsY = cellsY,
             NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = typeIds,
+            LinkKindIds = surface.LinkKindIds,
+            LinkBakeDigest = surface.LinkBakeDigest,
             TerrainCells = surface.TerrainCells,
             JumpCandidates = surface.JumpCandidates,
         };
@@ -92,7 +94,8 @@ public class S1SurfaceTruthTests
         Assert.That(hash, Is.EqualTo(truth["fnv1a"]!.GetValue<string>()),
             $"S1 地表与 Web 导出逐格不一致（seed {seed}）");
         Assert.That(blockers.Count, Is.EqualTo(truth["blockers"]!.GetValue<int>()));
-        Assert.That(bridges.Count, Is.EqualTo(truth["bridges"]!.GetValue<int>()));
+        Assert.That(bridges.Count, Is.EqualTo(truth["layeredPaths"]!.GetValue<int>()));
+        Assert.That(surface.JumpCandidates.Length, Is.EqualTo(truth["linkCandidates"]!.GetValue<int>()));
     }
 
     [Test]
@@ -240,6 +243,8 @@ public class S1SurfaceTruthTests
             NavCellsY = navCellsPerSide,
             NavCellSizeCm = runtime.NavCellSizeCm,
             TerrainTypeIds = runtime.TerrainTypeIds.ToArray(),
+            LinkKindIds = runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray(),
+            LinkBakeDigest = runtime.LinkBakeDigest,
             TerrainCells = new byte[navCellsPerSide * navCellsPerSide], // 全部 water（下标 0）
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
         };

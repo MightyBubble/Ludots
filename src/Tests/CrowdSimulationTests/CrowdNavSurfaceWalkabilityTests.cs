@@ -76,7 +76,7 @@ public class CrowdNavSurfaceWalkabilityTests
             terrain,
             runtime.TerrainTypeIds,
             sources,
-            jumpLinkBake: null);
+            linkCandidateBake: null);
 
         Assert.That(baked.JumpCandidates, Is.Empty);
         Assert.That(baked.TerrainTypeIds, Is.EqualTo(fixture.TerrainTypeIds.ToArray()));

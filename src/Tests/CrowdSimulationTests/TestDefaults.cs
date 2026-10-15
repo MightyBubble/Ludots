@@ -151,6 +151,9 @@ public static class TestDefaults
         return CrowdPairRules.Matrices(4, response, shares);
     }
 
+    public static string[] LinkKindIds(CrowdSimulationRuntimeConfig config)
+        => config.LinkCandidateBakes.Select(b => b.KindId).ToArray();
+
     public static CrowdSimulationRuntimeConfig Assemble(
         CrowdSimulationConfig? config = null,
         MapConfig? map = null,

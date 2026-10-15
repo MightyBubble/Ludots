@@ -242,6 +242,8 @@ public sealed class CrowdSimulationConfigLoader
             NavAreas = bound.NavAreas,
             TerrainToArea = bound.TerrainToArea,
             LinkKinds = bound.LinkKinds,
+            LinkCandidateBakes = bound.LinkCandidateBakes,
+            LinkBakeDigest = NavSurfaceContract.LinkBakeDigest(navCellSizeCm, bound.LinkCandidateBakes),
             NavProfiles = bound.NavProfiles,
             AgentTypes = bound.AgentTypes,
             UnitTypes = bound.UnitTypes,
@@ -550,6 +552,7 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         ValidateUpperLayerAreas(config, traversal, areaIndexById);
+        RuntimeLinkCandidateBake[] linkCandidateBakes = DeriveLinkCandidateBakes(mapPath, mapNav, traversal, terrainToArea);
 
         var profileById = new Dictionary<string, AgentProfileConfig>(StringComparer.Ordinal);
         for (int i = 0; i < profiles.Count; i++)
@@ -718,6 +721,7 @@ public sealed class CrowdSimulationConfigLoader
             terrainToArea,
             navAreas,
             linkKinds,
+            linkCandidateBakes,
             runtimeNavProfiles,
             runtimeAgentTypes,
             unitTypes,
@@ -798,6 +802,86 @@ public sealed class CrowdSimulationConfigLoader
         }
     }
 
+    private static RuntimeLinkCandidateBake[] DeriveLinkCandidateBakes(
+        string mapPath,
+        NavMapNavBoardsConfig mapNav,
+        CrowdTraversalConfig traversal,
+        int[] terrainToArea)
+    {
+        if (mapNav.LinkCandidateBake == null)
+        {
+            return [];
+        }
+
+        var kindIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (TraversalLinkKind kind in traversal.LinkKinds)
+        {
+            kindIds.Add(kind.Id);
+        }
+
+        foreach (string kindId in mapNav.LinkCandidateBake.Keys)
+        {
+            if (!kindIds.Contains(kindId))
+            {
+                throw new InvalidOperationException(
+                    $"{mapPath}.linkCandidateBake.{kindId} 不在 {CrowdTraversalConfig.RelativePath} 的 linkKinds 里。");
+            }
+        }
+
+        int areaCount = traversal.Areas.Count;
+        var bakes = new List<RuntimeLinkCandidateBake>(mapNav.LinkCandidateBake.Count);
+        for (int k = 0; k < traversal.LinkKinds.Count; k++)
+        {
+            string kindId = traversal.LinkKinds[k].Id;
+            if (!mapNav.LinkCandidateBake.TryGetValue(kindId, out NavLinkCandidateBakeConfig? geometry))
+            {
+                continue;
+            }
+
+            var endpointArea = new bool[areaCount];
+            var hardGapArea = new bool[areaCount];
+            Array.Fill(hardGapArea, true);
+            bool anyRow = false;
+            foreach (TraversalRow row in traversal.AgentTypes)
+            {
+                if (row.Links[k] == null) continue;
+                anyRow = true;
+                for (int a = 0; a < areaCount; a++)
+                {
+                    if (row.Cells[a] is not { } cell) continue;
+                    hardGapArea[a] = false;
+                    endpointArea[a] |= cell.Depart[k] || cell.Arrive[k];
+                }
+            }
+
+            if (!anyRow)
+            {
+                throw new InvalidOperationException(
+                    $"{mapPath}.linkCandidateBake.{kindId}：{CrowdTraversalConfig.RelativePath} 里没有任何移动类型有这种链接能力，候选不会被用到。");
+            }
+
+            var endpointTerrain = new bool[terrainToArea.Length];
+            var hardGapTerrain = new bool[terrainToArea.Length];
+            for (int t = 0; t < terrainToArea.Length; t++)
+            {
+                endpointTerrain[t] = endpointArea[terrainToArea[t]];
+                hardGapTerrain[t] = hardGapArea[terrainToArea[t]];
+            }
+
+            bakes.Add(new RuntimeLinkCandidateBake
+            {
+                KindId = kindId,
+                MaxGapCm = geometry.MaxGapCm,
+                LinkSpacingCm = geometry.LinkSpacingCm,
+                EndpointMaxSlopeDeg = geometry.EndpointMaxSlopeDeg,
+                EndpointTerrain = endpointTerrain,
+                HardGapTerrain = hardGapTerrain,
+            });
+        }
+
+        return bakes.ToArray();
+    }
+
     private static RuntimeNavProfile ToRuntimeNavProfile(TraversalRow row)
     {
         RuntimeJumpCapability? jump = null;
@@ -866,6 +950,7 @@ public sealed class CrowdSimulationConfigLoader
             IReadOnlyList<int> terrainToArea,
             IReadOnlyList<RuntimeNavArea> navAreas,
             IReadOnlyList<RuntimeLinkKind> linkKinds,
+            IReadOnlyList<RuntimeLinkCandidateBake> linkCandidateBakes,
             IReadOnlyList<RuntimeNavProfile> navProfiles,
             IReadOnlyList<RuntimeAgentType> agentTypes,
             IReadOnlyList<RuntimeUnitType> unitTypes,
@@ -880,6 +965,7 @@ public sealed class CrowdSimulationConfigLoader
             TerrainToArea = terrainToArea;
             NavAreas = navAreas;
             LinkKinds = linkKinds;
+            LinkCandidateBakes = linkCandidateBakes;
             NavProfiles = navProfiles;
             AgentTypes = agentTypes;
             UnitTypes = unitTypes;
@@ -895,6 +981,7 @@ public sealed class CrowdSimulationConfigLoader
         public IReadOnlyList<int> TerrainToArea { get; }
         public IReadOnlyList<RuntimeNavArea> NavAreas { get; }
         public IReadOnlyList<RuntimeLinkKind> LinkKinds { get; }
+        public IReadOnlyList<RuntimeLinkCandidateBake> LinkCandidateBakes { get; }
         public IReadOnlyList<RuntimeNavProfile> NavProfiles { get; }
         public IReadOnlyList<RuntimeAgentType> AgentTypes { get; }
         public IReadOnlyList<RuntimeUnitType> UnitTypes { get; }

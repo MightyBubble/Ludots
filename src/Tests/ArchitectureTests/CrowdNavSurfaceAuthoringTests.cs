@@ -132,17 +132,20 @@ public sealed class CrowdNavSurfaceAuthoringTests
                 NavCellsY = baked.NavCellsY,
                 NavCellSizeCm = baked.NavCellSizeCm,
                 TerrainTypeIds = baked.TerrainTypeIds,
+                LinkKindIds = ["jump"],
+                LinkBakeDigest = baked.LinkBakeDigest,
                 TerrainCells = baked.TerrainCells,
                 JumpCandidates =
                 [
                     new NavSurfaceJumpCandidate
                     {
+                        Steps = 1,
+                        Diagonal = true,
                         FromX = 0,
                         FromY = 0,
                         ToX = 1,
                         ToY = 1,
                         DropCm = 10,
-                        LengthCells = 1,
                     },
                 ],
             };
@@ -210,7 +213,9 @@ public sealed class CrowdNavSurfaceAuthoringTests
                 Assert.That(baked.NavCellsX, Is.EqualTo(fixture.NavCellsX), name);
                 Assert.That(baked.NavCellsY, Is.EqualTo(fixture.NavCellsY), name);
                 Assert.That(baked.NavCellSizeCm, Is.EqualTo(fixture.NavCellSizeCm), name);
-                Assert.That(baked.JumpCandidates, Has.Length.EqualTo(fixture.JumpCandidates.Length), name);
+                Assert.That(baked.LinkKindIds, Is.EqualTo(fixture.LinkKindIds), name);
+                Assert.That(baked.LinkBakeDigest, Is.EqualTo(fixture.LinkBakeDigest), name);
+                Assert.That(baked.JumpCandidates, Is.EqualTo(fixture.JumpCandidates), name);
                 Assert.That(fixture.JumpCandidates, Is.Not.Empty, name);
             }
         });
@@ -220,7 +225,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
         LogicTerrainField terrain,
         IReadOnlyList<string> terrainTypeIds,
         CrowdNavSurfaceBakeSources sources)
-        => CrowdNavSurfaceAuthoring.Bake(terrain, terrainTypeIds, sources, jumpLinkBake: null);
+        => CrowdNavSurfaceAuthoring.Bake(terrain, terrainTypeIds, sources, linkCandidateBake: null);
 
     private static SparseGridLogicTerrainField Grid(int cells, int cellCm)
         => new(cells, cells, cellCm, chunkSizeCells: 64);

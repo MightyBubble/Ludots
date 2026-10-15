@@ -29,6 +29,10 @@ public sealed class CrowdSimulationRuntimeConfig
     public required IReadOnlyList<int> TerrainToArea { get; init; }
     /// <summary>链接种类，按 traversal.json linkKinds 合并顺序。内核目前最多消费一种。</summary>
     public required IReadOnlyList<RuntimeLinkKind> LinkKinds { get; init; }
+    /// <summary>本图写了 linkCandidateBake 的种类，按 linkKinds 合并顺序；就是 .navsurface 的链接种类表。</summary>
+    public required IReadOnlyList<RuntimeLinkCandidateBake> LinkCandidateBakes { get; init; }
+    /// <summary>按当前配置算出的 .navsurface linkBakeDigest。</summary>
+    public required uint LinkBakeDigest { get; init; }
     public required IReadOnlyList<RuntimeNavProfile> NavProfiles { get; init; }
     public required IReadOnlyList<RuntimeAgentType> AgentTypes { get; init; }
     public required IReadOnlyList<RuntimeUnitType> UnitTypes { get; init; }
@@ -76,6 +80,20 @@ public sealed class RuntimeLinkKind
 {
     public required string Id { get; init; }
     public required Fix64 TraversalSpeedRatio { get; init; }
+}
+
+/// <summary>
+/// 一种链接的候选烘焙参数。几何参数来自地图；两张地形掩码按地形表下标，由通行矩阵推导：
+/// 端点 = 有这种链接能力的行里 depart 或 arrive 含它的区域，硬缝 = 这些行都不可通行的区域。
+/// </summary>
+public sealed class RuntimeLinkCandidateBake
+{
+    public required string KindId { get; init; }
+    public required int MaxGapCm { get; init; }
+    public required int LinkSpacingCm { get; init; }
+    public required double EndpointMaxSlopeDeg { get; init; }
+    public required bool[] EndpointTerrain { get; init; }
+    public required bool[] HardGapTerrain { get; init; }
 }
 
 /// <summary>移动类型的坡度与链接参数，和 <see cref="RuntimeAgentType"/> 一一对应。</summary>

@@ -38,7 +38,7 @@ public readonly record struct CrowdNavSurfaceBakeSources(
 
 /// <summary>
 /// 把逻辑地形的 AreaId 烤成 .navsurface 的地形类型格。
-/// 传入 jumpLinkBake 时，用同一份高度场和桥面栅格生成跳跃候选。
+/// 传入 linkCandidateBake 时，用同一份高度场和桥面栅格逐种类生成链接候选，并写入 linkBakeDigest。
 /// </summary>
 public static class CrowdNavSurfaceAuthoring
 {
@@ -46,7 +46,7 @@ public static class CrowdNavSurfaceAuthoring
         LogicTerrainField terrain,
         IReadOnlyList<string> terrainTypeIds,
         CrowdNavSurfaceBakeSources sources,
-        CrowdJumpLinkBakeInput? jumpLinkBake)
+        CrowdLinkCandidateBakeInput? linkCandidateBake)
     {
         ArgumentNullException.ThrowIfNull(terrain);
         ArgumentNullException.ThrowIfNull(terrainTypeIds);
@@ -132,17 +132,23 @@ public static class CrowdNavSurfaceAuthoring
             }
         }
 
-        NavSurfaceJumpCandidate[] jumps = jumpLinkBake == null
-            ? Array.Empty<NavSurfaceJumpCandidate>()
-            : CrowdJumpCandidateBake.Bake(
-                jumpLinkBake.MapId,
+        IReadOnlyList<RuntimeLinkCandidateBake> kinds =
+            linkCandidateBake?.Kinds ?? Array.Empty<RuntimeLinkCandidateBake>();
+        var kindIds = new string[kinds.Count];
+        var candidates = new List<NavSurfaceJumpCandidate>();
+        for (int k = 0; k < kinds.Count; k++)
+        {
+            kindIds[k] = kinds[k].KindId;
+            candidates.AddRange(CrowdLinkCandidateBake.Bake(
+                linkCandidateBake!.MapId,
                 navCells,
                 cells,
-                typeIds,
-                jumpLinkBake.Settings,
-                jumpLinkBake.Heights,
-                jumpLinkBake.Bridge,
-                sources.CrowdCellSizeCm);
+                checked((byte)k),
+                kinds[k],
+                linkCandidateBake.Heights,
+                linkCandidateBake.Bridge,
+                sources.CrowdCellSizeCm));
+        }
 
         return new NavSurfaceAsset
         {
@@ -150,8 +156,10 @@ public static class CrowdNavSurfaceAuthoring
             NavCellsY = navCells,
             NavCellSizeCm = sources.CrowdCellSizeCm,
             TerrainTypeIds = typeIds,
+            LinkKindIds = kindIds,
+            LinkBakeDigest = NavSurfaceContract.LinkBakeDigest(sources.CrowdCellSizeCm, kinds),
             TerrainCells = cells,
-            JumpCandidates = jumps,
+            JumpCandidates = candidates.ToArray(),
         };
     }
 
@@ -182,11 +190,6 @@ public static class CrowdNavSurfaceAuthoring
         string? heightAsset = map.ContinuousHeightmap?.Asset;
         if (string.IsNullOrWhiteSpace(heightAsset))
         {
-            if (binding.MapNav.JumpLinkBake != null)
-            {
-                throw new InvalidOperationException($"地图 \"{mapId}\" 写了 jumpLinkBake，但缺少 ContinuousHeightmap.asset。");
-            }
-
             throw new InvalidOperationException($"地图 \"{mapId}\" 缺少 ContinuousHeightmap.asset。");
         }
 
@@ -214,21 +217,21 @@ public static class CrowdNavSurfaceAuthoring
             height.SampleRows,
             "Navigation/navmesh.json",
             binding.Runtime.NavCellSizeCm);
-        CrowdJumpLinkBakeInput? jumpLinkBake = null;
-        if (binding.MapNav.JumpLinkBake != null)
+        CrowdLinkCandidateBakeInput? linkCandidateBake = null;
+        if (binding.Runtime.LinkCandidateBakes.Count > 0)
         {
             NavHeightField heights = NavHeightField.FromHeightmap(height, binding.Runtime.NavCellsPerSide, binding.Runtime.NavCellSizeCm);
             byte[] bridge = RasterizeBridgeMask(binding.Bridges, binding.Runtime);
-            jumpLinkBake = new CrowdJumpLinkBakeInput
+            linkCandidateBake = new CrowdLinkCandidateBakeInput
             {
                 MapId = mapId,
-                Settings = binding.MapNav.JumpLinkBake,
+                Kinds = binding.Runtime.LinkCandidateBakes,
                 Heights = heights,
                 Bridge = bridge,
             };
         }
 
-        return Bake(terrain, binding.Runtime.TerrainTypeIds, sources, jumpLinkBake);
+        return Bake(terrain, binding.Runtime.TerrainTypeIds, sources, linkCandidateBake);
     }
 
     /// <summary>
@@ -532,7 +535,7 @@ public static class CrowdNavSurfaceAuthoring
         CrowdSimulationRuntimeConfig runtime = CrowdSimulationConfigLoader.Load(
             config, map, profiles, navmesh, traversal, facts, fixedHz, rules);
         IReadOnlyList<LayeredPathRecord> bridges = Array.Empty<LayeredPathRecord>();
-        if (mapNav.JumpLinkBake != null)
+        if (runtime.LinkCandidateBakes.Count > 0)
         {
             var templatesById = new Dictionary<string, EntityTemplate>(templates.Count, StringComparer.Ordinal);
             for (int i = 0; i < templates.Count; i++)

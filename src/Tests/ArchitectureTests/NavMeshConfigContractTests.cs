@@ -51,7 +51,7 @@ namespace Ludots.Tests.Architecture
 
         [TestCase("navmesh", "logicTerrainAsset")]
         [TestCase("navmesh", "terrainAreas")]
-        [TestCase("mass-navigation", "jumpLinkBake")]
+        [TestCase("mass-navigation", "linkCandidateBake")]
         [TestCase("mass-navigation", "logicTerrainAsset")]
         [TestCase("crowd-simulation", "navProfiles")]
         public void NavMeshBakeConfigLoader_MapKeysAreWhitelistedPerSolver(string solver, string foreignKey)
@@ -81,7 +81,7 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.CrowdSimulation), Does.Not.Contain("navProfiles"));
             Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.MassNavigation), Does.Not.Contain("logicTerrainAsset"));
-            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.NavMesh), Does.Not.Contain("jumpLinkBake"));
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.NavMesh), Does.Not.Contain("linkCandidateBake"));
         }
 
         private static JsonObject CoreNavmeshJson()

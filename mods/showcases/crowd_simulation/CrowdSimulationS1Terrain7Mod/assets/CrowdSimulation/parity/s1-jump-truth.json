@@ -4,7 +4,7 @@
   "seed": 7,
   "navCellsPerSide": 256,
   "navCellSizeCm": 6250,
-  "jumpCandidates": [
+  "linkCandidates": [
     [185, 0, 191, 0, 162, 6.0],
     [184, 2, 184, 4, 420, 2.0],
     [214, 2, 219, 7, 16239, 7.071067810058594],

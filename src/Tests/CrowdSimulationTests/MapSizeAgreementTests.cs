@@ -138,6 +138,8 @@ public class MapSizeAgreementTests
         NavCellsY = cellsY,
         NavCellSizeCm = navCellSizeCm,
         TerrainTypeIds = new[] { "land" },
+        LinkKindIds = Array.Empty<string>(),
+        LinkBakeDigest = 0,
         TerrainCells = new byte[cellsX * cellsY],
         JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
     };

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -13,7 +14,7 @@ using NUnit.Framework;
 namespace CrowdSimulationTests;
 
 [TestFixture]
-public sealed class CrowdJumpLinkBakeTests
+public sealed class CrowdLinkCandidateBakeTests
 {
     [Test]
     public void S1Seeds_StoredSurfaceIsLudotsBake_AndJumpsMatchWebBehaviour()
@@ -32,6 +33,7 @@ public sealed class CrowdJumpLinkBakeTests
             foreach ((string name, string modId, int seed) in seeds)
             {
                 string mapId = "crowd_simulation_" + name;
+                CrowdSimulationRuntimeConfig runtime = S1SurfaceTruthTests.LoadRuntime(name);
                 NavMeshBakeConfigContext ctx = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repo, modId);
                 float shortestCm = float.PositiveInfinity;
                 for (int i = 0; i < ctx.AgentProfiles.Count; i++)
@@ -72,19 +74,26 @@ public sealed class CrowdJumpLinkBakeTests
                     failures.AppendLine($"seed={seed} 落差最大差值 {dropMax} cm，超过最矮机动档案 heightCm {shortestCm.ToString(CultureInfo.InvariantCulture)}。");
                 }
 
-                foreach (NavMeshAgentProfileConfig profile in ctx.Config.Profiles)
+                int linkRows = 0;
+                foreach (RuntimeNavProfile profile in runtime.NavProfiles)
                 {
                     if (profile.Jump == null)
                     {
                         continue;
                     }
 
+                    linkRows++;
                     string links = CompareLinks(name, profile, baked.JumpCandidates, web);
                     TestContext.Out.WriteLine($"seed={seed} profile={profile.Id} {links.Split('\n')[0]}");
                     if (links.Contains("不一致", StringComparison.Ordinal))
                     {
                         failures.AppendLine(links);
                     }
+                }
+
+                if (linkRows == 0)
+                {
+                    failures.AppendLine($"seed={seed} 没有任何移动类型有链接能力，链接对拍没有比到东西。");
                 }
             }
         });
@@ -134,50 +143,103 @@ public sealed class CrowdJumpLinkBakeTests
     }
 
     [Test]
-    public void JumpLinkBake_UnknownTerrain_IsRejected()
+    public void S1Maps_DeriveEndpointAndHardGapTerrainFromTraversal([ValueSource(typeof(S1SurfaceTruthTests), nameof(S1SurfaceTruthTests.Seeds))] string seed)
     {
-        JsonObject navmesh = MapWithJump("""
-            "jumpLinkBake": {
-              "maxGapCm": 600,
-              "linkSpacingCm": 500,
-              "endpointMaxSlopeDeg": 22,
-              "endpointTerrain": ["land", "marsh"],
-              "gapTerrain": ["cliff"]
-            }
-            """);
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            NavMeshBakeConfigLoader.Parse(navmesh, Bodies()))!;
-        Assert.That(ex.Message, Does.Contain("maps.flat.jumpLinkBake.endpointTerrain"));
-        Assert.That(ex.Message, Does.Contain("marsh"));
-        Assert.That(ex.Message, Does.Contain("terrainTypes"));
+        CrowdSimulationRuntimeConfig runtime = S1SurfaceTruthTests.LoadRuntime(seed);
+        Assert.That(runtime.LinkCandidateBakes, Has.Count.EqualTo(1));
+        RuntimeLinkCandidateBake jump = runtime.LinkCandidateBakes[0];
+        string[] Pick(bool[] mask) => runtime.TerrainTypeIds.Where((_, t) => mask[t]).ToArray();
+        Assert.That(jump.KindId, Is.EqualTo("jump"));
+        Assert.That((jump.MaxGapCm, jump.LinkSpacingCm, jump.EndpointMaxSlopeDeg), Is.EqualTo((37500, 31250, 22d)));
+        Assert.That(Pick(jump.EndpointTerrain), Is.EquivalentTo(new[] { "shore", "land", "mountain" }));
+        Assert.That(Pick(jump.HardGapTerrain), Is.EquivalentTo(new[] { "cliff", "water" }));
+        Assert.That(runtime.LinkBakeDigest, Is.EqualTo(NavSurfaceContract.LinkBakeDigest(runtime.NavCellSizeCm, runtime.LinkCandidateBakes)));
     }
 
     [Test]
-    public void JumpLinkBake_GapNotDivisibleByCell_IsRejected()
+    public void DemoMap_WithoutLinkCandidateBake_HasEmptyKindTable()
+    {
+        CrowdSimulationRuntimeConfig runtime = TestDefaults.Assemble();
+        Assert.That(runtime.LinkCandidateBakes, Is.Empty);
+        Assert.That(runtime.LinkBakeDigest, Is.EqualTo(NavSurfaceContract.LinkBakeDigest(runtime.NavCellSizeCm, [])));
+    }
+
+    [Test]
+    public void LinkCandidateBake_KindWithoutAnyAbleRow_IsDeadConfig()
+    {
+        JsonObject traversal = TestDefaults.DefaultTraversalJson();
+        foreach (var row in traversal["agentTypes"]!.AsObject())
+        {
+            row.Value!["links"]!["jump"] = false;
+            foreach (var cell in row.Value["cells"]!.AsObject())
+            {
+                if (cell.Value is JsonObject c)
+                {
+                    c["depart"] = new JsonArray();
+                    c["arrive"] = new JsonArray();
+                }
+            }
+        }
+
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(
+            navmesh: DemoNavmeshWith("""{ "jump": { "maxGapCm": 37500, "linkSpacingCm": 31250, "endpointMaxSlopeDeg": 22 } }"""),
+            traversal: TestDefaults.ParseTraversal(traversal)));
+        Assert.That(ex!.Message, Does.Contain("linkCandidateBake.jump"));
+        Assert.That(ex.Message, Does.Contain("没有任何移动类型有这种链接能力"));
+    }
+
+    [Test]
+    public void LinkCandidateBake_UnknownKind_IsRejected()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(
+            navmesh: DemoNavmeshWith("""{ "climb": { "maxGapCm": 37500, "linkSpacingCm": 31250, "endpointMaxSlopeDeg": 22 } }""")));
+        Assert.That(ex!.Message, Does.Contain("linkCandidateBake.climb"));
+        Assert.That(ex.Message, Does.Contain("linkKinds"));
+    }
+
+    [Test]
+    public void RetiredJumpLinkBake_NamesTheReplacement()
+    {
+        JsonObject navmesh = MapWithLinkBake("""
+            "jumpLinkBake": { "maxGapCm": 600, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 22 }
+            """);
+        var ex = Assert.Throws<InvalidOperationException>(() => NavMeshBakeConfigLoader.Parse(navmesh, Bodies()))!;
+        Assert.That(ex.Message, Does.Contain("maps.flat.jumpLinkBake 已删除"));
+        Assert.That(ex.Message, Does.Contain("linkCandidateBake"));
+    }
+
+    [TestCase("""{ "jump": { "maxGapCm": 650, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 22 } }""", "maxGapCm = 650")]
+    [TestCase("""{ "jump": { "maxGapCm": 600, "linkSpacingCm": 0, "endpointMaxSlopeDeg": 22 } }""", "linkSpacingCm = 0")]
+    [TestCase("""{ "jump": { "maxGapCm": 600, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 90 } }""", "(0, 90)")]
+    [TestCase("""{ "jump": { "maxGapCm": 600, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 0 } }""", "(0, 90)")]
+    [TestCase("""{ "jump": { "linkSpacingCm": 500, "endpointMaxSlopeDeg": 22 } }""", "maxGapCm")]
+    [TestCase("""{ "jump": { "maxGapCm": 600, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 22, "endpointTerrain": ["land"] } }""", "endpointTerrain")]
+    [TestCase("""{ "jump": false }""", "必须是对象")]
+    [TestCase("""{}""", "非空对象")]
+    public void LinkCandidateBake_GeometryRules_AreChecked(string kinds, string expected)
+    {
+        JsonObject navmesh = MapWithLinkBake($"\"linkCandidateBake\": {kinds}");
+        var ex = Assert.Throws<InvalidOperationException>(() => NavMeshBakeConfigLoader.Parse(navmesh, Bodies()))!;
+        Assert.That(ex.Message, Does.Contain("maps.flat.linkCandidateBake"));
+        Assert.That(ex.Message, Does.Contain(expected));
+    }
+
+    [Test]
+    public void LinkCandidateBake_GapNotDivisibleByCell_IsRejectedByBaker()
     {
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            CrowdJumpCandidateBake.CellsOf("flat", "maxGapCm", 37501, 100));
+            CrowdLinkCandidateBake.CellsOf("flat", "linkCandidateBake.jump.maxGapCm", 37501, 100));
         Assert.That(ex!.Message, Does.Contain("flat"));
         Assert.That(ex.Message, Does.Contain("maxGapCm"));
         Assert.That(ex.Message, Does.Contain("37501"));
         Assert.That(ex.Message, Does.Contain("100"));
     }
 
-    [Test]
-    public void JumpLinkBake_MissingField_IsRejected()
+    private static NavMeshBakeConfig DemoNavmeshWith(string linkCandidateBake)
     {
-        JsonObject navmesh = MapWithJump("""
-            "jumpLinkBake": {
-              "linkSpacingCm": 500,
-              "endpointMaxSlopeDeg": 22,
-              "endpointTerrain": ["land"],
-              "gapTerrain": ["cliff"]
-            }
-            """);
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            NavMeshBakeConfigLoader.Parse(navmesh, Bodies()))!;
-        Assert.That(ex.Message, Does.Contain("maps.flat.jumpLinkBake"));
-        Assert.That(ex.Message, Does.Contain("maxGapCm"));
+        JsonObject json = TestDefaults.DefaultNavmeshJson();
+        json["maps"]!["crowd_simulation_demo"]!["linkCandidateBake"] = JsonNode.Parse(linkCandidateBake);
+        return TestDefaults.ParseNavmesh(json);
     }
 
     private static NavSurfaceAsset BakeFlat(LogicTerrainField terrain, int cellCm)
@@ -186,17 +248,21 @@ public sealed class CrowdJumpLinkBakeTests
         int span = cells * cellCm;
         var heights = new Fix64[cells * cells];
         Array.Fill(heights, Fix64.FromInt(1000));
-        var input = new CrowdJumpLinkBakeInput
+        var input = new CrowdLinkCandidateBakeInput
         {
             MapId = "flat",
-            Settings = new NavJumpLinkBakeConfig
-            {
-                MaxGapCm = 6 * cellCm,
-                LinkSpacingCm = 5 * cellCm,
-                EndpointMaxSlopeDeg = 22,
-                EndpointTerrain = ["land"],
-                GapTerrain = ["cliff"],
-            },
+            Kinds =
+            [
+                new RuntimeLinkCandidateBake
+                {
+                    KindId = "jump",
+                    MaxGapCm = 6 * cellCm,
+                    LinkSpacingCm = 5 * cellCm,
+                    EndpointMaxSlopeDeg = 22,
+                    EndpointTerrain = [true, false],
+                    HardGapTerrain = [false, true],
+                },
+            ],
             Heights = new NavHeightField
             {
                 NavCellsPerSide = cells,
@@ -308,11 +374,11 @@ public sealed class CrowdJumpLinkBakeTests
 
     private static string CompareLinks(
         string seed,
-        NavMeshAgentProfileConfig profile,
+        RuntimeNavProfile profile,
         NavSurfaceJumpCandidate[] baked,
         NavSurfaceJumpCandidate[] web)
     {
-        NavMeshJumpConfig jump = profile.Jump;
+        RuntimeJumpCapability jump = profile.Jump!;
         LinkRow[] bakedLinks = Keep(baked, jump);
         LinkRow[] webLinks = Keep(web, jump);
         int bakedKept = bakedLinks.Length;
@@ -362,7 +428,7 @@ public sealed class CrowdJumpLinkBakeTests
     }
 
     private static string Cause(
-        NavMeshAgentProfileConfig profile,
+        RuntimeNavProfile profile,
         NavSurfaceJumpCandidate[] baked,
         NavSurfaceJumpCandidate[] web,
         LinkRow row)
@@ -374,7 +440,7 @@ public sealed class CrowdJumpLinkBakeTests
             return "一侧没有这条格对，链接差是格对差带出来的。";
         }
 
-        NavMeshJumpConfig jump = profile.Jump;
+        RuntimeJumpCapability jump = profile.Jump!;
         int bd = b.Value.DropCm;
         int sd = s.Value.DropCm;
         if ((bd <= jump.UpCm) != (sd <= jump.UpCm))
@@ -395,7 +461,7 @@ public sealed class CrowdJumpLinkBakeTests
         return "格对还在，过滤条件没有翻，顺序或端点方向不同。";
     }
 
-    private static LinkRow[] Keep(NavSurfaceJumpCandidate[] candidates, NavMeshJumpConfig jump)
+    private static LinkRow[] Keep(NavSurfaceJumpCandidate[] candidates, RuntimeJumpCapability jump)
     {
         var kept = new List<LinkRow>();
         for (int i = 0; i < candidates.Length; i++)
@@ -428,24 +494,10 @@ public sealed class CrowdJumpLinkBakeTests
 
     private static bool SameSurface(NavSurfaceAsset a, NavSurfaceAsset b)
     {
-        if (a.NavCellsX != b.NavCellsX || a.NavCellsY != b.NavCellsY || a.NavCellSizeCm != b.NavCellSizeCm
-            || !a.TerrainTypeIds.SequenceEqual(b.TerrainTypeIds) || !a.TerrainCells.SequenceEqual(b.TerrainCells)
-            || a.JumpCandidates.Length != b.JumpCandidates.Length)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < a.JumpCandidates.Length; i++)
-        {
-            NavSurfaceJumpCandidate x = a.JumpCandidates[i];
-            NavSurfaceJumpCandidate y = b.JumpCandidates[i];
-            if (!SameEnds(x, y) || x.DropCm != y.DropCm || x.LengthCells != y.LengthCells)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return a.NavCellsX == b.NavCellsX && a.NavCellsY == b.NavCellsY && a.NavCellSizeCm == b.NavCellSizeCm
+            && a.TerrainTypeIds.SequenceEqual(b.TerrainTypeIds) && a.LinkKindIds.SequenceEqual(b.LinkKindIds)
+            && a.LinkBakeDigest == b.LinkBakeDigest && a.TerrainCells.SequenceEqual(b.TerrainCells)
+            && a.JumpCandidates.SequenceEqual(b.JumpCandidates);
     }
 
     private static bool SameEnds(NavSurfaceJumpCandidate a, NavSurfaceJumpCandidate b)
@@ -464,7 +516,7 @@ public sealed class CrowdJumpLinkBakeTests
         return false;
     }
 
-    private static JsonObject MapWithJump(string jumpJson)
+    private static JsonObject MapWithLinkBake(string linkBakeJson)
         => JsonNode.Parse($$"""
             {
               "mode": "offline",
@@ -479,7 +531,7 @@ public sealed class CrowdJumpLinkBakeTests
                   "solver": "crowd-simulation",
                   "navCellSizeCm": 100,
                   "terrainTypes": ["land", "cliff"],
-                  {{jumpJson}}
+                  {{linkBakeJson}}
                 }
               },
               "runtimeIncremental": {

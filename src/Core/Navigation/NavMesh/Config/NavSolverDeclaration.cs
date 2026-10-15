@@ -25,7 +25,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private static readonly string[] NavMeshMapKeys = { "boards", "navProfiles", "navAreas" };
         private static readonly string[] MassNavigationMapKeys = { "boards", "navProfiles", "navAreas" };
-        private static readonly string[] CrowdSimulationMapKeys = { "boards", "logicTerrainAsset", "jumpLinkBake" };
+        private static readonly string[] CrowdSimulationMapKeys = { "boards", "logicTerrainAsset", "linkCandidateBake" };
         private static readonly string[] CrowdSimulationRequiredMapKeys = { "solver", "navCellSizeCm", "terrainTypes" };
         private static readonly string[] SolverOnly = { "solver" };
 

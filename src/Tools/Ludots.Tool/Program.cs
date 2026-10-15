@@ -510,7 +510,7 @@ namespace Ludots.Tool
 
             var bakeCrowdNavSurfaceCommand = new Command(
                 "bake-crowd-navsurface",
-                "Bake a CrowdSimulation .navsurface from the board's React terrain: terrain type cells, plus jump candidates when the map declares jumpLinkBake.");
+                "Bake a CrowdSimulation .navsurface from the board's React terrain: terrain type cells, plus link candidates for each kind in the map's linkCandidateBake.");
             var crowdOutOption = new Option<string>("--out", "Output .navsurface path") { IsRequired = true };
             var crowdModIdOption = new Option<string>("--modId", "Mod that authors the map") { IsRequired = true };
             var crowdOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
@@ -1635,7 +1635,7 @@ namespace {modId}
             {
                 NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthoredFile(FindAssetsRoot(), modId, mapId, outFile, overwrite);
                 Console.WriteLine(
-                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, jumps={asset.JumpCandidates.Length})");
+                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, linkKinds=[{string.Join(",", asset.LinkKindIds)}], linkCandidates={asset.JumpCandidates.Length}, linkBakeDigest=0x{asset.LinkBakeDigest:X8})");
                 return 0;
             }
             catch (Exception ex)

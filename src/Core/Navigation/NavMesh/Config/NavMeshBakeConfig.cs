@@ -118,17 +118,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public string LogicTerrainAsset { get; set; }
 
         /// <summary>
-        /// 地图级跳跃候选烘焙。缺省表示这张图不生成候选。运行时只收下，不拿来过滤链接。
+        /// 按链接种类 id 写的候选烘焙几何参数。缺省表示这张图不生成候选。端点和硬缝地形由群体通行矩阵推导，不写在这里。
         /// </summary>
-        public NavJumpLinkBakeConfig? JumpLinkBake { get; set; }
+        public Dictionary<string, NavLinkCandidateBakeConfig>? LinkCandidateBake { get; set; }
     }
 
-    public sealed class NavJumpLinkBakeConfig
+    public sealed class NavLinkCandidateBakeConfig
     {
         public int MaxGapCm { get; set; }
         public int LinkSpacingCm { get; set; }
-        public float EndpointMaxSlopeDeg { get; set; }
-        public List<string> EndpointTerrain { get; set; } = new();
-        public List<string> GapTerrain { get; set; } = new();
+        public double EndpointMaxSlopeDeg { get; set; }
     }
 }

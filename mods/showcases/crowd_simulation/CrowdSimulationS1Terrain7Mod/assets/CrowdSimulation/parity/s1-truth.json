@@ -5,7 +5,7 @@
   "navCellsPerSide": 256,
   "navCellSizeCm": 6250,
   "blockers": 300,
-  "bridges": 11,
-  "jumpCandidates": 333,
+  "layeredPaths": 11,
+  "linkCandidates": 333,
   "fnv1a": "dc383a24"
 }
