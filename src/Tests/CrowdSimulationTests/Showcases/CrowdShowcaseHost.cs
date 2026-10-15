@@ -8,6 +8,7 @@ using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
@@ -138,7 +139,7 @@ internal sealed class CrowdShowcaseHost : IDisposable
     }
 
     /// <summary>按宿主每帧的顺序写全场视觉缓冲（视野迷雾、登记的投影器），再按本机座位选地形贴花。</summary>
-    public GlobalFieldVisualDescriptor? GroundDecal(string seatId = "seat.0")
+    public GroundDecalView? GroundDecal(string seatId = "seat.0")
     {
         var buffer = new GlobalFieldVisualBuffer(recordCapacity: 16, cellCapacity: 1 << 20, dirtyRectCapacity: 16);
         buffer.BeginFrame();
@@ -159,7 +160,14 @@ internal sealed class CrowdShowcaseHost : IDisposable
             seatResolved = seats.TryGetScopeKeyId(seatId, out scope);
         }
 
-        return TerrainDecalSelection.TrySelect(buffer, seatResolved, scope, out var decal) ? decal : null;
+        if (!TerrainDecalSelection.TrySelect(buffer, seatResolved, scope, out var decal)) return null;
+        foreach (ref readonly var record in buffer.GetRecords())
+        {
+            if (record.IsActive && record.Descriptor.Id == decal.Id)
+                return new GroundDecalView(decal, buffer.GetCells(record).ToArray());
+        }
+
+        throw new InvalidOperationException($"选中的贴花 {decal.Id} 不在本帧缓冲里。");
     }
 
     public void Dispose() => Engine.Dispose();
@@ -183,5 +191,22 @@ internal sealed class CrowdShowcaseHost : IDisposable
         public System.Numerics.Vector2 Resolution { get; } = new(1280, 720);
         public float Fov { get; } = 50f;
         public float AspectRatio { get; } = 1280f / 720f;
+    }
+}
+
+/// <summary>地面贴花的一帧数据，按渲染端的读法取格值。</summary>
+internal sealed record GroundDecalView(GlobalFieldVisualDescriptor Descriptor, GlobalFieldVisualCell[] Cells)
+{
+    /// <summary>边界外没有贴花(null)；边界内没列出的格，纹理里是清屏值 0(迷雾的 Unseen)。</summary>
+    public byte? ByteAt(int x, int y)
+    {
+        IntRect b = Descriptor.BoundsCells;
+        if (x < b.Left || x >= b.Right || y < b.Top || y >= b.Bottom) return null;
+        foreach (var cell in Cells)
+        {
+            if (cell.Cell.X == x && cell.Cell.Y == y) return cell.ByteValue;
+        }
+
+        return 0;
     }
 }

@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Vision;
+using Ludots.Core.Mathematics;
 using NUnit.Framework;
 using static CrowdSimulationTests.Uat.CrowdFogUatTools;
 
@@ -73,7 +74,7 @@ public sealed class FogShowcaseTests
         var playerView = CrowdPlayerViewConfig.Load(CrowdShowcaseHost.MergedConfig(host.Engine, "CrowdSimulationPlayerView.json"), "CrowdSimulationPlayerView.json");
         Assert.That(playerView.FogHide, Is.True, "场景无效：玩家视图没开迷雾");
         var decal = host.GroundDecal();
-        Assert.That(decal?.Id.Kind, Is.EqualTo(GlobalFieldVisualKind.Fog), "迷雾开时地形贴花应是本机座位的迷雾");
+        Assert.That(decal?.Descriptor.Id.Kind, Is.EqualTo(GlobalFieldVisualKind.Fog), "迷雾开时地形贴花应是本机座位的迷雾");
 
         host.AdvanceTo(nearTick + 2 + wait);
         var (nearShown, _) = Shown(s, viewer, foe);
@@ -99,7 +100,26 @@ public sealed class FogShowcaseTests
         Assert.That(shrank, Is.EqualTo(-1), $"tick {shrank} 已探索格数减少");
         Assert.That(last, Is.GreaterThan(exploredAtOrder), "探索途中已探索格数没有增加");
         Assert.That(CrowdPlayerVisibility.StructureShown(s, viewer, bid, hideFog: true), Is.True, "进入视野的新建筑没有显示");
+        AssertDecalCoversMapAndUnseenCornersReadUnseen(host, fog, viewer);
         CrowdSimulationValidator.ValidateSim(s);
+    }
+
+    private static void AssertDecalCoversMapAndUnseenCornersReadUnseen(CrowdShowcaseHost host, CrowdFog fog, int viewer)
+    {
+        int side = fog.FogCellsPerSide;
+        var decal = host.GroundDecal();
+        Assert.That(decal?.Descriptor.Id.Kind, Is.EqualTo(GlobalFieldVisualKind.Fog), "迷雾开时地形贴花应是本机座位的迷雾");
+        Assert.That(decal!.Descriptor.BoundsCells, Is.EqualTo(new IntRect(0, 0, side, side)), "迷雾贴花应盖住整张图");
+        var field = fog.VisionField(viewer);
+        int unseenCorners = 0;
+        foreach (var (x, y) in new[] { (0, 0), (side - 1, 0), (0, side - 1), (side - 1, side - 1) })
+        {
+            var truth = field.GetVisibility(new FogCell(x, y));
+            Assert.That(decal.ByteAt(x, y), Is.EqualTo((byte)truth), $"角格 ({x},{y}) 贴花值与迷雾场不一致");
+            if (truth == CellVisibility.Unseen) unseenCorners++;
+        }
+
+        Assert.That(unseenCorners, Is.GreaterThan(0), "场景无效：四个角都被看过，核对不到从没见过的格");
     }
 
     [Test]

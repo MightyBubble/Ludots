@@ -41,12 +41,21 @@ namespace Ludots.Core.Vision
             for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++)
             {
                 FogField field = _fields[fieldIndex];
-                int cellCapacity = field.NonDefaultCount;
+                int blockSide = field.CellBlockSide;
+                int cellCapacity = Math.Max(field.NonDefaultCount, blockSide * blockSide);
                 EnsureFogCellCapacity(cellCapacity);
                 EnsureVisualCellCapacity(cellCapacity);
+                EnsureDirtyCellCapacity(blockSide * blockSide);
                 int cellCount = field.CopyCells(_fogCells.AsSpan(0, cellCapacity));
 
+                // 建了格块的场整块上传：没写过的格在纹理里就是 Unseen，地图外围不会因为不在边界里而显得已探明。
                 IntRect cellBounds = BuildVisualCells(_fogCells.AsSpan(0, cellCount), _visualCells);
+                if (blockSide > 0)
+                {
+                    var block = new IntRect(0, 0, blockSide, blockSide);
+                    cellBounds = HasArea(cellBounds) ? Union(cellBounds, block) : block;
+                }
+
                 int dirtyRectCount = BuildDirtyRects(field);
                 GlobalFieldVisualId id = new(
                     GlobalFieldVisualKind.Fog,
