@@ -234,13 +234,21 @@
 }
 
 .crowd-tel-row {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.crowd-tel-row.hot .crowd-chip {
+/* 告警角标常驻、文字由绑定切换；改成给行加类会让每次越线都整页重组。 */
+.crowd-alert {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  font-size: 12px;
+  font-weight: bold;
   color: rgba(181, 62, 48, 1);
+  white-space: nowrap;
 }
 
 /*
@@ -251,8 +259,4 @@
   font-size: 9px;
   color: rgba(132, 31, 48, 1);
   white-space: nowrap;
-}
-
-.crowd-tel-row.hot .crowd-spark {
-  color: rgba(181, 62, 48, 1);
 }

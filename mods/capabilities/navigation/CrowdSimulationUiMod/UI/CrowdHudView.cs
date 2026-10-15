@@ -13,7 +13,6 @@ namespace CrowdSimulationUiMod.UI;
 internal static class CrowdHudView
 {
     public const string RootId = "crowd-hud";
-    public const string ChipSeparator = " · ";
     private static readonly string[] NavIds = Ids("crowd-nav-", CrowdHudState.NavLineCount);
     private static readonly string[] TelemetryIds = Ids("crowd-tel-", CrowdHudState.TelemetryLineCount);
 
@@ -46,8 +45,8 @@ internal static class CrowdHudView
             if (s.ShowInspect)
             {
                 var inspect = Section("crowd-inspect");
-                if (s.Inspect.Length > 0) inspect.Child(Chips(s.Inspect).Id("crowd-inspect-line"));
-                if (s.Belief.Length > 0) inspect.Child(Chips(s.Belief).Id("crowd-belief-line"));
+                if (!s.Inspect.IsEmpty) inspect.Child(Chips(s.Inspect).Id("crowd-inspect-line"));
+                if (!s.Belief.IsEmpty) inspect.Child(Chips(s.Belief).Id("crowd-belief-line"));
                 view.Child(inspect);
             }
 
@@ -56,7 +55,7 @@ internal static class CrowdHudView
                 var nav = Section("crowd-nav");
                 for (int i = 0; i < s.NavLines.Length; i++)
                 {
-                    nav.Child((i == 0 ? Ui.Text(s.NavLines[i]).Class("crowd-heading") : Chips(s.NavLines[i])).Id(NavIds[i]));
+                    nav.Child((i == 0 ? Ui.Text(s.NavLines[i].Whole).Class("crowd-heading") : Chips(s.NavLines[i])).Id(NavIds[i]));
                 }
 
                 view.Child(nav);
@@ -87,8 +86,8 @@ internal static class CrowdHudView
             status.Child(Line(s.Status).Id("crowd-status-line"));
             status.Child(Chips(s.Rebake).Id("crowd-rebake-line"));
             status.Child(Line(s.Replay).Id("crowd-replay-line").Class(s.ReplayWarn ? "crowd-warn" : "crowd-ok"));
-            if (s.Counters.Length > 0) status.Child(Line(s.Counters).Id("crowd-counters-line").Class("crowd-dim"));
-            if (s.CounterDetail.Length > 0) status.Child(Line(s.CounterDetail).Id("crowd-counter-detail-line").Class("crowd-dim"));
+            if (!s.Counters.IsEmpty) status.Child(Line(s.Counters).Id("crowd-counters-line").Class("crowd-dim"));
+            if (!s.CounterDetail.IsEmpty) status.Child(Line(s.CounterDetail).Id("crowd-counter-detail-line").Class("crowd-dim"));
             status.Child(Line(s.Validation).Id("crowd-validation-line").Class(s.ValidationTone));
             status.Child(Line(s.Fuzz).Id("crowd-fuzz-line").Class(s.FuzzTone));
             dock.Child(status);
@@ -122,8 +121,8 @@ internal static class CrowdHudView
         for (int i = 0; i < s.TelemetryLines.Length; i++)
         {
             var row = Box("div").Id(TelemetryIds[i]).Class("crowd-tel-row");
-            if (s.TelemetryHot[i]) row.Class("hot");
-            row.Child(i == 0 ? Ui.Text(s.TelemetryLines[i]).Class("crowd-heading") : Chips(s.TelemetryLines[i]));
+            row.Child(i == 0 ? Ui.Text(s.TelemetryLines[i].Whole).Class("crowd-heading") : Chips(s.TelemetryLines[i]));
+            if (CrowdHudState.IsAlertable(i)) row.Child(Ui.Text(s.TelemetryAlert[i]).Class("crowd-alert"));
             int series = CrowdHudState.SparkSeriesOf(i);
             if (series >= 0 && s.SparkCount >= 2) row.Child(Ui.Text(s.SparkText[series]).Class("crowd-spark"));
             tel.Child(row);
@@ -133,23 +132,11 @@ internal static class CrowdHudView
         return rail;
     }
 
-    /// <summary>
-    /// 长文案按 “ · ” 拆成不换行的小段，由 flex-wrap 折行。
-    /// Skia 的文字换行逐前缀量宽，整句交给它折行每次重绘都是平方级开销。
-    /// </summary>
-    private static UiElementBuilder Chips(string text)
+    /// <summary>长文案按 “ · ” 拆成不换行的小段，由 flex-wrap 折行；每段挂一个绑定，读数变了只重量那一段。</summary>
+    private static UiElementBuilder Chips(HudLine line)
     {
         var row = Box("div").Class("crowd-chips");
-        int start = 0;
-        while (start <= text.Length)
-        {
-            int cut = text.IndexOf(ChipSeparator, start, StringComparison.Ordinal);
-            int end = cut < 0 ? text.Length : cut;
-            if (end > start) row.Child(Ui.Text(text.Substring(start, end - start)).Class("crowd-chip"));
-            if (cut < 0) break;
-            start = cut + ChipSeparator.Length;
-        }
-
+        for (int i = 0; i < line.PartCount; i++) row.Child(Ui.Text(line.Part(i)).Class("crowd-chip"));
         return row;
     }
 
@@ -159,7 +146,7 @@ internal static class CrowdHudView
 
     private static UiElementBuilder Section(string id) => Box("div").Id(id).Class("crowd-section");
 
-    private static UiElementBuilder Line(string text) => Ui.Text(text).Class("crowd-line");
+    private static UiElementBuilder Line(HudLine line) => Ui.Text(line.Whole).Class("crowd-line");
 
     private static string[] Ids(string prefix, int count)
     {

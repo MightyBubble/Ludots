@@ -15,7 +15,8 @@ namespace CrowdSimulationUiMod.UI;
 
 /// <summary>
 /// 群体 HUD 控制器。每帧只做时间戳比较和开关比较；面板到点才读 <see cref="CrowdHudFeed"/>，
-/// 读数变了才排版并重组一次页面。关着的面板既不读也不排版。
+/// 读数变了才排版。排版写进绑定，只重量变了尺寸的文字叶子；开关、段数、配色类变了才重组页面。
+/// 关着的面板既不读也不排版。
 /// </summary>
 internal sealed class CrowdHudController
 {
@@ -33,7 +34,7 @@ internal sealed class CrowdHudController
     private readonly long _telemetryPeriod;
     private readonly int[] _units = new int[MaxPlayers + 1];
     private readonly int[] _unitsShown = new int[MaxPlayers + 1];
-    private const string SparkBlocks = "▁▂▃▄▅▆▇█";
+    internal const string SparkBlocks = "▁▂▃▄▅▆▇█";
     private readonly double[][] _rings;
     private readonly char[] _sparkChars;
 
@@ -68,12 +69,13 @@ internal sealed class CrowdHudController
     private long _heapAt;
     private float _uiRedrawPeakMs;
     private double _composeMs = double.NaN;
+    private bool _reshape;
 
     public CrowdHudController(CrowdHudSettings settings, UiStyleSheet styleSheet)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _styleSheet = styleSheet ?? throw new ArgumentNullException(nameof(styleSheet));
-        _state = new CrowdHudState(MaxPlayers);
+        _state = new CrowdHudState(MaxPlayers, settings.History);
         _sparkChars = new char[settings.History];
         _statusPeriod = Ticks(settings.SampleMs.Status);
         _playerPeriod = Ticks(settings.SampleMs.Player);
@@ -113,6 +115,7 @@ internal sealed class CrowdHudController
         if (mounting && !TryResolveHost(engine)) return;
 
         bool changed = false;
+        _reshape = false;
         if (now >= _statusDue)
         {
             _statusDue = now + _statusPeriod;
@@ -138,6 +141,7 @@ internal sealed class CrowdHudController
             _navReady = false;
             _navDue = now;
             changed = true;
+            _reshape = true;
         }
 
         if (navOpen && now >= _navDue)
@@ -153,6 +157,7 @@ internal sealed class CrowdHudController
             ResetTelemetry();
             _telemetryDue = now;
             changed = true;
+            _reshape = true;
         }
 
         if (telemetryOpen)
@@ -174,8 +179,12 @@ internal sealed class CrowdHudController
         }
 
         if (!changed) return;
-        _page!.Mutate(Touch);
-        ComposeCount++;
+        if (_reshape)
+        {
+            _page!.Mutate(Touch);
+            ComposeCount++;
+        }
+
         _composeMs = Elapsed(started);
     }
 
@@ -218,7 +227,10 @@ internal sealed class CrowdHudController
         _faultLine = "";
         _faultTimeoutMs = double.NaN;
         _state.ShowStatus = _state.ShowPlayer = _state.ShowInspect = _state.ShowNav = _state.ShowTelemetry = _state.ShowFault = false;
-        _state.Tools = _state.Keys = "";
+        _state.Tools.Set("");
+        _state.Tools.Commit();
+        _state.Keys.Set("");
+        _state.Keys.Commit();
         ResetTelemetry();
         if (feed == null) return;
         _state.Kind = feed.Kind;
@@ -243,9 +255,11 @@ internal sealed class CrowdHudController
         if (_pathReady && next == _path) return false;
         _path = next;
         _pathReady = true;
-        _state.ShowStatus = false;
-        _state.Tools = CrowdHudFormat.PathDetail(in next);
-        _state.Keys = CrowdHudFormat.PathKeys(feed.Text, in next);
+        SetFlag(ref _state.ShowStatus, false);
+        CrowdHudFormat.PathDetail(_state.Tools.Buffer, in next);
+        Commit(_state.Tools);
+        CrowdHudFormat.PathKeys(_state.Keys.Buffer, feed.Text, in next);
+        Commit(_state.Keys);
         return true;
     }
 
@@ -256,19 +270,28 @@ internal sealed class CrowdHudController
         if (_deployReady && next == _deploy) return false;
         _deploy = next;
         _deployReady = true;
-        _state.ShowStatus = true;
-        _state.Tools = CrowdHudFormat.Tools(in next);
-        _state.Status = CrowdHudFormat.Status(in next);
-        _state.Rebake = CrowdHudFormat.Rebake(in next);
-        _state.Replay = CrowdHudFormat.Replay(in next);
-        _state.ReplayWarn = next.Interactive;
-        _state.Counters = CrowdHudFormat.Counters(in next);
-        _state.CounterDetail = CrowdHudFormat.CounterDetail(in next);
-        _state.Validation = CrowdHudFormat.Validation(in next);
-        _state.ValidationTone = CrowdHudFormat.Tone(next.RuntimePresent && next.ValidationRan, next.RuntimePresent && next.ValidationFailed);
-        _state.Fuzz = CrowdHudFormat.Fuzz(in next);
-        _state.FuzzTone = CrowdHudFormat.Tone(next.RuntimePresent && next.FuzzRan, next.RuntimePresent && next.FuzzFailed);
-        _state.Keys = CrowdHudFormat.DeployKeys(feed.Text, in next);
+        SetFlag(ref _state.ShowStatus, true);
+        CrowdHudFormat.Tools(_state.Tools.Buffer, in next);
+        Commit(_state.Tools);
+        CrowdHudFormat.Status(_state.Status.Buffer, in next);
+        Commit(_state.Status);
+        CrowdHudFormat.Rebake(_state.Rebake.Buffer, in next);
+        Commit(_state.Rebake);
+        CrowdHudFormat.Replay(_state.Replay.Buffer, in next);
+        Commit(_state.Replay);
+        SetFlag(ref _state.ReplayWarn, next.Interactive);
+        CrowdHudFormat.Counters(_state.Counters.Buffer, in next);
+        Commit(_state.Counters);
+        CrowdHudFormat.CounterDetail(_state.CounterDetail.Buffer, in next);
+        Commit(_state.CounterDetail);
+        CrowdHudFormat.Validation(_state.Validation.Buffer, in next);
+        Commit(_state.Validation);
+        SetTone(ref _state.ValidationTone, CrowdHudFormat.Tone(next.RuntimePresent && next.ValidationRan, next.RuntimePresent && next.ValidationFailed));
+        CrowdHudFormat.Fuzz(_state.Fuzz.Buffer, in next);
+        Commit(_state.Fuzz);
+        SetTone(ref _state.FuzzTone, CrowdHudFormat.Tone(next.RuntimePresent && next.FuzzRan, next.RuntimePresent && next.FuzzFailed));
+        CrowdHudFormat.DeployKeys(_state.Keys.Buffer, feed.Text, in next);
+        Commit(_state.Keys);
         return true;
     }
 
@@ -281,13 +304,23 @@ internal sealed class CrowdHudController
         _units.AsSpan().CopyTo(_unitsShown);
         _playerReady = true;
         CrowdPlayerViewLabels labels = feed.PlayerLabels!;
-        _state.ShowPlayer = true;
-        _state.PlayerCount = next.PlayerCount;
-        _state.TeamLine = CrowdHudFormat.TeamLine(in next, _unitsShown, labels);
-        _state.CardLine = CrowdHudFormat.CardLine(in next, labels);
-        _state.ModeLine = CrowdHudFormat.ModeLine(in next, labels);
-        _state.ClickLine = CrowdHudFormat.ClickLine(in next, labels);
-        _state.DeployLine = CrowdHudFormat.DeployLine(in next, labels);
+        SetFlag(ref _state.ShowPlayer, true);
+        if (_state.PlayerCount != next.PlayerCount)
+        {
+            _state.PlayerCount = next.PlayerCount;
+            _reshape = true;
+        }
+
+        CrowdHudFormat.TeamLine(_state.TeamLine.Buffer, in next, _unitsShown, labels);
+        Commit(_state.TeamLine);
+        CrowdHudFormat.CardLine(_state.CardLine.Buffer, in next, labels);
+        Commit(_state.CardLine);
+        CrowdHudFormat.ModeLine(_state.ModeLine.Buffer, in next, labels);
+        Commit(_state.ModeLine);
+        CrowdHudFormat.ClickLine(_state.ClickLine.Buffer, in next, labels);
+        Commit(_state.ClickLine);
+        CrowdHudFormat.DeployLine(_state.DeployLine.Buffer, in next, labels);
+        Commit(_state.DeployLine);
         return true;
     }
 
@@ -299,9 +332,11 @@ internal sealed class CrowdHudController
         {
             _inspect = next;
             _inspectReady = true;
-            _state.ShowInspect = next.Visible;
-            _state.Inspect = CrowdHudFormat.Inspect(in next);
-            _state.Belief = CrowdHudFormat.Belief(in next);
+            SetFlag(ref _state.ShowInspect, next.Visible);
+            CrowdHudFormat.Inspect(_state.Inspect.Buffer, in next);
+            Commit(_state.Inspect);
+            CrowdHudFormat.Belief(_state.Belief.Buffer, in next);
+            Commit(_state.Belief);
             changed = true;
         }
 
@@ -309,10 +344,12 @@ internal sealed class CrowdHudController
         if (faulted != _state.ShowFault
             || (faulted && (!string.Equals(line, _faultLine, StringComparison.Ordinal) || !timeoutMs.Equals(_faultTimeoutMs))))
         {
-            _state.ShowFault = faulted;
+            SetFlag(ref _state.ShowFault, faulted);
             _faultLine = line;
             _faultTimeoutMs = timeoutMs;
-            _state.Fault = faulted ? CrowdHudFormat.Fault(line, timeoutMs) : "";
+            if (faulted) CrowdHudFormat.Fault(_state.Fault.Buffer, line, timeoutMs);
+            else _state.Fault.Buffer.Clear();
+            Commit(_state.Fault);
             changed = true;
         }
 
@@ -327,6 +364,7 @@ internal sealed class CrowdHudController
         _nav = next;
         _navReady = true;
         CrowdHudFormat.WriteNav(in next, _state.NavLines);
+        for (int i = 0; i < _state.NavLines.Length; i++) Commit(_state.NavLines[i]);
         return true;
     }
 
@@ -360,8 +398,9 @@ internal sealed class CrowdHudController
     {
         var host = new CrowdHostReadout(fps, uiPeak, _composeMs, heapPerSec, width, height);
         CrowdHudFormat.WriteTelemetry(in r, in host, _settings.SampleMs.Telemetry, _settings.History, _state.TelemetryLines);
+        for (int i = 0; i < _state.TelemetryLines.Length; i++) Commit(_state.TelemetryLines[i]);
         CrowdHudFormat.MarkAlerts(in r, fps, _settings.Alerts, _state.TelemetryHot);
-        CrowdHudFormat.PrefixAlerts(_state.TelemetryLines, _state.TelemetryHot);
+        WriteAlerts();
         WriteSparks();
     }
 
@@ -399,9 +438,10 @@ internal sealed class CrowdHudController
                 _sparkChars[age] = SparkBlocks[(int)Math.Round(t * (SparkBlocks.Length - 1))];
             }
 
-            _state.SparkText[s] = new string(_sparkChars, 0, _histCount);
+            _state.SparkText[s].Set(_sparkChars.AsSpan(0, _histCount));
         }
 
+        if ((_state.SparkCount >= 2) != (_histCount >= 2)) _reshape = true;
         _state.SparkCount = _histCount;
     }
 
@@ -413,6 +453,30 @@ internal sealed class CrowdHudController
         _uiRedrawPeakMs = 0f;
         _state.SparkCount = 0;
         Array.Clear(_state.TelemetryHot);
+        WriteAlerts();
+    }
+
+    private void WriteAlerts()
+    {
+        for (int i = 0; i < _state.TelemetryAlert.Length; i++)
+            _state.TelemetryAlert[i].Set(_state.TelemetryHot[i] ? CrowdHudFormat.AlertLabel : "");
+    }
+
+    private void Commit(HudLine line) => _reshape |= line.Commit();
+
+    private void SetFlag(ref bool field, bool value)
+    {
+        if (field == value) return;
+        field = value;
+        _reshape = true;
+    }
+
+    /// <summary>配色类只取 <see cref="CrowdHudFormat.Tone"/> 的字面量，按引用比较即可。</summary>
+    private void SetTone(ref string field, string value)
+    {
+        if (ReferenceEquals(field, value)) return;
+        field = value;
+        _reshape = true;
     }
 
     /// <summary>仿真与呈现同进程，读的是本进程托管堆。</summary>

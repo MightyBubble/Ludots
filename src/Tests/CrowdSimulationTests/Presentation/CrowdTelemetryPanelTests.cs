@@ -125,8 +125,7 @@ public class CrowdTelemetryPanelTests
             CommandLog = 4,
             PlanTimeoutMs = 500,
         };
-        var lines = new string[CrowdHudState.NavLineCount];
-        CrowdHudFormat.WriteNav(in reading, lines);
+        string[] lines = NavText(in reading);
         Assert.That(lines[1], Does.Contain("容量 32").And.Contain("在册 7").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
         Assert.That(lines[1], Does.Contain("75%"));
         Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("N/A").And.Contain("无结果缓存"));
@@ -158,8 +157,7 @@ public class CrowdTelemetryPanelTests
             TileCount = 16,
         };
         var host = new CrowdHostReadout(double.NaN, double.NaN, double.NaN, double.NaN, 0, 0);
-        var lines = new string[CrowdHudState.TelemetryLineCount];
-        CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
+        string[] lines = TelemetryText(in reading, in host);
         var text = string.Join('\n', lines);
         Assert.That(text, Does.Contain("采样 250 ms · 曲线 48"));
         Assert.That(text, Does.Contain("FPS N/A"));
@@ -186,8 +184,7 @@ public class CrowdTelemetryPanelTests
             FlowMisses = 1,
             FlowEvicts = 2,
         };
-        var lines = new string[CrowdHudState.NavLineCount];
-        CrowdHudFormat.WriteNav(in reading, lines);
+        string[] lines = NavText(in reading);
         Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("在册 4").And.Contain("75%").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
         Assert.That(lines[2], Does.Not.Contain("无结果缓存"));
     }
@@ -208,8 +205,7 @@ public class CrowdTelemetryPanelTests
             FixedHz = 20,
         };
         var host = new CrowdHostReadout(1, 1, 1, 1, 1920, 1080);
-        var lines = new string[CrowdHudState.TelemetryLineCount];
-        CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
+        string[] lines = TelemetryText(in reading, in host);
         Assert.That(lines[10], Is.EqualTo("走廊扩展 6 次 1.2 ms"));
         Assert.That(lines[13], Does.StartWith("分辨率 1920x1080"));
     }
@@ -252,11 +248,10 @@ public class CrowdTelemetryPanelTests
         Assert.That(hot[CrowdHudState.FlipLine], Is.False);
         Assert.That(hot[CrowdHudState.SimLine], Is.True);
 
-        var lines = new string[CrowdHudState.TelemetryLineCount];
-        Array.Fill(lines, "x");
-        CrowdHudFormat.PrefixAlerts(lines, hot);
-        Assert.That(lines[CrowdHudState.SimLine], Is.EqualTo(CrowdHudFormat.AlertPrefix + "x"));
-        Assert.That(lines[0], Is.EqualTo("x"));
+        string[] lines = TelemetryText(in missing, new CrowdHostReadout(double.NaN, double.NaN, double.NaN, double.NaN, 0, 0));
+        Assert.That(lines[CrowdHudState.SimLine], Is.EqualTo("Sim 40.0 ms"), "告警走角标绑定，不改行文字");
+        Assert.That(CrowdHudState.IsAlertable(CrowdHudState.SimLine), Is.True);
+        Assert.That(CrowdHudState.IsAlertable(0), Is.False);
     }
 
     [Test]
@@ -380,14 +375,27 @@ public class CrowdTelemetryPanelTests
         Assert.That(stats.Requests, Is.GreaterThan(0));
         Assert.That(double.IsNaN(stats.RoundTripLastMs), Is.True);
         var nav = CrowdNavReadout.From(session);
-        var lines = new string[CrowdHudState.NavLineCount];
-        CrowdHudFormat.WriteNav(in nav, lines);
+        string[] lines = NavText(in nav);
         Assert.That(lines[1], Does.Contain("容量"));
         Assert.That(lines[2], Does.Contain("流场容量").And.Contain("在册").And.Contain("hit").And.Contain("miss").And.Contain("evict"));
         Assert.That(lines[4], Does.Contain("规划请求"));
         Assert.That(() => session.Step(out _), Throws.Nothing);
         session.BlockOnDueReplies = true;
         Assert.Throws<PathServiceFaultException>(() => session.Step(out _));
+    }
+
+    private static string[] NavText(in CrowdNavReadout reading)
+    {
+        HudLine[] lines = HudLine.Many(CrowdHudState.NavLineCount);
+        CrowdHudFormat.WriteNav(in reading, lines);
+        return Array.ConvertAll(lines, l => l.ToString());
+    }
+
+    private static string[] TelemetryText(in CrowdTelemetryReadout reading, in CrowdHostReadout host)
+    {
+        HudLine[] lines = HudLine.Many(CrowdHudState.TelemetryLineCount);
+        CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
+        return Array.ConvertAll(lines, l => l.ToString());
     }
 
     private static void Observe(

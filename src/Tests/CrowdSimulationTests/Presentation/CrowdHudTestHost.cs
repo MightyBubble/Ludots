@@ -84,12 +84,13 @@ internal sealed class CrowdHudTestHost : IDisposable
     public CrowdHudController Controller { get; }
     public int Renders { get; private set; }
 
-    /// <summary>推进一帧：时钟前进 <paramref name="ms"/> 毫秒后跑控制器，UIRoot 脏了才渲染。</summary>
+    /// <summary>推进一帧：时钟前进 <paramref name="ms"/> 毫秒后跑控制器，UIRoot 脏了才清屏重画（渲染器直接画进目标画布）。</summary>
     public void Frame(CrowdHudFeed? feed, double ms = 16d)
     {
         _clock += (long)(ms * Stopwatch.Frequency / 1000d);
         Controller.Tick(Engine, feed, _clock);
         if (!Root.IsDirty) return;
+        _surface.Canvas.Clear(SKColors.Transparent);
         Root.Render();
         Renders++;
     }

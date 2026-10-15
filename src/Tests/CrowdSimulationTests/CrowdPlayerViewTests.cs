@@ -185,11 +185,11 @@ public sealed class CrowdPlayerViewTests
         var labels = host.Labels;
         var texts = new System.Collections.Generic.List<string>
         {
-            CrowdHudFormat.TeamLine(in hud, units, labels),
-            CrowdHudFormat.CardLine(in hud, labels),
-            CrowdHudFormat.ModeLine(in hud, labels),
-            CrowdHudFormat.ClickLine(in hud, labels),
-            CrowdHudFormat.DeployLine(in hud, labels),
+            Write(b => CrowdHudFormat.TeamLine(b, in hud, units, labels)),
+            Write(b => CrowdHudFormat.CardLine(b, in hud, labels)),
+            Write(b => CrowdHudFormat.ModeLine(b, in hud, labels)),
+            Write(b => CrowdHudFormat.ClickLine(b, in hud, labels)),
+            Write(b => CrowdHudFormat.DeployLine(b, in hud, labels)),
         };
 
         Assert.That(texts, Does.Contain("idle · countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
@@ -245,6 +245,13 @@ public sealed class CrowdPlayerViewTests
         hold.Hold = true;
         system.Update(0.016f);
         Assert.That(ReadAlpha(world), Is.EqualTo(1f).Within(0.0001f));
+    }
+
+    private static string Write(Action<Ludots.UI.Runtime.UiTextBuffer> write)
+    {
+        var buffer = new Ludots.UI.Runtime.UiTextBuffer();
+        write(buffer);
+        return buffer.ToString();
     }
 
     private static CrowdOrderMode Choose(
