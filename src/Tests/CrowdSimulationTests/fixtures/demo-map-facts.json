@@ -1,5 +1,6 @@
 {
   "deploy": {
+    "initialUnits": 12000,
     "bases": [
       {
         "playerId": 1,

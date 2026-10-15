@@ -263,16 +263,7 @@ public class S4DeployTruthTests
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
         session.Structures.UseDeck(deck);
-        // 桥进入认知仓，不进地面栅格与碰撞。id 按 span 列表顺序续在阻挡物之后。
-        if (mapSurface.Bridges.Count > 0)
-        {
-            int bridgeTpl = session.Structures.TemplateIndexOf("bridge");
-            if (bridgeTpl >= 0)
-            {
-                session.Structures.InstallMapBridges(
-                    bridgeTpl, mapSurface.Bridges.Select(b => b.Span).ToList());
-            }
-        }
+        session.Structures.InstallMapBridges(mapSurface.Bridges);
 
         session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
         session.NavTileCache = cache;

@@ -112,16 +112,7 @@ static class SessionHost
         var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, demoDir, standardDir));
         session.Structures = CrowdStructuresStore.Build(runtime, bundle.Grid, bundle.MapSurface.Blockers);
         session.Structures.UseDeck(deck);
-        if (bundle.MapSurface.Bridges.Count > 0)
-        {
-            int bridgeTpl = session.Structures.TemplateIndexOf("bridge");
-            if (bridgeTpl >= 0)
-            {
-                var spans = new List<CrowdSimulationBridgeSpan>(bundle.MapSurface.Bridges.Count);
-                for (int i = 0; i < bundle.MapSurface.Bridges.Count; i++) spans.Add(bundle.MapSurface.Bridges[i].Span);
-                session.Structures.InstallMapBridges(bridgeTpl, spans);
-            }
-        }
+        session.Structures.InstallMapBridges(bundle.MapSurface.Bridges);
 
         session.RebakeSources = new CrowdRebakeSources(runtime, bundle.Heights, deck, bundle.Surface.JumpCandidates);
         session.NavTileCache = cache;
@@ -171,6 +162,7 @@ static class SessionHost
 
         string mapId = Path.GetFileNameWithoutExtension(maps[0]);
         var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "CrowdSimulationConfig.json")))!;
+        ConfigPipeline.DeepMerge(merged, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(demoDir, "CrowdSimulationConfig.json")))!);
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         var config = CrowdSimulationConfig.Load(merged);

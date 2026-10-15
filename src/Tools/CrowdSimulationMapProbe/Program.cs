@@ -622,6 +622,7 @@ public static class Program
             .Let(p => Path.GetFileNameWithoutExtension(p));
 
         var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "CrowdSimulationConfig.json")))!;
+        ConfigPipeline.DeepMerge(merged, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(demoDir, "CrowdSimulationConfig.json")))!);
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         var config = CrowdSimulationConfig.Load(merged);
