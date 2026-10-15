@@ -100,7 +100,7 @@ public class CrowdNavSurfaceWalkabilityTests
             NavCellSizeCm = baked.NavCellSizeCm,
             TerrainTypeIds = baked.TerrainTypeIds,
             LinkKindIds = fixture.LinkKindIds,
-            LinkBakeDigest = fixture.LinkBakeDigest,
+            BakeInputsDigest = fixture.BakeInputsDigest,
             TerrainCells = baked.TerrainCells,
             JumpCandidates = baked.JumpCandidates,
         };

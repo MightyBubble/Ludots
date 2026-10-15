@@ -100,7 +100,7 @@ $T nav init-crowd-heightmap --mapId crowd_minimal --modId CrowdSimulationMinimal
 $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinimalMod --out mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/terrain/crowd_minimal.navsurface
 ```
 
-输出 `256x256, types=2, linkKinds=[], linkCandidates=0, linkBakeDigest=0x8227BA97`。这张图没写 `linkCandidateBake`，所以链接种类表是空的，没有候选，摘要只含导航格边长。改了地编网格或 `.height` 就重跑这条命令（已有文件要加 `--overwrite`），再提交。测试会拿入库文件和现烤结果逐字节比较。
+输出 `256x256, types=2, linkKinds=[], linkCandidates=0, bakeInputsDigest=0x8227BA97`。这张图没写 `linkCandidateBake`，所以链接种类表是空的，没有候选，摘要只含导航格边长。改了地编网格或 `.height` 就重跑这条命令（已有文件要加 `--overwrite`），再提交。测试会拿入库文件和现烤结果逐字节比较。
 
 ## 第 6 步：单位和表现
 

@@ -125,7 +125,7 @@ public class CrowdDeckComponentTests
                 NavCellSizeCm = cell,
                 TerrainTypeIds = CopyIds(config.TerrainTypeIds),
                 LinkKindIds = TestDefaults.LinkKindIds(config),
-                LinkBakeDigest = config.LinkBakeDigest,
+                BakeInputsDigest = 0,
                 TerrainCells = terrain,
                 JumpCandidates = System.Array.Empty<NavSurfaceJumpCandidate>(),
             }, System.Array.Empty<BlockerFootprint>());

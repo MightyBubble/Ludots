@@ -133,7 +133,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
                 NavCellSizeCm = baked.NavCellSizeCm,
                 TerrainTypeIds = baked.TerrainTypeIds,
                 LinkKindIds = ["jump"],
-                LinkBakeDigest = baked.LinkBakeDigest,
+                BakeInputsDigest = baked.BakeInputsDigest,
                 TerrainCells = baked.TerrainCells,
                 JumpCandidates =
                 [
@@ -214,7 +214,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
                 Assert.That(baked.NavCellsY, Is.EqualTo(fixture.NavCellsY), name);
                 Assert.That(baked.NavCellSizeCm, Is.EqualTo(fixture.NavCellSizeCm), name);
                 Assert.That(baked.LinkKindIds, Is.EqualTo(fixture.LinkKindIds), name);
-                Assert.That(baked.LinkBakeDigest, Is.EqualTo(fixture.LinkBakeDigest), name);
+                Assert.That(baked.BakeInputsDigest, Is.EqualTo(fixture.BakeInputsDigest), name);
                 Assert.That(baked.JumpCandidates, Is.EqualTo(fixture.JumpCandidates), name);
                 Assert.That(fixture.JumpCandidates, Is.Not.Empty, name);
             }

@@ -228,7 +228,8 @@ public class S4DeployTruthTests
             "assets/" + runtime.SurfaceAsset,
             heightAsset,
             heightAssetPath,
-            mapSurface.Blockers);
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
         var grid = ingested.Grid;
         var heights = ingested.Heights;
         var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);

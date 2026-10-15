@@ -50,7 +50,7 @@ public class S1SurfaceTruthTests
             NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = typeIds,
             LinkKindIds = surface.LinkKindIds,
-            LinkBakeDigest = surface.LinkBakeDigest,
+            BakeInputsDigest = surface.BakeInputsDigest,
             TerrainCells = surface.TerrainCells,
             JumpCandidates = surface.JumpCandidates,
         };
@@ -183,8 +183,10 @@ public class S1SurfaceTruthTests
 
     /// <param name="tuneConfig">在合并后的 CrowdSimulationConfig JSON 上改值，再交给加载器校验。</param>
     /// <param name="bodies">换掉演示体型表与单位模板事实（null = 演示资产）。</param>
+    /// <param name="tuneNavmesh">在合并后的 navmesh.json 上改值。</param>
     internal static CrowdSimulationRuntimeConfig LoadRuntime(
-        string seed, bool lineOfSight, CrowdPairRules? pairRules, Action<JsonObject>? tuneConfig, CrowdTestBodies? bodies = null)
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, Action<JsonObject>? tuneConfig, CrowdTestBodies? bodies = null,
+        Action<JsonObject>? tuneNavmesh = null)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
@@ -197,6 +199,7 @@ public class S1SurfaceTruthTests
         var navmeshJson = TestDefaults.StandardNavmeshJson();
         var seedNav = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "Navigation", "navmesh.json")))!;
         ConfigPipeline.DeepMerge(navmeshJson, seedNav);
+        tuneNavmesh?.Invoke(navmeshJson);
 
         var mapJson = File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json"));
         var map = JsonSerializer.Deserialize<MapConfig>(mapJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
@@ -211,7 +214,8 @@ public class S1SurfaceTruthTests
             pairRules ?? TestDefaults.DemoPairRules());
     }
 
-    internal static CrowdSimulationMapSurface LoadMapSurface(string seed)
+    /// <param name="tuneMap">在地图 JSON 上改值，再抽取地表输入。</param>
+    internal static CrowdSimulationMapSurface LoadMapSurface(string seed, Action<JsonObject>? tuneMap = null)
     {
         var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
             File.ReadAllText(Path.Combine(SeedDir(seed), "Entities", "templates.json")),
@@ -219,9 +223,9 @@ public class S1SurfaceTruthTests
         var templatesById = templates.Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        var map = JsonSerializer.Deserialize<MapConfig>(
-            File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json")),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        var mapJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json")))!;
+        tuneMap?.Invoke(mapJson);
+        var map = mapJson.Deserialize<MapConfig>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
     }
 
@@ -244,7 +248,7 @@ public class S1SurfaceTruthTests
             NavCellSizeCm = runtime.NavCellSizeCm,
             TerrainTypeIds = runtime.TerrainTypeIds.ToArray(),
             LinkKindIds = runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray(),
-            LinkBakeDigest = runtime.LinkBakeDigest,
+            BakeInputsDigest = 0,
             TerrainCells = new byte[navCellsPerSide * navCellsPerSide], // 全部 water（下标 0）
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
         };

@@ -21,7 +21,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 ///   20  u16  terrainCount        地形类型表条数（1..256）
 ///   22  u16  linkKindCount       链接种类表条数（0..255）
 ///   24  i32  linkCandidateCount  链接候选条数
-///   28  u32  linkBakeDigest      见 <see cref="NavSurfaceContract.LinkBakeDigest"/>
+///   28  u32  bakeInputsDigest      见 <see cref="NavSurfaceContract.BakeInputsDigest"/>
 ///   32  ..   地形类型表：terrainCount × { u16 utf8ByteCount, bytes }（id 非空且不重复）
 ///   ..  ..   链接种类表：linkKindCount × { u16 utf8ByteCount, bytes }（id 非空且不重复）
 ///   ..  ..   格数据：cellsX × cellsY × u8，行优先 index = cy * cellsX + cx；
@@ -45,7 +45,7 @@ public sealed class NavSurfaceAsset
     public required string[] TerrainTypeIds { get; init; }
     /// <summary>链接种类 id 表；候选的 KindIndex = 本表下标。</summary>
     public required string[] LinkKindIds { get; init; }
-    public required uint LinkBakeDigest { get; init; }
+    public required uint BakeInputsDigest { get; init; }
     /// <summary>逐格地形类型编号（行优先，长度 = NavCellsX × NavCellsY）。</summary>
     public required byte[] TerrainCells { get; init; }
     public required NavSurfaceJumpCandidate[] JumpCandidates { get; init; }
@@ -84,7 +84,7 @@ public sealed class NavSurfaceAsset
         int terrainCount = reader.ReadUInt16();
         int linkKindCount = reader.ReadUInt16();
         int candidateCount = reader.ReadInt32();
-        uint linkBakeDigest = reader.ReadUInt32();
+        uint bakeInputsDigest = reader.ReadUInt32();
 
         ValidateHeader(cellsX, cellsY, navCellSizeCm, terrainCount, linkKindCount);
         if (candidateCount < 0)
@@ -147,7 +147,7 @@ public sealed class NavSurfaceAsset
             NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = terrainTypeIds,
             LinkKindIds = linkKindIds,
-            LinkBakeDigest = linkBakeDigest,
+            BakeInputsDigest = bakeInputsDigest,
             TerrainCells = terrainCells,
             JumpCandidates = candidates,
         };
@@ -177,7 +177,7 @@ public sealed class NavSurfaceAsset
         writer.Write((ushort)asset.TerrainTypeIds.Length);
         writer.Write((ushort)asset.LinkKindIds.Length);
         writer.Write(asset.JumpCandidates.Length);
-        writer.Write(asset.LinkBakeDigest);
+        writer.Write(asset.BakeInputsDigest);
 
         WriteIdTable(writer, asset.TerrainTypeIds, "terrainTypes");
         WriteIdTable(writer, asset.LinkKindIds, "linkKinds");

@@ -99,7 +99,8 @@ public sealed class S3PathDemoRuntime : IDisposable
             surfaceAssetPath,
             heightAsset,
             heightRel,
-            mapSurface.Blockers);
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
         var grid = ingested.Grid;
         var heights = ingested.Heights;
         var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);

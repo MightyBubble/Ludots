@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests;
 
-/// <summary>.navsurface v2：往返一致性 + 格式门禁（magic / 版本 / 长度 / 越界 / 候选位移）+ 和配置的链接种类表、摘要对照。</summary>
+/// <summary>.navsurface v2：往返一致性 + 格式门禁（magic / 版本 / 长度 / 越界 / 候选位移）+ 和配置的链接种类表对照。烘焙输入指纹见 <see cref="NavSurfaceBakeInputsStalenessTests"/>。</summary>
 [TestFixture]
 public class NavSurfaceAssetTests
 {
@@ -27,7 +27,7 @@ public class NavSurfaceAssetTests
             NavCellSizeCm = 6250,
             TerrainTypeIds = new[] { "water", "shore", "land", "mountain", "cliff" },
             LinkKindIds = new[] { "jump" },
-            LinkBakeDigest = 0xA1B2C3D4u,
+            BakeInputsDigest = 0xA1B2C3D4u,
             TerrainCells = cells,
             JumpCandidates = new[]
             {
@@ -45,7 +45,7 @@ public class NavSurfaceAssetTests
             NavCellSizeCm = asset.NavCellSizeCm,
             TerrainTypeIds = terrainTypes ?? asset.TerrainTypeIds,
             LinkKindIds = linkKinds ?? asset.LinkKindIds,
-            LinkBakeDigest = digest ?? asset.LinkBakeDigest,
+            BakeInputsDigest = digest ?? asset.BakeInputsDigest,
             TerrainCells = asset.TerrainCells,
             JumpCandidates = candidates ?? asset.JumpCandidates,
         };
@@ -54,8 +54,7 @@ public class NavSurfaceAssetTests
         => With(
             Sample(),
             candidates: Array.Empty<NavSurfaceJumpCandidate>(),
-            linkKinds: runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray(),
-            digest: runtime.LinkBakeDigest);
+            linkKinds: runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray());
 
     private static int CandidateOffset(byte[] bytes, int index, int count) => bytes.Length - (count - index) * NavSurfaceAsset.LinkCandidateRecordBytes;
 
@@ -79,7 +78,7 @@ public class NavSurfaceAssetTests
         Assert.That(read.TerrainTypeIds, Is.EqualTo(asset.TerrainTypeIds));
         Assert.That(read.TerrainCells, Is.EqualTo(asset.TerrainCells));
         Assert.That(read.LinkKindIds, Is.EqualTo(asset.LinkKindIds));
-        Assert.That(read.LinkBakeDigest, Is.EqualTo(0xA1B2C3D4u));
+        Assert.That(read.BakeInputsDigest, Is.EqualTo(0xA1B2C3D4u));
         Assert.That(read.JumpCandidates, Is.EqualTo(asset.JumpCandidates));
         Assert.That(read.JumpCandidates[0].LengthCells, Is.EqualTo(2f));
         Assert.That(read.JumpCandidates[1].LengthCells, Is.EqualTo((float)(3 * Math.Sqrt(2.0))));
@@ -253,7 +252,7 @@ public class NavSurfaceAssetTests
     }
 
     [Test]
-    public void Contract_LinkKindTableAndDigestMustMatchConfig()
+    public void Contract_LinkKindTableMustMatchConfig()
     {
         var runtime = TestDefaults.Assemble();
         var asset = MatchingConfig(runtime);
@@ -262,14 +261,10 @@ public class NavSurfaceAssetTests
         var kinds = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.Validate(extraKind, runtime));
         Assert.That(kinds!.Message, Does.Contain("链接种类表"));
         Assert.That(kinds.Message, Does.Contain("重烘"));
-
-        var stale = With(asset, digest: runtime.LinkBakeDigest ^ 1u);
-        var digest = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.Validate(stale, runtime));
-        Assert.That(digest!.Message, Does.Contain("链接候选和配置不一致，重烘"));
     }
 
     [Test]
-    public void LinkBakeDigest_EmptyTable_HashesOnlyNavCellSize()
+    public void BakeInputsDigest_WithoutLinks_HashesOnlyNavCellSize()
     {
         uint expected = 2166136261u;
         foreach (byte b in BitConverter.GetBytes(6250))
@@ -277,37 +272,8 @@ public class NavSurfaceAssetTests
             expected = (expected ^ b) * 16777619u;
         }
 
-        Assert.That(NavSurfaceContract.LinkBakeDigest(6250, Array.Empty<RuntimeLinkCandidateBake>()), Is.EqualTo(expected));
-    }
-
-    [Test]
-    public void LinkBakeDigest_ChangesWithEveryInput()
-    {
-        static RuntimeLinkCandidateBake Bake(string id = "jump", int gap = 37500, int spacing = 31250, double slope = 22, int endpoint = 1, int hardGap = 4)
-            => new()
-            {
-                KindId = id,
-                MaxGapCm = gap,
-                LinkSpacingCm = spacing,
-                EndpointMaxSlopeDeg = slope,
-                EndpointTerrain = new[] { endpoint == 0, endpoint == 1, false, false, false },
-                HardGapTerrain = new[] { false, false, false, false, hardGap == 4 },
-            };
-
-        uint baseline = NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake() });
-        var variants = new[]
-        {
-            NavSurfaceContract.LinkBakeDigest(12500, new[] { Bake() }),
-            NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake(id: "leap") }),
-            NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake(gap: 43750) }),
-            NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake(spacing: 37500) }),
-            NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake(slope: 22.5) }),
-            NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake(endpoint: 0) }),
-            NavSurfaceContract.LinkBakeDigest(6250, new[] { Bake(hardGap: 3) }),
-            NavSurfaceContract.LinkBakeDigest(6250, Array.Empty<RuntimeLinkCandidateBake>()),
-        };
-        Assert.That(variants, Has.None.EqualTo(baseline));
-        Assert.That(variants.Distinct().Count(), Is.EqualTo(variants.Length));
+        Assert.That(NavSurfaceContract.BakeInputsDigestWithoutLinks(6250), Is.EqualTo(expected));
+        Assert.That(expected, Is.EqualTo(0x8227BA97u));
     }
 
     [Test]
@@ -322,7 +288,7 @@ public class NavSurfaceAssetTests
             NavCellSizeCm = asset.NavCellSizeCm,
             TerrainTypeIds = asset.TerrainTypeIds,
             LinkKindIds = asset.LinkKindIds,
-            LinkBakeDigest = asset.LinkBakeDigest,
+            BakeInputsDigest = asset.BakeInputsDigest,
             TerrainCells = new byte[128 * 128],
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
         };

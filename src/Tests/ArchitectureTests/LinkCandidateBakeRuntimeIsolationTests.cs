@@ -3,8 +3,8 @@ using NUnit.Framework;
 namespace Ludots.Tests.Architecture;
 
 /// <summary>
-/// 链接候选烘焙参数只给烘焙器和装载核对用：共享导航装载器收下它，群体装载器推导掩码并算 linkBakeDigest，
-/// NavSurfaceContract 拿摘要比对资产。建链接时按每行的 depart / arrive 过滤，不读烘焙掩码。
+/// 链接候选烘焙参数只给烘焙器和进图核对用：共享导航装载器收下它，群体装载器推导掩码，
+/// NavSurfaceContract 把它算进 bakeInputsDigest 比对资产。建链接时按每行的 depart / arrive 过滤，不读烘焙掩码。
 /// </summary>
 [TestFixture]
 public sealed class LinkCandidateBakeRuntimeIsolationTests

@@ -243,7 +243,6 @@ public sealed class CrowdSimulationConfigLoader
             TerrainToArea = bound.TerrainToArea,
             LinkKinds = bound.LinkKinds,
             LinkCandidateBakes = bound.LinkCandidateBakes,
-            LinkBakeDigest = NavSurfaceContract.LinkBakeDigest(navCellSizeCm, bound.LinkCandidateBakes),
             NavProfiles = bound.NavProfiles,
             AgentTypes = bound.AgentTypes,
             UnitTypes = bound.UnitTypes,

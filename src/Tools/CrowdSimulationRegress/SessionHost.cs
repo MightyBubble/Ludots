@@ -235,7 +235,8 @@ static class SessionHost
             Path.Combine(seedDir, "terrain", $"{mapId}.navsurface"),
             height,
             heightPath,
-            mapSurface.Blockers);
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
         return new SeedBundle(mapId, config, runtime, surface, height, mapSurface, ingested.Grid, ingested.Heights);
     }
 

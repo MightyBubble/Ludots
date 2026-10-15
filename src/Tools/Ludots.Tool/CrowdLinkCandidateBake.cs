@@ -8,7 +8,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Tool;
 
 /// <summary>
-/// 一次链接候选烘焙要用的高度、桥面掩码和各种类参数。地图没写 linkCandidateBake 时不传。
+/// 一次链接候选烘焙要用的高度、桥面掩码和各种类参数，以及由同一批输入算出的 bakeInputsDigest。地图没写 linkCandidateBake 时不传。
 /// </summary>
 public sealed class CrowdLinkCandidateBakeInput
 {
@@ -17,6 +17,8 @@ public sealed class CrowdLinkCandidateBakeInput
     public required IReadOnlyList<RuntimeLinkCandidateBake> Kinds { get; init; }
     public required NavHeightField Heights { get; init; }
     public required byte[] Bridge { get; init; }
+    /// <summary>见 <see cref="NavSurfaceContract.BakeInputsDigest"/>。</summary>
+    public required uint BakeInputsDigest { get; init; }
 }
 
 /// <summary>

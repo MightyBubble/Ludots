@@ -146,7 +146,7 @@ Minimal 的 `agent_profiles.json`、`CrowdSimulationDebug.json`、`config_catalo
 
 不写 `linkCandidateBake` 的图不烘候选，Minimal 就是这样。
 
-这样做的代价：以后给某一行加上链接能力、或改了 `depart` / `arrive`，所有带这个种类的地图候选都会变，必须重烘。`.navsurface` v2 的 `linkBakeDigest` 把这件事变成装载报错（第 6 节）。
+这样做的代价：以后给某一行加上链接能力、或改了 `depart` / `arrive`，所有带这个种类的地图候选都会变，必须重烘。`.navsurface` v2 的 `bakeInputsDigest` 把这件事变成进图报错（第 6 节）。
 
 ### 2.5 两个层
 
@@ -454,7 +454,7 @@ S4 只写顺序和选择键，并在自己的条目片段里加上 S1 图专有�
 | 20 | u16 | terrainCount | 1–256 |
 | 22 | u16 | linkKindCount | 0–255 |
 | 24 | i32 | linkCandidateCount | ≥ 0 |
-| 28 | u32 | linkBakeDigest | 见下 |
+| 28 | u32 | bakeInputsDigest | 见下 |
 
 头之后依次是：
 
@@ -478,12 +478,15 @@ S4 只写顺序和选择键，并在自己的条目片段里加上 S1 图专有�
 
 v1 的 `f32 LengthCells` 去掉，改由 steps 和斜向位算：`diagonal ? (float)(steps * Math.Sqrt(2.0)) : steps`。这和今天烘焙器（`CrowdJumpCandidateBake` 第 137 行）写进 v1 的值是同一个 float，后面 `Fix64.FromFloat` / `FromDouble` 的结果逐位相同。
 
-`linkBakeDigest` 是 32 位 FNV-1a，对下面的字节序列求值，烘焙器写入，运行时按当前配置重算并比对，不同就报错“链接候选和配置不一致，重烘”：
+`bakeInputsDigest` 是 32 位 FNV-1a，对下面的字节序列求值（整数一律小端），烘焙器写入，进图时在 `CrowdSimulationWorldIngest.Build` 里按当前配置、地图实体和高度场重算并比对，不同就报错“烘焙输入和当前配置不一致，重烘”：
 
 - i32 navCellSizeCm
+- 链接种类表为空时到此为止
 - 对链接种类表里的每个种类，按表顺序：utf8 id、一个 0x00、i32 maxGapCm、i32 linkSpacingCm、endpointMaxSlopeDeg 的 IEEE 754 双精度位、再按地形表顺序每个地形一个字节（bit0 = 端点地形，bit1 = 硬缝地形）
+- i32 上层条带实体数；每条按地图实体顺序：utf8 模板 id、一个 0x00、i32 fromXCm、fromYCm、toXCm、toYCm、widthCm，模板效果一个字节、utf8 区域 id、一个 0x00、i32 portalReachNavCells
+- 按格序每格 i64 高度、i64 坡度（Fix64 原始值，和烘焙器读的 `NavHeightField` 相同）
 
-链接种类表为空时，摘要就是只含 navCellSizeCm 的那份值。烘焙时排除的地图上层条带覆盖格来自地图实体，不进摘要；今天改桥也要重烘，这一点不变。
+S1 三张图现在的值是 0xB7DEB8CB（s1337）、0xC937ADBD（s2024）、0x52A63616（s7），最小样板仍是 0x8227BA97。
 
 ## 7 等价表
 
