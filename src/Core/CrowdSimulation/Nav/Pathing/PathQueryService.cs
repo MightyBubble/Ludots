@@ -9,12 +9,18 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
 
 /// <summary>一次两点路径请求(格号 + 上下文 + 起端层)。
-/// CorridorMask 非空 = 同走廊刷新(S7 队伍反应):不重推走廊,按 padMask ∪ 该掩码建流场。</summary>
+/// CorridorMask 非空 = 同走廊刷新(S7 队伍反应):不重推走廊,按 padMask ∪ 该掩码建流场。
+/// Origins 非空 = 组规划:每个起点各推一条走廊,并进同一张掩码,流场按垫过的并集建。</summary>
 public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level)
 {
     public byte[]? CorridorMask { get; init; }
     /// <summary>走廊扩展：统计进扩展次数和耗时。建场仍是 padMask ∪ 原掩码。</summary>
     public bool Extension { get; init; }
+    /// <summary>组的起点表,按 (格, 层) 成对平铺。数组归调用方,答复取走前不能改。</summary>
+    public int[]? Origins { get; init; }
+    public int OriginCount { get; init; }
+    /// <summary>领队起点(地面层)。它的走廊也并进组掩码;流场描不到它而目标可达时,并入它的 tile 重建一次。-1 = 无。</summary>
+    public int LeaderStart { get; init; } = -1;
 }
 
 /// <summary>路径答复:折线 + 方向图(流场);不可达时 Points 为 null。</summary>
@@ -105,7 +111,7 @@ public sealed class PathQueryService : IDisposable
     /// <summary>测试钩:每个任务计算前注入的额外耗时(模拟后台变慢)。</summary>
     public TimeSpan TestDelayPerJob { get; set; } = TimeSpan.Zero;
 
-    /// <summary>测试钩:走廊查询一律按失败处理(模拟 HPA 图与连通域不一致)。</summary>
+    /// <summary>测试钩:两点请求和组请求里的领队走廊按失败处理(模拟 HPA 图与连通域不一致)。</summary>
     public bool TestCorridorFails { get; set; }
 
     public int Waits { get; private set; }
@@ -530,6 +536,8 @@ public sealed class PathQueryService : IDisposable
             return slot.Result;
         }
 
+        if (q.Origins != null) return ComputeGroup(q, nav, pool, buffers, slot, tiles);
+
         Array.Clear(buffers.Corridor, 0, tiles);
         buffers.Corridor[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
         var stages = default(CorridorQuery.CorridorStageTicks);
@@ -567,15 +575,7 @@ public sealed class PathQueryService : IDisposable
 
         if (points == null && nav.CanReach(nav.CompAt(q.StartCell, q.Level), nav.Comp[q.GoalCell]))
         {
-            // 起点落在走廊掩码外时流场描不到起点，目标却可达:并入起点 tile 重建一次
-            int startTile = NavGridSteps.TileOf(q.StartCell, navCellsPerSide, navCellsPerTile, navTilesPerSide);
-            buffers.Corridor[startTile] = 1;
-            buffers.Pad[startTile] = 1;
-            FlowFieldBuilder.PadMaskInto(buffers.Pad, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Union);
-            pool.Give(flow);
-            long retryMark = Stopwatch.GetTimestamp();
-            flow = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Union, pool);
-            Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - retryMark);
+            flow = RebuildWithStartTile(nav, q.StartCell, q.GoalCell, flow, pool, buffers);
             var retry = CorridorQuery.FlowPoints(flow, q.StartCell, buffers.Scratch);
             if (retry != null)
             {
@@ -599,6 +599,65 @@ public sealed class PathQueryService : IDisposable
         Array.Copy(buffers.Corridor, slot.Mask, tiles);
         Fill(slot, q, points != null, corridor.Kind, points, pointCount, layers, layerCount, flow, slot.Mask);
         return slot.Result;
+    }
+
+    /// <summary>
+    /// 组规划:目标 tile 加上每个起点、领队起点的走廊,并成一张掩码,垫一圈后建场。
+    /// 组总能拿到场;成员可不可达在规划时逐个按连通域判过。
+    /// </summary>
+    private PathResult ComputeGroup(PathQuery q, NavContext nav, FlowPool pool, WorkerBuffers buffers, ReplySlot slot, int tiles)
+    {
+        int navCellsPerSide = nav.NavCellsPerSide;
+        int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
+        Array.Clear(buffers.Corridor, 0, tiles);
+        buffers.Corridor[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
+        var stages = default(CorridorQuery.CorridorStageTicks);
+        var origins = q.Origins!;
+        for (int k = 0; k < q.OriginCount; k++)
+        {
+            CorridorQuery.CorridorTo(nav, _config, origins[2 * k], q.GoalCell, buffers.Corridor, origins[2 * k + 1], buffers.Scratch, ref stages);
+        }
+
+        bool leaderOnCorridor = true;
+        if (q.LeaderStart >= 0)
+        {
+            bool found = !TestCorridorFails &&
+                CorridorQuery.CorridorTo(nav, _config, q.LeaderStart, q.GoalCell, buffers.Corridor, 0, buffers.Scratch, ref stages).Points != null;
+            leaderOnCorridor = found && nav.Links == null;
+        }
+
+        if (stages.NavMesh != 0) Interlocked.Add(ref _navTicks, stages.NavMesh);
+        if (stages.Hpa != 0) Interlocked.Add(ref _hpaTicks, stages.Hpa);
+        FlowFieldBuilder.PadMaskInto(buffers.Corridor, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Pad);
+        long flowMark = Stopwatch.GetTimestamp();
+        var flow = FlowFieldBuilder.Build(nav, q.GoalCell, buffers.Pad, pool);
+        Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - flowMark);
+        if (!leaderOnCorridor &&
+            CorridorQuery.FlowPoints(flow, q.LeaderStart, buffers.Scratch) == null &&
+            nav.CanReach(nav.CompAt(q.LeaderStart, 0), nav.Comp[q.GoalCell]))
+        {
+            flow = RebuildWithStartTile(nav, q.LeaderStart, q.GoalCell, flow, pool, buffers);
+        }
+
+        if (slot.Mask.Length != tiles) slot.Mask = new byte[tiles];
+        Array.Copy(buffers.Corridor, slot.Mask, tiles);
+        Fill(slot, q, true, CorridorQuery.Branch.None, null, 0, null, 0, flow, slot.Mask);
+        return slot.Result;
+    }
+
+    /// <summary>起点落在走廊掩码外时流场描不到起点，目标却可达:并入起点 tile,按 pad(已垫掩码 ∪ 起点) 重建一次。</summary>
+    private FlowField RebuildWithStartTile(NavContext nav, int startCell, int goalCell, FlowField flow, FlowPool pool, WorkerBuffers buffers)
+    {
+        int navTilesPerSide = nav.Hpa!.NavTilesPerSide;
+        int startTile = NavGridSteps.TileOf(startCell, nav.NavCellsPerSide, nav.Hpa.NavCellsPerTile, navTilesPerSide);
+        buffers.Corridor[startTile] = 1;
+        buffers.Pad[startTile] = 1;
+        FlowFieldBuilder.PadMaskInto(buffers.Pad, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles, buffers.Union);
+        pool.Give(flow);
+        long retryMark = Stopwatch.GetTimestamp();
+        var rebuilt = FlowFieldBuilder.Build(nav, goalCell, buffers.Union, pool);
+        Interlocked.Add(ref _flowTicks, Stopwatch.GetTimestamp() - retryMark);
+        return rebuilt;
     }
 
     private void Fill(

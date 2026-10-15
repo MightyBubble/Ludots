@@ -22,6 +22,7 @@ public sealed class CrowdSimPlanner
     private const int GroupScratch = CrowdSimulationLimits.HotPathSpanReserve;
     private const int LeaderPoolCount = 32;
     private const int PathCapacity = CrowdSimulationLimits.HotPathSpanReserve;
+    private const int OriginBufferCount = 16;
 
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
@@ -46,6 +47,9 @@ public sealed class CrowdSimPlanner
     private readonly Stack<byte[]> _maskCopies;
     private readonly List<PendingRefresh> _maskHold;
     private readonly int[] _retiredIds;
+    private readonly Stack<int[]> _originBuffers;
+    private readonly int[] _originStamp;
+    private int _originGen;
     private int _strayCursor;
     private int _tilesPerSide;
     private bool _loggedFirstPlan;
@@ -126,6 +130,10 @@ public sealed class CrowdSimPlanner
         public int RequestId;
         /// <summary>答复落帧时导航版本或导航号变了，组进入 AfterStalePlan。</summary>
         public int Version;
+        /// <summary>每 (tile, 层) 一个起点,(格, 层) 成对。工人读到答复取走为止。</summary>
+        public int[] Origins = Array.Empty<int>();
+        public int OriginCount;
+        public int LeaderStart;
     }
 
     /// <summary>流场刷新的到点答复:同走廊在新导航上重建流场,领队与槽位不动。</summary>
@@ -206,6 +214,9 @@ public sealed class CrowdSimPlanner
         for (int i = 0; i < pendingSlots; i++) _maskCopies.Push(new byte[tileCount]);
         _maskHold = new List<PendingRefresh>(pendingSlots);
         _retiredIds = new int[pendingSlots];
+        _originStamp = new int[tileCount * 2];
+        _originBuffers = new Stack<int[]>(GroupScratch);
+        for (int i = 0; i < OriginBufferCount; i++) _originBuffers.Push(new int[tileCount * 4]);
         session.Groups.ReleaseFlow = ReleaseGroupFlow;
     }
 
@@ -241,7 +252,7 @@ public sealed class CrowdSimPlanner
         return false;
     }
 
-    /// <summary>为一批指令起规划:组目标/可达替代/成员标记/出发代表格,再发请求。</summary>
+    /// <summary>为一批指令起规划:组目标/可达替代/成员标记/每 (tile, 层) 一个起点,再发请求。</summary>
     public void Plan(IReadOnlyList<CrowdOrder> orders, int tick)
     {
         var session = _session;
@@ -355,7 +366,7 @@ public sealed class CrowdSimPlanner
             mem.Add(i);
         }
 
-        // 发请求:组流场(代表格→目标)+ 每(指令×移动类型)一条领队路径(最严净空导航,联合质心起点)
+        // 发请求:组流场(各起点走廊并集→目标)+ 每(指令×移动类型)一条领队路径(最严净空导航,联合质心起点)
         var pendingOrders = _pendingOrders;
         pendingOrders.Clear();
         for (int orderIndex = 0; orderIndex < orders.Count; orderIndex++)
@@ -376,15 +387,15 @@ public sealed class CrowdSimPlanner
                     continue;
                 }
 
-                int repCell = RepresentativeCell(session, mem);
-                int reqId = _service.Request(new PathQuery(g.NavId, repCell, g.Goal, 0), tick);
                 var pg = RentGroup();
                 pg.GroupId = g.Id;
                 pg.PlanSeq = ++_seq;
                 pg.NavId = g.NavId;
                 pg.Goal = g.Goal;
-                pg.RequestId = reqId;
                 pg.Version = session.ResolveNavContext(g.NavId).Version;
+                pg.Origins = RentOrigins();
+                pg.OriginCount = CollectOrigins(session, mem, pg.Origins);
+                pg.LeaderStart = -1;
                 po.Groups.Add(pg);
                 if (!byLayer.TryGetValue(g.LayerIdx, out var bucket))
                 {
@@ -425,7 +436,9 @@ public sealed class CrowdSimPlanner
                 var nav = session.ResolveNavContext(strictest.NavId);
                 int lc = CrowdDeployment.NearestPassable(nav,
                     CrowdSimulationSpace.CellAtStrict(sx / cnt, sy / cnt, cfg.NavCellSizeCm, navCellsPerSide));
-                if (lc < 0 || !nav.CanReach(nav.Comp[lc], strictest.GoalComp)) lc = RepresentativeCell(session, membersByGroup[strictestId]);
+                var strictestPg = PendingGroupOf(po, strictestId);
+                if (lc < 0 || !nav.CanReach(nav.Comp[lc], strictest.GoalComp)) lc = RepresentativeStart(strictestPg);
+                strictestPg.LeaderStart = lc;
                 CrowdLeader? prev = null;
                 foreach (int gid in bucket)
                 {
@@ -433,16 +446,29 @@ public sealed class CrowdSimPlanner
                 }
 
                 foreach (int gid in bucket) session.Groups.Groups[gid]!.PrevLeader = null;
-                int leaderReq = _service.Request(new PathQuery(strictest.NavId, lc, strictest.Goal, 0), tick);
                 var pl = RentLeaderReq();
                 pl.StrictestGroupId = strictestId;
                 if (bucket.Count > pl.BucketGroupIds.Length) pl.BucketGroupIds = new int[Math.Max(bucket.Count, pl.BucketGroupIds.Length * 2)];
                 for (int bi = 0; bi < bucket.Count; bi++) pl.BucketGroupIds[bi] = bucket[bi];
                 pl.BucketCount = bucket.Count;
                 pl.StartCell = lc;
-                pl.RequestId = leaderReq;
                 pl.Prev = prev;
                 po.Leaders.Add(pl);
+            }
+
+            for (int gi = 0; gi < po.Groups.Count; gi++)
+            {
+                var pg = po.Groups[gi];
+                pg.RequestId = _service.Request(
+                    new PathQuery(pg.NavId, -1, pg.Goal, 0) { Origins = pg.Origins, OriginCount = pg.OriginCount, LeaderStart = pg.LeaderStart },
+                    tick);
+            }
+
+            for (int li = 0; li < po.Leaders.Count; li++)
+            {
+                var pl = po.Leaders[li];
+                var strictest = session.Groups.Groups[pl.StrictestGroupId]!;
+                pl.RequestId = _service.Request(new PathQuery(strictest.NavId, pl.StartCell, strictest.Goal, 0), tick);
             }
 
             ReturnLayers();
@@ -1206,19 +1232,71 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>按成员列表顺序,返回第一个地面层单位的格;没有地面成员才用第一个成员的格。</summary>
-    private int RepresentativeCell(CrowdSimSession session, List<int> members)
+    /// <summary>
+    /// 按成员顺序收起点:每个 (tile, 层) 留第一个成员的格,跳跃中的成员用落点格。不设上限,
+    /// 一组最多 tile 数 × 2 个。返回起点对数。
+    /// </summary>
+    private int CollectOrigins(CrowdSimSession session, List<int> members, int[] origins)
     {
-        int fallback = -1;
+        var cfg = session.Config;
+        int perTile = cfg.Hpa.NavCellsPerTile, side = cfg.NavCellsPerSide;
+        int gen = ++_originGen;
+        if (gen == int.MaxValue)
+        {
+            Array.Clear(_originStamp, 0, _originStamp.Length);
+            _originGen = gen = 1;
+        }
+
+        int count = 0;
         foreach (int i in members)
         {
             var st = session.World.Get<CrowdSimulationUnitState>(session.Units.EntityAt(i));
+            if (st.Level > 1) throw new InvalidOperationException($"单位层号 {st.Level} 超出起点表的两层编码。");
             int cell = CellOfUnit(session, i, st);
-            if (fallback < 0) fallback = cell;
-            if (st.Level == 0) return cell;
+            int key = NavGridSteps.TileOf(cell, side, perTile, _tilesPerSide) * 2 + st.Level;
+            if (_originStamp[key] == gen) continue;
+            _originStamp[key] = gen;
+            origins[2 * count] = cell;
+            origins[2 * count + 1] = st.Level;
+            count++;
         }
 
-        return fallback;
+        return count;
+    }
+
+    /// <summary>领队兜底起点:第一个地面层起点;没有地面起点才用第一个起点。</summary>
+    private static int RepresentativeStart(PendingGroup pg)
+    {
+        for (int k = 0; k < pg.OriginCount; k++)
+        {
+            if (pg.Origins[2 * k + 1] == 0) return pg.Origins[2 * k];
+        }
+
+        return pg.Origins[0];
+    }
+
+    private static PendingGroup PendingGroupOf(PendingOrder po, int groupId)
+    {
+        for (int i = 0; i < po.Groups.Count; i++)
+        {
+            if (po.Groups[i].GroupId == groupId) return po.Groups[i];
+        }
+
+        throw new InvalidOperationException($"指令 {po.Order.Id} 的待发组里没有组 {groupId}。");
+    }
+
+    private int[] RentOrigins()
+    {
+        if (_originBuffers.TryPop(out var buffer)) return buffer;
+        return new int[_originStamp.Length * 2];
+    }
+
+    private void ReturnOrigins(PendingGroup pg)
+    {
+        if (pg.Origins.Length == 0) return;
+        _originBuffers.Push(pg.Origins);
+        pg.Origins = Array.Empty<int>();
+        pg.OriginCount = 0;
     }
 
     private static int CompAtLevel(CrowdSimSession session, CrowdNavGroupSet.Group g, int cell, int level) =>
@@ -1503,7 +1581,12 @@ public sealed class CrowdSimPlanner
 
     private void RecycleOrder(PendingOrder order)
     {
-        for (int i = 0; i < order.Groups.Count; i++) _groupPool.Push(order.Groups[i]);
+        for (int i = 0; i < order.Groups.Count; i++)
+        {
+            ReturnOrigins(order.Groups[i]);
+            _groupPool.Push(order.Groups[i]);
+        }
+
         order.Groups.Clear();
         for (int i = 0; i < order.Leaders.Count; i++) _leaderReqPool.Push(order.Leaders[i]);
         order.Leaders.Clear();
