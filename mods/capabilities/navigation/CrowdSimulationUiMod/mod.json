@@ -1,0 +1,18 @@
+{
+  "name": "CrowdSimulationUiMod",
+  "version": "1.0.0",
+  "description": "CrowdSimulation 演示 HUD：顶部工具条、左上玩家状态卡、右侧检视/导航(F9)/遥测(F10)栏、左下会话状态、底部键位说明。走 UiSurfaceHost 叠加段，布局与配色在 assets/CrowdSimulationUi/hud.css，采样节奏在 hud.json。数据只读 CrowdSimulationRuntime.HudFeed，仿真 tick 不碰界面；关着的面板不采样。",
+  "main": "bin/net9.0/CrowdSimulationUiMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "navigation",
+    "crowd-simulation",
+    "ui",
+    "hud"
+  ]
+}

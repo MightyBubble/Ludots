@@ -1,0 +1,156 @@
+/* 群体演示 HUD。四周贴边，中间留给战场；1280×720 下右栏与左下状态区不重叠。 */
+
+#crowd-hud {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: rgba(236, 230, 214, 1);
+  font-size: 12px;
+}
+
+.crowd-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  background-color: rgba(24, 18, 28, 0.82);
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(236, 230, 214, 0.19);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* 不换行：Skia 换行逐前缀量宽，长行每次重绘都是平方级开销。 */
+.crowd-line {
+  font-size: 12px;
+  color: rgba(236, 230, 214, 1);
+  white-space: nowrap;
+}
+
+.crowd-dim {
+  color: rgba(190, 196, 206, 1);
+}
+
+.crowd-ok {
+  color: rgba(115, 255, 140, 1);
+}
+
+.crowd-bad {
+  color: rgba(255, 90, 76, 1);
+}
+
+.crowd-warn {
+  color: rgba(255, 150, 110, 1);
+}
+
+.crowd-heading {
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(255, 214, 120, 1);
+}
+
+/* 顶部工具条：标题 + 当前工具/步进/倍速一行。 */
+#crowd-toolbar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  border-color: rgba(255, 217, 51, 0.7);
+}
+
+#crowd-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: rgba(255, 235, 89, 1);
+}
+
+#crowd-tools {
+  color: rgba(255, 219, 115, 1);
+}
+
+/* 左上：玩家视图队伍条与指令状态卡。 */
+#crowd-player {
+  position: absolute;
+  left: 12px;
+  top: 76px;
+  width: 400px;
+  border-color: rgba(150, 42, 72, 0.7);
+}
+
+#crowd-team-swatches {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+.crowd-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+/* 右栏：检视行、导航面板(F9)在上、遥测面板(F10)在下。 */
+#crowd-debug-column {
+  position: absolute;
+  right: 12px;
+  top: 76px;
+  width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.crowd-tel-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.crowd-tel-row.hot .crowd-line {
+  color: rgba(255, 72, 56, 1);
+}
+
+/* 曲线是画布节点，柱子在 hud.json 的颜色下画满这个框。 */
+.crowd-spark {
+  width: 144px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* 左下：路径故障条、会话状态、键位说明自下而上堆叠。 */
+#crowd-bottom {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+#crowd-fault {
+  border-color: rgba(255, 72, 56, 1);
+}
+
+#crowd-fault-line {
+  color: rgba(255, 72, 56, 1);
+}
+
+#crowd-legend {
+  padding: 4px 10px;
+}
+
+#crowd-keys {
+  font-size: 11px;
+  color: rgba(191, 230, 255, 1);
+  white-space: nowrap;
+}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "sampleMs": {
+    "status": 250,
+    "player": 250,
+    "inspect": 250,
+    "nav": 500,
+    "telemetry": 250
+  },
+  "history": 48,
+  "sparkColor": [236, 232, 220, 217],
+  "sparkHotColor": [255, 72, 56, 255],
+  "alerts": {
+    "lowFps": 90,
+    "simMs": 12,
+    "avoidMs": 6,
+    "headingDeg": 25,
+    "flipPct": 30
+  }
+}
