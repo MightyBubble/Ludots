@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Nodes;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -58,6 +61,46 @@ internal static class CrowdUatKit
         session.BlockOnDueReplies = true;
         var nav = session.NavFor(runtime.UnitTypes[0].AgentTypeIndex, 0);
         return new CrowdUatScene(runtime, session, service, nav);
+    }
+
+    /// <summary>带运动内核的空会话，体型表换成 <paramref name="bodies"/>。</summary>
+    public static CrowdUatScene Scene(CrowdTestBodies bodies, Action<JsonObject>? tuneConfig = null, string seed = DefaultSeed)
+    {
+        var (runtime, session) = S4DeployTruthTests.BuildSession(seed, tuneConfig, bodies);
+        var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        session.BlockOnDueReplies = true;
+        return new CrowdUatScene(runtime, session, service, session.NavFor(runtime.UnitTypes[0].AgentTypeIndex, 0));
+    }
+
+    /// <summary>演示体型表按半径级（升序）逐级换半径，单位模板的个人半径随之按避让倍数重算。</summary>
+    public static CrowdTestBodies DemoBodiesWithRadii(params int[] radiusCmByClass)
+    {
+        var profiles = System.Text.Json.JsonSerializer.Deserialize<List<AgentProfileConfig>>(
+            System.IO.File.ReadAllText(System.IO.Path.Combine("assets", "agent_profiles.json")),
+            Ludots.Core.Config.StrictJsonOptions.CreateCamelCase())!;
+        var classes = profiles.Select(p => (int)p.RadiusCm).Distinct().OrderBy(r => r).ToArray();
+        if (classes.Length != radiusCmByClass.Length)
+            throw new ArgumentException($"演示体型有 {classes.Length} 个半径级，给了 {radiusCmByClass.Length} 个半径。");
+        var radiusOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var p in profiles)
+        {
+            p.RadiusCm = radiusCmByClass[Array.IndexOf(classes, (int)p.RadiusCm)];
+            radiusOf[p.Id] = (int)p.RadiusCm;
+        }
+
+        Fix64 scale = Fix64.FromDouble(TestDefaults.DefaultConfigJson()["agents"]!["avoidanceRadiusScale"]!.GetValue<double>());
+        var templates = TestDefaults.DemoTemplates().Select(t => new CrowdUnitTemplateFacts
+        {
+            TemplateId = t.TemplateId,
+            ProfileId = t.ProfileId,
+            AgentTypeId = t.AgentTypeId,
+            SpeedCmPerSecond = t.SpeedCmPerSecond,
+            PersonalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(Fix64.FromInt(radiusOf[t.ProfileId]), scale),
+            PushPriority = t.PushPriority,
+            Special = t.Special,
+        }).ToList();
+        return new CrowdTestBodies(new AgentProfileRegistry(profiles), templates);
     }
 
     /// <summary>地图中心最近的可走格上生成 <paramref name="count"/> 个玩家 1 的 0 号兵种。</summary>

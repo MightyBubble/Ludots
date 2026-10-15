@@ -199,15 +199,20 @@ public class S4DeployTruthTests
     internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, Action<JsonObject> tuneConfig)
         => BuildSession(seed, lineOfSight: false, pairRules: null, S1SurfaceTruthTests.ReadSurface(seed), tuneConfig);
 
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
+        string seed, Action<JsonObject>? tuneConfig, CrowdTestBodies bodies)
+        => BuildSession(seed, lineOfSight: false, pairRules: null, S1SurfaceTruthTests.ReadSurface(seed), tuneConfig, bodies);
+
     private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
         string seed, bool lineOfSight, CrowdPairRules? pairRules)
         => BuildSession(seed, lineOfSight, pairRules, S1SurfaceTruthTests.ReadSurface(seed));
 
     private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
-        string seed, bool lineOfSight, CrowdPairRules? pairRules, NavSurfaceAsset surface, Action<JsonObject>? tuneConfig = null)
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, NavSurfaceAsset surface,
+        Action<JsonObject>? tuneConfig = null, CrowdTestBodies? bodies = null)
     {
         CrowdTestScheduler.Ensure();
-        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight, pairRules, tuneConfig);
+        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight, pairRules, tuneConfig, bodies);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var map = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "Maps", $"crowd_simulation_{seed}.json")))!;
         int boardWidthCm = map["Boards"]![0]!["WidthCm"]!.GetValue<int>();
@@ -253,7 +258,7 @@ public class S4DeployTruthTests
         }
 
         var world = ArchWorld.Create();
-        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world));
+        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, bodies?.Profiles ?? TestDefaults.DemoProfiles()));
         // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
@@ -278,7 +283,8 @@ public class S4DeployTruthTests
     /// <summary>单位创建单路径的无头装配:模板注册表与模板键走引擎同一装载链
     /// (VFS 挂载 CrowdSimulationMod 资产 → ConfigPipeline → MapLoader.LoadTemplates),
     /// 单位实例化与真机同走 EntityBuilder.UseTemplate→Build;选中属主置空,不镜像。</summary>
-    private static CrowdSimPresentationWiring BuildWiring(CrowdSimulationRuntimeConfig runtime, ArchWorld world)
+    private static CrowdSimPresentationWiring BuildWiring(
+        CrowdSimulationRuntimeConfig runtime, ArchWorld world, Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry profiles)
     {
         var vfs = new VirtualFileSystem();
         vfs.Mount("Core", Path.Combine("assets", "crowdmod"));
@@ -292,7 +298,7 @@ public class S4DeployTruthTests
             TemplateRegistry = mapLoader.TemplateRegistry,
             TemplateKeys = mapLoader.EntityTemplateKeys,
             TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
-                runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, TestDefaults.DemoProfiles(), "测试装配(CrowdSimulationTests)"),
+                runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, profiles, "测试装配(CrowdSimulationTests)"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
                 Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusKey),
             SelectedCollectionKeyId = collections.KeyRegistry.Register(CrowdSimPresentationWiring.SelectedCollectionKey),
