@@ -51,9 +51,9 @@ public sealed class CrowdPlacementAgreementTests
         int hoverY = free.Y * cell + cell / 2;
         var demo = new S4DeployDemoRuntime(null);
         demo.UseViewLabels(new[] { "路线" });
-        demo.UseStructures(new[]
+        demo.UsePalette(new[]
         {
-            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, cell, 0, "CrowdSimulation.S4.Template1"),
+            new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, cell, 0, 0, "CrowdSimulation.S4.Template1"),
         });
         demo.EnqueueTool(CrowdClickTool.Structure);
         demo.Tick();
@@ -234,11 +234,11 @@ public sealed class CrowdPlacementAgreementTests
             PlaceOutOfBounds = "(越界)",
             PlaceOverlapsStructure = "(压到已有结构)",
             PlaceOverlapsBlocked = "(压到阻挡格)",
-            PlaceSpanTerrain = "(跨越段地形不可放)",
-            PlaceAnchorTerrain = "(桥端不可锚)",
+            PlaceInteriorArea = "(跨越段地形不可放)",
+            PlaceEndpointArea = "(桥端不可锚)",
             PlaceLegal = new[] { 89, 230, 115, 242 },
             PlaceIllegal = new[] { 255, 77, 64, 242 },
-            PlaceAnchor = new[] { 255, 214, 64, 242 },
+            PlaceEndpoint = new[] { 255, 214, 64, 242 },
             PlacePortal = new[] { 64, 196, 255, 242 },
             PendingNav = "",
         },

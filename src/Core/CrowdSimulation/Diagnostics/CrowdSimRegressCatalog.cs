@@ -42,9 +42,9 @@ public sealed class CrowdSimRegressCatalog
     private readonly int _boomRadiusCm;
     private readonly Fix64 _ringScale;
     private readonly Fix64 _impulse;
-    private readonly string _bridgeTemplate;
-    private readonly int _bridgeWidthCm;
-    private readonly int _bridgeSpanCm;
+    private readonly string _pathTemplate;
+    private readonly int _pathWidthCm;
+    private readonly int _pathLengthCm;
     private readonly IReadOnlyList<CrowdFuzzOp> _ops;
 
     private CrowdSimRegressCatalog(
@@ -70,9 +70,9 @@ public sealed class CrowdSimRegressCatalog
         int boomRadiusCm,
         Fix64 ringScale,
         Fix64 impulse,
-        string bridgeTemplate,
-        int bridgeWidthCm,
-        int bridgeSpanCm,
+        string pathTemplate,
+        int pathWidthCm,
+        int pathLengthCm,
         IReadOnlyList<CrowdFuzzOp> ops,
         CrowdSimRegressFogSpec fog)
     {
@@ -98,9 +98,9 @@ public sealed class CrowdSimRegressCatalog
         _boomRadiusCm = boomRadiusCm;
         _ringScale = ringScale;
         _impulse = impulse;
-        _bridgeTemplate = bridgeTemplate;
-        _bridgeWidthCm = bridgeWidthCm;
-        _bridgeSpanCm = bridgeSpanCm;
+        _pathTemplate = pathTemplate;
+        _pathWidthCm = pathWidthCm;
+        _pathLengthCm = pathLengthCm;
         _ops = ops;
         Fog = fog;
     }
@@ -133,9 +133,9 @@ public sealed class CrowdSimRegressCatalog
         BoomRadiusCm = _boomRadiusCm,
         RingScale = _ringScale,
         Impulse = _impulse,
-        BridgeTemplate = _bridgeTemplate,
-        BridgeWidthCm = _bridgeWidthCm,
-        BridgeSpanCm = _bridgeSpanCm,
+        PathTemplate = _pathTemplate,
+        PathWidthCm = _pathWidthCm,
+        PathLengthCm = _pathLengthCm,
         Ops = _ops,
     };
 
@@ -153,7 +153,7 @@ public sealed class CrowdSimRegressCatalog
         RequireExact(fuzz, "regress catalog fuzz",
             "seedAssets", "movement", "truthNavFrozen", "stepsPerOp", "probeHandles", "spawnCount",
             "placeTemplate", "placeSizeCm", "orderShape", "orderMemberCap", "stallGuard",
-            "boomRadiusCm", "ringScale", "impulse", "bridgeTemplate", "bridgeWidthCm", "bridgeSpanCm", "ops");
+            "boomRadiusCm", "ringScale", "impulse", "pathTemplate", "pathWidthCm", "pathLengthCm", "ops");
         return new CrowdSimRegressCatalog(
             defaults,
             full,
@@ -177,9 +177,9 @@ public sealed class CrowdSimRegressCatalog
             RequireInt(fuzz, "boomRadiusCm", 1, null),
             RequireRingScale(fuzz),
             RequireFix(fuzz, "impulse", Fix64.Zero),
-            RequireString(fuzz, "bridgeTemplate"),
-            RequireInt(fuzz, "bridgeWidthCm", 1, null),
-            RequireInt(fuzz, "bridgeSpanCm", 1, null),
+            RequireString(fuzz, "pathTemplate"),
+            RequireInt(fuzz, "pathWidthCm", 1, null),
+            RequireInt(fuzz, "pathLengthCm", 1, null),
             ParseOps(fuzz["ops"] as JsonArray ?? throw new InvalidOperationException("regress catalog: fuzz.ops 需为数组。")),
             ParseFog(RequireObject(root, "fog")));
     }

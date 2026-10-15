@@ -29,15 +29,15 @@ public class NavSurfaceAssetTests
             LinkKindIds = new[] { "jump" },
             BakeInputsDigest = 0xA1B2C3D4u,
             TerrainCells = cells,
-            JumpCandidates = new[]
+            LinkCandidates = new[]
             {
-                new NavSurfaceJumpCandidate { Steps = 2, FromX = 10, FromY = 20, ToX = 12, ToY = 20, DropCm = 1500 },
-                new NavSurfaceJumpCandidate { Steps = 3, Diagonal = true, FromX = 100, FromY = 100, ToX = 97, ToY = 103, DropCm = 2000 },
+                new NavSurfaceLinkCandidate { Steps = 2, FromX = 10, FromY = 20, ToX = 12, ToY = 20, DropCm = 1500 },
+                new NavSurfaceLinkCandidate { Steps = 3, Diagonal = true, FromX = 100, FromY = 100, ToX = 97, ToY = 103, DropCm = 2000 },
             },
         };
     }
 
-    private static NavSurfaceAsset With(NavSurfaceAsset asset, NavSurfaceJumpCandidate[]? candidates = null, string[]? linkKinds = null, uint? digest = null, string[]? terrainTypes = null)
+    private static NavSurfaceAsset With(NavSurfaceAsset asset, NavSurfaceLinkCandidate[]? candidates = null, string[]? linkKinds = null, uint? digest = null, string[]? terrainTypes = null)
         => new()
         {
             NavCellsX = asset.NavCellsX,
@@ -47,13 +47,13 @@ public class NavSurfaceAssetTests
             LinkKindIds = linkKinds ?? asset.LinkKindIds,
             BakeInputsDigest = digest ?? asset.BakeInputsDigest,
             TerrainCells = asset.TerrainCells,
-            JumpCandidates = candidates ?? asset.JumpCandidates,
+            LinkCandidates = candidates ?? asset.LinkCandidates,
         };
 
     private static NavSurfaceAsset MatchingConfig(CrowdSimulationRuntimeConfig runtime)
         => With(
             Sample(),
-            candidates: Array.Empty<NavSurfaceJumpCandidate>(),
+            candidates: Array.Empty<NavSurfaceLinkCandidate>(),
             linkKinds: runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray());
 
     private static int CandidateOffset(byte[] bytes, int index, int count) => bytes.Length - (count - index) * NavSurfaceAsset.LinkCandidateRecordBytes;
@@ -79,9 +79,9 @@ public class NavSurfaceAssetTests
         Assert.That(read.TerrainCells, Is.EqualTo(asset.TerrainCells));
         Assert.That(read.LinkKindIds, Is.EqualTo(asset.LinkKindIds));
         Assert.That(read.BakeInputsDigest, Is.EqualTo(0xA1B2C3D4u));
-        Assert.That(read.JumpCandidates, Is.EqualTo(asset.JumpCandidates));
-        Assert.That(read.JumpCandidates[0].LengthCells, Is.EqualTo(2f));
-        Assert.That(read.JumpCandidates[1].LengthCells, Is.EqualTo((float)(3 * Math.Sqrt(2.0))));
+        Assert.That(read.LinkCandidates, Is.EqualTo(asset.LinkCandidates));
+        Assert.That(read.LinkCandidates[0].LengthCells, Is.EqualTo(2f));
+        Assert.That(read.LinkCandidates[1].LengthCells, Is.EqualTo((float)(3 * Math.Sqrt(2.0))));
     }
 
     [Test]
@@ -178,7 +178,7 @@ public class NavSurfaceAssetTests
         Assert.That(ex!.Message, Does.Contain("端点越界"));
 
         var asset = Sample();
-        var outside = new[] { new NavSurfaceJumpCandidate { Steps = 1, FromX = 255, FromY = 0, ToX = 256, ToY = 0 } };
+        var outside = new[] { new NavSurfaceLinkCandidate { Steps = 1, FromX = 255, FromY = 0, ToX = 256, ToY = 0 } };
         Assert.Throws<InvalidDataException>(() => Serialize(With(asset, candidates: outside)));
     }
 
@@ -232,8 +232,8 @@ public class NavSurfaceAssetTests
         var asset = Sample();
         var twoKinds = With(asset, linkKinds: new[] { "jump", "climb" }, candidates: new[]
         {
-            new NavSurfaceJumpCandidate { KindIndex = 1, Steps = 1, FromX = 0, FromY = 0, ToX = 1, ToY = 0 },
-            new NavSurfaceJumpCandidate { KindIndex = 0, Steps = 1, FromX = 0, FromY = 0, ToX = 1, ToY = 0 },
+            new NavSurfaceLinkCandidate { KindIndex = 1, Steps = 1, FromX = 0, FromY = 0, ToX = 1, ToY = 0 },
+            new NavSurfaceLinkCandidate { KindIndex = 0, Steps = 1, FromX = 0, FromY = 0, ToX = 1, ToY = 0 },
         });
         var order = Assert.Throws<InvalidDataException>(() => Serialize(twoKinds));
         Assert.That(order!.Message, Does.Contain("升序"));
@@ -290,7 +290,7 @@ public class NavSurfaceAssetTests
             LinkKindIds = asset.LinkKindIds,
             BakeInputsDigest = asset.BakeInputsDigest,
             TerrainCells = new byte[128 * 128],
-            JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
+            LinkCandidates = Array.Empty<NavSurfaceLinkCandidate>(),
         };
         int boardCm = runtime.NavCellsPerSide * runtime.NavCellSizeCm;
         var height = ContinuousHeightmapAsset.CreateSingleLayerFromRawUInt16(

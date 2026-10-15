@@ -37,8 +37,8 @@ public sealed class CrowdHudText
         PlaceOutOfBounds = deploy.PlaceOutOfBounds;
         PlaceOverlapsStructure = deploy.PlaceOverlapsStructure;
         PlaceOverlapsBlocked = deploy.PlaceOverlapsBlocked;
-        PlaceSpanTerrain = deploy.PlaceSpanTerrain;
-        PlaceAnchorTerrain = deploy.PlaceAnchorTerrain;
+        PlaceInteriorArea = deploy.PlaceInteriorArea;
+        PlaceEndpointArea = deploy.PlaceEndpointArea;
         PendingNav = deploy.PendingNav;
     }
 
@@ -51,8 +51,8 @@ public sealed class CrowdHudText
     public string PlaceOutOfBounds { get; } = string.Empty;
     public string PlaceOverlapsStructure { get; } = string.Empty;
     public string PlaceOverlapsBlocked { get; } = string.Empty;
-    public string PlaceSpanTerrain { get; } = string.Empty;
-    public string PlaceAnchorTerrain { get; } = string.Empty;
+    public string PlaceInteriorArea { get; } = string.Empty;
+    public string PlaceEndpointArea { get; } = string.Empty;
     public string PendingNav { get; } = string.Empty;
 }
 
@@ -84,7 +84,7 @@ public record struct CrowdDeployHud
     public int Moving;
     public int Arrived;
     public int Unreachable;
-    public int Jumping;
+    public int Traversing;
     /// <summary>本机座位玩家的选中数；没有座位时为 -1。</summary>
     public int Selected;
     public int FixedHz;
@@ -104,7 +104,7 @@ public record struct CrowdDeployHud
     public string TemplateLabel;
     public bool PendingNav;
 
-    /// <summary>光标不在地面上时为 false；此时没有预览结论。</summary>
+    /// <summary>光标不在地表上时为 false；此时没有预览结论。</summary>
     public bool PreviewKnown;
     public bool PreviewShown;
     public bool PreviewValid;
@@ -288,7 +288,7 @@ public record struct CrowdTelemetryReadout
     public int Moving;
     public int Arrived;
     public int Unreachable;
-    public int Jumping;
+    public int Traversing;
     public int NavCellCm;
     public int TileCount;
     public bool WorldBakeRecorded;
@@ -335,7 +335,7 @@ public record struct CrowdTelemetryReadout
             Moving = telemetry.Moving,
             Arrived = telemetry.Arrived,
             Unreachable = telemetry.Unreachable,
-            Jumping = telemetry.Jumping,
+            Traversing = telemetry.Traversing,
             NavCellCm = session.Config.NavCellSizeCm,
             TileCount = tiles,
             WorldBakeRecorded = baked,

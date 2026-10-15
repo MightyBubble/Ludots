@@ -142,7 +142,7 @@ public class S2NavTruthTests
             var set = new HashSet<(int, int)>(
                 narrowed.Links.From.Zip(narrowed.Links.To, (f, t) => (f, t)));
             int navCellsPerSide = runtime.NavCellsPerSide;
-            foreach (var cand in surface.JumpCandidates)
+            foreach (var cand in surface.LinkCandidates)
             {
                 if (cand.DropCm <= 5000) continue;
                 int a = cand.FromY * navCellsPerSide + cand.FromX, b = cand.ToY * navCellsPerSide + cand.ToX;

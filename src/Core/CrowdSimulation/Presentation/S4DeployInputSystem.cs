@@ -47,7 +47,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
             _demo.ArmSession(session);
         }
 
-        bool picked = CrowdPointerGround.TryPick(_engine, actions, out double xCm, out double yCm);
+        bool picked = CrowdSurfacePick.TryPick(_engine, actions, out double xCm, out double yCm);
         _demo.HoverCm = picked ? (xCm, yCm) : null;
 
         if (actions.PressedThisTick(_bindings.CycleView)) _demo.EnqueueCycleView();

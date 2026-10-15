@@ -50,7 +50,7 @@ public sealed class CrowdTelemetryEventTests
         session.Advance(session.Config.Planning.LatencyTicks);
         int membersBefore = session.Units.Count;
         int hist = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
-            + session.Telemetry.Unreachable + session.Telemetry.Jumping;
+            + session.Telemetry.Unreachable + session.Telemetry.Traversing;
         Assert.That(hist, Is.EqualTo(membersBefore));
         session.Commands.Schedule(session, new[]
         {
@@ -65,7 +65,7 @@ public sealed class CrowdTelemetryEventTests
         Assert.That(session.Telemetry.StallTicks, Is.EqualTo(session.Telemetry.PathWaits), "无头 Step 的停摆与等路同一次计数");
         Assert.That(session.Units.Count, Is.EqualTo(membersBefore + 4));
         int histAfter = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
-            + session.Telemetry.Unreachable + session.Telemetry.Jumping;
+            + session.Telemetry.Unreachable + session.Telemetry.Traversing;
         Assert.That(histAfter, Is.EqualTo(session.Units.Count), "等路停摆前 Flush 增加的成员要重数进直方");
     }
 

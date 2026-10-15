@@ -7,7 +7,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
 /// 导航格地表视图：逐格地形类型、导航区域、阻挡。
-/// 这里只把地形类型映成区域，并按阻挡足迹盖静态阻挡。桥面在 UpperLayerBake，道路 / 泛洪 / 火场的代价变化在重烘分类里。
+/// 这里只把地形类型映成区域，并按阻挡足迹盖静态阻挡。上层在 UpperLayerBake，setArea 结构的代价变化在重烘分类里。
 /// </summary>
 public sealed class SurfaceGrid
 {
@@ -19,8 +19,8 @@ public sealed class SurfaceGrid
     public required byte[] Area { get; init; }
     /// <summary>逐格阻挡：阻挡足迹覆盖率 ≥ 实体点名模板的 effect.coverage。</summary>
     public required byte[] Blocked { get; init; }
-    /// <summary>跳跃候选（.navsurface 资产原样携带;按几何 profile 过滤成链接是烘焙侧的事）。</summary>
-    public required NavSurfaceJumpCandidate[] JumpCandidates { get; init; }
+    /// <summary>链接候选（.navsurface 资产原样携带;按几何 profile 过滤成链接是烘焙侧的事）。</summary>
+    public required NavSurfaceLinkCandidate[] LinkCandidates { get; init; }
 
     public static SurfaceGrid Build(
         CrowdSimulationRuntimeConfig config,
@@ -84,7 +84,7 @@ public sealed class SurfaceGrid
             TerrainType = surface.TerrainCells,
             Area = area,
             Blocked = blocked,
-            JumpCandidates = surface.JumpCandidates,
+            LinkCandidates = surface.LinkCandidates,
         };
     }
 

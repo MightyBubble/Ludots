@@ -92,7 +92,7 @@ public sealed class CrowdLeader
     internal bool IsWall(int cell) => _wall.Contains(cell);
 
     /// <summary>
-    /// 规划时路线已贴靠或穿越的不可通行格（墙角、跳跃链接）记为基线，阻挡判定只认基线之外的新阻挡；
+    /// 规划时路线已贴靠或穿越的不可通行格（墙角、链接）记为基线，阻挡判定只认基线之外的新阻挡；
     /// 否则任何无关的结构变化都会让沿墙角拉直的路线被判为受阻而重新规划。路径定稿（起点覆写）之后调用。
     /// </summary>
     internal void RecordWalls(NavContext nav, int navCellSizeCm, int navCellsPerSide)
@@ -210,9 +210,9 @@ public sealed class CrowdLeader
 
         int n = _count;
         Fix64 ox = XCm, oy = YCm;
-        // 桥面层:地面不可走但桥面可走时,步速吃桥面代价而不是水下代价
+        // 上层:底层不可走但上层可走时,步速吃上层代价而不是底层代价
         int cell = CrowdSimulationSpace.CellAt(XCm, YCm, navCellSizeCm, navCellsPerSide);
-        // 路线只在链接缝和墙角上经过两层都不可走的格。那里没有这一行的格参数，步速不按地面缩放。
+        // 路线只在链接缝和墙角上经过两层都不可走的格。那里没有这一行的格参数，步速不按底层缩放。
         Fix64 cellSpeed = Nav.Passable[cell] != 0 ? speedCmPerSecond / Nav.SpeedDivisor[cell]
             : Nav.UpPass[cell] != 0 ? speedCmPerSecond / Nav.UpSpeedDivisor[cell]
             : speedCmPerSecond;

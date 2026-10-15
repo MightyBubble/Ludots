@@ -9,7 +9,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// 马达层(Fix64 厘米域):把期望速度变成受物理约束的运动——
 /// 一阶速度响应、最大转向率、速度上限、墙面滑动。唯一写 x/y/vx/vy 的层。
 /// 存储是 Fix64 原始值,不二次量化。
-/// 阻挡盒只站在地面层;桥面层(lv=1)不吃地面阻挡。
+/// 阻挡盒只站在底层;上层(lv=1)不吃底层阻挡。
 /// </summary>
 public static class CrowdMotor
 {
@@ -71,19 +71,19 @@ public static class CrowdMotor
             var kin = k.Kins[i];
             var pos = k.Positions[i];
 
-            if (state.State == (byte)CrowdUnitState.Jump)
+            if (state.State == (byte)CrowdUnitState.Traversing)
             {
-                // 跳跃:从起点到落点的直线,不吃墙面和避让
-                Fix64 sp = k.Speeds[i] * k.JumpSpeedRatio;
-                Fix64 L = kin.JumpLengthCm;
-                kin.JumpT += sp * dt;
-                Fix64 t = Fix64.Min(Fix64.OneValue, kin.JumpT / L);
-                Fix64 ex = (kin.JumpToCm.X - kin.RestCm.X) / L, ey = (kin.JumpToCm.Y - kin.RestCm.Y) / L;
+                // 穿越:从起点到落点的直线,不吃墙面和避让
+                Fix64 sp = k.Speeds[i] * k.LinkSpeedRatio;
+                Fix64 L = kin.LinkLengthCm;
+                kin.LinkT += sp * dt;
+                Fix64 t = Fix64.Min(Fix64.OneValue, kin.LinkT / L);
+                Fix64 ex = (kin.LinkToCm.X - kin.RestCm.X) / L, ey = (kin.LinkToCm.Y - kin.RestCm.Y) / L;
                 pos = new Fix64Vec2(kin.RestCm.X + ex * L * t, kin.RestCm.Y + ey * L * t);
                 kin.Velocity = new Fix64Vec2(ex * sp, ey * sp);
                 if (t >= Fix64.OneValue)
                 {
-                    pos = kin.JumpToCm;
+                    pos = kin.LinkToCm;
                     state.State = (byte)CrowdUnitState.Moving;
                     state.Mode = 0;
                     kin.Blend = Fix64.Zero;
@@ -114,7 +114,7 @@ public static class CrowdMotor
             }
             int lv = state.Level;
             byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
-            byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 非地面层的亚格 walk 用 UpPass
+            byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 非底层的亚格 walk 用 UpPass
             Fix64 px = pos.X, py = pos.Y;
             // 格号用一次定点除法再下取整。
             int cx = CrowdSimulationSpace.NavCellCoord(px, navCellSizeCm), cy = CrowdSimulationSpace.NavCellCoord(py, navCellSizeCm);
@@ -182,7 +182,7 @@ public static class CrowdMotor
                 else { nx2 = px; ny2 = py; nvx = Fix64.Zero; nvy = Fix64.Zero; ncx = cx; ncy = cy; }
             }
 
-            // 精确盘面接触:先净空取整剩下的亚格被挡格,再阻挡盒(仅地面层)
+            // 精确盘面接触:先净空取整剩下的亚格被挡格,再阻挡盒(仅底层)
             Fix64 radiusCm = k.Radii[i];
             if (nav != openNav)
             {

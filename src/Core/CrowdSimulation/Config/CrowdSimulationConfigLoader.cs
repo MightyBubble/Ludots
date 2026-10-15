@@ -731,7 +731,7 @@ public sealed class CrowdSimulationConfigLoader
     }
 
     /// <summary>
-    /// 上层区域 = surface 效果引用的区域。上层格不在地面栅格里，所以它不能是链接端点、不能是地形对应的目标，
+    /// 上层区域 = surface 效果引用的区域。上层格不在底层栅格里，所以它不能是链接端点、不能是地形对应的目标，
     /// 不能被 setArea 引用，也不能出现在 spanEnds 的区域表里。
     /// </summary>
     private static void ValidateUpperLayerAreas(
@@ -768,7 +768,7 @@ public sealed class CrowdSimulationConfigLoader
             if (upper.Contains(traversal.Areas[areaIndex].Id))
             {
                 throw new InvalidOperationException(
-                    $"{CrowdTraversalConfig.RelativePath}: terrainAreas.{terrainId} = \"{traversal.Areas[areaIndex].Id}\" 是上层区域，不能做地面地形的区域。");
+                    $"{CrowdTraversalConfig.RelativePath}: terrainAreas.{terrainId} = \"{traversal.Areas[areaIndex].Id}\" 是上层区域，不能做底层地形的区域。");
             }
         }
 
@@ -796,7 +796,7 @@ public sealed class CrowdSimulationConfigLoader
             if (upper.Contains(areaIds[i]))
             {
                 throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: {path}[{i}] = \"{areaIds[i]}\" 是上层区域，地面格的静态地形区域不会是它。");
+                    $"{CrowdSimulationConfigValidator.FileName}: {path}[{i}] = \"{areaIds[i]}\" 是上层区域，底层格的静态地形区域不会是它。");
             }
         }
     }
@@ -883,8 +883,8 @@ public sealed class CrowdSimulationConfigLoader
 
     private static RuntimeNavProfile ToRuntimeNavProfile(TraversalRow row)
     {
-        RuntimeJumpCapability? jump = null;
-        if (row.Links.Count > 0 && row.Links[0] is { } link)
+        RuntimeLinkCapability? link = null;
+        if (row.Links.Count > 0 && row.Links[0] is { } rowLink)
         {
             var departByArea = new bool[row.Cells.Count];
             var arriveByArea = new bool[row.Cells.Count];
@@ -895,12 +895,12 @@ public sealed class CrowdSimulationConfigLoader
                 arriveByArea[a] = cell.Arrive[0];
             }
 
-            jump = new RuntimeJumpCapability
+            link = new RuntimeLinkCapability
             {
-                UpCm = link.UpCm,
-                DownCm = link.DownCm,
-                RangeNavCells = link.RangeNavCells,
-                Cost = Fix64.FromDouble(link.CostPerNavCell),
+                UpCm = rowLink.UpCm,
+                DownCm = rowLink.DownCm,
+                RangeNavCells = rowLink.RangeNavCells,
+                Cost = Fix64.FromDouble(rowLink.CostPerNavCell),
                 DepartByArea = departByArea,
                 ArriveByArea = arriveByArea,
             };
@@ -910,7 +910,7 @@ public sealed class CrowdSimulationConfigLoader
         {
             Id = row.Id,
             MaxSlopeDeg = row.MaxSlopeDeg is double deg ? Fix64.FromDouble(deg) : null,
-            Jump = jump,
+            Link = link,
         };
     }
 

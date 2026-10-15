@@ -182,7 +182,7 @@ public sealed class CrowdSimulationValidatorTests
         int cell = IndexOf(session.Structures!.Blocked, 1);
         PlaceAtCell(session, entity, cell % n, cell / n);
         var state = session.World.Get<CrowdSimulationUnitState>(entity);
-        state.State = (byte)CrowdUnitState.Jump;
+        state.State = (byte)CrowdUnitState.Traversing;
         session.World.Set(entity, state);
         Assert.DoesNotThrow(() => CrowdSimulationValidator.ValidateSim(session));
     }

@@ -34,7 +34,7 @@ internal sealed class S3PathInputSystem : ISystem<float>
         int navCellsPerSide = _runtime.Nav.NavCellsPerSide;
         float csCm = _runtime.Config.NavCellSizeCm;
         int hovered = -1;
-        if (CrowdPointerGround.TryPick(_engine, actions, out double xCm, out double yCm))
+        if (CrowdSurfacePick.TryPick(_engine, actions, out double xCm, out double yCm))
         {
             int cx = (int)MathF.Floor((float)xCm / csCm);
             int cy = (int)MathF.Floor((float)yCm / csCm);

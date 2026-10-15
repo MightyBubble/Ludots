@@ -8,8 +8,8 @@ namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
 /// .navsurface v2 —— CrowdSimulation 的地表资产：逐导航格的地形类型编号 + 链接候选。
-/// 高度真相在 .height 资产，本文件不重复存储；桥面不作为地形写入——桥实体在运行时
-/// 生成独立的桥面层，初始桥候选只作为元数据参考，生效覆盖一律由实体产生。
+/// 高度真相在 .height 资产，本文件不重复存储；上层不作为地形写入——上层条带实体在运行时
+/// 生成独立的上层，地图实体以外的上层不存在，生效覆盖一律由实体产生。
 ///
 /// 二进制布局（小端）：
 ///   0   4    magic "LNSF"
@@ -48,7 +48,7 @@ public sealed class NavSurfaceAsset
     public required uint BakeInputsDigest { get; init; }
     /// <summary>逐格地形类型编号（行优先，长度 = NavCellsX × NavCellsY）。</summary>
     public required byte[] TerrainCells { get; init; }
-    public required NavSurfaceJumpCandidate[] JumpCandidates { get; init; }
+    public required NavSurfaceLinkCandidate[] LinkCandidates { get; init; }
 
     public int NavCellTotal => NavCellsX * NavCellsY;
 
@@ -109,7 +109,7 @@ public sealed class NavSurfaceAsset
 
         ValidateCells(terrainCells, terrainCount);
 
-        var candidates = new NavSurfaceJumpCandidate[candidateCount];
+        var candidates = new NavSurfaceLinkCandidate[candidateCount];
         for (int i = 0; i < candidateCount; i++)
         {
             byte kindIndex = reader.ReadByte();
@@ -119,7 +119,7 @@ public sealed class NavSurfaceAsset
                 throw new InvalidDataException($".navsurface: 链接候选 {i} 的 flags = 0x{flags:X2}，只允许 bit0（斜向）。");
             }
 
-            candidates[i] = new NavSurfaceJumpCandidate
+            candidates[i] = new NavSurfaceLinkCandidate
             {
                 KindIndex = kindIndex,
                 Diagonal = (flags & DiagonalFlag) != 0,
@@ -149,7 +149,7 @@ public sealed class NavSurfaceAsset
             LinkKindIds = linkKindIds,
             BakeInputsDigest = bakeInputsDigest,
             TerrainCells = terrainCells,
-            JumpCandidates = candidates,
+            LinkCandidates = candidates,
         };
     }
 
@@ -165,7 +165,7 @@ public sealed class NavSurfaceAsset
         }
 
         ValidateCells(asset.TerrainCells, asset.TerrainTypeIds.Length);
-        ValidateCandidates(asset.JumpCandidates, asset.NavCellsX, asset.NavCellsY, asset.LinkKindIds.Length);
+        ValidateCandidates(asset.LinkCandidates, asset.NavCellsX, asset.NavCellsY, asset.LinkKindIds.Length);
 
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
         writer.Write(Magic);
@@ -176,14 +176,14 @@ public sealed class NavSurfaceAsset
         writer.Write(asset.NavCellSizeCm);
         writer.Write((ushort)asset.TerrainTypeIds.Length);
         writer.Write((ushort)asset.LinkKindIds.Length);
-        writer.Write(asset.JumpCandidates.Length);
+        writer.Write(asset.LinkCandidates.Length);
         writer.Write(asset.BakeInputsDigest);
 
         WriteIdTable(writer, asset.TerrainTypeIds, "terrainTypes");
         WriteIdTable(writer, asset.LinkKindIds, "linkKinds");
         writer.Write(asset.TerrainCells);
 
-        foreach (var c in asset.JumpCandidates)
+        foreach (var c in asset.LinkCandidates)
         {
             writer.Write(c.KindIndex);
             writer.Write(c.Diagonal ? DiagonalFlag : (byte)0);
@@ -288,7 +288,7 @@ public sealed class NavSurfaceAsset
         }
     }
 
-    private static void ValidateCandidates(NavSurfaceJumpCandidate[] candidates, int cellsX, int cellsY, int linkKindCount)
+    private static void ValidateCandidates(NavSurfaceLinkCandidate[] candidates, int cellsX, int cellsY, int linkKindCount)
     {
         int previousKind = 0;
         for (int i = 0; i < candidates.Length; i++)
@@ -337,7 +337,7 @@ public sealed class NavSurfaceAsset
 /// From 是高端格，To 是低端格；DropCm = height(from) − height(to) ≥ 0（厘米）。
 /// 位移沿 8 个方向之一走 Steps 格；LengthCells 是两端点格距。
 /// </summary>
-public struct NavSurfaceJumpCandidate
+public struct NavSurfaceLinkCandidate
 {
     public byte KindIndex { get; init; }
     public bool Diagonal { get; init; }

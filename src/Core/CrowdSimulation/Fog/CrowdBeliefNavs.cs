@@ -89,7 +89,7 @@ public sealed class CrowdBeliefNavs
     public void TruthChanged() => Epoch++;
 
     /// <summary>
-    /// 桥面变更后重烘已经物化的变体。调用方须持有导航锁。
+    /// 上层变更后重烘已经物化的变体。调用方须持有导航锁。
     /// 走 RebakeNav，不走 RebakeContexts：后者会换掉重烘结果缓冲。
     /// </summary>
     internal void RebakeMaterialized((int X0, int Y0, int X1, int Y1) rect, NavTileCache cache)
@@ -447,7 +447,7 @@ public sealed class CrowdBeliefNavs
         return copy;
     }
 
-    /// <summary>全拷贝变体克隆:逐格数组全拷;tile 条目 / 桥面 tile 信息 / HPA 内层数组共享
+    /// <summary>全拷贝变体克隆:逐格数组全拷;tile 条目 / 上层 tile 信息 / HPA 内层数组共享
     /// (增量重烘只替换条目);链接集换自有 CompOut;可达备忘全新。</summary>
     private static NavContext CloneNav(NavContext t, int id)
     {

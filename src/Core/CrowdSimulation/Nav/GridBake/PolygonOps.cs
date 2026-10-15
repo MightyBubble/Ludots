@@ -57,7 +57,7 @@ public static class PolygonOps
         return false;
     }
 
-    /// <summary>洞合并:每个洞的最左顶点只在最近的至多 16 个外环顶点里找不相交的桥；16 个都被挡则仍桥到最近顶点。最左 x 相同时保洞的输入序;距离相同时保顶点序。</summary>
+    /// <summary>洞合并:每个洞的最左顶点只在最近的至多 16 个外环顶点里找不相交的连接边；16 个都被挡则仍连到最近顶点。最左 x 相同时保洞的输入序;距离相同时保顶点序。</summary>
     internal static List<int> MergeHoles(List<int> outer, List<List<int>> holes, TileBakeScratch scratch)
     {
         var ranks = scratch.Polys;
@@ -115,7 +115,7 @@ public static class PolygonOps
         return outer;
     }
 
-    /// <summary>耳切三角化(正向简单多边形,允许桥接洞)。返回顶点下标三元组。</summary>
+    /// <summary>耳切三角化(正向简单多边形,洞经连接边并入外环)。返回顶点下标三元组。</summary>
     internal static List<int> Triangulate(List<int> p, TileBakeScratch scratch)
     {
         int n = p.Count >> 1;

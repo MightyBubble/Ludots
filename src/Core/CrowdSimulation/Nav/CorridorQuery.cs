@@ -8,14 +8,14 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// 走廊查询:
-/// 无跳跃链接的上下文先走 tile 寻址 NavMesh A* + 漏斗;有链接直接 HPA*
+/// 无链接的上下文先走 tile 寻址 NavMesh A* + 漏斗;有链接直接 HPA*
 /// (链接是抽象边,NavMesh 上没有);NavMesh 失败也回落 HPA*。命中的 tile 标进走廊掩码。
-/// 桥面起点:先沿桥面 BFS 到最近的桥头 portal,再从那里查地面图,
-/// 途经的桥面 tile 并入走廊。
+/// 上层起点:先沿上层 BFS 到最近的入口 portal,再从那里查底层图,
+/// 途经的上层 tile 并入走廊。
 /// </summary>
 public static class CorridorQuery
 {
-    /// <summary>一次走廊查询里 NavMesh 与 HPA* 各自的秒表 tick。桥面 BFS 不计入。</summary>
+    /// <summary>一次走廊查询里 NavMesh 与 HPA* 各自的秒表 tick。上层 BFS 不计入。</summary>
     public struct CorridorStageTicks
     {
         public long NavMesh;
@@ -162,7 +162,7 @@ public static class CorridorQuery
         return s.Publish(Branch.Hpa, p.CellCount * 2, null, 0, p.TileIds, p.Cells, p.CellCount, p.Cost);
     }
 
-    // 桥面 BFS 到最近的桥头 portal(双层可走),途经 tile 并入走廊
+    // 上层 BFS 到最近的入口 portal(双层可走),途经 tile 并入走廊
     private static int UpperLayerExit(NavContext nav, int from, byte[] mask, Scratch s)
     {
         int navCellsPerSide = nav.NavCellsPerSide;

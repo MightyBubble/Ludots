@@ -117,7 +117,7 @@ public sealed class CrowdHudFeed
         hud.ViewMode = demo.ViewMode;
         hud.ViewLabel = demo.ViewLabel;
         hud.TemplateIndex = demo.TemplateIndex;
-        hud.TemplateLabel = demo.Template.Label;
+        hud.TemplateLabel = demo.Choice.Label;
         hud.Interactive = demo.InteractiveMode;
         hud.PreviewKnown = session != null && _previewKnown;
         hud.PreviewShown = hud.PreviewKnown && _previewShown;
@@ -136,7 +136,7 @@ public sealed class CrowdHudFeed
             hud.Moving = telemetry.Moving;
             hud.Arrived = telemetry.Arrived;
             hud.Unreachable = telemetry.Unreachable;
-            hud.Jumping = telemetry.Jumping;
+            hud.Traversing = telemetry.Traversing;
             hud.Selected = runtime != null && runtime.TryLocalSeatPlayerId(out int seatPlayer)
                 ? session.SelectedCollectionCount(seatPlayer)
                 : -1;
@@ -155,7 +155,7 @@ public sealed class CrowdHudFeed
         }
         else
         {
-            hud.Tick = hud.Units = hud.Idle = hud.Moving = hud.Arrived = hud.Unreachable = hud.Jumping = 0;
+            hud.Tick = hud.Units = hud.Idle = hud.Moving = hud.Arrived = hud.Unreachable = hud.Traversing = 0;
             hud.Selected = -1;
             hud.FixedHz = 0;
             hud.AvoidHz = 0;

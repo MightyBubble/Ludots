@@ -100,10 +100,10 @@ public sealed class RuntimeNavProfile
     public required string Id { get; init; }
     /// <summary>坡度上限（度）；null = 不限坡度。ignoresSlope 区域不适用。</summary>
     public required Fix64? MaxSlopeDeg { get; init; }
-    public required RuntimeJumpCapability? Jump { get; init; }
+    public required RuntimeLinkCapability? Link { get; init; }
 }
 
-public sealed class RuntimeJumpCapability
+public sealed class RuntimeLinkCapability
 {
     public required int UpCm { get; init; }
     public required int DownCm { get; init; }

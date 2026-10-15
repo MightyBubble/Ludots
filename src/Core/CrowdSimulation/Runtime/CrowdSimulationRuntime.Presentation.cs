@@ -160,6 +160,22 @@ public sealed partial class CrowdSimulationRuntime
         _pathPresentationInstalled = true;
     }
 
+    private S4DeployDemoRuntime.PaletteChoice[] ResolvePalette(GameEngine engine, CrowdDeployPresentation deploy)
+    {
+        var structures = (_session ?? throw new InvalidOperationException("部署演示面板要在会话激活之后装。")).Config.Structures;
+        var entries = CrowdStructurePalette.LoadMerged(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        var choices = new S4DeployDemoRuntime.PaletteChoice[deploy.Palette.Length];
+        for (int i = 0; i < deploy.Palette.Length; i++)
+        {
+            CrowdPaletteSlotDto slot = deploy.Palette[i];
+            if (!entries.TryGetValue(slot.Entry, out CrowdPaletteEntry? entry))
+                throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.deploy.palette[{i}].entry \"{slot.Entry}\" 不在 {CrowdStructurePalette.RelativePath}。");
+            CrowdStructurePalette.RequireTemplate(slot.Entry, entry, structures);
+            choices[i] = new S4DeployDemoRuntime.PaletteChoice(slot.Entry, entry.TemplateId, entry.Label, entry.Gesture, entry.SizeCm, entry.ToOffsetXCm, entry.ToOffsetYCm, slot.SelectAction);
+        }
+        return choices;
+    }
+
     private void InstallDeployPresentation(GameEngine engine)
     {
         if (_deployPresentationInstalled) return;
@@ -192,18 +208,7 @@ public sealed partial class CrowdSimulationRuntime
             SpeedUp = deploy.Actions.SpeedUp,
             Fuzz = deploy.Actions.Fuzz,
         };
-        var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
-        for (int i = 0; i < deploy.Structures.Length; i++)
-        {
-            CrowdStructureTemplateDto item = deploy.Structures[i];
-            choices[i] = new S4DeployDemoRuntime.StructureChoice(
-                item.Id,
-                item.Label,
-                item.Shape,
-                item.SizeCm,
-                item.RoadLengthCm ?? 0,
-                item.SelectAction);
-        }
+        S4DeployDemoRuntime.PaletteChoice[] choices = ResolvePalette(engine, deploy);
 
         var (routes, slot) = RequireVisualServices(engine);
         var demo = new S4DeployDemoRuntime(engine);
@@ -223,7 +228,7 @@ public sealed partial class CrowdSimulationRuntime
         CrowdDebugRates rates = _debug?.Rates
             ?? throw new InvalidOperationException("部署演示缺少 rates。");
         demo.UseViewLabels(presentation.ViewLabels);
-        demo.UseStructures(choices);
+        demo.UsePalette(choices);
         demo.UseDebugTools(tools, rates);
         Func<CrowdSimSession?> sessionSource = () =>
             engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null;

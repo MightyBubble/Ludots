@@ -97,7 +97,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private static Vector2 CellCenter(int cell, int navCellsPerSide, float navCellVisual)
         => new((cell % navCellsPerSide + 0.5f) * navCellVisual, (cell / navCellsPerSide + 0.5f) * navCellVisual);
 
-    // NavMesh 多边形线框 + tile 网格 + HPA 入口 + 跳跃链接,按上下文缓存(线框是静态数据)
+    // NavMesh 多边形线框 + tile 网格 + HPA 入口 + 链接,按上下文缓存(线框是静态数据)
     private void EnsureWireframe(int navCellsPerSide, float navCellVisual)
     {
         var nav = _runtime.Nav;
@@ -107,14 +107,14 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         _wireMarkers.Clear();
         int navCellsPerTile = _runtime.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var navmeshColor = new Vector4(0.9f, 0.9f, 0.9f, 0.55f);
-        var deckColor = new Vector4(1f, 0.84f, 0.31f, 0.85f);
+        var upperColor = new Vector4(1f, 0.84f, 0.31f, 0.85f);
         for (int ty = 0; ty < navTilesPerSide; ty++)
         {
             for (int tx = 0; tx < navTilesPerSide; tx++)
             {
                 int tileId = ty * navTilesPerSide + tx;
                 AddEntryWire(nav.Tiles?[tileId], tx * navCellsPerTile, ty * navCellsPerTile, navCellVisual, navmeshColor);
-                if (nav.UpperTiles != null && nav.UpperTiles.TryGetValue(tileId, out var up)) AddEntryWire(up.Entry, tx * navCellsPerTile, ty * navCellsPerTile, navCellVisual, deckColor);
+                if (nav.UpperTiles != null && nav.UpperTiles.TryGetValue(tileId, out var up)) AddEntryWire(up.Entry, tx * navCellsPerTile, ty * navCellsPerTile, navCellVisual, upperColor);
             }
         }
 
@@ -133,9 +133,9 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
             {
                 foreach (int cell in block.Cells)
                 {
-                    bool deck = cell >= n2;
-                    int cc = deck ? cell - n2 : cell;
-                    _wireMarkers.Add((new Vector2((cc % navCellsPerSide + 0.5f) * navCellVisual, (cc / navCellsPerSide + 0.5f) * navCellVisual), RouteVisualMarkerShape.Ring, navCellVisual * 0.4f, deck ? deckColor : entranceColor));
+                    bool upper = cell >= n2;
+                    int cc = upper ? cell - n2 : cell;
+                    _wireMarkers.Add((new Vector2((cc % navCellsPerSide + 0.5f) * navCellVisual, (cc / navCellsPerSide + 0.5f) * navCellVisual), RouteVisualMarkerShape.Ring, navCellVisual * 0.4f, upper ? upperColor : entranceColor));
                 }
             }
         }

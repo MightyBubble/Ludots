@@ -96,7 +96,7 @@ public sealed class BridgeUatTests
         for (int i = 0; i < session.Units.Count; i++)
         {
             byte state = CrowdUatKit.StateAt(session, i).State;
-            if (state == (byte)CrowdUnitState.Moving || state == (byte)CrowdUnitState.Jump) return false;
+            if (state == (byte)CrowdUnitState.Moving || state == (byte)CrowdUnitState.Traversing) return false;
         }
 
         return true;

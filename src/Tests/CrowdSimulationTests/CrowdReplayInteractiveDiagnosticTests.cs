@@ -251,7 +251,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         Set(host, "_surfaceGrid", session.Structures!.TerrainSurface());
         Set(host, "_heights", sources.HeightS);
         Set(host, "_deck", sources.UpperLayer);
-        Set(host, "_jumpCandidates", sources.JumpCandidates);
+        Set(host, "_linkCandidates", sources.LinkCandidates);
         Set(host, "_mapSurfaceBlockers", map.Blockers);
         Set(host, "_mapSurfaceBridges", map.LayeredPaths);
     }

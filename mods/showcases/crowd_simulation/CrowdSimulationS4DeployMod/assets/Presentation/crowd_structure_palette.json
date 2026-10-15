@@ -1,0 +1,8 @@
+{
+  "s7barrier": {
+    "template": "s7barrier",
+    "label": "路障 square 70m(4s 寿命)",
+    "gesture": { "kind": "point" },
+    "sizeCm": 7000
+  }
+}

@@ -8,10 +8,10 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
-/// 群体演示的地面拾取:指针位置走已绑定的 PointerPos 动作,射线走 ScreenRayProvider 与高度图。
+/// 群体演示的地表拾取:指针位置走已绑定的 PointerPos 动作,射线走 ScreenRayProvider 与高度图。
 /// 群体 HUD 面板只显示不收指针，被界面捕获的点击在输入层就已拦下。
 /// </summary>
-internal static class CrowdPointerGround
+internal static class CrowdSurfacePick
 {
     public static bool TryPick(
         GameEngine engine,
@@ -31,10 +31,24 @@ internal static class CrowdPointerGround
             return false;
         }
 
-        var ray = rays.GetRay(new Vector2(pointer.X, pointer.Y));
-        if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit)) return false;
-        xCm = hit.WorldXCm;
-        yCm = hit.WorldYCm;
+        if (!TryRaycast(rays, heightmap, pointer.X, pointer.Y, out float worldX, out float worldY, out _)) return false;
+        xCm = worldX;
+        yCm = worldY;
+        return true;
+    }
+
+    public static bool TryRaycast(IScreenRayProvider rays, IContinuousHeightmap height, float x, float y, out float worldX, out float worldY, out float heightCm)
+    {
+        var ray = rays.GetRay(new Vector2(x, y));
+        if (!height.TryRaycastGround(in ray, out var hit))
+        {
+            worldX = worldY = heightCm = 0f;
+            return false;
+        }
+
+        worldX = hit.WorldXCm;
+        worldY = hit.WorldYCm;
+        heightCm = hit.HeightCm;
         return true;
     }
 }

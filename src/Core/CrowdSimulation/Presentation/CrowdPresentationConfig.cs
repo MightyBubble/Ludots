@@ -71,18 +71,19 @@ internal sealed class CrowdPresentationConfig
             if (cfg.Path != null)
                 throw new InvalidOperationException("CrowdSimulationDebug.json presentation.kind=deploy 不能带 path。");
             RequireDeployCopy(cfg.Deploy);
-            if (cfg.Deploy.Structures == null || cfg.Deploy.Structures.Length == 0)
-                throw new InvalidOperationException("CrowdSimulationDebug.json presentation.deploy.structures 至少一条。");
+            if (cfg.Deploy.Palette == null || cfg.Deploy.Palette.Length == 0)
+                throw new InvalidOperationException("CrowdSimulationDebug.json presentation.deploy.palette 至少一条。");
             var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < cfg.Deploy.Structures.Length; i++)
+            for (int i = 0; i < cfg.Deploy.Palette.Length; i++)
             {
-                CrowdStructureTemplateDto row = cfg.Deploy.Structures[i]
-                    ?? throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.deploy.structures[{i}] 为空。");
-                ValidateStructure(row, i);
+                CrowdPaletteSlotDto row = cfg.Deploy.Palette[i]
+                    ?? throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.deploy.palette[{i}] 为空。");
+                RequireText(row.Entry, $"deploy.palette[{i}].entry");
+                RequireText(row.SelectAction, $"deploy.palette[{i}].selectAction");
                 if (!seen.Add(row.SelectAction))
                 {
                     throw new InvalidOperationException(
-                        $"CrowdSimulationDebug.json presentation.deploy.structures[{i}].selectAction 重复。");
+                        $"CrowdSimulationDebug.json presentation.deploy.palette[{i}].selectAction 重复。");
                 }
             }
         }
@@ -139,52 +140,13 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.PlaceOutOfBounds, "deploy.placeOutOfBounds");
         RequireText(deploy.PlaceOverlapsStructure, "deploy.placeOverlapsStructure");
         RequireText(deploy.PlaceOverlapsBlocked, "deploy.placeOverlapsBlocked");
-        RequireText(deploy.PlaceSpanTerrain, "deploy.placeSpanTerrain");
-        RequireText(deploy.PlaceAnchorTerrain, "deploy.placeAnchorTerrain");
+        RequireText(deploy.PlaceInteriorArea, "deploy.placeInteriorArea");
+        RequireText(deploy.PlaceEndpointArea, "deploy.placeEndpointArea");
         RequireText(deploy.PendingNav, "deploy.pendingNav");
         RequireColor(deploy.PlaceLegal, "deploy.placeLegal");
         RequireColor(deploy.PlaceIllegal, "deploy.placeIllegal");
-        RequireColor(deploy.PlaceAnchor, "deploy.placeAnchor");
+        RequireColor(deploy.PlaceEndpoint, "deploy.placeEndpoint");
         RequireColor(deploy.PlacePortal, "deploy.placePortal");
-    }
-
-    private static void ValidateStructure(CrowdStructureTemplateDto row, int index)
-    {
-        string at = $"presentation.deploy.structures[{index}]";
-        RequireText(row.Id, $"{at}.id");
-        RequireText(row.Label, $"{at}.label");
-        RequireText(row.SelectAction, $"{at}.selectAction");
-        if (row.SizeCm <= 0)
-            throw new InvalidOperationException($"CrowdSimulationDebug.json {at}.sizeCm 必须 > 0。");
-        if (row.Shape == S4DeployDemoRuntime.ShapePoint)
-        {
-            if (row.RoadLengthCm != null)
-            {
-                throw new InvalidOperationException(
-                    $"CrowdSimulationDebug.json {at}.shape=point 不能带 roadLengthCm。");
-            }
-        }
-        else if (row.Shape == S4DeployDemoRuntime.ShapeRoad)
-        {
-            if (row.RoadLengthCm is not > 0)
-            {
-                throw new InvalidOperationException(
-                    $"CrowdSimulationDebug.json {at}.shape=road 需要 roadLengthCm > 0。");
-            }
-        }
-        else if (row.Shape == S4DeployDemoRuntime.ShapeDisc || row.Shape == S4DeployDemoRuntime.ShapeSpan)
-        {
-            if (row.RoadLengthCm != null)
-            {
-                throw new InvalidOperationException(
-                    $"CrowdSimulationDebug.json {at}.shape={row.Shape} 不能带 roadLengthCm。");
-            }
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                $"CrowdSimulationDebug.json {at}.shape \"{row.Shape}\" 需为 {S4DeployDemoRuntime.ShapePoint} / {S4DeployDemoRuntime.ShapeRoad} / {S4DeployDemoRuntime.ShapeDisc} / {S4DeployDemoRuntime.ShapeSpan}。");
-        }
     }
 
     internal static Vector4 Rgba(int[]? rgba, string path)
@@ -244,14 +206,14 @@ internal sealed class CrowdDeployPresentation
     [JsonRequired] public string PlaceOutOfBounds { get; set; } = string.Empty;
     [JsonRequired] public string PlaceOverlapsStructure { get; set; } = string.Empty;
     [JsonRequired] public string PlaceOverlapsBlocked { get; set; } = string.Empty;
-    [JsonRequired] public string PlaceSpanTerrain { get; set; } = string.Empty;
-    [JsonRequired] public string PlaceAnchorTerrain { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceInteriorArea { get; set; } = string.Empty;
+    [JsonRequired] public string PlaceEndpointArea { get; set; } = string.Empty;
     [JsonRequired] public int[] PlaceLegal { get; set; } = Array.Empty<int>();
     [JsonRequired] public int[] PlaceIllegal { get; set; } = Array.Empty<int>();
-    [JsonRequired] public int[] PlaceAnchor { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] PlaceEndpoint { get; set; } = Array.Empty<int>();
     [JsonRequired] public int[] PlacePortal { get; set; } = Array.Empty<int>();
     [JsonRequired] public string PendingNav { get; set; } = string.Empty;
-    [JsonRequired] public CrowdStructureTemplateDto[] Structures { get; set; } = Array.Empty<CrowdStructureTemplateDto>();
+    [JsonRequired] public CrowdPaletteSlotDto[] Palette { get; set; } = Array.Empty<CrowdPaletteSlotDto>();
 }
 
 internal sealed class CrowdDeployActions
@@ -280,12 +242,9 @@ internal sealed class CrowdDeployActions
     [JsonRequired] public string Fuzz { get; set; } = string.Empty;
 }
 
-internal sealed class CrowdStructureTemplateDto
+/// <summary>面板的一格：<see cref="CrowdStructurePalette"/> 的条目 id 加选择键。</summary>
+internal sealed class CrowdPaletteSlotDto
 {
-    [JsonRequired] public string Id { get; set; } = string.Empty;
-    [JsonRequired] public string Label { get; set; } = string.Empty;
-    [JsonRequired] public string Shape { get; set; } = string.Empty;
-    [JsonRequired] public int SizeCm { get; set; }
-    public int? RoadLengthCm { get; set; }
+    [JsonRequired] public string Entry { get; set; } = string.Empty;
     [JsonRequired] public string SelectAction { get; set; } = string.Empty;
 }

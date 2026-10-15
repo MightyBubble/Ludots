@@ -68,7 +68,7 @@ public struct CrowdSimulationPhaseTicks
 
 /// <summary>
 /// 人群仿真遥测(MassNavigationTelemetry 同款 POCO,无字符串键)。
-/// 本 tick 快照(赋值覆盖):Units、Contacts、Idle/Moving/Arrived/Unreachable/Jumping、LastTickMs、LastPhaseTicks。
+/// 本 tick 快照(赋值覆盖):Units、Contacts、Idle/Moving/Arrived/Unreachable/Traversing、LastTickMs、LastPhaseTicks。
 /// 会话累计:Ticks、Rebakes、FogRefreshes、SubStepClamped、EvictStuck、Plans,以及 PathWaits 与 StallTicks(同一次停摆各加一,无头 Step/Advance 也计)。
 /// TickMs 是墙钟 EMA,MaxTickMs 是墙钟峰值。SumPhaseTicks 是各阶段秒表 tick 的会话累计。
 /// </summary>
@@ -90,7 +90,7 @@ public sealed class CrowdSimulationTelemetry
     public int Moving { get; private set; }
     public int Arrived { get; private set; }
     public int Unreachable { get; private set; }
-    public int Jumping { get; private set; }
+    public int Traversing { get; private set; }
     /// <summary>本 tick 计入航向均值的抽样次数。0 表示没有可比较的相邻步。</summary>
     public int MotionSamples { get; private set; }
     /// <summary>移动单位相邻步航向变化的绝对值均值(度)。没有样本时为 0。</summary>
@@ -133,13 +133,13 @@ public sealed class CrowdSimulationTelemetry
     public void MarkEvictStuck(int stuck) => EvictStuck += stuck;
     public void MarkPlans(int applied) => Plans += applied;
 
-    public void SetUnitStates(int idle, int moving, int arrived, int unreachable, int jumping)
+    public void SetUnitStates(int idle, int moving, int arrived, int unreachable, int traversing)
     {
         Idle = idle;
         Moving = moving;
         Arrived = arrived;
         Unreachable = unreachable;
-        Jumping = jumping;
+        Traversing = traversing;
     }
 
     /// <summary>本 tick 运动质量。反复率用整数百分数，分母为 0 时记 0。</summary>
@@ -158,7 +158,7 @@ public sealed class CrowdSimulationTelemetry
     {
         Ticks = Units = Contacts = Rebakes = FogRefreshes = PathWaits = StallTicks = 0;
         SubStepClamped = EvictStuck = Plans = 0;
-        Idle = Moving = Arrived = Unreachable = Jumping = 0;
+        Idle = Moving = Arrived = Unreachable = Traversing = 0;
         MotionSamples = FlipCount = SteerPairs = FlipPct = 0;
         HeadingDeg = 0;
         LastTickMs = TickMs = MaxTickMs = 0;

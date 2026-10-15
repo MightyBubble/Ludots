@@ -38,7 +38,7 @@ public class CrowdDebugOverlayGeometryTests
     }
 
     [Test]
-    public void JumpLinks_SplitTwoWayAndOneWay()
+    public void Links_SplitTwoWayAndOneWay()
     {
         var links = new NavLinkSet
         {
@@ -55,7 +55,7 @@ public class CrowdDebugOverlayGeometryTests
             CompOut = new Dictionary<int, HashSet<int>>(),
         };
         var dest = new CrowdDebugSegment[2];
-        int count = CrowdDebugOverlayGeometry.AppendJumps(links, navCellsPerSide: 4, cellCm: 10, dest, 0);
+        int count = CrowdDebugOverlayGeometry.AppendLinks(links, navCellsPerSide: 4, cellCm: 10, dest, 0);
         Assert.That(count, Is.EqualTo(2));
         Assert.That(dest[0].Kind, Is.EqualTo(CrowdDebugSegmentKind.TwoWay));
         Assert.That(dest[1].Kind, Is.EqualTo(CrowdDebugSegmentKind.OneWay));

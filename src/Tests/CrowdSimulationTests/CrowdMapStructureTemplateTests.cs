@@ -186,7 +186,7 @@ public class CrowdMapStructureTemplateTests
             TerrainType = new byte[n2],
             Area = new byte[n2],
             Blocked = new byte[n2],
-            JumpCandidates = [],
+            LinkCandidates = [],
         };
     }
 

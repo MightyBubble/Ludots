@@ -20,7 +20,7 @@ public static class CrowdWalls
         {
             public int Version = -1;
             public byte[]? Walk;
-            public byte[]? UpWalk; // 桥面层以 UpPass 为 walk 口径
+            public byte[]? UpWalk; // 上层以 UpPass 为 walk 口径
             public byte[]? Grid;
             public bool Filled;
         }

@@ -175,9 +175,9 @@ public sealed class CrowdHudAllocTests
     {
         var presentation = DeployPresentation();
         demo.UseViewLabels(presentation.ViewLabels);
-        demo.UseStructures(new[]
+        demo.UsePalette(new[]
         {
-            new S4DeployDemoRuntime.StructureChoice("building", "建筑", S4DeployDemoRuntime.ShapePoint, 14000, 0, "CrowdSimulation.S4.Template1"),
+            new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, 14000, 0, 0, "CrowdSimulation.S4.Template1"),
         });
         return new CrowdHudFeed(demo, presentation, session, () => null, null);
     }
@@ -206,17 +206,10 @@ public sealed class CrowdHudAllocTests
             PlaceBlocked = "(此处不可放)",
             PlaceOffMap = "(光标不在地图上)",
             PendingNav = " · 导航变体未就绪",
-            Structures = new[]
-            {
-                new CrowdStructureTemplateDto
+            Palette = new[]
                 {
-                    Id = "building",
-                    Label = "建筑",
-                    Shape = S4DeployDemoRuntime.ShapePoint,
-                    SizeCm = 14000,
-                    SelectAction = "CrowdSimulation.S4.Template1",
+                    new CrowdPaletteSlotDto { Entry = "building", SelectAction = "CrowdSimulation.S4.Template1" },
                 },
-            },
         },
     };
 }

@@ -173,7 +173,7 @@ public class CrowdBeliefTerrainTests
                 LinkKindIds = TestDefaults.LinkKindIds(config),
                 BakeInputsDigest = 0,
                 TerrainCells = terrain,
-                JumpCandidates = System.Array.Empty<NavSurfaceJumpCandidate>(),
+                LinkCandidates = System.Array.Empty<NavSurfaceLinkCandidate>(),
             }, new[] { blocker });
 
             var span = new CrowdSimulationPathSpan
@@ -206,7 +206,7 @@ public class CrowdBeliefTerrainTests
             store.UseUpperLayer(deck);
             store.InstallMapLayeredPaths(new[] { layeredPath });
             var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
-            var sources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);
+            var sources = new CrowdRebakeSources(config, heights, deck, surface.LinkCandidates);
             var radiusClasses = CrowdDeployment.DistinctRadiusClasses(config);
             var navBy = new Dictionary<(int, int), NavContext>();
             foreach (var profile in config.Profiles)

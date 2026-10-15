@@ -26,9 +26,9 @@ public static class CrowdSimulationValidator
     }
 
     /// <summary>
-    /// 句柄池、组计数与原型、世界边界、非跳跃单位的停留、流场和指令引用。
-    /// 地面看结构仓的活阻挡栅格和该单位导航的可通行格；桥面看 <see cref="NavContext.UpPass"/>。
-    /// 跳跃单位离网直线可越阻挡，不查停留。重烘阶段 0 当帧挤离还没跑，这一帧不查停留。
+    /// 句柄池、组计数与原型、世界边界、非穿越中单位的停留、流场和指令引用。
+    /// 底层看结构仓的活阻挡栅格和该单位导航的可通行格；上层看 <see cref="NavContext.UpPass"/>。
+    /// 穿越中的单位离网直线可越阻挡，不查停留。重烘阶段 0 当帧挤离还没跑，这一帧不查停留。
     /// </summary>
     public static void ValidateSim(CrowdSimSession session)
     {
@@ -120,7 +120,7 @@ public static class CrowdSimulationValidator
 
     /// <summary>
     /// 真实导航对当前地表全量烘焙。每个已构建的认知变体对它自己的认知场再烤一遍。
-    /// 认知变体的跳跃链接只比数量。
+    /// 认知变体的链接只比数量。
     /// </summary>
     public static void ValidateNav(CrowdSimSession session)
     {
@@ -416,7 +416,7 @@ public static class CrowdSimulationValidator
         var units = session.Units;
         var entity = units.EntityAt(dense);
         var state = session.World.Get<CrowdSimulationUnitState>(entity);
-        if (state.State == (byte)CrowdUnitState.Jump) return false;
+        if (state.State == (byte)CrowdUnitState.Traversing) return false;
 
         slot = state.Slot;
         entityId = entity.Id;
@@ -469,7 +469,7 @@ public static class CrowdSimulationValidator
         {
             1 => "停在阻挡格",
             2 => "停在不可通行格",
-            3 => "停在桥面不可通行格",
+            3 => "停在上层不可通行格",
             4 => "没有导航组",
             _ => throw new InvalidOperationException($"未知停留类别 {kind}。"),
         };

@@ -6,7 +6,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// HPA* 抽象图寻路:起点 tile 内 Dijkstra 到本 tile 全部入口,
-/// 抽象图 A*(块内边 + 跳跃链接边),进入终点 tile 的节点再接终点 tile 内 Dijkstra 收尾。
+/// 抽象图 A*(块内边 + 链接边),进入终点 tile 的节点再接终点 tile 内 Dijkstra 收尾。
 /// 返回 tile 走廊 + 途经的入口格。返回的 Cost 是起点 Dijkstra、抽象图边和终点 Dijkstra 的 g 值。堆序用 octile × MinCost，这个乘积不是返回代价。
 /// </summary>
 public static class HpaQuery
@@ -165,7 +165,7 @@ public static class HpaQuery
         for (int i = 0; i < sb.CellCount; i++)
         {
             int c = sb.Cells[i];
-            if (c >= n2) continue; // 桥面节点不会被纯地面的起点 Dijkstra 到达
+            if (c >= n2) continue; // 上层节点不会被纯底层的起点 Dijkstra 到达
             var d = s.StartDist[NavGridSteps.LocalIndex(c, navCellsPerSide, navCellsPerTile)];
             if (d >= inf) continue;
             g[c] = d; parent[c] = -1;
@@ -186,7 +186,7 @@ public static class HpaQuery
             if (!closed.Add(u)) continue;
             expanded++;
             s.Gu = g[u];
-            // 键 ≥ N² 是桥面节点:终点在地面,它们永远不会结束搜索
+            // 键 ≥ N² 是上层节点:终点在底层,它们永远不会结束搜索
             int cl = NavGridSteps.TileOf(u % n2, navCellsPerSide, navCellsPerTile, navTilesPerSide);
             var b = blocks[cl];
             int i = b.Index[u];

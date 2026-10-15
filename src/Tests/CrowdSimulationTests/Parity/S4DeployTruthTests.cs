@@ -266,7 +266,7 @@ public class S4DeployTruthTests
         session.Structures.UseUpperLayer(deck);
         session.Structures.InstallMapLayeredPaths(mapSurface.LayeredPaths);
 
-        session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
+        session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.LinkCandidates);
         session.NavTileCache = cache;
         session.BindVision(new FogLayerRegistry(), new FogFieldStore());
         return (runtime, session);

@@ -17,7 +17,7 @@ public sealed class BankJumpUatTests
     {
         var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
         var bridges = S1SurfaceTruthTests.LoadMapSurface(seed).LayeredPaths;
-        var jumps = S1SurfaceTruthTests.ReadSurface(seed).JumpCandidates;
+        var jumps = S1SurfaceTruthTests.ReadSurface(seed).LinkCandidates;
         int n = runtime.NavCellsPerSide, cs = runtime.NavCellSizeCm;
         Assert.That(bridges.Count, Is.GreaterThan(0), "场景无效：世界无桥");
         Assert.That(jumps.Length, Is.GreaterThan(0), "场景无效：世界无 jump 候选");

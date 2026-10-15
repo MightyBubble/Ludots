@@ -29,18 +29,16 @@ public enum CrowdClickTool : byte
 /// </summary>
 public sealed class S4DeployDemoRuntime
 {
-    public const string ShapePoint = "point";
-    public const string ShapeRoad = "road";
-    public const string ShapeDisc = "disc";
-    public const string ShapeSpan = "span";
-
-    /// <summary>建造模板。shape=road 时道路自光标向 +X 铺 RoadLengthCm;point 的 RoadLengthCm 恒为 0,形状以 Shape 为准。</summary>
-    public sealed record StructureChoice(string Id, string Label, string Shape, int SizeCm, int RoadLengthCm, string SelectAction)
-    {
-        public bool IsRoad => string.Equals(Shape, ShapeRoad, StringComparison.Ordinal);
-        public bool IsDisc => string.Equals(Shape, ShapeDisc, StringComparison.Ordinal);
-        public bool IsSpan => string.Equals(Shape, ShapeSpan, StringComparison.Ordinal);
-    }
+    /// <summary>面板上的一格：手势条目加选择键。fixedPath 的终点 = 起点 + ToOffset；其他手势的 ToOffset 为 0。</summary>
+    public sealed record PaletteChoice(
+        string EntryId,
+        string TemplateId,
+        string Label,
+        CrowdPlacementGesture Gesture,
+        int SizeCm,
+        int ToOffsetXCm,
+        int ToOffsetYCm,
+        string SelectAction);
 
     private const string PlaybackOwner = "crowd-simulation.deploy";
 
@@ -57,7 +55,7 @@ public sealed class S4DeployDemoRuntime
     private int _speedIndex;
     private TimeFlowToken _speedToken;
 
-    /// <summary>本帧光标地面厘米。由输入系统写入，呈现只读。</summary>
+    /// <summary>本帧光标落在地表的厘米坐标。由输入系统写入，呈现只读。</summary>
     public (double X, double Y)? HoverCm { get; set; }
 
     /// <summary>点选生成覆盖 tools 的数量、模板和半径级。空则仍用 tools。</summary>
@@ -89,7 +87,7 @@ public sealed class S4DeployDemoRuntime
         CrowdClickTool.Off => "关闭",
         CrowdClickTool.Boom => "爆炸",
         CrowdClickTool.Spawn => "生成",
-        CrowdClickTool.Structure => "建筑",
+        CrowdClickTool.Structure => "结构",
         CrowdClickTool.Demolish => "拆除",
         _ => throw new InvalidOperationException($"未知点击工具 {Tool}。"),
     };
@@ -107,10 +105,10 @@ public sealed class S4DeployDemoRuntime
 
         InteractiveMode = true;
     }
-    private StructureChoice[] _choices = Array.Empty<StructureChoice>();
+    private PaletteChoice[] _choices = Array.Empty<PaletteChoice>();
     private string[]? _viewLabels;
     private int _viewModeCount = 3;
-    public StructureChoice Template => _choices[TemplateIndex];
+    public PaletteChoice Choice => _choices[TemplateIndex];
     public int StructureCount => _choices.Length;
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
@@ -123,12 +121,12 @@ public sealed class S4DeployDemoRuntime
         _viewModeCount = labels.Length;
     }
 
-    public void UseStructures(StructureChoice[] choices)
+    public void UsePalette(PaletteChoice[] choices)
     {
         if (choices == null || choices.Length == 0)
-            throw new InvalidOperationException("部署演示至少一条结构模板。");
+            throw new InvalidOperationException("部署演示面板至少一条。");
         _choices = choices;
-        ApplyPlaceTemplate();
+        ApplyPlaceEntry();
     }
 
     internal void UseDebugTools(CrowdDebugTools tools, CrowdDebugRates rates)
@@ -146,7 +144,7 @@ public sealed class S4DeployDemoRuntime
         TickHzWindow = rates.TickWindowText;
         _speedIndex = IndexOfSpeed(tools.SpeedStepsPermille, TimeFlowService.DefaultScalePermille);
         SpeedPermille = tools.SpeedStepsPermille[_speedIndex];
-        ApplyPlaceTemplate();
+        ApplyPlaceEntry();
     }
 
     public void ArmSession(CrowdSimSession session)
@@ -262,45 +260,37 @@ public sealed class S4DeployDemoRuntime
 
     private void PlaceAt(int xCm, int yCm)
     {
-        StructureChoice tpl = Template;
-        if (tpl.IsSpan)
+        PaletteChoice choice = Choice;
+        if (choice.Gesture == CrowdPlacementGesture.TwoPoint && !HasSpanAnchor)
         {
-            if (!HasSpanAnchor)
-            {
-                HasSpanAnchor = true;
-                SpanAnchorX = xCm;
-                SpanAnchorY = yCm;
-                return;
-            }
-
-            int x0 = SpanAnchorX;
-            int y0 = SpanAnchorY;
-            ClearSpan();
-            SubmitInteractive(new CrowdSimCommand
-            {
-                Kind = CrowdSimCommandKind.PlaceStructure,
-                TemplateId = tpl.Id,
-                XCm = x0,
-                YCm = y0,
-                SizeCm = tpl.SizeCm,
-                ToXCm = xCm,
-                ToYCm = yCm,
-            });
+            HasSpanAnchor = true;
+            SpanAnchorX = xCm;
+            SpanAnchorY = yCm;
             return;
         }
 
-        bool road = tpl.IsRoad;
+        var (x0, y0, x1, y1) = FootprintEnds(choice, xCm, yCm);
+        ClearSpan();
         SubmitInteractive(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
-            TemplateId = tpl.Id,
-            XCm = xCm,
-            YCm = yCm,
-            SizeCm = tpl.SizeCm,
-            ToXCm = road ? xCm + tpl.RoadLengthCm : 0,
-            ToYCm = road ? yCm : 0,
+            TemplateId = choice.TemplateId,
+            XCm = x0,
+            YCm = y0,
+            SizeCm = choice.SizeCm,
+            ToXCm = x1,
+            ToYCm = y1,
         });
     }
+
+    /// <summary>光标在 (xCm, yCm) 时这一格会放下的足迹两端。twoPoint 还没点起点时起点就是光标；point 的终点为 0。</summary>
+    internal (int X0, int Y0, int X1, int Y1) FootprintEnds(PaletteChoice choice, int xCm, int yCm) => choice.Gesture switch
+    {
+        CrowdPlacementGesture.Point => (xCm, yCm, 0, 0),
+        CrowdPlacementGesture.FixedPath => (xCm, yCm, xCm + choice.ToOffsetXCm, yCm + choice.ToOffsetYCm),
+        CrowdPlacementGesture.TwoPoint => HasSpanAnchor ? (SpanAnchorX, SpanAnchorY, xCm, yCm) : (xCm, yCm, xCm, yCm),
+        _ => throw new InvalidOperationException($"未知摆放手势 {choice.Gesture}。"),
+    };
 
     private void SubmitSpawnAt(int xCm, int yCm)
     {
@@ -374,12 +364,12 @@ public sealed class S4DeployDemoRuntime
             TimeFlowDomainIds.Simulation, permille, PlaybackOwner, "playback");
     }
 
-    private void ApplyPlaceTemplate()
+    private void ApplyPlaceEntry()
     {
         if (_tools == null || _choices.Length == 0) return;
         for (int i = 0; i < _choices.Length; i++)
         {
-            if (!string.Equals(_choices[i].Id, _tools.PlaceTemplate, StringComparison.Ordinal)) continue;
+            if (!string.Equals(_choices[i].EntryId, _tools.PlaceEntry, StringComparison.Ordinal)) continue;
             TemplateIndex = i;
             return;
         }

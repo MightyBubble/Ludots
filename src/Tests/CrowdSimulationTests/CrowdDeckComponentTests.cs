@@ -127,7 +127,7 @@ public class CrowdDeckComponentTests
                 LinkKindIds = TestDefaults.LinkKindIds(config),
                 BakeInputsDigest = 0,
                 TerrainCells = terrain,
-                JumpCandidates = System.Array.Empty<NavSurfaceJumpCandidate>(),
+                LinkCandidates = System.Array.Empty<NavSurfaceLinkCandidate>(),
             }, System.Array.Empty<BlockerFootprint>());
 
             var bridges = new List<LayeredPathRecord>
@@ -157,7 +157,7 @@ public class CrowdDeckComponentTests
             store.UseUpperLayer(deck);
             store.InstallMapLayeredPaths(bridges);
             var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
-            var sources = new CrowdRebakeSources(config, heights, deck, surface.JumpCandidates);
+            var sources = new CrowdRebakeSources(config, heights, deck, surface.LinkCandidates);
             return new Baked(config, store, nav, navs, sources, cache, side, cell);
         }
 

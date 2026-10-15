@@ -64,7 +64,7 @@ internal sealed class CrowdSimulationDebugConfig
 
         if (cfg.Tools != null && cfg.Presentation?.Deploy != null)
         {
-            RequirePlaceTemplate(cfg.Tools, cfg.Presentation.Deploy);
+            RequirePlaceEntry(cfg.Tools, cfg.Presentation.Deploy);
         }
 
         return cfg;
@@ -120,14 +120,8 @@ internal sealed class CrowdSimulationDebugConfig
             throw new InvalidOperationException("CrowdSimulationDebug.json: tools.spawnUnitType 必须 ≥ 0。");
         if (tools.SpawnRadiusClass < 0)
             throw new InvalidOperationException("CrowdSimulationDebug.json: tools.spawnRadiusClass 必须 ≥ 0。");
-        if (string.IsNullOrWhiteSpace(tools.PlaceTemplate))
-            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.placeTemplate 必填。");
-        if (tools.RectSizeCm <= 0)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.rectSizeCm 必须 > 0。");
-        if (tools.DiscRadiusCm <= 0)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.discRadiusCm 必须 > 0。");
-        if (tools.PathWidthCm <= 0)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.pathWidthCm 必须 > 0。");
+        if (string.IsNullOrWhiteSpace(tools.PlaceEntry))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.placeEntry 必填。");
         if (tools.SpeedStepsPermille == null || tools.SpeedStepsPermille.Length == 0)
             throw new InvalidOperationException("CrowdSimulationDebug.json: tools.speedStepsPermille 至少一档。");
         bool hasUnity = false;
@@ -181,21 +175,21 @@ internal sealed class CrowdSimulationDebugConfig
             throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.stallGuard 必须 ≥ 1。");
         if (fuzz.Ops == null || fuzz.Ops.Length == 0)
             throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.ops 至少一条。");
-        bool placeBridge = false;
+        bool placePath = false;
         for (int i = 0; i < fuzz.Ops.Length; i++)
         {
             if (string.IsNullOrWhiteSpace(fuzz.Ops[i].Id))
                 throw new InvalidOperationException($"CrowdSimulationDebug.json: fuzz.ops[{i}].id 必填。");
-            if (fuzz.Ops[i].Id == "placeBridge") placeBridge = true;
+            if (fuzz.Ops[i].Id == "placePath") placePath = true;
         }
 
-        if (!placeBridge) return;
-        if (string.IsNullOrWhiteSpace(fuzz.BridgeTemplate))
-            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.bridgeTemplate 必填。");
-        if (fuzz.BridgeWidthCm < 1)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.bridgeWidthCm 必须 ≥ 1。");
-        if (fuzz.BridgeSpanCm < 1)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.bridgeSpanCm 必须 ≥ 1。");
+        if (!placePath) return;
+        if (string.IsNullOrWhiteSpace(fuzz.PathTemplate))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.pathTemplate 必填。");
+        if (fuzz.PathWidthCm < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.pathWidthCm 必须 ≥ 1。");
+        if (fuzz.PathLengthCm < 1)
+            throw new InvalidOperationException("CrowdSimulationDebug.json: fuzz.pathLengthCm 必须 ≥ 1。");
     }
 
     private static void ValidateRates(CrowdDebugRates rates)
@@ -220,44 +214,15 @@ internal sealed class CrowdSimulationDebugConfig
         }
     }
 
-    private static void RequirePlaceTemplate(CrowdDebugTools tools, CrowdDeployPresentation deploy)
+    private static void RequirePlaceEntry(CrowdDebugTools tools, CrowdDeployPresentation deploy)
     {
-        CrowdStructureTemplateDto? matched = null;
-        for (int i = 0; i < deploy.Structures.Length; i++)
+        for (int i = 0; i < deploy.Palette.Length; i++)
         {
-            CrowdStructureTemplateDto row = deploy.Structures[i];
-            if (!string.Equals(row.Id, tools.PlaceTemplate, StringComparison.Ordinal)) continue;
-            matched = row;
-            break;
+            if (string.Equals(deploy.Palette[i].Entry, tools.PlaceEntry, StringComparison.Ordinal)) return;
         }
 
-        if (matched == null)
-        {
-            throw new InvalidOperationException(
-                $"CrowdSimulationDebug.json: tools.placeTemplate \"{tools.PlaceTemplate}\" 不在 presentation.deploy.structures。");
-        }
-
-        if (matched.Shape == S4DeployDemoRuntime.ShapePoint && matched.SizeCm != tools.RectSizeCm)
-        {
-            throw new InvalidOperationException(
-                "CrowdSimulationDebug.json: tools.placeTemplate 是方形时，其 sizeCm 必须等于 tools.rectSizeCm。");
-        }
-
-        for (int i = 0; i < deploy.Structures.Length; i++)
-        {
-            CrowdStructureTemplateDto row = deploy.Structures[i];
-            if (row.Shape == S4DeployDemoRuntime.ShapeDisc && row.SizeCm != tools.DiscRadiusCm)
-            {
-                throw new InvalidOperationException(
-                    $"CrowdSimulationDebug.json: presentation.deploy.structures[{i}] 是圆时，sizeCm 必须等于 tools.discRadiusCm。");
-            }
-
-            if (row.Shape == S4DeployDemoRuntime.ShapeSpan && row.SizeCm != tools.PathWidthCm)
-            {
-                throw new InvalidOperationException(
-                    $"CrowdSimulationDebug.json: presentation.deploy.structures[{i}] 是连线时，sizeCm 必须等于 tools.pathWidthCm。");
-            }
-        }
+        throw new InvalidOperationException(
+            $"CrowdSimulationDebug.json: tools.placeEntry \"{tools.PlaceEntry}\" 不在 presentation.deploy.palette。");
     }
 }
 
@@ -269,10 +234,7 @@ internal sealed class CrowdDebugTools
     [JsonRequired] public int SpawnCount { get; init; }
     [JsonRequired] public int SpawnUnitType { get; init; }
     [JsonRequired] public int SpawnRadiusClass { get; init; }
-    [JsonRequired] public string PlaceTemplate { get; init; } = string.Empty;
-    [JsonRequired] public int RectSizeCm { get; init; }
-    [JsonRequired] public int DiscRadiusCm { get; init; }
-    [JsonRequired] public int PathWidthCm { get; init; }
+    [JsonRequired] public string PlaceEntry { get; init; } = string.Empty;
     [JsonRequired] public int[] SpeedStepsPermille { get; init; } = Array.Empty<int>();
 }
 
@@ -289,9 +251,9 @@ internal sealed class CrowdDebugFuzz
     [JsonRequired] public string OrderShape { get; init; } = string.Empty;
     [JsonRequired] public int OrderMemberCap { get; init; }
     [JsonRequired] public int StallGuard { get; init; }
-    public string BridgeTemplate { get; init; } = "";
-    public int BridgeWidthCm { get; init; }
-    public int BridgeSpanCm { get; init; }
+    public string PathTemplate { get; init; } = "";
+    public int PathWidthCm { get; init; }
+    public int PathLengthCm { get; init; }
     [JsonRequired] public CrowdDebugFuzzOp[] Ops { get; init; } = Array.Empty<CrowdDebugFuzzOp>();
 
     public CrowdFuzzPlan ToPlan(CrowdDebugTools tools)
@@ -321,9 +283,9 @@ internal sealed class CrowdDebugFuzz
             OrderShape = OrderShape,
             OrderMemberCap = OrderMemberCap,
             StallGuard = StallGuard,
-            BridgeTemplate = BridgeTemplate,
-            BridgeWidthCm = BridgeWidthCm,
-            BridgeSpanCm = BridgeSpanCm,
+            PathTemplate = PathTemplate,
+            PathWidthCm = PathWidthCm,
+            PathLengthCm = PathLengthCm,
             BoomRadiusCm = tools.BoomRadiusCm,
             RingScale = Fix64.FromDouble(tools.RingScale),
             Impulse = Fix64.FromDouble(tools.Impulse),

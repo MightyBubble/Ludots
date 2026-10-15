@@ -24,7 +24,7 @@ public static class CrowdStructurePlacement
 {
     public const byte FlagIllegal = 1;
     public const byte FlagPortal = 2;
-    public const byte FlagAnchor = 4;
+    public const byte FlagEndpoint = 4;
 
     public static CrowdPlacementReject Judge(
         CrowdStructuresStore store,
@@ -98,18 +98,18 @@ public static class CrowdStructurePlacement
             for (int x = geo.MinX; x <= geo.MaxX; x++)
             {
                 if (!geo.Hit(x, y, out Fix64 endDist)) continue;
-                bool anchorCell = geo.IsAnchorCell(x, y);
+                bool endpointCell = geo.IsAnchorCell(x, y);
                 if (x == geo.EndX0 && y == geo.EndY0) painted0 = true;
                 if (x == geo.EndX1 && y == geo.EndY1) painted1 = true;
                 byte flag = 0;
-                if (anchorCell) flag |= FlagAnchor;
+                if (endpointCell) flag |= FlagEndpoint;
                 if (geo.IsPortal(endDist)) flag |= FlagPortal;
                 int area = store.StaticTerrainArea(y * side + x);
-                bool areaOk = anchorCell ? endpointAreas[area] : interiorAreas[area];
+                bool areaOk = endpointCell ? endpointAreas[area] : interiorAreas[area];
                 if (!areaOk)
                 {
                     flag |= FlagIllegal;
-                    reason = Worse(reason, anchorCell ? CrowdPlacementReject.EndpointArea : CrowdPlacementReject.InteriorArea);
+                    reason = Worse(reason, endpointCell ? CrowdPlacementReject.EndpointArea : CrowdPlacementReject.InteriorArea);
                 }
 
                 flag |= BaseLayerFlag(store, template.OnUpperLayer, x, y, ref reason);

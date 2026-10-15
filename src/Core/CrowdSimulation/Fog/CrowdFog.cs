@@ -19,7 +19,7 @@ namespace Ludots.Core.CrowdSimulation.Fog;
 /// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell) 的 fog 格)上
 /// 有一份 FogField:可见格按 fog.rateHz 重建(组按 round-robin 摊到周期各 tick,单位只在本组槽位 tick 盖章),
 /// 已探索粘滞。belief = 实体 id → 末次所见快照 {tpl, fp}(地图初始实体全员已知;运行时
-/// 实体见即知;真值已拆的实体留残影,直到其地面再被看见);key = 认知实体集的交换 XOR 哈希
+/// 实体见即知;真值已拆的实体留残影,直到其底层再被看见);key = 认知实体集的交换 XOR 哈希
 /// ——同 key 的组共享一个认知槽(槽归属永远经集合相等确认,哈希碰撞不可能错分)。
 /// 确定性:只由 tick 计数与单位状态驱动。马达永远走真相;规划侧经 CrowdBeliefSync 消费认知。
 /// </summary>
@@ -712,7 +712,7 @@ public sealed class CrowdFog
     }
 
     /// <summary>共享视野:组 b 并入 a(低组号存活,与构造的 root[max]=min 同款)。可见和已探索按格 OR，
-    /// 新可见或新已探索触发 tile 入集；信念并进存活组(只有一侧见过的已拆实体留残影直到地面再见)。
+    /// 新可见或新已探索触发 tile 入集；信念并进存活组(只有一侧见过的已拆实体留残影直到底层再见)。
     /// 源 scope 从雾场摘掉，之后不再盖章；玩家改挂存活组。被并掉的组无玩家，认知同步把它停在真相槽。
     /// 返回存活组;同组返回 -1。不支持拆组。</summary>
     public int MergeGroups(int a, int b)

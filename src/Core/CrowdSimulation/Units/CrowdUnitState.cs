@@ -7,5 +7,5 @@ public enum CrowdUnitState : byte
     Moving = 1,
     Arrived = 2,
     Unreachable = 3,
-    Jump = 4,
+    Traversing = 4,
 }

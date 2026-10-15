@@ -57,8 +57,8 @@ public sealed class CrowdSimulationMinimalModTests
             Assert.That(baked.TerrainTypeIds, Is.EqualTo(stored.TerrainTypeIds));
             Assert.That(baked.TerrainCells, Is.EqualTo(stored.TerrainCells),
                 $"入库的 {MapId}.navsurface 不是当前 Ludots 烘焙结果，重跑 Ludots.Tool nav bake-crowd-navsurface。");
-            Assert.That(baked.JumpCandidates, Is.Empty);
-            Assert.That(stored.JumpCandidates, Is.Empty);
+            Assert.That(baked.LinkCandidates, Is.Empty);
+            Assert.That(stored.LinkCandidates, Is.Empty);
         });
     }
 

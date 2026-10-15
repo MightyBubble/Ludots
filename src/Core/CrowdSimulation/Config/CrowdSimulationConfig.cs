@@ -99,7 +99,6 @@ public sealed class CrowdSimulationConfig
         ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
         ("movement.maxStepCells", "movement.maxStepNavCells"),
         ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
-        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
         ("agentTypes", "CrowdSimulation/traversal.json 的 agentTypes"),
         ("agents.radiusClasses", "单位模板 CrowdSimulationAgent.pushPriority"),
         ("agents.profilesUri", "Navigation/agent_profiles.json"),
@@ -110,7 +109,6 @@ public sealed class CrowdSimulationConfig
         ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainTypes"),
         ("world.surfaceAsset", "地图 ContinuousHeightmap.asset（同主干 .navsurface）"),
         ("world.navCellSizeCm", "Navigation/navmesh.json 的 maps.<mapId>.navCellSizeCm"),
-        ("movement.jumpSpeedRatio", "CrowdSimulation/traversal.json 的 linkKinds.<kind>.traversalSpeedRatio"),
         ("world.mapId", "当前聚焦的地图"),
         ("mapId", "当前聚焦的地图"),
         ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
@@ -358,7 +356,7 @@ public sealed class CrowdSimulationConfig
         public required int RevealTicks { get; init; }
         public required int SlotCacheCapacity { get; init; }
         public required int VariantCapacity { get; init; }
-        /// <summary>视线遮挡的初始开关。建筑挡住的 fog 格不透明，更高地形挡住视线。fogSight 可在运行时改 CrowdFog.Los。高度表在迷雾装配时注入。</summary>
+        /// <summary>视线遮挡的初始开关。结构挡住的 fog 格不透明，更高地形挡住视线。fogSight 可在运行时改 CrowdFog.Los。高度表在迷雾装配时注入。</summary>
         public required bool LineOfSight { get; init; }
         /// <summary>观察者眼高，厘米。</summary>
         public required int EyeCm { get; init; }
@@ -498,7 +496,7 @@ public sealed class CrowdSimulationConfig
         public required double Coverage { get; init; }
     }
 
-    /// <summary>格心落在足迹里的地面格改成 area；重叠时 priority 高者胜，同级后放置者胜。</summary>
+    /// <summary>格心落在足迹里的底层格改成 area；重叠时 priority 高者胜，同级后放置者胜。</summary>
     public sealed class StructureSetAreaEffect : StructureEffectEntry
     {
         public required string Area { get; init; }

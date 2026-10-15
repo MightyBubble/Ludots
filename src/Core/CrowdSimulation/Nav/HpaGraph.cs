@@ -9,8 +9,8 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// HPA* 抽象图(烘焙路径):
 /// 入口 = 共享边界上的开放格对(宽 run 取两端、窄 run 取中点,不超过 maxEntranceWidth),
-/// tile 内边 = tile 内 Dijkstra 距离;跳跃链接成为端点间的有向抽象边;
-/// 桥面层节点键 = 导航格总数 + 格号,只在桥头 portal 与地面 0 代价相连。
+/// tile 内边 = tile 内 Dijkstra 距离;链接成为端点间的有向抽象边;
+/// 上层节点键 = 导航格总数 + 格号,只在入口 portal 与底层 0 代价相连。
 /// 簇块在增量重烘时原地改写；认知变体必须 CloneForVariant，不能和真相共享内层数组。
 /// </summary>
 public sealed class HpaGraph
@@ -24,12 +24,12 @@ public sealed class HpaGraph
     public required int[][] BorderE { get; set; }
     /// <summary>每 tile 的南边界入口对列表。</summary>
     public required int[][] BorderS { get; set; }
-    /// <summary>每 tile 的桥面东/南跨界边(keyA, keyB, cost)三元组。</summary>
+    /// <summary>每 tile 的上层东/南跨界边(keyA, keyB, cost)三元组。</summary>
     public required int[][] UpE { get; set; }
     public required Fix64[][] UpECost { get; set; }
     public required int[][] UpS { get; set; }
     public required Fix64[][] UpSCost { get; set; }
-    /// <summary>每 tile 的节点格表(地面格在前,桥面节点 = 导航格总数 + 格号 在后)。</summary>
+    /// <summary>每 tile 的节点格表(底层格在前,上层节点 = 导航格总数 + 格号 在后)。</summary>
     public required int[][] Cells { get; set; }
     /// <summary>簇内边:(i, j, dist) 三元组,下标为 Cells 内序号。</summary>
     public required int[][] Intra { get; set; }
@@ -38,9 +38,9 @@ public sealed class HpaGraph
     public required int[][] CrossLayer { get; set; }
     /// <summary>簇块:节点格 + 格→局部号 + CSR 出边。增量重烘原地改写。</summary>
     public required HpaTileBlock[] Blocks { get; set; }
-    /// <summary>跳跃链接的有向出边:起点格 → (目标格, 代价) 平铺。</summary>
+    /// <summary>链接的有向出边:起点格 → (目标格, 代价) 平铺。</summary>
     public required Dictionary<int, List<(int To, Fix64 Cost)>> LinkOut { get; set; }
-    /// <summary>跳跃链接端点按簇的归属表(增量:与重烘后的表比对,落在干净簇的新端点要重烘该簇)。</summary>
+    /// <summary>链接端点按簇的归属表(增量:与重烘后的表比对,落在干净簇的新端点要重烘该簇)。</summary>
     public Dictionary<int, List<int>>? LinkTiles { get; set; }
     public required int NodeCount { get; set; }
     public required int EdgeCount { get; set; }
@@ -315,7 +315,7 @@ public sealed class HpaGraph
         }
 
         for (int i = 0; i < _dropKeys.Count; i++) lk.Remove(_dropKeys[i]);
-        // 重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
+        // 重生成的链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
         var oldLk = LinkTiles ?? EmptyLinks;
         int oldCount = LoadAscendingKeys(oldLk);
         for (int i = 0; i < oldCount; i++) aff.Add(_ascend[i].Key);
@@ -507,7 +507,7 @@ public sealed class HpaGraph
         g._nS[cl] = g._border.Count;
     }
 
-    // 桥面跨界入口(仅桥面↔桥面;桥头 portal 的跨层边在 BakeTile 的 xl 里)
+    // 上层跨界入口(仅上层↔上层;入口 portal 的跨层边在 BakeTile 的 xl 里)
     private static void UpScan(HpaGraph g, NavContext nav, int cl, bool east)
     {
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide;
@@ -518,7 +518,7 @@ public sealed class HpaGraph
         costs.Clear();
         if (nb >= 0 && AnyUp(nav, cl, navCellsPerTile) && AnyUp(nav, nb, navCellsPerTile))
         {
-            // 与 scanBorder 同一 run 逻辑,目标格函数映射到桥面可走格。先把入口对抄走,再复用 _border。
+            // 与 scanBorder 同一 run 逻辑,目标格函数映射到上层可走格。先把入口对抄走,再复用 _border。
             int origin = east
                 ? (cy * navCellsPerTile) * navCellsPerSide + cx * navCellsPerTile + navCellsPerTile - 1
                 : (cy * navCellsPerTile + navCellsPerTile - 1) * navCellsPerSide + cx * navCellsPerTile;
@@ -585,7 +585,7 @@ public sealed class HpaGraph
         return slot;
     }
 
-    // 该 tile 是否有桥面可走格
+    // 该 tile 是否有上层可走格
     private static bool AnyUp(NavContext nav, int tileId, int tileSize)
     {
         int navCellsPerSide = nav.NavCellsPerSide;
@@ -646,7 +646,7 @@ public sealed class HpaGraph
             for (int i = 0; i < linkCells.Count; i++) AddNode(g, linkCells[i]);
         }
 
-        // 桥面节点:跨界入口 + portal 跨层对
+        // 上层节点:跨界入口 + portal 跨层对
         var up = g._bakeUp;
         var uSeen = g._bakeUSeen;
         var xl = g._bakeXl;
@@ -749,7 +749,7 @@ public sealed class HpaGraph
             }
         }
 
-        // 桥面节点的簇内边(桥面 tile 内 8 连通 Dijkstra)
+        // 上层节点的簇内边(上层 tile 内 8 连通 Dijkstra)
         if (up.Count > 0)
         {
             for (int i = 0; i < up.Count; i++)
@@ -854,7 +854,7 @@ public sealed class HpaGraph
         }
     }
 
-    // 桥面 tile 内的 8 连通 Dijkstra(禁切角,代价走桥面)
+    // 上层 tile 内的 8 连通 Dijkstra(禁切角,代价走上层)
     private static void UpperDijkstra(HpaGraph g, NavContext nav, int cl, int start)
     {
         int navCellsPerTile = g.NavCellsPerTile, navCellsPerSide = nav.NavCellsPerSide;

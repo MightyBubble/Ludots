@@ -13,9 +13,9 @@ using CrowdSimulationTests.Parity;
 namespace CrowdSimulationTests;
 
 /// <summary>
-/// 现场群体订单：地面点取 WorldCm 的 X 与 Z。接入在 AbilityActivation 排空，下一拍会话步进才记日志。
+/// 现场群体订单：地表点取 WorldCm 的 X 与 Z。接入在 AbilityActivation 排空，下一拍会话步进才记日志。
 /// </summary>
-public sealed class CrowdOrderBridgeTests
+public sealed class CrowdOrderAdapterTests
 {
     [Test]
     public void PlainRightClick_ReadsWorldCmXAndZAsIntegers()
@@ -29,7 +29,7 @@ public sealed class CrowdOrderBridgeTests
             OrderAt(session, 1),
         };
 
-        CrowdSimulationOrderBridge.Accept(session, batch);
+        CrowdSimulationOrderAdapter.Accept(session, batch);
         Assert.That(session.Commands.Log, Is.Empty);
         Assert.That(session.Step(out _), Is.True);
 
@@ -37,7 +37,7 @@ public sealed class CrowdOrderBridgeTests
         var order = session.Commands.Log[0].Cmd;
         Assert.That(order.XCm, Is.EqualTo(120000));
         Assert.That(order.YCm, Is.EqualTo(800000));
-        Assert.That(order.ShapeId, Is.EqualTo(CrowdSimulationOrderBridge.PlainClickShapeId));
+        Assert.That(order.ShapeId, Is.EqualTo(CrowdSimulationOrderAdapter.PlainClickShapeId));
         Assert.That(order.HasAuto, Is.False);
         Assert.That(order.Members, Has.Length.EqualTo(2));
     }
@@ -48,7 +48,7 @@ public sealed class CrowdOrderBridgeTests
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 2, 1, 0, 0), Is.EqualTo(2));
         var prefs = new CrowdPlayerOrderPrefs { ShapeId = "box", MagicBox = false };
-        CrowdSimulationOrderBridge.Accept(session, new[] { OrderAt(session, 0), OrderAt(session, 1) }, prefs);
+        CrowdSimulationOrderAdapter.Accept(session, new[] { OrderAt(session, 0), OrderAt(session, 1) }, prefs);
         Assert.That(session.Step(out _), Is.True);
         var order = session.Commands.Log[0].Cmd;
         Assert.That(order.HasAuto, Is.True);
@@ -59,7 +59,7 @@ public sealed class CrowdOrderBridgeTests
     [Test]
     public void NextStepAfterAbilityActivation_LogsTheCrowdOrderOnce()
     {
-        var (session, system, queue, results) = OpenBridge();
+        var (session, system, queue, results) = OpenAdapter();
         results.BeginLogicStep();
         Assert.That(queue.TryEnqueueSharedBatch(Batch(session)), Is.EqualTo(OrderSubmitResult.Queued));
         system.Update(0f);
@@ -122,15 +122,15 @@ public sealed class CrowdOrderBridgeTests
     }
 
     [Test]
-    public void MissingOrderBufferSystem_ThrowsWhenBridgeIsInstalled()
+    public void MissingOrderBufferSystem_ThrowsWhenAdapterIsInstalled()
     {
         using var engine = new GameEngine();
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            CrowdSimulationOrderBridge.Register(engine, engine.CrowdRuntime));
+            CrowdSimulationOrderAdapter.Register(engine, engine.CrowdRuntime));
         Assert.That(ex!.Message, Does.Contain("OrderBufferSystem"));
     }
 
-    private static (CrowdSimSession Session, OrderBufferSystem System, OrderQueue Queue, OrderAdmissionResultBuffer Results) OpenBridge()
+    private static (CrowdSimSession Session, OrderBufferSystem System, OrderQueue Queue, OrderAdmissionResultBuffer Results) OpenAdapter()
     {
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 2, 1, 0, 0), Is.EqualTo(2));
@@ -144,7 +144,7 @@ public sealed class CrowdOrderBridgeTests
             results,
             queue,
             closeEntityIntakeOnUpdate: false);
-        system.RegisterExternalOrderConsumer(1, batch => CrowdSimulationOrderBridge.Accept(session, batch));
+        system.RegisterExternalOrderConsumer(1, batch => CrowdSimulationOrderAdapter.Accept(session, batch));
         return (session, system, queue, results);
     }
 
