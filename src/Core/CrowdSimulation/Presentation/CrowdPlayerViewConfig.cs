@@ -36,11 +36,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int RouteThicknessCm { get; init; }
     [JsonRequired] public int MarkerRadiusCm { get; init; }
     [JsonRequired] public int CrossArmCm { get; init; }
-    [JsonRequired] public int KillRadiusCm { get; init; }
     [JsonRequired] public double KillRingScale { get; init; }
     [JsonRequired] public double KillImpulse { get; init; }
-    [JsonRequired] public int KillXCm { get; init; }
-    [JsonRequired] public int KillYCm { get; init; }
     [JsonRequired] public int EnemyMarkRadiusCm { get; init; }
     [JsonRequired] public float HillshadeStrength { get; init; }
     [JsonRequired] public int MaxBeliefMarkers { get; init; }
@@ -109,8 +106,6 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
         if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1 || EnemyMarkRadiusCm < 1)
             throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm、crossArmCm 与 enemyMarkRadiusCm 需为 ≥ 1 的整数。");
-        if (KillRadiusCm < 1)
-            throw new InvalidOperationException($"{path}: killRadiusCm 需为 ≥ 1 的整数。");
         if (!(KillRingScale > 1d) || !double.IsFinite(KillRingScale))
             throw new InvalidOperationException($"{path}: killRingScale 必须 > 1。");
         if (KillImpulse < 0d || !double.IsFinite(KillImpulse))

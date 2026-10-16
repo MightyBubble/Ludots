@@ -813,7 +813,7 @@ internal sealed class CrowdPlayerViewHost
     private void LaunchOutside(CrowdSimSession session, S4DeployDemoRuntime demo)
     {
         CrowdFogCheckScene scene = RequireScene();
-        EnqueueKill(demo);
+        EnqueueKill(session, demo);
         EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         EnqueueCluster(session, demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
@@ -864,7 +864,7 @@ internal sealed class CrowdPlayerViewHost
             throw new InvalidOperationException("墙后敌方收进导航格心后离开了遮挡东侧那一格迷雾。");
         }
 
-        EnqueueKill(demo);
+        EnqueueKill(session, demo);
         EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
@@ -967,14 +967,30 @@ internal sealed class CrowdPlayerViewHost
             _enemyMark);
     }
 
-    private void EnqueueKill(S4DeployDemoRuntime demo)
+    internal static void BoardDisc(CrowdSimSession session, out int xCm, out int yCm, out int radiusCm)
     {
+        ArgumentNullException.ThrowIfNull(session);
+        int side = checked(session.Config.NavCellsPerSide * session.Config.NavCellSizeCm);
+        if (side < 2)
+            throw new InvalidOperationException("击杀圈需要导航板边长至少 2 厘米。");
+        int center = side / 2;
+        int far = side - center;
+        xCm = center;
+        yCm = center;
+        double reach = Math.Sqrt(((double)far * far) + ((double)far * far));
+        int whole = (int)reach;
+        radiusCm = (double)whole < reach ? whole + 1 : whole;
+    }
+
+    private void EnqueueKill(CrowdSimSession session, S4DeployDemoRuntime demo)
+    {
+        BoardDisc(session, out int xCm, out int yCm, out int radiusCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.Kill,
-            XCm = _config.KillXCm,
-            YCm = _config.KillYCm,
-            RadiusCm = _config.KillRadiusCm,
+            XCm = xCm,
+            YCm = yCm,
+            RadiusCm = radiusCm,
             RingScale = Fix64.FromDouble(_config.KillRingScale),
             Impulse = Fix64.FromDouble(_config.KillImpulse),
         });
