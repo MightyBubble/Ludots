@@ -1,4 +1,8 @@
+using System.Linq;
+using System.Runtime;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -76,6 +80,20 @@ public sealed class OpeningDeployTests
         Assert.That(session.IsAlive, Is.False, "引擎销毁后群体会话仍被引用（路径服务工作线程没有停）。");
     }
 
+    [Test]
+    public void EngineDispose_ReleasesModLoadContexts()
+    {
+        WeakReference loadContext = RunAndDisposeEngineLoadContext();
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        for (int i = 0; i < 24 && loadContext.IsAlive; i++)
+        {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(loadContext.IsAlive, Is.False, "引擎销毁后 Mod 的 collectible ALC 仍被强引用。");
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference RunAndDisposeEngine()
     {
@@ -87,6 +105,42 @@ public sealed class OpeningDeployTests
                 ?? throw new InvalidOperationException("没有群体会话。");
             TickUntilFirstStep(engine, session);
             return new WeakReference(session);
+        }
+        finally
+        {
+            Directory.Delete(probe, recursive: true);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference RunAndDisposeEngineLoadContext()
+    {
+        string probe = CreateProbeMod(4);
+        try
+        {
+            using var engine = StartS4Engine(probe);
+            CrowdSimSession session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
+                ?? throw new InvalidOperationException("没有群体会话。");
+            TickUntilFirstStep(engine, session);
+            AssemblyLoadContext? loadContext = null;
+            foreach (Assembly assembly in engine.ModLoader.LoadedAssemblies)
+            {
+                var alc = AssemblyLoadContext.GetLoadContext(assembly);
+                if (alc == null || !alc.IsCollectible) continue;
+                string? name = assembly.GetName().Name;
+                if (name != null && name.StartsWith("CrowdSimulation", StringComparison.Ordinal))
+                {
+                    loadContext = alc;
+                    break;
+                }
+            }
+
+            if (loadContext == null)
+            {
+                throw new InvalidOperationException("未找到 CrowdSimulation collectible ALC。");
+            }
+
+            return new WeakReference(loadContext);
         }
         finally
         {

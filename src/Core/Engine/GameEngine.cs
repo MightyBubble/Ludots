@@ -5155,7 +5155,11 @@ namespace Ludots.Core.Engine
                 Diagnostics.Log.Info(in LogChannels.Engine, "Unloading ModLoader contexts...");
                 TriggerManager?.UnregisterAllModTriggers();
                 ModLoader.UnloadAll();
+                ModLoader.MapManager = null!;
+                ModLoader = null!;
             }
+
+            MapManager = null!;
 
             if (_jobScheduler != null)
             {
