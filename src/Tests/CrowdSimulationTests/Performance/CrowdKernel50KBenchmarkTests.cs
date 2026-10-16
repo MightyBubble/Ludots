@@ -74,7 +74,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         Advance(session, reference, watch, measuredTicks, elapsed, phases, notes);
         string loadAfter = File.ReadAllText("/proc/loadavg").Trim();
         Assert.That(session.Units.Count, Is.EqualTo(units), "基准单位数");
-        Assert.That(session.TruthNavFrozen, Is.False);
+        Assert.That(session.Presentation.TruthNavFrozen, Is.False);
         Assert.That(session.Telemetry.FogRefreshes, Is.GreaterThan(0), "计时窗必须走过迷雾刷新");
         var order = new int[measuredTicks];
         for (int i = 0; i < measuredTicks; i++) order[i] = i;

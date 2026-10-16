@@ -77,7 +77,7 @@ public sealed class CrowdSimReplayTests
         session.RebakeSources = live.RebakeSources;
         session.NavTileCache = live.NavTileCache;
         session.BindVision(new FogLayerRegistry(), new FogFieldStore());
-        session.TruthNavFrozen = live.TruthNavFrozen;
+        session.Presentation.TruthNavFrozen = live.Presentation.TruthNavFrozen;
         return session;
     }
 }

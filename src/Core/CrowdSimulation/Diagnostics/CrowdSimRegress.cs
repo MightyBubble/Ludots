@@ -177,7 +177,7 @@ public static class CrowdSimRegress
                 using var host = request.OpenScenario(scenario);
                 bake = repeat == 0 ? host.BakeMs : Math.Max(bake, host.BakeMs);
                 var session = host.Session;
-                session.TruthNavFrozen = scenario.TruthNavFrozen;
+                session.Presentation.TruthNavFrozen = scenario.TruthNavFrozen;
                 session.DiagnosticDigest = true;
                 session.BlockOnDueReplies = true;
                 var script = CrowdReferenceScript.Load(scenario.Script, session.Units.Capacity);

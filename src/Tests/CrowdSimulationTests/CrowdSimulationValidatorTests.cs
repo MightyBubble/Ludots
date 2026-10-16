@@ -138,7 +138,7 @@ public sealed class CrowdSimulationValidatorTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true;
+        session.Presentation.TruthNavFrozen = true;
 
         var scriptJson = new JsonArray();
         foreach (var (tick, json) in new (int Tick, string Json)[]

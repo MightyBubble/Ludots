@@ -392,7 +392,7 @@ public class CrowdDynamicDeckTests
             var service = new PathQueryService(navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
             session.BlockOnDueReplies = true;
-            session.TruthNavFrozen = true;
+            session.Presentation.TruthNavFrozen = true;
             session.VerifyIncrementalNav = true;
             return new RiverWorld(service)
             {

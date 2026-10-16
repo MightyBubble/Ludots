@@ -107,7 +107,7 @@ public static class Program
                         Path.Combine(repo, catalog.StandardAssets),
                         Path.Combine(repo, catalog.DemoAssets),
                         catalog.FuzzMovement);
-                    host.Session.TruthNavFrozen = catalog.FuzzTruthNavFrozen;
+                    host.Session.Presentation.TruthNavFrozen = catalog.FuzzTruthNavFrozen;
                     return host;
                 }
                 : null,

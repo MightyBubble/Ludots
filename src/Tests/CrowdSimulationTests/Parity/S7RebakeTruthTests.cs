@@ -65,7 +65,7 @@ public sealed class S7RebakeTruthTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
+        session.Presentation.TruthNavFrozen = true; // S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");

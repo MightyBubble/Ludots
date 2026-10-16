@@ -152,7 +152,7 @@ public sealed class CrowdParallelDeterminismTests
         var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true;
+        session.Presentation.TruthNavFrozen = true;
         return new SessionScope(session, service);
     }
 
