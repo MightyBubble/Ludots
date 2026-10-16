@@ -425,7 +425,9 @@ public class CrowdTelemetryPanelTests
     private static CrowdSimulationDebugViewConfig LoadShipped()
     {
         string path = ShippedPath();
-        return CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path);
+        var merged = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        return CrowdSimulationDebugViewConfig.Load(merged, path);
     }
 
     private static JsonObject Shipped() => JsonNode.Parse(File.ReadAllText(ShippedPath()))!.AsObject();

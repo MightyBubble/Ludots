@@ -132,7 +132,8 @@ public class CrowdDebugViewSessionTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         string path = ViewPath();
-        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        var root = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
 
         var oldKey = (JsonObject)root.DeepClone();
         oldKey["inspect"]!["layerIndex"] = 0;

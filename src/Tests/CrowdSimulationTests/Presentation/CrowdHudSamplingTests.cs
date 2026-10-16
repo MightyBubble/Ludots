@@ -131,13 +131,17 @@ public sealed class CrowdHudSamplingTests
     internal static CrowdDebugViewFrame ShippedDebugView()
     {
         string path = Path.Combine(RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
-        return new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path));
+        var merged = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        return new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(merged, path));
     }
 
     internal static CrowdPlayerViewHost ShippedPlayerView(CrowdSimSession session)
     {
         string path = Path.Combine(RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationPlayerView.json");
-        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path));
+        var merged = CrowdPresentationPaletteTestMerge.MergedPlayerView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(merged, path));
         host.Bind(session);
         return host;
     }
