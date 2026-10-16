@@ -6,7 +6,7 @@ namespace CrowdSimulationTests.Parity;
 /// <summary>
 /// Web 端烘焙的链接候选快照，只作行为对拍参照；入库 .navsurface 由 Ludots 烘焙。
 /// 每行依次是 fromX、fromY、toX、toY、dropCm、lengthCells。lengthCells 不进候选记录，
-/// 读入时由位移推出 steps 和斜向位，再核对按 v2 公式算出的格距和快照里的 float 逐位相同。
+/// 读入时由位移推出 steps 和斜向位，再核对按 steps 与斜向位算出的格距和快照里的 float 逐位相同。
 /// </summary>
 internal static class S1JumpTruth
 {

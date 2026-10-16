@@ -7,22 +7,21 @@ using Ludots.Core.CrowdSimulation.Config;
 namespace Ludots.Core.CrowdSimulation.World;
 
 /// <summary>
-/// .navsurface v2 —— CrowdSimulation 的地表资产：逐导航格的地形类型编号 + 链接候选。
+/// .navsurface —— CrowdSimulation 的地表资产：逐导航格的地形类型编号 + 链接候选。
 /// 高度真相在 .height 资产，本文件不重复存储；上层不作为地形写入——上层条带实体在运行时
 /// 生成独立的上层，地图实体以外的上层不存在，生效覆盖一律由实体产生。
 ///
-/// 二进制布局（小端）：
+/// 二进制布局（小端），与 <see cref="Layout"/> 同一份描述：
 ///   0   4    magic "LNSF"
-///   4   u16  version = 2（不等于当前版本一律拒绝，无迁移）
-///   6   u16  headerBytes = 32
-///   8   i32  cellsX              导航格数（X）
-///   12  i32  cellsY              导航格数（Y；世界正方形由加载侧校验，本格式不强制）
-///   16  i32  navCellSizeCm       导航格边长（厘米）
-///   20  u16  terrainCount        地形类型表条数（1..256）
-///   22  u16  linkKindCount       链接种类表条数（0..255）
-///   24  i32  linkCandidateCount  链接候选条数
-///   28  u32  bakeInputsDigest      见 <see cref="NavSurfaceContract.BakeInputsDigest"/>
-///   32  ..   地形类型表：terrainCount × { u16 utf8ByteCount, bytes }（id 非空且不重复）
+///   4   u16  headerBytes = 30
+///   6   i32  cellsX              导航格数（X）
+///   10  i32  cellsY              导航格数（Y；世界正方形由加载侧校验，本格式不强制）
+///   14  i32  navCellSizeCm       导航格边长（厘米）
+///   18  u16  terrainCount        地形类型表条数（1..256）
+///   20  u16  linkKindCount       链接种类表条数（0..255）
+///   22  i32  linkCandidateCount  链接候选条数
+///   26  u32  bakeInputsDigest      见 <see cref="NavSurfaceContract.BakeInputsDigest"/>
+///   30  ..   地形类型表：terrainCount × { u16 utf8ByteCount, bytes }（id 非空且不重复）
 ///   ..  ..   链接种类表：linkKindCount × { u16 utf8ByteCount, bytes }（id 非空且不重复）
 ///   ..  ..   格数据：cellsX × cellsY × u8，行优先 index = cy * cellsX + cx；
 ///            cell (0,0) = 地图局部坐标原点角，值 = 地形类型表下标
@@ -33,10 +32,17 @@ namespace Ludots.Core.CrowdSimulation.World;
 public sealed class NavSurfaceAsset
 {
     public const uint Magic = 0x46534E4C; // "LNSF"，小端落盘顺序 L-N-S-F
-    public const ushort CurrentVersion = 2;
-    public const ushort HeaderBytes = 32;
+    public const ushort HeaderBytes = 30;
     public const int LinkCandidateRecordBytes = 16;
     public const byte DiagonalFlag = 1;
+
+    /// <summary>
+    /// 头 30 字节，字段顺序 magic、headerBytes、cellsX、cellsY、navCellSizeCm、terrainCount、linkKindCount、linkCandidateCount、bakeInputsDigest。
+    /// 链接候选记录 16 字节，字段顺序 kindIndex、flags、steps、fromX、fromY、toX、toY、dropCm。
+    /// 这段文字进 <see cref="NavSurfaceContract.BakeInputsDigest"/>，布局一变指纹就变。
+    /// </summary>
+    public const string Layout =
+        "headerBytes=30;fields=magic,headerBytes,cellsX,cellsY,navCellSizeCm,terrainCount,linkKindCount,linkCandidateCount,bakeInputsDigest;linkRecordBytes=16;linkFields=kindIndex,flags,steps,fromX,fromY,toX,toY,dropCm";
 
     public required int NavCellsX { get; init; }
     public required int NavCellsY { get; init; }
@@ -65,17 +71,10 @@ public sealed class NavSurfaceAsset
             throw new InvalidDataException($".navsurface: magic 0x{magic:X8} 不是 \"LNSF\"。");
         }
 
-        ushort version = reader.ReadUInt16();
-        if (version != CurrentVersion)
-        {
-            throw new InvalidDataException(
-                $".navsurface: version = {version}，不是当前版本 v{CurrentVersion}（无迁移），用 nav bake-crowd-navsurface 重烘。");
-        }
-
         ushort headerBytes = reader.ReadUInt16();
         if (headerBytes != HeaderBytes)
         {
-            throw new InvalidDataException($".navsurface: headerBytes = {headerBytes}，v{CurrentVersion} 头长必须是 {HeaderBytes}。");
+            throw new InvalidDataException($".navsurface: headerBytes = {headerBytes}，头长必须是 {HeaderBytes}。");
         }
 
         int cellsX = reader.ReadInt32();
@@ -169,7 +168,6 @@ public sealed class NavSurfaceAsset
 
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
         writer.Write(Magic);
-        writer.Write(CurrentVersion);
         writer.Write(HeaderBytes);
         writer.Write(asset.NavCellsX);
         writer.Write(asset.NavCellsY);
