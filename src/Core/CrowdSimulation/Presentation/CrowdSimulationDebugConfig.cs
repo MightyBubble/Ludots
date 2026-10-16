@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Diagnostics;
+using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -104,10 +106,8 @@ internal sealed class CrowdSimulationDebugConfig
             throw new InvalidOperationException("CrowdSimulationDebug.json: tools.ringScale 必须 > 1。");
         if (tools.SpawnCount < 1)
             throw new InvalidOperationException("CrowdSimulationDebug.json: tools.spawnCount 必须 ≥ 1。");
-        if (tools.SpawnUnitType < 0)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.spawnUnitType 必须 ≥ 0。");
-        if (tools.SpawnRadiusClass < 0)
-            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.spawnRadiusClass 必须 ≥ 0。");
+        if (string.IsNullOrWhiteSpace(tools.SpawnTemplate))
+            throw new InvalidOperationException("CrowdSimulationDebug.json: tools.spawnTemplate 必填。");
         if (string.IsNullOrWhiteSpace(tools.PlaceEntry))
             throw new InvalidOperationException("CrowdSimulationDebug.json: tools.placeEntry 必填。");
         if (tools.SpeedStepsPermille == null || tools.SpeedStepsPermille.Length == 0)
@@ -220,9 +220,18 @@ internal sealed class CrowdDebugTools
     [JsonRequired] public double RingScale { get; init; }
     [JsonRequired] public double Impulse { get; init; }
     [JsonRequired] public int SpawnCount { get; init; }
-    [JsonRequired] public int SpawnUnitType { get; init; }
-    [JsonRequired] public int SpawnRadiusClass { get; init; }
+    [JsonRequired] public string SpawnTemplate { get; init; } = string.Empty;
     [JsonRequired] public string PlaceEntry { get; init; } = string.Empty;
+    public int ResolvedUnitType { get; private set; }
+    public int ResolvedRadiusClass { get; private set; }
+
+    public void ResolveSpawn(CrowdSimulationRuntimeConfig cfg)
+    {
+        ArgumentNullException.ThrowIfNull(cfg);
+        var (unitType, radius) = CrowdDeployment.LocateTemplate(cfg, SpawnTemplate);
+        ResolvedUnitType = unitType;
+        ResolvedRadiusClass = radius;
+    }
     [JsonRequired] public int[] SpeedStepsPermille { get; init; } = Array.Empty<int>();
 }
 

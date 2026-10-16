@@ -9,8 +9,7 @@
           "xCm": 715625,
           "yCm": 828125,
           "count": 200,
-          "unitType": 0,
-          "rIdx": 0
+          "template": "crowd_minimal.unit"
         }
       },
       {
@@ -21,8 +20,7 @@
           "xCm": 715625,
           "yCm": 765625,
           "count": 200,
-          "unitType": 0,
-          "rIdx": 0
+          "template": "crowd_minimal.unit"
         }
       },
       {

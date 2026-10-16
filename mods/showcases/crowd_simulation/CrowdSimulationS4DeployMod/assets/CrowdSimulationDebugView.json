@@ -9,10 +9,10 @@
   "overlayReserve": 128,
   "dirtyPulsePercent": 70,
   "inspect": {
-    "layerIndex": 0,
-    "radiusIndex": 0
+    "agentType": "foot",
+    "profile": "foot_r100"
   },
-  "beliefGroup": 0,
+  "beliefPlayer": 1,
   "unitColor": "off",
   "overlays": {
     "funnel": false,

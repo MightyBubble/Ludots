@@ -278,8 +278,8 @@ public static class CrowdModScaffold
             ["session"] = new JsonObject
             {
                 ["script"] = new JsonArray(
-                    Spawn(1, Player1BaseXCm),
-                    Spawn(2, Player2BaseXCm),
+                    Spawn(1, Player1BaseXCm, unit),
+                    Spawn(2, Player2BaseXCm, unit),
                     Order(1, Player2BaseXCm),
                     Order(2, Player1BaseXCm)),
             },
@@ -316,7 +316,7 @@ public static class CrowdModScaffold
         ["components"] = new JsonObject { ["Name"] = new JsonObject { ["Value"] = id } },
     };
 
-    private static JsonObject Spawn(int player, int xCm) => new()
+    private static JsonObject Spawn(int player, int xCm, string templateId) => new()
     {
         ["tick"] = 0,
         ["cmd"] = new JsonObject
@@ -326,8 +326,7 @@ public static class CrowdModScaffold
             ["xCm"] = xCm,
             ["yCm"] = BaseYCm,
             ["count"] = UnitsPerPlayer,
-            ["unitType"] = 0,
-            ["rIdx"] = 0,
+            ["template"] = templateId,
         },
     };
 

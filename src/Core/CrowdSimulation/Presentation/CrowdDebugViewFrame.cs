@@ -1,4 +1,5 @@
 using System.Numerics;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -68,6 +69,10 @@ internal sealed class CrowdDebugViewFrame
     internal int LayerIndex;
     internal int RadiusIndex;
     internal int BeliefGroup;
+    private CrowdSimSession? _catalogSession;
+    private string _agentTypeId = "";
+    private string _profileId = "";
+    private int _beliefPlayer;
     internal int ControllingPlayer = -1;
     internal bool NavPanel;
     internal bool TelemetryPanel;
@@ -88,9 +93,9 @@ internal sealed class CrowdDebugViewFrame
         Links = config.Overlays.Links;
         Belief = config.Overlays.Belief;
         UnitColorMode = config.UnitColorMode;
-        LayerIndex = config.Inspect.LayerIndex;
-        RadiusIndex = config.Inspect.RadiusIndex;
-        BeliefGroup = config.BeliefGroup;
+        LayerIndex = -1;
+        RadiusIndex = -1;
+        BeliefGroup = -1;
         NavPanel = config.Panels.Nav;
         TelemetryPanel = config.Panels.Telemetry;
         _flow = new CrowdFlowFieldVisualProjector(_flowSource)
@@ -163,23 +168,128 @@ internal sealed class CrowdDebugViewFrame
             UnitColorMode = (UnitColorMode + 1) % (CrowdSimulationDebugViewConfig.ColorPriority + 1);
         if (!engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out CrowdSimSession? session) || session == null)
             return;
+        BindCatalog(session);
         if (actions.PressedThisTick(bindings.CycleBeliefGroup))
         {
             int groups = session.Fog?.VisionGroupCount ?? 0;
-            if (groups > 0) BeliefGroup = (BeliefGroup + 1) % groups;
+            if (groups > 0)
+            {
+                BeliefGroup = (BeliefGroup + 1) % groups;
+                _beliefPlayer = FirstPlayer(session, BeliefGroup);
+            }
         }
 
         if (actions.PressedThisTick(bindings.CycleInspectLayer))
         {
             int layers = session.Config.AgentTypes.Count;
-            if (layers > 0) LayerIndex = (LayerIndex + 1) % layers;
+            if (layers > 0)
+            {
+                LayerIndex = (LayerIndex + 1) % layers;
+                SyncProfile(session);
+            }
         }
 
         if (actions.PressedThisTick(bindings.CycleInspectRadius))
         {
             int radii = session.Config.RadiusClasses.Count;
-            if (radii > 0) RadiusIndex = (RadiusIndex + 1) % radii;
+            if (radii > 0)
+            {
+                RadiusIndex = (RadiusIndex + 1) % radii;
+                SyncProfile(session);
+            }
         }
+    }
+
+    internal void BindCatalog(CrowdSimSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        if (ReferenceEquals(_catalogSession, session)) return;
+        var cfg = session.Config;
+        int agent = -1;
+        for (int i = 0; i < cfg.AgentTypes.Count; i++)
+        {
+            if (string.Equals(cfg.AgentTypes[i].Id, _config.Inspect.AgentType, StringComparison.Ordinal))
+            {
+                agent = i;
+                break;
+            }
+        }
+
+        if (agent < 0)
+            throw new InvalidOperationException($"未知移动类型 \"{_config.Inspect.AgentType}\"。");
+        RuntimeAgentProfile? profile = null;
+        for (int i = 0; i < cfg.Profiles.Count; i++)
+        {
+            if (string.Equals(cfg.Profiles[i].Id, _config.Inspect.Profile, StringComparison.Ordinal))
+            {
+                profile = cfg.Profiles[i];
+                break;
+            }
+        }
+
+        if (profile == null)
+            throw new InvalidOperationException($"未知体型 \"{_config.Inspect.Profile}\"。");
+        if (profile.AgentTypeIndex != agent)
+            throw new InvalidOperationException($"体型 \"{profile.Id}\" 不属于移动类型 \"{cfg.AgentTypes[agent].Id}\"。");
+        int radiusCm = (int)profile.RadiusCm.ToInt();
+        int radius = -1;
+        for (int i = 0; i < cfg.RadiusClasses.Count; i++)
+        {
+            if (cfg.RadiusClasses[i] == radiusCm)
+            {
+                radius = i;
+                break;
+            }
+        }
+
+        if (radius < 0)
+            throw new InvalidOperationException($"体型 \"{profile.Id}\" 的半径不在半径级表。");
+        if (session.Fog == null)
+            throw new InvalidOperationException("调试视图需要视野。");
+        int table = ControllingIndex(cfg.PairRules.IndexByPlayerId, _config.BeliefPlayer);
+        if (table < 0 || (uint)table >= (uint)session.Fog.GroupOf.Length)
+            throw new InvalidOperationException($"玩家 {_config.BeliefPlayer} 不在配对表里。");
+        LayerIndex = agent;
+        RadiusIndex = radius;
+        BeliefGroup = session.Fog.GroupOf[table];
+        _agentTypeId = cfg.AgentTypes[agent].Id;
+        _profileId = profile.Id;
+        _beliefPlayer = _config.BeliefPlayer;
+        _catalogSession = session;
+    }
+
+    private void SyncProfile(CrowdSimSession session)
+    {
+        int radiusCm = session.Config.RadiusClasses[RadiusIndex];
+        RuntimeAgentProfile? profile = null;
+        for (int i = 0; i < session.Config.Profiles.Count; i++)
+        {
+            RuntimeAgentProfile row = session.Config.Profiles[i];
+            if (row.AgentTypeIndex == LayerIndex && (int)row.RadiusCm.ToInt() == radiusCm)
+            {
+                profile = row;
+                break;
+            }
+        }
+
+        if (profile == null)
+            throw new InvalidOperationException($"移动类型 \"{session.Config.AgentTypes[LayerIndex].Id}\" 没有半径 {radiusCm} 的体型。");
+        _agentTypeId = session.Config.AgentTypes[LayerIndex].Id;
+        _profileId = profile.Id;
+    }
+
+    private static int FirstPlayer(CrowdSimSession session, int group)
+    {
+        var indexBy = session.Config.PairRules.IndexByPlayerId;
+        var groupOf = session.Fog!.GroupOf;
+        for (int player = 1; player < indexBy.Length; player++)
+        {
+            int table = indexBy[player];
+            if ((uint)table < (uint)groupOf.Length && groupOf[table] == group)
+                return player;
+        }
+
+        throw new InvalidOperationException($"视野组 {group} 没有玩家。");
     }
 
     public void Draw(CrowdSimSession session, ScreenOverlayBuffer overlay)
@@ -219,12 +329,12 @@ internal sealed class CrowdDebugViewFrame
     {
         bool nav = Corridor || Flow || NavPolygons || HpaGraph || Links || TileGrid || Density || Blocked || TerrainTypes;
         readout.NavOverlays = nav;
-        readout.LayerIndex = LayerIndex;
-        readout.RadiusIndex = RadiusIndex;
+        readout.AgentTypeId = _agentTypeId;
+        readout.ProfileId = _profileId;
         readout.UnitColor = (CrowdUnitColorMode)UnitColorMode;
         readout.TerrainTypes = TerrainTypes;
         readout.Belief = Belief;
-        readout.BeliefGroup = BeliefGroup;
+        readout.BeliefPlayer = _beliefPlayer;
         readout.DivergentCells = Belief ? _diffCount : 0;
         readout.Ghosts = Belief ? _ghostStat : 0;
     }
@@ -270,6 +380,7 @@ internal sealed class CrowdDebugViewFrame
 
     private void Prepare(CrowdSimSession session)
     {
+        BindCatalog(session);
         if (_engine != null)
             ResolvePlayer(session);
         if (!ViewportLocked)

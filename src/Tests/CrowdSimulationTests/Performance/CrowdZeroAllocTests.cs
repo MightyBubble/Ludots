@@ -76,8 +76,8 @@ public sealed class CrowdZeroAllocTests
         Bind(host, session);
         session.Commands.Schedule(session, new List<CrowdCommand>
         {
-            Cmd(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":200,"unitType":0,"rIdx":0}"""),
-            Cmd(0, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":200,"unitType":0,"rIdx":0}"""),
+            Cmd(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":200,"template":"crowd_simulation.unit.infantry.r100"}"""),
+            Cmd(0, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":200,"template":"crowd_simulation.unit.infantry.r100"}"""),
             Cmd(8, """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}"""),
         });
         host.Tick();

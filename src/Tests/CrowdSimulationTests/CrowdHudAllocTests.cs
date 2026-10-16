@@ -186,7 +186,7 @@ public sealed class CrowdHudAllocTests
     {
         Kind = CrowdPresentationConfig.KindDeploy,
         Title = "S4",
-        ViewLabels = new[] { "路线", "可走", "线框" },
+        ViewLabels = CrowdViewCatalog.Named(("route", "路线"), ("walkable", "可走"), ("wire", "线框")),
         Hud = new CrowdHudConfig
         {
             Keys = "V 视图 {view} · 模板[{templateIndex}] · {activity}{pending}",

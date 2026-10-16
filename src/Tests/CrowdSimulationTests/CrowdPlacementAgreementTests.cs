@@ -50,7 +50,7 @@ public sealed class CrowdPlacementAgreementTests
         int hoverX = free.X * cell + cell / 2;
         int hoverY = free.Y * cell + cell / 2;
         var demo = new S4DeployDemoRuntime(null);
-        demo.UseViewLabels(new[] { "路线" });
+        demo.UseViewLabels(CrowdViewCatalog.Named(("route", "路线")));
         demo.UsePalette(new[]
         {
             new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, cell, 0, 0, "CrowdSimulation.S4.Template1"),
@@ -212,7 +212,7 @@ public sealed class CrowdPlacementAgreementTests
     {
         Kind = CrowdPresentationConfig.KindDeploy,
         Title = "放置",
-        ViewLabels = new[] { "路线" },
+        ViewLabels = CrowdViewCatalog.Named(("route", "路线")),
         Hud = new CrowdHudConfig
         {
             Keys = "{activity}",

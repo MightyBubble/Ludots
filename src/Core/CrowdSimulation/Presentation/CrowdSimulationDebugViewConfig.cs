@@ -28,7 +28,7 @@ internal sealed class CrowdSimulationDebugViewConfig
     [JsonRequired] public int OverlayReserve { get; init; }
     [JsonRequired] public int DirtyPulsePercent { get; init; }
     [JsonRequired] public CrowdDebugViewInspect Inspect { get; init; } = null!;
-    [JsonRequired] public int BeliefGroup { get; init; }
+    [JsonRequired] public int BeliefPlayer { get; init; }
     [JsonRequired] public string UnitColor { get; init; } = "";
     [JsonRequired] public CrowdDebugViewOverlays Overlays { get; init; } = null!;
     [JsonRequired] public CrowdDebugViewColors Colors { get; init; } = null!;
@@ -74,12 +74,12 @@ internal sealed class CrowdSimulationDebugViewConfig
             throw new InvalidOperationException($"{path}: maxScreenSegments 与 overlayReserve 之和超过屏幕叠加容量 {ScreenOverlayBuffer.MaxItems}。");
         if (DirtyPulsePercent < 1 || DirtyPulsePercent > CrowdSimulationLimits.FullPercent)
             throw new InvalidOperationException($"{path}: dirtyPulsePercent 需为 1..{CrowdSimulationLimits.FullPercent} 的整数。");
-        if (Inspect.LayerIndex < 0)
-            throw new InvalidOperationException($"{path}: inspect.layerIndex 需为 ≥ 0 的整数。");
-        if (Inspect.RadiusIndex < 0)
-            throw new InvalidOperationException($"{path}: inspect.radiusIndex 需为 ≥ 0 的整数。");
-        if (BeliefGroup < 0)
-            throw new InvalidOperationException($"{path}: beliefGroup 需为 ≥ 0 的整数。");
+        if (string.IsNullOrWhiteSpace(Inspect.AgentType))
+            throw new InvalidOperationException($"{path}: inspect.agentType 不能为空。");
+        if (string.IsNullOrWhiteSpace(Inspect.Profile))
+            throw new InvalidOperationException($"{path}: inspect.profile 不能为空。");
+        if (BeliefPlayer < 1)
+            throw new InvalidOperationException($"{path}: beliefPlayer 需为 ≥ 1 的玩家 id。");
         UnitColorMode = UnitColor switch
         {
             "off" => ColorOff,
@@ -102,8 +102,8 @@ internal sealed class CrowdSimulationDebugViewConfig
 
 internal sealed class CrowdDebugViewInspect
 {
-    [JsonRequired] public int LayerIndex { get; init; }
-    [JsonRequired] public int RadiusIndex { get; init; }
+    [JsonRequired] public string AgentType { get; init; } = "";
+    [JsonRequired] public string Profile { get; init; } = "";
 }
 
 internal sealed class CrowdDebugViewOverlays

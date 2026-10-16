@@ -113,12 +113,13 @@ public sealed class S4DeployDemoRuntime
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
 
-    public void UseViewLabels(string[] labels)
+    internal void UseViewLabels(CrowdViewCatalog catalog)
     {
-        if (labels == null || labels.Length == 0)
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (catalog.Length == 0)
             throw new InvalidOperationException("部署演示视图名至少一条。");
-        _viewLabels = labels;
-        _viewModeCount = labels.Length;
+        _viewLabels = catalog.Labels;
+        _viewModeCount = catalog.Length;
     }
 
     public void UsePalette(PaletteChoice[] choices)
@@ -157,6 +158,7 @@ public sealed class S4DeployDemoRuntime
             ClearSpan();
         }
 
+        _tools?.ResolveSpawn(session.Config);
         session.PlaybackHeld = PlaybackHeld;
     }
 
@@ -295,6 +297,22 @@ public sealed class S4DeployDemoRuntime
     private void SubmitSpawnAt(int xCm, int yCm)
     {
         CrowdDebugTools tools = RequireTools();
+        int unitType;
+        int radius;
+        if (ClickSpawnUnitType is int clickUnit && ClickSpawnRadiusClass is int clickRadius)
+        {
+            unitType = clickUnit;
+            radius = clickRadius;
+        }
+        else
+        {
+            if (!TrySession(out CrowdSimSession session))
+                throw new InvalidOperationException("部署演示还没有会话，不能解析生成模板。");
+            tools.ResolveSpawn(session.Config);
+            unitType = tools.ResolvedUnitType;
+            radius = tools.ResolvedRadiusClass;
+        }
+
         SubmitInteractive(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.SpawnAt,
@@ -302,8 +320,8 @@ public sealed class S4DeployDemoRuntime
             XCm = xCm,
             YCm = yCm,
             Count = ClickSpawnCount ?? tools.SpawnCount,
-            UnitType = ClickSpawnUnitType ?? tools.SpawnUnitType,
-            RIdx = ClickSpawnRadiusClass ?? tools.SpawnRadiusClass,
+            UnitType = unitType,
+            RIdx = radius,
         });
     }
 

@@ -105,7 +105,7 @@ public sealed class CrowdTelemetryClampEvictPlanTests
         {
             Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
-            ViewLabels = new[] { "路线", "可走", "线框" },
+            ViewLabels = CrowdViewCatalog.Named(("route", "路线"), ("walkable", "可走"), ("wire", "线框")),
             Hud = new CrowdHudConfig { Keys = "k {view}" },
             Deploy = new CrowdDeployPresentation
             {

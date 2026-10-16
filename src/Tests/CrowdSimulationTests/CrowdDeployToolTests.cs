@@ -212,7 +212,7 @@ public sealed class CrowdDeployToolTests
         {
             Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
-            ViewLabels = new[] { "路线" },
+            ViewLabels = CrowdViewCatalog.Named(("route", "路线")),
             Hud = new CrowdHudConfig
             {
                 Keys = "左键 {tool} · {activity}{pending}",
@@ -421,8 +421,7 @@ public sealed class CrowdDeployToolTests
         RingScale = 2,
         Impulse = 4,
         SpawnCount = 24,
-        SpawnUnitType = 0,
-        SpawnRadiusClass = 0,
+        SpawnTemplate = "crowd_simulation.unit.infantry.r100",
         PlaceEntry = "building",
         SpeedStepsPermille = new[] { 500, 1000, 2000, 4000 },
     };
@@ -460,7 +459,7 @@ public sealed class CrowdDeployToolTests
         }
 
         var demo = new S4DeployDemoRuntime(engine);
-        demo.UseViewLabels(new[] { "路线" });
+        demo.UseViewLabels(CrowdViewCatalog.Named(("route", "路线")));
         demo.UsePalette(new[]
         {
             new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, 14000, 0, 0, "t1"),
