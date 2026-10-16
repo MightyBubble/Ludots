@@ -1293,11 +1293,11 @@ namespace Ludots.Tests.Architecture
 
         private static string CreateTempRepoNavigationConfig()
         {
-            string repoRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-config-repo-" + Guid.NewGuid().ToString("N"));
-            string navigationDir = Path.Combine(repoRoot, "assets", "Navigation");
+            string tempRepoRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-config-repo-" + Guid.NewGuid().ToString("N"));
+            string navigationDir = Path.Combine(tempRepoRoot, "assets", "Navigation");
             Directory.CreateDirectory(navigationDir);
-            Directory.CreateDirectory(Path.Combine(repoRoot, "mods"));
-            File.WriteAllText(Path.Combine(repoRoot, "assets", "config_catalog.json"),
+            Directory.CreateDirectory(Path.Combine(tempRepoRoot, "mods"));
+            File.WriteAllText(Path.Combine(tempRepoRoot, "assets", "config_catalog.json"),
                 """
                 [
                   { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById", "IdField": "id" },
@@ -1331,7 +1331,7 @@ namespace Ludots.Tests.Architecture
                   }
                 }
                 """);
-            return repoRoot;
+            return tempRepoRoot;
         }
 
         private static void WriteModManifest(string modRoot, string id, string dependenciesJson)
