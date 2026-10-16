@@ -92,7 +92,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         string maxLine = FormatPhases(phases[order[^1]], 1);
         string spikeLine = DescribeSpike(order, elapsed, phases, notes, p95Rank);
 
-        string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-kernel-50k-tick"));
+        string dir = BenchmarkOutputDirectory();
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "trace.jsonl"),
             $"{{\"units\":{units},\"ticks\":{measuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4},\"budgetMs\":{budgetMs},\"fogFrozen\":false,\"fogRefreshes\":{session.Telemetry.FogRefreshes},\"workers\":{session.Config.Sim.ParallelWorkerCount},\"spawn\":\"deploy.bases\",\"loadAtWindow\":\"{loadAtWindow}\",\"load1\":{load1.ToString("F2", CultureInfo.InvariantCulture)},\"cores\":{cores},\"loadWaitMs\":{loadWait.ElapsedMilliseconds},\"loadAfter\":\"{loadAfter}\"}}\n");
@@ -363,4 +363,15 @@ public sealed class CrowdKernel50KBenchmarkTests
 
     private static double Load1Minute(string loadavg)
         => double.Parse(loadavg.Split(' ', 2)[0], CultureInfo.InvariantCulture);
+
+    private static string BenchmarkOutputDirectory()
+    {
+        string? fromEnv = Environment.GetEnvironmentVariable("CROWD_50K_BENCHMARK_DIR");
+        if (!string.IsNullOrWhiteSpace(fromEnv))
+        {
+            return Path.GetFullPath(fromEnv);
+        }
+
+        return Path.Combine(TestContext.CurrentContext.WorkDirectory, "crowd-kernel-50k-tick");
+    }
 }
