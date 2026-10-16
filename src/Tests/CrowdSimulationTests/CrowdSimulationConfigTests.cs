@@ -16,6 +16,26 @@ namespace CrowdSimulationTests;
 public class CrowdSimulationConfigTests
 {
     [Test]
+    public void World_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json.Remove("world");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("world"));
+    }
+
+    [Test]
+    public void WorldSeed_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["world"]!.AsObject().Remove("seed");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("seed"));
+    }
+
+    [Test]
     public void PlanTimeoutMs_Absent_FailsLoad()
     {
         JsonObject json = TestDefaults.DefaultConfigJson();

@@ -298,8 +298,8 @@ public sealed class CrowdSimulationConfig
 
     public sealed class WorldSection
     {
-        /// <summary>生成盐。地图覆盖里的 world.seed 深合并进来；缺键则为 0。</summary>
-        public int Seed { get; init; }
+        /// <summary>生成盐。地图覆盖写 world.seed；合并结果缺这个键则装载失败。</summary>
+        public required int Seed { get; init; }
     }
 
     public sealed class WorkerSection

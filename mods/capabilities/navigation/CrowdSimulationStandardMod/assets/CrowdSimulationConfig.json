@@ -1,5 +1,4 @@
 {
-  "world": {},
   "worker": {
     "planTimeoutMs": 5000
   },

@@ -1,4 +1,7 @@
 {
+  "world": {
+    "seed": 0
+  },
   "deploy": {
     "initialUnits": 12000,
     "bases": [
