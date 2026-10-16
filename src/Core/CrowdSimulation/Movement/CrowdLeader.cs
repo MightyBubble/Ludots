@@ -198,7 +198,7 @@ public sealed class CrowdLeader
         return (ax, ay, false);
     }
 
-    /// <summary>步进一个子步(dt 秒;pace = leaderSpeed;turnK = min(1, dt×leaderTurnRate);faceStep = 拖线朝向的转角步长)。</summary>
+    /// <summary>步进一个子步(dt 秒;pace = leaderSpeedRatio;turnK = min(1, dt×leaderTurnRate);faceStep = 拖线朝向的转角步长)。</summary>
     public void Step(Fix64 speedCmPerSecond, Fix64 pace, Fix64 turnK, Fix64 faceStep, Fix64 dt, int navCellSizeCm, int navCellsPerSide)
     {
         if (Done)

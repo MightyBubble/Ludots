@@ -15,7 +15,9 @@ public sealed class CrowdPresentationConfigTests
     {
         var s3 = ParseMod("CrowdSimulationS3PathMod");
         Assert.That(s3.Kind, Is.EqualTo(CrowdPresentationConfig.KindPath));
-        Assert.That(s3.ViewLabels, Has.Length.EqualTo(3));
+        Assert.That(s3.ViewLabels.Length, Is.EqualTo(3));
+        Assert.That(s3.ViewLabels.Ids, Is.EqualTo(new[] { "route", "walkable", "navmesh" }));
+        Assert.That(s3.ViewLabels.LabelOf("walkable"), Is.EqualTo("可走区域"));
         Assert.That(s3.Path!.TruthAsset, Does.Contain("s3c-query-truth.json"));
         Assert.That(s3.Deploy, Is.Null);
 
@@ -23,7 +25,7 @@ public sealed class CrowdPresentationConfigTests
         Assert.That(s4.Kind, Is.EqualTo(CrowdPresentationConfig.KindDeploy));
         Assert.That(s4.Deploy!.Actions.Validate, Is.EqualTo("CrowdSimulation.Validate"));
         Assert.That(s4.Deploy.Actions.Fuzz, Is.EqualTo("CrowdSimulation.S4.Fuzz"));
-        var s4Debug = CrowdSimulationDebugConfig.Load(JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject());
+        var s4Debug = CrowdSimulationDebugConfig.Load(ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json"));
         Assert.That(s4Debug.Fuzz!.SliceMs, Is.EqualTo(8));
         Assert.That(s4Debug.Fuzz.ToPlan(s4Debug.Tools!).BoomRadiusCm, Is.EqualTo(s4Debug.Tools!.BoomRadiusCm));
         Assert.That(s4.Deploy!.Palette.Select(p => p.Entry),
@@ -31,6 +33,20 @@ public sealed class CrowdPresentationConfigTests
         Assert.That(s4Debug.Tools!.PlaceEntry, Is.EqualTo("building"));
         Assert.That(s4.Deploy.Actions.ToolBoom, Is.EqualTo("CrowdSimulation.S4.ToolBoom"));
         Assert.That(s4.Deploy.Actions.Stress, Is.EqualTo("CrowdSimulation.S4.Stress"));
+    }
+
+    [Test]
+    public void ViewLabels_NumericKeyAndUnknownId_Fail()
+    {
+        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS3PathMod")))!.AsObject();
+        var numeric = (JsonObject)debug.DeepClone();
+        numeric["presentation"]!["viewLabels"] = new JsonObject { ["0"] = "路线" };
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdPresentationConfig.ParseOptional(numeric));
+        Assert.That(ex!.Message, Does.Contain("0"));
+
+        var loaded = CrowdPresentationConfig.ParseOptional(debug);
+        var missing = Assert.Throws<InvalidOperationException>(() => loaded!.ViewLabels.LabelOf("missing-view"));
+        Assert.That(missing!.Message, Does.Contain("missing-view"));
     }
 
     [Test]
@@ -60,8 +76,6 @@ public sealed class CrowdPresentationConfigTests
 
         var rates = new JsonObject
         {
-            ["tickHzMin"] = 10,
-            ["tickHzMax"] = 60,
             ["avoidHzMin"] = 0,
             ["avoidHzMax"] = 30,
             ["avoidStep"] = 1,
@@ -75,8 +89,7 @@ public sealed class CrowdPresentationConfigTests
         ["ringScale"] = 2,
         ["impulse"] = 4,
         ["spawnCount"] = 24,
-        ["spawnUnitType"] = 0,
-        ["spawnRadiusClass"] = 0,
+        ["spawnTemplate"] = "crowd_simulation.unit.infantry.r100",
         ["placeEntry"] = "building",
         ["speedStepsPermille"] = new JsonArray(500, 1000, 2000, 4000),
     };
@@ -181,9 +194,32 @@ public sealed class CrowdPresentationConfigTests
     }
 
     [Test]
+    public void SpawnTemplate_UnknownKeyAndMissingCatalogId_AreRejected()
+    {
+        var unknown = MinimalTools();
+        unknown["spawnUnitType"] = 0;
+        var key = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = unknown }));
+        Assert.That(key!.Message, Does.Contain("spawnUnitType"));
+
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        var tools = new CrowdDebugTools
+        {
+            BoomRadiusCm = 12500,
+            RingScale = 2,
+            Impulse = 4,
+            SpawnCount = 24,
+            SpawnTemplate = "missing.unit",
+            PlaceEntry = "building",
+            SpeedStepsPermille = new[] { 500, 1000, 2000, 4000 },
+        };
+        var missing = Assert.Throws<InvalidOperationException>(() => tools.ResolveSpawn(session.Config));
+        Assert.That(missing!.Message, Does.Contain("missing.unit"));
+    }
+
+    [Test]
     public void ToolsPlaceEntry_MustNameAPaletteSlot()
     {
-        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject();
+        var debug = ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json");
         debug["tools"]!["placeEntry"] = "absent";
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
         Assert.That(ex!.Message, Does.Contain("absent"));
@@ -192,7 +228,7 @@ public sealed class CrowdPresentationConfigTests
     [Test]
     public void PaletteSlot_DuplicateSelectAction_IsRejected()
     {
-        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject();
+        var debug = ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json");
         var palette = debug["presentation"]!["deploy"]!["palette"]!.AsArray();
         palette[1]!["selectAction"] = palette[0]!["selectAction"]!.GetValue<string>();
         Assert.Throws<InvalidOperationException>(() => CrowdPresentationConfig.ParseOptional(debug));
@@ -200,7 +236,7 @@ public sealed class CrowdPresentationConfigTests
 
     private static CrowdPresentationConfig ParseMod(string mod)
     {
-        var debug = JsonNode.Parse(File.ReadAllText(DebugPath(mod)))!.AsObject();
+        var debug = ModConfigChain.Open(mod).Merged("CrowdSimulationDebug.json");
         return CrowdSimulationDebugConfig.Load(debug).Presentation!;
     }
 

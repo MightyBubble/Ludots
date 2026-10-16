@@ -21,11 +21,10 @@ public static class CrowdFogDecalSettings
     {
         ArgumentNullException.ThrowIfNull(pipeline);
         ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(catalog, RelativePath, ConfigMergePolicy.DeepObject);
-        JsonObject merged = pipeline.MergeDeepObjectFromCatalog(in entry, report);
-        if (merged == null || merged.Count == 0)
-        {
+        JsonObject merged = pipeline.MergeDeepObjectFromCatalog(in entry, report)
+            ?? throw new InvalidOperationException($"{RelativePath}: 存在目录登记但合并为空。");
+        if (merged.Count == 0)
             throw new InvalidOperationException($"{RelativePath}: 存在目录登记但合并为空。");
-        }
 
         return Load(merged);
     }
@@ -44,9 +43,7 @@ public static class CrowdFogDecalSettings
         }
 
         if (colors == null)
-        {
             throw new InvalidOperationException($"{RelativePath}: 反序列化为空。");
-        }
 
         return new FogDecalPalette(
             Color(colors.Unseen, "unseen"),
@@ -55,29 +52,17 @@ public static class CrowdFogDecalSettings
             Color(colors.Denied, "denied"));
     }
 
-    private static FogDecalColor Color(int[]? rgba, string field)
+    private static FogDecalColor Color(CrowdDebugRgba rgba, string field)
     {
-        if (rgba == null || rgba.Length != 4)
-        {
-            throw new InvalidOperationException($"{RelativePath}: {field} 需要 4 个 0..255 的整数。");
-        }
-
-        for (int i = 0; i < 4; i++)
-        {
-            if ((uint)rgba[i] > 255)
-            {
-                throw new InvalidOperationException($"{RelativePath}: {field}[{i}] 超出 0..255。");
-            }
-        }
-
-        return new FogDecalColor((byte)rgba[0], (byte)rgba[1], (byte)rgba[2], (byte)rgba[3]);
+        rgba.Validate($"{RelativePath}: {field}", "rgba");
+        return new FogDecalColor((byte)rgba.Red, (byte)rgba.Green, (byte)rgba.Blue, (byte)rgba.Alpha);
     }
 
     private sealed class CrowdFogDecalColors
     {
-        [JsonRequired] public int[] Unseen { get; set; } = Array.Empty<int>();
-        [JsonRequired] public int[] Explored { get; set; } = Array.Empty<int>();
-        [JsonRequired] public int[] Visible { get; set; } = Array.Empty<int>();
-        [JsonRequired] public int[] Denied { get; set; } = Array.Empty<int>();
+        [JsonRequired] public CrowdDebugRgba Unseen { get; set; } = null!;
+        [JsonRequired] public CrowdDebugRgba Explored { get; set; } = null!;
+        [JsonRequired] public CrowdDebugRgba Visible { get; set; } = null!;
+        [JsonRequired] public CrowdDebugRgba Denied { get; set; } = null!;
     }
 }

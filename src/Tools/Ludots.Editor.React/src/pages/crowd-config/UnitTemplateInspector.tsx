@@ -62,7 +62,6 @@ export function UnitTemplateInspector({ modId, view, draftText, issues, onDraftC
   }
 
   function options(field: UnitField): string[] {
-    if (field.reference === 'agentTypes') return view?.agentTypes ?? [];
     if (field.reference === 'agentProfiles') return (view?.agentProfiles ?? []).map((option) => option.id);
     return [];
   }

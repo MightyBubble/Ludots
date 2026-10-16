@@ -29,8 +29,25 @@ public static class CrowdSimCommands
     /// 日志再停摆,live 与回放不对称。会话域两面:玩家号表外(1..P);迷雾面指令与
     /// order.fogTerrain 在迷雾未启用(会话无 Fog)的会话上。载荷结构面(字段缺失/类型/
     /// area 恰一/obscure ticks 值)由边界 CrowdSimCommand.Parse 一次成形,不在这里。</summary>
-    public static void Validate(CrowdSimSession sim, CrowdSimCommand cmd)
+    public static CrowdSimCommand Validate(CrowdSimSession sim, CrowdSimCommand cmd)
     {
+        if (cmd.Kind == CrowdSimCommandKind.SpawnAt)
+        {
+            if (string.IsNullOrEmpty(cmd.TemplateId))
+            {
+                if ((uint)cmd.UnitType >= (uint)sim.Config.UnitTypes.Count
+                    || (uint)cmd.RIdx >= (uint)sim.Config.RadiusClasses.Count)
+                {
+                    throw new System.InvalidOperationException("spawnAt: 单位行或半径级不在表内。");
+                }
+            }
+            else
+            {
+                var (unitType, radiusIndex) = CrowdDeployment.LocateTemplate(sim.Config, cmd.TemplateId);
+                cmd = cmd with { UnitType = unitType, RIdx = radiusIndex };
+            }
+        }
+
         if (cmd.Kind is CrowdSimCommandKind.FogSight or CrowdSimCommandKind.Reveal
             or CrowdSimCommandKind.Obscure or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare)
         {
@@ -82,7 +99,7 @@ public static class CrowdSimCommands
             or CrowdSimCommandKind.Order or CrowdSimCommandKind.Reveal or CrowdSimCommandKind.Obscure
             or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare))
         {
-            return;
+            return cmd;
         }
 
         RequirePlayer(sim, cmd.Player);
@@ -101,6 +118,8 @@ public static class CrowdSimCommands
                 throw new System.InvalidOperationException("order: 成员集为空。");
             }
         }
+
+        return cmd;
     }
 
     private static Movement.CrowdMovementKernel RequireMovement(CrowdSimSession sim, string type) =>
@@ -151,7 +170,7 @@ public static class CrowdSimCommands
             if (dist <= ring && cmd.Impulse > Fix64.Zero && dist > Fix64.Zero)
             {
                 var agent = world.Get<CrowdSimulationAgent>(entity);
-                Fix64 scale = agent.SpeedCmPerSecond * cmd.Impulse / dist;
+                Fix64 scale = agent.SpeedCmPerSec * cmd.Impulse / dist;
                 var kin = world.Get<CrowdSimulationKinematics>(entity);
                 kin.Velocity = new Fix64Vec2(kin.Velocity.X + dx * scale, kin.Velocity.Y + dy * scale);
                 world.Set(entity, kin);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
@@ -28,6 +29,63 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         private static readonly string[] CrowdSimulationMapKeys = { "boards", "logicTerrainAsset", "linkCandidateBake" };
         private static readonly string[] CrowdSimulationRequiredMapKeys = { "solver", "navCellSizeCm", "terrainTypes" };
         private static readonly string[] SolverOnly = { "solver" };
+
+        public static readonly string[] DotRecastBakeRootRequiredKeys =
+            { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" };
+
+        public static readonly string[] DotRecastBakeRootOptionalKeys = { "terrainFeed", "maps" };
+
+        public static readonly string[] CrowdSimulationOnlyRootRequiredKeys = { "maps" };
+
+        public static bool ContainsAnyDotRecastBakeRootKey(JsonObject root)
+        {
+            ArgumentNullException.ThrowIfNull(root);
+            for (int i = 0; i < DotRecastBakeRootRequiredKeys.Length; i++)
+            {
+                if (root.ContainsKey(DotRecastBakeRootRequiredKeys[i]))
+                {
+                    return true;
+                }
+            }
+
+            return root.ContainsKey("terrainFeed");
+        }
+
+        /// <summary>
+        /// 合并后的 navmesh.json 是否必须带 DotRecast 烘焙根键。
+        /// maps 为空或含 navmesh / mass-navigation 图时必填；maps 里全是 crowd-simulation 时不要求。
+        /// </summary>
+        public static bool RequiresDotRecastBakeRoot(JsonObject root)
+        {
+            ArgumentNullException.ThrowIfNull(root);
+            if (root["maps"] is not JsonObject maps || maps.Count == 0)
+            {
+                return true;
+            }
+
+            foreach (KeyValuePair<string, JsonNode?> entry in maps)
+            {
+                if (entry.Value is not JsonObject mapObj)
+                {
+                    continue;
+                }
+
+                if (!mapObj.TryGetPropertyValue("solver", out JsonNode? solverNode) ||
+                    solverNode is not JsonValue solverValue ||
+                    !solverValue.TryGetValue<string>(out string? solver) ||
+                    string.IsNullOrWhiteSpace(solver))
+                {
+                    return true;
+                }
+
+                if (!string.Equals(solver, CrowdSimulation, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>maps.&lt;mapId&gt; 必须写的键。</summary>
         public static IReadOnlyList<string> RequiredMapKeys(string solver) => solver switch

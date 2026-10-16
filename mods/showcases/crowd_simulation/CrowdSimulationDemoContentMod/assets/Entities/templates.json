@@ -7,11 +7,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r100",
-        "agentTypeId": "foot",
-        "speedCmPerSecond": 1400,
-        "personalRadiusCm": 600,
+        "speedCmPerSec": 1400,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -23,11 +21,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r200",
-        "agentTypeId": "foot",
-        "speedCmPerSecond": 1400,
-        "personalRadiusCm": 1200,
+        "speedCmPerSec": 1400,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -39,11 +35,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r300",
-        "agentTypeId": "foot",
-        "speedCmPerSecond": 1400,
-        "personalRadiusCm": 1800,
+        "speedCmPerSec": 1400,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -55,11 +49,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r400",
-        "agentTypeId": "foot",
-        "speedCmPerSecond": 1400,
-        "personalRadiusCm": 2400,
+        "speedCmPerSec": 1400,
         "pushPriority": 5,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -71,11 +63,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r100",
-        "agentTypeId": "hull",
-        "speedCmPerSecond": 1100,
-        "personalRadiusCm": 600,
+        "speedCmPerSec": 1100,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -87,11 +77,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r200",
-        "agentTypeId": "hull",
-        "speedCmPerSecond": 1100,
-        "personalRadiusCm": 1200,
+        "speedCmPerSec": 1100,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -103,11 +91,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r300",
-        "agentTypeId": "hull",
-        "speedCmPerSecond": 1100,
-        "personalRadiusCm": 1800,
+        "speedCmPerSec": 1100,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -119,11 +105,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r400",
-        "agentTypeId": "hull",
-        "speedCmPerSecond": 1100,
-        "personalRadiusCm": 2400,
+        "speedCmPerSec": 1100,
         "pushPriority": 5,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -135,11 +119,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r100",
-        "agentTypeId": "climber",
-        "speedCmPerSecond": 800,
-        "personalRadiusCm": 600,
+        "speedCmPerSec": 800,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -151,11 +133,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r200",
-        "agentTypeId": "climber",
-        "speedCmPerSecond": 800,
-        "personalRadiusCm": 1200,
+        "speedCmPerSec": 800,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -167,11 +147,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r300",
-        "agentTypeId": "climber",
-        "speedCmPerSecond": 800,
-        "personalRadiusCm": 1800,
+        "speedCmPerSec": 800,
         "pushPriority": 5,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -183,11 +161,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r400",
-        "agentTypeId": "climber",
-        "speedCmPerSecond": 800,
-        "personalRadiusCm": 2400,
+        "speedCmPerSec": 800,
         "pushPriority": 6,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -199,11 +175,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r100",
-        "agentTypeId": "amphib",
-        "speedCmPerSecond": 1000,
-        "personalRadiusCm": 600,
+        "speedCmPerSec": 1000,
         "pushPriority": 1,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -215,11 +189,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r200",
-        "agentTypeId": "amphib",
-        "speedCmPerSecond": 1000,
-        "personalRadiusCm": 1200,
+        "speedCmPerSec": 1000,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -231,11 +203,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r300",
-        "agentTypeId": "amphib",
-        "speedCmPerSecond": 1000,
-        "personalRadiusCm": 1800,
+        "speedCmPerSec": 1000,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -247,11 +217,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r400",
-        "agentTypeId": "amphib",
-        "speedCmPerSecond": 1000,
-        "personalRadiusCm": 2400,
+        "speedCmPerSec": 1000,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -263,11 +231,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r100",
-        "agentTypeId": "leaper",
-        "speedCmPerSecond": 1200,
-        "personalRadiusCm": 600,
+        "speedCmPerSec": 1200,
         "pushPriority": 2,
-        "special": true
+        "autoDeploy": false
       }
     }
   },
@@ -279,11 +245,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r200",
-        "agentTypeId": "leaper",
-        "speedCmPerSecond": 1200,
-        "personalRadiusCm": 1200,
+        "speedCmPerSec": 1200,
         "pushPriority": 3,
-        "special": true
+        "autoDeploy": false
       }
     }
   },
@@ -295,11 +259,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r300",
-        "agentTypeId": "leaper",
-        "speedCmPerSecond": 1200,
-        "personalRadiusCm": 1800,
+        "speedCmPerSec": 1200,
         "pushPriority": 4,
-        "special": true
+        "autoDeploy": false
       }
     }
   },
@@ -311,11 +273,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r400",
-        "agentTypeId": "leaper",
-        "speedCmPerSecond": 1200,
-        "personalRadiusCm": 2400,
+        "speedCmPerSec": 1200,
         "pushPriority": 5,
-        "special": true
+        "autoDeploy": false
       }
     }
   }

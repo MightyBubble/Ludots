@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests;
 
-/// <summary>.navsurface v2：往返一致性 + 格式门禁（magic / 版本 / 长度 / 越界 / 候选位移）+ 和配置的链接种类表对照。烘焙输入指纹见 <see cref="NavSurfaceBakeInputsStalenessTests"/>。</summary>
+/// <summary>.navsurface：往返一致性 + 格式门禁（magic / 头长 / 长度 / 越界 / 候选位移）+ 和配置的链接种类表对照。烘焙输入指纹见 <see cref="NavSurfaceBakeInputsStalenessTests"/>。</summary>
 [TestFixture]
 public class NavSurfaceAssetTests
 {
@@ -85,15 +85,17 @@ public class NavSurfaceAssetTests
     }
 
     [Test]
-    public void Header_FollowsV2Layout()
+    public void Header_FollowsLayout()
     {
         var bytes = Serialize(Sample());
-        Assert.That(BitConverter.ToUInt16(bytes, 4), Is.EqualTo((ushort)2));
-        Assert.That(BitConverter.ToUInt16(bytes, 6), Is.EqualTo((ushort)32));
-        Assert.That(BitConverter.ToUInt16(bytes, 20), Is.EqualTo((ushort)5));
-        Assert.That(BitConverter.ToUInt16(bytes, 22), Is.EqualTo((ushort)1));
-        Assert.That(BitConverter.ToInt32(bytes, 24), Is.EqualTo(2));
-        Assert.That(BitConverter.ToUInt32(bytes, 28), Is.EqualTo(0xA1B2C3D4u));
+        Assert.That(BitConverter.ToUInt16(bytes, 4), Is.EqualTo(NavSurfaceAsset.HeaderBytes));
+        Assert.That(BitConverter.ToInt32(bytes, 6), Is.EqualTo(256));
+        Assert.That(BitConverter.ToInt32(bytes, 10), Is.EqualTo(256));
+        Assert.That(BitConverter.ToInt32(bytes, 14), Is.EqualTo(6250));
+        Assert.That(BitConverter.ToUInt16(bytes, 18), Is.EqualTo((ushort)5));
+        Assert.That(BitConverter.ToUInt16(bytes, 20), Is.EqualTo((ushort)1));
+        Assert.That(BitConverter.ToInt32(bytes, 22), Is.EqualTo(2));
+        Assert.That(BitConverter.ToUInt32(bytes, 26), Is.EqualTo(0xA1B2C3D4u));
         int second = CandidateOffset(bytes, 1, 2);
         Assert.That(bytes[second], Is.EqualTo(0), "kindIndex");
         Assert.That(bytes[second + 1], Is.EqualTo(NavSurfaceAsset.DiagonalFlag), "flags");
@@ -111,26 +113,16 @@ public class NavSurfaceAssetTests
     }
 
     [Test]
-    public void V1_IsRejectedWithRebakeHint()
-    {
-        var bytes = Serialize(Sample());
-        BitConverter.GetBytes((ushort)1).CopyTo(bytes, 4);
-        var ex = Assert.Throws<InvalidDataException>(() => NavSurfaceAsset.Read(new MemoryStream(bytes)));
-        Assert.That(ex!.Message, Does.Contain("version = 1"));
-        Assert.That(ex.Message, Does.Contain("重烘"));
-    }
-
-    [Test]
-    public void HeaderBytes_MustBeExactly32()
+    public void HeaderBytes_MustMatchLayout()
     {
         var longer = Serialize(Sample());
-        BitConverter.GetBytes((ushort)33).CopyTo(longer, 6);
+        BitConverter.GetBytes((ushort)32).CopyTo(longer, 4);
         var longHeader = Assert.Throws<InvalidDataException>(() => NavSurfaceAsset.Read(new MemoryStream(longer)));
         Assert.That(longHeader!.Message, Does.Contain("headerBytes"));
-        Assert.That(longHeader.Message, Does.Contain("32"));
+        Assert.That(longHeader.Message, Does.Contain(NavSurfaceAsset.HeaderBytes.ToString()));
 
         var shorter = Serialize(Sample());
-        BitConverter.GetBytes((ushort)16).CopyTo(shorter, 6);
+        BitConverter.GetBytes((ushort)16).CopyTo(shorter, 4);
         var shortHeader = Assert.Throws<InvalidDataException>(() => NavSurfaceAsset.Read(new MemoryStream(shorter)));
         Assert.That(shortHeader!.Message, Does.Contain("headerBytes"));
     }
@@ -264,16 +256,22 @@ public class NavSurfaceAssetTests
     }
 
     [Test]
-    public void BakeInputsDigest_WithoutLinks_HashesOnlyNavCellSize()
+    public void BakeInputsDigest_WithoutLinks_MixesLayoutThenNavCellSize()
     {
         uint expected = 2166136261u;
+        foreach (byte b in System.Text.Encoding.UTF8.GetBytes(NavSurfaceAsset.Layout))
+        {
+            expected = (expected ^ b) * 16777619u;
+        }
+
+        expected = (expected ^ 0) * 16777619u;
         foreach (byte b in BitConverter.GetBytes(6250))
         {
             expected = (expected ^ b) * 16777619u;
         }
 
         Assert.That(NavSurfaceContract.BakeInputsDigestWithoutLinks(6250), Is.EqualTo(expected));
-        Assert.That(expected, Is.EqualTo(0x8227BA97u));
+        Assert.That(expected, Is.EqualTo(0x697DE4E4u));
     }
 
     [Test]

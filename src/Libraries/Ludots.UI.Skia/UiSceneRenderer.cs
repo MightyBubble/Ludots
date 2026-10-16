@@ -10,6 +10,8 @@ namespace Ludots.UI.Skia;
 /// <summary>
 /// 直接画进目标画布。画笔、裁剪路径、模糊滤镜、折行缓冲和子节点排序表都由实例持有并反复使用，
 /// 只有渐变、虚线边框首次出现这类少见样式才会分配；同一实例不能跨线程并发渲染。
+/// <see cref="Render"/> 认为目标画布只归它画：画布、场景、尺寸都没换且场景只报了局部改动时，
+/// 只清掉并重画改动节点前后两次的墨迹范围，其余像素留着上一帧。
 /// </summary>
 public sealed class SkiaUiRenderer : IUiRenderer
 {
@@ -29,9 +31,17 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private readonly SKPath _clipPath = new SKPath();
 
+	private readonly SKPath _vectorPath = new SKPath();
+
+	private readonly SKPaint _vectorFillPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+
+	private readonly SKPaint _vectorStrokePaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round };
+
 	private readonly UiTextLines _textLines = new UiTextLines();
 
 	private readonly Dictionary<float, SKImageFilter> _blurFilters = new Dictionary<float, SKImageFilter>();
+
+	private readonly Dictionary<float, SKMaskFilter> _blurMasks = new Dictionary<float, SKMaskFilter>();
 
 	private readonly Dictionary<(UiBorderStyle Style, float Width), SKPathEffect> _borderDashes = new Dictionary<(UiBorderStyle, float), SKPathEffect>();
 
@@ -39,20 +49,82 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private int _depth;
 
+	private readonly SKRegion _damage = new SKRegion();
+
+	private readonly SKRoundRect _ringOuter = new SKRoundRect();
+
+	private readonly SKRoundRect _ringInner = new SKRoundRect();
+
+	/// <summary>上次画进保留画布时文字墨迹超出“布局框外扩字形余量”的节点，按设备坐标记下，改字时连旧墨迹一起清。</summary>
+	private readonly Dictionary<UiNode, SKRect> _textOverflowInk = new Dictionary<UiNode, SKRect>();
+
+	private SKCanvas? _paintedCanvas;
+
+	private UiScene? _paintedScene;
+
+	private float _paintedWidth;
+
+	private float _paintedHeight;
+
+	/// <summary>保留画布上有背景模糊或 sticky 定位：前者读改动区外的旧像素，后者的位移不进改动表，只能整张重画。</summary>
+	private bool _paintedNonLocal;
+
+	private bool _recordInk;
+
+	/// <summary><see cref="Render"/> 整张清屏重画的次数。</summary>
+	public int FullPaintCount { get; private set; }
+
+	/// <summary><see cref="Render"/> 只重画改动区的次数（改动区为空、什么都没画的也算）。</summary>
+	public int DamagePaintCount { get; private set; }
+
+	/// <summary>换画布会让下一次 <see cref="Render"/> 整张重画；两次渲染之间调用方不能往这张画布上画别的。</summary>
 	public void SetCanvas(SKCanvas canvas) => _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
 
 	public void Render(UiScene scene, float width, float height)
 	{
 		ArgumentNullException.ThrowIfNull(scene, "scene");
 		SKCanvas canvas = _canvas ?? throw new InvalidOperationException("SetCanvas must be called before Render.");
-		RenderToCanvas(scene, canvas, width, height);
+		scene.Layout(width, height);
+		_recordInk = true;
+		if (TryBuildDamage(scene, canvas, width, height))
+		{
+			DamagePaintCount++;
+			if (!_damage.IsEmpty)
+			{
+				int count = canvas.Save();
+				canvas.ClipRegion(_damage);
+				canvas.Clear(SKColors.Transparent);
+				PaintScene(scene, canvas, width, height);
+				canvas.RestoreToCount(count);
+			}
+		}
+		else
+		{
+			FullPaintCount++;
+			canvas.Clear(SKColors.Transparent);
+			_textOverflowInk.Clear();
+			_paintedNonLocal = false;
+			PaintScene(scene, canvas, width, height);
+			_paintedCanvas = canvas;
+			_paintedScene = scene;
+			_paintedWidth = width;
+			_paintedHeight = height;
+		}
+		_recordInk = false;
+		scene.AcceptPaint();
 	}
 
+	/// <summary>把场景整张画进 <paramref name="canvas"/>，不清屏，也不消费场景的改动表。</summary>
 	public void RenderToCanvas(UiScene scene, SKCanvas canvas, float width, float height)
 	{
 		ArgumentNullException.ThrowIfNull(scene, "scene");
 		ArgumentNullException.ThrowIfNull(canvas, "canvas");
 		scene.Layout(width, height);
+		PaintScene(scene, canvas, width, height);
+	}
+
+	private void PaintScene(UiScene scene, SKCanvas canvas, float width, float height)
+	{
 		if (scene.Root == null)
 		{
 			return;
@@ -62,6 +134,194 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		_depth = 0;
 		RenderNode(scene.Root, canvas);
 		canvas.RestoreToCount(count);
+	}
+
+	private bool TryBuildDamage(UiScene scene, SKCanvas canvas, float width, float height)
+	{
+		if (!ReferenceEquals(canvas, _paintedCanvas)
+			|| !ReferenceEquals(scene, _paintedScene)
+			|| !width.Equals(_paintedWidth)
+			|| !height.Equals(_paintedHeight)
+			|| _paintedNonLocal
+			|| scene.Root == null
+			|| scene.IsPaintDamageFull)
+		{
+			return false;
+		}
+		_damage.SetEmpty();
+		var bounds = new SKRectI(0, 0, (int)MathF.Ceiling(width), (int)MathF.Ceiling(height));
+		for (int i = 0; i < scene.PaintDamageCount; i++)
+		{
+			UiPaintDamage damage = scene.GetPaintDamage(i);
+			UiNode node = damage.Node;
+			if (_textOverflowInk.TryGetValue(node, out SKRect oldInk))
+			{
+				AddDamage(oldInk, bounds);
+			}
+			if (!TryGetDeviceOffset(node, out float dx, out float dy, out bool shown))
+			{
+				return false;
+			}
+			if (!shown)
+			{
+				continue;
+			}
+			UiStyle style = node.RenderStyle;
+			bool clips = style.ClipContent || style.Overflow == UiOverflow.Scroll;
+			ReadOnlySpan<char> text = clips ? default : ResolveRenderableText(node);
+			bool hasText = !text.IsWhiteSpace();
+			if (hasText && node.TextRuns is { Count: > 0 })
+			{
+				return false;
+			}
+			SKRect previous = BoxInk(ToSkRect(damage.PreviousRect), style);
+			SKRect current = ToSkRect(node.LayoutRect);
+			if (hasText)
+			{
+				previous.Inflate(GlyphMarginX(style), GlyphMarginY(style));
+				SKRect textInk = TextInk(text, node, current, style);
+				textInk.Offset(dx, dy);
+				AddDamage(textInk, bounds);
+			}
+			previous.Offset(dx, dy);
+			AddDamage(previous, bounds);
+			current = BoxInk(current, style);
+			current.Offset(dx, dy);
+			AddDamage(current, bounds);
+		}
+		return true;
+	}
+
+	private void AddDamage(SKRect rect, SKRectI bounds)
+	{
+		var pixels = new SKRectI(
+			(int)MathF.Floor(rect.Left),
+			(int)MathF.Floor(rect.Top),
+			(int)MathF.Ceiling(rect.Right),
+			(int)MathF.Ceiling(rect.Bottom));
+		if (pixels.IntersectsWith(bounds))
+		{
+			_damage.Op(SKRectI.Intersect(pixels, bounds), SKRegionOperation.Union);
+		}
+	}
+
+	/// <summary>
+	/// 布局框到画布的平移：祖先滚动容器的滚动量和 sticky 位移。链上有变换或模糊滤镜时墨迹不再是平移后的框，返回 false。
+	/// </summary>
+	private static bool TryGetDeviceOffset(UiNode node, out float dx, out float dy, out bool shown)
+	{
+		dx = 0f;
+		dy = 0f;
+		shown = true;
+		for (UiNode? current = node; current != null; current = current.Parent)
+		{
+			UiStyle style = current.RenderStyle;
+			if (style.Transform.HasOperations || style.FilterBlurRadius > 0.01f)
+			{
+				return false;
+			}
+			if (!style.Visible || style.Display == UiDisplay.None)
+			{
+				shown = false;
+			}
+			dx += current.StickyOffsetX;
+			dy += current.StickyOffsetY;
+			if (!ReferenceEquals(current, node) && style.Overflow == UiOverflow.Scroll)
+			{
+				dx -= current.ScrollOffsetX;
+				dy -= current.ScrollOffsetY;
+			}
+		}
+		return true;
+	}
+
+	/// <summary>节点自己画到的范围（不含子节点和文字）：边框盒加阴影、轮廓，再留抗锯齿的一像素。</summary>
+	private static SKRect BoxInk(SKRect rect, UiStyle style)
+	{
+		SKRect ink = rect;
+		if (style.BoxShadows.Count > 0)
+		{
+			for (int i = 0; i < style.BoxShadows.Count; i++)
+			{
+				UnionShadow(ref ink, rect, style.BoxShadows[i]);
+			}
+		}
+		else if (style.BoxShadow is { } shadow)
+		{
+			UnionShadow(ref ink, rect, shadow);
+		}
+		float grow = 1f;
+		if (style.OutlineWidth > 0f)
+		{
+			grow += style.OutlineWidth;
+		}
+		ink.Inflate(grow, grow);
+		return ink;
+	}
+
+	private static void UnionShadow(ref SKRect ink, SKRect rect, UiShadow shadow)
+	{
+		if (!shadow.IsVisible)
+		{
+			return;
+		}
+		SKRect shadowRect = rect;
+		shadowRect.Offset(shadow.OffsetX, shadow.OffsetY);
+		float spread = shadow.SpreadRadius + BlurExtent(shadow.BlurRadius);
+		shadowRect.Inflate(spread, spread);
+		ink.Union(shadowRect);
+	}
+
+	/// <summary>高斯模糊在 3σ 外可以忽略。</summary>
+	private static float BlurExtent(float blurRadius) => blurRadius > 0.01f ? 3f * ToSigma(blurRadius) : 0f;
+
+	/// <summary>字形可能伸出行框：斜体右悬、行高小于字高时的升部降部。</summary>
+	private static float GlyphMarginX(UiStyle style) => style.FontSize * 0.25f;
+
+	private static float GlyphMarginY(UiStyle style) => style.FontSize * 0.5f;
+
+	/// <summary>纯文本节点的文字墨迹，按 <see cref="DrawText"/> 的同一套折行和对齐算。</summary>
+	private SKRect TextInk(ReadOnlySpan<char> text, UiNode node, SKRect borderBox, UiStyle style)
+	{
+		SKRect content = ContentBox(borderBox, style);
+		UiTextLines lines = _textLines;
+		UiTextLayout.LayoutLines(text, style, Math.Max(0f, content.Width), constrainWidth: true, lines);
+		float textHeight = style.FontSize * style.LineHeight * lines.Count;
+		SKRect textBox = AlignTextBox(node, content, borderBox, style, lines.MaxWidth, textHeight);
+		return TextInk(textBox, lines.MaxWidth, textHeight, style);
+	}
+
+	private static SKRect TextInk(SKRect textBox, float textWidth, float textHeight, UiStyle style)
+	{
+		SKRect ink = textBox;
+		ink.Inflate(
+			Math.Max(0f, textWidth - textBox.Width) + GlyphMarginX(style),
+			Math.Max(0f, textHeight - textBox.Height) + GlyphMarginY(style));
+		if (style.TextShadow is { IsVisible: true } shadow)
+		{
+			SKRect shadowInk = ink;
+			shadowInk.Offset(shadow.OffsetX, shadow.OffsetY);
+			float blur = BlurExtent(shadow.BlurRadius);
+			shadowInk.Inflate(blur, blur);
+			ink.Union(shadowInk);
+		}
+		return ink;
+	}
+
+	private void RecordTextInk(UiNode node, SKRect borderBox, SKRect textBox, float textWidth, float textHeight, UiStyle style, SKCanvas canvas)
+	{
+		SKRect ink = TextInk(textBox, textWidth, textHeight, style);
+		SKRect plain = borderBox;
+		plain.Inflate(GlyphMarginX(style), GlyphMarginY(style));
+		if (plain.Contains(ink))
+		{
+			if (_textOverflowInk.Count > 0)
+			{
+				_textOverflowInk.Remove(node);
+			}
+			return;
+		}
+		_textOverflowInk[node] = canvas.TotalMatrix.MapRect(ink);
 	}
 
 	public void ExportPng(UiScene scene, string outputPath, int width, int height)
@@ -114,6 +374,15 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		{
 			canvas.Translate(node.StickyOffsetX, node.StickyOffsetY);
 		}
+		if (flag && canvas.QuickReject(BoxInk(sKRect, renderStyle)))
+		{
+			canvas.RestoreToCount(count);
+			return;
+		}
+		if (renderStyle.PositionType == UiPositionType.Sticky || renderStyle.BackdropBlurRadius > 0.01f)
+		{
+			_paintedNonLocal = true;
+		}
 		if (renderStyle.Opacity < 1f)
 		{
 			_layerPaint.ImageFilter = null;
@@ -134,13 +403,13 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		DrawBackgrounds(canvas, sKRect, renderStyle);
 		if (renderStyle.BorderWidth > 0f && renderStyle.BorderColor != UiColor.Transparent)
 		{
-			DrawRect(canvas, sKRect, renderStyle.BorderRadius, BorderPaint(renderStyle));
+			DrawBorder(canvas, sKRect, renderStyle);
 		}
 		if (renderStyle.OutlineWidth > 0f && renderStyle.OutlineColor != UiColor.Transparent)
 		{
-			SKRect rect = sKRect;
-			rect.Inflate(renderStyle.OutlineWidth * 0.5f, renderStyle.OutlineWidth * 0.5f);
-			DrawRect(canvas, rect, renderStyle.BorderRadius + renderStyle.OutlineWidth * 0.5f, Stroke(renderStyle.OutlineColor, renderStyle.OutlineWidth));
+			SKRect outer = sKRect;
+			outer.Inflate(renderStyle.OutlineWidth, renderStyle.OutlineWidth);
+			FillRing(canvas, outer, renderStyle.BorderRadius + renderStyle.OutlineWidth, sKRect, renderStyle.BorderRadius, renderStyle.OutlineColor);
 		}
 		if (flag)
 		{
@@ -228,6 +497,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 	{
 		_fillPaint.Shader = null;
 		_fillPaint.ImageFilter = null;
+		_fillPaint.MaskFilter = null;
 		_fillPaint.BlendMode = SKBlendMode.SrcOver;
 		_fillPaint.Color = color.ToSKColor();
 		return _fillPaint;
@@ -258,6 +528,20 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			_blurFilters[sigma] = filter;
 		}
 		return filter;
+	}
+
+	/// <summary>
+	/// 实心形状的模糊用遮罩滤镜：和图像滤镜出的像素一样，但不在光栅后端为每个形状开一张离屏层。
+	/// </summary>
+	private SKMaskFilter BlurMask(float blurRadius)
+	{
+		float sigma = ToSigma(blurRadius);
+		if (!_blurMasks.TryGetValue(sigma, out SKMaskFilter? mask))
+		{
+			mask = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma);
+			_blurMasks[sigma] = mask;
+		}
+		return mask;
 	}
 
 	private static void DrawRect(SKCanvas canvas, SKRect rect, float radius, SKPaint paint)
@@ -315,6 +599,35 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		paint.Shader = null;
 	}
 
+	/// <summary>边框画在边框盒以内。实线按填充环画：抗锯齿描边在复杂裁剪下 Skia 会换光栅路径，局部重画时圆角处差一两个色阶，填充不会。</summary>
+	private void DrawBorder(SKCanvas canvas, SKRect rect, UiStyle style)
+	{
+		float width = style.BorderWidth;
+		if (style.BorderStyle == UiBorderStyle.Solid)
+		{
+			SKRect inner = rect;
+			inner.Inflate(-width, -width);
+			FillRing(canvas, rect, style.BorderRadius, inner, Math.Max(0f, style.BorderRadius - width), style.BorderColor);
+			return;
+		}
+		SKRect centre = rect;
+		centre.Inflate(-width * 0.5f, -width * 0.5f);
+		DrawRect(canvas, centre, Math.Max(0f, style.BorderRadius - width * 0.5f), BorderPaint(style));
+	}
+
+	private void FillRing(SKCanvas canvas, SKRect outer, float outerRadius, SKRect inner, float innerRadius, UiColor color)
+	{
+		SKPaint paint = Fill(color);
+		if (inner.Width <= 0f || inner.Height <= 0f)
+		{
+			DrawRect(canvas, outer, outerRadius, paint);
+			return;
+		}
+		_ringOuter.SetRect(outer, outerRadius, outerRadius);
+		_ringInner.SetRect(inner, innerRadius, innerRadius);
+		canvas.DrawRoundRectDifference(_ringOuter, _ringInner, paint);
+	}
+
 	private SKPaint BorderPaint(UiStyle style)
 	{
 		SKPaint paint = Stroke(style.BorderColor, style.BorderWidth);
@@ -363,12 +676,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			return;
 		}
 		SKPaint paint = Fill(shadow.Color);
-		paint.ImageFilter = shadow.BlurRadius > 0.01f ? BlurFilter(shadow.BlurRadius) : null;
+		paint.MaskFilter = shadow.BlurRadius > 0.01f ? BlurMask(shadow.BlurRadius) : null;
 		SKRect shadowRect = rect;
 		shadowRect.Offset(shadow.OffsetX, shadow.OffsetY);
 		shadowRect.Inflate(shadow.SpreadRadius, shadow.SpreadRadius);
 		DrawRect(canvas, shadowRect, style.BorderRadius + shadow.SpreadRadius, paint);
-		paint.ImageFilter = null;
+		paint.MaskFilter = null;
 	}
 
 	private void DrawBackdropBlur(SKCanvas canvas, SKRect rect, UiStyle style)
@@ -461,6 +774,10 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		UiTextLayout.LayoutLines(text, style, Math.Max(0f, content.Width), constrainWidth: true, lines);
 		float lineHeight = style.FontSize * style.LineHeight;
 		SKRect textBox = AlignTextBox(node, content, borderBox, style, lines.MaxWidth, lineHeight * lines.Count);
+		if (_recordInk && !style.ClipContent && style.Overflow != UiOverflow.Scroll)
+		{
+			RecordTextInk(node, borderBox, textBox, lines.MaxWidth, lineHeight * lines.Count, style, canvas);
+		}
 		_textPaint.Color = style.Color.ToSKColor();
 		SKPaint? shadowPaint = ConfigureTextShadowPaint(style.TextShadow);
 		float baselineY = textBox.Top + style.FontSize;
@@ -609,15 +926,82 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private void DrawCanvas(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
 	{
-		if (node.CanvasContent is ISkiaUiCanvasContent skiaCanvas)
+		bool isSkia = node.CanvasContent is ISkiaUiCanvasContent;
+		if (!isSkia && node.CanvasContent is not UiVectorDrawList)
 		{
-			SKRect rect2 = new SKRect(rect.Left + style.Padding.Left, rect.Top + style.Padding.Top, rect.Right - style.Padding.Right, rect.Bottom - style.Padding.Bottom);
-			if (!(rect2.Width <= 0.01f) && !(rect2.Height <= 0.01f))
+			return;
+		}
+		SKRect rect2 = new SKRect(rect.Left + style.Padding.Left, rect.Top + style.Padding.Top, rect.Right - style.Padding.Right, rect.Bottom - style.Padding.Bottom);
+		if (rect2.Width <= 0.01f || rect2.Height <= 0.01f)
+		{
+			return;
+		}
+		int count = canvas.Save();
+		ClipNodeBounds(canvas, rect2, style);
+		if (isSkia)
+		{
+			((ISkiaUiCanvasContent)node.CanvasContent!).Draw(canvas, rect2);
+		}
+		else
+		{
+			DrawVectorList((UiVectorDrawList)node.CanvasContent!, rect2, canvas);
+		}
+		canvas.RestoreToCount(count);
+	}
+
+	private void DrawVectorList(UiVectorDrawList list, SKRect content, SKCanvas canvas)
+	{
+		ReadOnlySpan<UiVectorCommand> commands = list.Commands;
+		ReadOnlySpan<float> points = list.Points;
+		float w = content.Width;
+		float h = content.Height;
+		for (int i = 0; i < commands.Length; i++)
+		{
+			ref readonly UiVectorCommand command = ref commands[i];
+			switch (command.Kind)
 			{
-				int count = canvas.Save();
-				ClipNodeBounds(canvas, rect2, style);
-				skiaCanvas.Draw(canvas, rect2);
-				canvas.RestoreToCount(count);
+			case UiVectorCommandKind.FillRect:
+				_vectorFillPaint.Color = command.Color.ToSKColor();
+				canvas.DrawRect(content.Left + command.X * w, content.Top + command.Y * h, command.Width * w, command.Height * h, _vectorFillPaint);
+				break;
+			case UiVectorCommandKind.FillCircle:
+				_vectorFillPaint.Color = command.Color.ToSKColor();
+				canvas.DrawCircle(content.Left + command.X * w, content.Top + command.Y * h, command.Width, _vectorFillPaint);
+				break;
+			case UiVectorCommandKind.StrokePolyline:
+			case UiVectorCommandKind.FillPolygon:
+				if (command.PointCount < 2)
+				{
+					break;
+				}
+				_vectorPath.Reset();
+				for (int p = 0; p < command.PointCount; p++)
+				{
+					int at = (command.PointStart + p) * 2;
+					float x = content.Left + points[at] * w;
+					float y = content.Top + points[at + 1] * h;
+					if (p == 0)
+					{
+						_vectorPath.MoveTo(x, y);
+					}
+					else
+					{
+						_vectorPath.LineTo(x, y);
+					}
+				}
+				if (command.Kind == UiVectorCommandKind.FillPolygon)
+				{
+					_vectorPath.Close();
+					_vectorFillPaint.Color = command.Color.ToSKColor();
+					canvas.DrawPath(_vectorPath, _vectorFillPaint);
+				}
+				else
+				{
+					_vectorStrokePaint.Color = command.Color.ToSKColor();
+					_vectorStrokePaint.StrokeWidth = command.StrokeWidth;
+					canvas.DrawPath(_vectorPath, _vectorStrokePaint);
+				}
+				break;
 			}
 		}
 	}

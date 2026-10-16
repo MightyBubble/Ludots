@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -15,6 +16,26 @@ namespace CrowdSimulationTests;
 [TestFixture]
 public class CrowdSimulationConfigTests
 {
+    [Test]
+    public void World_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json.Remove("world");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("world"));
+    }
+
+    [Test]
+    public void WorldSeed_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["world"]!.AsObject().Remove("seed");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("seed"));
+    }
+
     [Test]
     public void PlanTimeoutMs_Absent_FailsLoad()
     {
@@ -58,7 +79,7 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
 
         var foot = runtime.AgentTypes[0];
-        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSecond),
+        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSec),
             Is.All.EqualTo(Fix64.FromInt(1400)));
         // road 是合并后第 5 个区域；foot 对 road 代价 0.7。
         Assert.That(foot.CostByArea[5], Is.EqualTo(Fix64.FromDouble(0.7)));
@@ -98,31 +119,38 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void MixedBaseColors_AreRejected()
+    public void BaseColor_IsNotARuleField()
     {
         var json = TestDefaults.DefaultConfigJson();
-        ((JsonObject)json["deploy"]!["bases"]![1]!).Remove("color");
-        var config = CrowdSimulationConfig.Load(json);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
-        Assert.That(ex.Message, Does.Contain("deploy.bases[1].color"));
+        ((JsonObject)json["deploy"]!["bases"]![0]!).Add("color", "#4DB2FF");
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain("color"));
     }
 
     [Test]
-    public void BasesWithoutColors_StillAssemble()
+    public void PlayerColors_MissingPlayer_IsRejected()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        foreach (var basis in json["deploy"]!["bases"]!.AsArray())
-        {
-            ((JsonObject)basis!).Remove("color");
-        }
+        var palette = CrowdPlayerColors.Load(new JsonObject { ["1"] = "#4DB2FF" });
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdPlayerColors.RequirePlayers(palette, new[] { 1, 2 }, "demo"));
+        Assert.That(ex!.Message, Does.Contain("缺少玩家 2"));
+    }
 
-        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json));
-        Assert.That(runtime.Deploy.Bases.Count, Is.GreaterThan(1));
-        foreach (var basis in runtime.Deploy.Bases)
-        {
-            Assert.That(basis.Color, Is.Null);
-        }
+    [Test]
+    public void PlayerColors_UnknownPlayer_IsRejected()
+    {
+        var palette = CrowdPlayerColors.Load(new JsonObject { ["1"] = "#4DB2FF", ["9"] = "#FFC53D" });
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdPlayerColors.RequirePlayers(palette, new[] { 1 }, "demo"));
+        Assert.That(ex!.Message, Does.Contain("玩家 9"));
+    }
+
+    [Test]
+    public void PlayerColors_BadKey_IsRejected()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdPlayerColors.Load(new JsonObject { ["red"] = "#4DB2FF" }));
+        Assert.That(ex!.Message, Does.Contain("red"));
     }
 
     [Test]
@@ -195,22 +223,23 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void TemplateAgentType_NotInPathing_IsRejected()
+    public void TemplateNavProfile_NotInTraversal_IsRejected()
     {
         var templates = TestDefaults.DemoTemplates();
         var first = templates[0];
-        templates[0] = new CrowdUnitTemplateFacts
+        var profiles = TestDefaults.DemoProfiles();
+        var list = new List<Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig>(profiles.Count);
+        for (int i = 0; i < profiles.Count; i++)
         {
-            TemplateId = first.TemplateId,
-            ProfileId = first.ProfileId,
-            AgentTypeId = "ghost",
-            SpeedCmPerSecond = first.SpeedCmPerSecond,
-            PersonalRadiusCm = first.PersonalRadiusCm,
-            PushPriority = first.PushPriority,
-            Special = first.Special,
-        };
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
-        Assert.That(ex!.Message, Does.Contain("ghost"));
+            list.Add(profiles[i]);
+        }
+
+        list.Single(profile => profile.Id == first.ProfileId).NavProfileId = "ghost";
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(
+            profiles: new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(list),
+            templates: templates));
+        Assert.That(ex!.Message, Does.Contain("navProfileId"));
+        Assert.That(ex.Message, Does.Contain("ghost"));
         Assert.That(ex.Message, Does.Contain(first.TemplateId));
     }
 
@@ -218,7 +247,8 @@ public class CrowdSimulationConfigTests
     public void PathingAgentType_WithoutTemplate_IsNotBound()
     {
         var templates = TestDefaults.DemoTemplates();
-        templates.RemoveAll(item => item.AgentTypeId == "foot");
+        var profiles = TestDefaults.DemoProfiles();
+        templates.RemoveAll(item => profiles.Require(item.ProfileId, item.TemplateId).NavProfileId == "foot");
         var runtime = TestDefaults.Assemble(templates: templates);
         Assert.That(runtime.AgentTypes.Any(agent => agent.Id == "foot"), Is.False);
         Assert.That(runtime.AgentTypes[0].Id, Is.EqualTo("hull"));
@@ -235,13 +265,34 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void RetiredVersionKey_IsRejected()
+    public void UnknownKey_IsRejectedAtRootNestedObjectAndDictionaryValue()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        json["version"] = 6;
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
-        Assert.That(ex!.Message, Does.Contain("已删除 version"));
-        Assert.That(ex.Message, Does.Contain("配置不再带版本号，由严格 schema 与 mod.json semver 管理"));
+        var root = TestDefaults.DefaultConfigJson();
+        root["version"] = 6;
+        var rootEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(root));
+        AssertUnknown(rootEx, "version");
+
+        var nested = TestDefaults.DefaultConfigJson();
+        nested["worker"]!["planTimeout"] = 1;
+        var nestedEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(nested));
+        AssertUnknown(nestedEx, "planTimeout");
+
+        var formation = TestDefaults.DefaultConfigJson();
+        formation["formations"]!["box"]!["spacing"] = 1;
+        var formationEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(formation));
+        AssertUnknown(formationEx, "spacing");
+
+        var effect = WithTemplate(Building);
+        effect["structures"]!["templates"]!["x"]!["effect"]!["extra"] = 1;
+        var effectEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(effect));
+        AssertUnknown(effectEx, "extra");
+    }
+
+    private static void AssertUnknown(InvalidOperationException? ex, string key)
+    {
+        Assert.That(ex, Is.Not.Null);
+        Assert.That(ex!.Message, Does.Contain(key));
+        Assert.That(ex.Message, Does.Contain("could not be mapped"));
     }
 
     [Test]
@@ -310,12 +361,12 @@ public class CrowdSimulationConfigTests
     public void PartialOverride_MergesOverDefaults()
     {
         var merged = TestDefaults.DefaultConfigJson();
-        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formation": { "leaderSpeed": 0.6 } }""")!.AsObject());
+        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formation": { "leaderSpeedRatio": 0.6 } }""")!.AsObject());
 
         var config = CrowdSimulationConfig.Load(merged);
         var runtime = TestDefaults.Assemble(config);
 
-        Assert.That(runtime.Formation.LeaderSpeed, Is.EqualTo(Fix64.FromDouble(0.6)));
+        Assert.That(runtime.Formation.LeaderSpeedRatio, Is.EqualTo(Fix64.FromDouble(0.6)));
         Assert.That(runtime.Formation.SpacingScale, Is.EqualTo(Fix64.FromDouble(1.1)));
         Assert.That(runtime.NavCellSizeCm, Is.EqualTo(6250));
     }
@@ -380,17 +431,16 @@ public class CrowdSimulationConfigTests
         Assert.That(byId["s7barrier"].LifetimeSecRaw, Is.EqualTo(4.0));
     }
 
-    [TestCase("blockCoverage", "0.5", "effect.coverage")]
-    [TestCase("portalReachNavCells", "4", "effect.portalReachNavCells")]
-    [TestCase("anchorTerrain", "[\"land\"]", "placement.endpointAreas")]
-    [TestCase("spanTerrain", "[\"water\"]", "placement.interiorAreas")]
-    public void StructureSection_RetiredKey_NamesItsReplacement(string key, string value, string replacement)
+    [TestCase("blockCoverage", "0.5")]
+    [TestCase("portalReachNavCells", "4")]
+    [TestCase("anchorTerrain", "[\"land\"]")]
+    [TestCase("spanTerrain", "[\"water\"]")]
+    public void StructureSection_UnknownKey_IsRejected(string key, string value)
     {
         var json = TestDefaults.DefaultConfigJson();
         json["structures"]![key] = JsonNode.Parse(value);
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
-        Assert.That(ex!.Message, Does.Contain($"已删除 structures.{key}"));
-        Assert.That(ex.Message, Does.Contain(replacement));
+        AssertUnknown(ex, key);
     }
 
     [TestCase("name", "\"X\"")]
@@ -398,12 +448,12 @@ public class CrowdSimulationConfigTests
     [TestCase("area", "\"road\"")]
     [TestCase("priority", "1")]
     [TestCase("layered", "true")]
-    public void StructureTemplate_RetiredKey_IsRejected(string key, string value)
+    public void StructureTemplate_UnknownKey_IsRejected(string key, string value)
     {
         var json = WithTemplate(Building);
         json["structures"]!["templates"]!["x"]![key] = JsonNode.Parse(value);
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
-        Assert.That(ex!.Message, Does.Contain($"已删除 structures.templates.x.{key}"));
+        AssertUnknown(ex, key);
     }
 
     [Test]
@@ -580,66 +630,6 @@ public class CrowdSimulationConfigTests
                 $"玩家号 [{string.Join(',', ids)}] 应被拒绝");
             Assert.That(ex!.Message, Does.Contain(expected), $"[{string.Join(',', ids)}] 的报错应写明规则");
         }
-    }
-
-    [Test]
-    public void RetiredSpatialKeys_NameTheReplacement()
-    {
-        foreach (var (oldPath, newKey) in CrowdSimulationConfig.RetiredSpatialKeys)
-        {
-            var json = TestDefaults.DefaultConfigJson();
-            string concrete = PlaceRetiredKey(json, oldPath);
-            var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json), oldPath);
-            Assert.That(ex!.Message, Does.Contain(concrete), oldPath);
-            Assert.That(ex.Message, Does.Contain(newKey), oldPath);
-            Assert.That(ex.Message, Does.Contain("已删除"), oldPath);
-        }
-    }
-
-    [Test]
-    public void RetiredSpatialKeys_AreNotEmptied()
-    {
-        var old = new HashSet<string>(CrowdSimulationConfig.RetiredSpatialKeys.Select(entry => entry.OldPath));
-        Assert.That(old, Does.Contain("formation.settleTime"));
-        Assert.That(old, Does.Contain("movement.slotTimeConstant"));
-        Assert.That(old, Does.Contain("sim.timeScale"));
-        Assert.That(old, Does.Contain("formations[].spacing"));
-        Assert.That(old, Does.Contain("fog.cellCells"));
-        Assert.That(old, Does.Contain("movement.blendRate"));
-        Assert.That(old, Does.Contain("movement.unitTurnRate"));
-        Assert.That(old, Does.Contain("movement.stallDecay"));
-        Assert.That(old, Does.Contain("movement.slotCheckInterval"));
-        Assert.That(old, Does.Contain("formation.leaderTurnRate"));
-        Assert.That(old, Does.Contain("avoidance.acceleration"));
-        Assert.That(old, Does.Contain("relations"));
-        Assert.That(old, Does.Contain("push.modes"));
-    }
-
-    private static string PlaceRetiredKey(JsonObject root, string oldPath)
-    {
-        if (oldPath == "formations[].spacing")
-        {
-            root["formations"]!["box"]!["spacing"] = 1;
-            return "formations.box.spacing";
-        }
-
-        const string templateKey = "structures.templates[].";
-        if (oldPath.StartsWith(templateKey, StringComparison.Ordinal))
-        {
-            string key = oldPath[templateKey.Length..];
-            root["structures"]!["templates"]!["building"]![key] = 1;
-            return "structures.templates.building." + key;
-        }
-
-        var parts = oldPath.Split('.');
-        JsonObject obj = root;
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            obj = obj[parts[i]]!.AsObject();
-        }
-
-        obj[parts[^1]] = 1;
-        return oldPath;
     }
 
     [Test]

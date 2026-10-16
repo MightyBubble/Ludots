@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Presentation;
@@ -11,32 +12,39 @@ namespace CrowdSimulationTests.Presentation;
 public sealed class CrowdHudSamplingTests
 {
     [Test]
-    public void ClosedPanels_NeverRead_AndHaveNoNodes()
+    public void ClosedPanels_NeverRead_AndStayHidden()
     {
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
         var debug = ShippedDebugView();
+        Assert.That(debug.NavPanel, Is.False, "出厂配置导航页关着");
+        Assert.That(debug.TelemetryPanel, Is.True, "出厂配置照原型常开遥测");
+        debug.TelemetryPanel = false;
         feed.UseDebugView(debug);
         using var ui = new CrowdHudTestHost();
 
         for (int i = 0; i < 40; i++) ui.FrameAfterAllPeriods(feed);
 
-        Assert.That(debug.NavPanel || debug.TelemetryPanel, Is.False, "出厂配置两个面板都关着");
-        Assert.That(feed.NavReads, Is.Zero, "导航面板关着不该读");
-        Assert.That(feed.TelemetryReads, Is.Zero, "遥测面板关着不该读");
+        Assert.That(feed.NavReads, Is.Zero, "缓存页没打开不该读");
+        Assert.That(feed.InspectReads, Is.Zero, "检视页没打开不该读");
+        Assert.That(feed.TelemetryReads, Is.Zero, "遥测关着不该读");
         Assert.That(feed.PlayerReads, Is.Zero, "没有玩家视图就没有玩家面板");
         Assert.That(feed.DeployReads, Is.EqualTo(40));
-        Assert.That(ui.Has("crowd-nav"), Is.False);
-        Assert.That(ui.Has("crowd-telemetry"), Is.False);
-        Assert.That(ui.Has("crowd-player"), Is.False);
+        Assert.That(ui.Visible("crowd-dv-layers"), Is.True, "调试视图默认停在图层页");
+        Assert.That(ui.Visible("crowd-dv-cache"), Is.False);
+        Assert.That(ui.Visible("crowd-dv-inspect"), Is.False);
+        Assert.That(ui.Visible("crowd-telemetry"), Is.False);
+        Assert.That(ui.Visible("crowd-pr"), Is.False);
+        Assert.That(ui.Visible("crowd-playerbar"), Is.False);
     }
 
     [Test]
-    public void NavPanel_SamplesOnOpenThenAtItsOwnRate_AndStopsWhenClosed()
+    public void NavPanelKey_OpensCacheTab_SamplesAtItsOwnRate_AndStopsWhenClosed()
     {
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
         var debug = ShippedDebugView();
+        debug.TelemetryPanel = false;
         feed.UseDebugView(debug);
         using var ui = new CrowdHudTestHost();
         ui.Frame(feed);
@@ -45,7 +53,8 @@ public sealed class CrowdHudSamplingTests
         debug.NavPanel = true;
         ui.Frame(feed, 1);
         Assert.That(feed.NavReads, Is.EqualTo(1), "打开当帧就采一次");
-        Assert.That(ui.Text("crowd-nav-0"), Is.EqualTo("导航缓存 / 路径服务"));
+        Assert.That(ui.Visible("crowd-dv-cache"), Is.True);
+        Assert.That(ui.Find("crowd-dv-tab-cache")!.HasClass("nf-tab-on"), Is.True);
 
         int framesInsidePeriod = (navPeriod - 1) / 16;
         for (int i = 0; i < framesInsidePeriod; i++) ui.Frame(feed, 16);
@@ -57,10 +66,37 @@ public sealed class CrowdHudSamplingTests
 
         debug.NavPanel = false;
         ui.Frame(feed, 1);
-        Assert.That(ui.Has("crowd-nav"), Is.False);
+        Assert.That(ui.Visible("crowd-dv-cache"), Is.False);
+        Assert.That(ui.Visible("crowd-dv-layers"), Is.True, "关掉缓存页回到图层页");
         int reads = feed.NavReads;
         for (int i = 0; i < 20; i++) ui.FrameAfterAllPeriods(feed);
         Assert.That(feed.NavReads, Is.EqualTo(reads), "关掉后不再读");
+    }
+
+    [Test]
+    public void InspectTab_ClickedOpen_SamplesOnlyWhileShown()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
+        var debug = ShippedDebugView();
+        debug.TelemetryPanel = false;
+        feed.UseDebugView(debug);
+        using var ui = new CrowdHudTestHost();
+        for (int i = 0; i < 4; i++) ui.FrameAfterAllPeriods(feed);
+        Assert.That(feed.InspectReads, Is.Zero);
+
+        Assert.That(ui.Click("crowd-dv-tab-inspect"), Is.True, "点页签要被 HUD 接住");
+        ui.Frame(feed, 1);
+        Assert.That(ui.Visible("crowd-dv-inspect"), Is.True);
+        for (int i = 0; i < 3; i++) ui.FrameAfterAllPeriods(feed);
+        Assert.That(feed.InspectReads, Is.GreaterThanOrEqualTo(3));
+        Assert.That(ui.Text("crowd-dv-inspect"), Does.Contain("关").Or.Contain("队伍"), "检视页写了单位着色");
+
+        ui.Click("crowd-dv-tab-layers");
+        ui.Frame(feed, 1);
+        int reads = feed.InspectReads;
+        for (int i = 0; i < 10; i++) ui.FrameAfterAllPeriods(feed);
+        Assert.That(feed.InspectReads, Is.EqualTo(reads), "切走后不再读");
     }
 
     [Test]
@@ -69,6 +105,7 @@ public sealed class CrowdHudSamplingTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
         var debug = ShippedDebugView();
+        debug.TelemetryPanel = false;
         feed.UseDebugView(debug);
         using var ui = new CrowdHudTestHost();
         ui.Frame(feed);
@@ -77,8 +114,8 @@ public sealed class CrowdHudSamplingTests
         debug.TelemetryPanel = true;
         ui.Frame(feed, 1);
         Assert.That(feed.TelemetryReads, Is.EqualTo(1));
-        Assert.That(ui.Text("crowd-tel-0"), Does.StartWith($"遥测 采样 {period} ms"));
-        Assert.That(ui.Text("crowd-tel-5"), Does.StartWith("UI 重绘峰值"));
+        Assert.That(ui.Visible("crowd-telemetry"), Is.True);
+        Assert.That(ui.Text("crowd-telemetry"), Does.Contain("TELEMETRY").And.Contain("UI 重绘峰值"));
 
         for (int i = 0; i < (period - 1) / 16; i++) ui.Frame(feed, 16);
         Assert.That(feed.TelemetryReads, Is.EqualTo(1));
@@ -88,10 +125,42 @@ public sealed class CrowdHudSamplingTests
 
         debug.TelemetryPanel = false;
         ui.Frame(feed, 1);
-        Assert.That(ui.Has("crowd-telemetry"), Is.False);
+        Assert.That(ui.Visible("crowd-telemetry"), Is.False);
         int reads = feed.TelemetryReads;
         for (int i = 0; i < 20; i++) ui.FrameAfterAllPeriods(feed);
         Assert.That(feed.TelemetryReads, Is.EqualTo(reads));
+    }
+
+    /// <summary>
+    /// 取代旧 Reactive HUD 的 <c>StatusCard_LabelsEveryCount</c>：原先断言 TeamLine/CardLine/ClickLine/DeployLine 带齐标签、
+    /// 点选模板末段、部署数、移动类型 id，且不含占位星号。Markup HUD 上对应玩家条计数、生成区模板 id、部署参数与图层行文案。
+    /// </summary>
+    [Test]
+    public void StatusCard_LabelsEveryCount()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
+        var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
+        var player = ShippedPlayerView(session);
+        feed.UsePlayerView(player);
+        using var ui = new CrowdHudTestHost();
+        for (int i = 0; i < 6; i++) ui.FrameAfterAllPeriods(feed);
+
+        string players = ui.Text("crowd-players");
+        Assert.That(players, Does.Contain("P1"));
+        Assert.That(players, Does.Contain("4"), "本方单位数应带在玩家芯片上");
+
+        string spawnHead = ui.Text("crowd-spawn-section");
+        Assert.That(spawnHead, Does.Contain("crowd_simulation.unit.infantry.r100"), "点选模板应显示完整 id");
+
+        string deploy = ui.Text("crowd-deploy-params");
+        Assert.That(deploy, Does.Contain("24"), "部署数量");
+
+        string layers = ui.Text("crowd-layer-rows");
+        Assert.That(layers, Does.Contain("foot"), "图层行显示移动类型 id（配置里的 unitTypes.id）");
+
+        string hint = ui.Text("crowd-hint");
+        Assert.That(hint, Does.Not.Contain("*"));
     }
 
     [Test]
@@ -130,14 +199,18 @@ public sealed class CrowdHudSamplingTests
 
     internal static CrowdDebugViewFrame ShippedDebugView()
     {
-        string path = Path.Combine(RepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
-        return new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path));
+        string path = Path.Combine(RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
+        var merged = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        return new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(merged, path));
     }
 
     internal static CrowdPlayerViewHost ShippedPlayerView(CrowdSimSession session)
     {
-        string path = Path.Combine(RepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationPlayerView.json");
-        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path));
+        string path = Path.Combine(RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationPlayerView.json");
+        var merged = CrowdPresentationPaletteTestMerge.MergedPlayerView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(merged, path));
         host.Bind(session);
         return host;
     }

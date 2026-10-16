@@ -10,37 +10,31 @@ namespace Ludots.Core.CrowdSimulation.Config;
 public readonly record struct CrowdUnitTemplateField(string Name, string Kind, string? Reference);
 
 /// <summary>
-/// 单位模板上 CrowdSimulationAgent 的装载事实。速度、个人半径、推挤优先级以模板为准。
+/// 单位模板上 CrowdSimulationAgent 的装载事实。速度、推挤优先级以模板为准。
+/// 个人半径不在模板上，装载时由体型半径乘 avoidanceRadiusScale 算出。
 /// </summary>
 public sealed class CrowdUnitTemplateFacts
 {
     public const string ComponentName = "CrowdSimulationAgent";
     public const string ProfileIdField = "profileId";
-    public const string AgentTypeIdField = "agentTypeId";
-    public const string SpeedField = "speedCmPerSecond";
-    public const string PersonalRadiusField = "personalRadiusCm";
+    public const string SpeedField = "speedCmPerSec";
     public const string PushPriorityField = "pushPriority";
-    public const string SpecialField = "special";
+    public const string AutoDeployField = "autoDeploy";
     public const string AgentProfilesReference = "agentProfiles";
-    public const string AgentTypesReference = "agentTypes";
 
     public static readonly IReadOnlyList<CrowdUnitTemplateField> AuthoredFields =
     [
         new(ProfileIdField, "string", AgentProfilesReference),
-        new(AgentTypeIdField, "string", AgentTypesReference),
         new(SpeedField, "number", null),
-        new(PersonalRadiusField, "number", null),
         new(PushPriorityField, "number", null),
-        new(SpecialField, "bool", null),
+        new(AutoDeployField, "bool", null),
     ];
 
     public required string TemplateId { get; init; }
     public required string ProfileId { get; init; }
-    public required string AgentTypeId { get; init; }
-    public required Fix64 SpeedCmPerSecond { get; init; }
-    public required Fix64 PersonalRadiusCm { get; init; }
+    public required Fix64 SpeedCmPerSec { get; init; }
     public required Fix64 PushPriority { get; init; }
-    public required bool Special { get; init; }
+    public required bool AutoDeploy { get; init; }
 
     public static List<CrowdUnitTemplateFacts> FromTemplates(IEnumerable<EntityTemplate> templates)
     {
@@ -67,33 +61,38 @@ public sealed class CrowdUnitTemplateFacts
     public static CrowdUnitTemplateFacts Parse(string templateId, JsonObject obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
-        RejectRetiredKeys(obj);
+        RejectUnknownFields(obj);
         string Prefix(string field) => $"Entities/templates.json: 模板 \"{templateId}\" 的 {ComponentName}.{field}";
         return new CrowdUnitTemplateFacts
         {
             TemplateId = templateId,
             ProfileId = RequireString(obj, ProfileIdField, Prefix(ProfileIdField)),
-            AgentTypeId = RequireString(obj, AgentTypeIdField, Prefix(AgentTypeIdField)),
-            SpeedCmPerSecond = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
-            PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
+            SpeedCmPerSec = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
             PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
-            Special = RequireBool(obj, SpecialField, Prefix(SpecialField)),
+            AutoDeploy = RequireBool(obj, AutoDeployField, Prefix(AutoDeployField)),
         };
     }
 
-    public static void RejectRetiredKeys(JsonObject obj)
+    public static void RejectUnknownFields(JsonObject obj)
     {
-        if (obj.ContainsKey("agentType"))
+        ArgumentNullException.ThrowIfNull(obj);
+        foreach (var (key, _) in obj)
         {
-            throw new InvalidOperationException("CrowdSimulationAgent 已删除 agentType，改用 agentTypeId。");
-        }
+            bool known = false;
+            for (int i = 0; i < AuthoredFields.Count; i++)
+            {
+                if (string.Equals(AuthoredFields[i].Name, key, StringComparison.Ordinal))
+                {
+                    known = true;
+                    break;
+                }
+            }
 
-        if (obj.ContainsKey("radiusClassCm") || obj.ContainsKey("radiusCm"))
-        {
-            throw new InvalidOperationException(
-                "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId；个人半径写 personalRadiusCm。");
+            if (!known)
+            {
+                throw new InvalidOperationException($"{ComponentName} contains unsupported property '{key}'.");
+            }
         }
-
     }
 
     private static bool RequireBool(JsonObject obj, string name, string path)

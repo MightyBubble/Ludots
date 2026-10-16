@@ -143,7 +143,7 @@ public sealed class CrowdSimulationValidatorTests
         var scriptJson = new JsonArray();
         foreach (var (tick, json) in new (int Tick, string Json)[]
         {
-            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"unitType":0,"rIdx":0}"""),
+            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"template":"crowd_simulation.unit.infantry.r100"}"""),
             (2, """{"type":"order","xCm":1200000,"yCm":800000,"player":1,"shape":"box"}"""),
             (30, """{"type":"placeStructure","template":"building","xCm":503125,"yCm":565625,"sizeCm":14000}"""),
             (60, """{"type":"removeStructureAt","xCm":503125,"yCm":565625}"""),
@@ -217,7 +217,7 @@ public sealed class CrowdSimulationValidatorTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         var group = session.Groups.Alloc(1, 0, 0, FirstNav(session).Id);
         session.Units.Add(new CrowdUnitSpawnRequest(
-            Fix64.FromInt(480000), Fix64.FromInt(560000), 0, 0, group.Id, 1, Fix64.FromInt(40), 0, 0));
+            Fix64.FromInt(480000), Fix64.FromInt(560000), 0, 0, group.Id, 1, Fix64.FromInt(40), Fix64.Zero, 0, 0));
         var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
         Assert.That(ex!.Message, Does.Contain("还没绑定实体"));
     }

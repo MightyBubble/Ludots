@@ -78,16 +78,15 @@ public sealed class CrowdIncrementalRebakeBudgetTests
     private static void AssertFlashSteady(CrowdSimSession session)
     {
         var demo = new S4DeployDemoRuntime(null);
-        demo.UseViewLabels(new[] { "路线", "可走", "线框" });
+        demo.UseViewLabels(CrowdViewCatalog.Named(("route", "路线"), ("walkable", "可走"), ("wire", "线框")));
         demo.UsePalette(new[]
         {
             new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, SizeCm, 0, 0, "CrowdSimulation.S4.Template1"),
         });
         var presentation = new CrowdPresentationConfig
         {
-            Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
-            ViewLabels = new[] { "路线", "可走", "线框" },
+            ViewLabels = CrowdViewCatalog.Named(("route", "路线"), ("walkable", "可走"), ("wire", "线框")),
             Hud = new CrowdHudConfig
             {
                 Keys = "V 视图 {view} · 模板[{templateIndex}] · {activity}{pending}",

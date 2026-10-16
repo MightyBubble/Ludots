@@ -8,14 +8,12 @@
       {
         "playerId": 1,
         "xCm": 715625,
-        "yCm": 828125,
-        "color": "#4DB2FF"
+        "yCm": 828125
       },
       {
         "playerId": 2,
         "xCm": 715625,
-        "yCm": 765625,
-        "color": "#FFC53D"
+        "yCm": 765625
       }
     ]
   }

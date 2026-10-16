@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -12,11 +13,9 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 /// </summary>
 internal sealed class CrowdPlayerViewConfig
 {
-    [JsonRequired] public int Version { get; init; }
     [JsonRequired] public bool MagicBox { get; init; }
     [JsonRequired] public bool FogHide { get; init; }
     [JsonRequired] public bool PlayerRoute { get; init; }
-    [JsonRequired] public bool LineOfSight { get; init; }
     [JsonRequired] public bool LayersStartEnabled { get; init; }
     [JsonRequired] public int DeployCount { get; init; }
     [JsonRequired] public int DeployCountStep { get; init; }
@@ -26,10 +25,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int ClickCountStep { get; init; }
     [JsonRequired] public int ClickCountMin { get; init; }
     [JsonRequired] public int ClickCountMax { get; init; }
-    [JsonRequired] public int ClickUnitType { get; init; }
-    [JsonRequired] public int ClickRadiusClass { get; init; }
-    [JsonRequired] public int RadiusMinIndex { get; init; }
-    [JsonRequired] public int RadiusMaxIndex { get; init; }
+    [JsonRequired] public string ClickTemplate { get; init; } = "";
+    [JsonRequired] public string[] ClickTemplates { get; init; } = Array.Empty<string>();
     [JsonRequired] public int RippleMs { get; init; }
     [JsonRequired] public int RippleRadiusCm { get; init; }
     [JsonRequired] public int DashCm { get; init; }
@@ -38,11 +35,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int RouteThicknessCm { get; init; }
     [JsonRequired] public int MarkerRadiusCm { get; init; }
     [JsonRequired] public int CrossArmCm { get; init; }
-    [JsonRequired] public int KillRadiusCm { get; init; }
     [JsonRequired] public double KillRingScale { get; init; }
     [JsonRequired] public double KillImpulse { get; init; }
-    [JsonRequired] public int KillXCm { get; init; }
-    [JsonRequired] public int KillYCm { get; init; }
     [JsonRequired] public int EnemyMarkRadiusCm { get; init; }
     [JsonRequired] public float HillshadeStrength { get; init; }
     [JsonRequired] public int MaxBeliefMarkers { get; init; }
@@ -51,8 +45,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public string BoxingContextId { get; init; } = "";
     [JsonRequired] public string FogSceneUri { get; init; } = "";
     [JsonRequired] public string DefaultShapeId { get; init; } = "";
+    [JsonRequired] public Dictionary<string, string> ShapeLabels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewActions Actions { get; init; } = null!;
-    [JsonRequired] public CrowdPlayerViewLabels Labels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewColors Colors { get; init; } = null!;
 
     public static CrowdPlayerViewConfig Load(JsonObject node, string path)
@@ -76,8 +70,6 @@ internal sealed class CrowdPlayerViewConfig
 
     private void Validate(string path)
     {
-        if (Version != 1)
-            throw new InvalidOperationException($"{path}: version 需为 1。");
         RequireRange(path, "deployCount", DeployCount, DeployCountMin, DeployCountMax);
         if (DeployCountStep < 1)
             throw new InvalidOperationException($"{path}: deployCountStep 需为 ≥ 1 的整数。");
@@ -88,14 +80,20 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: clickCountStep 需为 ≥ 1 的整数。");
         if (ClickCountMin < 1 || ClickCountMax < ClickCountMin)
             throw new InvalidOperationException($"{path}: clickCountMin/Max 非法。");
-        if (ClickUnitType < 0 || ClickRadiusClass < 0)
-            throw new InvalidOperationException($"{path}: clickUnitType 与 clickRadiusClass 需为 ≥ 0 的整数。");
-        if (RadiusMinIndex < 0)
-            throw new InvalidOperationException($"{path}: radiusMinIndex 需为 ≥ 0 的整数。");
-        if (RadiusMaxIndex < -1)
-            throw new InvalidOperationException($"{path}: radiusMaxIndex 需为 ≥ -1 的整数，-1 表示绑到半径级表的最后一档。");
-        if (RadiusMaxIndex >= 0 && RadiusMaxIndex < RadiusMinIndex)
-            throw new InvalidOperationException($"{path}: radiusMaxIndex 不能小于 radiusMinIndex。");
+        if (ClickTemplates == null || ClickTemplates.Length == 0)
+            throw new InvalidOperationException($"{path}: clickTemplates 至少一条。");
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < ClickTemplates.Length; i++)
+        {
+            string id = ClickTemplates[i];
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 不能为空。");
+            if (!seen.Add(id))
+                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 重复。");
+        }
+
+        if (string.IsNullOrWhiteSpace(ClickTemplate) || !seen.Contains(ClickTemplate))
+            throw new InvalidOperationException($"{path}: clickTemplate 必须是 clickTemplates 里的模板 id。");
         if (RippleMs < 1)
             throw new InvalidOperationException($"{path}: rippleMs 需为 ≥ 1 的整数。");
         if (RippleRadiusCm < 1)
@@ -106,8 +104,6 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
         if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1 || EnemyMarkRadiusCm < 1)
             throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm、crossArmCm 与 enemyMarkRadiusCm 需为 ≥ 1 的整数。");
-        if (KillRadiusCm < 1)
-            throw new InvalidOperationException($"{path}: killRadiusCm 需为 ≥ 1 的整数。");
         if (!(KillRingScale > 1d) || !double.IsFinite(KillRingScale))
             throw new InvalidOperationException($"{path}: killRingScale 必须 > 1。");
         if (KillImpulse < 0d || !double.IsFinite(KillImpulse))
@@ -120,8 +116,17 @@ internal sealed class CrowdPlayerViewConfig
         RequireText(path, "boxingContextId", BoxingContextId);
         RequireText(path, "fogSceneUri", FogSceneUri);
         RequireText(path, "defaultShapeId", DefaultShapeId);
+        if (ShapeLabels == null || ShapeLabels.Count == 0)
+            throw new InvalidOperationException($"{path}: shapeLabels 至少一条。");
+        foreach (var pair in ShapeLabels)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                throw new InvalidOperationException($"{path}: shapeLabels 的键不能为空。");
+            if (string.IsNullOrWhiteSpace(pair.Value))
+                throw new InvalidOperationException($"{path}: shapeLabels.{pair.Key} 不能为空。");
+        }
+
         Actions.Validate(path);
-        Labels.Validate(path);
         Colors.Validate(path);
     }
 
@@ -199,72 +204,6 @@ internal sealed class CrowdPlayerViewActions
 
     private static void Require(string path, string field, string value)
         => CrowdPlayerViewConfig.RequireText($"{path}.actions", field, value);
-}
-
-/// <summary>玩家视图状态卡文案，来自 CrowdSimulationPlayerView.json labels。</summary>
-public sealed class CrowdPlayerViewLabels
-{
-    [JsonRequired] public string Planning { get; init; } = "";
-    [JsonRequired] public string Moving { get; init; } = "";
-    [JsonRequired] public string Arrived { get; init; } = "";
-    [JsonRequired] public string Partial { get; init; } = "";
-    [JsonRequired] public string Idle { get; init; } = "";
-    [JsonRequired] public string MagicOn { get; init; } = "";
-    [JsonRequired] public string MagicOff { get; init; } = "";
-    [JsonRequired] public string Formation { get; init; } = "";
-    [JsonRequired] public string Converge { get; init; } = "";
-    [JsonRequired] public string Preserve { get; init; } = "";
-    [JsonRequired] public string FogOn { get; init; } = "";
-    [JsonRequired] public string FogOff { get; init; } = "";
-    [JsonRequired] public string RouteOn { get; init; } = "";
-    [JsonRequired] public string RouteOff { get; init; } = "";
-    [JsonRequired] public string LosOn { get; init; } = "";
-    [JsonRequired] public string LosOff { get; init; } = "";
-    [JsonRequired] public string ClickSpawn { get; init; } = "";
-    [JsonRequired] public string SceneOutside { get; init; } = "";
-    [JsonRequired] public string SceneBehind { get; init; } = "";
-    [JsonRequired] public string CountPlanning { get; init; } = "";
-    [JsonRequired] public string CountMoving { get; init; } = "";
-    [JsonRequired] public string CountOther { get; init; } = "";
-    [JsonRequired] public string UnitType { get; init; } = "";
-    [JsonRequired] public string Radius { get; init; } = "";
-    [JsonRequired] public string Count { get; init; } = "";
-    [JsonRequired] public string Deploy { get; init; } = "";
-    [JsonRequired] public string Layer { get; init; } = "";
-    [JsonRequired] public string Self { get; init; } = "";
-
-    internal void Validate(string path)
-    {
-        string prefix = $"{path}.labels";
-        CrowdPlayerViewConfig.RequireText(prefix, "planning", Planning);
-        CrowdPlayerViewConfig.RequireText(prefix, "moving", Moving);
-        CrowdPlayerViewConfig.RequireText(prefix, "arrived", Arrived);
-        CrowdPlayerViewConfig.RequireText(prefix, "partial", Partial);
-        CrowdPlayerViewConfig.RequireText(prefix, "idle", Idle);
-        CrowdPlayerViewConfig.RequireText(prefix, "magicOn", MagicOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "magicOff", MagicOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "formation", Formation);
-        CrowdPlayerViewConfig.RequireText(prefix, "converge", Converge);
-        CrowdPlayerViewConfig.RequireText(prefix, "preserve", Preserve);
-        CrowdPlayerViewConfig.RequireText(prefix, "fogOn", FogOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "fogOff", FogOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "routeOn", RouteOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "routeOff", RouteOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "losOn", LosOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "losOff", LosOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "clickSpawn", ClickSpawn);
-        CrowdPlayerViewConfig.RequireText(prefix, "sceneOutside", SceneOutside);
-        CrowdPlayerViewConfig.RequireText(prefix, "sceneBehind", SceneBehind);
-        CrowdPlayerViewConfig.RequireText(prefix, "countPlanning", CountPlanning);
-        CrowdPlayerViewConfig.RequireText(prefix, "countMoving", CountMoving);
-        CrowdPlayerViewConfig.RequireText(prefix, "countOther", CountOther);
-        CrowdPlayerViewConfig.RequireText(prefix, "unitType", UnitType);
-        CrowdPlayerViewConfig.RequireText(prefix, "radius", Radius);
-        CrowdPlayerViewConfig.RequireText(prefix, "count", Count);
-        CrowdPlayerViewConfig.RequireText(prefix, "deploy", Deploy);
-        CrowdPlayerViewConfig.RequireText(prefix, "layer", Layer);
-        CrowdPlayerViewConfig.RequireText(prefix, "self", Self);
-    }
 }
 
 internal sealed class CrowdPlayerViewColors

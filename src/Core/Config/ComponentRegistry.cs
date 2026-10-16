@@ -1985,26 +1985,15 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
             }
 
-            Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.RejectRetiredKeys(obj);
-            ValidateProperties(
-                obj,
-                "CrowdSimulationAgent",
-                "profileId",
-                "agentTypeId",
-                "speedCmPerSecond",
-                "personalRadiusCm",
-                "pushPriority",
-                "special");
             var facts = Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.Parse("template", obj);
             // 模板装载不持有会话的档案表。下标在 CrowdSimUnits 生成时写入；0 是合法下标，未写入用 -1。
             entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent
             {
                 ProfileIndex = -1,
                 AgentTypeIndex = -1,
-                SpeedCmPerSecond = facts.SpeedCmPerSecond,
-                PersonalRadiusCm = facts.PersonalRadiusCm,
+                SpeedCmPerSec = facts.SpeedCmPerSec,
                 PushPriority = facts.PushPriority,
-                Special = facts.Special,
+                AutoDeploy = facts.AutoDeploy,
             });
         }
 

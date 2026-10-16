@@ -73,12 +73,12 @@ internal static class CrowdUatKit
         return new CrowdUatScene(runtime, session, service, session.NavFor(runtime.UnitTypes[0].AgentTypeIndex, 0));
     }
 
-    /// <summary>演示体型表按半径级（升序）逐级换半径，单位模板的个人半径随之按避让倍数重算。</summary>
+    /// <summary>演示体型表按半径级（升序）逐级换半径。个人半径由装载按避让倍数重算。</summary>
     public static CrowdTestBodies DemoBodiesWithRadii(params int[] radiusCmByClass)
-        => DemoBodies(radiusCmByClass, speedCmPerSecond: null, tuneTraversal: null);
+        => DemoBodies(radiusCmByClass, speedCmPerSec: null, tuneTraversal: null);
 
-    /// <summary>演示体型与模板；<paramref name="speedCmPerSecond"/> 给定时所有单位模板换成这一速度，<paramref name="tuneTraversal"/> 在演示 traversal.json 合并结果上改值。</summary>
-    public static CrowdTestBodies DemoBodies(int[]? radiusCmByClass, Fix64? speedCmPerSecond, Action<JsonObject>? tuneTraversal)
+    /// <summary>演示体型与模板；<paramref name="speedCmPerSec"/> 给定时所有单位模板换成这一速度，<paramref name="tuneTraversal"/> 在演示 traversal.json 合并结果上改值。</summary>
+    public static CrowdTestBodies DemoBodies(int[]? radiusCmByClass, Fix64? speedCmPerSec, Action<JsonObject>? tuneTraversal)
     {
         var profiles = System.Text.Json.JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             System.IO.File.ReadAllText(System.IO.Path.Combine("assets", "agent_profiles.json")),
@@ -86,25 +86,18 @@ internal static class CrowdUatKit
         var classes = profiles.Select(p => (int)p.RadiusCm).Distinct().OrderBy(r => r).ToArray();
         if (radiusCmByClass != null && classes.Length != radiusCmByClass.Length)
             throw new ArgumentException($"演示体型有 {classes.Length} 个半径级，给了 {radiusCmByClass.Length} 个半径。");
-        var radiusOf = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var p in profiles)
         {
             if (radiusCmByClass != null) p.RadiusCm = radiusCmByClass[Array.IndexOf(classes, (int)p.RadiusCm)];
-            radiusOf[p.Id] = (int)p.RadiusCm;
         }
 
-        Fix64 scale = Fix64.FromDouble(TestDefaults.DefaultConfigJson()["agents"]!["avoidanceRadiusScale"]!.GetValue<double>());
         var templates = TestDefaults.DemoTemplates().Select(t => new CrowdUnitTemplateFacts
         {
             TemplateId = t.TemplateId,
             ProfileId = t.ProfileId,
-            AgentTypeId = t.AgentTypeId,
-            SpeedCmPerSecond = speedCmPerSecond ?? t.SpeedCmPerSecond,
-            PersonalRadiusCm = radiusCmByClass == null
-                ? t.PersonalRadiusCm
-                : CrowdSimulationSpace.PersonalRadiusCm(Fix64.FromInt(radiusOf[t.ProfileId]), scale),
+            SpeedCmPerSec = speedCmPerSec ?? t.SpeedCmPerSec,
             PushPriority = t.PushPriority,
-            Special = t.Special,
+            AutoDeploy = t.AutoDeploy,
         }).ToList();
         CrowdTraversalConfig? traversal = null;
         if (tuneTraversal != null)
@@ -227,14 +220,14 @@ internal static class CrowdUatKit
     }
 
     /// <summary>单位实体的速度来自实体模板，不读 <see cref="CrowdTestBodies"/> 的模板事实；换了模板速度的场景生成后用它把在场单位写成同一速度。</summary>
-    public static void SetUnitSpeed(CrowdSimSession session, Fix64 speedCmPerSecond)
+    public static void SetUnitSpeed(CrowdSimSession session, Fix64 speedCmPerSec)
     {
         session.Units.MaterializePending();
         for (int i = 0; i < session.Units.Count; i++)
         {
             var e = session.Units.EntityAt(i);
             var agent = session.World.Get<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>(e);
-            agent.SpeedCmPerSecond = speedCmPerSecond;
+            agent.SpeedCmPerSec = speedCmPerSec;
             session.World.Set(e, agent);
         }
     }

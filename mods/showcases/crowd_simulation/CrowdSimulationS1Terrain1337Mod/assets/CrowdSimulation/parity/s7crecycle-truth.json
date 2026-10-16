@@ -14,8 +14,7 @@
         "xCm": 480000,
         "yCm": 560000,
         "count": 8,
-        "unitType": 0,
-        "rIdx": 0
+        "template": "crowd_simulation.unit.infantry.r100"
       }
     },
     {

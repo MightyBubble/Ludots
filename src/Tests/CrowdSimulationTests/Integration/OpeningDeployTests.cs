@@ -25,9 +25,7 @@ public sealed class OpeningDeployTests
         int initial = snapshot["scenario"]!["deploy"]!["initialUnits"]!.GetValue<int>();
         Assert.That(initial, Is.EqualTo(12000));
 
-        string debugPath = Path.Combine(
-            repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebug.json");
-        var debug = JsonNode.Parse(File.ReadAllText(debugPath))!.AsObject();
+        var debug = ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json");
         CrowdDebugScriptEntry[] script = CrowdSimulationDebugConfig.Load(debug).Session?.Script
             ?? throw new InvalidOperationException("S4 调试脚本缺失。");
         for (int i = 0; i < script.Length; i++)

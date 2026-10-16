@@ -50,7 +50,7 @@ public sealed class CrowdSimRegressTests
         var plan = catalog.CreateFuzzPlan(7, 200);
         Assert.That(plan.Ops.Any(op => op.Id == "kill" && !op.Reserved && op.ProbeHandles), Is.True);
         var tools = JsonNode.Parse(File.ReadAllText(Path.Combine(
-            root, "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))!
+            root, "mods/capabilities/navigation/CrowdSimulationUiMod/assets/CrowdSimulationDebug.json")))!
             ["tools"]!.AsObject();
         Assert.That(plan.BoomRadiusCm, Is.EqualTo(tools["boomRadiusCm"]!.GetValue<int>()));
         Assert.That(plan.RingScale.ToDouble(), Is.EqualTo(tools["ringScale"]!.GetValue<double>()).Within(1e-6));

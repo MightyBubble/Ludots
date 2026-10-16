@@ -106,7 +106,7 @@ public sealed class SubStepUatTests
         Assert.That(cheap, Is.GreaterThanOrEqualTo(RoadCells / 2), $"场景无效：道路格代价未生效（{cheap}/{RoadCells}）");
 
         CrowdUatKit.SpawnAt(sim, sx, sy, Count, rIdx: 0);
-        CrowdUatKit.SetUnitSpeed(sim, cfg.Profiles[0].SpeedCmPerSecond);
+        CrowdUatKit.SetUnitSpeed(sim, cfg.Profiles[0].SpeedCmPerSec);
         CrowdUatKit.Order(sim, ex, ey);
         Fix64 peak = Fix64.Zero;
         var pos = new Dictionary<uint, Fix64Vec2>();
@@ -188,7 +188,7 @@ public sealed class SubStepUatTests
                 if (d > Fix64.Zero && d < min) min = d;
             }
 
-            best = Fix64.Max(best, p.SpeedCmPerSecond / min);
+            best = Fix64.Max(best, p.SpeedCmPerSec / min);
         }
 
         return best;
@@ -204,7 +204,7 @@ public sealed class SubStepUatTests
     private static int OldNeeded(CrowdSimulationRuntimeConfig cfg)
     {
         Fix64 max = Fix64.Zero;
-        foreach (var p in cfg.Profiles) max = Fix64.Max(max, p.SpeedCmPerSecond);
+        foreach (var p in cfg.Profiles) max = Fix64.Max(max, p.SpeedCmPerSec);
         return Needed(cfg, max);
     }
 }

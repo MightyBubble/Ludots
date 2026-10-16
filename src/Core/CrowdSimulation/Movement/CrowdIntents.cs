@@ -189,7 +189,7 @@ public static class CrowdIntents
         else if (g.LosAll || (int)(session.Units.HandleAt(i) + (uint)k.Tick) % s.Every == 0)
         {
             Fix64 sightIn = Fix64.Max(k.SlotSightNavCells, Fix64.FromInt(order?.ReachCells ?? 1));
-            Fix64 lim = state.Mode != 0 ? sightIn * k.SightHysteresis : sightIn;
+            Fix64 lim = state.Mode != 0 ? sightIn * k.SightHysteresisScale : sightIn;
             int scx = sc % s.NavN, scy = sc / s.NavN;
             bool vis = Fix64.Abs(Fix64.FromInt(scx - cx)) <= lim && Fix64.Abs(Fix64.FromInt(scy - cy)) <= lim
                 && NavGridSteps.LineOfSight(pass, s.NavN, cell, sc);
@@ -218,7 +218,7 @@ public static class CrowdIntents
         Fix64 slotDist = CrowdFix.Hypot(ox2, oy2);
         if (w > Fix64.Zero)
         {
-            if (leader.Done && w > k.BlendCommit && slotDist < s.ArriveSlot)
+            if (leader.Done && w > k.BlendCommitRatio && slotDist < s.ArriveSlot)
             {
                 arrived = true;
             }
@@ -226,7 +226,7 @@ public static class CrowdIntents
             {
                 // 槽位跟踪:领队速度前馈 + 比例修正(无 bang-bang)
                 Fix64 sx = leader.Vx + ox2 * k.SlotGain, sy = leader.Vy + oy2 * k.SlotGain;
-                Fix64 cap = spd * k.CatchUp, m2 = sx * sx + sy * sy;
+                Fix64 cap = spd * k.CatchUpSpeedRatio, m2 = sx * sx + sy * sy;
                 if (m2 > cap * cap)
                 {
                     Fix64 scale = cap / Fix64Math.Sqrt(m2);
@@ -263,7 +263,7 @@ public static class CrowdIntents
                     dvy += (ly / ld) * spd * (Fix64.OneValue - w);
                 }
             }
-            else if (!slotOk && route <= k.GoalArriveNavCells && w < k.BlendCommit)
+            else if (!slotOk && route <= k.GoalArriveNavCells && w < k.BlendCommitRatio)
             {
                 arrived = true; // 槽位无效且路线短、混合权重低时,按目标格到达
             }

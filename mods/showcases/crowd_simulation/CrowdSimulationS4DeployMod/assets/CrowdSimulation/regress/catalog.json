@@ -1,6 +1,12 @@
 {
-  "defaults": ["deploy", "rebake", "areas"],
-  "full": ["stress"],
+  "defaults": [
+    "deploy",
+    "rebake",
+    "areas"
+  ],
+  "full": [
+    "stress"
+  ],
   "repeat": 1,
   "seed": 1,
   "fuzzOps": 0,
@@ -55,13 +61,13 @@
     "pathWidthCm": 6250,
     "pathLengthCm": 62500,
     "ops": [
-      { "id": "spawn", "structure": false, "probeHandles": false, "reserved": false },
-      { "id": "order", "structure": false, "probeHandles": false, "reserved": false },
-      { "id": "place", "structure": true, "probeHandles": false, "reserved": false },
-      { "id": "remove", "structure": true, "probeHandles": false, "reserved": false },
-      { "id": "placePath", "structure": true, "probeHandles": false, "reserved": false },
-      { "id": "removePath", "structure": true, "probeHandles": false, "reserved": false },
-      { "id": "kill", "structure": false, "probeHandles": true, "reserved": false }
+      "spawn",
+      "order",
+      "place",
+      "remove",
+      "placePath",
+      "removePath",
+      "kill"
     ]
   },
   "fog": {

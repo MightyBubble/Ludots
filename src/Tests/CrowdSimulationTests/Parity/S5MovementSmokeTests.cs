@@ -97,7 +97,7 @@ public sealed class S5MovementSmokeTests
 
         var script = new JsonArray
         {
-            new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["unitType"] = 0, ["rIdx"] = 0 } },
+            new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["template"] = "crowd_simulation.unit.infantry.r100" } },
             new JsonObject { ["tick"] = 10, ["cmd"] = new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" } },
         };
         var reference = CrowdReferenceScript.Load(script, session.Units.Capacity);

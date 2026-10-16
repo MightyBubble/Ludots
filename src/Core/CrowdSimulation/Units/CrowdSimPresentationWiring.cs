@@ -34,8 +34,8 @@ public sealed class CrowdSimPresentationWiring
     public RuntimeEntitySpawnSystem? Spawns { get; init; }
     public RuntimeEntitySpawnReceiptQueue? SpawnReceipts { get; init; }
     public int SpawnReceiptChannelId { get; init; }
-    /// <summary>[unitType][radiusClass] → (模板 id, 模板键 id)。会话激活时按单位模板的
-    /// agentTypeId 与档案半径预解析，并核对模板声明的档案。</summary>
+    /// <summary>[unitType][radiusClass] → (模板 id, 模板键 id)。会话激活时按体型的
+    /// navProfileId 与档案半径预解析，并核对模板声明的档案。</summary>
     public required IReadOnlyList<IReadOnlyList<(string TemplateId, int TemplateKeyId)>> TemplatesByUnitTypeRadius { get; init; }
     /// <summary>单位半径(米)写进单位黑板的键 id(presenter 的 ownerBlackboardFloat 车道读它,如选中环随体型缩放)。</summary>
     public required int RadiusMetersBlackboardKeyId { get; init; }
@@ -52,7 +52,7 @@ public sealed class CrowdSimPresentationWiring
     /// <summary><see cref="HiddenTemplateTag"/> 的标签 id。0 = 无头接线,不剔除任何本方单位。</summary>
     public int HiddenTemplateTagId { get; set; }
 
-    /// <summary>移动类型 × 半径级 → 模板表。模板的 agentTypeId 与档案半径必须和这一格一致。
+    /// <summary>移动类型 × 半径级 → 模板表。体型的 navProfileId 与档案半径必须和这一格一致。
     /// 引擎装配与无头装配共用同一份口径。</summary>
     public static (string TemplateId, int TemplateKeyId)[][] BuildUnitTypeTemplates(
         CrowdSimulationRuntimeConfig config,
@@ -88,7 +88,6 @@ public sealed class CrowdSimPresentationWiring
                 string? profileId = template.Components.TryGetValue("CrowdSimulationAgent", out var agentNode)
                     ? agentNode?["profileId"]?.GetValue<string>()
                     : null;
-                string? agentTypeId = agentNode?["agentTypeId"]?.GetValue<string>();
                 if (string.IsNullOrWhiteSpace(profileId) || !agentProfiles.TryGet(profileId, out var profile))
                 {
                     throw new InvalidOperationException(
@@ -96,10 +95,10 @@ public sealed class CrowdSimPresentationWiring
                 }
 
                 string expectedAgent = config.AgentTypes[unitType.AgentTypeIndex].Id;
-                if (!string.Equals(agentTypeId, expectedAgent, StringComparison.Ordinal) || (int)profile.RadiusCm != radiusCm)
+                if (!string.Equals(profile.NavProfileId, expectedAgent, StringComparison.Ordinal) || (int)profile.RadiusCm != radiusCm)
                 {
                     throw new InvalidOperationException(
-                        $"{configSource}: 移动类型 {unitType.Id} 半径 {radiusCm} 的模板 \"{templateId}\" 声明 profile \"{profileId}\"(agentTypeId {agentTypeId}, 半径 {profile.RadiusCm}),与 {expectedAgent} / {radiusCm} 不一致。");
+                        $"{configSource}: 移动类型 {unitType.Id} 半径 {radiusCm} 的模板 \"{templateId}\" 声明 profile \"{profileId}\"(navProfileId {profile.NavProfileId}, 半径 {profile.RadiusCm}),与 {expectedAgent} / {radiusCm} 不一致。");
                 }
 
                 int templateKeyId = templateKeys.GetId(templateId);

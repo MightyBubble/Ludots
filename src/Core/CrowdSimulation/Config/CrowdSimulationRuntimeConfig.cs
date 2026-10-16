@@ -147,9 +147,9 @@ public sealed class RuntimeAgentProfile
     /// <summary>推挤优先级来自单位模板。</summary>
     public required Fix64 PushPriority { get; init; }
     /// <summary>该模板的速度（厘米 / 仿真秒）。领队步伐取同组最小，子步数取实际绑定模板的最大。</summary>
-    public required Fix64 SpeedCmPerSecond { get; init; }
-    /// <summary>true 不参与批量部署。同一移动类型的模板不必相同。</summary>
-    public required bool Special { get; init; }
+    public required Fix64 SpeedCmPerSec { get; init; }
+    /// <summary>true 参与批量部署和随机测试。同一移动类型的模板不必相同。</summary>
+    public required bool AutoDeploy { get; init; }
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>
     public required int ClearanceNavCells { get; init; }
@@ -206,10 +206,10 @@ public sealed class RuntimeFogSection
 public sealed class RuntimeFormationSection
 {
     public required Fix64 SpacingScale { get; init; }
-    public required Fix64 LeaderSpeed { get; init; }
+    public required Fix64 LeaderSpeedRatio { get; init; }
     public required Fix64 LeaderTurnRatePerSec { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
-    public required Fix64 CatchUp { get; init; }
+    public required Fix64 CatchUpSpeedRatio { get; init; }
     public required Fix64 SlotSightNavCells { get; init; }
     public required Fix64 SettleTimeSec { get; init; }
     public required Fix64 LeaderLookAheadNavCells { get; init; }
@@ -218,7 +218,7 @@ public sealed class RuntimeFormationSection
     public required Fix64 SlotArriveNavCells { get; init; }
     public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SettleRadiusNavCells { get; init; }
-    public required Fix64 ClumpSlack { get; init; }
+    public required Fix64 ClumpSlackScale { get; init; }
     public required Fix64 MinClumpNavCells { get; init; }
     public required Fix64 HeadingInheritDot { get; init; }
     public required Fix64 MirrorFlipDot { get; init; }
@@ -227,7 +227,6 @@ public sealed class RuntimeFormationSection
 public sealed class RuntimeFormationShape
 {
     public required string Id { get; init; }
-    public required string Label { get; init; }
     public required Fix64 SpacingDiameterScale { get; init; }
     public required Fix64 Aspect { get; init; }
     public required bool Wedge { get; init; }
@@ -239,9 +238,9 @@ public sealed class RuntimeMovementSection
     public required int MaxSubSteps { get; init; }
     public required Fix64 SlotTimeConstantSec { get; init; }
     public required Fix64 BlendRatePerSec { get; init; }
-    public required Fix64 BlendCommit { get; init; }
+    public required Fix64 BlendCommitRatio { get; init; }
     public required int SlotCheckIntervalSubSteps { get; init; }
-    public required Fix64 SightHysteresis { get; init; }
+    public required Fix64 SightHysteresisScale { get; init; }
     public required Fix64 LaneSpreadSpeedRatio { get; init; }
     public required Fix64 WakeDistanceNavCells { get; init; }
     public required Fix64 StallSpeedRatio { get; init; }
@@ -263,12 +262,12 @@ public sealed class RuntimeAvoidanceSection
     public required Fix64 AccelerationPerSec { get; init; }
     public required Fix64 RestDeadband { get; init; }
     public required Fix64 MaxPush { get; init; }
-    public required Fix64 Smoothing { get; init; }
+    public required Fix64 SmoothingRatio { get; init; }
 }
 
 public sealed class RuntimePushSection
 {
-    public required Fix64 MovingBonus { get; init; }
+    public required Fix64 MovingPriorityBonus { get; init; }
     public required Fix64 DominantShare { get; init; }
 }
 
@@ -276,6 +275,7 @@ public sealed class RuntimePushSection
 /// 玩家对功能位。ResponseByPair[a * P + b] 是表序 a 碰到表序 b 时的推挤响应。
 /// SharesVisionByPair 同下标；两个方向都为真才并视野组。
 /// IndexByPlayerId 把玩家号换成表序：玩家号必须恰为 1..P 的排列，数组按下标直查，长度 = P + 1。
+/// PlayerIds 是反过来的那张表：下标是表序，值是地图 Players 声明的玩家号。
 /// </summary>
 public sealed class CrowdPairRules
 {
@@ -283,6 +283,7 @@ public sealed class CrowdPairRules
     public required CrowdPushResponse[] ResponseByPair { get; init; }
     public required bool[] SharesVisionByPair { get; init; }
     public required int[] IndexByPlayerId { get; init; }
+    internal int[] PlayerIds { get; private set; } = Array.Empty<int>();
 
     public static CrowdPairRules Matrices(int playerCount, CrowdPushResponse[] responseByPair, bool[] sharesVisionByPair)
     {
@@ -304,6 +305,7 @@ public sealed class CrowdPairRules
             ResponseByPair = responseByPair,
             SharesVisionByPair = sharesVisionByPair,
             IndexByPlayerId = new int[playerCount + 1],
+            PlayerIds = new int[playerCount],
         };
     }
 
@@ -345,10 +347,18 @@ public sealed class CrowdPairRules
                 $"Maps/{map.Id}.json: 玩家下标表长度 {IndexByPlayerId.Length}，需为 {count + 1}。");
         }
 
+        if (PlayerIds.Length != count)
+        {
+            throw new InvalidOperationException(
+                $"Maps/{map.Id}.json: 玩家号表长度 {PlayerIds.Length}，需为 {count}。");
+        }
+
         Array.Clear(IndexByPlayerId);
         for (int i = 0; i < count; i++)
         {
-            IndexByPlayerId[map.Players[i].PlayerId] = i;
+            int id = map.Players[i].PlayerId;
+            IndexByPlayerId[id] = i;
+            PlayerIds[i] = id;
         }
     }
 }
@@ -367,7 +377,6 @@ public sealed class RuntimeSpawnSection
 {
     public required int PlacementTries { get; init; }
     public required Fix64 GroupSpacingScale { get; init; }
-    public required int TargetSearchTries { get; init; }
     public required Fix64 NavCellInsetFraction { get; init; }
 }
 
@@ -480,12 +489,10 @@ public sealed class RuntimeDeployBase
     public required int PlayerId { get; init; }
     public required int XCm { get; init; }
     public required int YCm { get; init; }
-    /// <summary>该玩家的单位配色(#rrggbb)。装载要求基地要么全部写颜色，要么全部不写。全部不写则不注册调色板。</summary>
-    public string? Color { get; init; }
 }
 
 public sealed class RuntimeTelemetrySection
 {
     public required Fix64 TurnEpsRad { get; init; }
-    public required Fix64 Ema { get; init; }
 }
+
