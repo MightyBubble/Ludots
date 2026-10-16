@@ -153,7 +153,7 @@
   - [CrowdSimulation 与 NavSurface：导航体系重构](architecture/crowdsimulation-and-navsurface.md)
     - [CrowdSimulation 最小样板：从空目录做一个群体地图 Mod](architecture/crowdsimulation-minimal-mod.md)
     - [CrowdSimulation 演示场景：行军、折返、连点、迷雾、5 万单位](architecture/crowdsimulation-showcases.md)
-    - [CrowdSimulation 数据结构：通行矩阵、结构模板与 .navsurface v2](architecture/crowdsimulation-data-schema.md)
+    - [CrowdSimulation 配置合同参考](architecture/crowdsimulation-data-schema.md)
   - [MassNavigation 数值域与确定性边界](architecture/mass-navigation-numeric-domain.md)
   - [Prefab Grounding 与 Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)
