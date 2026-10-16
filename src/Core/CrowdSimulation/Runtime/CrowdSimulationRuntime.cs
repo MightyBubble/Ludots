@@ -574,8 +574,8 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             new PresentationStableId { Value = stableIds.Allocate() },
             new Gameplay.Spawning.EntityTemplateKeyRef { TemplateKeyId = sessionTemplateKeyId });
 
-        // 单位模板映射:unitTypes[].templates 按(兵种 × 半径级)声明,模板自身声明 profile;
-        // 在此预解析成 id 表并做闭包校验(与无头装配共用 CrowdSimPresentationWiring 同一口径)。
+        // 单位模板映射：每个移动类型按半径级挂模板。模板的 CrowdSimulationAgent 声明 agentTypeId 与 profileId，
+        // 档案半径必须对上这一格。这里预解析成 id 表，与无头装配共用 CrowdSimPresentationWiring。
         var templateRegistry = engine.MapLoader.TemplateRegistry;
         var unitTypeTemplates = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
             runtimeConfig, templateRegistry, templateKeys, agentProfiles, CrowdSimulationConfigPath);

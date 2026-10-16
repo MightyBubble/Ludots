@@ -322,24 +322,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key} must be an object.");
                     }
 
-                    if (mapObj.ContainsKey("surfaceAsset"))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.surfaceAsset 已删除。.navsurface 从地图 ContinuousHeightmap.asset 推导（去掉 assets/ 前缀，.height 换成 .navsurface）。");
-                    }
-
-                    if (mapObj.ContainsKey("agentTypes"))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.agentTypes 已删除。本图要烘焙的能力档写在 maps.{mapEntry.Key}.navProfiles（能力档 id 数组）。");
-                    }
-
-                    if (mapObj.ContainsKey("jumpLinkBake"))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.jumpLinkBake 已删除。几何参数写在 maps.{mapEntry.Key}.linkCandidateBake.<链接种类>（maxGapCm、linkSpacingCm、endpointMaxSlopeDeg），端点和硬缝地形由 traversal.json 推导。");
-                    }
-
                     string solver = RequireString(mapObj, "solver", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
                     if (!NavSolverDeclaration.IsKnown(solver))
                     {
@@ -403,12 +385,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                             if (boardEntry.Value is not JsonObject boardObj)
                             {
                                 throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key} must be an object.");
-                            }
-
-                            if (boardObj.ContainsKey("surfaceAsset"))
-                            {
-                                throw new InvalidOperationException(
-                                    $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}.surfaceAsset 已删除。.navsurface 从地图 ContinuousHeightmap.asset 推导（去掉 assets/ 前缀，.height 换成 .navsurface）。");
                             }
 
                             RequireOnlyProperties(

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
 import { TraversalMatrixEditor } from './crowd-config/TraversalMatrixEditor';
-import { cloneTraversal, type CostMatrixView, type Traversal } from './crowd-config/traversalMatrix';
+import { cloneTraversal, type Traversal } from './crowd-config/traversalMatrix';
 import { UnitTemplateInspector } from './crowd-config/UnitTemplateInspector';
 import type { UnitTemplatesView } from './crowd-config/unitTemplates';
 
@@ -17,7 +17,6 @@ type Snapshot = {
   mapOwner?: string | null;
   mapOwnedBySelection?: boolean;
   fixedHz?: number;
-  bundleVersion?: number;
   scenario?: unknown;
   globals?: unknown;
   templates?: unknown;
@@ -26,7 +25,8 @@ type Snapshot = {
   defaults?: Record<string, unknown>;
   owners?: Owner[];
   unitTemplates?: UnitTemplatesView;
-  costMatrix?: CostMatrixView;
+  traversal?: Traversal;
+  mapAreas?: string[];
   help?: HelpItem[];
   issues?: Issue[];
 };
@@ -35,7 +35,7 @@ const TABS = [
   { id: 'scenario', label: '场景实例' },
   { id: 'globals', label: '全局参数' },
   { id: 'templates', label: '实体模板' },
-  { id: 'costMatrix', label: '代价矩阵' },
+  { id: 'traversal', label: '通行矩阵' },
   { id: 'bundle', label: '完整包' },
   { id: 'debug', label: '调试参数' },
   { id: 'debugView', label: '调试视图' },
@@ -47,7 +47,7 @@ const LIVE_METHOD: Partial<Record<TabId, string>> = {
   scenario: 'ludots.crowd.config.rebuildWorld',
   globals: 'ludots.crowd.config.rebuildWorld',
   templates: 'ludots.crowd.config.rebuildWorld',
-  costMatrix: 'ludots.crowd.config.rebuildWorld',
+  traversal: 'ludots.crowd.config.rebuildWorld',
   debug: 'ludots.crowd.config.applyDebug',
   debugView: 'ludots.crowd.config.applyDebugView',
 };
@@ -131,7 +131,7 @@ export function CrowdConfigEditorPage() {
           debug: pretty(json.debug),
           debugView: pretty(json.debugView),
         });
-        setTraversal(cloneTraversal(json.costMatrix?.traversal));
+        setTraversal(cloneTraversal(json.traversal));
         const loaded = [...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])];
         setIssues(loaded);
         setLoadedIssues(loaded);
@@ -164,8 +164,8 @@ export function CrowdConfigEditorPage() {
   }
 
   function parseLayer(layer: TabId): unknown {
-    if (layer === 'costMatrix') {
-      return { traversal };
+    if (layer === 'traversal') {
+      return traversal;
     }
     return JSON.parse(texts[layer] || '{}');
   }
@@ -183,7 +183,7 @@ export function CrowdConfigEditorPage() {
     const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/crowd-config`);
     const json = (await res.json()) as Snapshot;
     setSnapshot(json);
-    setTraversal(cloneTraversal(json.costMatrix?.traversal));
+    setTraversal(cloneTraversal(json.traversal));
     setLoadedIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
   }
 
@@ -262,9 +262,9 @@ export function CrowdConfigEditorPage() {
   }
 
   function resetDraft() {
-    if (tab === 'costMatrix') {
-      const defaults = snapshot?.defaults?.costMatrix as CostMatrixView | undefined;
-      setTraversal(cloneTraversal(defaults?.traversal ?? snapshot?.costMatrix?.traversal));
+    if (tab === 'traversal') {
+      const defaults = snapshot?.defaults?.traversal as Traversal | undefined;
+      setTraversal(cloneTraversal(defaults ?? snapshot?.traversal));
       setStatus('草稿已回到默认。文件还没改。');
       return;
     }
@@ -280,7 +280,7 @@ export function CrowdConfigEditorPage() {
       const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/crowd-config/bundle`);
       const json = await res.json();
       setBundleText(pretty(json));
-      setStatus(`导出的 version 是 ${snapshot?.bundleVersion ?? ''}`);
+      setStatus('已导出完整包。');
     } finally {
       setBusy(false);
     }
@@ -302,15 +302,15 @@ export function CrowdConfigEditorPage() {
     }
   }
 
-  const defaultsText = tab === 'bundle' || tab === 'costMatrix' ? '' : pretty(snapshot?.defaults?.[tab]);
-  const traversalDefaults = cloneTraversal((snapshot?.defaults?.costMatrix as CostMatrixView | undefined)?.traversal);
+  const defaultsText = tab === 'bundle' || tab === 'traversal' ? '' : pretty(snapshot?.defaults?.[tab]);
+  const traversalDefaults = cloneTraversal(snapshot?.defaults?.traversal as Traversal | undefined);
 
   return (
     <div className="h-full overflow-auto bg-studio-bg px-6 py-6 text-studio-label">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-2xl font-semibold">群体配置</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-studio-secondary">
-          场景、全局、模板来自加载顺序里的合并结果。写入只落在当前选中的 Mod。通行矩阵来自 CrowdSimulation/traversal.json，每一格都写明，不可走是 false。完整包的 version 必须正好等于 {snapshot?.bundleVersion ?? '…'}，没有迁移。
+          场景、全局、模板来自加载顺序里的合并结果。写入只落在当前选中的 Mod。通行矩阵来自 CrowdSimulation/traversal.json，每一格都写明，不可走是 false。完整包是 scenario、globals、templates、traversal 四个字段。
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -406,19 +406,19 @@ export function CrowdConfigEditorPage() {
           />
         ) : null}
 
-        {tab === 'costMatrix' && traversal ? (
+        {tab === 'traversal' && traversal ? (
           <TraversalMatrixEditor
             traversal={traversal}
             defaults={traversalDefaults}
-            mapAreas={snapshot?.costMatrix?.mapAreas ?? []}
+            mapAreas={snapshot?.mapAreas ?? []}
             onChange={setTraversal}
           />
         ) : null}
 
         {tab === 'bundle' ? (
           <div className="mt-4">
-            <p className="text-sm text-studio-secondary" data-bundle-version="">
-              结构版本 {snapshot?.bundleVersion ?? '…'}。缺 version、或 version 不是这个数，整包拒绝，不改草稿。
+            <p className="text-sm text-studio-secondary" data-bundle-fields="">
+              字段缺失、类型不对或不认识的字段会按字段拒绝，不改草稿。
             </p>
             <div className="mt-3 flex gap-2">
               <button type="button" className={STUDIO_CHROME.btnGhost} disabled={busy} onClick={() => void exportBundle()}>
@@ -436,7 +436,7 @@ export function CrowdConfigEditorPage() {
           </div>
         ) : null}
 
-        {tab !== 'bundle' && tab !== 'costMatrix' ? (
+        {tab !== 'bundle' && tab !== 'traversal' ? (
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <label className="block text-xs text-studio-muted">
               当前草稿

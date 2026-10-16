@@ -196,14 +196,14 @@ public sealed class CrowdLinkCandidateBakeTests
     }
 
     [Test]
-    public void RetiredJumpLinkBake_NamesTheReplacement()
+    public void CrowdMap_UnknownKey_IsRejected()
     {
         JsonObject navmesh = MapWithLinkBake("""
             "jumpLinkBake": { "maxGapCm": 600, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 22 }
             """);
         var ex = Assert.Throws<InvalidOperationException>(() => NavMeshBakeConfigLoader.Parse(navmesh, Bodies()))!;
-        Assert.That(ex.Message, Does.Contain("maps.flat.jumpLinkBake 已删除"));
-        Assert.That(ex.Message, Does.Contain("linkCandidateBake"));
+        Assert.That(ex.Message, Does.Contain("maps.flat"));
+        Assert.That(ex.Message, Does.Contain("unknown property 'jumpLinkBake'"));
     }
 
     [TestCase("""{ "jump": { "maxGapCm": 650, "linkSpacingCm": 500, "endpointMaxSlopeDeg": 22 } }""", "maxGapCm = 650")]

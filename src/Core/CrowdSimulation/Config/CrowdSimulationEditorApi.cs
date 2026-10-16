@@ -84,34 +84,29 @@ public static partial class CrowdSimulationEditorApi
             [CrowdSimulationAuthoringBundle.ScenarioKey] = snapshot["scenario"]?.DeepClone(),
             [CrowdSimulationAuthoringBundle.GlobalsKey] = snapshot["globals"]?.DeepClone(),
             [CrowdSimulationAuthoringBundle.TemplatesKey] = snapshot["templates"]?.DeepClone(),
-            [CrowdSimulationAuthoringBundle.CostMatrixKey] = new JsonObject { ["traversal"] = snapshot["costMatrix"]?["traversal"]?.DeepClone() },
-            [CrowdSimulationAuthoringBundle.VersionKey] = CrowdSimulationAuthoringBundle.SchemaVersion,
+            [CrowdSimulationAuthoringBundle.TraversalKey] = snapshot["traversal"]?.DeepClone(),
         };
     }
 
     public static JsonObject ImportBundle(string repoRoot, string modId, JsonObject bundle, bool write, string? targetRootOverride = null)
     {
         ArgumentNullException.ThrowIfNull(bundle);
-        if (!TryReadVersion(bundle, out int version, out string? versionError))
+        var shape = new List<CrowdSimulationAuthoringIssue>();
+        foreach (var (key, _) in bundle)
         {
-            return CrowdSimulationEditorResult.Failed(CrowdSimulationAuthoringIssues.One("version", versionError!)).ToJson();
+            if (Array.IndexOf(CrowdSimulationAuthoringBundle.BundleKeys, key) < 0)
+            {
+                shape.AddRange(CrowdSimulationAuthoringIssues.One(key, $"完整包不认识字段 \"{key}\"。" ));
+            }
         }
 
-        if (version != CrowdSimulationAuthoringBundle.SchemaVersion)
+        JsonObject? scenario = RequireBundleObject(bundle, CrowdSimulationAuthoringBundle.ScenarioKey, shape);
+        JsonObject? globals = RequireBundleObject(bundle, CrowdSimulationAuthoringBundle.GlobalsKey, shape);
+        JsonObject? templates = RequireBundleObject(bundle, CrowdSimulationAuthoringBundle.TemplatesKey, shape);
+        JsonObject? traversal = RequireBundleObject(bundle, CrowdSimulationAuthoringBundle.TraversalKey, shape);
+        if (shape.Count > 0 || scenario == null || globals == null || templates == null || traversal == null)
         {
-            return CrowdSimulationEditorResult.Failed(CrowdSimulationAuthoringIssues.One(
-                "version",
-                $"完整包 version = {version}，必须等于 {CrowdSimulationAuthoringBundle.SchemaVersion}。没有迁移。")).ToJson();
-        }
-
-        if (bundle[CrowdSimulationAuthoringBundle.ScenarioKey] is not JsonObject scenario
-            || bundle[CrowdSimulationAuthoringBundle.GlobalsKey] is not JsonObject globals
-            || bundle[CrowdSimulationAuthoringBundle.TemplatesKey] is not JsonObject templates
-            || bundle[CrowdSimulationAuthoringBundle.CostMatrixKey] is not JsonObject costMatrix)
-        {
-            return CrowdSimulationEditorResult.Failed(CrowdSimulationAuthoringIssues.One(
-                "bundle",
-                "完整包必须是 { scenario, globals, templates, costMatrix, version }。")).ToJson();
+            return CrowdSimulationEditorResult.Failed(shape).ToJson();
         }
 
         try
@@ -122,7 +117,7 @@ public static partial class CrowdSimulationEditorApi
             patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.ScenarioLayer, scenario, issues));
             patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.GlobalsLayer, globals, issues));
             patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.TemplatesLayer, templates, issues));
-            patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.CostMatrixLayer, costMatrix, issues));
+            patches.Add(session.PatchesFor(CrowdSimulationAuthoringBundle.TraversalLayer, traversal, issues));
             if (issues.Count > 0)
             {
                 return CrowdSimulationEditorResult.Failed(issues).ToJson();
@@ -160,23 +155,21 @@ public static partial class CrowdSimulationEditorApi
         }
     }
 
-    private static bool TryReadVersion(JsonObject bundle, out int version, out string? error)
+    private static JsonObject? RequireBundleObject(JsonObject bundle, string key, List<CrowdSimulationAuthoringIssue> issues)
     {
-        version = 0;
-        error = null;
-        if (!bundle.ContainsKey(CrowdSimulationAuthoringBundle.VersionKey) || bundle[CrowdSimulationAuthoringBundle.VersionKey] is null)
+        if (!bundle.ContainsKey(key) || bundle[key] is null)
         {
-            error = "完整包缺少 version。";
-            return false;
+            issues.AddRange(CrowdSimulationAuthoringIssues.One(key, $"完整包缺少 {key}。"));
+            return null;
         }
 
-        if (bundle[CrowdSimulationAuthoringBundle.VersionKey] is not JsonValue value || !value.TryGetValue(out version))
+        if (bundle[key] is not JsonObject obj)
         {
-            error = "完整包的 version 必须是整数。";
-            return false;
+            issues.AddRange(CrowdSimulationAuthoringIssues.One(key, $"完整包的 {key} 必须是对象。"));
+            return null;
         }
 
-        return true;
+        return obj;
     }
 
     internal sealed partial class EditorSession
@@ -321,7 +314,6 @@ public static partial class CrowdSimulationEditorApi
                 ["mapOwner"] = MapOwner,
                 ["mapOwnedBySelection"] = SelectedOwnsMap,
                 ["fixedHz"] = FixedHz,
-                ["bundleVersion"] = CrowdSimulationAuthoringBundle.SchemaVersion,
                 ["scenario"] = scenario,
                 ["globals"] = globals,
                 ["templates"] = templates,
@@ -334,11 +326,13 @@ public static partial class CrowdSimulationEditorApi
                     ["templates"] = templatesDefaults,
                     ["debug"] = (BaselineDebug ?? Debug)?.DeepClone(),
                     ["debugView"] = (BaselineDebugView ?? DebugView)?.DeepClone(),
-                    ["costMatrix"] = CostMatrix(BaselineTraversal.Count == 0 ? Traversal : BaselineTraversal, Navmesh, MapId),
+                    ["traversal"] = (BaselineTraversal.Count == 0 ? Traversal : BaselineTraversal).DeepClone(),
+                    ["mapAreas"] = MapAreas(BaselineTraversal.Count == 0 ? Traversal : BaselineTraversal, Navmesh, MapId),
                 },
                 ["owners"] = Owners.DeepClone(),
                 ["unitTemplates"] = UnitTemplates.DeepClone(),
-                ["costMatrix"] = CostMatrix(Traversal, Navmesh, MapId),
+                ["traversal"] = Traversal.DeepClone(),
+                ["mapAreas"] = MapAreas(Traversal, Navmesh, MapId),
                 ["help"] = Help(),
                 ["issues"] = new JsonArray(),
             };
@@ -359,8 +353,8 @@ public static partial class CrowdSimulationEditorApi
                 case CrowdSimulationAuthoringBundle.TemplatesLayer:
                     PatchTemplates(RequireObject(draft, "templates", issues), patches, issues);
                     break;
-                case CrowdSimulationAuthoringBundle.CostMatrixLayer:
-                    PatchCostMatrix(RequireObject(draft, "costMatrix", issues), patches, issues);
+                case CrowdSimulationAuthoringBundle.TraversalLayer:
+                    PatchTraversal(RequireObject(draft, "traversal", issues), patches, issues);
                     break;
                 case CrowdSimulationAuthoringBundle.DebugLayer:
                     PatchWholeFile(DebugFile, RequireObject(draft, "debug", issues), BaselineDebug ?? new JsonObject(), Debug == null, patches, issues);
@@ -661,17 +655,10 @@ public static partial class CrowdSimulationEditorApi
             }
         }
 
-        private void PatchCostMatrix(JsonObject draft, PatchSet patches, List<CrowdSimulationAuthoringIssue> issues)
+        private void PatchTraversal(JsonObject draft, PatchSet patches, List<CrowdSimulationAuthoringIssue> issues)
         {
-            RejectForeign(draft, ["traversal", "mapAreas"], "costMatrix", issues);
-            if (draft["traversal"] is not JsonObject traversal)
-            {
-                issues.Add(Issue("traversal", $"代价矩阵缺少 traversal（{TraversalFile} 合并后的全文）。"));
-                return;
-            }
-
-            RejectOmissions(traversal, BaselineTraversal, "traversal", issues);
-            JsonObject file = OverrideOf(traversal, BaselineTraversal) as JsonObject ?? new JsonObject();
+            RejectOmissions(draft, BaselineTraversal, "traversal", issues);
+            JsonObject file = OverrideOf(draft, BaselineTraversal) as JsonObject ?? new JsonObject();
             PutIfPresent(patches, TraversalFile, file);
         }
 

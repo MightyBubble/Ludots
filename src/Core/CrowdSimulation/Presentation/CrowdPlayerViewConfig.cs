@@ -12,7 +12,6 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 /// </summary>
 internal sealed class CrowdPlayerViewConfig
 {
-    [JsonRequired] public int Version { get; init; }
     [JsonRequired] public bool MagicBox { get; init; }
     [JsonRequired] public bool FogHide { get; init; }
     [JsonRequired] public bool PlayerRoute { get; init; }
@@ -76,8 +75,6 @@ internal sealed class CrowdPlayerViewConfig
 
     private void Validate(string path)
     {
-        if (Version != 1)
-            throw new InvalidOperationException($"{path}: version 需为 1。");
         RequireRange(path, "deployCount", DeployCount, DeployCountMin, DeployCountMax);
         if (DeployCountStep < 1)
             throw new InvalidOperationException($"{path}: deployCountStep 需为 ≥ 1 的整数。");

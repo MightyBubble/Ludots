@@ -67,7 +67,7 @@ public sealed class CrowdUnitTemplateFacts
     public static CrowdUnitTemplateFacts Parse(string templateId, JsonObject obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
-        RejectRetiredKeys(obj);
+        RejectUnknownFields(obj);
         string Prefix(string field) => $"Entities/templates.json: 模板 \"{templateId}\" 的 {ComponentName}.{field}";
         return new CrowdUnitTemplateFacts
         {
@@ -81,19 +81,26 @@ public sealed class CrowdUnitTemplateFacts
         };
     }
 
-    public static void RejectRetiredKeys(JsonObject obj)
+    public static void RejectUnknownFields(JsonObject obj)
     {
-        if (obj.ContainsKey("agentType"))
+        ArgumentNullException.ThrowIfNull(obj);
+        foreach (var (key, _) in obj)
         {
-            throw new InvalidOperationException("CrowdSimulationAgent 已删除 agentType，改用 agentTypeId。");
-        }
+            bool known = false;
+            for (int i = 0; i < AuthoredFields.Count; i++)
+            {
+                if (string.Equals(AuthoredFields[i].Name, key, StringComparison.Ordinal))
+                {
+                    known = true;
+                    break;
+                }
+            }
 
-        if (obj.ContainsKey("radiusClassCm") || obj.ContainsKey("radiusCm"))
-        {
-            throw new InvalidOperationException(
-                "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId；个人半径写 personalRadiusCm。");
+            if (!known)
+            {
+                throw new InvalidOperationException($"{ComponentName}.{key} 是未知字段。");
+            }
         }
-
     }
 
     private static bool RequireBool(JsonObject obj, string name, string path)

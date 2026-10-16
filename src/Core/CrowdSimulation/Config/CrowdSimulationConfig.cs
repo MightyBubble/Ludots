@@ -41,7 +41,6 @@ public sealed class CrowdSimulationConfig
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
         ArgumentNullException.ThrowIfNull(configObject);
-        RejectRetiredKeys(configObject);
         RejectIdKeyedNulls(configObject);
         RequireStructureKinds(configObject);
         var options = StrictJsonOptions.CreateCamelCase();
@@ -78,87 +77,11 @@ public sealed class CrowdSimulationConfig
         return Load(obj);
     }
 
-    /// <summary>旧作者键只用于报错。命中即拒绝，不读取值。</summary>
-    internal static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
-    [
-        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
-        ("deploy.spreadCells", "deploy.spreadCm"),
-        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
-        ("fog.cellCells", "fog.cellSizeCm"),
-        ("formation.goalArriveCells", "formation.goalArriveCm"),
-        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
-        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
-        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
-        ("formation.minClumpCells", "formation.minClumpCm"),
-        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
-        ("formation.slotArriveCells", "formation.slotArriveCm"),
-        ("formation.slotSightCells", "formation.slotSightCm"),
-        ("formations[].spacing", "formations.<id>.spacingDiameterScale"),
-        ("hpa.clusterSize", "navtile.sizeCm"),
-        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
-        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
-        ("movement.maxStepCells", "movement.maxStepNavCells"),
-        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
-        ("agentTypes", "CrowdSimulation/traversal.json 的 agentTypes"),
-        ("agents.radiusClasses", "单位模板 CrowdSimulationAgent.pushPriority"),
-        ("agents.profilesUri", "Navigation/agent_profiles.json"),
-        ("unitTypes", "单位模板 CrowdSimulationAgent"),
-        ("navAreas", "CrowdSimulation/traversal.json 的 areas"),
-        ("terrainAreas", "CrowdSimulation/traversal.json 的 terrainAreas"),
-        ("navProfiles", "CrowdSimulation/traversal.json 的 agentTypes.<id>.maxSlopeDeg / links"),
-        ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainTypes"),
-        ("world.surfaceAsset", "地图 ContinuousHeightmap.asset（同主干 .navsurface）"),
-        ("world.navCellSizeCm", "Navigation/navmesh.json 的 maps.<mapId>.navCellSizeCm"),
-        ("world.mapId", "当前聚焦的地图"),
-        ("mapId", "当前聚焦的地图"),
-        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
-        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
-        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
-        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
-        ("spawn.cellInset", "spawn.navCellInsetFraction"),
-        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
-        ("structures.portalCells", "structures.templates.<id>.effect.portalReachNavCells"),
-        ("structures.portalReachNavCells", "structures.templates.<id>.effect.portalReachNavCells"),
-        ("structures.blockCoverage", "structures.templates.<id>.effect.coverage"),
-        ("structures.anchorTerrain", "structures.templates.<id>.placement.endpointAreas（区域 id）"),
-        ("structures.spanTerrain", "structures.templates.<id>.placement.interiorAreas（区域 id）"),
-        ("structures.templates[].name", "面板条目的文案（模板没有名字）"),
-        ("structures.templates[].blocker", "structures.templates.<id>.effect { kind: \"block\", coverage }"),
-        ("structures.templates[].area", "structures.templates.<id>.effect.area"),
-        ("structures.templates[].priority", "structures.templates.<id>.effect.priority"),
-        ("structures.templates[].layered", "structures.templates.<id>.layer"),
-        ("formation.settleTime", "formation.settleTimeSec"),
-        ("movement.slotTimeConstant", "movement.slotTimeConstantSec"),
-        ("sim.timeScale", "sim.simSecondsPerTickSecond"),
-        ("movement.blendRate", "movement.blendRatePerSec"),
-        ("movement.unitTurnRate", "movement.unitTurnRateRadPerSec"),
-        ("movement.stallDecay", "movement.stallDecayPerSec"),
-        ("movement.slotCheckInterval", "movement.slotCheckIntervalSubSteps"),
-        ("formation.leaderTurnRate", "formation.leaderTurnRatePerSec"),
-        ("avoidance.acceleration", "avoidance.accelerationPerSec"),
-        ("relations", "pairRules（yieldsTo / sharesVisionWith 各写 relation）"),
-        ("push.modes", "pairRules.yieldsTo"),
-    ];
-
     private static readonly string[] IdKeyedObjects =
     [
         "formations",
         "structures.templates",
     ];
-
-    private static void RejectRetiredKeys(JsonObject root)
-    {
-        if (root.ContainsKey("version"))
-        {
-            throw new InvalidOperationException(
-                "CrowdSimulationConfig.json: 已删除 version。配置不再带版本号，由严格 schema 与 mod.json semver 管理。");
-        }
-
-        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
-        {
-            RejectRetiredSpatialKey(root, oldPath.Split('.'), 0, "", newKey);
-        }
-    }
 
     private static readonly string[] StructureEffectKinds = ["block", "setArea", "surface"];
     private static readonly string[] StructurePlacementKinds = ["unrestricted", "spanEnds"];
@@ -247,53 +170,6 @@ public sealed class CrowdSimulationConfig
                     $"CrowdSimulationConfig.json: {built}{name}.{key} 为 null。以 id 为键的对象不接受 null。");
             }
         }
-    }
-
-    private static void RejectRetiredSpatialKey(JsonNode? node, string[] segments, int index, string built, string newKey)
-    {
-        if (node is not JsonObject obj || index >= segments.Length)
-        {
-            return;
-        }
-
-        string segment = segments[index];
-        bool array = segment.EndsWith("[]", StringComparison.Ordinal);
-        string name = array ? segment[..^2] : segment;
-        if (!obj.ContainsKey(name))
-        {
-            return;
-        }
-
-        if (array)
-        {
-            if (obj[name] is JsonArray items)
-            {
-                for (int i = 0; i < items.Count; i++)
-                {
-                    RejectRetiredSpatialKey(items[i], segments, index + 1, $"{built}{name}[{i}].", newKey);
-                }
-
-                return;
-            }
-
-            if (obj[name] is JsonObject children)
-            {
-                foreach (var (key, child) in children)
-                {
-                    RejectRetiredSpatialKey(child, segments, index + 1, $"{built}{name}.{key}.", newKey);
-                }
-            }
-
-            return;
-        }
-
-        if (index == segments.Length - 1)
-        {
-            throw new InvalidOperationException(
-                $"CrowdSimulationConfig.json: 已删除 {built}{name}，改用 {newKey}。");
-        }
-
-        RejectRetiredSpatialKey(obj[name], segments, index + 1, built + name + ".", newKey);
     }
 
     public sealed class WorldSection

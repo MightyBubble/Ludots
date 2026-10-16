@@ -1985,7 +1985,6 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
             }
 
-            Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.RejectRetiredKeys(obj);
             ValidateProperties(
                 obj,
                 "CrowdSimulationAgent",

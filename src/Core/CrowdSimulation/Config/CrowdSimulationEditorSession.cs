@@ -348,8 +348,8 @@ public static partial class CrowdSimulationEditorApi
             };
         }
 
-        /// <summary>traversal 是合并后的全文，列是全部区域。mapAreas 是这张图的地形经 terrainAreas 落到的区域，只用来高亮。</summary>
-        private static JsonObject CostMatrix(JsonObject traversal, JsonObject navmesh, string mapId)
+        /// <summary>这张图的地形经 terrainAreas 落到的区域，只用来高亮。</summary>
+        private static JsonArray MapAreas(JsonObject traversal, JsonObject navmesh, string mapId)
         {
             var mapAreas = new JsonArray();
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -371,11 +371,7 @@ public static partial class CrowdSimulationEditorApi
                 }
             }
 
-            return new JsonObject
-            {
-                ["traversal"] = traversal.DeepClone(),
-                ["mapAreas"] = mapAreas,
-            };
+            return mapAreas;
         }
 
         private static JsonArray Help()

@@ -10,18 +10,19 @@ public class CrowdSimulationEditorApiTests
     private const string S4 = "CrowdSimulationS4DeployMod";
 
     [Test]
-    public void Load_S4_ExposesLayersOwnersAndBundleVersion()
+    public void Load_S4_ExposesLayersOwnersAndTraversal()
     {
         JsonObject snapshot = CrowdSimulationEditorApi.Load(FindRepoRoot(), S4);
         Assert.That(Flag(snapshot, "ok"), Is.True, snapshot.ToJsonString());
-        Assert.That(Int(snapshot, "bundleVersion"), Is.EqualTo(CrowdSimulationAuthoringBundle.SchemaVersion));
+        Assert.That(snapshot.ContainsKey("bundleVersion"), Is.False);
         Assert.That(Text(snapshot, "mapId"), Is.EqualTo("crowd_simulation_s1337"));
         Assert.That(snapshot["scenario"], Is.InstanceOf<JsonObject>());
         Assert.That(snapshot["globals"], Is.InstanceOf<JsonObject>());
         Assert.That(snapshot["templates"], Is.InstanceOf<JsonObject>());
         Assert.That(snapshot["debug"], Is.InstanceOf<JsonObject>());
         Assert.That(snapshot["debugView"], Is.InstanceOf<JsonObject>());
-        Assert.That(snapshot["costMatrix"], Is.InstanceOf<JsonObject>());
+        Assert.That(snapshot["traversal"], Is.InstanceOf<JsonObject>());
+        Assert.That(snapshot["mapAreas"]!.ToJsonString(), Is.EqualTo("[\"deep\",\"shallow\",\"open\",\"rough\",\"sheer\"]"));
         var owners = (JsonArray)snapshot["owners"]!;
         Assert.That(owners.Count, Is.GreaterThan(0));
         var first = (JsonObject)owners[0]!;
@@ -136,7 +137,7 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void Import_RejectsMissingOrOtherVersion_BeforeValidation()
+    public void Import_RejectsUnknownOrMissingFields_BeforeValidation()
     {
         string repo = FindRepoRoot();
         string copy = CopyS4();
@@ -145,7 +146,9 @@ public class CrowdSimulationEditorApiTests
         try
         {
             JsonObject bundle = CrowdSimulationEditorApi.ExportBundle(repo, S4, copy);
-            Assert.That(Int(bundle, "version"), Is.EqualTo(CrowdSimulationAuthoringBundle.SchemaVersion));
+            Assert.That(bundle["traversal"], Is.InstanceOf<JsonObject>());
+            Assert.That(bundle.ContainsKey("version"), Is.False);
+            Assert.That(bundle.ContainsKey("costMatrix"), Is.False);
             bundle["version"] = 99;
             JsonObject wrong = CrowdSimulationEditorApi.ImportBundle(repo, S4, bundle, write: true, copy);
             Assert.That(Flag(wrong, "ok"), Is.False, wrong.ToJsonString());
@@ -153,9 +156,10 @@ public class CrowdSimulationEditorApiTests
             Assert.That(File.ReadAllText(configPath), Is.EqualTo(before));
 
             bundle.Remove("version");
+            bundle.Remove("traversal");
             JsonObject missing = CrowdSimulationEditorApi.ImportBundle(repo, S4, bundle, write: false, copy);
             Assert.That(Flag(missing, "ok"), Is.False);
-            Assert.That(missing["issues"]!.ToJsonString(), Does.Contain("version"));
+            Assert.That(missing["issues"]!.ToJsonString(), Does.Contain("traversal"));
         }
         finally
         {
@@ -164,25 +168,23 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void CostMatrix_RoundTrip_WritesOnlyChangedCellsToTraversal()
+    public void Traversal_RoundTrip_WritesOnlyChangedCellsToTraversal()
     {
         string repo = FindRepoRoot();
         string copy = CopyS4();
         try
         {
             JsonObject snapshot = CrowdSimulationEditorApi.Load(repo, S4, copy);
-            JsonObject matrix = (JsonObject)snapshot["costMatrix"]!.DeepClone()!;
-            Assert.That(matrix["mapAreas"]!.ToJsonString(), Is.EqualTo("[\"deep\",\"shallow\",\"open\",\"rough\",\"sheer\"]"));
-            matrix.Remove("mapAreas");
-            JsonObject footCells = (JsonObject)matrix["traversal"]!["agentTypes"]!["foot"]!["cells"]!;
+            JsonObject traversal = (JsonObject)snapshot["traversal"]!.DeepClone()!;
+            JsonObject footCells = (JsonObject)traversal["agentTypes"]!["foot"]!["cells"]!;
             footCells["open"]!["cost"] = 7;
             footCells["burning"] = false;
-            JsonObject applied = CrowdSimulationEditorApi.Apply(repo, S4, "costMatrix", matrix, copy);
+            JsonObject applied = CrowdSimulationEditorApi.Apply(repo, S4, "traversal", traversal, copy);
             Assert.That(Flag(applied, "ok"), Is.True, applied.ToJsonString());
             Assert.That(applied["written"]!.ToJsonString(), Does.Contain(S4 + "/assets/CrowdSimulation/traversal.json"));
 
             JsonObject again = CrowdSimulationEditorApi.Load(repo, S4, copy);
-            JsonObject footAgain = (JsonObject)again["costMatrix"]!["traversal"]!["agentTypes"]!["foot"]!["cells"]!;
+            JsonObject footAgain = (JsonObject)again["traversal"]!["agentTypes"]!["foot"]!["cells"]!;
             Assert.That(footAgain["open"]!["cost"]!.GetValue<double>(), Is.EqualTo(7));
             Assert.That(footAgain["burning"]!.GetValue<bool>(), Is.False);
 
@@ -197,16 +199,16 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void CostMatrix_DroppingACellTheDependencyGives_IsRejected()
+    public void Traversal_DroppingACellTheDependencyGives_IsRejected()
     {
         string copy = CopyS4();
         try
         {
             JsonObject snapshot = CrowdSimulationEditorApi.Load(FindRepoRoot(), S4, copy);
-            JsonObject traversal = (JsonObject)snapshot["costMatrix"]!["traversal"]!.DeepClone()!;
+            JsonObject traversal = (JsonObject)snapshot["traversal"]!.DeepClone()!;
             ((JsonObject)traversal["agentTypes"]!["foot"]!["cells"]!).Remove("road");
             JsonObject result = CrowdSimulationEditorApi.Validate(
-                FindRepoRoot(), S4, "costMatrix", new JsonObject { ["traversal"] = traversal }, copy);
+                FindRepoRoot(), S4, "traversal", traversal, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
             Assert.That(result["issues"]!.ToJsonString(), Does.Contain("traversal.agentTypes.foot.cells.road"));
             Assert.That(File.Exists(Path.Combine(copy, "assets", "CrowdSimulation", "traversal.json")), Is.False);
@@ -238,14 +240,23 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void LiveApply_DebugViewWrongVersion_DoesNotCommit()
+    public void LiveApply_DebugViewUnknownKey_DoesNotCommit()
     {
         bool committed = false;
-        CrowdSimulationEditorResult result = CrowdSimulationLiveApply.ApplyDebugView(
-            new JsonObject { ["version"] = 2 },
-            () => committed = true);
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "crowd_simulation",
+            "CrowdSimulationS4DeployMod",
+            "assets",
+            "CrowdSimulationDebugView.json");
+        JsonObject node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        node["extra"] = 1;
+        CrowdSimulationEditorResult result = CrowdSimulationLiveApply.ApplyDebugView(node, () => committed = true);
         Assert.That(result.Ok, Is.False);
         Assert.That(committed, Is.False);
+        Assert.That(result.ToJson()["issues"]!.ToJsonString(), Does.Contain("extra"));
     }
 
     [Test]
