@@ -34,12 +34,14 @@ public static class CrowdDeployment
 
         var radiusClasses = DistinctRadiusClasses(cfg);
         int playerCount = cfg.Deploy.Bases.Count;
-        var perPlayer = new List<CrowdNavGroupSet.Group>[playerCount];
-        var centers = new Dictionary<int, List<int>>();
-        var typeOf = new Dictionary<int, int>();
+        var scratch = sim.DeploymentBuffers;
+        scratch.BeginSpawn(playerCount);
+        var perPlayer = scratch.PerPlayer;
+        var centers = scratch.Centers;
+        var typeOf = scratch.TypeOf;
         for (int p = 0; p < playerCount; p++)
         {
-            var list = new List<CrowdNavGroupSet.Group>();
+            var list = perPlayer[p];
             var b = cfg.Deploy.Bases[p];
             int player = TableIndex(cfg, b.PlayerId);
             int bx = (int)(b.XCm / cfg.NavCellSizeCm), by = (int)(b.YCm / cfg.NavCellSizeCm);
@@ -54,7 +56,7 @@ public static class CrowdDeployment
                     }
                     var nav = sim.NavFor(l, r);
                     if (nav.CellCount == 0) continue;
-                    var centerCells = new List<int>();
+                    var centerCells = scratch.RentCenterList();
                     for (int k = 0; k < dp.CentersPerGroup; k++)
                     {
                         int x = ClampN(bx + DetRound((rng.Next() * 2 - Fix64.OneValue) * dp.BaseJitterNavCells), navCellsPerSide);
@@ -72,7 +74,6 @@ public static class CrowdDeployment
                 }
             }
 
-            perPlayer[p] = list;
         }
 
         int total = Math.Min(count, sim.Units.Capacity), tries = cfg.Spawn.PlacementTries;
