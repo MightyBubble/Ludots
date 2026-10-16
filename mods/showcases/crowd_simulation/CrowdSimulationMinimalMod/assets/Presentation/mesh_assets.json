@@ -1,0 +1,7 @@
+[
+  {
+    "id": "crowd_minimal.unit.body",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

@@ -50,6 +50,7 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RequireProfilesObject(mergedObject["profiles"], relativePath);
             RejectRenamedAuthoringFields(mergedObject, relativePath);
 
             var config = mergedObject.Deserialize<CommandIntentProfilesConfig>(JsonOptions)
@@ -58,16 +59,34 @@ namespace Ludots.Core.Input.Interaction
             return config;
         }
 
+        /// <summary>
+        /// <c>profiles</c> 是以档案 id 为键的对象。数组会被拒绝，错误写明要对象。
+        /// </summary>
+        public static void RequireProfilesObject(JsonNode? profiles, string relativePath)
+        {
+            if (profiles is JsonArray)
+            {
+                throw new InvalidOperationException(
+                    $"'{relativePath}' profiles must be an object keyed by profile id, not an array.");
+            }
+
+            if (profiles is not JsonObject)
+            {
+                throw new InvalidOperationException(
+                    $"'{relativePath}' profiles must be an object keyed by profile id.");
+            }
+        }
+
         private static void RejectRenamedAuthoringFields(JsonObject root, string relativePath)
         {
-            if (root["profiles"] is not JsonArray profiles)
+            if (root["profiles"] is not JsonObject profiles)
             {
                 return;
             }
 
-            for (int i = 0; i < profiles.Count; i++)
+            foreach (var pair in profiles)
             {
-                if (profiles[i] is not JsonObject profile)
+                if (pair.Value is not JsonObject profile)
                 {
                     continue;
                 }
@@ -84,7 +103,7 @@ namespace Ludots.Core.Input.Interaction
                         continue;
                     }
 
-                    string rulePath = $"{relativePath}.profiles[{i}].rules[{r}]";
+                    string rulePath = $"{relativePath}.profiles['{pair.Key}'].rules[{r}]";
                     if (rule["actor"] is JsonObject actor && actor.ContainsKey("hasAbilityWithTag"))
                     {
                         throw new InvalidOperationException(
@@ -115,17 +134,20 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Command intent config '{source}' must explicitly define profiles.");
             }
 
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < config.Profiles.Count; i++)
+            foreach (var pair in config.Profiles)
             {
-                CommandIntentProfileDefinition profile = config.Profiles[i]
-                    ?? throw new InvalidOperationException($"Command intent config '{source}' profiles[{i}] must be an object.");
-                string path = $"{source}.profiles[{i}]";
-                RequireTrimmedNonEmpty(profile.Id, $"{path}.id");
-                if (!ids.Add(profile.Id))
+                CommandIntentProfileDefinition profile = pair.Value
+                    ?? throw new InvalidOperationException($"Command intent config '{source}' profiles['{pair.Key}'] must be an object.");
+                string path = $"{source}.profiles['{pair.Key}']";
+                RequireTrimmedNonEmpty(pair.Key, path);
+                if (!string.IsNullOrEmpty(profile.Id) &&
+                    !string.Equals(profile.Id, pair.Key, StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException($"{path}.id duplicates command intent profile '{profile.Id}'.");
+                    throw new InvalidOperationException(
+                        $"{path}.id '{profile.Id}' does not match the profile key.");
                 }
+
+                profile.Id = pair.Key;
 
                 CommandIntentGroupPolicyDefinition groupPolicy = profile.GroupPolicy
                     ?? throw new InvalidOperationException($"{path}.groupPolicy must be an object.");

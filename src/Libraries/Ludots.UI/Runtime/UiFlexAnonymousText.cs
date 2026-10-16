@@ -7,7 +7,7 @@ public static class UiFlexAnonymousText
 	public static bool ShouldAlignAsAnonymousFlexItem(UiNode node)
 	{
 		ArgumentNullException.ThrowIfNull(node);
-		if (node.Children.Count > 0 || string.IsNullOrEmpty(node.TextContent))
+		if (node.Children.Count > 0 || node.Text.IsEmpty)
 		{
 			return false;
 		}

@@ -1,0 +1,16 @@
+{
+  "name": "CrowdSimulationMod",
+  "version": "1.0.0",
+  "description": "CrowdSimulation 能力 Mod：确定性大规模群体导航（NavSurface 地表 + 分层导航 + 流场 + 避让推挤）。只放能力本身：配置目录、会话模板、选中圈表现、指令类型、地形叠层开关。参数默认值在 CrowdSimulationStandardMod，演示单位在 CrowdSimulationDemoContentMod。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "navigation",
+    "crowd-simulation",
+    "navsurface",
+    "large-world"
+  ]
+}

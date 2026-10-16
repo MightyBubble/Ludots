@@ -1,7 +1,6 @@
 {
-  "agentTypes": [
-    {
-      "id": "StrategyFoot",
+  "agentTypes": {
+    "StrategyFoot": {
       "profileId": "Small",
       "selection": {
         "mode": "PreferMesh",
@@ -12,7 +11,11 @@
       },
       "navMesh": {
         "areaCosts": [
-          { "areaId": 0, "cost": 1.0 }
+          {
+            "areaId": 0,
+            "cost": 1.0,
+            "passable": true
+          }
         ]
       },
       "nodeGraph": {
@@ -23,5 +26,5 @@
         "tagCostRules": []
       }
     }
-  ]
+  }
 }

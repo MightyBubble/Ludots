@@ -63,6 +63,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 service = new NavQueryService(
                     store,
                     layer,
+                    profile,
                     areaCosts,
                     _tileWidthCm,
                     _tileHeightCm,

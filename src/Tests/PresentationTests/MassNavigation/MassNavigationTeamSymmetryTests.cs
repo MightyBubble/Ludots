@@ -274,6 +274,7 @@ public class MassNavigationTeamSymmetryTests
             new AgentProfileConfig
             {
                 Id = "heavy",
+                NavProfileId = "heavy",
                 RadiusCm = 28,
                 HeightCm = 200,
                 ClearanceCm = 40,
@@ -283,6 +284,7 @@ public class MassNavigationTeamSymmetryTests
             new AgentProfileConfig
             {
                 Id = "light",
+                NavProfileId = "light",
                 RadiusCm = 20,
                 HeightCm = 180,
                 ClearanceCm = 40,

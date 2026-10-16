@@ -18,6 +18,11 @@
     },
     {
       "kind": "csproj",
+      "value": "mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod",
+      "reason": "群体模拟演示单位和演示结构模板，S1 种子、S3、S4 共用，没有地图，不是独立的 showcase"
+    },
+    {
+      "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorCommon",
       "reason": "shared library for graph-behavior capability showcases; not a standalone showcase entry"
     },
@@ -100,6 +105,11 @@
       "kind": "csproj",
       "value": "mods/showcases/panel_theme_showcase/PanelThemeShowcaseMod",
       "reason": "共享主题资产库（binding 已豁免），mod.json 对账暴露的存量缺口"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/crowd_simulation/CrowdSimulationShowcaseStageMod",
+      "reason": "群体模拟演示场景的共用舞台（S4 交互层，关掉开局部署、S4 脚本和自动回放），没有自己的脚本，不是独立的 showcase"
     }
   ],
   "showcases": [
@@ -11121,6 +11131,252 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubInt/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_1337",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod",
+      "projectPath": null,
+      "title": "CrowdSimulation S1 地形（种子 1337）",
+      "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s1_terrain_1337",
+      "preset": "crowd_simulation_s1_terrain_1337_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-and-navsurface.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s1337_types.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_2024",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain2024Mod",
+      "projectPath": null,
+      "title": "CrowdSimulation S1 地形（种子 2024）",
+      "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s1_terrain_2024",
+      "preset": "crowd_simulation_s1_terrain_2024_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-and-navsurface.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s2024_types.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_7",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod",
+      "projectPath": null,
+      "title": "CrowdSimulation S1 地形（种子 7）",
+      "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s1_terrain_7",
+      "preset": "crowd_simulation_s1_terrain_7_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-and-navsurface.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s7_types.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_minimal",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationMinimalMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 最小样板",
+      "summary": "从空目录写出的群体 Mod：一种单位、一个表现、256×256 导航格的陆地 + 水面小图，方块墙挡在中间，两名玩家各 200 人绕墙走到对面。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_minimal",
+      "preset": "crowd_simulation_minimal_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-minimal-mod.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Authoring.CrowdSimulationMinimalModTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-minimal",
+      "screenshot": "artifacts/acceptance/crowdsimulation-minimal/crowd_minimal_around_wall.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_march",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationMarchShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 行军",
+      "summary": "120 人方块在图中心集结，向东行军，出发 30 tick 后改令转向约 60°；转向时背离新目标的单位-tick 不超过 2%。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_march",
+      "preset": "crowd_simulation_showcase_march_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.FormationShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/march.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "march"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_reversal",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationReversalShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 折返",
+      "summary": "120 人方块向东出发后 180° 掉头：新领队镜像排槽，单位沿旧航向的队内位置不穿队，同向再令镜像不回翻。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_reversal",
+      "preset": "crowd_simulation_showcase_reversal_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.FormationShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/reversal.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "reversal"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_repeat_click",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationRepeatClickShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 连点",
+      "summary": "已集结的 120 人方块被同一目标每 10 tick 连点 8 次：单位不后退，不在到达和行进之间来回翻转。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_repeat_click",
+      "preset": "crowd_simulation_showcase_repeat_click_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.FormationShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/repeat_click.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "repeat-click"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_fog_explore",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationFogExploreShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 迷雾探索",
+      "summary": "视野外的敌方小队、敌方目标和新建筑都不画；敌人走进视野才显示，小队向南探索，看见建筑后它才进认知、才画出来。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_fog_explore",
+      "preset": "crowd_simulation_showcase_fog_explore_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.FogShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/fog_explore_seen.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "fog",
+        "explore"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_fog_reroute",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationFogRerouteShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 看见建筑后改道",
+      "summary": "迷雾里放到领队路线上的建筑：没看见前按认知照旧走、不重新规划，看见之后改道绕开。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_fog_reroute",
+      "preset": "crowd_simulation_showcase_fog_reroute_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.FogShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/fog_reroute_seen.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "fog",
+        "reroute"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_fog_shared_vision",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationFogAllyVisionShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 共享视野",
+      "summary": "盟友看见的建筑和敌人，原地不动的本方也看见；视野外拆掉的建筑留残影，盟友回去看一眼残影才消失。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_fog_shared_vision",
+      "preset": "crowd_simulation_showcase_fog_shared_vision_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.FogShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/fog_shared_vision_seen.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "fog",
+        "shared-vision"
+      ]
+    },
+    {
+      "id": "crowd_simulation_showcase_stress_50k",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationStress50kShowcaseMod",
+      "projectPath": null,
+      "title": "CrowdSimulation 演示 · 5 万单位压力场景",
+      "summary": "与 50k 门禁同一场景：4 名玩家共 5 万步兵开往同一目标，遥测面板默认打开，分列模拟耗时和渲染耗时。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_showcase_stress_50k",
+      "preset": "crowd_simulation_showcase_stress_50k_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Showcases.Stress50kShowcaseTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-showcases",
+      "screenshot": "artifacts/acceptance/crowdsimulation-showcases/stress_50k_hud.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "stress",
+        "telemetry"
+      ]
     },
     {
       "id": "capability_standard_graph_op_SubmitResponseChainOrder",

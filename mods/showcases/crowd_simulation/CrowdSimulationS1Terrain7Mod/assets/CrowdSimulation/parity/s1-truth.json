@@ -1,0 +1,11 @@
+{
+  "fixedHz": 30,
+  "mapId": "crowd_simulation_s7",
+  "seed": 7,
+  "navCellsPerSide": 256,
+  "navCellSizeCm": 6250,
+  "blockers": 300,
+  "layeredPaths": 11,
+  "linkCandidates": 333,
+  "fnv1a": "dc383a24"
+}

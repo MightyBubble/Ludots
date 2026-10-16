@@ -20,6 +20,8 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
+using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation;
@@ -104,6 +106,7 @@ namespace Ludots.Adapter.Raylib
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
+        private const uint FlagWindowHidden = 0x80;
         private const float HostShadowTexelWorld = 0.08f;
         private static readonly float HostShadowSceneRadiusMeters =
             ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS", 48f);
@@ -272,6 +275,12 @@ namespace Ludots.Adapter.Raylib
                     Rl.SetConfigFlags(FlagWindowResizable);
                 }
 
+                // 取证运行可在无桌面干扰下跑完(共享机器上前台窗口会被抢焦点/误关)
+                if (ReadEnvBoolOrDefault("LUDOTS_RAYLIB_WINDOW_HIDDEN", defaultValue: false))
+                {
+                    Rl.SetConfigFlags(FlagWindowHidden);
+                }
+
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
                 if (config.WindowStartMaximized)
@@ -377,7 +386,24 @@ namespace Ludots.Adapter.Raylib
 
                 ValidateRequiredContextBeforeLoop(engine);
 
-                var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                var debugDrawRenderer = new RaylibDebugDrawRenderer
+                {
+                    PlaneY = 0.35f,
+                    GroundSamplerM = (x, z) =>
+                        engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm) &&
+                        hm.TrySampleHeightCm(x * 100f, z * 100f, out float heightCm)
+                            ? heightCm / 100f
+                            : (float?)null,
+                };
+                var routeVisualRenderer = new RaylibRouteVisualRenderer
+                {
+                    PlaneY = 0.45f,
+                    GroundSamplerM = (x, z) =>
+                        engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm2) &&
+                        hm2.TrySampleHeightCm(x * 100f, z * 100f, out float heightCm2)
+                            ? heightCm2 / 100f
+                            : (float?)null,
+                };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 var discreteFieldProjector = new FieldDiscreteVisualProjector(
@@ -568,6 +594,7 @@ namespace Ludots.Adapter.Raylib
                 var presentFrames = new List<ViewportDrawFrame>(4);
                 int frameIndex = 0;
                 string? navWalkabilityOverlayMapId = null;
+                var terrainTypeOverlay = new RaylibTerrainTypeOverlayBinding();
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
@@ -781,11 +808,22 @@ namespace Ludots.Adapter.Raylib
                                     fieldSession.RegionGroups,
                                     in mapMode,
                                     globalFieldVisualBuffer);
-                        if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
-                        {
-                            influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
-                            influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
-                        }                            }
+                            }
+
+                            if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
+                            {
+                                influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
+                                influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
+                            }
+
+                            if (engine.TryGetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry, out Ludots.Core.Presentation.Fields.GlobalFieldVisualProjectorRegistry? fieldProjectorRegistry))
+                            {
+                                // 能力 / Mod 注册的投影器(流场等),宿主不逐个认识
+                                foreach (var projector in fieldProjectorRegistry.Projectors)
+                                {
+                                    projector.Project(globalFieldVisualBuffer);
+                                }
+                            }
                         }
 
                         if (overlaySceneBuilder != null && overlayScene != null)
@@ -817,6 +855,11 @@ namespace Ludots.Adapter.Raylib
                             continuousHeightmapRenderer,
                             renderDebug.DrawNavWalkabilityTexture,
                             ref navWalkabilityOverlayMapId);
+                        terrainTypeOverlay.Apply(
+                            continuousHeightmapRenderer,
+                            engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? crowdRuntime)
+                                ? crowdRuntime?.TerrainTypeOverlay
+                                : null);
                         Color frameClearColor = skyEnvironment.IsActive
                             ? skyEnvironment.ResolveClearColor()
                             : (activeMapRequestsDeepBackground
@@ -1093,6 +1136,7 @@ namespace Ludots.Adapter.Raylib
                                 {
                                     // Window-anchored overlay text is composited once for the whole frame.
                                     screenOverlayBuffer?.AddText(
+                                        PresentationOverlayLayer.TopMost,
                                         10,
                                         40,
                                         navMeshPresentationBuffer.FormatMetadataLine(),
@@ -1118,8 +1162,57 @@ namespace Ludots.Adapter.Raylib
 
                             if (drawFieldOverlays && globalFieldVisualBuffer != null)
                             {
+                                // Flow / Walkable 优先占用唯一贴花槽。迷雾只贴本视口座位的视野组；
+                                // 没有座位或该座位没有 scope 时不贴，也不把缓冲里的雾画成平面四边形。
+                                bool seatScopeResolved = false;
+                                int seatScopeKeyId = 0;
+                                string? seatId = viewport.Frame.SeatId;
+                                if (!string.IsNullOrEmpty(seatId) &&
+                                    engine.TryGetService(CoreServiceKeys.SeatVisionScope, out Ludots.Core.Presentation.Rendering.ISeatVisionScope? seatVision) &&
+                                    seatVision != null)
+                                {
+                                    seatScopeResolved = seatVision.TryGetScopeKeyId(seatId, out seatScopeKeyId);
+                                }
+
+                                bool hasDecal = Ludots.Core.Presentation.Rendering.TerrainDecalSelection.TrySelect(
+                                    globalFieldVisualBuffer,
+                                    seatScopeResolved,
+                                    seatScopeKeyId,
+                                    out Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor decalField);
+                                bool fogOwnsDecal = hasDecal && decalField.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Fog;
+                                fieldRenderPresenter.FogPalette = engine.TryGetService(
+                                    CoreServiceKeys.FogDecalPalette,
+                                    out Ludots.Core.Presentation.Rendering.FogDecalPalette? fogPalette)
+                                    ? fogPalette
+                                    : null;
+
+                                fieldRenderPresenter.DrawFlowKind = !hasDecal;
+                                fieldRenderPresenter.DrawFogKind = seatScopeResolved && !fogOwnsDecal;
                                 long fieldRenderStart = Stopwatch.GetTimestamp();
                                 fieldRenderPresenter.Draw(globalFieldVisualBuffer);
+                                // 地形类型叠层已在本帧绘制前占住贴花槽。场贴花不再改绑，也不清外部纹理。
+                                if (!terrainTypeOverlay.Bound && hasDecal &&
+                                    fieldRenderPresenter.TryGetStagedTexture(decalField.Id, out Texture2D decalTexture))
+                                {
+                                    var bounds = decalField.BoundsCells;
+                                    float cs = decalField.CellSizeCm;
+                                    // 迷雾/流场都要求全缩放可见(overview 网格下保留贴花)
+                                    continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = true;
+                                    continuousHeightmapRenderer.SetNavWalkabilityOverlayExternal(
+                                        decalTexture,
+                                        new System.Numerics.Vector4(
+                                            bounds.X * cs,
+                                            bounds.Y * cs,
+                                            (bounds.X + bounds.Width) * cs,
+                                            (bounds.Y + bounds.Height) * cs),
+                                        fogOwnsDecal ? 1f : Ludots.Raylib.Render.RaylibContinuousHeightmapRenderer.DefaultNavWalkabilityBlendStrength);
+                                }
+                                else if (!terrainTypeOverlay.Bound)
+                                {
+                                    continuousHeightmapRenderer.ClearNavWalkabilityOverlayExternal();
+                                    continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = false;
+                                }
+
                                 presentationTiming?.ObserveGlobalFieldRender(
                                     ElapsedMs(fieldRenderStart),
                                     fieldRenderPresenter.LastFieldTextureCount,
@@ -1237,6 +1330,13 @@ namespace Ludots.Adapter.Raylib
                             else
                             {
                                 presentationTiming?.ObserveDebugDrawRender(0d, 0);
+                            }
+
+                            // 路线 / 标记(gameplay 通道,不吃调试开关):移动路线、阵型槽位等叠加
+                            if (engine.TryGetService(CoreServiceKeys.RouteVisualBuffer, out RouteVisualBuffer? routeVisuals) &&
+                                (routeVisuals.Polylines.Count > 0 || routeVisuals.Markers.Count > 0))
+                            {
+                                routeVisualRenderer.Draw(routeVisuals);
                             }
 
                             EndCoreMode3D();

@@ -16,7 +16,8 @@ namespace Ludots.Core.Gameplay.Camera
                     definition.ZoomCmPerWheel,
                     definition.MinDistanceCm,
                     definition.MaxDistanceCm,
-                    definition.ZoomFactorPerWheel));
+                    definition.ZoomFactorPerWheel,
+                    definition.ZoomTowardsPointer));
             }
 
             switch (definition.PanMode)

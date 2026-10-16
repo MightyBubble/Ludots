@@ -1,0 +1,130 @@
+{
+  "magicBox": true,
+  "fogHide": false,
+  "playerRoute": true,
+  "layersStartEnabled": true,
+  "deployCount": 24,
+  "deployCountStep": 4,
+  "deployCountMin": 1,
+  "deployCountMax": 500,
+  "clickCount": 8,
+  "clickCountStep": 1,
+  "clickCountMin": 1,
+  "clickCountMax": 64,
+  "clickTemplate": "crowd_simulation.unit.infantry.r100",
+  "clickTemplates": [
+    "crowd_simulation.unit.infantry.r100",
+    "crowd_simulation.unit.infantry.r200",
+    "crowd_simulation.unit.infantry.r300",
+    "crowd_simulation.unit.infantry.r400",
+    "crowd_simulation.unit.navy.r100",
+    "crowd_simulation.unit.navy.r200",
+    "crowd_simulation.unit.navy.r300",
+    "crowd_simulation.unit.navy.r400",
+    "crowd_simulation.unit.mountaineer.r100",
+    "crowd_simulation.unit.mountaineer.r200",
+    "crowd_simulation.unit.mountaineer.r300",
+    "crowd_simulation.unit.mountaineer.r400",
+    "crowd_simulation.unit.amphibious.r100",
+    "crowd_simulation.unit.amphibious.r200",
+    "crowd_simulation.unit.amphibious.r300",
+    "crowd_simulation.unit.amphibious.r400",
+    "crowd_simulation.unit.jumper.r100",
+    "crowd_simulation.unit.jumper.r200",
+    "crowd_simulation.unit.jumper.r300",
+    "crowd_simulation.unit.jumper.r400"
+  ],
+  "rippleMs": 700,
+  "rippleRadiusCm": 6000,
+  "dashCm": 8000,
+  "gapCm": 4000,
+  "maxDashes": 256,
+  "routeThicknessCm": 300,
+  "markerRadiusCm": 2000,
+  "crossArmCm": 3000,
+  "killRingScale": 2,
+  "killImpulse": 0,
+  "enemyMarkRadiusCm": 2400,
+  "hillshadeStrength": 1.2,
+  "maxBeliefMarkers": 1024,
+  "cameraId": "CrowdSimulation.Camera.S4Deploy",
+  "seatId": "seat.0",
+  "boxingContextId": "interaction.context.crowd_simulation.boxing",
+  "fogSceneUri": "CrowdSimulationS4DeployMod:assets/CrowdSimulation/player-fog-check.json",
+  "defaultShapeId": "box",
+  "actions": {
+    "nextTeam": "CrowdSimulation.Player.NextTeam",
+    "selectAll": "CrowdSimulation.Player.SelectAll",
+    "clearSelection": "CrowdSimulation.Player.ClearSelection",
+    "toggleLayer": "CrowdSimulation.Player.ToggleLayer",
+    "cycleLayer": "CrowdSimulation.Player.CycleLayer",
+    "toggleFog": "CrowdSimulation.Player.ToggleFog",
+    "sceneOutside": "CrowdSimulation.Player.SceneOutside",
+    "sceneBehind": "CrowdSimulation.Player.SceneBehind",
+    "toggleLos": "CrowdSimulation.Player.ToggleLos",
+    "toggleRoute": "CrowdSimulation.Player.ToggleRoute",
+    "deployCountDown": "CrowdSimulation.Player.DeployCountDown",
+    "deployCountUp": "CrowdSimulation.Player.DeployCountUp",
+    "cycleClickTemplate": "CrowdSimulation.Player.CycleClickTemplate",
+    "cycleClickRadius": "CrowdSimulation.Player.CycleClickRadius",
+    "toggleMagicBox": "CrowdSimulation.Player.ToggleMagicBox",
+    "cycleShape": "CrowdSimulation.Player.CycleShape",
+    "clickCountDown": "CrowdSimulation.Player.ClickCountDown",
+    "clickCountUp": "CrowdSimulation.Player.ClickCountUp",
+    "cycleRadiusRange": "CrowdSimulation.Player.CycleRadiusRange",
+    "boxSelectBegin": "CrowdSimulation.BoxSelectBegin",
+    "secondaryHold": "CrowdSimulation.SecondaryHold",
+    "formationCommit": "CrowdSimulation.FormationCommit",
+    "primaryTap": "CrowdSimulation.PrimaryTap"
+  },
+  "colors": {
+    "selected": {
+      "red": 255,
+      "green": 255,
+      "blue": 255,
+      "alpha": 255
+    },
+    "terrainLow": {
+      "red": 78,
+      "green": 96,
+      "blue": 62,
+      "alpha": 255
+    },
+    "terrainHigh": {
+      "red": 214,
+      "green": 206,
+      "blue": 176,
+      "alpha": 255
+    },
+    "terrainShade": {
+      "red": 36,
+      "green": 32,
+      "blue": 48,
+      "alpha": 255
+    },
+    "goal": {
+      "red": 236,
+      "green": 220,
+      "blue": 160,
+      "alpha": 230
+    },
+    "ripple": {
+      "red": 150,
+      "green": 42,
+      "blue": 72,
+      "alpha": 160
+    },
+    "enemyMark": {
+      "red": 255,
+      "green": 96,
+      "blue": 32,
+      "alpha": 255
+    }
+  },
+  "shapeLabels": {
+    "box": "方阵",
+    "line": "横队",
+    "wedge": "楔形",
+    "loose": "松散"
+  }
+}

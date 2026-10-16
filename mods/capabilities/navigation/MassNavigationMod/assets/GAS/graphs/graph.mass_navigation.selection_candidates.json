@@ -6,14 +6,17 @@
     "nodes": [
       { "id": "map", "op": "QueryAllMapEntities" },
       { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable" },
+      { "id": "startup_team", "op": "QueryFilterTeam", "teamId": 1 },
       { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
     ],
     "controlEdges": [
       { "from": "map", "fromPort": "next", "to": "commandable" },
-      { "from": "commandable", "fromPort": "next", "to": "halt" }
+      { "from": "commandable", "fromPort": "next", "to": "startup_team" },
+      { "from": "startup_team", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
-      { "from": "map", "fromPort": "list", "to": "commandable", "toPort": "list" }
+      { "from": "map", "fromPort": "list", "to": "commandable", "toPort": "list" },
+      { "from": "commandable", "fromPort": "list", "to": "startup_team", "toPort": "list" }
     ]
   }
 ]

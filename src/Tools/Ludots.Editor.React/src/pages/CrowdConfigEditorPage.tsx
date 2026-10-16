@@ -1,0 +1,483 @@
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
+import { TraversalMatrixEditor } from './crowd-config/TraversalMatrixEditor';
+import { cloneTraversal, type Traversal } from './crowd-config/traversalMatrix';
+import { UnitTemplateInspector } from './crowd-config/UnitTemplateInspector';
+import type { UnitTemplatesView } from './crowd-config/unitTemplates';
+
+type ModInfo = { id: string; name?: string };
+type Issue = { path?: string; message?: string; sourceMod?: string; sourceFile?: string };
+type Owner = { file: string; path: string; sourceMod?: string; sourceFile?: string };
+type HelpItem = { topic: string; text: string };
+type Snapshot = {
+  ok?: boolean;
+  modId?: string;
+  mapId?: string;
+  mapOwner?: string | null;
+  mapOwnedBySelection?: boolean;
+  fixedHz?: number;
+  scenario?: unknown;
+  globals?: unknown;
+  templates?: unknown;
+  debug?: unknown;
+  debugView?: unknown;
+  defaults?: Record<string, unknown>;
+  owners?: Owner[];
+  unitTemplates?: UnitTemplatesView;
+  traversal?: Traversal;
+  mapAreas?: string[];
+  help?: HelpItem[];
+  issues?: Issue[];
+};
+
+const TABS = [
+  { id: 'scenario', label: '场景实例' },
+  { id: 'globals', label: '全局参数' },
+  { id: 'templates', label: '实体模板' },
+  { id: 'traversal', label: '通行矩阵' },
+  { id: 'bundle', label: '完整包' },
+  { id: 'debug', label: '调试参数' },
+  { id: 'debugView', label: '调试视图' },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
+const LIVE_METHOD: Partial<Record<TabId, string>> = {
+  scenario: 'ludots.crowd.config.rebuildWorld',
+  globals: 'ludots.crowd.config.rebuildWorld',
+  templates: 'ludots.crowd.config.rebuildWorld',
+  traversal: 'ludots.crowd.config.rebuildWorld',
+  debug: 'ludots.crowd.config.applyDebug',
+  debugView: 'ludots.crowd.config.applyDebugView',
+};
+
+function pretty(value: unknown): string {
+  return JSON.stringify(value ?? {}, null, 2);
+}
+
+function readMods(payload: { mods?: unknown }): ModInfo[] {
+  const raw = Array.isArray(payload.mods) ? payload.mods : [];
+  return raw
+    .map((item) => {
+      const row = item as { id?: string; Id?: string; name?: string; Name?: string };
+      return { id: row.id ?? row.Id ?? '', name: row.name ?? row.Name };
+    })
+    .filter((mod) => mod.id.length > 0);
+}
+
+function applyLabel(tab: TabId): string {
+  if (tab === 'debug') return '应用调试参数';
+  if (tab === 'debugView') return '应用调试视图';
+  if (tab === 'bundle') return '导入';
+  return '应用并重建世界';
+}
+
+export function CrowdConfigEditorPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedMod = searchParams.get('mod') ?? 'CrowdSimulationS4DeployMod';
+  const [mods, setMods] = useState<ModInfo[]>([]);
+  const [modId, setModId] = useState(requestedMod);
+  const [tab, setTab] = useState<TabId>('scenario');
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [texts, setTexts] = useState<Record<string, string>>({});
+  const [traversal, setTraversal] = useState<Traversal | null>(null);
+  const [bundleText, setBundleText] = useState('');
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [loadedIssues, setLoadedIssues] = useState<Issue[]>([]);
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const validateTimer = useRef<number | undefined>(undefined);
+  const [rpcPort, setRpcPort] = useState('47921');
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/mods');
+        const json = (await res.json()) as { mods?: unknown };
+        if (cancelled) return;
+        const list = readMods(json);
+        setMods(list);
+        setModId((current) => {
+          if (current && list.some((mod) => mod.id === current)) return current;
+          if (requestedMod && list.some((mod) => mod.id === requestedMod)) return requestedMod;
+          return list.find((mod) => mod.id === 'CrowdSimulationS4DeployMod')?.id ?? list[0]?.id ?? '';
+        });
+      } catch (err) {
+        if (!cancelled) setStatus(err instanceof Error ? err.message : '编辑器服务没有返回 mod 列表');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedMod]);
+
+  useEffect(() => {
+    if (!modId) return;
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/crowd-config`);
+        const json = (await res.json()) as Snapshot;
+        if (cancelled) return;
+        setSnapshot(json);
+        setTexts({
+          scenario: pretty(json.scenario),
+          globals: pretty(json.globals),
+          templates: pretty(json.templates),
+          debug: pretty(json.debug),
+          debugView: pretty(json.debugView),
+        });
+        setTraversal(cloneTraversal(json.traversal));
+        const loaded = [...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])];
+        setIssues(loaded);
+        setLoadedIssues(loaded);
+        if (json.ok === false) {
+          setStatus('这份配置没有读出来');
+          return;
+        }
+        const checked = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/validate`, {
+          layer: 'templates',
+          draft: json.templates,
+        });
+        if (cancelled || checked.ok !== false) return;
+        const known = new Set(loaded.map((issue) => issue.message));
+        const merged = [...loaded, ...(checked.issues ?? []).filter((issue) => !known.has(issue.message))];
+        setIssues(merged);
+        setLoadedIssues(merged);
+      } catch (err) {
+        if (!cancelled) setStatus(err instanceof Error ? err.message : '群体配置没有读出来');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [modId]);
+
+  function setText(layer: string, value: string) {
+    setTexts((current) => ({ ...current, [layer]: value }));
+  }
+
+  function parseLayer(layer: TabId): unknown {
+    if (layer === 'traversal') {
+      return traversal;
+    }
+    return JSON.parse(texts[layer] || '{}');
+  }
+
+  async function post(path: string, body: unknown): Promise<Snapshot & { written?: string[]; lost?: string[]; rebuilt?: boolean }> {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return (await res.json()) as Snapshot & { written?: string[]; lost?: string[]; rebuilt?: boolean };
+  }
+
+  async function reload() {
+    const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/crowd-config`);
+    const json = (await res.json()) as Snapshot;
+    setSnapshot(json);
+    setTraversal(cloneTraversal(json.traversal));
+    setLoadedIssues([...(json.issues ?? []), ...(json.unitTemplates?.issues ?? [])]);
+  }
+
+  async function validate() {
+    try {
+      await check(tab, parseLayer(tab));
+    } catch (err) {
+      setIssues([{ path: '', message: err instanceof Error ? err.message : '草稿不是 JSON' }]);
+    }
+  }
+
+  async function check(layer: TabId, draft: unknown) {
+    setBusy(true);
+    setStatus('');
+    try {
+      const json = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/validate`, { layer, draft });
+      setIssues(json.issues ?? []);
+      setStatus(json.ok ? '校验通过' : '校验没有通过，没有写文件，也没有重建。');
+    } catch (err) {
+      setIssues([{ path: '', message: err instanceof Error ? err.message : '校验请求失败' }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function editTemplates(text: string) {
+    setText('templates', text);
+    window.clearTimeout(validateTimer.current);
+    validateTimer.current = window.setTimeout(() => void check('templates', JSON.parse(text)), 600);
+  }
+
+  async function apply() {
+    setBusy(true);
+    setStatus('');
+    try {
+      const draft = parseLayer(tab);
+      const json = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/apply`, { layer: tab, draft });
+      setIssues(json.issues ?? []);
+      if (!json.ok) {
+        setStatus('校验没有通过，没有写文件，也没有重建。');
+        return;
+      }
+      const written = (json.written ?? []).join('、') || '没有需要写入的差异';
+      const method = LIVE_METHOD[tab];
+      if (!method) {
+        setStatus(`已写入 ${written}`);
+        await reload();
+        return;
+      }
+      try {
+        const rpc = await fetch(`http://127.0.0.1:${rpcPort}/rpc`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: {} }),
+        });
+        const payload = (await rpc.json()) as { result?: { ok?: boolean; issues?: Issue[]; lost?: string[]; rebuilt?: boolean }; error?: { message?: string } };
+        if (payload.error) {
+          setStatus(`已写入 ${written}。运行中的游戏拒绝了：${payload.error.message ?? ''}`);
+        } else if (payload.result?.ok === false) {
+          setIssues(payload.result.issues ?? []);
+          setStatus(`已写入 ${written}。运行中的局没有改，因为校验没有通过。`);
+        } else if (payload.result?.rebuilt) {
+          setStatus(`已写入 ${written}。世界已重建。丢掉的是：${(payload.result.lost ?? []).join('、')}`);
+        } else {
+          setStatus(`已写入 ${written}。运行中的局已按这份生效。`);
+        }
+      } catch {
+        setStatus(`已写入 ${written}。没有运行中的游戏，所以没有当场生效。`);
+      }
+      await reload();
+    } catch (err) {
+      setIssues([{ path: '', message: err instanceof Error ? err.message : '草稿不是 JSON' }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function resetDraft() {
+    if (tab === 'traversal') {
+      const defaults = snapshot?.defaults?.traversal as Traversal | undefined;
+      setTraversal(cloneTraversal(defaults ?? snapshot?.traversal));
+      setStatus('草稿已回到默认。文件还没改。');
+      return;
+    }
+    if (tab === 'bundle') return;
+    const defaults = snapshot?.defaults?.[tab];
+    setText(tab, pretty(defaults));
+    setStatus('草稿已回到默认。文件还没改。');
+  }
+
+  async function exportBundle() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/crowd-config/bundle`);
+      const json = await res.json();
+      setBundleText(pretty(json));
+      setStatus('已导出完整包。');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importBundle() {
+    setBusy(true);
+    setStatus('');
+    try {
+      const bundle = JSON.parse(bundleText || '{}') as unknown;
+      const json = await post(`/api/mods/${encodeURIComponent(modId)}/crowd-config/bundle`, { bundle, write: true });
+      setIssues(json.issues ?? []);
+      setStatus(json.ok ? `已写入 ${(json.written ?? []).join('、') || '完整包'}` : '完整包没有导入。');
+      if (json.ok) await reload();
+    } catch (err) {
+      setIssues([{ path: 'bundle', message: err instanceof Error ? err.message : '完整包不是 JSON' }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const defaultsText = tab === 'bundle' || tab === 'traversal' ? '' : pretty(snapshot?.defaults?.[tab]);
+  const traversalDefaults = cloneTraversal(snapshot?.defaults?.traversal as Traversal | undefined);
+
+  return (
+    <div className="h-full overflow-auto bg-studio-bg px-6 py-6 text-studio-label">
+      <div className="mx-auto max-w-6xl">
+        <h1 className="text-2xl font-semibold">群体配置</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-studio-secondary">
+          场景、全局、模板来自加载顺序里的合并结果。写入只落在当前选中的 Mod。通行矩阵来自 CrowdSimulation/traversal.json，每一格都写明，不可走是 false。完整包是 scenario、globals、templates、traversal 四个字段。
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <label className={STUDIO_CHROME.label}>
+            Mod
+            <select
+              className={STUDIO_CHROME.field}
+              value={modId}
+              onChange={(event) => {
+                const next = event.target.value;
+                setModId(next);
+                setSearchParams(next ? { mod: next } : {});
+              }}
+            >
+              {mods.map((mod) => (
+                <option key={mod.id} value={mod.id}>
+                  {mod.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs text-studio-muted">
+            地图 {snapshot?.mapId ?? '…'} · 地图文件属于 {snapshot?.mapOwner ?? '（没有文件）'}
+            {snapshot && snapshot.mapOwnedBySelection === false ? ' · 当前 Mod 不能改这份地图' : ''}
+            · FixedHz {snapshot?.fixedHz ?? '…'}
+          </p>
+          <label className={STUDIO_CHROME.label}>
+            运行中游戏的 RPC 端口
+            <input
+              className={STUDIO_CHROME.field}
+              value={rpcPort}
+              onChange={(event) => setRpcPort(event.target.value)}
+              data-live-rpc-port=""
+            />
+          </label>
+        </div>
+
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {TABS.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                data-crowd-tab={item.id}
+                className={tab === item.id ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff}
+                onClick={() => {
+                  setTab(item.id);
+                  setIssues(loadedIssues);
+                  setStatus('');
+                }}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {(snapshot?.help ?? []).map((item) => (
+            <li key={item.topic} className="rounded-md border border-studio-elevated bg-studio-surface px-3 py-2 text-xs leading-relaxed">
+              <span className="text-studio-blue">{item.topic}</span>
+              <span className="text-studio-secondary"> {item.text}</span>
+            </li>
+          ))}
+        </ul>
+
+        {loading ? <p className="mt-4 text-sm text-studio-muted">正在合并…</p> : null}
+        {status ? <p className="mt-4 text-sm text-studio-secondary" data-crowd-status="">{status}</p> : null}
+        {issues.length > 0 ? (
+          <ul className="mt-3 space-y-2">
+            {issues.map((issue, index) => (
+              <li key={`${issue.path}-${index}`} data-crowd-error="" className="rounded-md border border-studio-red/40 bg-studio-red/10 px-3 py-2 text-sm">
+                <span className="font-mono text-xs text-studio-red">{issue.path || '（无字段）'}</span>
+                <span className="mt-1 block">{issue.message}</span>
+                {issue.sourceMod || issue.sourceFile ? (
+                  <span className="mt-1 block font-mono text-xs text-studio-secondary">
+                    {issue.sourceMod ?? ''} {issue.sourceFile ?? ''}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {tab === 'templates' ? (
+          <UnitTemplateInspector
+            key={modId}
+            modId={modId}
+            view={snapshot?.unitTemplates}
+            draftText={texts.templates ?? ''}
+            issues={issues}
+            onDraftChange={editTemplates}
+            onDraftError={(message) => setIssues([{ path: 'unitTypes', message }])}
+          />
+        ) : null}
+
+        {tab === 'traversal' && traversal ? (
+          <TraversalMatrixEditor
+            traversal={traversal}
+            defaults={traversalDefaults}
+            mapAreas={snapshot?.mapAreas ?? []}
+            onChange={setTraversal}
+          />
+        ) : null}
+
+        {tab === 'bundle' ? (
+          <div className="mt-4">
+            <p className="text-sm text-studio-secondary" data-bundle-fields="">
+              字段缺失、类型不对或不认识的字段会按字段拒绝，不改草稿。
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button type="button" className={STUDIO_CHROME.btnGhost} disabled={busy} onClick={() => void exportBundle()}>
+                导出
+              </button>
+              <button type="button" className={STUDIO_CHROME.btnPrimary} disabled={busy} onClick={() => void importBundle()}>
+                导入
+              </button>
+            </div>
+            <textarea
+              className="mt-3 h-80 w-full rounded-md border border-studio-elevated bg-studio-bg p-3 font-mono text-xs"
+              value={bundleText}
+              onChange={(event) => setBundleText(event.target.value)}
+            />
+          </div>
+        ) : null}
+
+        {tab !== 'bundle' && tab !== 'traversal' ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <label className="block text-xs text-studio-muted">
+              当前草稿
+              <textarea
+                className="mt-1 h-96 w-full rounded-md border border-studio-elevated bg-studio-bg p-3 font-mono text-xs text-studio-label"
+                value={texts[tab] ?? ''}
+                onChange={(event) => setText(tab, event.target.value)}
+              />
+            </label>
+            <label className="block text-xs text-studio-muted">
+              默认
+              <textarea className="mt-1 h-96 w-full rounded-md border border-studio-elevated bg-studio-surface p-3 font-mono text-xs text-studio-secondary" readOnly value={defaultsText} />
+            </label>
+          </div>
+        ) : null}
+
+        {tab !== 'bundle' ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" className={STUDIO_CHROME.btnGhost} disabled={busy} onClick={() => void validate()}>
+              校验
+            </button>
+            <button type="button" className={STUDIO_CHROME.btnPrimary} disabled={busy} onClick={() => void apply()}>
+              {applyLabel(tab)}
+            </button>
+            <button type="button" className={STUDIO_CHROME.btnGhost} disabled={busy} onClick={resetDraft}>
+              恢复默认
+            </button>
+          </div>
+        ) : null}
+
+        <details className="mt-6">
+          <summary className="cursor-pointer text-sm text-studio-secondary">字段归属</summary>
+          <ul className="mt-2 max-h-64 space-y-1 overflow-auto text-xs">
+            {(snapshot?.owners ?? []).slice(0, 80).map((owner) => (
+              <li key={`${owner.file}:${owner.path}`} className="font-mono text-studio-muted">
+                {owner.file} {owner.path} · {owner.sourceFile}
+              </li>
+            ))}
+          </ul>
+        </details>
+      </div>
+    </div>
+  );
+}

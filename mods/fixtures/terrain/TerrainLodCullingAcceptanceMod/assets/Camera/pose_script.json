@@ -1,0 +1,48 @@
+{
+  "mapId": "terrain_lod_culling_acceptance",
+  "virtualCameraId": "TerrainLod.Script",
+  "keyframes": [
+    {
+      "endFrame": 300,
+      "target": { "from": [90000, 90000], "to": [320000, 320000], "ease": "linear" },
+      "yaw": { "from": 40, "to": 40, "ease": "linear" },
+      "pitch": { "from": 46, "to": 46, "ease": "linear" },
+      "distance": { "from": 5200, "to": 5200, "ease": "linear" }
+    },
+    {
+      "endFrame": 480,
+      "target": { "from": [204800, 204800], "to": [204800, 204800], "ease": "linear" },
+      "yaw": { "from": 210, "to": 30, "ease": "linear" },
+      "pitch": { "from": 36, "to": 36, "ease": "linear" },
+      "distance": { "from": 26000, "to": 26000, "ease": "linear" }
+    },
+    {
+      "endFrame": 540,
+      "target": { "from": [204800, 204800], "to": [204800, 204800], "ease": "linear" },
+      "yaw": { "from": 40, "to": 40, "ease": "linear" },
+      "pitch": { "from": 36, "to": 62, "ease": "linear" },
+      "distance": { "from": 26000, "to": 900000, "ease": "smoothstep" }
+    },
+    {
+      "endFrame": 1020,
+      "target": { "from": [204800, 204800], "to": [204800, 204800], "ease": "linear" },
+      "yaw": { "from": 40, "to": 40, "ease": "linear" },
+      "pitch": { "from": 62, "to": 62, "ease": "linear" },
+      "distance": { "from": 900000, "to": 900000, "ease": "linear" }
+    },
+    {
+      "endFrame": 1032,
+      "target": { "from": [204800, 204800], "to": [204800, 204800], "ease": "linear" },
+      "yaw": { "from": 40, "to": 40, "ease": "linear" },
+      "pitch": { "from": 62, "to": 46, "ease": "linear" },
+      "distance": { "from": 900000, "to": 5200, "ease": "smoothstep" }
+    },
+    {
+      "endFrame": 1080,
+      "target": { "from": [204800, 204800], "to": [204800, 204800], "ease": "linear" },
+      "yaw": { "from": 40, "to": 40, "ease": "linear" },
+      "pitch": { "from": 46, "to": 46, "ease": "linear" },
+      "distance": { "from": 5200, "to": 5200, "ease": "linear" }
+    }
+  ]
+}

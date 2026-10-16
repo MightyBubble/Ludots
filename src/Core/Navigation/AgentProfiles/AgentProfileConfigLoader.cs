@@ -20,12 +20,14 @@ namespace Ludots.Core.Navigation.AgentProfiles
 
         public AgentProfileRegistry Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            return ConfigMergeProvenance.Wrap(RelativePath, report, tracked =>
+            {
             ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(
                 catalog,
                 RelativePath,
                 ConfigMergePolicy.ArrayById,
                 defaultIdField: "id");
-            IReadOnlyList<MergedConfigEntry> entries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            IReadOnlyList<MergedConfigEntry> entries = _pipeline.MergeArrayByIdFromCatalog(in entry, tracked);
             if (entries == null || entries.Count == 0)
             {
                 throw new InvalidOperationException("Navigation/agent_profiles.json must define at least one profile.");
@@ -46,50 +48,41 @@ namespace Ludots.Core.Navigation.AgentProfiles
             }
 
             return new AgentProfileRegistry(profiles);
+            });
         }
+
+        private static readonly string[] RequiredProperties =
+            { "id", "radiusCm", "heightCm", "clearanceCm", "draftCm", "beamCm", "mass", "layer", "navProfileId" };
+        private static readonly string[] OptionalProperties = Array.Empty<string>();
 
         private static void ValidateRaw(JsonObject obj, int index)
         {
-            RequireOnlyProperties(
-                obj,
-                $"AgentProfile[{index}]",
-                "id",
-                "radiusCm",
-                "heightCm",
-                "clearanceCm",
-                "draftCm",
-                "beamCm",
-                "mass",
-                "layer");
-        }
-
-        private static void RequireOnlyProperties(JsonObject obj, string path, params string[] allowed)
-        {
+            string path = $"AgentProfile[{index}]";
             foreach (var property in obj)
             {
                 bool known = false;
-                for (int i = 0; i < allowed.Length; i++)
-                {
-                    if (string.Equals(property.Key, allowed[i], StringComparison.Ordinal))
-                    {
-                        known = true;
-                        break;
-                    }
-                }
-
+                for (int i = 0; i < RequiredProperties.Length; i++) known |= string.Equals(property.Key, RequiredProperties[i], StringComparison.Ordinal);
+                for (int i = 0; i < OptionalProperties.Length; i++) known |= string.Equals(property.Key, OptionalProperties[i], StringComparison.Ordinal);
                 if (!known)
                 {
+                    if (string.Equals(property.Key, "templateId", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{path} 已删除 templateId。模板 id 是实体模板自己的 id；群体速度写在 CrowdSimulationAgent.speedCmPerSec。");
+                    }
+
                     throw new InvalidOperationException($"{path} contains unknown property '{property.Key}'.");
                 }
             }
 
-            for (int i = 0; i < allowed.Length; i++)
+            for (int i = 0; i < RequiredProperties.Length; i++)
             {
-                if (!obj.ContainsKey(allowed[i]))
+                if (!obj.ContainsKey(RequiredProperties[i]))
                 {
-                    throw new InvalidOperationException($"{path} must explicitly define '{allowed[i]}'.");
+                    throw new InvalidOperationException($"{path} must explicitly define '{RequiredProperties[i]}'.");
                 }
             }
         }
+
     }
 }

@@ -96,7 +96,7 @@ MassNavigation
 | 能力 | 唯一归属 | 不应放在哪里 |
 |---|---|---|
 | 跨域区域分类 | Map/Terrain 的 areaId/tags（#372）；导航只消费 | 地形 cost、Nav 私有词汇表 |
-| Agent 通行代价 | `PathingConfig.agentTypes[].navMesh.areaCosts` | 地图分类、sidecar 或几何 profile |
+| Agent 通行代价 | `PathingConfig.agentTypes.<id>.navMesh.areaCosts` | 地图分类、sidecar 或几何 profile |
 | 地形源读取与快照 | `NavBakeSource` adapter | Web 私有格式、showcase 私有 loader |
 | 配置合并与校验 | `ConfigPipeline` + `NavMeshBakeConfigLoader` | CLI 手写默认值、编辑器自行解释 JSON |
 | 烘焙 | `NavBakeContext` + `NavBakeService` + `INavBakeAlgorithm` | CLI/Bridge 各写一套 bake loop |
@@ -253,7 +253,7 @@ NavMesh 负责“哪里能走”和“路径是什么”；MassNavigation 负责
 }
 ```
 
-示例表达目标概念，不是可直接复制的当前 schema。区域分类按 [#372](https://github.com/MightyBubble/Ludots/issues/372) 只存 `areaId/tags`；代价沿用现有 `Navigation/pathing.json` 的 `agentTypes[].navMesh.areaCosts[]`，逐 Agent 解释区域，不放在地图声明里。示例和双 Agent 验收见 [区域分类与 Agent 通行代价](navmesh-features/area-costs.md)。单改某 Agent 的代价不重烘焙几何，也不改变另一 Agent 的策略。时间预算用于估算和诊断，提交数量不保证后台工作在同一 tick 完成。
+示例表达目标概念，不是可直接复制的当前 schema。区域分类按 [#372](https://github.com/MightyBubble/Ludots/issues/372) 只存 `areaId/tags`；代价沿用现有 `Navigation/pathing.json` 的 `agentTypes.<id>.navMesh.areaCosts[]`，逐 Agent 解释区域，不放在地图声明里。示例和双 Agent 验收见 [区域分类与 Agent 通行代价](navmesh-features/area-costs.md)。单改某 Agent 的代价不重烘焙几何，也不改变另一 Agent 的策略。时间预算用于估算和诊断，提交数量不保证后台工作在同一 tick 完成。
 
 配置规则：
 
@@ -436,7 +436,7 @@ UAT 证据至少包括：启动 preset、Agent Bridge `/health` 两次且 `pumpC
 - 真实 NavTileStore overlay、N 开关、后台障碍重烤和生产帧 NavMesh pass 已进入 main。
 - Agent Bridge 已有导航空间探针和查询工具。
 - 此前导航专项审计记录为架构回归 91/91 通过（本次文档修改未重跑运行时测试）；`.height` 单瓦片烘焙及走性 PNG 导出通过。
-- `PathingConfig` 与 `AutoPathService` 已按 Agent 编译区域代价表；`LogicTerrainCell.Cost`、`NavMeshBakeConfig.Areas[].Cost` 仍是待清理残留。纯 NavMesh 引导仍用首个 Agent 的 query adapter，不能宣称所有入口都按请求身份选择策略，详见 [区域代价现状](navmesh-features/area-costs.md)。
+- `PathingConfig` 与 `AutoPathService` 已按 Agent 编译区域代价表。`LogicTerrainCell.Cost` 和 `NavMeshBakeConfig.Areas[].Cost` 已删除。区域写 `id`、`areaId`、`slopeFree`。`areaCosts[]` 可写 `speedDivisor`（不写等于 `cost`）和 `passable`（`false` 为不可进）。纯 NavMesh 入口要求请求写明 `AgentTypeId`。详见 [区域代价现状](navmesh-features/area-costs.md)。
 - 当前配置仍由 `NavMeshBakeConfig` 的 `mode/algorithm/profiles/layers/areas/runtimeIncremental` 主导，`NavBakeContext` 仍直接接收 `LogicTerrainField`。
 - 多板 registry、board 身份路径、非零 origin、两轴 tile 尺寸和完整 source snapshot 尚未达到目标合同。
 - 此前审计的运行时 4 个场景中 2 个通过、2 个失败（本次未重跑）：一个未在固定 tick 窗口内等到 revision，另一个路径绕行通过但小队未全部抵达。
@@ -472,7 +472,7 @@ UAT 证据至少包括：启动 preset、Agent Bridge `/health` 两次且 `pumpC
 3. **P1：新源、拓扑与语义（未收口）**，拆为 [拓扑与逻辑地形](navmesh-features/topology-and-logic-terrain.md)、[源接入](navmesh-features/source-and-semantics.md)、[多层/表面](navmesh-features/multi-layer-pathing.md)、[几何约束](navmesh-features/slope-clearance.md)、[结构障碍](navmesh-features/structural-obstacles.md)、[区域代价](navmesh-features/area-costs.md)、[水面](navmesh-features/water-semantics.md) 和 [Link](navmesh-features/navmesh-links.md)。`codex/nav-bake-policy` 有连续高度和 authored obstacle 输入实现，但未合入；仍需完成 `NavBakeSource`、grid/hex adapter、area/water sidecar，并让 CLI、Bridge、runtime 消费同一 source contract。
 4. **P1：路由、执行与作者工具链（未收口）**，拆为 [路由域选择](navmesh-features/route-domain-selection.md)、[路线到 MassNavigation 执行](navmesh-features/route-execution.md)、[作者入口](navmesh-features/authoring-toolchain.md)、[profile/半径配置](navmesh-features/agent-profiles.md) 与 [烘焙估算](navmesh-features/bake-estimation-and-memory.md)。现有 CLI/Bridge 共享部分 Core bake 链路；`codex/nav-authoring-showcase` 和 `codex/nav-bake-visualization` 的作者面仍依赖旧 payload/入口。仍需统一 `nav bake --map <id>`、manifest 写入、错误提示、Graph/Mesh/Auto 解释和双 profile 执行验收。
 5. **P2：产物与编辑器（部分完成）**，拆为 [产物/Manifest](navmesh-features/artifacts-and-manifest.md)、[投影贴图](navmesh-features/walkability-projection.md) 与 [真实调试显示](navmesh-features/navmesh-debug-view.md)。主线已有 `.ntil` NavTile 和真实 overlay；编辑器仍存在 Artifact 版本选择、`.ntil`/`detourBase64` 双 payload 边界，未证明保存后冷启动可查询。#1402 分支没有补齐这一合同。
-6. **P2：查询性能与诊断（分支完成，主线未收口）**，拆为 [缓存](navmesh-features/query-cache.md) 与 [查询诊断](navmesh-features/query-diagnostics.md)。#1164 提供 Detour mesh cache、共享 LoadedVersion、并行 rebake worker 和异步测试修正；PR 仍是 draft，主线当前不能宣称已完成。接收时还需查询缓冲复用、容量合同、失败原因统计和零分配回归。
+6. **P2：查询性能与诊断（分支完成，主线未收口）**，拆为 [缓存](navmesh-features/query-cache.md) 与 [查询诊断](navmesh-features/query-diagnostics.md)。查询缓存分支提供 Detour mesh cache、共享 LoadedVersion、并行 rebake worker 和异步测试修正；草案还没合入，单飞、worker 和指标面板还不能算进主线。查询路径已经按每个 `NavTileStore` 常驻一份 `DtNavMesh`，`Revision` 变化时路线 sink 会让旧 waypoint 失效。接收时还需查询缓冲复用、容量合同、失败原因统计和零分配回归。
 7. **P2：[旧类型清理](navmesh-features/legacy-retirement.md)（部分完成）**。命名迁移和部分旧 CDT 清理已经进 main；历史分支仍携带 `.vhtm/.vtxm`、旧 CDT 或重复 editor pipeline，不能整体回迁。待所有消费方迁移后再删除 LogicTerrain 持久化旁路和重复入口。
 8. **P2：[Showcase 交付](navmesh-features/showcase-delivery.md)（未收口）**。主线已登记 NavGate/debug showcase；`nav/bake-island-showcase` 只有设计，`codex/nav-authoring-showcase`/#1402 只有局部实现。仍需 Agent Bridge 观察→驱动→验证闭环、HUD、故障反馈、消融对照、截图/录屏和门户验收证据。
 

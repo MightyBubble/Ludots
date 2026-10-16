@@ -2069,6 +2069,7 @@ namespace Ludots.Tests.GAS
                 new AgentProfileConfig
                 {
                     Id = RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
+                    NavProfileId = RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,
@@ -2213,6 +2214,7 @@ namespace Ludots.Tests.GAS
                 new AgentProfileConfig
                 {
                     Id = "Small",
+                    NavProfileId = "Small",
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,

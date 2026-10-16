@@ -1,0 +1,1235 @@
+// 导出为 Ludots Mod（AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
+// 产物：.height（CHTM v2，uint16 缩放）、.navsurface（v1）、Maps/<id>.json（队伍 / 关系 / 阻挡物 / 桥）、
+//       CrowdSimulationConfig.json 覆盖片段、Navigation/navmesh.json 的地图地形事实、
+//       parity/s1-truth.json（FNV-1a 摘要；对拍口径见 crowdsimulation-and-navsurface.md 行为对拍定案）。
+// 正本在 Ludots 仓库（本文件即正本）；运行时位于 CrowdSimulation Web 沙盒的 scripts/ 下，
+// 依赖沙盒内 src/engine/ 的生成器（相对导入按该布局解析）。
+// 用法：node scripts/exportLudots.mjs --seed 1337 --map-id crowd_simulation_s1 --out exports/crowd_simulation_s1
+import { register } from 'node:module';
+
+register('data:text/javascript,' + encodeURIComponent(`
+export async function resolve(spec, ctx, next) {
+  try { return await next(spec, ctx); }
+  catch (e) { if (/^\\.\\.?\\//.test(spec) && !/\\.m?js$/.test(spec)) return next(spec + '.js', ctx); throw e; }
+}`));
+
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
+const FIXED_HZ = 30;
+const stamp = (obj) => ({ fixedHz: FIXED_HZ, ...obj });
+const seed = +arg('seed', 1337);
+const mapId = arg('map-id', `crowd_simulation_s${seed}`);
+const outRoot = arg('out', join('exports', mapId));
+for (const sub of ['terrain', 'Maps', 'parity', 'Navigation']) mkdirSync(join(outRoot, sub), { recursive: true });
+
+const { DEFAULT_SOURCES, validateConfig } = await import('../src/engine/config.js');
+const { generateWorld } = await import('../src/engine/terrain.js');
+const { generateStructures } = await import('../src/engine/structures/mapGen.js');
+const { personalRadius } = await import('../src/engine/core/space.js');
+const { entityList } = await import('../src/engine/structures/store.js');
+
+const sources = structuredClone(DEFAULT_SOURCES);
+sources.scenario.world.seed = seed;
+// S7(F03-a)追加的寿命模板:4 秒寿命的建筑阻挡,驱动寿命到期路径;C# mod 配置同位序同 id
+sources.templates.structures.push({ id: 's7barrier', name: '路障', footprint: 'rect', blocker: true, lifetimeSec: 4 });
+sources.globals.render.structures.s7barrier = { fill: 'rgba(214,116,52,0.9)', stroke: 'rgba(120,60,26,0.95)' };
+const config = validateConfig(sources);
+const world = generateWorld(config);
+const reach = Math.max(...config.agents.radiusClasses.map((_, r) => personalRadius(config, r)));
+const structures = generateStructures(world, config, reach);
+
+// ───────────────────────────── 小端二进制写出器 ─────────────────────────────
+class BW {
+  constructor() { this.parts = []; }
+  u8(v) { this.parts.push(Buffer.from([v & 0xff])); }
+  u16(v) { const b = Buffer.alloc(2); b.writeUInt16LE(v); this.parts.push(b); }
+  i32(v) { const b = Buffer.alloc(4); b.writeInt32LE(v); this.parts.push(b); }
+  u32(v) { const b = Buffer.alloc(4); b.writeUInt32LE(v >>> 0); this.parts.push(b); }
+  f32(v) { const b = Buffer.alloc(4); b.writeFloatLE(v); this.parts.push(b); }
+  f64(v) { const b = Buffer.alloc(8); b.writeDoubleLE(v); this.parts.push(b); }
+  bytes(buf) { this.parts.push(Buffer.from(buf)); }
+  // .NET BinaryWriter.Write(string)：7 位变长字节数 + UTF-8
+  netString(s) {
+    const b = Buffer.from(s, 'utf8');
+    let n = b.length;
+    while (n >= 0x80) { this.u8((n & 0x7f) | 0x80); n >>= 7; }
+    this.u8(n & 0x7f);
+    this.bytes(b);
+  }
+  build() { return Buffer.concat(this.parts); }
+}
+
+// ───────────────────────────── .navsurface v1 ─────────────────────────────
+const N = world.N, cellSizeCm = Math.round(world.cellSize * 100);
+const terrainIds = config.terrainTypes.map((t) => t.id);
+{
+  const w = new BW();
+  w.u32(0x46534e4c); // "LNSF"
+  w.u16(1); // version
+  w.u16(32); // headerBytes
+  w.i32(N); w.i32(N); w.i32(cellSizeCm);
+  w.i32(world.jumps.count);
+  w.u16(terrainIds.length); w.u16(0); w.i32(0);
+  for (const id of terrainIds) { const b = Buffer.from(id, 'utf8'); w.u16(b.length); w.bytes(b); }
+  w.bytes(Buffer.from(world.type.buffer, world.type.byteOffset, N * N));
+  for (let k = 0; k < world.jumps.count; k++) {
+    const a = world.jumps.a[k], b = world.jumps.b[k];
+    w.u16(a % N); w.u16((a / N) | 0); w.u16(b % N); w.u16((b / N) | 0);
+    w.i32(Math.round(world.jumps.drop[k] * 100));
+    w.f32(world.jumps.len[k]);
+  }
+  writeFileSync(join(outRoot, 'terrain', `${mapId}.navsurface`), w.build());
+}
+
+// ───────────────────────────── .height（CHTM v2） ─────────────────────────────
+const B = world.B, HS = world.heightScale;
+let heightRaw, heightOffsetCm, heightSpanCm;
+{
+  const count = B * B;
+  let mn = Infinity, mx = -Infinity;
+  for (let i = 0; i < count; i++) {
+    const cm = world.heightBake[i] * HS * 100;
+    if (cm < mn) mn = cm;
+    if (cm > mx) mx = cm;
+  }
+  const offsetCm = Math.floor(mn), spanCm = Math.max(1, Math.ceil(mx) - offsetCm);
+  const raw = Buffer.alloc(count * 2);
+  for (let i = 0; i < count; i++) {
+    const cm = world.heightBake[i] * HS * 100;
+    raw.writeUInt16LE(Math.min(65535, Math.max(0, Math.round(((cm - offsetCm) * 65535) / spanCm))), i * 2);
+  }
+  heightRaw = raw; heightOffsetCm = offsetCm; heightSpanCm = spanCm;
+  const w = new BW();
+  w.bytes(Buffer.from('CHTM', 'ascii'));
+  w.i32(2); // version
+  const worldCm = world.size * 100;
+  w.i32(0); w.i32(0); w.i32(worldCm); w.i32(worldCm); // bounds
+  w.i32(B); w.i32(B); // sampleColumns / sampleRows
+  w.i32(2); // RowMajorUInt16Scaled
+  w.i32(0); // defaultLayerIndex
+  w.i32(1); // TriangleHeightfield
+  w.i32(offsetCm); w.i32(spanCm); w.i32(65535); // sampleScale: cm = offset + raw * span / 65535
+  w.i32(1); // layerCount
+  w.i32(0); w.netString('base'); w.i32(0); w.i32(count); // layer 0
+  w.i32(count);
+  w.bytes(raw);
+  writeFileSync(join(outRoot, 'terrain', `${mapId}.height`), w.build());
+}
+
+// ───────────────────────────── 地图实体（阻挡物 / 桥） ─────────────────────────────
+const cm = (m) => Math.round(m * 100);
+const tplOf = (t) => config.structures.templates[t];
+const blockers = [], bridges = [];
+for (const e of entityList(structures)) {
+  const tpl = tplOf(e.tpl);
+  if (tpl.blocker) blockers.push({ xCm: cm(e.fp.x), yCm: cm(e.fp.y), sizeCm: cm(e.fp.hx * 2) });
+  else if (tpl.layered) bridges.push({ x0Cm: cm(e.fp.x0), y0Cm: cm(e.fp.y0), x1Cm: cm(e.fp.x1), y1Cm: cm(e.fp.y1), widthCm: cm(e.fp.w) });
+}
+// 实体按参考端 id 序(entityList 迭代序)写出,不排序——C# 结构仓的实体 id 按加载序分配,
+// 迷雾认知的逐 id 语义(残影/遗忘/共享)要求两端 id 同构(F02)。
+
+const entities = [
+  {
+    InstanceId: 'team_1', Template: 'crowd_simulation_team',
+    Relations: [
+      { To: 'team_1', Type: 'Friendly' },
+      { To: 'team_2', Type: 'Hostile' },
+    ],
+  },
+  {
+    InstanceId: 'team_2', Template: 'crowd_simulation_team',
+    Relations: [
+      { To: 'team_2', Type: 'Friendly' },
+      { To: 'team_1', Type: 'Hostile' },
+    ],
+  },
+  ...config.players.map((p, i) => ({ InstanceId: `player_${i + 1}`, Template: 'crowd_simulation_player' })),
+  ...blockers.map((b, i) => ({
+    InstanceId: `building_${String(i + 1).padStart(4, '0')}`,
+    Template: `crowd_simulation_blocker_${b.sizeCm / 100}m`,
+    Overrides: { WorldPositionCm: { Value: { X: b.xCm, Y: b.yCm } } },
+  })),
+  ...bridges.map((b, i) => ({
+    InstanceId: `bridge_${String(i + 1).padStart(4, '0')}`,
+    Template: 'crowd_simulation_bridge',
+    Overrides: {
+      CrowdSimulationBridgeSpan: { x0Cm: b.x0Cm, y0Cm: b.y0Cm, x1Cm: b.x1Cm, y1Cm: b.y1Cm, widthCm: b.widthCm },
+    },
+  })),
+];
+
+const worldCm = world.size * 100;
+// 绝对高程着色的海平面与峰跨度用真实数据算（默认 36 m 跨度会把 1400 m 地形整个饱和成单色）
+const seaLevelCm = Math.round(world.thresholds.seaH * HS * 100);
+const peakSpanCm = Math.max(100, Math.round((1 - world.thresholds.seaH) * HS * 100));
+const mapJson = {
+  Id: mapId,
+  Tags: ['crowd_simulation'],
+  Tuning: { LoadedChunkCapacity: 256 },
+  Boards: [{
+    Name: 'default', SpatialType: 'Grid', WidthCm: worldCm, HeightCm: worldCm,
+    Anchor: { LocalXCm: 0, LocalYCm: 0, WorldXCm: 0, WorldYCm: 0 }, Grid: { CellSizeCm: 100 },
+  }],
+  ContinuousHeightmap: {
+    Asset: `assets/terrain/${mapId}.height`,
+    RenderProfile: {
+      OverviewSwitchChunkSpans: 2.5,
+      OverviewVertexLimit: 65536,
+      DisableDistanceFog: true,
+      DisplayHeightScale: 1.0,
+      SeaLevelCm: seaLevelCm,
+      AbsoluteColorPeakSpanCm: peakSpanCm,
+    },
+  },
+  DefaultCamera: { VirtualCameraId: 'CrowdSimulation.Camera.Terrain', TargetXCm: worldCm / 2, TargetYCm: worldCm / 2, Yaw: 45, Pitch: 55, DistanceCm: Math.round(worldCm * 1.2), FovYDeg: 50 },
+  Teams: [{ TeamId: 1, RepresentativeInstanceId: 'team_1' }, { TeamId: 2, RepresentativeInstanceId: 'team_2' }],
+  Players: config.players.map((p, i) => ({ PlayerId: i + 1, TeamId: p.team === 'A' ? 1 : 2, RepresentativeInstanceId: `player_${i + 1}` })),
+  Entities: entities,
+};
+writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, null, 2));
+
+// ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
+// 不写 pairRules，也不写已删除的 relations。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
+// 地形类型到区域写在 navmesh.json 的 maps.<mapId>.terrainAreas（有序数组）。
+// .navsurface 从地图 ContinuousHeightmap.asset 推导（同主干，扩展名 .navsurface）。
+const cmPart = (num, den) => Math.round(worldCm * num / den);
+const terrainAreaById = { water: 'deep', shore: 'shallow', land: 'Default', mountain: 'rough', cliff: 'sheer' };
+const terrainAreas = [];
+for (const terrain of config.terrainTypes) {
+  const area = terrainAreaById[terrain.id];
+  if (!area) throw new Error(`地形类型 ${terrain.id} 没有导航区域。maps.${mapId}.terrainAreas 只认 water/shore/land/mountain/cliff。`);
+  terrainAreas.push({ terrainId: terrain.id, areaId: area });
+}
+writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
+  maps: {
+    [mapId]: {
+      solver: 'crowd-simulation',
+      navAreas: ['Default', 'shallow', 'rough', 'sheer', 'deep', 'road', 'deck', 'flooded', 'burning'],
+      terrainAreas,
+    },
+  },
+}, null, 2));
+writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
+  world: { seed },
+  deploy: {
+    bases: [
+      { playerId: 1, xCm: cmPart(3, 10), yCm: cmPart(7, 20), color: '#4DB2FF' },
+      { playerId: 2, xCm: cmPart(7, 10), yCm: cmPart(13, 20), color: '#7ED957' },
+      { playerId: 3, xCm: cmPart(7, 10), yCm: cmPart(3, 10), color: '#FFC53D' },
+      { playerId: 4, xCm: cmPart(3, 10), yCm: cmPart(7, 10), color: '#C792FF' },
+    ],
+  },
+  structures: {
+    templates: {
+      s7barrier: { name: '路障', footprint: 'rect', blocker: true, lifetimeSec: 4 },
+    },
+  },
+}, null, 2));
+
+// ───────────────────────────── S1 对拍摘要（FNV-1a 32） ─────────────────────────────
+// 字节流契约（C# 端按同一顺序重建）：
+//   "LS1T" · i32 N · i32 cellSizeCm · u16 类型数 · 类型 id 表（u16 长 + utf8） · N² 类型栅格
+//   · N² 区域栅格（地形映射后） · N² 阻挡栅格 · i32 阻挡数 · 逐阻挡 i32 xCm/yCm/sizeCm（已排序）
+//   · i32 桥数 · 逐桥 i32 x0/y0/x1/y1/widthCm（已排序）
+//   · i32 跳跃候选数 · 逐候选 u16 fromX/fromY/toX/toY · i32 dropCm · f32 lenCells
+function fnv1a(buf) {
+  let h = 2166136261;
+  for (const b of buf) { h ^= b; h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+{
+  const w = new BW();
+  w.bytes(Buffer.from('LS1T', 'ascii'));
+  w.i32(N); w.i32(cellSizeCm);
+  w.u16(terrainIds.length);
+  for (const id of terrainIds) { const b = Buffer.from(id, 'utf8'); w.u16(b.length); w.bytes(b); }
+  w.bytes(Buffer.from(world.type.buffer, world.type.byteOffset, N * N));
+  w.bytes(Buffer.from(structures.area.buffer, structures.area.byteOffset, N * N));
+  w.bytes(Buffer.from(structures.blocked.buffer, structures.blocked.byteOffset, N * N));
+  w.i32(blockers.length);
+  for (const b of blockers) { w.i32(b.xCm); w.i32(b.yCm); w.i32(b.sizeCm); }
+  w.i32(bridges.length);
+  for (const b of bridges) { w.i32(b.x0Cm); w.i32(b.y0Cm); w.i32(b.x1Cm); w.i32(b.y1Cm); w.i32(b.widthCm); }
+  w.i32(world.jumps.count);
+  for (let k = 0; k < world.jumps.count; k++) {
+    const a = world.jumps.a[k], b = world.jumps.b[k];
+    w.u16(a % N); w.u16((a / N) | 0); w.u16(b % N); w.u16((b / N) | 0);
+    w.i32(Math.round(world.jumps.drop[k] * 100));
+    w.f32(world.jumps.len[k]);
+  }
+  const bytes = w.build();
+  writeFileSync(join(outRoot, 'parity', 's1-truth.json'), JSON.stringify(stamp({
+    mapId, seed, navCellsPerSide: N, navCellSizeCm: cellSizeCm,
+    blockers: blockers.length, layeredPaths: bridges.length, linkCandidates: world.jumps.count,
+    fnv1a: fnv1a(bytes),
+  }), null, 2));
+}
+
+console.log(`[export] ${mapId} seed=${seed} cells=${N}x${N} blockers=${blockers.length} bridges=${bridges.length} jumps=${world.jumps.count} → ${outRoot}`);
+
+// ───────────────────────────── S2:逐导航上下文真相（量化高度输入） ─────────────────────────────
+// 两端读同一份量化高度（14.1）：navHeight / slope 从写出的 uint16 样本重建，再跑真实烘焙。
+const { buildNavContext, navIdOf } = await import('../src/engine/nav.js');
+const { TileCache } = await import('../src/engine/navtile/tileCache.js');
+const { clearanceOf } = await import('../src/engine/core/space.js');
+
+const worldQ = Object.assign({}, world);
+// 跳跃候选同样换成量化后的 .navsurface 落盘值（drop 四舍五入到厘米;len 已是 f32）
+{
+  const n = world.jumps.count;
+  const q = { count: n, a: new Int32Array(n), b: new Int32Array(n), len: new Float32Array(n), drop: new Float32Array(n) };
+  for (let k = 0; k < n; k++) {
+    q.a[k] = world.jumps.a[k]; q.b[k] = world.jumps.b[k];
+    q.len[k] = Math.fround(world.jumps.len[k]);
+    q.drop[k] = Math.round(world.jumps.drop[k] * 100) / 100;
+  }
+  worldQ.jumps = q;
+}
+{
+  const Bq = world.B, Nq = world.N, cellSizeM = world.cellSize;
+  const cmQ = new Float64Array(Bq * Bq);
+  for (let i = 0; i < Bq * Bq; i++) cmQ[i] = (heightOffsetCm + (heightRaw.readUInt16LE(i * 2) * heightSpanCm) / 65535) / 100;
+  const navHeight = new Float64Array(Nq * Nq);
+  for (let y = 0; y < Nq; y++) {
+    const by0 = Math.floor((y * Bq) / Nq), by1 = Math.max(by0 + 1, Math.floor(((y + 1) * Bq) / Nq));
+    for (let x = 0; x < Nq; x++) {
+      const bx0 = Math.floor((x * Bq) / Nq), bx1 = Math.max(bx0 + 1, Math.floor(((x + 1) * Bq) / Nq));
+      let sum = 0, cnt = 0;
+      for (let by = by0; by < by1; by++) for (let bx = bx0; bx < bx1; bx++) { sum += cmQ[by * Bq + bx]; cnt++; }
+      navHeight[y * Nq + x] = sum / cnt;
+    }
+  }
+  const slope = new Float64Array(Nq * Nq), k2 = 1 / (2 * cellSizeM);
+  for (let y = 0; y < Nq; y++) for (let x = 0; x < Nq; x++) {
+    const xl = Math.max(0, x - 1), xr = Math.min(Nq - 1, x + 1), yu = Math.max(0, y - 1), yd = Math.min(Nq - 1, y + 1);
+    const gx = (navHeight[y * Nq + xr] - navHeight[y * Nq + xl]) * k2;
+    const gy = (navHeight[yd * Nq + x] - navHeight[yu * Nq + x]) * k2;
+    slope[y * Nq + x] = Math.sqrt(gx * gx + gy * gy);
+  }
+  worldQ.navHeight = navHeight; worldQ.slope = slope;
+}
+
+// 分区摘要用规范化标签（按连通域最小格号排序编号），跨语言只比较划分不比较标签编号
+function canonComp(comp, n2) {
+  const minCell = new Map();
+  for (let i = 0; i < n2; i++) {
+    const c = comp[i];
+    if (c < 0) continue;
+    const m = minCell.get(c);
+    if (m === undefined || i < m) minCell.set(c, i);
+  }
+  const comps = [...minCell.entries()].sort((a, b) => a[1] - b[1]);
+  const rank = new Map(comps.map((e, i) => [e[0], i]));
+  const out = new Int32Array(n2).fill(-1);
+  for (let i = 0; i < n2; i++) if (comp[i] >= 0) out[i] = rank.get(comp[i]);
+  return out;
+}
+
+{
+  const n2 = world.N * world.N;
+  const tileCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+  const seen = new Set(), contexts = [];  for (let a = 0; a < config.agentTypes.length; a++) {
+    for (let r = 0; r < config.agents.radiusClasses.length; r++) {
+      const c = clearanceOf(config, r), id = navIdOf(a, c);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      contexts.push({ a, clearance: c, id, nav: buildNavContext(worldQ, config, a, c, structures, tileCache) });
+    }
+  }
+
+  const w = new BW();
+  w.bytes(Buffer.from('LS2T', 'ascii'));
+  w.i32(world.N); w.i32(contexts.length);
+  const summary = [];
+  for (const { a, clearance, id, nav } of contexts) {
+    w.i32(id);
+    w.bytes(Buffer.from(nav.passable.buffer, nav.passable.byteOffset, n2));
+    const cc = canonComp(nav.comp, n2);
+    w.bytes(Buffer.from(cc.buffer, cc.byteOffset, n2 * 4));
+    const links = nav.links;
+    const linkCount = links ? links.count : 0;
+    w.i32(linkCount);
+    for (let e = 0; e < linkCount; e++) { w.u32(links.from[e]); w.u32(links.to[e]); w.u8(links.two[e]); w.f32(links.len[e]); }
+    let passableCount = 0;
+    for (let i = 0; i < n2; i++) passableCount += nav.passable[i];
+    summary.push({
+      navId: id, agentType: config.agentTypes[a].id, clearance,
+      passableCount, compCount: nav.compCount, linkCount,
+    });
+  }
+  const bytes = w.build();
+  writeFileSync(join(outRoot, 'parity', 's2-nav-truth.json'), JSON.stringify(stamp({
+    mapId, seed, contexts: summary, fnv1a: fnv1a(bytes),
+  }), null, 2));
+  // 逐上下文可走栅格转储(分歧定位用;真相摘要是权威,本文件只做调试)
+  const dbgDir = join(outRoot, 'parity', 's2');
+  mkdirSync(dbgDir, { recursive: true });
+  for (const { a, clearance, nav } of contexts) {
+    writeFileSync(join(dbgDir, `${config.agentTypes[a].id}_c${clearance}.pass`), Buffer.from(nav.passable.buffer, nav.passable.byteOffset, n2));
+  }
+  // 量化输入推导的坡度栅格(f32)——坡度分歧测量用
+  {
+    const sf = new Float32Array(worldQ.slope.length);
+    for (let i = 0; i < sf.length; i++) sf[i] = worldQ.slope[i];
+    writeFileSync(join(dbgDir, 'slope.f32'), Buffer.from(sf.buffer));
+  }
+  console.log(`[export] ${mapId} s2 contexts=${contexts.length} fnv=${fnv1a(bytes)}`);
+
+  // ───────────────────────────── S3:tile 烘焙真相(内容键序) ─────────────────────────────
+  // tile 缓存里的每个条目按内容键排序后逐字段入流;uid(获取序)不参与,跨端按内容对齐。
+  {
+    const entries = [...tileCache.map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    // 逐字段写出一个条目(全局流与逐条目哈希共用同一段代码)
+    const writeEntry = (w, e) => {
+      const wi32 = (arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.i32(arr[i]); };
+      const wf32 = (arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.f32(arr[i]); };
+      w.i32(e.count); w.i32(e.regionCount);
+      wf32(e.vx); wf32(e.vy);
+      wi32(e.polyStart); wi32(e.polyVerts);
+      wi32(e.neiStart); wi32(e.nei); wi32(e.neiA); wi32(e.neiB);
+      wi32(e.bminx); wi32(e.bminy); wi32(e.bmaxx); wi32(e.bmaxy);
+      wi32(e.polyOf);
+      wi32(e.border.poly);
+      w.i32(e.border.side.length); for (let i = 0; i < e.border.side.length; i++) w.u8(e.border.side[i]);
+      wi32(e.border.lo); wi32(e.border.hi);
+      w.i32(e.border.rev.length); for (let i = 0; i < e.border.rev.length; i++) w.u8(e.border.rev[i]);
+    };
+    const w2 = new BW();
+    w2.bytes(Buffer.from('LS3T', 'ascii'));
+    w2.i32(world.N);
+    w2.i32(entries.length);
+    const perEntry = [];
+    for (const [, e] of entries) {
+      writeEntry(w2, e);
+      const w3 = new BW();
+      writeEntry(w3, e);
+      perEntry.push(fnv1a(w3.build()));
+    }
+    w2.i32(tileCache.bakes); w2.i32(tileCache.hits); w2.i32(tileCache.misses);
+    const bytes2 = w2.build();
+    writeFileSync(join(outRoot, 'parity', 's3-tile-truth.json'), JSON.stringify(stamp({
+      mapId, seed, navTileEntries: entries.length, bakes: tileCache.bakes, hits: tileCache.hits, misses: tileCache.misses, fnv1a: fnv1a(bytes2),
+      // 键指纹 → 条目哈希(键 = tile 精确内容,跨端按内容对齐,不靠位置序)
+      entryHashes: Object.fromEntries(entries.map(([k, ], i) => [fnv1a(Buffer.from([...k].flatMap((c) => { const cc = c.charCodeAt(0); return [cc & 0xff, cc >> 8]; }))), perEntry[i]])),
+    }), null, 2));
+    console.log(`[export] ${mapId} s3 tiles=${entries.length} bakes=${tileCache.bakes} fnv=${fnv1a(bytes2)}`);
+
+    // ───────────────────────────── S3-b:拼装网格 + HPA* 抽象图真相 ─────────────────────────────
+    // 拓扑(节点格 / 邻接目标 / 计数 / 网格多边形结构)进 FNV;代价数组(浮点)只落数值,
+    // C# 侧按带宽比较(两套数学体系的最后位差异不算缺陷,超过带宽才算)。
+    {
+      const { assembleNavmesh } = await import('../src/engine/navtile/assemble.js');
+      const { flattenHpa } = await import('../src/engine/hpa.js');
+      const wq = new BW(); // 拓扑流
+      const wc = new BW(); // 代价流
+      wq.bytes(Buffer.from('LS3B', 'ascii'));
+      wq.i32(world.N); wq.i32(contexts.length);
+      const perCtx = [];
+      const writeI32s = (w, arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.i32(arr[i]); };
+      const writeU8s = (w, arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.u8(arr[i]); };
+      const writeCosts = (arr) => { wc.i32(arr.length); for (let i = 0; i < arr.length; i++) wc.f64(arr[i]); };
+      for (const { id, nav } of contexts) {
+        wq.i32(id);
+        const mesh = assembleNavmesh(nav);
+        wq.i32(mesh.count); wq.i32(mesh.regionCount);
+        writeI32s(wq, mesh.polyStart); writeI32s(wq, mesh.polyVerts); writeI32s(wq, mesh.polyTile);
+        writeI32s(wq, mesh.neiStart); writeI32s(wq, mesh.nei);
+        writeI32s(wq, mesh.polyOf);
+        // 网格顶点与邻接端点坐标是整数(f32 容器装 int),按 int 入流
+        writeI32s(wq, Int32Array.from(mesh.vx, (v) => v)); writeI32s(wq, Int32Array.from(mesh.vy, (v) => v));
+        writeI32s(wq, Int32Array.from(mesh.pax, (v) => v)); writeI32s(wq, Int32Array.from(mesh.pay, (v) => v));
+        writeI32s(wq, Int32Array.from(mesh.pbx, (v) => v)); writeI32s(wq, Int32Array.from(mesh.pby, (v) => v));
+        writeCosts(mesh.polyCost);
+        const flat = flattenHpa(nav.hpa);
+        wq.i32(flat.nodeCount); wq.i32(flat.edgeCount);
+        writeI32s(wq, flat.nodeCell); writeU8s(wq, flat.nodeLayer); writeI32s(wq, flat.nodeCluster);
+        writeI32s(wq, flat.adjStart); writeI32s(wq, flat.adjTo);
+        writeCosts(flat.adjCost);
+        perCtx.push({ navId: id, polys: mesh.count, hpaNodes: flat.nodeCount, hpaEdges: flat.edgeCount });
+      }
+      const truthBytes = wq.build();
+      writeFileSync(join(outRoot, 'parity', 's3b-topology.bin'), truthBytes);
+      writeFileSync(join(outRoot, 'parity', 's3b-graph-truth.json'), JSON.stringify(stamp({
+        mapId, seed, contexts: perCtx, fnv1a: fnv1a(truthBytes),
+      }), null, 2));
+      writeFileSync(join(outRoot, 'parity', 's3b-costs.bin'), wc.build());
+      console.log(`[export] ${mapId} s3b fnv=${fnv1a(truthBytes)}`);
+    }
+
+    // ───────────────────────────── S3-c:两点路径 + 流场真相 ─────────────────────────────
+    // 64 组确定性起终点 × 每上下文。对拍契约(两套浮点体系下唯一诚实的口径):
+    //   逐位(FNV):分支(tile A*+漏斗 / HPA* / 不可达)、trace 是否到达;
+    //   带宽:折线总长度(点列由浮点派生,平局时点数与顶点都可不同,坐标入诊断流)、
+    //   路径代价、起格积分 / 绷紧长度;
+    //   结构容差(s3c-detail.bin):HPA 走廊 / poly 链 / 到达集合是浮点派生量——等代价
+    //     十字路口的择路会被最后位差翻转(两解同最优),逐格 integ / len 在两侧到达集合的
+    //     交集上按带宽比较,独占格计数限容差;
+    //   路点(s3c-wp.bin):决定性全等,平局双解按规则校验。
+    {
+      const { findTilePath, markTileClusters } = await import('../src/engine/navtile/tileQuery.js');
+      const { findPath } = await import('../src/engine/hpa.js');
+      const { buildFlowField, padMask, tracePath } = await import('../src/engine/flowfield.js');
+      const { clusterOf } = await import('../src/engine/grid.js');
+      const { FlowPool } = await import('../src/engine/planning/flowPool.js');
+
+      // 固定种子的 LCG 取点,过滤到全部上下文地面可走;对子随真相落盘,C# 端直接读取
+      let rngState = 0x2f6e2b1;
+      const rng = () => (rngState = (Math.imul(rngState, 1103515245) + 12345) & 0x7fffffff) / 0x80000000;
+      const pairs = [];
+      let sampleGuard = 0;
+      while (pairs.length < 64 && sampleGuard++ < 200000) {
+        const sx = (rng() * N) | 0, sy = (rng() * N) | 0, gx = (rng() * N) | 0, gy = (rng() * N) | 0;
+        if (Math.abs(sx - gx) + Math.abs(sy - gy) < 8) continue;
+        const sCell = sy * N + sx, gCell = gy * N + gx;
+        if (contexts.every(({ nav }) => nav.passable[sCell] && nav.passable[gCell])) pairs.push([sCell, gCell]);
+      }
+      if (pairs.length < 64) throw new Error(`S3-c 起终点采样不足: ${pairs.length}/64`);
+
+      const inset = config.navmesh.portalInsetCells, pad = config.flowfield.corridorPadding;
+      const pool = new FlowPool(N, config.flowfield.poolCapacity);
+      const wq = new BW(); // 逐位流(FNV)
+      const wf = new BW(); // 浮点流(带宽)
+      const wd = new BW(); // 结构容差流(链 / 到达集合)
+      const ww = new BW(); // 路点与路点链(派生量诊断流)
+      const wi32s = (w, arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.i32(arr[i]); };
+      wq.bytes(Buffer.from('LS3C', 'ascii'));
+      wq.i32(N); wq.i32(contexts.length); wq.i32(pairs.length);
+      wd.bytes(Buffer.from('LS3D', 'ascii'));
+      wd.i32(N); wd.i32(contexts.length); wd.i32(pairs.length);
+      ww.bytes(Buffer.from('LS3W', 'ascii'));
+      ww.i32(N); ww.i32(contexts.length); ww.i32(pairs.length);
+      const perCtxQ = [];
+      for (const { id, nav } of contexts) {
+        wq.i32(id);
+        wd.i32(id);
+        ww.i32(id);
+        const { S, C } = nav.hpa;
+        let reachable = 0;
+        for (const [start, goal] of pairs) {
+          const mask = new Uint8Array(C * C);
+          mask[clusterOf(goal, N, S, C)] = 1;
+          let branch = 0, polyRefs = [], hpaClusters = [], hpaCells = [], points = null, cost = 0;
+          const r = nav.links ? null : findTilePath(nav, start, goal, nav.minCost, inset);
+          if (r) {
+            branch = 1; polyRefs = r.polys; points = r.points; cost = r.cost;
+            markTileClusters(nav, r.polys, mask);
+          } else {
+            const p = findPath(nav, start, goal);
+            if (p) {
+              branch = 2; hpaClusters = p.clusters; hpaCells = p.cells; cost = p.cost;
+              for (const c of p.clusters) mask[c] = 1;
+              points = [];
+              for (const c of p.cells) points.push((c % N) + 0.5, ((c / N) | 0) + 0.5);
+            }
+          }
+          const flow = buildFlowField(nav, goal, padMask(mask, C, pad), pool);
+          const trace = tracePath(flow, start, N * N);
+          const traceOk = trace[trace.length - 1] === goal ? 1 : 0;
+          const cells = Array.from(pool.order.subarray(0, flow.reached)).sort((a, b) => a - b);
+          wq.u8(branch); wq.u8(traceOk);
+          // 折线:总长度带宽对齐(点列由浮点派生,平局时点数与顶点都可不同);坐标入诊断流
+          let plen = 0;
+          if (points) for (let i = 2; i < points.length; i += 2) plen += Math.hypot(points[i] - points[i - 2], points[i + 1] - points[i - 1]);
+          wf.f64(plen);
+          wf.f64(cost);
+          wd.i32(points ? points.length / 2 : -1);
+          if (points) for (const v of points) wd.f64(v);
+          wi32s(wd, polyRefs); wi32s(wd, hpaClusters); wi32s(wd, hpaCells);
+          wd.i32(flow.reached);
+          wd.i32(cells.length);
+          for (const cell of cells) { wd.i32(cell); wf.f64(flow.integ[cell]); wf.f64(flow.len[cell]); }
+          wf.f64(flow.integ[start]); wf.f64(flow.len[start]);
+          wi32s(ww, trace);
+          ww.i32(cells.length);
+          for (const cell of cells) { ww.i32(cell); ww.i32(flow.wp[cell]); }
+          if (branch || traceOk) reachable++;
+        }
+        perCtxQ.push({ navId: id, reachable });
+      }
+      const queryBytes = wq.build();
+      writeFileSync(join(outRoot, 'parity', 's3c-topology.bin'), queryBytes); // 分歧定位用;摘要是权威
+      writeFileSync(join(outRoot, 'parity', 's3c-detail.bin'), wd.build());
+      writeFileSync(join(outRoot, 'parity', 's3c-wp.bin'), ww.build());
+      writeFileSync(join(outRoot, 'parity', 's3c-floats.bin'), wf.build());
+      writeFileSync(join(outRoot, 'parity', 's3c-query-truth.json'), JSON.stringify(stamp({
+        mapId, seed, pairs, contexts: perCtxQ, fnv1a: fnv1a(queryBytes),
+      }), null, 2));
+      console.log(`[export] ${mapId} s3c pairs=${pairs.length} fnv=${fnv1a(queryBytes)}`);
+    }
+
+    // ───────────────────────────── S4:部署与指令回放真相 ─────────────────────────────
+    // 规范校验码(按 Ludots Fix64 原始值计算):生成位置按 Fix64 语义逐 op 求值
+    // (镜像侧 S4 归一补丁,globalThis.__S4_FIX64_SPAWN__;FromDouble 向零截断、乘法向 -∞ 取整到
+    // 2^-32 网格,与 Ludots Fix64 同语义);字段顺序与参考实现 unitChecksum 一致。
+    // 脚本玩家编号用 Ludots 约定(1..P;参考端 0 基,运行时在 spawn/select 处换算)。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const navList = contexts.map((c) => c.nav);
+      const host = createNavHost(config, worldQ, structures, navList, tileCache);
+      const sim = new Simulation(sources, { world: worldQ, structures, navs: navList, tileCache, ms: 0 }, new LocalPathService(host));
+
+      // 脚本(与 C# 对拍共用同一份数据;玩家 1..4 = Ludots 约定,位置为厘米)
+      const script = [
+        { tick: 0, cmd: { type: 'spawn', count: 12000 } },
+        { tick: 30, cmd: { type: 'select', player: 1, x0Cm: 167500, y0Cm: 247500, x1Cm: 792500, y1Cm: 872500, additive: false } },
+        { tick: 60, cmd: { type: 'spawnAt', player: 2, xCm: 1120000, yCm: 1040000, count: 20, unitType: 0, rIdx: 0 } },
+        { tick: 90, cmd: { type: 'selectAll', player: 2 } },
+        { tick: 120, cmd: { type: 'clearSelection' } },
+      ];
+      // 换算成参考端(0 基玩家,米制)再入队
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'select') return { tick: e.tick, cmd: { type: 'select', player: c.player - 1, x0: c.x0Cm / 100, y0: c.y0Cm / 100, x1: c.x1Cm / 100, y1: c.y1Cm / 100, additive: c.additive } };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'selectAll') return { tick: e.tick, cmd: { type: 'selectAll', player: c.player - 1 } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      const mix32 = (h, v) => Math.imul(h ^ v, 16777619) >>> 0;
+      const mixI64 = (h, raw) => mix32(mix32(h, Number(raw & 0xffffffffn) >>> 0), Number((raw >> 32n) & 0xffffffffn) >>> 0);
+      const canonChecksum = () => {
+        const u = sim.units, n = u.count;
+        // 防御:真值生成期单位数与 canonical 缓冲不一致时立刻炸,不产错位真值
+        if (sim.__canonX.length < n || sim.__canonY.length < n)
+          throw new Error(`canonChecksum: units.count=${n} 超出 canonical 缓冲 ${sim.__canonX.length}`);
+        let h = mix32(mix32(2166136261, sim.tickCount), n);
+        for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonX[i] * 100 * 4294967296)));
+        for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonY[i] * 100 * 4294967296)));
+        // L02:运动字段按原始 int64 低 32 → 高 32 两词混入(与 C# CrowdSimChecksum 同形);部署会话无运动栈,两词恒零
+        for (let k = 0; k < 6; k++) for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        for (let i = 0; i < n; i++) h = mix32(h, u.state[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.group[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.id[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.order[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.mode[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.level[i]);
+        // L14:避让隐藏状态(分离两轴 + calm 逐单位 mixI64 双词 + 相位一词)——部署会话恒零,词数与 C# 侧对齐
+        for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        h = mix32(h, 0);
+        return h.toString(16).padStart(8, '0');
+      };
+
+      const frames = [];
+      for (let t = 0; t < 150; t++) { sim.advance(1); frames.push(canonChecksum()); }
+      if (sim.__canonX.length !== sim.units.count) throw new Error(`S4 规范位置数 ${sim.__canonX.length} ≠ 单位数 ${sim.units.count}`);
+
+      // 部署转储(单位逐条:Ludots 玩家号 / 模板下标 / 半径级 / 组 / 规范位置米)
+      const wu = new BW();
+      wu.bytes(Buffer.from('LS4U', 'ascii'));
+      wu.i32(sim.units.count);
+      const arch = sim.archetypes;
+      for (let i = 0; i < sim.units.count; i++) {
+        wu.i32(sim.units.player[i] + 1);
+        wu.i32(arch.unitOf[sim.units.arch[i]]);
+        wu.i32(arch.radiusOf[sim.units.arch[i]]);
+        wu.i32(sim.units.group[i]);
+        wu.f64(sim.__canonX[i]);
+        wu.f64(sim.__canonY[i]);
+      }
+      writeFileSync(join(outRoot, 'parity', 's4-units.bin'), wu.build());
+
+      // 框选边界安全距(参考端 f32 存储与 Fix64 在边界上的翻转风险披露)
+      let minEdge = Infinity;
+      {
+        const u = sim.units;
+        for (let i = 0; i < u.count; i++) {
+          if (u.player[i] !== 0) continue;
+          const d = Math.min(
+            Math.abs(u.x[i] - 1675), Math.abs(u.x[i] - 7925),
+            Math.abs(u.y[i] - 2475), Math.abs(u.y[i] - 8725));
+          if (d < minEdge) minEdge = d;
+        }
+      }
+      writeFileSync(join(outRoot, 'parity', 's4-deploy-truth.json'), JSON.stringify(stamp({
+        mapId, seed,
+        note: 'S4 规范校验码以 Fix64 原始值为口径(甲方体系);生成位置经镜像侧 S4 归一补丁按 Fix64 语义逐 op 求值。运动字段按原始 int64 低→高两词混入(L02;部署会话无运动栈恒零)。脚本玩家编号 1..P 为 Ludots 约定。',
+        script, frames,
+        unitCount: sim.units.count,
+        spawnSeq: sim.spawnSeq,
+        selectEdgeMinDistCm: Math.round(minEdge * 1000) / 10,
+      }), null, 2));
+      console.log(`[export] ${mapId} s4 units=${sim.units.count} frames=${frames.length} edge=${minEdge.toFixed(2)}m`);
+    }
+
+    // ───────────────────────────── S5:移动与阵型轨迹真相 ─────────────────────────────
+    // 轨迹是浮点派生量:参考端 f64(detMath),Ludots 端 Fix64——对拍口径 =
+    // 状态机字段逐位 + 位置逐 tick 带宽(带值实证校准后写进测试,不藏在导出器里)。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const navList = contexts.map((c) => c.nav);
+      const host = createNavHost(config, worldQ, structures, navList, tileCache);
+      const sim = new Simulation(sources, { world: worldQ, structures, navs: navList, tileCache, ms: 0 }, new LocalPathService(host));
+
+      // 脚本(Ludots 约定:厘米、玩家 1..P):多类型集群 + 单单位无接触轨迹
+      const script = [
+        { tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 120, unitType: 0, rIdx: 0 } },
+        { tick: 2, cmd: { type: 'spawnAt', player: 2, xCm: 1120000, yCm: 1040000, count: 60, unitType: 1, rIdx: 0 } },
+        { tick: 4, cmd: { type: 'spawnAt', player: 3, xCm: 1120000, yCm: 480000, count: 60, unitType: 2, rIdx: 0 } },
+        { tick: 6, cmd: { type: 'spawnAt', player: 4, xCm: 480000, yCm: 1120000, count: 1, unitType: 4, rIdx: 0 } },
+        { tick: 10, cmd: { type: 'order', player: 1, xCm: 1200000, yCm: 800000, shape: 'box' } },
+        { tick: 14, cmd: { type: 'order', player: 2, xCm: 400000, yCm: 900000, shape: 'box' } },
+        { tick: 18, cmd: { type: 'order', player: 3, xCm: 500000, yCm: 500000, shape: 'box' } },
+        { tick: 22, cmd: { type: 'order', player: 4, xCm: 900000, yCm: 700000, shape: 'box' } },
+      ];
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'order') return { tick: e.tick, cmd: { type: 'order', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, opts: { shape: c.shape } } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+      // L12-④:逐单位接触计数进真值 bin(u16/单位/tick;求解行累加,跳过行保持 0,两端同构逐位可比)
+      sim.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+
+      const u0 = (sim, i) => sim.units.x[i].toFixed(4), u1 = (sim, i) => sim.units.y[i].toFixed(4);
+      const TICKS = 600;
+      const w = new BW();
+      w.bytes(Buffer.from('LS5T', 'ascii'));
+      w.i32(TICKS);
+      for (let t = 0; t < TICKS; t++) {
+        sim.sepCtx.unitContacts.fill(0);
+        sim.advance(1);
+        const u = sim.units, n = u.count;
+        w.i32(n);
+        for (let i = 0; i < n; i++) {
+          w.u32(u.id[i]);
+          w.f64(u.x[i] * 100); w.f64(u.y[i] * 100); // 厘米
+          w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
+          w.u32(u.order[i]);
+          w.u16(sim.sepCtx.unitContacts[i]);
+        }
+      }
+      writeFileSync(join(outRoot, 'parity', 's5-trajectory.bin'), w.build());
+      writeFileSync(join(outRoot, 'parity', 's5-trajectory-truth.json'), JSON.stringify(stamp({
+        mapId, seed,
+        note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。每单位记录后附 u16 接触计数(L12-④ 硬门:每 tick 清零、求解行累加,跳过行为 0,两端同构逐位可比)。',
+        ticks: TICKS, script,
+      }), null, 2));
+      console.log(`[export] ${mapId} s5 ticks=${TICKS} units=${sim.units.count}`);
+    }
+
+    // ───────────────────────────── S7:结构动态化真相(F03-a) ─────────────────────────────
+    // 放置 / 拆除 / 寿命到期 → 脏 tile 增量重烘 → 队伍反应(重规划/流场刷新)+ 唤醒 + 挤离。
+    // 镜像协议与 headless 同形(createHeadless):路径 host 持烘焙深拷贝,结构 op 按指令序应用
+    // 两侧,job 只见其请求前生效的 op。重烘报告以 stats.rebake 完结态为准(rebakes 计数前进且
+    // 无在途 job 的 tick 采样),执行 tick 由脚本序与寿命公式(ceil(lifetimeSec/simDt))推出,
+    // 两侧同构。gate = S5 口径(状态机逐位 + 位置带宽 + contacts 双容忍),报告逐字段一致。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      // S7 归一补丁(镜像侧 fog.js/beliefSync.js 的 __S7_TRUTH_NAV__ 同款门):S7-a 内核无迷雾
+      // (F02 另单),参考端可见性与认知槽冻结在 truth——队伍反应走真值直反应,与 C# 同构。
+      globalThis.__S7_TRUTH_NAV__ = true;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const { packStatic, unpackStatic, withoutScratch } = await import('../src/engine/workers/bake.js');
+      const navList = contexts.map((c) => c.nav);
+      const baked = { world: worldQ, worldCached: true, structures, navs: navList, tileCache, ms: 0 };
+      const copy = unpackStatic(withoutScratch(navList, () => structuredClone(packStatic(baked))), config);
+      const host = createNavHost(config, copy.world, copy.structures, copy.navs, copy.tileCache);
+      const sim = new Simulation(sources, baked, new LocalPathService(host));
+      sim.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+
+      // 脚本(厘米 / 玩家 1..P):部署 → 行军 → 建筑挡路(重规划路径)→ 拆除(重烘复原)→
+      // 寿命路障(4s = 12 tick @simDt=1/3s,到期拆除)→ 道路(仅代价重烘 + 流场刷新)。
+      // 格距 62.5m:尺寸/位置按静态图同档(mapGen 35–140m)且中心落在格心,覆盖份额 0/1 清晰无骑线。
+      const script = [
+        { tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 120, unitType: 0, rIdx: 0 } },
+        { tick: 2, cmd: { type: 'order', player: 1, xCm: 1200000, yCm: 800000, shape: 'box' } },
+        { tick: 30, cmd: { type: 'placeStructure', template: 'building', xCm: 503125, yCm: 565625, sizeCm: 14000 } },
+        { tick: 60, cmd: { type: 'removeStructureAt', xCm: 503125, yCm: 565625 } },
+        { tick: 90, cmd: { type: 'placeStructure', template: 's7barrier', xCm: 521875, yCm: 571875, sizeCm: 7000 } },
+        { tick: 120, cmd: { type: 'placeStructure', template: 'road', xCm: 496875, yCm: 565625, sizeCm: 3000, toXCm: 521875, toYCm: 565625 } },
+      ];
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'order') return { tick: e.tick, cmd: { type: 'order', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, opts: { shape: c.shape } } };
+        if (c.type === 'placeStructure') return { tick: e.tick, cmd: { type: 'place', template: c.template, x: c.xCm / 100, y: c.yCm / 100, size: c.sizeCm / 100, ...(c.toXCm !== undefined ? { to: [c.toXCm / 100, c.toYCm / 100] } : {}) } };
+        if (c.type === 'removeStructureAt') return { tick: e.tick, cmd: { type: 'remove', x: c.xCm / 100, y: c.yCm / 100 } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      // op 的执行 tick:脚本 place/remove 的 tick + 隐式寿命到期 tick(s7barrier 唯一寿命实体),
+      // 按时间升序(报告按 op 完成序产出,与执行序一致)
+      const simDt = config.sim.timeScale / config.movement.tickRate;
+      const barrier = sources.templates.structures.find((t) => t.id === 's7barrier');
+      const barrierTick = script.find((e) => e.cmd.template === 's7barrier').tick;
+      const expireTick = barrierTick + Math.ceil(barrier.lifetimeSec / simDt);
+      const opList = script.filter((e) => e.cmd.type === 'placeStructure' || e.cmd.type === 'removeStructureAt')
+        .map((e) => ({ tick: e.tick, kind: e.cmd.type === 'placeStructure' ? 1 : 2 }));
+      opList.push({ tick: expireTick, kind: 2 });
+      opList.sort((a, b) => a.tick - b.tick);
+      const opExecTicks = opList.map((o) => o.tick);
+      const opKinds = opList.map((o) => o.kind);
+
+      const TICKS = 360;
+      const w = new BW();
+      w.bytes(Buffer.from('LS7T', 'ascii'));
+      w.i32(TICKS);
+      const frames = [];
+      const ops = [];
+      let seenRebakes = 0;
+      for (let t = 0; t < TICKS; t++) {
+        sim.sepCtx.unitContacts.fill(0);
+        sim.advance(1);
+        // 帧校验码 = 参考端自身 unitChecksum(f32 口径,诊断列;跨引擎 gate 走 bin 的带宽与状态机口径)
+        frames.push(sim.checksum());
+        const u = sim.units, n = u.count;
+        w.i32(n);
+        for (let i = 0; i < n; i++) {
+          w.u32(u.id[i]);
+          w.f64(u.x[i] * 100); w.f64(u.y[i] * 100); // 厘米
+          w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
+          w.u32(u.order[i]);
+          w.u16(sim.sepCtx.unitContacts[i]);
+        }
+        // 重烘报告采样:job 完结且计数前进的 tick(stage 2 已发布 evicted/stuck)
+        if (sim.rebakeJob === null && sim.stats.rebakes > seenRebakes) {
+          seenRebakes = sim.stats.rebakes;
+          ops.push({ reportTick: sim.tickCount, r: sim.stats.rebake, union: [...sim.stats.dirtyTiles].sort((a, b) => a - b) });
+        }
+      }
+      if (ops.length !== opExecTicks.length) throw new Error(`S7 重烘报告数 ${ops.length} ≠ 预期 op 数 ${opExecTicks.length}`);
+      writeFileSync(join(outRoot, 'parity', 's7-rebake.bin'), w.build());
+      const wo = new BW();
+      wo.bytes(Buffer.from('LS7O', 'ascii'));
+      wo.i32(ops.length);
+      ops.forEach((op, i) => {
+        wo.i32(opExecTicks[i]);
+        wo.u8(opKinds[i]);
+        wo.i32(op.reportTick);
+        wo.i32(op.r.tiles); wo.i32(op.r.contexts); wo.i32(op.r.costOnly);
+        wo.i32(op.r.hits); wo.i32(op.r.misses);
+        wo.i32(op.r.orders); wo.i32(op.r.refreshes);
+        wo.i32(op.r.evicted); wo.i32(op.r.stuck);
+        wo.i32(op.union.length);
+        for (const tile of op.union) wo.i32(tile);
+      });
+      writeFileSync(join(outRoot, 'parity', 's7-ops.bin'), wo.build());
+      writeFileSync(join(outRoot, 'parity', 's7-rebake-truth.json'), JSON.stringify(stamp({
+        mapId, seed,
+        note: 'S7 结构动态化:逐 tick 真值与 S5 块同构(位置带宽 + 状态机逐位 + contacts 双容忍);s7-ops.bin 为每次结构 op 的重烘焙报告(执行 tick / 类别 / 报告 tick / tiles/contexts/costOnly/hits/misses/orders/refreshes/evicted/stuck / 受影响 tile 并集升序),逐字段硬门。frames 为参考端自身 unitChecksum(f32 口径,诊断列,不跨引擎比对);gate 走 bin。口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾(S7-a 内核无迷雾,F02 另单),组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;重烘报告在 job 完结 tick 采样,执行 tick 由脚本序 + 寿命公式推出(C# 同构)。s7barrier 为 S7 追加的 4 秒寿命模板,C# mod 配置同位序同 id。格距 62.5m:足迹尺寸取静态图同档(35–140m)、中心落在格心,覆盖份额无骑线。',
+        ticks: TICKS, script, opExecTicks, frames,
+      }), null, 2));
+      console.log(`[export] ${mapId} s7 ticks=${TICKS} units=${sim.units.count} ops=${ops.length} rebakes=${sim.stats.rebakes}`);
+    }
+
+    // ───────────────────────────── S7-b:迷雾 / 视野组 / 认知变体真相(F02) ─────────────────────────────
+    // 迷雾开启口径:不置 __S7_TRUTH_NAV__(与 S7 块互斥并存,既有真值不重导)。
+    // 脚本 = 部署 → 行军(视盘推进/探索提交)→ 路上放未知建筑(发现前不绕、发现后改道)→
+    // 拆除(残影)→ 折返再见地面(残影消失)→ reveal/obscure/forget → fogShare 并组 →
+    // order 的 fogTerrain 开关对照(乐观迷雾)。逐 tick 记录:单位(与 S5/S7 同构)+
+    // 迷雾 digest(每组 visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev 计数器,
+    // 全局 seq/switches/槽账)——迷雾状态是整数/集合态,digest 逐位硬门,无带宽口径。
+    // 认知变体导航的内容一致性由轨迹门(单位按认知改道)与结构 op 报告背书。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      // L31 归一补丁:活迷雾块的 LOS/格化按 Fix64 网格语义逐 op 求值(与 C# 定点侧同一棵树)
+      globalThis.__L31_FIX64_LOS__ = true;
+      // 迷雾开启:S7 块置位的冻结门在块尾不回收,这里显式关掉(本块的口径就是活迷雾)
+      globalThis.__S7_TRUTH_NAV__ = false;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const { packStatic } = await import('../src/engine/workers/bake.js');
+      const { TileCache } = await import('../src/engine/navtile/tileCache');
+      const { hpaScratch } = await import('../src/engine/hpa');
+      const { meshScratch } = await import('../src/engine/navtile/assemble');
+      // 全新基线:不复用前块的共享 structures/navs(S7 块的道路实体与重烘会泄漏进来,
+      // 与 C# 新会话的干净基线不同构)——重跑结构生成 + 全新 tile 缓存 + 全新上下文烘焙
+      const { generateStructures: regenStructures } = await import('../src/engine/structures/mapGen.js');
+      const freshStructures = regenStructures(world, config, reach);
+      const freshCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      const navList = [];
+      {
+        const seen = new Set();
+        for (let a = 0; a < config.agentTypes.length; a++) for (let r = 0; r < config.agents.radiusClasses.length; r++) {
+          const c = clearanceOf(config, r), id = navIdOf(a, c);
+          if (seen.has(id)) continue;
+          seen.add(id);
+          navList.push(buildNavContext(worldQ, config, a, c, freshStructures, freshCache));
+        }
+      }
+      const baked = { world: worldQ, worldCached: true, structures: freshStructures, navs: navList, tileCache: freshCache, ms: 0 };
+      // 无头深拷贝(全新烘焙的 navmesh/meshBuf 齐备;守卫式剥 scratch,克隆后按需重建)
+      const stripClone = () => {
+        const saved = navList.map((n) => [n.hpa.scratch, n.meshBuf && n.meshBuf.scratch, n.navmesh && n.navmesh.scratch]);
+        for (const n of navList) { n.hpa.scratch = null; if (n.meshBuf) n.meshBuf.scratch = null; if (n.navmesh) n.navmesh.scratch = null; }
+        try { return structuredClone(packStatic(baked)); } finally {
+          navList.forEach((n, k) => { n.hpa.scratch = saved[k][0]; if (n.meshBuf) n.meshBuf.scratch = saved[k][1]; if (n.navmesh) n.navmesh.scratch = saved[k][2]; });
+        }
+      };
+      const payload = stripClone();
+      const copyCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      for (const [k, e] of payload.tiles) copyCache.map.set(k, e);
+      Object.assign(copyCache, payload.tileStats);
+      for (const e of copyCache.map.values()) copyCache.uid = Math.max(copyCache.uid, e.uid + 1);
+      for (const nav of payload.navs) {
+        nav.hpa.scratch = hpaScratch(nav.hpa.S);
+        if (nav.meshBuf) nav.meshBuf.scratch = null;
+        if (nav.navmesh) nav.navmesh.scratch = meshScratch(nav.meshBuf, nav.navmesh.count);
+      }
+      const copy = { world: payload.world, worldCached: true, structures: payload.structures, navs: payload.navs, tileCache: copyCache, ms: 0 };
+      const host = createNavHost(config, copy.world, copy.structures, copy.navs, copy.tileCache);
+      const sim = new Simulation(sources, baked, new LocalPathService(host));
+      sim.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+      console.log(`[export] s7fog groups G=${sim.fog.G} groupOf=[${sim.fog.groupOf}] F=${sim.fog.F} period=${sim.fog.period}`);
+
+      const script = [
+        { tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 120, unitType: 0, rIdx: 0 } },
+        { tick: 2, cmd: { type: 'order', player: 1, xCm: 1200000, yCm: 800000, shape: 'box' } },
+        { tick: 5, cmd: { type: 'placeStructure', template: 'building', xCm: 584375, yCm: 584375, sizeCm: 14000 } },
+        { tick: 90, cmd: { type: 'removeStructureAt', xCm: 584375, yCm: 584375 } },
+        { tick: 120, cmd: { type: 'order', player: 1, xCm: 480000, yCm: 560000, shape: 'box' } },
+        { tick: 150, cmd: { type: 'reveal', player: 1, rect: [900000, 900000, 1000000, 1000000] } },
+        { tick: 170, cmd: { type: 'obscure', player: 1, rect: [700000, 600000, 800000, 700000], ticks: 30 } },
+        { tick: 200, cmd: { type: 'forget', player: 1, rect: [1000000, 1000000, 1100000, 1100000] } },
+        { tick: 230, cmd: { type: 'fogShare', player: 1, with: 2 } },
+        { tick: 260, cmd: { type: 'order', player: 1, xCm: 1300000, yCm: 500000, shape: 'box', fogTerrain: true } },
+        { tick: 330, cmd: { type: 'order', player: 1, xCm: 480000, yCm: 560000, shape: 'box', fogTerrain: false } },
+      ];
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'order') return { tick: e.tick, cmd: { type: 'order', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, opts: { shape: c.shape, ...(c.fogTerrain !== undefined ? { fogTerrain: c.fogTerrain } : {}) } } };
+        if (c.type === 'placeStructure') return { tick: e.tick, cmd: { type: 'place', template: c.template, x: c.xCm / 100, y: c.yCm / 100, size: c.sizeCm / 100 } };
+        if (c.type === 'removeStructureAt') return { tick: e.tick, cmd: { type: 'remove', x: c.xCm / 100, y: c.yCm / 100 } };
+        if (c.type === 'reveal') return { tick: e.tick, cmd: { type: 'reveal', player: c.player - 1, rect: c.rect.map((v) => v / 100) } };
+        if (c.type === 'obscure') return { tick: e.tick, cmd: { type: 'obscure', player: c.player - 1, rect: c.rect.map((v) => v / 100), ticks: c.ticks } };
+        if (c.type === 'forget') return { tick: e.tick, cmd: { type: 'forget', player: c.player - 1, rect: c.rect.map((v) => v / 100) } };
+        if (c.type === 'fogShare') return { tick: e.tick, cmd: { type: 'fogShare', player: c.player - 1, with: c.with - 1 } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      const TICKS = 360;
+      const G = sim.fog.G;
+      const w = new BW();
+      w.bytes(Buffer.from('LS7F', 'ascii'));
+      w.i32(TICKS);
+      w.i32(G);
+      const ops = [];
+      let seenRebakes = 0;
+      let seenSwitches = 0;
+      for (let t = 0; t < TICKS; t++) {
+        sim.sepCtx.unitContacts.fill(0);
+        sim.advance(1);
+        const u = sim.units, n = u.count;
+        w.i32(n);
+        for (let i = 0; i < n; i++) {
+          w.u32(u.id[i]);
+          w.f64(u.x[i] * 100); w.f64(u.y[i] * 100);
+          w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
+          w.u32(u.order[i]);
+          w.u16(sim.sepCtx.unitContacts[i]);
+        }
+        // 迷雾 digest:整数/集合态,逐位门
+        const fog = sim.fog, F2 = fog.F * fog.F;
+        for (let g = 0; g < G; g++) {
+          let vis = 0, exp = 0;
+          for (let c = g * F2; c < (g + 1) * F2; c++) { if (fog.visible[c]) vis++; if (fog.explored[c]) exp++; }
+          w.i32(vis); w.i32(exp);
+          w.i32(fog.belief[g].size);
+          w.i32(fog.tiles[g].size);
+          w.u32(fog.beliefKey(g));
+          w.i32(sim.belief.slot[g]);
+          w.i32(fog.entRev[g]); w.i32(fog.rev[g]);
+        }
+        w.i32(sim.belief.seq); w.i32(sim.belief.switches);
+        w.i32(sim.belief.entry.size); w.i32(sim.belief.dormant.length);
+        w.i32(fog.beliefCount());
+        // 结构 op 报告采样(与 S7 块同款)
+        if (sim.rebakeJob === null && sim.stats.rebakes > seenRebakes) {
+          seenRebakes = sim.stats.rebakes;
+          ops.push({ reportTick: sim.tickCount, r: sim.stats.rebake, union: [...sim.stats.dirtyTiles].sort((a, b) => a - b) });
+        }
+        if (sim.belief.switches > seenSwitches) seenSwitches = sim.belief.switches;
+      }
+      const opList = script.filter((e) => e.cmd.type === 'placeStructure' || e.cmd.type === 'removeStructureAt')
+        .map((e) => ({ tick: e.tick, kind: e.cmd.type === 'placeStructure' ? 1 : 2 }));
+      const opExecTicks = opList.map((o) => o.tick);
+      if (ops.length !== opExecTicks.length) throw new Error(`S7-b 重烘报告数 ${ops.length} ≠ 预期 ${opExecTicks.length}`);
+      writeFileSync(join(outRoot, 'parity', 's7fog.bin'), w.build());
+      const wo = new BW();
+      wo.bytes(Buffer.from('LS7O', 'ascii'));
+      wo.i32(ops.length);
+      ops.forEach((op, i) => {
+        wo.i32(opExecTicks[i]);
+        wo.u8(opList[i].kind);
+        wo.i32(op.reportTick);
+        wo.i32(op.r.tiles); wo.i32(op.r.contexts); wo.i32(op.r.costOnly);
+        wo.i32(op.r.hits); wo.i32(op.r.misses);
+        wo.i32(op.r.orders); wo.i32(op.r.refreshes);
+        wo.i32(op.r.evicted); wo.i32(op.r.stuck);
+        wo.i32(op.union.length);
+        for (const tile of op.union) wo.i32(tile);
+      });
+      writeFileSync(join(outRoot, 'parity', 's7fog-ops.bin'), wo.build());
+      writeFileSync(join(outRoot, 'parity', 's7fog-truth.json'), JSON.stringify(stamp({
+        mapId, seed,
+        note: 'S7-b 迷雾/认知(F02):迷雾开启口径(不置 __S7_TRUTH_NAV__,与 S7 块并存)。单位记录与 S5/S7 同构(位置带宽 + 状态机逐位 + contacts 双容忍);迷雾 digest 每组每 tick(visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev)+ 全局槽账(seq/switches/entry/dormant/beliefCount),整数集合态逐位硬门。s7fog-ops.bin 为结构 op 报告(place@5 挡路改道、remove@90 残影语义),逐字段硬门。脚本含 reveal/obscure/forget/fogShare 与 order 的 fogTerrain 开关(乐观迷雾)。C# 侧 CrowdFog/CrowdBeliefState 字段一一对应。',
+        ticks: TICKS, visionGroupCount: G, script, opExecTicks,
+      }), null, 2));
+      console.log(`[export] ${mapId} s7fog ticks=${TICKS} units=${sim.units.count} ops=${ops.length} switches=${seenSwitches} beliefCount=${sim.fog.beliefCount()}`);
+    }
+
+    // ───────────────────── S7-c:认知槽回收复用(建造→拆除→再建造) ─────────────────────
+    // 迷雾开启口径(与 S7-b 同):逐 tick 记单位 + 迷雾 digest + 结构 op 报告。脚本 =
+    // 11 轮「放置(未知)→ reveal 发现 → 拆除(残影)→ 再 reveal 见地面(残影消)」——每轮发现
+    // 造一个新认知槽、回到基线复用原槽;11 轮后休眠槽超 slotCacheCapacity,最旧先淘汰;
+    // 再建造 S1/S2/S3 命中已淘汰的认知集 → 开新槽(容量回收复用)。槽号/槽账在 digest 里,
+    // 淘汰次序(注册序 = JS Map 插入序)错一步,重建命中的槽号就分叉——digest 逐位即门。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      globalThis.__L31_FIX64_LOS__ = true; // L31:与 S7-b 同口径
+      globalThis.__S7_TRUTH_NAV__ = false;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const { packStatic } = await import('../src/engine/workers/bake.js');
+      const { TileCache } = await import('../src/engine/navtile/tileCache');
+      const { hpaScratch } = await import('../src/engine/hpa');
+      const { meshScratch } = await import('../src/engine/navtile/assemble');
+      const { generateStructures: regenStructures2 } = await import('../src/engine/structures/mapGen.js');
+      const freshStructures2 = regenStructures2(world, config, reach);
+      const freshCache2 = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      const navList2 = [];
+      {
+        const seen = new Set();
+        for (let a = 0; a < config.agentTypes.length; a++) for (let r = 0; r < config.agents.radiusClasses.length; r++) {
+          const c = clearanceOf(config, r), id = navIdOf(a, c);
+          if (seen.has(id)) continue;
+          seen.add(id);
+          navList2.push(buildNavContext(worldQ, config, a, c, freshStructures2, freshCache2));
+        }
+      }
+      const baked2 = { world: worldQ, worldCached: true, structures: freshStructures2, navs: navList2, tileCache: freshCache2, ms: 0 };
+      const stripClone2 = () => {
+        const saved = navList2.map((n) => [n.hpa.scratch, n.meshBuf && n.meshBuf.scratch, n.navmesh && n.navmesh.scratch]);
+        for (const n of navList2) { n.hpa.scratch = null; if (n.meshBuf) n.meshBuf.scratch = null; if (n.navmesh) n.navmesh.scratch = null; }
+        try { return structuredClone(packStatic(baked2)); } finally {
+          navList2.forEach((n, k) => { n.hpa.scratch = saved[k][0]; if (n.meshBuf) n.meshBuf.scratch = saved[k][1]; if (n.navmesh) n.navmesh.scratch = saved[k][2]; });
+        }
+      };
+      const payload2 = stripClone2();
+      const copyCache2 = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      for (const [k, e] of payload2.tiles) copyCache2.map.set(k, e);
+      Object.assign(copyCache2, payload2.tileStats);
+      for (const e of copyCache2.map.values()) copyCache2.uid = Math.max(copyCache2.uid, e.uid + 1);
+      for (const nav of payload2.navs) {
+        nav.hpa.scratch = hpaScratch(nav.hpa.S);
+        if (nav.meshBuf) nav.meshBuf.scratch = null;
+        if (nav.navmesh) nav.navmesh.scratch = meshScratch(nav.meshBuf, nav.navmesh.count);
+      }
+      const copy2 = { world: payload2.world, worldCached: true, structures: payload2.structures, navs: payload2.navs, tileCache: copyCache2, ms: 0 };
+      const host2 = createNavHost(config, copy2.world, copy2.structures, copy2.navs, copy2.tileCache);
+      const sim2 = new Simulation(sources, baked2, new LocalPathService(host2));
+      sim2.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+
+      // 双列建筑(A 列 y=9125m,B 列 y=9625m,各 8 个,x = 10000m + 250m·k,间距一个 fog 格,
+      // 足迹互不相触;reveal 矩形 = 建筑所在的整一个 fog 格)。单位 8 个停出生点。
+      // 每轮 6 拍:双放 → p1 见 A / p2 见 B(两视野组各持一个私有槽)→ 交叉见(两私有槽
+      // 同一 retire 内休眠——追加序在此暴露)→ 双拆(共享残影槽)→ 双清地面。槽号单调,
+      // 超容淘汰从表头吃;被淘汰过的认知集在重建段再命中,槽号即指纹。
+      const rectOf = (x, y) => [x - 12500, y * 100 - 12500, x + 12500, y * 100 + 12500];
+      const centersA = [], centersB = [];
+      for (let k = 0; k < 8; k++) {
+        centersA.push({ x: 1000000 + 25000 * k, y: 912500 });
+        centersB.push({ x: 1400000 + 25000 * k, y: 962500 });
+      }
+      const script2 = [{ tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 8, unitType: 0, rIdx: 0 } }];
+      const cycle = (base, k) => {
+        const a = centersA[k], b = centersB[k];
+        // 结构指令间距 ≥3 tick:前一 job 要在其完成 tick 末被采样,才会不被下一条结构
+        // 指令的强制收尾覆盖(采样读的是"最后一份报告")。reveal 无此约束。
+        script2.push({ tick: base, cmd: { type: 'placeStructure', template: 'building', xCm: a.x, yCm: a.y, sizeCm: 14000 } });
+        script2.push({ tick: base + 3, cmd: { type: 'placeStructure', template: 'building', xCm: b.x, yCm: b.y, sizeCm: 14000 } });
+        script2.push({ tick: base + 6, cmd: { type: 'reveal', player: 1, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 7, cmd: { type: 'reveal', player: 2, rect: rectOf(b.x, 9625) } });
+        script2.push({ tick: base + 8, cmd: { type: 'reveal', player: 1, rect: rectOf(b.x, 9625) } });
+        script2.push({ tick: base + 8, cmd: { type: 'reveal', player: 2, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 11, cmd: { type: 'removeStructureAt', xCm: a.x, yCm: a.y } });
+        script2.push({ tick: base + 14, cmd: { type: 'removeStructureAt', xCm: b.x, yCm: b.y } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 1, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 1, rect: rectOf(b.x, 9625) } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 2, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 2, rect: rectOf(b.x, 9625) } });
+      };
+      for (let k = 0; k < 8; k++) cycle(10 + 18 * k, k);
+      // 重建段:再走第 4/5 轮(那两轮的私有槽对是淘汰序反转的候选命中点)
+      cycle(160, 4); cycle(178, 5);
+      const webScript2 = script2.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'placeStructure') return { tick: e.tick, cmd: { type: 'place', template: c.template, x: c.xCm / 100, y: c.yCm / 100, size: c.sizeCm / 100 } };
+        if (c.type === 'removeStructureAt') return { tick: e.tick, cmd: { type: 'remove', x: c.xCm / 100, y: c.yCm / 100 } };
+        if (c.type === 'reveal') return { tick: e.tick, cmd: { type: 'reveal', player: c.player - 1, rect: c.rect.map((v) => v / 100) } };
+        return e;
+      });
+      sim2.commands.schedule(webScript2);
+
+      const TICKS2 = 200;
+      const G2 = sim2.fog.G;
+      const w2 = new BW();
+      w2.bytes(Buffer.from('LS7C', 'ascii'));
+      w2.i32(TICKS2);
+      w2.i32(G2);
+      const ops2 = [];
+      let seenRebakes2 = 0;
+      let lastSlot = -1, lastSeq = -1, lastDormant = -1;
+      for (let t = 0; t < TICKS2; t++) {
+        sim2.sepCtx.unitContacts.fill(0);
+        sim2.advance(1);
+        const u = sim2.units, n = u.count;
+        w2.i32(n);
+        for (let i = 0; i < n; i++) {
+          w2.u32(u.id[i]);
+          w2.f64(u.x[i] * 100); w2.f64(u.y[i] * 100);
+          w2.u8(u.state[i]); w2.u8(u.mode[i]); w2.u8(u.level[i]);
+          w2.u32(u.order[i]);
+          w2.u16(sim2.sepCtx.unitContacts[i]);
+        }
+        const fog = sim2.fog, F2 = fog.F * fog.F;
+        for (let g = 0; g < G2; g++) {
+          let vis = 0, exp = 0;
+          for (let c = g * F2; c < (g + 1) * F2; c++) { if (fog.visible[c]) vis++; if (fog.explored[c]) exp++; }
+          w2.i32(vis); w2.i32(exp);
+          w2.i32(fog.belief[g].size);
+          w2.i32(fog.tiles[g].size);
+          w2.u32(fog.beliefKey(g));
+          w2.i32(sim2.belief.slot[g]);
+          w2.i32(fog.entRev[g]); w2.i32(fog.rev[g]);
+        }
+        w2.i32(sim2.belief.seq); w2.i32(sim2.belief.switches);
+        w2.i32(sim2.belief.entry.size); w2.i32(sim2.belief.dormant.length);
+        w2.i32(fog.beliefCount());
+        if (sim2.rebakeJob === null && sim2.stats.rebakes > seenRebakes2) {
+          seenRebakes2 = sim2.stats.rebakes;
+          ops2.push({ reportTick: sim2.tickCount, r: sim2.stats.rebake, union: [...sim2.stats.dirtyTiles].sort((a, b) => a - b) });
+        }
+        if (sim2.belief.seq !== lastSeq || sim2.belief.dormant.length !== lastDormant || sim2.belief.slot[0] !== lastSlot) {
+          console.log(`[export] s7c t=${t} slot0=${sim2.belief.slot[0]} seq=${sim2.belief.seq} entry=${sim2.belief.entry.size} dormant=${sim2.belief.dormant.length}`);
+          lastSlot = sim2.belief.slot[0]; lastSeq = sim2.belief.seq; lastDormant = sim2.belief.dormant.length;
+        }
+      }
+      const opList2 = script2.filter((e) => e.cmd.type === 'placeStructure' || e.cmd.type === 'removeStructureAt')
+        .map((e) => ({ tick: e.tick, kind: e.cmd.type === 'placeStructure' ? 1 : 2 }));
+      const opExecTicks2 = opList2.map((o) => o.tick);
+      if (ops2.length !== opExecTicks2.length) throw new Error(`S7-c 重烘报告数 ${ops2.length} ≠ 预期 ${opExecTicks2.length}`);
+      writeFileSync(join(outRoot, 'parity', 's7crecycle.bin'), w2.build());
+      const wo2 = new BW();
+      wo2.bytes(Buffer.from('LS7O', 'ascii'));
+      wo2.i32(ops2.length);
+      ops2.forEach((op, i) => {
+        wo2.i32(opExecTicks2[i]);
+        wo2.u8(opList2[i].kind);
+        wo2.i32(op.reportTick);
+        wo2.i32(op.r.tiles); wo2.i32(op.r.contexts); wo2.i32(op.r.costOnly);
+        wo2.i32(op.r.hits); wo2.i32(op.r.misses);
+        wo2.i32(op.r.orders); wo2.i32(op.r.refreshes);
+        wo2.i32(op.r.evicted); wo2.i32(op.r.stuck);
+        wo2.i32(op.union.length);
+        for (const tile of op.union) wo2.i32(tile);
+      });
+      writeFileSync(join(outRoot, 'parity', 's7crecycle-ops.bin'), wo2.build());
+      writeFileSync(join(outRoot, 'parity', 's7crecycle-truth.json'), JSON.stringify(stamp({
+        mapId, seed,
+        note: 'S7-c 认知槽回收复用:迷雾开启口径。11 轮放置→发现→拆除(残影)→再见地面 + 重建 S1/S2/S3;休眠槽超 slotCacheCapacity(8) 触发最旧淘汰,重建命中已淘汰认知集 = 容量回收复用。digest(槽号/槽账)逐位硬门——淘汰次序(注册序)是隐含合同。',
+        ticks: TICKS2, visionGroupCount: G2, script: script2, opExecTicks: opExecTicks2,
+      }), null, 2));
+      console.log(`[export] ${mapId} s7crecycle ticks=${TICKS2} units=${sim2.units.count} ops=${ops2.length} seq=${sim2.belief.seq} dormant=${sim2.belief.dormant.length}`);
+    }
+
+    // ───────────────────── L51:迷雾面命令格化对拍(circle/poly,格单位归一树) ─────────────────────
+    // 直接调引擎 areaCells(__L31_FIX64_LOS__ 置位走定点树)。参考端形状仍是米;
+    // 写出的对拍文件换成厘米。C# 直接读厘米。F/fcs 与 Fog 构造同式派生(cellCells×导航格)。
+    {
+      globalThis.__L31_FIX64_LOS__ = true;
+      const { areaCells } = await import('../src/engine/fog/area.js');
+      const K = config.fog.cellCells;
+      const F = Math.ceil(world.N / K);
+      const fcsM = world.cellSize * K;
+      const cases = [
+        { name: 'rect1km', kind: 'rect', value: [9000, 9000, 10000, 10000] },
+        { name: 'circle600m', kind: 'circle', value: [8000, 8000, 600] },
+        { name: 'circle1000m', kind: 'circle', value: [4000, 11000, 1000] },
+        { name: 'poly800m', kind: 'poly', value: [[11600, 3600], [12400, 3600], [12400, 4400], [11600, 4400]] },
+        { name: 'poly2km', kind: 'poly', value: [[2000, 2000], [4000, 2200], [3800, 4000], [2600, 4200], [1900, 3200]] },
+        // 构造性咬合(撤掉定点树必红):勾股圆 300-400-500——圆心/半径使 s 行 dy=300m、
+        // h=400m 恰落格界,双精度树 14 格 vs 定点树 13 格;顶点恰落格边界的四边形——
+        // 边界 ceil/floor 在两树间翻转。参数经双树分叉探针搜索选定。
+        { name: 'biteCirclePyth', kind: 'circle', value: [4225, 2075, 500] },
+        { name: 'bitePolyGridEdge', kind: 'poly', value: [[6000, 3000], [8000, 4000], [7500, 4600], [6500, 4800]] },
+      ];
+      const cmValue = (v) => (Array.isArray(v) ? v.map(cmValue) : v * 100);
+      const areaOut = {
+        mapId, seed,
+        note: 'L51 面积格化对拍:格单位归一树(厘米输入,守卫 ±46340 m),双端同棵求值树逐格硬门。rect1km 与 s7fog 的 reveal 同参,是 rect 路径的回归钉;circle/poly 为旧厘米域树 r·r 溢出界(~463 m)之外的首批两端证据。',
+        navCellsPerFogCell: K, fogCellsPerSide: F, fogCellSizeCm: Math.round(fcsM * 100), cases: [],
+      };
+      for (const c of cases) {
+        const r = areaCells(F, fcsM, { kind: c.kind, value: c.value });
+        areaOut.cases.push({ name: c.name, kind: c.kind, value: cmValue(c.value), cells: [...r.cells], box: [...r.box] });
+      }
+      writeFileSync(join(outRoot, 'parity', 's7area-truth.json'), JSON.stringify(stamp(areaOut), null, 2));
+      console.log(`[export] ${mapId} s7area cases=${areaOut.cases.length} F=${F} fcsM=${fcsM}`);
+    }
+
+    // ───────────────────── L52:LOS 高度线恰等阈值咬合(工程化高度表直调 sight) ─────────────────────
+    // 真实例上整体替换高度/不透明表后走真实 sight 路径(定点树)。样线 (10,10)→(16,10),
+    // n=12,眼高 10m、hAvg[t]=40m → rise=30;s=2 采样格 11、f=1/6:定点积 4.999999998136679,
+    // 双精度积 4.9999999999999999——V=15−2^−32 落在窗口内 → 双精度可见、定点阻挡,
+    // 撤掉定点必红;V=15 恰等阈值钉严格大于语义(两端皆阻挡)。
+    {
+      globalThis.__L31_FIX64_LOS__ = true;
+      const { Fog } = await import('../src/engine/fog/fog.js');
+      // sight 只读高度/不透明表;relations 以 kindOf 桩走完构造(视野分组本块不消费),
+      // structures 用顶层正本实例(构造期收桥足迹)。
+      const fogObj = new Fog(config, world, { kindOf: () => 0 }, structures);
+      const G32 = 4294967296;
+      const mkRaw = (raw) => Number(BigInt(raw)) / G32;
+      const from = [10, 10], to = [16, 10];
+      const rowY = 10, flat = (col) => rowY * 64 + col; // 采样行 = 10(dy=0)
+      const v0 = from[1] * 64 + from[0], t0 = to[1] * 64 + to[0];
+      const hAvgTRaw = 40 * G32;
+      const cases3 = [
+        { name: 'biteThreshold', hMaxRaw: { [flat(11)]: 15 * G32 - 1 }, expect: false },
+        { name: 'thresholdExact', hMaxRaw: { [flat(11)]: 15 * G32 }, expect: false },
+        { name: 'belowBothTrees', hMaxRaw: { [flat(11)]: 14 * G32 + G32 / 2 }, expect: true },
+        { name: 'clearLos', hMaxRaw: {}, expect: true },
+        { name: 'opaqueMidBlocks', hMaxRaw: {}, opaque: flat(13), expect: false },
+      ];
+      const losOut = {
+        mapId, seed, fogCellsPerSide: fogObj.F, eyeCm: Math.round(fogObj.eye * 100),
+        note: 'L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 全 0 除指定格;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。',
+        fromFogCell: from, toFogCell: to, hAvgTRaw, cases: [],
+      };
+      for (const c of cases3) {
+        const hAvg = new Float64Array(64 * 64), hMax = new Float64Array(64 * 64), opaque = new Uint8Array(64 * 64);
+        hAvg[t0] = mkRaw(hAvgTRaw);
+        for (const [k, raw] of Object.entries(c.hMaxRaw)) hMax[+k] = mkRaw(raw);
+        if (c.opaque !== undefined) opaque[c.opaque] = 1;
+        Object.assign(fogObj, { hAvg, hMax, opaque, los: true });
+        const got = fogObj.sight(from[0], from[1], to[0], to[1]);
+        losOut.cases.push({ name: c.name, hMaxRaw: c.hMaxRaw, opaque: c.opaque ?? 0, expect: c.expect, got });
+        if (got !== c.expect) throw new Error(`L52 LOS case ${c.name}: got ${got} ≠ 预期 ${c.expect}`);
+      }
+      writeFileSync(join(outRoot, 'parity', 's7los-truth.json'), JSON.stringify(stamp(losOut), null, 2));
+      console.log(`[export] ${mapId} s7los cases=${losOut.cases.length}`);
+    }
+
+  }
+}

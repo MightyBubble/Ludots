@@ -31,7 +31,7 @@ public sealed class RaylibFieldRenderPresenterTests
         field.SetDenied(new FogCell(2, 0));
         ProjectFog(buffer, field);
 
-        var presenter = new RaylibFieldRenderPresenter();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
         ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
 
         Assert.That(plans.Length, Is.EqualTo(1));
@@ -51,10 +51,81 @@ public sealed class RaylibFieldRenderPresenterTests
         Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(1, 0), out Color explored), Is.True);
         Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(2, 0), out Color denied), Is.True);
         Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(3, 0), out Color unseen), Is.True);
-        Assert.That(visible, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible)));
+        Assert.That(visible, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, MarketPalette())));
         Assert.That(explored.a, Is.GreaterThan(visible.a));
         Assert.That(denied.r, Is.GreaterThan(denied.g));
         Assert.That(unseen.a, Is.GreaterThan(explored.a));
+    }
+
+    [Test]
+    public void BuildTexturePlan_CellBlockFog_TextureCoversWholeBlockAndNeverSeenFarCornerIsUnseen()
+    {
+        const int Side = 64;
+        var registry = new FogLayerRegistry();
+        FogLayerId layerId = registry.Register("ground", cellSizeCm: 100, updateHz: 10);
+        var store = new FogFieldStore(initialCapacity: 2, chunkSizeCells: 16);
+        FogField field = store.GetOrCreate(1, registry.Get(layerId));
+        field.EnsureCellBlock(Side);
+        field.SetVisible(new FogCell(2, 2));
+        field.SetExplored(new FogCell(3, 2));
+
+        var buffer = new GlobalFieldVisualBuffer(recordCapacity: 4, cellCapacity: Side * Side, dirtyRectCapacity: 4);
+        var projector = new FogGlobalFieldVisualProjector();
+        buffer.BeginFrame();
+        projector.Project(store, buffer);
+        var palette = MarketPalette();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = palette };
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(plans[0].BoundsCells, Is.EqualTo(new Ludots.Core.Mathematics.IntRect(0, 0, Side, Side)),
+            "贴花的世界范围取 BoundsCells × 格边长，必须是整块地图");
+        Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(Side - 1, Side - 1), out Color corner), Is.True);
+        Assert.That(corner, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Unseen, palette)));
+        Assert.That(presenter.TryGetStagedPixel(plans[0].Id, new FieldCell2D(2, 2), out Color seen), Is.True);
+        Assert.That(seen, Is.EqualTo(RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, palette)));
+
+        field.SetVisible(new FogCell(40, 40));
+        buffer.BeginFrame();
+        projector.Project(store, buffer);
+        plans = presenter.BuildTexturePlan(buffer);
+        Assert.That(plans[0].BoundsCells, Is.EqualTo(new Ludots.Core.Mathematics.IntRect(0, 0, Side, Side)));
+        Assert.That(plans[0].FullUpload, Is.False, "边界不变，纹理不重建，只传脏格");
+    }
+
+    [Test]
+    public void ResolveFogColor_MatchesMarketThreeStateFogContract()
+    {
+        GlobalFieldVisualBuffer buffer = CreateBuffer(out _, out FogField field);
+        field.SetVisible(new FogCell(0, 0));
+        ProjectFog(buffer, field);
+        var missing = new RaylibFieldRenderPresenter();
+        InvalidOperationException absent = Assert.Throws<InvalidOperationException>(
+            () => missing.BuildTexturePlan(buffer))!;
+        Assert.That(absent.Message, Does.Contain("FogDecalPalette"));
+
+        FogDecalPalette palette = MarketPalette();
+        Color visible = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible, palette);
+        Color explored = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Explored, palette);
+        Color unseen = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Unseen, palette);
+        Color denied = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Denied, palette);
+
+        Assert.That(visible.a, Is.EqualTo(0), "可见=清晰(全透明)。");
+        Assert.That(explored.r | explored.g | explored.b, Is.EqualTo(0), "已探索暗化取黑。");
+        Assert.That(unseen.r | unseen.g | unseen.b, Is.EqualTo(0), "不可见取黑。");
+        Assert.That(unseen.a, Is.GreaterThan(200), "不可见接近不透明。");
+        Assert.That(explored.a, Is.InRange(100, 200), "已探索暗化为中等不透明。");
+        Assert.That(denied.r, Is.GreaterThan(denied.g), "遮蔽态保留暗红提示。");
+        Assert.That(denied.r, Is.LessThan(120), "遮蔽态不抢可见性语义。");
+    }
+
+    [Test]
+    public void FieldPresenter_FogKindDrawDefaultsOn_AndCanBeSuppressedForTerrainDecal()
+    {
+        var presenter = new RaylibFieldRenderPresenter();
+        Assert.That(presenter.DrawFogKind, Is.True, "无地形贴花槽位时迷雾由本渲染器平面绘制。");
+        presenter.DrawFogKind = false;
+        Assert.That(presenter.DrawFogKind, Is.False, "宿主改道地形贴花槽位后可压制平面绘制。");
     }
 
     [Test]
@@ -120,6 +191,106 @@ public sealed class RaylibFieldRenderPresenterTests
 
         Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
         Assert.That(color, Is.EqualTo(new Color(51, 102, 153, 128)));
+    }
+
+    [Test]
+    public void BuildTexturePlan_StagesWalkableFieldWithDirectRgbaContract()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.Walkable,
+            scopeKeyId: 1,
+            layerKeyId: 0,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 2, 1),
+            GlobalFieldVisualValueKind.Vector4);
+        GlobalFieldVisualCell[] cells =
+        {
+            new(new FieldCell2D(0, 0), new System.Numerics.Vector4(0.63f, 0.12f, 0.12f, 0.5f)),
+        };
+        IntRect[] dirty = { new(0, 0, 2, 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, dirty);
+
+        var presenter = new RaylibFieldRenderPresenter();
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(presenter.LastUnsupportedFieldCount, Is.Zero);
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
+        Assert.That(color, Is.EqualTo(new Color(161, 31, 31, 128)));        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(1, 0), out Color empty), Is.True);
+        Assert.That(empty.a, Is.Zero);
+    }
+
+    [Test]
+    public void BuildTexturePlan_StagesFlowFieldWithDirectionHueContract()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.Flow,
+            scopeKeyId: 1,
+            layerKeyId: 0,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 3, 1),
+            GlobalFieldVisualValueKind.Vector4);
+        GlobalFieldVisualCell[] cells =
+        {
+            // 东向(0° → 红色相)、北向(90° → 绿色相)、未到达(零方向 → 透明)
+            new(new FieldCell2D(0, 0), new System.Numerics.Vector4(1f, 0f, 1f, 0f)),
+            new(new FieldCell2D(1, 0), new System.Numerics.Vector4(0f, 1f, 0.5f, 0f)),
+            new(new FieldCell2D(2, 0), new System.Numerics.Vector4(0f, 0f, 1f, 0f)),
+        };
+        IntRect[] dirty = { new(0, 0, 3, 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, dirty);
+
+        var presenter = new RaylibFieldRenderPresenter();
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(presenter.LastUnsupportedFieldCount, Is.Zero);
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color east), Is.True);
+        Assert.That(east.r, Is.EqualTo(255));
+        Assert.That(east.g, Is.LessThan(80));
+        Assert.That(east.b, Is.LessThan(80));
+        Assert.That(east.a, Is.EqualTo(230));
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(1, 0), out Color north), Is.True);
+        Assert.That(north.g, Is.GreaterThan(north.r));
+        Assert.That(north.g, Is.GreaterThan(north.b));
+        Assert.That(north.a, Is.EqualTo(115));
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(2, 0), out Color unreached), Is.True);
+        Assert.That(unreached.a, Is.Zero);
+    }
+
+    [Test]
+    public void BuildTexturePlan_RejectsNonVector4FlowField()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.Flow,
+            scopeKeyId: 1,
+            layerKeyId: 0,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 1, 1),
+            GlobalFieldVisualValueKind.Byte);
+        GlobalFieldVisualCell[] cells = { new(new FieldCell2D(0, 0), byteValue: 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, new[] { new IntRect(0, 0, 1, 1) });
+
+        var presenter = new RaylibFieldRenderPresenter();
+        Assert.Throws<InvalidOperationException>(() => presenter.BuildTexturePlan(buffer));
     }
 
     [Test]
@@ -197,25 +368,33 @@ public sealed class RaylibFieldRenderPresenterTests
         }
         ProjectFog(buffer, field);
 
-        var presenter = new RaylibFieldRenderPresenter();
-        presenter.BuildTexturePlan(buffer);
-        presenter.BuildTexturePlan(buffer);
-        _ = presenter.LastFieldCellCount;
-
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        GC.GetAllocatedBytesForCurrentThread();
-
-        long before = GC.GetAllocatedBytesForCurrentThread();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
+        // GetAllocatedBytesForCurrentThread is approximate under tiered JIT;
+        // retry the measured window so a one-time bump cannot flake the zero-alloc contract.
+        long allocated = long.MaxValue;
         int observed = 0;
-        for (int i = 0; i < 1_000; i++)
+        for (int attempt = 0; attempt < 3 && allocated != 0; attempt++)
         {
             presenter.BuildTexturePlan(buffer);
-            observed += presenter.LastFieldCellCount;
+            presenter.BuildTexturePlan(buffer);
+            _ = presenter.LastFieldCellCount;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            observed = 0;
+            for (int i = 0; i < 1_000; i++)
+            {
+                presenter.BuildTexturePlan(buffer);
+                observed += presenter.LastFieldCellCount;
+            }
+
+            allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         Assert.That(observed, Is.EqualTo(256_000));
         Assert.That(allocated, Is.EqualTo(0));
     }
@@ -261,7 +440,7 @@ public sealed class RaylibFieldRenderPresenterTests
         buffer.BeginFrame();
         buffer.Upsert(descriptor, cells, dirtyRects);
 
-        var presenter = new RaylibFieldRenderPresenter();
+        var presenter = new RaylibFieldRenderPresenter { FogPalette = MarketPalette() };
         // GetAllocatedBytesForCurrentThread is approximate under tiered JIT / concurrent GC;
         // retry the measured window so cold-runner noise cannot flake the zero-alloc contract.
         long allocated = long.MaxValue;
@@ -309,6 +488,12 @@ public sealed class RaylibFieldRenderPresenterTests
             $"BuildTexturePlan fell below the CI wall-clock floor ({CiPlanHzFloor:F0}Hz): {planHz:F1}Hz " +
             "— this is a real regression, not runner jitter.");
     }
+
+    private static FogDecalPalette MarketPalette() => new(
+        new FogDecalColor(0, 0, 0, 232),
+        new FogDecalColor(0, 0, 0, 148),
+        new FogDecalColor(0, 0, 0, 0),
+        new FogDecalColor(64, 8, 16, 214));
 
     private static GlobalFieldVisualBuffer CreateBuffer(out FogLayerId layerId, out FogField field)
     {

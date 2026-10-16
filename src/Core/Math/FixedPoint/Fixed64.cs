@@ -599,6 +599,27 @@ namespace FixPointCS
         }
 
         /// <summary>
+        /// 精确积:先取绝对值,按 32/16 位分段相乘,再回填符号,负数向零截断。
+        /// Mul 用算术右移 32 位拆整数部,负数向下取整;负结果且低 32 位余量非 0 时两者差 1 个最小单位,
+        /// 其余情况与 Mul 相同。结果放不进有符号 64 位或操作数为 long.MinValue 时,结果无意义。
+        /// </summary>
+        public static long MulExact(long a, long b)
+        {
+            bool neg = (a < 0) ^ (b < 0);
+            long ua = a < 0 ? -a : a, ub = b < 0 ? -b : b;
+            long ah = ua >> 32, al = ua & 0xFFFFFFFFL;
+            long bh = ub >> 32, bl = ub & 0xFFFFFFFFL;
+            // |a|·|b| 的 raw = ah·bh·2^32 + ah·bl + al·bh + floor(al·bl / 2^32);
+            // al·bl 可到 2^64,低段再按 16 位分半求 floor(各中间量 < 2^34,long 内精确)
+            long alHi = al >> 16, alLo = al & 0xFFFFL, blHi = bl >> 16, blLo = bl & 0xFFFFL;
+            long mid = alHi * blLo + alLo * blHi;
+            long low = ((mid - ((mid >> 16) << 16)) << 16) + alLo * blLo;
+            long fracHi = alHi * blHi + (mid >> 16) + (low >= 1L << 32 ? 1 : 0);
+            long r = (ah * bh << 32) + ah * bl + al * bh + fracHi;
+            return neg ? -r : r;
+        }
+
+        /// <summary>
         /// Calculates the square root of the given number.
         /// </summary>
         public static long SqrtPrecise(long a)

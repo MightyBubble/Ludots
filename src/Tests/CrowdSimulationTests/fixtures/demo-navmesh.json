@@ -1,0 +1,9 @@
+{
+  "maps": {
+    "crowd_simulation_demo": {
+      "solver": "crowd-simulation",
+      "navCellSizeCm": 6250,
+      "terrainTypes": ["water", "shore", "land", "mountain", "cliff"]
+    }
+  }
+}

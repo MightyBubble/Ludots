@@ -165,8 +165,10 @@ public sealed class RaylibShaderContractTests
         Assert.That(terrain, Does.Contain("uniform sampler2D uNavWalkabilityMap"));
         Assert.That(terrain, Does.Contain("uniform int uUseNavWalkability"));
         Assert.That(terrain, Does.Contain("uniform vec4 uNavWalkabilityBounds"));
+        Assert.That(terrain, Does.Contain("uniform float uNavWalkabilityBlend"));
         Assert.That(terrain, Does.Contain("vec2 worldCm = fragPos.xz * 100.0"));
-        Assert.That(terrain, Does.Contain("uv.y = 1.0 - uv.y"));
+        Assert.That(terrain, Does.Contain("uniform int uNavWalkabilityTopRowIsMaxY"));
+        Assert.That(terrain, Does.Contain("if (uNavWalkabilityTopRowIsMaxY != 0) uv.y = 1.0 - uv.y"));
         Assert.That(terrain, Does.Contain("albedo = mix(albedo, navTint.rgb"));
         Assert.That(
             terrain.IndexOf("if (uUseNavWalkability != 0)", StringComparison.Ordinal),
@@ -178,6 +180,8 @@ public sealed class RaylibShaderContractTests
         Assert.That(renderer, Does.Contain("\"uNavWalkabilityMap\""));
         Assert.That(renderer, Does.Contain("\"uUseNavWalkability\""));
         Assert.That(renderer, Does.Contain("\"uNavWalkabilityBounds\""));
+        Assert.That(renderer, Does.Contain("\"uNavWalkabilityBlend\""));
+        Assert.That(renderer, Does.Contain("\"uNavWalkabilityTopRowIsMaxY\""));
         Assert.That(renderer, Does.Contain("NavWalkabilityMaterialSlot"));
     }
 

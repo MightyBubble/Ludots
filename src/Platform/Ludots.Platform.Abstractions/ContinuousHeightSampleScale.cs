@@ -19,7 +19,8 @@ namespace Ludots.Platform.Abstractions
                 throw new InvalidOperationException("Visual height sample denominator must be positive.");
             }
 
-            return OffsetCm + ((rawSample * UnitsPerSampleNumeratorCm) / (float)UnitsPerSampleDenominator);
+            // 先 widening 成 long 再乘:raw(≤65535) × 分子在大比例资产下会溢出 int32。
+            return OffsetCm + (float)((rawSample * (long)UnitsPerSampleNumeratorCm) / (double)UnitsPerSampleDenominator);
         }
 
         public void Validate()

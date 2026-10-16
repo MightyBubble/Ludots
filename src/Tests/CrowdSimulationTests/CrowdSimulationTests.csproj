@@ -1,0 +1,94 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <StartupObject>CrowdSimulationTests.Performance.ZeroAllocGateHost</StartupObject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">osx</SkiaNativeRid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Tools\Ludots.Tool\Ludots.Tool.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\navigation\CrowdSimulationUiMod\CrowdSimulationUiMod.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\TestCommon\TeamRelationTestHarness.cs" Link="TeamRelationTestHarness.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationStandardMod\assets\CrowdSimulationConfig.json">
+      <Link>assets\CrowdSimulationConfig.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\assets\Navigation\navmesh.json">
+      <Link>assets\navmesh.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationStandardMod\assets\CrowdSimulation\traversal.json">
+      <Link>assets\traversal.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="fixtures\demo-navmesh.json">
+      <Link>fixtures\demo-navmesh.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="fixtures\demo-map-facts.json">
+      <Link>fixtures\demo-map-facts.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationStandardMod\assets\Navigation\agent_profiles.json">
+      <Link>assets\agent_profiles.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationDemoContentMod\assets\**">
+      <Link>assets\crowddemo\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain1337Mod\assets\**">
+      <Link>assets\s1\s1337\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain2024Mod\assets\**">
+      <Link>assets\s1\s2024\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain7Mod\assets\**">
+      <Link>assets\s1\s7\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll"
+          Link="libSkiaSharp.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll')" />
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so"
+          Link="libSkiaSharp.so"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so')" />
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib"
+          Link="libSkiaSharp.dylib"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib')" />
+  </ItemGroup>
+
+</Project>

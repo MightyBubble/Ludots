@@ -1,0 +1,5 @@
+pose fields (targetXCm,targetYCm,yaw,pitch,distanceCm) per shot group, last occurrence per run:
+  near  before=(1577300, 1393500, 45, 55, 60000) after=(1577300, 1393500, 45, 55, 60000) equal=True
+  mid   before=(1577300, 1393500, 45, 55, 250000) after=(1577300, 1393500, 45, 55, 250000) equal=True
+  far   before=(1577300, 1393500, 45, 55, 1920000) after=(1577300, 1393500, 45, 55, 1920000) equal=True
+ALL FIELD-EQUAL: True

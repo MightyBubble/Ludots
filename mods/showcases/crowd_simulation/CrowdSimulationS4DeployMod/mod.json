@@ -1,0 +1,22 @@
+{
+  "name": "CrowdSimulationS4DeployMod",
+  "version": "0.4.0",
+  "description": "S4 部署交互演示（种子 1337）：开局按规则部署单位，带自动回放对拍、建造/迷雾脚本与完整调试 HUD。键位与工具说明见 gitbook/architecture/crowdsimulation-showcases.md 的「S4 部署演示」。",
+
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "deploy",
+    "s4"
+  ]
+}

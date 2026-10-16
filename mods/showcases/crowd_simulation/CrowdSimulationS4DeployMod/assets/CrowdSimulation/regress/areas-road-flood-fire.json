@@ -1,0 +1,39 @@
+{
+  "ticks": 2701,
+  "expectAbsentTemplates": ["fire"],
+  "expectPresentTemplates": ["road", "flood"],
+  "script": [
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "road",
+        "xCm": 470000,
+        "yCm": 560000,
+        "sizeCm": 3000,
+        "toXCm": 520000,
+        "toYCm": 560000
+      }
+    },
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "flood",
+        "xCm": 600000,
+        "yCm": 500000,
+        "sizeCm": 8000
+      }
+    },
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "fire",
+        "xCm": 700000,
+        "yCm": 500000,
+        "sizeCm": 8000
+      }
+    }
+  ]
+}

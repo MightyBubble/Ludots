@@ -10,6 +10,8 @@ namespace Ludots.Raylib.Render
     {
         public int CircleSegments { get; set; } = 32;
         public float PlaneY { get; set; } = 0f;
+        /// <summary>世界米 (x, z) → 地面高度(米);null 时退回固定平面。返回 null 采样失败同样退回。</summary>
+        public Func<float, float, float?>? GroundSamplerM { get; set; }
 
         public void Draw(DebugDrawCommandBuffer buffer)
         {
@@ -67,7 +69,7 @@ namespace Ludots.Raylib.Render
             Rl.DrawLine3D(p3, p0, col);
         }
 
-        private Vector3 ToV3(Vector2 p) => new Vector3(p.X, PlaneY, p.Y);
+        private Vector3 ToV3(Vector2 p) => new Vector3(p.X, (GroundSamplerM?.Invoke(p.X, p.Y) ?? 0f) + PlaneY, p.Y);
 
         private static Color ToColor(DebugDrawColor c) => new Color(c.R, c.G, c.B, c.A);
     }

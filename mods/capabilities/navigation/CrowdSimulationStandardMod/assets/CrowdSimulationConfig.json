@@ -1,0 +1,160 @@
+{
+  "worker": {
+    "planTimeoutMs": 5000
+  },
+  "agents": {
+    "avoidanceRadiusScale": 6
+  },
+  "navmesh": {
+    "minRegionNavCellArea": 12,
+    "maxSimplificationErrorNavCells": 1.3,
+    "maxEdgeLenNavCells": 12,
+    "maxVertsPerPoly": 6,
+    "portalInsetNavCells": 0.5
+  },
+  "hpa": {
+    "maxEntranceWidthNavCells": 6
+  },
+  "navtile": {
+    "sizeCm": 100000,
+    "cacheCapacity": 4096
+  },
+  "flowfield": {
+    "cacheCapacity": 80,
+    "poolCapacity": 16,
+    "corridorPaddingNavTiles": 1,
+    "maxRebuildsPerTick": 1
+  },
+  "planning": {
+    "latencyTicks": 2,
+    "refreshLatencyTicks": 12,
+    "maxRefreshesPerTick": 1,
+    "rebakeSlices": 3
+  },
+  "fog": {
+    "rateHz": 4,
+    "cellSizeCm": 25000,
+    "visionCm": 80000,
+    "revealTicks": 30,
+    "slotCacheCapacity": 8,
+    "variantCapacity": 64,
+    "lineOfSight": false,
+    "eyeCm": 1000
+  },
+  "formation": {
+    "spacingScale": 1.1,
+    "leaderSpeedRatio": 0.8,
+    "leaderTurnRatePerSec": 3,
+    "faceTurnScale": 0.5,
+    "catchUpSpeedRatio": 1.35,
+    "slotSightCm": 100000,
+    "leaderLookAheadCm": 37500,
+    "magicBoxMaxSpreadCm": 250000,
+    "magicBoxPadCm": 6250,
+    "slotArriveCm": 2187.5,
+    "goalArriveCm": 6250,
+    "settleRadiusCm": 12500,
+    "clumpSlackScale": 1.3,
+    "minClumpCm": 9375,
+    "headingInheritDot": 0.94,
+    "mirrorFlipDot": -0.5,
+    "settleTimeSec": 4
+  },
+  "formations": {
+    "box": {
+      "spacingDiameterScale": 1,
+      "aspect": 1.5,
+      "wedge": false
+    },
+    "line": {
+      "spacingDiameterScale": 1,
+      "aspect": 6,
+      "wedge": false
+    },
+    "wedge": {
+      "spacingDiameterScale": 1,
+      "aspect": 1.5,
+      "wedge": true
+    },
+    "loose": {
+      "spacingDiameterScale": 1.8,
+      "aspect": 1.5,
+      "wedge": false
+    }
+  },
+  "movement": {
+    "maxStepNavCells": 0.45,
+    "maxSubSteps": 8,
+    "blendRatePerSec": 2.5,
+    "blendCommitRatio": 0.5,
+    "slotCheckIntervalSubSteps": 4,
+    "sightHysteresisScale": 1.5,
+    "laneSpreadSpeedRatio": 0.5,
+    "wakeDistanceCm": 12500,
+    "stallSpeedRatio": 0.3,
+    "stallDecayPerSec": 0.5,
+    "unitTurnRateRadPerSec": 2.5,
+    "stopSpeedRatio": 0.2,
+    "speedCapRatio": 1.5,
+    "restAccelScale": 2,
+    "restSeparationScale": 0.6,
+    "slotTimeConstantSec": 1.5
+  },
+  "avoidance": {
+    "rateHz": 15,
+    "hashRings": 1,
+    "maxNeighbors": 24,
+    "maxScan": 96,
+    "separationWeight": 1.4,
+    "accelerationPerSec": 4,
+    "restDeadband": 0.25,
+    "maxPush": 1.5,
+    "smoothingRatio": 0.5
+  },
+  "push": {
+    "movingPriorityBonus": 1,
+    "dominantShare": 0.1
+  },
+  "pairRules": {
+    "yieldsTo": {
+      "relation": "Friendly"
+    },
+    "sharesVisionWith": {
+      "relation": "Friendly"
+    }
+  },
+  "sim": {
+    "maxUnits": 50000,
+    "parallelWorkerCount": 4,
+    "simSecondsPerTickSecond": 10
+  },
+  "spawn": {
+    "placementTries": 8,
+    "groupSpacingScale": 2.2,
+    "navCellInsetFraction": 0.02
+  },
+  "structures": {
+    "templates": {
+      "building": {
+        "layer": "base",
+        "footprint": "square",
+        "effect": {
+          "kind": "block",
+          "coverage": 0.5
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
+        "lifetimeSec": null
+      }
+    }
+  },
+  "deploy": {
+    "spreadCm": 187500,
+    "baseJitterCm": 125000,
+    "centersPerGroup": 3
+  },
+  "telemetry": {
+    "turnEpsRad": 0.035
+  }
+}

@@ -134,5 +134,42 @@ namespace GasTests
                 Assert.That(dropped, Is.EqualTo(2), $"Dropped mismatch for {partition.GetType().Name}");
             }
         }
+
+        [Test]
+        public void March_ReusesEmptiedCellsWithoutAllocating()
+        {
+            var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4, initialChunkCapacity: 16);
+            const int n = 8;
+            var entities = new Entity[n];
+            for (int i = 0; i < n; i++)
+            {
+                entities[i] = _world.Create();
+                partition.Add(entities[i], i, 0);
+            }
+
+            for (int step = 0; step < 24; step++) Advance(partition, entities, step);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int step = 24; step < 72; step++) Advance(partition, entities, step);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Span<Entity> buffer = stackalloc Entity[16];
+            int found = partition.Query(new IntRect(72, 0, 16, 1), buffer, out int dropped);
+            Assert.That(allocated, Is.Zero, $"march reused emptied cells but allocated {allocated} bytes");
+            Assert.That(dropped, Is.EqualTo(0));
+            Assert.That(found, Is.EqualTo(n));
+            for (int i = 0; i < n; i++)
+                Assert.That(buffer.Slice(0, found).Contains(entities[i]), Is.True);
+        }
+
+        private static void Advance(ChunkedGridSpatialPartitionWorld partition, Entity[] entities, int step)
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                int x = i + step;
+                partition.Remove(entities[i], x, 0);
+                partition.Add(entities[i], x + 1, 0);
+            }
+        }
     }
 }

@@ -96,6 +96,9 @@ public sealed class RaylibSyntheticKeyboardInputTests
             return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, lineHeight, lineHeight);
         }
 
+        public UiTextSize MeasureSize(ReadOnlySpan<char> text, UiStyle style, float availableWidth, bool constrainWidth)
+            => new UiTextSize(text.Length * 8f, Math.Max(1f, style.FontSize));
+
         public float MeasureWidth(string? text, UiStyle style)
         {
             return (text?.Length ?? 0) * 8f;

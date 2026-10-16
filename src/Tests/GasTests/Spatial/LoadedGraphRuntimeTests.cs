@@ -111,6 +111,7 @@ namespace Ludots.Tests.GAS
                 requestId: 1,
                 actor: default,
                 domain: PathDomain.Auto,
+                agentTypeId: "graph_only",
                 start: PathEndpoint.FromWorldCm(5, 0),
                 goal: PathEndpoint.FromWorldCm(1495, 0),
                 budget: new PathBudget(maxExpanded: 0, maxPoints: 8));
@@ -138,6 +139,7 @@ namespace Ludots.Tests.GAS
                 new AgentProfileConfig
                 {
                     Id = id,
+                    NavProfileId = id,
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,

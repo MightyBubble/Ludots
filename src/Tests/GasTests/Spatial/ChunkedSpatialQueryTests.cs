@@ -120,6 +120,85 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        [TestCase(40)]
+        [TestCase(400)]
+        [TestCase(2000)]
+        public void Query_SparseChunks_AfterChurn_MatchesCellByCellScanOrder(int entityCount)
+        {
+            var world = World.Create();
+            try
+            {
+                var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
+                var random = new Random(1337);
+                var placed = new List<(Entity Entity, int CellX, int CellY)>();
+                for (int i = 0; i < entityCount; i++)
+                {
+                    Entity entity = world.Create();
+                    int cellX = random.Next(-64, 128);
+                    int cellY = random.Next(-64, 64);
+                    partition.Add(entity, cellX, cellY);
+                    placed.Add((entity, cellX, cellY));
+                }
+
+                for (int i = 0; i < entityCount * 2; i++)
+                {
+                    int pick = random.Next(placed.Count);
+                    (Entity entity, int oldX, int oldY) = placed[pick];
+                    partition.Remove(entity, oldX, oldY);
+                    int cellX = random.Next(-64, 128);
+                    int cellY = random.Next(-64, 64);
+                    partition.Add(entity, cellX, cellY);
+                    placed[pick] = (entity, cellX, cellY);
+                }
+
+                IntRect[] rects =
+                {
+                    new IntRect(-64, -64, 191, 127),
+                    new IntRect(-30, -20, 100, 70),
+                    new IntRect(0, 0, 63, 63),
+                    new IntRect(10, 10, 3, 3),
+                };
+                var buffer = new Entity[entityCount];
+                var cell = new Entity[entityCount];
+                foreach (IntRect rect in rects)
+                {
+                    int count = partition.Query(in rect, buffer, out int dropped);
+                    That(dropped, Is.Zero);
+
+                    var expected = new List<Entity>();
+                    int maxX = rect.X + rect.Width;
+                    int maxY = rect.Y + rect.Height;
+                    for (int chunkY = MathUtil.FloorDiv(rect.Y, 64); chunkY <= MathUtil.FloorDiv(maxY, 64); chunkY++)
+                    for (int chunkX = MathUtil.FloorDiv(rect.X, 64); chunkX <= MathUtil.FloorDiv(maxX, 64); chunkX++)
+                    for (int y = Math.Max(rect.Y, chunkY * 64); y <= Math.Min(maxY, chunkY * 64 + 63); y++)
+                    for (int x = Math.Max(rect.X, chunkX * 64); x <= Math.Min(maxX, chunkX * 64 + 63); x++)
+                    {
+                        var single = new IntRect(x, y, 0, 0);
+                        int n = partition.Query(in single, cell, out _);
+                        for (int i = 0; i < n; i++) expected.Add(cell[i]);
+                    }
+
+                    That(buffer[..count], Is.EqualTo(expected.ToArray()),
+                        $"rect {rect.X},{rect.Y} {rect.Width}x{rect.Height} must list entities in the cell-by-cell order");
+                }
+
+                var whole = new IntRect(0, -64, 63, 63);
+                partition.Query(in whole, buffer, out _);
+                long bytes = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 100; i++)
+                {
+                    partition.Query(in whole, buffer, out _);
+                }
+
+                That(GC.GetAllocatedBytesForCurrentThread() - bytes, Is.Zero,
+                    "the occupied-cell path must not allocate once warm");
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
         [Test]
         public void Query_WorldSizedRect_TruncatesWithDroppedCount_AndIsWarmAllocationFree()
         {

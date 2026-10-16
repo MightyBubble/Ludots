@@ -17,6 +17,8 @@ namespace Ludots.Core.Presentation.Rendering
         Heat = 5,
         Influence = 6,
         DiscreteOwnership = 7,
+        /// <summary>可走区域层(Vector4 直接 RGBA;不可走遮罩 / 桥面 / 桥头 portal 等按格直接着色)。</summary>
+        Walkable = 8,
     }
 
     public enum GlobalFieldVisualValueKind : byte

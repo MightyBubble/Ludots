@@ -1,0 +1,84 @@
+[
+  {
+    "id": "crowd_simulation.selection.bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.selection_ring",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.selection_ring",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.6,
+            1,
+            2.6
+          ],
+          "scaleParamKey": "crowd_simulation.unit.ring_scale"
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            0.55
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.ring_scale",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "crowd_simulation.unit.radius_m"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.ring_scale",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  }
+]

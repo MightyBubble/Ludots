@@ -1,0 +1,26 @@
+[
+  {
+    "Path": "Entities/templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/presenters.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/mesh_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/crowd_structure_palette.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Presentation/host_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

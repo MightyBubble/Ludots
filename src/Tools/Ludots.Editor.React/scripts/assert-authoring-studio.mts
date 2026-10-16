@@ -14,10 +14,10 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 assert(AUTHORING_STUDIO_HOME === '/', 'studio home must be / so one-click opens the desk, not the map');
-assert(AUTHORING_TOOLS.length === 6, `studio must list exactly 6 tools, got ${AUTHORING_TOOLS.length}`);
+assert(AUTHORING_TOOLS.length === 8, `studio must list exactly 8 tools, got ${AUTHORING_TOOLS.length}`);
 assert(
-  AUTHORING_TOOL_IDS.join(',') === 'blueprint,bt,fsm,dialogue,text,timeline',
-  `studio tool order must be blueprint, bt, fsm, dialogue, text, timeline; got ${AUTHORING_TOOL_IDS.join(',')}`,
+  AUTHORING_TOOL_IDS.join(',') === 'blueprint,bt,fsm,dialogue,text,timeline,provenance,crowd',
+  `studio tool order must be blueprint, bt, fsm, dialogue, text, timeline, provenance, crowd; got ${AUTHORING_TOOL_IDS.join(',')}`,
 );
 
 const forbidden = ['/map', '/ui-panel-authoring', '/gas', '/data'];
@@ -34,6 +34,8 @@ assert(matchAuthoringTool('/blueprint')?.id === 'blueprint', '/blueprint is the 
 assert(matchAuthoringTool('/dialogue')?.id === 'dialogue', '/dialogue is the studio card path');
 assert(matchAuthoringTool('/timeline')?.id === 'timeline', '/timeline is a first-class studio room');
 assert(matchAuthoringTool('/text-bank')?.id === 'text', '/text-bank is a first-class studio room');
+assert(matchAuthoringTool('/config-provenance')?.id === 'provenance', '/config-provenance is a first-class studio room');
+assert(matchAuthoringTool('/crowd-config')?.id === 'crowd', '/crowd-config is a first-class studio room');
 assert(matchAuthoringTool('/map') === undefined, 'map editor must not be a studio tool');
 assert(matchAuthoringTool('/ui-panel-authoring') === undefined, 'panel authoring must not be a studio tool');
 assert(AUTHORING_TOOLS.find((tool) => tool.id === 'dialogue')?.blurb.includes('树'), 'dialogue card must say it is a tree');

@@ -21,6 +21,8 @@ namespace Ludots.Raylib.Render
         private const int OverviewTextureScreenScale = 2;
         private const Rl.MaterialMapIndex NavWalkabilityMaterialSlot = Rl.MaterialMapIndex.MATERIAL_MAP_HEIGHT;
         private const Rl.ShaderLocationIndex NavWalkabilityShaderSlot = Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT;
+        /// <summary>贴花槽位默认混合强度(流场/可走层的软化值;迷雾等全强度贴花按调用方声明)。</summary>
+        public const float DefaultNavWalkabilityBlendStrength = 0.35f;
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
@@ -54,6 +56,8 @@ namespace Ludots.Raylib.Render
         private int _locUseNavWalkability = -1;
         private int _locNavWalkabilityBounds = -1;
         private int _locNavWalkabilityMap = -1;
+        private int _locNavWalkabilityBlend = -1;
+        private int _locNavWalkabilityTopRowIsMaxY = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
         private IContinuousHeightmap? _stampHeightSampleSource;
@@ -69,6 +73,9 @@ namespace Ludots.Raylib.Render
         private Vector4 _controlBoundsMeters;
         private Vector4 _navWalkabilityBoundsCm;
         private string? _navWalkabilityTextureUri;
+        private float _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
+        // 图片文件首行是北边(最大 Y)；场纹理与地形类型叠层按格行写，首行是最小 Y。
+        private bool _navWalkabilityTopRowIsMaxY;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -87,6 +94,8 @@ namespace Ludots.Raylib.Render
         public bool TerrainAlbedoActive => _albedoEnabled;
 
         public bool NavWalkabilityOverlayActive => _navWalkabilityEnabled;
+        /// <summary>overview 简化网格下是否保留叠加(旧 walkability 水洗在全图视角被刻意洗掉;Flow 场要求全缩放可见)。</summary>
+        public bool NavWalkabilityOverlayVisibleInOverview { get; set; }
 
         private float? _absoluteColorSeaLevelCm;
         private float _absoluteColorPeakSpanCm = 3600f;
@@ -336,6 +345,7 @@ namespace Ludots.Raylib.Render
             UnloadNavWalkabilityTexture();
             _navWalkabilityTexture = loaded;
             _navWalkabilityTextureUri = textureUri;
+            _navWalkabilityTopRowIsMaxY = true;
             _navWalkabilityBoundsCm = boundsCm;
             _navWalkabilityEnabled = true;
             ApplyNavWalkabilityMaterialMap();
@@ -344,7 +354,9 @@ namespace Ludots.Raylib.Render
 
         public void ClearNavWalkabilityOverlay()
         {
-            if (!_navWalkabilityEnabled && _navWalkabilityTexture.id == 0)
+            // 只清 URI 自有绑定;外部持有的贴花(Flow 场等)由持有方经 ClearNavWalkabilityOverlayExternal 管理,
+            // 帧初的 URI 配置轮询不得清掉外部贴花。
+            if (_navWalkabilityTextureUri == null)
             {
                 return;
             }
@@ -353,6 +365,57 @@ namespace Ludots.Raylib.Render
             _navWalkabilityEnabled = false;
             _navWalkabilityBoundsCm = default;
             _navWalkabilityTextureUri = null;
+            _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
+            if (_initialized)
+            {
+                _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
+                ApplyNavWalkabilityUniforms();
+            }
+        }
+
+        /// <summary>
+        /// 绑定外部持有的叠加纹理(场渲染管线的帧更新纹理,如 Flow 方向场、战争迷雾三态层)到地形贴花槽位:
+        /// 与 SetNavWalkabilityOverlay 同一着色器契约,但纹理所有权在外部——本类不加载、
+        /// 不卸载,内容更新由持有方原地重传,绑定一次即持续生效。blendStrength 声明该贴花的
+        /// 混合强度(流场/可走层 0.35 软化;迷雾等"不可见=黑"语义取 1.0)。
+        /// </summary>
+        public void SetNavWalkabilityOverlayExternal(Texture2D texture, Vector4 boundsCm, float blendStrength = DefaultNavWalkabilityBlendStrength)
+        {
+            if (texture.id == 0) throw new ArgumentException("外部叠加纹理必须已加载。", nameof(texture));
+            if (boundsCm.Z - boundsCm.X <= 0f || boundsCm.W - boundsCm.Y <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(boundsCm), boundsCm, "外部叠加 bounds 必须有正跨度。");
+            }
+
+            if (!float.IsFinite(blendStrength) || blendStrength < 0f || blendStrength > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(blendStrength), blendStrength, "外部叠加混合强度必须在 [0,1]。");
+            }
+
+            // 若之前持有的是自有纹理(URI 路径),先卸;外部纹理永不卸载
+            if (_navWalkabilityTexture.id != 0 && _navWalkabilityTextureUri != null)
+            {
+                UnloadNavWalkabilityTexture();
+            }
+
+            _navWalkabilityTexture = texture;
+            _navWalkabilityTextureUri = null;
+            _navWalkabilityTopRowIsMaxY = false;
+            _navWalkabilityBoundsCm = boundsCm;
+            _navWalkabilityBlendStrength = blendStrength;
+            _navWalkabilityEnabled = true;
+            ApplyNavWalkabilityMaterialMap();
+            ApplyNavWalkabilityUniforms();
+        }
+
+        /// <summary>解绑外部叠加(不卸载纹理,所有权在持有方)。</summary>
+        public void ClearNavWalkabilityOverlayExternal()
+        {
+            if (_navWalkabilityTextureUri != null || !_navWalkabilityEnabled) return;
+            _navWalkabilityTexture = default;
+            _navWalkabilityEnabled = false;
+            _navWalkabilityBoundsCm = default;
+            _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
             if (_initialized)
             {
                 _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
@@ -383,7 +446,11 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
+            // chunk 边界法线需要跨界采样邻 chunk 高度;渲染源同时实现连续高度图时记下,
+            // CreateChunkMesh 据此把单边差分换成跨界的中心差分(仅边界顶点,内部顶点路径不变)
+            _chunkNormalHeightSampler = source as IContinuousHeightmap;
             ContinuousHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
+            _oceanVoidFillAtSampleCeiling = profile.OceanVoidFillAtSampleCeiling;
             if (_controlMapEnabled)
             {
                 WorldAabbCm bounds = source.Bounds;
@@ -404,12 +471,15 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame = 0d;
 
             float aspect = ResolveFrameAspect();
-            bool useOverview = ShouldUseOverviewMesh(
-                source,
-                in camera,
-                aspect,
-                VisibleRadiusCm,
-                profile.OverviewSwitchChunkSpans);
+            // 已进入 overview 后,footprint 要低于阈值的 80% 才退回 chunk,
+            // 消除切换边界附近的逐帧抖动。
+            float detailRadiusCm = ResolveDetailRadiusCm(source, VisibleRadiusCm);
+            float activationRadiusCm = detailRadiusCm * MathF.Max(1f, profile.OverviewSwitchChunkSpans);
+            float footprintRadiusCm = ComputeCameraFootprintRadiusCm(camera, aspect);
+            bool useOverview = _lastUseOverview
+                ? footprintRadiusCm > activationRadiusCm * OverviewHysteresisRatio
+                : footprintRadiusCm > activationRadiusCm;
+            _lastUseOverview = useOverview;
             if (useOverview)
             {
                 if (source is not IContinuousHeightmap heightSampleSource)
@@ -422,7 +492,16 @@ namespace Ludots.Raylib.Render
                 EnsureOverviewMesh(source, heightSampleSource, profile.OverviewVertexLimit);
                 ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
                 // Keep albedo/control so authored weight maps stay readable; drop nav walkability wash only.
-                ApplyOverviewWithoutNavWalkabilityUniforms();
+                // Flow 类叠加(NavWalkabilityOverlayVisibleInOverview)要求全缩放可见,跳过这条洗掉
+                if (NavWalkabilityOverlayVisibleInOverview)
+                {
+                    ApplyNavWalkabilityUniforms();
+                }
+                else
+                {
+                    ApplyOverviewWithoutNavWalkabilityUniforms();
+                }
+
                 RaylibMatrix identity = RaylibMatrix.Identity;
                 Rl.rlDisableBackfaceCulling();
                 Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
@@ -430,14 +509,27 @@ namespace Ludots.Raylib.Render
                 ApplyNavWalkabilityUniforms();
                 DrawnChunkCountLastFrame = 1;
                 TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
-                EvictUnusedChunks(240);
+                // overview 驻留期间刷新帧龄,否则 240 帧逐出。
+                // 窗口平移时的常规驱逐在 chunk 路径照常进行,钉住只发生在 overview 驻留期间。
+                foreach (long key in _chunks.Keys)
+                {
+                    CollectionsMarshal.GetValueRefOrNullRef(_chunks, key).LastUsedFrame = _frameIndex;
+                }
+
                 return;
             }
 
-            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
-            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            // 窗口必须盖住当帧屏幕 footprint,与切换判据自洽。
+            float windowHalfCm = ResolveWindowHalfCm(source, in camera);
+            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+
+            // 与朝向无关的方形窗口在斜视角下会盖到屏幕外 chunk;
+            // 逐 chunk 对当帧视锥做 AABB 剔除(已建块用紧 Y 界,未建块用垂直棱柱保守判定)
+            Span<Vector4> frustumPlanes = stackalloc Vector4[6];
+            ExtractFrustumPlanes(in camera, aspect, frustumPlanes);
 
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
@@ -446,6 +538,11 @@ namespace Ludots.Raylib.Render
                     if (!source.TryGetChunk(x, y, out ContinuousHeightmapRenderChunk chunk))
                     {
                         MissingChunkCountLastFrame++;
+                        continue;
+                    }
+
+                    if (IsChunkOutsideFrustum(in chunk, frustumPlanes))
+                    {
                         continue;
                     }
 
@@ -474,10 +571,13 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
 
             EnsureInitialized();
-            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
-            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            _chunkNormalHeightSampler = source as IContinuousHeightmap;
+            _oceanVoidFillAtSampleCeiling = source.RenderProfile.OceanVoidFillAtSampleCeiling;
+            float windowHalfCm = ResolveWindowHalfCm(source, in camera);
+            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
             RaylibMatrix identity = RaylibMatrix.Identity;
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
@@ -599,6 +699,8 @@ namespace Ludots.Raylib.Render
             _locUseNavWalkability = Rl.GetShaderLocation(_terrainShader, "uUseNavWalkability");
             _locNavWalkabilityBounds = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBounds");
             _locNavWalkabilityMap = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityMap");
+            _locNavWalkabilityBlend = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBlend");
+            _locNavWalkabilityTopRowIsMaxY = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityTopRowIsMaxY");
             int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
             int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
             int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
@@ -612,13 +714,15 @@ namespace Ludots.Raylib.Render
                 _locUseNavWalkability < 0 ||
                 _locNavWalkabilityBounds < 0 ||
                 _locNavWalkabilityMap < 0 ||
+                _locNavWalkabilityBlend < 0 ||
+                _locNavWalkabilityTopRowIsMaxY < 0 ||
                 locSand < 0 ||
                 locGrass < 0 ||
                 locDirt < 0 ||
                 locRock < 0)
             {
                 throw new InvalidOperationException(
-                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/texture0..texture3).");
+                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/uNavWalkabilityBlend/uNavWalkabilityTopRowIsMaxY/texture0..texture3).");
             }
 
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
@@ -775,6 +879,8 @@ namespace Ludots.Raylib.Render
 
             int useNavWalkability = _navWalkabilityEnabled ? 1 : 0;
             Vector4 bounds = _navWalkabilityBoundsCm;
+            float blendStrength = _navWalkabilityBlendStrength;
+            int topRowIsMaxY = _navWalkabilityTopRowIsMaxY ? 1 : 0;
             Rl.SetShaderValue(
                 _terrainShader,
                 _locUseNavWalkability,
@@ -785,6 +891,16 @@ namespace Ludots.Raylib.Render
                 _locNavWalkabilityBounds,
                 &bounds,
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locNavWalkabilityBlend,
+                &blendStrength,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locNavWalkabilityTopRowIsMaxY,
+                &topRowIsMaxY,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
         }
 
         private void ApplyNavWalkabilityMaterialMap()
@@ -987,7 +1103,8 @@ namespace Ludots.Raylib.Render
 
         private void UnloadNavWalkabilityTexture()
         {
-            if (_navWalkabilityTexture.id != 0)
+            // 外部持有的纹理(URI 为空)只解绑不卸载,所有权在持有方
+            if (_navWalkabilityTexture.id != 0 && _navWalkabilityTextureUri != null)
             {
                 RaylibNativeResources.UnloadTexture(_navWalkabilityTexture);
             }
@@ -1180,6 +1297,7 @@ namespace Ludots.Raylib.Render
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float? oceanVoidSentinelCm = ResolveOceanVoidSentinelCm(_oceanVoidFillAtSampleCeiling, in chunk);
             float displayHeightScale = _displayHeightScale;
             for (int y = 0; y < rows; y++)
             {
@@ -1200,8 +1318,8 @@ namespace Ludots.Raylib.Render
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
-                        displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, absolutePeakSpanCm);
+                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm, oceanVoidSentinelCm);
+                        displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, oceanVoidSentinelCm);
                     }
                     else
                     {
@@ -1212,11 +1330,14 @@ namespace Ludots.Raylib.Render
                         in chunk,
                         sourceX,
                         sourceY,
+                        worldXCm,
+                        worldYCm,
                         stepXCm,
                         stepYCm,
                         displayHeightScale,
                         absoluteSeaCm,
-                        absolutePeakSpanCm);
+                        oceanVoidSentinelCm,
+                        _chunkNormalHeightSampler);
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
                     if (absoluteSeaCm is float)
                     {
@@ -1310,22 +1431,31 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
-        internal static float ResolveAbsoluteHeightBand(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        internal static float ResolveAbsoluteHeightBand(
+            float heightCm,
+            float seaLevelCm,
+            float absolutePeakSpanCm,
+            float? oceanVoidSentinelCm)
         {
             float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
             float relative = (heightCm - seaLevelCm) / peakSpanCm;
-            // Authored land peaks sit within AbsoluteColorPeakSpanCm. Continental assets may fill
-            // ocean/void with sentinel values far above that span — tint those as open water, not peaks.
-            if (relative > 1f)
+            if (heightCm <= seaLevelCm)
+            {
+                return relative;
+            }
+
+            // 负色带只留给海平面以下,以及地图声明的原码天花板哨兵。
+            // 超出色带跨度的真实山峰停在峰顶色:跨度只铺色带,不把山染成水。
+            if (oceanVoidSentinelCm is float sentinelCm && heightCm >= sentinelCm)
             {
                 float overshoot = relative - 1f;
                 return -Math.Clamp(overshoot * 0.02f, 0.01f, 0.08f);
             }
 
-            return relative;
+            return MathF.Min(relative, 1f);
         }
 
-        internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float? oceanVoidSentinelCm)
         {
             // Below-sea bathymetry flattens onto the sea plane so continental scale does not dig ocean pits.
             if (heightCm <= seaLevelCm)
@@ -1333,11 +1463,10 @@ namespace Ludots.Raylib.Render
                 return seaLevelCm;
             }
 
-            // Void/ocean fills in continental assets use values at the raw sample ceiling; tint and
-            // geometry both treat those as open water. Authored relief that merely exceeds the tint
-            // peak span keeps its real elevation — flattening it would desync terrain presentation
-            // from grounding, which samples this same heightmap.
-            if (IsOvershootSentinel(heightCm))
+            // Void/ocean fills at the raw sample ceiling are a per-asset contract (profile-declared):
+            // exporter-derived uint16 assets spend the whole raw range on authored relief, so their
+            // ceiling values are real peaks and must keep elevation.
+            if (oceanVoidSentinelCm is float sentinelCm && heightCm >= sentinelCm)
             {
                 return seaLevelCm;
             }
@@ -1346,14 +1475,110 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// Raw UInt16 heightmap storage tops out at <see cref="ushort.MaxValue"/> before sample scaling,
-        /// so continental void/ocean fills land within a few percent of that ceiling. Everything below
-        /// it is authored relief.
+        /// Void-fill sentinel threshold in decoded cm: the raw ceiling fraction rescaled through the
+        /// asset's own sample scale. Null when the map does not declare ocean void fills, or when the
+        /// layout has no raw ceiling semantics (int16 centimeter storage).
         /// </summary>
-        private static bool IsOvershootSentinel(float heightCm)
+        internal static float? ResolveOceanVoidSentinelCm(bool oceanVoidFillDeclared, in ContinuousHeightmapRenderChunk chunk)
         {
+            if (!oceanVoidFillDeclared)
+            {
+                return null;
+            }
+
+            if (chunk.StorageLayout != ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled &&
+                chunk.StorageLayout != ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled)
+            {
+                return null;
+            }
+
             const float SentinelFractionOfSampleCeiling = 0.88f;
-            return heightCm >= ushort.MaxValue * SentinelFractionOfSampleCeiling;
+            return chunk.SampleScale.Decode((ushort)MathF.Ceiling(ushort.MaxValue * SentinelFractionOfSampleCeiling));
+        }
+
+        /// <summary>
+        /// 概览样本的哨兵按它所在 chunk 的 sample scale。未声明时不查块。
+        /// 块缺失直接失败,不用 (0,0) 的缩放套到别的块上。
+        /// </summary>
+        internal static float? ResolveOceanVoidSentinelAtWorld(
+            IContinuousHeightmapRenderSource source,
+            float worldXCm,
+            float worldYCm)
+        {
+            if (!source.RenderProfile.OceanVoidFillAtSampleCeiling)
+            {
+                return null;
+            }
+
+            int chunkX = ResolveChunkIndex(worldXCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int chunkY = ResolveChunkIndex(worldYCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            if (!source.TryGetChunk(chunkX, chunkY, out ContinuousHeightmapRenderChunk chunk))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} overview sample ({worldXCm}, {worldYCm}) needs chunk ({chunkX}, {chunkY}) to resolve the ocean-void sentinel, and that chunk is missing.");
+            }
+
+            return ResolveOceanVoidSentinelCm(true, in chunk);
+        }
+
+        /// <summary>
+        /// 概览在顶点循环前按 chunk 各取一次采样步长。声明海洋哨兵时同一轮把哨兵也算进表;未声明时表保持 null,不解码。
+        /// 栅格里缺一块就失败,不用 (0,0) 的步长,也不用 overview 间距 / 32。
+        /// </summary>
+        internal static void BuildOverviewChunkTables(
+            IContinuousHeightmapRenderSource source,
+            out float[] sampleStepXCm,
+            out float[] sampleStepYCm,
+            out float?[]? oceanVoidSentinelCm)
+        {
+            int columns = source.ChunkColumns;
+            int rows = source.ChunkRows;
+            if (columns <= 0 || rows <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} overview mesh needs a positive chunk grid, got {columns}×{rows}.");
+            }
+
+            int count = checked(columns * rows);
+            sampleStepXCm = new float[count];
+            sampleStepYCm = new float[count];
+            bool oceanVoidFillDeclared = source.RenderProfile.OceanVoidFillAtSampleCeiling;
+            oceanVoidSentinelCm = oceanVoidFillDeclared ? new float?[count] : null;
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    if (!source.TryGetChunk(x, y, out ContinuousHeightmapRenderChunk chunk))
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibContinuousHeightmapRenderer)} overview sample needs chunk ({x}, {y}) and that chunk is missing.");
+                    }
+
+                    int index = (y * columns) + x;
+                    sampleStepXCm[index] = MathF.Max(1f, chunk.SampleStepXCm);
+                    sampleStepYCm[index] = MathF.Max(1f, chunk.SampleStepYCm);
+                    if (oceanVoidFillDeclared)
+                    {
+                        oceanVoidSentinelCm![index] = ResolveOceanVoidSentinelCm(true, in chunk);
+                    }
+                }
+            }
+        }
+
+        internal static int OverviewChunkSlot(IContinuousHeightmapRenderSource source, float worldXCm, float worldYCm)
+        {
+            int chunkX = ResolveChunkIndex(worldXCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int chunkY = ResolveChunkIndex(worldYCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            return (chunkY * source.ChunkColumns) + chunkX;
+        }
+
+        /// <summary>
+        /// 两侧都采到是中心差分,分母为两倍步长;只采到一侧时高度差只跨一步,分母用单侧步长。
+        /// </summary>
+        internal static float FiniteDifferenceSpanCm(float stepCm, bool leftSampled, bool rightSampled)
+        {
+            int sides = (leftSampled ? 1 : 0) + (rightSampled ? 1 : 0);
+            return MathF.Max(1f, stepCm * Math.Max(sides, 1));
         }
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
@@ -1399,15 +1624,18 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
-        private static Vector3 ComputeNormal(
+        internal static Vector3 ComputeNormal(
             in ContinuousHeightmapRenderChunk chunk,
             int x,
             int y,
+            float worldXCm,
+            float worldYCm,
             float stepXCm,
             float stepYCm,
             float displayHeightScale,
             float? absoluteSeaCm,
-            float absolutePeakSpanCm)
+            float? oceanVoidSentinelCm,
+            IContinuousHeightmap? worldSampler)
         {
             int left = Math.Max(0, x - 1);
             int right = Math.Min(chunk.SampleColumns - 1, x + 1);
@@ -1417,23 +1645,53 @@ namespace Ludots.Raylib.Render
             chunk.TryReadHeightCm(right, y, out float hRight);
             chunk.TryReadHeightCm(x, top, out float hTop);
             chunk.TryReadHeightCm(x, bottom, out float hBottom);
+            int spanStepsX = right - left;
+            int spanStepsY = bottom - top;
+            // chunk 边界的单边差分与邻 chunk 在共享列上的单边差分不一致,形成逐 chunk 着色接缝。
+            // 渲染源同时是连续高度图时,越界邻居改取真实跨界格高(地图边缘采样失败则维持单边回退)
+            if (worldSampler != null)
+            {
+                if (left >= x)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm - stepXCm, worldYCm, out float hWorld)) { hLeft = hWorld; spanStepsX++; }
+                }
+
+                if (right <= x)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm + stepXCm, worldYCm, out float hWorld)) { hRight = hWorld; spanStepsX++; }
+                }
+
+                if (top >= y)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm, worldYCm - stepYCm, out float hWorld)) { hTop = hWorld; spanStepsY++; }
+                }
+
+                if (bottom <= y)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm, worldYCm + stepYCm, out float hWorld)) { hBottom = hWorld; spanStepsY++; }
+                }
+            }
+
             if (absoluteSeaCm is float seaCm)
             {
-                hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, absolutePeakSpanCm);
-                hRight = ResolveAbsoluteDisplayHeightCm(hRight, seaCm, absolutePeakSpanCm);
-                hTop = ResolveAbsoluteDisplayHeightCm(hTop, seaCm, absolutePeakSpanCm);
-                hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, absolutePeakSpanCm);
+                hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, oceanVoidSentinelCm);
+                hRight = ResolveAbsoluteDisplayHeightCm(hRight, seaCm, oceanVoidSentinelCm);
+                hTop = ResolveAbsoluteDisplayHeightCm(hTop, seaCm, oceanVoidSentinelCm);
+                hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, oceanVoidSentinelCm);
             }
 
             float scale = MathF.Max(ContinuousHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
-            float dx = MathF.Max(1f, (right - left) * stepXCm);
-            float dz = MathF.Max(1f, (bottom - top) * stepYCm);
+            float dx = MathF.Max(1f, spanStepsX * stepXCm);
+            float dz = MathF.Max(1f, spanStepsY * stepYCm);
             Vector3 normal = Vector3.Normalize(
                 new Vector3(-(hRight - hLeft) * scale / dx, 1f, -(hBottom - hTop) * scale / dz));
             return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z)
                 ? normal
                 : Vector3.UnitY;
         }
+
+        private IContinuousHeightmap? _chunkNormalHeightSampler;
+        private bool _oceanVoidFillAtSampleCeiling;
 
         private void ClearChunkGpuCache()
         {
@@ -1495,9 +1753,10 @@ namespace Ludots.Raylib.Render
             IContinuousHeightmap heightSampleSource,
             int overviewVertexLimit)
         {
-            int stepChunks = ResolveOverviewStepChunks(source.ChunkColumns, source.ChunkRows, overviewVertexLimit);
-            int columns = ResolveOverviewAxisPointCount(source.ChunkColumns, stepChunks);
-            int rows = ResolveOverviewAxisPointCount(source.ChunkRows, stepChunks);
+            // 分辨率与 chunk 栅格解耦:花满 OverviewVertexLimit 的预算,而不是每 chunk 一顶点
+            // (16km 图 33×33=500m/格;预算 65536 → 255²≈62.5m/格,轮廓保住)。
+            int columns = ResolveOverviewAxisPointCount(overviewVertexLimit);
+            int rows = columns;
             int vertexCount = checked(columns * rows);
             if (vertexCount > ushort.MaxValue)
             {
@@ -1525,6 +1784,32 @@ namespace Ludots.Raylib.Render
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             float displayHeightScale = _displayHeightScale;
+            BuildOverviewChunkTables(
+                source,
+                out float[] overviewStepXCm,
+                out float[] overviewStepYCm,
+                out float?[]? oceanVoidSentinelCm);
+
+            float? SentinelAt(float sampleXCm, float sampleYCm)
+            {
+                if (oceanVoidSentinelCm == null)
+                {
+                    return null;
+                }
+
+                return oceanVoidSentinelCm[OverviewChunkSlot(source, sampleXCm, sampleYCm)];
+            }
+
+            float DisplayHeightAt(float sampleXCm, float sampleYCm, float heightCm)
+            {
+                if (absoluteSeaCm is not float seaCm)
+                {
+                    return heightCm;
+                }
+
+                return ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, SentinelAt(sampleXCm, sampleYCm));
+            }
+
             float minHeightCm = float.PositiveInfinity;
             float maxHeightCm = float.NegativeInfinity;
             var heights = new float[vertexCount];
@@ -1541,9 +1826,7 @@ namespace Ludots.Raylib.Render
                         heightCm = absoluteSeaCm ?? 0f;
                     }
 
-                    float displayHeightCm = absoluteSeaCm is float seaForDisplay
-                        ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, absolutePeakSpanCm)
-                        : heightCm;
+                    float displayHeightCm = DisplayHeightAt(worldXCm, worldYCm, heightCm);
                     heights[vertex] = heightCm;
                     displayHeights[vertex] = displayHeightCm;
                     minHeightCm = MathF.Min(minHeightCm, heightCm);
@@ -1567,16 +1850,47 @@ namespace Ludots.Raylib.Render
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             for (int y = 0; y < rows; y++)
             {
+                float worldYCm = bounds.Top + (y * stepZCm);
                 for (int x = 0; x < columns; x++)
                 {
                     int vertex = (y * columns) + x;
+                    float worldXCm = bounds.Left + (x * stepXCm);
                     float heightCm = heights[vertex];
-                    float hL = displayHeights[(y * columns) + Math.Max(0, x - 1)];
-                    float hR = displayHeights[(y * columns) + Math.Min(columns - 1, x + 1)];
-                    float hT = displayHeights[(Math.Max(0, y - 1) * columns) + x];
-                    float hB = displayHeights[(Math.Min(rows - 1, y + 1) * columns) + x];
-                    float dx = MathF.Max(1f, stepXCm);
-                    float dz = MathF.Max(1f, stepZCm);
+                    int overviewSlot = OverviewChunkSlot(source, worldXCm, worldYCm);
+                    float detailStepXCm = overviewStepXCm[overviewSlot];
+                    float detailStepZCm = overviewStepYCm[overviewSlot];
+                    // LOD 几何 + 细节法线:粗网格只定轮廓,法线步长取样本所在 chunk 的采样步长。
+                    // 对连续场中心差分取真坡向——粗网格自身差分会把一切细部斜率抹成 0(远景糊)。
+                    float hL = displayHeights[vertex];
+                    float hR = hL;
+                    float hT = hL;
+                    float hB = hL;
+                    bool sampledL = heightSampleSource.TrySampleHeightCm(worldXCm - detailStepXCm, worldYCm, out float rawL);
+                    bool sampledR = heightSampleSource.TrySampleHeightCm(worldXCm + detailStepXCm, worldYCm, out float rawR);
+                    bool sampledT = heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm - detailStepZCm, out float rawT);
+                    bool sampledB = heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm + detailStepZCm, out float rawB);
+                    if (sampledL)
+                    {
+                        hL = DisplayHeightAt(worldXCm - detailStepXCm, worldYCm, rawL);
+                    }
+
+                    if (sampledR)
+                    {
+                        hR = DisplayHeightAt(worldXCm + detailStepXCm, worldYCm, rawR);
+                    }
+
+                    if (sampledT)
+                    {
+                        hT = DisplayHeightAt(worldXCm, worldYCm - detailStepZCm, rawT);
+                    }
+
+                    if (sampledB)
+                    {
+                        hB = DisplayHeightAt(worldXCm, worldYCm + detailStepZCm, rawB);
+                    }
+
+                    float dx = FiniteDifferenceSpanCm(detailStepXCm, sampledL, sampledR);
+                    float dz = FiniteDifferenceSpanCm(detailStepZCm, sampledT, sampledB);
                     Vector3 normal = Vector3.Normalize(
                         new Vector3(-(hR - hL) * displayHeightScale / dx, 1f, -(hB - hT) * displayHeightScale / dz));
                     if (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z))
@@ -1596,7 +1910,11 @@ namespace Ludots.Raylib.Render
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
+                        heightBand = ResolveAbsoluteHeightBand(
+                            heightCm,
+                            seaCm,
+                            absolutePeakSpanCm,
+                            SentinelAt(worldXCm, worldYCm));
                         ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
@@ -1755,11 +2073,7 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            float chunkWidthCm = source.Bounds.Width / (float)source.ChunkColumns;
-            float chunkHeightCm = source.Bounds.Height / (float)source.ChunkRows;
-            float detailRadiusCm = MathF.Max(
-                MathF.Max(1f, detailVisibleRadiusCm),
-                MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
+            float detailRadiusCm = ResolveDetailRadiusCm(source, detailVisibleRadiusCm);
             float activationRadiusCm = detailRadiusCm * MathF.Max(1f, activationMultiplier);
             return ComputeCameraFootprintRadiusCm(camera, aspect) > activationRadiusCm;
         }
@@ -1778,6 +2092,143 @@ namespace Ludots.Raylib.Render
             float halfWidthMeters = halfHeightMeters * MathF.Max(0.001f, aspect);
             float radiusMeters = MathF.Sqrt((halfWidthMeters * halfWidthMeters) + (halfHeightMeters * halfHeightMeters));
             return radiusMeters * 100f;
+        }
+
+        /// <summary>未建 chunk 的保守剔除高度范围(米):顶/底平面对垂直棱柱永不拒绝,等效 XZ 投影剔除。</summary>
+        private const float VerticalPrismExtentMeters = 1e7f;
+
+        private bool IsChunkOutsideFrustum(in ContinuousHeightmapRenderChunk chunk, ReadOnlySpan<Vector4> planes)
+        {
+            float minX = chunk.Bounds.Left * 0.01f;
+            float maxX = chunk.Bounds.Right * 0.01f;
+            float minZ = chunk.Bounds.Top * 0.01f;
+            float maxZ = chunk.Bounds.Bottom * 0.01f;
+            float minY;
+            float maxY;
+            if (_chunks.TryGetValue(PackChunkKey(chunk.ChunkX, chunk.ChunkY), out ChunkGpu cached))
+            {
+                minY = cached.MinY;
+                maxY = cached.MaxY;
+            }
+            else
+            {
+                minY = -VerticalPrismExtentMeters;
+                maxY = VerticalPrismExtentMeters;
+            }
+
+            return IsAabbOutsideFrustum(planes, minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        /// <summary>
+        /// 从相机提取 6 视锥平面(行向量 Gribb–Hartmann:平面 = view·proj 的行组合)。
+        /// 近/远面只影响剔除距离界,取宽容值;平面未归一化,只用于符号测试。
+        /// </summary>
+        internal static void ExtractFrustumPlanes(in Camera3D camera, float aspect, Span<Vector4> planes)
+        {
+            if (planes.Length < 6)
+            {
+                throw new ArgumentException("Frustum plane span requires at least 6 elements.", nameof(planes));
+            }
+
+            float clampedAspect = MathF.Max(0.001f, aspect);
+            float fovyRad = Math.Clamp(camera.fovy * (MathF.PI / 180f), 0.001f, MathF.PI - 0.001f);
+            const float NearMeters = 1f;
+            const float FarMeters = 1e7f;
+            Vector3 forward = Vector3.Normalize(camera.target - camera.position);
+            Vector3 up = camera.up;
+            if (!float.IsFinite(up.X) || up == Vector3.Zero)
+            {
+                up = Vector3.UnitY;
+            }
+
+            Vector3 right = Vector3.Normalize(Vector3.Cross(up, forward));
+            if (!float.IsFinite(right.X) || right == Vector3.Zero)
+            {
+                // 视线与 up 平行(正俯仰 90°):退化为无剔除——平面全零,IsAabbOutsideFrustum 永假
+                planes.Clear();
+                return;
+            }
+
+            Vector3 trueUp = Vector3.Cross(forward, right);
+
+            // 行向量 view(RH,看向 -Z):基向量按列放置,平移在底行
+            var view = Matrix4x4.Identity;
+            view.M11 = right.X; view.M21 = right.Y; view.M31 = right.Z;
+            view.M12 = trueUp.X; view.M22 = trueUp.Y; view.M32 = trueUp.Z;
+            view.M13 = -forward.X; view.M23 = -forward.Y; view.M33 = -forward.Z;
+            view.M41 = -Vector3.Dot(right, camera.position);
+            view.M42 = -Vector3.Dot(trueUp, camera.position);
+            view.M43 = Vector3.Dot(forward, camera.position);
+
+            float yScale = 1f / MathF.Tan(fovyRad * 0.5f);
+            float xScale = yScale / clampedAspect;
+            var projection = Matrix4x4.Identity;
+            projection.M11 = xScale;
+            projection.M22 = yScale;
+            projection.M33 = FarMeters / (NearMeters - FarMeters);
+            projection.M34 = -1f;
+            projection.M43 = (NearMeters * FarMeters) / (NearMeters - FarMeters);
+
+            Matrix4x4 vp = view * projection;
+            // 行向量约定(clip = p·M):平面取 VP 的列组合(Gribb–Hartmann)
+            Vector4 col1 = new(vp.M11, vp.M21, vp.M31, vp.M41);
+            Vector4 col2 = new(vp.M12, vp.M22, vp.M32, vp.M42);
+            Vector4 col3 = new(vp.M13, vp.M23, vp.M33, vp.M43);
+            Vector4 col4 = new(vp.M14, vp.M24, vp.M34, vp.M44);
+            planes[0] = col4 + col1; // left
+            planes[1] = col4 - col1; // right
+            planes[2] = col4 + col2; // bottom
+            planes[3] = col4 - col2; // top
+            planes[4] = col4 + col3; // near
+            planes[5] = col4 - col3; // far
+        }
+
+        internal static bool IsAabbOutsideFrustum(
+            ReadOnlySpan<Vector4> planes,
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ)
+        {
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Vector4 plane = planes[i];
+                if (plane == Vector4.Zero)
+                {
+                    continue;
+                }
+
+                float px = plane.X >= 0f ? maxX : minX;
+                float py = plane.Y >= 0f ? maxY : minY;
+                float pz = plane.Z >= 0f ? maxZ : minZ;
+                if ((plane.X * px) + (plane.Y * py) + (plane.Z * pz) + plane.W < 0f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // LOD 退回比例(滞回):进入 overview 后,footprint 低于阈值 × 该比例才退回 chunk
+        private const float OverviewHysteresisRatio = 0.8f;
+        private bool _lastUseOverview;
+
+        internal static float ResolveDetailRadiusCm(IContinuousHeightmapRenderSource source, float detailVisibleRadiusCm)
+        {
+            float chunkWidthCm = source.Bounds.Width / (float)source.ChunkColumns;
+            float chunkHeightCm = source.Bounds.Height / (float)source.ChunkRows;
+            return MathF.Max(
+                MathF.Max(1f, detailVisibleRadiusCm),
+                MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
+        }
+
+        /// <summary>chunk 窗口半边:盖住当帧屏幕 footprint,与切换判据自洽。</summary>
+        private float ResolveWindowHalfCm(IContinuousHeightmapRenderSource source, in Camera3D camera)
+        {
+            return MathF.Max(VisibleRadiusCm, ComputeCameraFootprintRadiusCm(camera, ResolveFrameAspect()));
         }
 
         internal static void ResolveOverviewTextureSize(
@@ -1804,27 +2255,19 @@ namespace Ludots.Raylib.Render
             textureWidth = Math.Clamp((int)MathF.Round(longEdge * aspect), 1, OverviewTextureMaxLongEdgePixels);
         }
 
-        internal static int ResolveOverviewStepChunks(int chunkColumns, int chunkRows, int maxVertices)
+        /// <summary>overview 网格每轴点数:预算开平方(ushort 索引上限内),与 chunk 栅格无关。
+        /// 预算 65536 → 255²(16km 图 ≈62.5m/格);最小预算也保 2×2。</summary>
+        internal static int ResolveOverviewAxisPointCount(int vertexLimit)
         {
-            if (chunkColumns <= 0) throw new ArgumentOutOfRangeException(nameof(chunkColumns));
-            if (chunkRows <= 0) throw new ArgumentOutOfRangeException(nameof(chunkRows));
+            if (vertexLimit < 4) throw new ArgumentOutOfRangeException(nameof(vertexLimit));
 
-            int vertexLimit = Math.Clamp(maxVertices, 4, ushort.MaxValue);
-            int step = 1;
-            while (checked(ResolveOverviewAxisPointCount(chunkColumns, step) * ResolveOverviewAxisPointCount(chunkRows, step)) > vertexLimit)
+            int axis = (int)MathF.Floor(MathF.Sqrt(Math.Clamp(vertexLimit, 4, ushort.MaxValue)));
+            while (axis > 2 && checked(axis * axis) > ushort.MaxValue)
             {
-                step++;
+                axis--;
             }
 
-            return step;
-        }
-
-        internal static int ResolveOverviewAxisPointCount(int chunkCount, int stepChunks)
-        {
-            if (chunkCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkCount));
-            if (stepChunks <= 0) throw new ArgumentOutOfRangeException(nameof(stepChunks));
-
-            return ((chunkCount + stepChunks - 1) / stepChunks) + 1;
+            return axis;
         }
 
         internal static float ResolveEffectiveSeaLevelCm(ContinuousHeightmapRenderProfile renderProfile, float minHeightCm)

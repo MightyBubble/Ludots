@@ -1,0 +1,119 @@
+using System;
+using System.Collections.Generic;
+using Arch.Core;
+using Ludots.Core.Association;
+using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Presentation;
+
+namespace Ludots.Core.CrowdSimulation.Units;
+
+/// <summary>
+/// 会话到呈现/交互基建的接线(宿主在引擎世界跑会话时注入;回放/无头装配注入派生接线——
+/// 共享模板数据、全新稳定 id 分配器、不持有集合写者,不触碰活集合仓)。数据都按 id 预解析,
+/// 生成热路径不做字符串解析。
+/// </summary>
+public sealed class CrowdSimPresentationWiring
+{
+    public const string SelectedCollectionKey = "selected";
+    /// <summary>模板上的这个标签表示该模板生成的单位不参与“全体本方”下令。</summary>
+    public const string HiddenTemplateTag = "crowd_simulation.hidden_template";
+    /// <summary>呈现稳定 id 分配器(PresentationEntityLifecycleSystem 的投影入口)。</summary>
+    public required PresentationStableIdAllocator StableIds { get; init; }
+    /// <summary>实体模板注册表(单位模板实例化的数据源;会话激活时已装载 mod 资产)。</summary>
+    public required DataRegistry<EntityTemplate> TemplateRegistry { get; init; }
+    /// <summary>模板键注册表。无头/回放用它自建 RuntimeEntitySpawnSystem；引擎接线同样带上，方便回放复制。</summary>
+    public required EntityTemplateKeyRegistry TemplateKeys { get; init; }
+    /// <summary>
+    /// 引擎世界的生成系统。null 时会话在本世界上自建队列和 RuntimeEntitySpawnSystem
+    /// （无头、回放）。自建的是同一个类型，不是另一套物化。
+    /// </summary>
+    public RuntimeEntitySpawnSystem? Spawns { get; init; }
+    public RuntimeEntitySpawnReceiptQueue? SpawnReceipts { get; init; }
+    public int SpawnReceiptChannelId { get; init; }
+    /// <summary>[unitType][radiusClass] → (模板 id, 模板键 id)。会话激活时按体型的
+    /// navProfileId 与档案半径预解析，并核对模板声明的档案。</summary>
+    public required IReadOnlyList<IReadOnlyList<(string TemplateId, int TemplateKeyId)>> TemplatesByUnitTypeRadius { get; init; }
+    /// <summary>单位半径(米)写进单位黑板的键 id(presenter 的 ownerBlackboardFloat 车道读它,如选中环随体型缩放)。</summary>
+    public required int RadiusMetersBlackboardKeyId { get; init; }
+    /// <summary>选中集合键 id(presenter 监听的公开键 selected)。</summary>
+    public required int SelectedCollectionKeyId { get; init; }
+    /// <summary>实体集合仓(presenter 监听集合成员增减来显隐选中环)。</summary>
+    public required EntityCollectionStore Collections { get; init; }
+    /// <summary>集合的唯一写者。null = 回放/无头,不触碰活集合仓。</summary>
+    public CollectionApplier? CollectionApplier { get; set; }
+    /// <summary>下标 = 玩家号的代表实体。null = 不挂代表。</summary>
+    public Entity[]? PlayerReps { get; set; }
+    /// <summary>活会话的 owns 边。null = 回放/无头,不写关系图。下令授权走这条边。</summary>
+    public OwnershipResolver? Ownership { get; set; }
+    /// <summary><see cref="HiddenTemplateTag"/> 的标签 id。0 = 无头接线,不剔除任何本方单位。</summary>
+    public int HiddenTemplateTagId { get; set; }
+
+    /// <summary>移动类型 × 半径级 → 模板表。体型的 navProfileId 与档案半径必须和这一格一致。
+    /// 引擎装配与无头装配共用同一份口径。</summary>
+    public static (string TemplateId, int TemplateKeyId)[][] BuildUnitTypeTemplates(
+        CrowdSimulationRuntimeConfig config,
+        DataRegistry<EntityTemplate> templateRegistry,
+        EntityTemplateKeyRegistry templateKeys,
+        AgentProfileRegistry agentProfiles,
+        string configSource)
+    {
+        var radiusClasses = CrowdDeployment.DistinctRadiusClasses(config);
+        var rows = new (string TemplateId, int TemplateKeyId)[config.UnitTypes.Count][];
+        for (int t = 0; t < config.UnitTypes.Count; t++)
+        {
+            var unitType = config.UnitTypes[t];
+            if (unitType.TemplatesByRadiusCm == null || unitType.TemplatesByRadiusCm.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{configSource}: 移动类型 {unitType.Id} 没有单位模板;单位生成管线按(移动类型 × 半径级)实例化模板。");
+            }
+
+            var row = new (string TemplateId, int TemplateKeyId)[radiusClasses.Count];
+            for (int r = 0; r < radiusClasses.Count; r++)
+            {
+                int radiusCm = radiusClasses[r];
+                if (!unitType.TemplatesByRadiusCm.TryGetValue(radiusCm, out string? templateId))
+                {
+                    throw new InvalidOperationException(
+                        $"{configSource}: 移动类型 {unitType.Id} 缺半径级 {radiusCm} 的模板。");
+                }
+
+                var template = templateRegistry.Get(templateId)
+                    ?? throw new InvalidOperationException(
+                        $"{configSource}: 移动类型 {unitType.Id} 的半径 {radiusCm} 引用未知实体模板 \"{templateId}\"。");
+                string? profileId = template.Components.TryGetValue("CrowdSimulationAgent", out var agentNode)
+                    ? agentNode?["profileId"]?.GetValue<string>()
+                    : null;
+                if (string.IsNullOrWhiteSpace(profileId) || !agentProfiles.TryGet(profileId, out var profile))
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 模板 \"{templateId}\" 的 CrowdSimulationAgent 缺有效 profileId(需存在于 Navigation/agent_profiles.json)。");
+                }
+
+                string expectedAgent = config.AgentTypes[unitType.AgentTypeIndex].Id;
+                if (!string.Equals(profile.NavProfileId, expectedAgent, StringComparison.Ordinal) || (int)profile.RadiusCm != radiusCm)
+                {
+                    throw new InvalidOperationException(
+                        $"{configSource}: 移动类型 {unitType.Id} 半径 {radiusCm} 的模板 \"{templateId}\" 声明 profile \"{profileId}\"(navProfileId {profile.NavProfileId}, 半径 {profile.RadiusCm}),与 {expectedAgent} / {radiusCm} 不一致。");
+                }
+
+                int templateKeyId = templateKeys.GetId(templateId);
+                if (templateKeyId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"CrowdSimulation 单位模板键 '{templateId}' 未注册。单位模板写在地图依赖的 Mod 的 Entities/templates.json。");
+                }
+
+                row[r] = (templateId, templateKeyId);
+            }
+
+            rows[t] = row;
+        }
+
+        return rows;
+    }
+}

@@ -73,12 +73,13 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 |---|---|---|---|
 | `mode` | `offline` or `runtime-incremental` | `NavBakeContext.Mode` | Required, strict casing |
 | `algorithm` | `recast` or `cdt` | `NavBakeContext.Algorithm` | Required, strict casing; `runtime-incremental` requires `cdt` |
-| `profiles[].id` | AgentProfile id | `AgentProfileRegistry` | Must exist, strict casing |
-| `profiles[].maxClimbCm` | cm | NavMesh profile | Required number |
-| `profiles[].maxSlopeDeg` | degrees | NavMesh profile | Required number |
+| `profiles.<id>` | capability id | `NavMeshProfileRegistry` | Id-keyed object. Catalog index is the property order after merge |
+| `profiles.<id>.maxClimbCm` | cm | NavMesh profile | Required number |
+| `profiles.<id>.maxSlopeDeg` | degrees | NavMesh profile | Omit means unlimited. `0` and negative values are rejected. Recast bake requires `> 0` and `< 90`. The non-Recast estimator treats an omitted slope as an unrestricted walkable dot (`-1`); an explicit `0` throws, same as the loader |
+| `profiles.<id>.agentProfileId` | body id | bake and estimate hash | Required on every capability profile. Recast also requires a positive `maxSlopeDeg` |
 | `layers[].id` | layer id | Nav layer | Required non-empty trimmed string |
 | `layers[].layer` | int | NavTile layer | Required number |
-| `areas[]` | area cost list | NavMesh area costs | Required explicit array, may be empty |
+| `areas.<id>` | `areaId` 0..255 and `slopeFree` | NavMesh area | Id-keyed object. Runtime indexes use the authored `areaId`. No `cost` on the area |
 | `runtimeIncremental.tileBudgetPerFixedTick` | int | Runtime rebuild queue | Required, `> 0` |
 | `runtimeIncremental.includeNeighborTiles` | bool | Dirty AABB aggregation | Required |
 | `runtimeIncremental.heightScaleMeters` | float | Runtime `NavBuildConfig` | Required, `> 0` |

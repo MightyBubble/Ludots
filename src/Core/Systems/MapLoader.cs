@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
@@ -774,6 +775,8 @@ namespace Ludots.Core.Systems
                     throw new InvalidOperationException(
                         $"Map '{mapConfig.Id}' references unknown entity template '{entityData.Template}'.");
                 }
+
+                NavSessionBinding.RequireMassNavigationTemplate(templates[entityData.Template]);
 
                 // 可寻址路径 = 摆放实例根 instanceId + localId 链；缺 instanceId 的后代会
                 // 落进根名字空间与兄弟撞名。此门必须盖住 batch 与非 batch 两条路径（S3-a）。
@@ -1734,6 +1737,11 @@ namespace Ludots.Core.Systems
 
         private void TryApplyTemplateKey(Entity entity, string templateId)
         {
+            if (TemplateRegistry?.Get(templateId) is EntityTemplate boundTemplate)
+            {
+                NavSessionBinding.RequireMassNavigationTemplate(boundTemplate);
+            }
+
             int templateKeyId = EntityTemplateKeys.GetId(templateId);
             if (templateKeyId <= 0)
             {

@@ -38,6 +38,8 @@ namespace Ludots.Core.Config
                 report.RecordFragment(entry.RelativePath, fragments[i].SourceUri);
             }
 
+            RecordAppliedFileWinner(fragments, in entry, report);
+
             if (entry.MergePolicy == ConfigMergePolicy.ArrayById)
             {
                 var entries = MergeArrayByIdToEntriesCore(fragments, in entry, report);
@@ -49,6 +51,51 @@ namespace Ludots.Core.Config
             var nodes = new JsonNode[fragments.Count];
             for (int i = 0; i < fragments.Count; i++) nodes[i] = fragments[i].Node;
             return MergeMany(nodes, in entry);
+        }
+
+        private static void RecordAppliedFileWinner(
+            IReadOnlyList<ConfigFragment> fragments,
+            in ConfigCatalogEntry entry,
+            ConfigConflictReport report)
+        {
+            switch (entry.MergePolicy)
+            {
+                case ConfigMergePolicy.DeepObject:
+                    for (int i = fragments.Count - 1; i >= 0; i--)
+                    {
+                        if (fragments[i].Node is JsonObject)
+                        {
+                            report.RecordFileWinner(entry.RelativePath, fragments[i].SourceUri, ConfigConflictReport.FileWinnerLastFragment);
+                            return;
+                        }
+                    }
+
+                    return;
+                case ConfigMergePolicy.Replace:
+                    if (fragments.Count == 0)
+                    {
+                        return;
+                    }
+
+                    report.RecordFileWinner(
+                        entry.RelativePath,
+                        fragments[fragments.Count - 1].SourceUri,
+                        ConfigConflictReport.FileWinnerLastFragment);
+                    return;
+                case ConfigMergePolicy.ArrayReplace:
+                    for (int i = fragments.Count - 1; i >= 0; i--)
+                    {
+                        if (fragments[i].Node is JsonArray)
+                        {
+                            report.RecordFileWinner(entry.RelativePath, fragments[i].SourceUri, ConfigConflictReport.FileWinnerAppliedArray);
+                            return;
+                        }
+                    }
+
+                    return;
+                default:
+                    return;
+            }
         }
 
         private static JsonNode MergeDeepObject(IReadOnlyList<JsonNode> fragments, string[] arrayAppendFields)

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Ludots.Core.Navigation.Pathing.Config
 {
     public sealed class PathingConfig
     {
+        [JsonConverter(typeof(PathingAgentTypeCatalogConverter))]
         public List<PathingAgentTypeConfig> AgentTypes { get; set; } = new();
     }
 
@@ -12,9 +14,9 @@ namespace Ludots.Core.Navigation.Pathing.Config
     {
         public string Id { get; set; }
         public string ProfileId { get; set; }
-        public PathingSelectionConfig Selection { get; set; } = new();
-        public PathingNavMeshConfig NavMesh { get; set; } = new();
-        public PathingNodeGraphConfig NodeGraph { get; set; } = new();
+        public PathingSelectionConfig Selection { get; set; }
+        public PathingNavMeshConfig NavMesh { get; set; }
+        public PathingNodeGraphConfig NodeGraph { get; set; }
     }
 
     public enum PathSelectionMode : byte
@@ -41,8 +43,11 @@ namespace Ludots.Core.Navigation.Pathing.Config
 
     public sealed class PathingAreaCostConfig
     {
-        public int AreaId { get; set; } = 0;
-        public float Cost { get; set; } = 1f;
+        public int AreaId { get; set; }
+        public double Cost { get; set; }
+
+        /// <summary>false 表示该 agent 进不了这个区域。</summary>
+        public bool Passable { get; set; }
     }
 
     public sealed class PathingNodeGraphConfig

@@ -1,17 +1,80 @@
 using System;
+using System.Collections.Generic;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Pathing.Config;
 
 namespace Ludots.Core.Navigation.Pathing
 {
     public sealed class NavMeshPathServiceAdapter : IPathService
     {
-        private readonly NavQueryService _navMesh;
         private readonly PathStore _store;
+        private readonly string _mapId;
+        private readonly Dictionary<string, NavQueryService> _queries;
+        private readonly Dictionary<string, string> _capabilityByAgent;
 
-        public NavMeshPathServiceAdapter(NavQueryService navMesh, PathStore store)
+        public NavMeshPathServiceAdapter(
+            NavQueryServiceRegistry navRegistry,
+            NavMeshProfileRegistry navProfiles,
+            AgentProfileRegistry agentProfiles,
+            PathingConfig pathing,
+            PathStore store,
+            NavMapQueryScope scope)
         {
-            _navMesh = navMesh ?? throw new ArgumentNullException(nameof(navMesh));
+            _ = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
+            _ = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _ = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
+            _ = pathing ?? throw new ArgumentNullException(nameof(pathing));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            if (!scope.IsSpecified)
+            {
+                throw new ArgumentException("Navmesh path service requires the map query scope.", nameof(scope));
+            }
+
+            _mapId = scope.MapId;
+            if (pathing.AgentTypes == null || pathing.AgentTypes.Count == 0)
+            {
+                throw new InvalidOperationException("PathingConfig.agentTypes must define at least one agent type for navmesh path service bootstrap.");
+            }
+
+            var meshProfiles = new HashSet<string>(scope.NavProfileIds, StringComparer.Ordinal);
+            _queries = new Dictionary<string, NavQueryService>(pathing.AgentTypes.Count, StringComparer.Ordinal);
+            _capabilityByAgent = new Dictionary<string, string>(pathing.AgentTypes.Count, StringComparer.Ordinal);
+            for (int i = 0; i < pathing.AgentTypes.Count; i++)
+            {
+                PathingAgentTypeConfig agent = pathing.AgentTypes[i]
+                    ?? throw new InvalidOperationException("PathingConfig.agentTypes contains null.");
+                if (string.IsNullOrWhiteSpace(agent.Id))
+                {
+                    throw new InvalidOperationException("PathingConfig.agentTypes contains a missing id.");
+                }
+
+                AgentProfileConfig body = agentProfiles.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
+                if (!_capabilityByAgent.TryAdd(agent.Id, body.NavProfileId))
+                {
+                    throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agent.Id}'.");
+                }
+
+                if (!NavMapAgentBinding.SelectsMesh(agent) || !meshProfiles.Contains(body.NavProfileId))
+                {
+                    continue;
+                }
+
+                if (!navProfiles.TryGetIndex(body.NavProfileId, out int profileIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"PathingConfig.agentTypes[{agent.Id}] agent profile '{body.Id}' references nav profile '{body.NavProfileId}', which is not registered.");
+                }
+
+                if (!navRegistry.TryCreateQuery(body.Layer, profileIndex, PathingAreaCostCompiler.Compile(agent.NavMesh), out NavQueryService query))
+                {
+                    throw new InvalidOperationException(
+                        $"地图 {_mapId} 的移动类型 \"{agent.Id}\"（能力档 \"{body.NavProfileId}\"）无法建立网格查询。");
+                }
+
+                _queries.Add(agent.Id, query);
+            }
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)
@@ -28,10 +91,16 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
+            if (string.IsNullOrWhiteSpace(request.AgentTypeId) || !_queries.TryGetValue(request.AgentTypeId, out NavQueryService query))
+            {
+                _capabilityByAgent.TryGetValue(request.AgentTypeId ?? string.Empty, out string capabilityProfileId);
+                throw new InvalidOperationException(
+                    NavMapQueryScope.MissingQueryMessage(_mapId, request.AgentTypeId, capabilityProfileId));
+            }
             int maxPoints = request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath;
             int maxPortals = Math.Max(0, maxPoints - 2);
 
-            var r = _navMesh.TryFindPath(
+            var r = query.TryFindPath(
                 startXcm: request.Start.Xcm,
                 startZcm: request.Start.Ycm,
                 goalXcm: request.Goal.Xcm,
@@ -75,6 +144,21 @@ namespace Ludots.Core.Navigation.Pathing
         {
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
         }
+
+        public bool TryReadNavPublication(string agentTypeId, out int layer, out int profile, out uint revision)
+        {
+            layer = 0;
+            profile = 0;
+            revision = 0;
+            if (string.IsNullOrWhiteSpace(agentTypeId) || !_queries.TryGetValue(agentTypeId, out NavQueryService query))
+            {
+                return false;
+            }
+
+            layer = query.Layer;
+            profile = query.Profile;
+            revision = query.Store.Revision;
+            return true;
+        }
     }
 }
-

@@ -1,0 +1,21 @@
+{
+  "name": "CrowdSimulationS3PathMod",
+  "version": "0.1.0",
+  "description": "S3 两点路径交互演示（种子 1337）：在地图上设起点/终点并观察路径查询与贴花。操作说明见 gitbook/architecture/crowdsimulation-showcases.md 的「S3 路径演示」。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "navsurface",
+    "s3"
+  ]
+}

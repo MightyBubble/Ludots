@@ -27,6 +27,26 @@ public sealed class UiLayoutEngine
 	private readonly UiFlexNodePool _flexPool = new UiFlexNodePool();
 	private readonly MeasureFunc _leafMeasureFunc;
 	private readonly MeasureFunc _inlineMeasureFunc;
+	private Node? _retainedFlexRoot;
+	private UiNode? _retainedRoot;
+	private float _retainedWidth;
+	private float _retainedHeight;
+	private bool _retainedNeedsPostPasses;
+	private int _generation;
+
+	/// <summary>完整排版（重建 flex 树）次数。</summary>
+	public int FullLayoutCount { get; private set; }
+
+	/// <summary>只因绑定文字变化、在保留的 flex 树上重排的次数。</summary>
+	public int TextRelayoutCount { get; private set; }
+
+	/// <summary>最近一次文字重排里尺寸确实变了、被标脏的叶子数；为零时只需重绘。</summary>
+	public int LastTextRelayoutDirtyLeaves { get; private set; }
+
+	private List<UiPaintDamage>? _movedSink;
+
+	/// <summary>最近一次文字重排挪动的节点超出了改动表的容量，没记全。</summary>
+	internal bool LastTextRelayoutMovedOverflow { get; private set; }
 
 	public UiLayoutEngine(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
 	{
@@ -71,10 +91,16 @@ public sealed class UiLayoutEngine
 	public void Layout(UiNode root, float width, float height)
 	{
 		ArgumentNullException.ThrowIfNull(root, "root");
+		_flexPool.ReleaseAll();
+		_retainedFlexRoot = null;
+		_retainedRoot = null;
+		_retainedNeedsPostPasses = false;
+		_generation++;
 		List<Node> deferredCalcNodes = _scratch.BeginDeferredCalc();
 		Node node = BuildFlexTree(root, isRoot: true, width, height, deferredCalcNodes);
 		node.CalculateLayout(width, height, Direction.LTR);
-		if (deferredCalcNodes.Count > 0)
+		bool hadDeferredCalc = deferredCalcNodes.Count > 0;
+		if (hadDeferredCalc)
 		{
 			for (int i = 0; i < deferredCalcNodes.Count; i++)
 			{
@@ -87,14 +113,166 @@ public sealed class UiLayoutEngine
 		UiGridLayoutEngine.LayoutSubtree(root, this, _scratch);
 		UiInlineFlowEngine.LayoutSubtree(root, _textMeasurer, _imageSizeProvider, _scratch);
 		root.RecalculateStickyOffsetsForSubtree();
-		_flexPool.ReleaseAll();
+		FullLayoutCount++;
+		if (!hadDeferredCalc && !_retainedNeedsPostPasses)
+		{
+			_retainedFlexRoot = node;
+			_retainedRoot = root;
+			_retainedWidth = width;
+			_retainedHeight = height;
+		}
+	}
+
+	/// <summary>
+	/// 绑定文字变了的叶子在上次完整排版保留下来的 flex 树上重排：先按记下的约束重量，尺寸没变的不标脏；
+	/// 变了的只标脏它到根这一条链，兄弟子树走 flex 引擎的缓存。写回布局时跳过没动的子树。
+	/// 树里有网格、表格、行内格式化上下文或延后的 calc 长度时，这些后处理要整树重跑，返回 false 交给完整排版。
+	/// 框变了的节点（连同原框）和滚动量变了的滚动容器追加进 <paramref name="moved"/>，到它的容量为止，不扩容。
+	/// </summary>
+	internal bool TryRelayoutText(UiNode root, float width, float height, List<UiNode> changedLeaves, List<UiPaintDamage>? moved)
+	{
+		Node? flexRoot = _retainedFlexRoot;
+		if (flexRoot == null
+			|| !ReferenceEquals(root, _retainedRoot)
+			|| Math.Abs(width - _retainedWidth) >= 0.01f
+			|| Math.Abs(height - _retainedHeight) >= 0.01f)
+		{
+			return false;
+		}
+
+		for (int i = 0; i < changedLeaves.Count; i++)
+		{
+			UiNode leaf = changedLeaves[i];
+			if (leaf.Children.Count > 0)
+			{
+				return false;
+			}
+			if (leaf.FlexNode == null || leaf.LayoutGeneration != _generation)
+			{
+				if (IsLaidOut(leaf))
+				{
+					return false;
+				}
+			}
+		}
+
+		LastTextRelayoutMovedOverflow = false;
+		int dirty = 0;
+		for (int i = 0; i < changedLeaves.Count; i++)
+		{
+			UiNode leaf = changedLeaves[i];
+			if (leaf.FlexNode == null || leaf.LayoutGeneration != _generation || MeasuredSizesStillHold(leaf))
+			{
+				continue;
+			}
+			leaf.MeasureLog?.Clear();
+			leaf.FlexNode.MarkAsDirty();
+			dirty++;
+		}
+
+		LastTextRelayoutDirtyLeaves = dirty;
+		TextRelayoutCount++;
+		if (dirty == 0)
+		{
+			return true;
+		}
+
+		flexRoot.CalculateLayout(width, height, Direction.LTR);
+		_movedSink = moved;
+		ApplyChangedLayout(root, flexRoot, 0f, 0f, force: false);
+		_movedSink = null;
+		root.RecalculateStickyOffsetsForSubtree();
+		return true;
+	}
+
+	/// <summary>没进 flex 树的叶子（祖先 display:none）不参与排版，文字怎么变都不影响布局。</summary>
+	private static bool IsLaidOut(UiNode node)
+	{
+		for (UiNode? current = node; current != null; current = current.Parent)
+		{
+			if (!current.Style.Visible || current.Style.Display == UiDisplay.None)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private bool MeasuredSizesStillHold(UiNode leaf)
+	{
+		UiLeafMeasureLog? log = leaf.MeasureLog;
+		if (log == null)
+		{
+			return true;
+		}
+		if (log.Overflowed)
+		{
+			return false;
+		}
+		for (int i = 0; i < log.Count; i++)
+		{
+			ref readonly UiLeafMeasureLog.Entry entry = ref log[i];
+			Size now = MeasureNode(leaf, entry.Width, entry.WidthMode, entry.Height, entry.HeightMode);
+			if (!now.Width.Equals(entry.Result.Width) || !now.Height.Equals(entry.Result.Height))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private void ApplyChangedLayout(UiNode uiNode, Node flexNode, float parentX, float parentY, bool force)
+	{
+		float x = parentX + flexNode.LayoutGetLeft();
+		float y = parentY + flexNode.LayoutGetTop();
+		UiRect rect = new UiRect(x, y, Math.Max(0f, flexNode.LayoutGetWidth()), Math.Max(0f, flexNode.LayoutGetHeight()));
+		UiRect previous = uiNode.LayoutRect;
+		bool originMoved = !rect.X.Equals(previous.X) || !rect.Y.Equals(previous.Y);
+		if (!force && !flexNode.hasNewLayout && !originMoved && rect.Width.Equals(previous.Width) && rect.Height.Equals(previous.Height))
+		{
+			return;
+		}
+		flexNode.hasNewLayout = false;
+		if (!rect.Equals(previous))
+		{
+			RecordMoved(uiNode, previous);
+		}
+		uiNode.SetLayout(rect);
+		int count = Math.Min(uiNode.Children.Count, flexNode.ChildrenCount);
+		for (int i = 0; i < count; i++)
+		{
+			ApplyChangedLayout(uiNode.Children[i], flexNode.GetChild(i), x, y, originMoved);
+		}
+		float scrollWidth = uiNode.ScrollContentWidth, scrollHeight = uiNode.ScrollContentHeight;
+		float scrollX = uiNode.ScrollOffsetX, scrollY = uiNode.ScrollOffsetY;
+		UpdateScrollMetrics(uiNode, flexNode, x, y, rect.Width, rect.Height, count);
+		if (!scrollWidth.Equals(uiNode.ScrollContentWidth) || !scrollHeight.Equals(uiNode.ScrollContentHeight)
+			|| !scrollX.Equals(uiNode.ScrollOffsetX) || !scrollY.Equals(uiNode.ScrollOffsetY))
+		{
+			RecordMoved(uiNode, uiNode.LayoutRect);
+		}
+	}
+
+	private void RecordMoved(UiNode node, UiRect previous)
+	{
+		List<UiPaintDamage>? sink = _movedSink;
+		if (sink == null)
+		{
+			return;
+		}
+		if (sink.Count == sink.Capacity)
+		{
+			LastTextRelayoutMovedOverflow = true;
+			return;
+		}
+		sink.Add(new UiPaintDamage(node, previous));
 	}
 
 	internal float MeasureContentWidth(UiNode node)
 	{
 		ArgumentNullException.ThrowIfNull(node, nameof(node));
 		if (node.Children.Count > 0
-			&& string.IsNullOrWhiteSpace(node.TextContent)
+			&& !node.HasText
 			&& node.Kind != UiNodeKind.Image
 			&& !string.Equals(node.TagName, "img", StringComparison.OrdinalIgnoreCase))
 		{
@@ -114,7 +292,7 @@ public sealed class UiLayoutEngine
 	{
 		ArgumentNullException.ThrowIfNull(node, nameof(node));
 		if (node.Children.Count > 0
-			&& string.IsNullOrWhiteSpace(node.TextContent)
+			&& !node.HasText
 			&& node.Kind != UiNodeKind.Image
 			&& !string.Equals(node.TagName, "img", StringComparison.OrdinalIgnoreCase))
 		{
@@ -170,13 +348,22 @@ public sealed class UiLayoutEngine
 	{
 		Node flexNode = _flexPool.Rent();
 		flexNode.Context = node;
+		node.FlexNode = flexNode;
+		node.LayoutGeneration = _generation;
+		node.MeasureLog?.Clear();
 		ConfigureNodeStyle(flexNode, node, isRoot, rootWidth, rootHeight, deferredCalcNodes);
+		if (node.Kind == UiNodeKind.Table)
+		{
+			_retainedNeedsPostPasses = true;
+		}
 		if (node.Style.Display == UiDisplay.Grid)
 		{
+			_retainedNeedsPostPasses = true;
 			return flexNode;
 		}
 		if (UiInlineFlowEngine.IsInlineFormattingContext(node))
 		{
+			_retainedNeedsPostPasses = true;
 			flexNode.SetMeasureFunc(_inlineMeasureFunc);
 			return flexNode;
 		}
@@ -196,9 +383,13 @@ public sealed class UiLayoutEngine
 
 	private Size MeasureLeafNode(Node flexNode, float width, MeasureMode widthMode, float height, MeasureMode heightMode)
 	{
-		return flexNode.Context is UiNode node
-			? MeasureNode(node, width, widthMode, height, heightMode)
-			: default;
+		if (flexNode.Context is not UiNode node)
+		{
+			return default;
+		}
+		Size size = MeasureNode(node, width, widthMode, height, heightMode);
+		(node.MeasureLog ??= new UiLeafMeasureLog()).Record(width, widthMode, height, heightMode, size);
+		return size;
 	}
 
 	private Size MeasureInlineNode(Node flexNode, float width, MeasureMode widthMode, float height, MeasureMode heightMode)
@@ -493,7 +684,7 @@ public sealed class UiLayoutEngine
 		{
 			return false;
 		}
-		if (node.Kind == UiNodeKind.Text || !string.IsNullOrWhiteSpace(node.TextContent))
+		if (node.Kind == UiNodeKind.Text || node.HasText)
 		{
 			return true;
 		}
@@ -530,20 +721,26 @@ public sealed class UiLayoutEngine
 		float num3 = Math.Max(0f, flexNode.LayoutGetWidth());
 		float num4 = Math.Max(0f, flexNode.LayoutGetHeight());
 		uiNode.SetLayout(new UiRect(num, num2, num3, num4));
+		flexNode.hasNewLayout = false;
 		int num5 = Math.Min(uiNode.Children.Count, flexNode.ChildrenCount);
 		for (int i = 0; i < num5; i++)
 		{
 			ApplyLayout(uiNode.Children[i], flexNode.GetChild(i), num, num2);
 		}
-		float num6 = num3;
-		float num7 = num4;
-		for (int j = 0; j < num5; j++)
+		UpdateScrollMetrics(uiNode, flexNode, num, num2, num3, num4, num5);
+	}
+
+	private static void UpdateScrollMetrics(UiNode uiNode, Node flexNode, float x, float y, float width, float height, int childCount)
+	{
+		float contentWidth = width;
+		float contentHeight = height;
+		for (int j = 0; j < childCount; j++)
 		{
 			UiRect layoutRect = uiNode.Children[j].LayoutRect;
-			num6 = Math.Max(num6, Math.Max(0f, layoutRect.Right - num));
-			num7 = Math.Max(num7, Math.Max(0f, layoutRect.Bottom - num2));
+			contentWidth = Math.Max(contentWidth, Math.Max(0f, layoutRect.Right - x));
+			contentHeight = Math.Max(contentHeight, Math.Max(0f, layoutRect.Bottom - y));
 		}
-		uiNode.SetScrollMetrics(num6, num7);
+		uiNode.SetScrollMetrics(contentWidth, contentHeight);
 	}
 
 	private void NormalizeTableLayouts(UiNode node)
@@ -883,7 +1080,6 @@ public sealed class UiLayoutEngine
 	private Size MeasureNode(UiNode node, float width, MeasureMode widthMode, float height, MeasureMode heightMode)
 	{
 		UiStyle style = node.Style;
-		string textContent = node.TextContent;
 		if (node.TextRuns is { Count: > 0 })
 		{
 			float availableWidth = ((widthMode == MeasureMode.Undefined) ? float.PositiveInfinity : Math.Max(0f, width - style.Padding.Horizontal));
@@ -893,12 +1089,13 @@ public sealed class UiLayoutEngine
 			return new Size(ResolveMeasuredAxis(measured, width, widthMode), ResolveMeasuredAxis(measured2, height, heightMode));
 		}
 
-		if (!string.IsNullOrWhiteSpace(textContent))
+		ReadOnlySpan<char> text = node.Text;
+		if (!text.IsWhiteSpace())
 		{
 			float availableWidth = ((widthMode == MeasureMode.Undefined) ? float.PositiveInfinity : Math.Max(0f, width - style.Padding.Horizontal));
-			UiTextLayoutResult uiTextLayoutResult = _textMeasurer.Measure(textContent, style, availableWidth, widthMode != MeasureMode.Undefined);
-			float measured = uiTextLayoutResult.Width + style.Padding.Horizontal;
-			float measured2 = uiTextLayoutResult.Height + style.Padding.Vertical;
+			UiTextSize textSize = _textMeasurer.MeasureSize(text, style, availableWidth, widthMode != MeasureMode.Undefined);
+			float measured = textSize.Width + style.Padding.Horizontal;
+			float measured2 = textSize.Height + style.Padding.Vertical;
 			return new Size(ResolveMeasuredAxis(measured, width, widthMode), ResolveMeasuredAxis(measured2, height, heightMode));
 		}
 		UiNodeKind kind = node.Kind;

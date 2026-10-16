@@ -67,7 +67,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
     public static class RecastNavTileBaker
     {
-        private const float CmPerMeter = SpatialScaleDefaults.CellCm;
+        private const float CmPerMeter = SpatialScaleDefaults.CentimetersPerMeter;
 
         /// <summary>
         /// Hard cap on the solid heightfield column count. RcHeightfield allocates one
@@ -190,7 +190,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         continuous.Heightmap,
                         continuous.Bounds,
                         continuous.BlockedAtOrBelowHeightCm,
-                        navProfile.MaxSlopeDeg,
+                        NavCapabilityBakeBody.RequireRecastSlope(navProfile),
                         tileMinX,
                         tileMinZ,
                         tileMaxX,
@@ -566,7 +566,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             float radius = agentProfile.RadiusCm / CmPerMeter;
             float height = agentProfile.HeightCm / CmPerMeter;
             float maxClimb = navProfile.MaxClimbCm / CmPerMeter;
-            float maxSlope = navProfile.MaxSlopeDeg;
+            float maxSlope = NavCapabilityBakeBody.RequireRecastSlope(navProfile);
 
             float terrainCellSize = GetTerrainCellStepMeters(terrain);
             float cellSize = ResolveRecastCellSizeMeters(agentProfile, navProfile, terrainCellSize, continuousHeight);

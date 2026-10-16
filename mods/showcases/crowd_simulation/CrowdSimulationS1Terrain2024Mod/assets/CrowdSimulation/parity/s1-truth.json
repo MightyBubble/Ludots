@@ -1,0 +1,11 @@
+{
+  "fixedHz": 30,
+  "mapId": "crowd_simulation_s2024",
+  "seed": 2024,
+  "navCellsPerSide": 256,
+  "navCellSizeCm": 6250,
+  "blockers": 300,
+  "layeredPaths": 6,
+  "linkCandidates": 171,
+  "fnv1a": "d3cfae4a"
+}

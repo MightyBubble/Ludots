@@ -1,8 +1,10 @@
 using Arch.Core;
 using Arch.Persistence;
 using Ludots.Core.Components;
+using Ludots.Core.CrowdSimulation;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Persistence;
 using MessagePack;
@@ -383,6 +385,31 @@ public sealed class ArchPersistenceCharacterizationTests
         Entity entity = FindSingle<EntityInfoTitleToken>(restored);
         Assert.That(restored.Get<EntityInfoTitleToken>(entity).Value, Is.EqualTo("hero.liu.title"));
     }
+
+    [Test]
+    public void MassNavigationAgentRoundTrips()
+    {
+        using World world = World.Create();
+        world.Create(new MassNavigationAgent { ProfileId = 7, AgentTypeId = "infantry.small" });
+
+        using World restored = CoreRoundTrip(world);
+        MassNavigationAgent agent = restored.Get<MassNavigationAgent>(FindSingle<MassNavigationAgent>(restored));
+        Assert.That(agent.ProfileId, Is.EqualTo(7));
+        Assert.That(agent.AgentTypeId, Is.EqualTo("infantry.small"));
+    }
+
+
+    [Test]
+    public void CrowdSimulationStructureRoundTrips()
+    {
+        using World world = World.Create();
+        world.Create(new CrowdSimulationStructure { Template = "crowd_simulation.structure.wall" });
+
+        using World restored = CoreRoundTrip(world);
+        CrowdSimulationStructure structure = restored.Get<CrowdSimulationStructure>(FindSingle<CrowdSimulationStructure>(restored));
+        Assert.That(structure.Template, Is.EqualTo("crowd_simulation.structure.wall"));
+    }
+
 
     [Test]
     public void ArchBinarySerializerRejectsComponentArrayPayloadWhenSerializedTypeContractDiffersFromSignature()

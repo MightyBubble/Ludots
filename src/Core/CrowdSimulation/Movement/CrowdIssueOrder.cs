@@ -1,0 +1,147 @@
+using System.Collections.Generic;
+using Ludots.Core.Components;
+using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Mathematics.FixedPoint;
+
+namespace Ludots.Core.CrowdSimulation.Movement;
+
+/// <summary>
+/// 移动下令(Fix64 厘米域):调用方给出的成员句柄按
+/// (移动类型 × 半径级) 重组进新组、挂同一条新指令;magic box 定落点模式;
+/// PRESERVE 时各层块按(层质心 − 指令质心)平移目标。
+/// 成员、目标格、去重键相同且各组已有目标或在规划中,则返回原模式,不新建指令。
+/// 本函数不写日志,不读选中集合,空成员也不改写成全体。
+/// </summary>
+public static class CrowdIssueOrder
+{
+    public static CrowdOrderMode? Issue(
+        CrowdSimSession sim, Fix64 wxCm, Fix64 wyCm, int player,
+        string shapeId, bool? auto, Fix64Vec2? face, Fix64 widthCm, ReadOnlySpan<uint> members)
+    {
+        var world = sim.World;
+        var units = sim.Units;
+        sim.BindMemberSet(members, player);
+        int clickCell = CrowdSimulationSpace.CellAtStrict(wxCm, wyCm, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
+        var key = CrowdOrderDedupKey.Create(shapeId, auto, face, widthCm);
+
+        // 同玩家、同成员集、同目标格与同参数的存活指令 → 直接复用
+        CrowdOrder? same = null;
+        int m = 0;
+        bool broken = false;
+        for (int i = 0; i < units.Count; i++)
+        {
+            var st = world.Get<CrowdSimulationUnitState>(units.EntityAt(i));
+            if (sim.MemberStamp[units.SlotAt(i)] != sim.MemberEpoch) continue;
+            var g = sim.Groups.Groups[st.GroupId];
+            int oid = g?.OrderId ?? 0;
+            CrowdOrder? o = oid > 0 ? FindOrder(sim, oid) : null;
+            if (o == null || (same != null && o != same)) { same = null; broken = true; break; }
+            same = o;
+            m++;
+        }
+
+        if (!broken && same != null && same.ClickCell == clickCell && same.DedupKey == key)
+        {
+            int memberSum = 0;
+            foreach (var l in same.Groups) memberSum += sim.Groups.Groups[l.GroupId]?.Count ?? 0;
+            bool allGoalOrPlanning = true;
+            foreach (var l in same.Groups)
+            {
+                var g = sim.Groups.Groups[l.GroupId]!;
+                if (g.Goal < 0 && !g.Planning) { allGoalOrPlanning = false; break; }
+            }
+
+            if (memberSum == m && allGoalOrPlanning) return same.Mode;
+        }
+
+        // 重组:每个 (层 × 半径级) 一个新组,挂同一条新指令;顺带算全体质心与包围盒
+        var fresh = sim.IssueGroups;
+        fresh.Clear();
+        var freshInOrder = sim.IssueGroupOrder; // 新组序=单位扫描首见序,决定 order.Groups 追加序
+        freshInOrder.Clear();
+        var lsum = sim.IssueLayerSums;
+        lsum.Clear();
+        Fix64 x0 = Fix64.MaxValue, y0 = Fix64.MaxValue, x1 = Fix64.MinValue, y1 = Fix64.MinValue;
+        Fix64 sx = Fix64.Zero, sy = Fix64.Zero;
+        int n = 0;
+        for (int i = 0; i < units.Count; i++)
+        {
+            var entity = units.EntityAt(i);
+            var st = world.Get<CrowdSimulationUnitState>(entity);
+            if (sim.MemberStamp[units.SlotAt(i)] != sim.MemberEpoch) continue;
+            var old = sim.Groups.Groups[st.GroupId]!;
+            int gk = old.LayerIdx * CrowdSimulationLimits.NavContextLayerStride + old.RIdx;
+            if (!fresh.TryGetValue(gk, out var g))
+            {
+                // 新组以 BodyNavId 落底,AttachGroupNav 再挂规划句柄。
+                // Group.Player 用 PairRules.IndexByPlayerId。
+                g = sim.Groups.Alloc(sim.Config.PairRules.IndexByPlayerId[player], old.LayerIdx, old.RIdx, old.BodyNavId);
+                sim.AttachGroupNav(g);
+                fresh[gk] = g;
+                freshInOrder.Add(g);
+            }
+
+            if (g.PrevLeader == null && old.Leader is { Done: false }) g.PrevLeader = old.Leader;
+            old.Count--;
+            st.GroupId = g.Id;
+            world.Set(entity, st);
+            g.Count++;
+            var p = world.Get<WorldPositionCm>(entity).Value;
+            if (!lsum.TryGetValue(g.LayerIdx, out var acc)) acc = (Fix64.Zero, Fix64.Zero, 0);
+            lsum[g.LayerIdx] = (acc.XCm + p.X, acc.YCm + p.Y, acc.Count + 1);
+            sx += p.X;
+            sy += p.Y;
+            n++;
+            if (p.X < x0) x0 = p.X;
+            if (p.X > x1) x1 = p.X;
+            if (p.Y < y0) y0 = p.Y;
+            if (p.Y > y1) y1 = p.Y;
+        }
+
+        sim.Groups.ReleaseEmpty();
+        if (n == 0) return null;
+
+        var fc = sim.Config.Formation;
+        var mode = CrowdOrderModeChooser.Choose(
+            x0, y0, x1, y1, wxCm, wyCm,
+            fc.MagicBoxPadCm,
+            fc.MagicBoxMaxSpreadCm,
+            face.HasValue, auto == false);
+        var order = sim.Orders.Create(player, mode, shapeId, face, widthCm);
+        order.ClickCell = clickCell;
+        order.DedupKey = key;
+        Fix64 ccx = sx / n, ccy = sy / n;
+        foreach (var g in freshInOrder)
+        {
+            // PRESERVE:各层块按(层质心 − 指令质心)平移目标
+            Fix64 tx = wxCm, ty = wyCm;
+            if (mode == CrowdOrderMode.Preserve && lsum.TryGetValue(g.LayerIdx, out var acc) && acc.Count > 0)
+            {
+                tx = wxCm + acc.XCm / acc.Count - ccx;
+                ty = wyCm + acc.YCm / acc.Count - ccy;
+            }
+
+            int goalCell = CrowdSimulationSpace.CellAtStrict(tx, ty, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
+            order.Groups.Add(sim.Orders.RentLink(g.Id, goalCell));
+            g.OrderId = order.Id;
+        }
+
+        // 空组已释放。旧指令上指向空槽或已改派组的链接留着，重烘阶段 2 会按空槽写目标。
+        sim.Orders.Prune(sim.Groups);
+        sim.IssueBatch[0] = order;
+        sim.Planner?.Plan(sim.IssueBatch, sim.TickCount);
+        return mode;
+    }
+
+    private static CrowdOrder? FindOrder(CrowdSimSession sim, int orderId)
+    {
+        var list = sim.Orders.List;
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].Id == orderId) return list[i];
+        }
+
+        return null;
+    }
+}

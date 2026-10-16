@@ -108,6 +108,7 @@ jobs:
         run: |
           $guardFilter = @(
             'FullyQualifiedName~ArchitectureGuardTests',
+            'FullyQualifiedName~CrowdSimulationCommentHygieneTests',
             'FullyQualifiedName~S14LayeringRatchetTests',
             'FullyQualifiedName~GasRuntimeStateContractTests',
             'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
@@ -212,6 +213,19 @@ jobs:
         shell: pwsh
         run: |
           dotnet test src/Tests/RaylibAdapterTests/RaylibAdapterTests.csproj -c Debug --no-build --filter "TestCategory=raylib-field" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run CrowdSimulation authoring acceptance slice
+        shell: pwsh
+        run: |
+          dotnet build mods/LudotsCoreMod/LudotsCoreMod.csproj -c Release -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Debug --no-build --filter "TestCategory=crowd-authoring" -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

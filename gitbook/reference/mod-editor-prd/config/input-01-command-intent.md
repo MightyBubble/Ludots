@@ -7,33 +7,36 @@
 引擎根资产真实档案（`assets/Input/command_intent_profiles.json` 全量）：
 
 ```json
-{ "profiles": [
-  { "id": "intent.command.default",
+{ "profiles": {
+  "intent.command.default": {
     "groupPolicy": { "kind": "independent" },
     "rules": [
       { "priority": 20, "target": { "hasEntity": true },  "route": { "orderTypeKey": "moveTo" } },
-      { "priority": 10, "target": { "hasEntity": false }, "route": { "orderTypeKey": "moveTo" } } ] } ] }
+      { "priority": 10, "target": { "hasEntity": false }, "route": { "orderTypeKey": "moveTo" } } ] } } }
 ```
+
+`profiles` 以档案 id 为键。数组会被拒绝，错误写明要对象。
 
 教学骨架（演员条件 + 槽位路由）：
 
 ```json
-{ "id": "intent.command.combat",
-  "groupPolicy": { "kind": "independent" },
-  "rules": [
-    { "priority": 30, "actor": { "hasAbilityWithCategory": "Ability.Attack" },
-      "target": { "relation": ["Hostile"] },
-      "route": { "orderTypeKey": "attackTarget" } },
-    { "priority": 20,
-      "actor": { "hasAbilityWithCategory": "Ability.Train" },
-      "route": { "slot": "contextGroup:group.production" } } ] }
+{ "profiles": {
+  "intent.command.combat": {
+    "groupPolicy": { "kind": "independent" },
+    "rules": [
+      { "priority": 30, "actor": { "hasAbilityWithCategory": "Ability.Attack" },
+        "target": { "relation": ["Hostile"] },
+        "route": { "orderTypeKey": "attackTarget" } },
+      { "priority": 20,
+        "actor": { "hasAbilityWithCategory": "Ability.Train" },
+        "route": { "slot": "contextGroup:group.production" } } ] } } }
 ```
 
 ## 2. 字段与行为
 
 | 字段 | 这样配会产生什么效果 |
 |---|---|
-| `id` | 档案标识；控制方案默认与交互帧按它引用 |
+| 对象键 | 档案 id；控制方案默认与交互帧按它引用 |
 | `groupPolicy.kind` | 编组策略；内置仅 `independent`（逐演员独立），新 kind 由 mod 代码注册 |
 | `rules[].priority` | 数值大者先裁决，命中即止 |
 | `actor` | 演员侧条件：`hasAbilityWithCategory` / `allTags` / `anyTags` / `noneTags`（身上有其中任一标签就不命中） |

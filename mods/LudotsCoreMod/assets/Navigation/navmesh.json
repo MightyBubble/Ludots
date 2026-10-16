@@ -1,28 +1,51 @@
 {
   "maps": {
     "navmesh_debug_grid": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "navProfiles": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     },
     "navmesh_debug_openworld": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 25600,
           "tileWorldHeightCm": 25600
         }
-      }
+      },
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     },
     "navmesh_debug_vhtm": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     }
   }
 }

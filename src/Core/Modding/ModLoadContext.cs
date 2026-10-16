@@ -13,7 +13,7 @@ namespace Ludots.Core.Modding
         private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.Ordinal);
         private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.Ordinal);
         private readonly HashSet<string> _processSharedAssemblyNames;
-        private readonly Func<AssemblyName, Assembly> _sharedAssemblyResolver;
+        private Func<AssemblyName, Assembly>? _sharedAssemblyResolver;
 
         public ModLoadContext(
             Func<AssemblyName, Assembly> sharedAssemblyResolver,
@@ -284,6 +284,18 @@ namespace Ludots.Core.Modding
             }
 
             return OpenReadStream(pdbPath);
+        }
+
+        /// <summary>
+        /// 卸载 collectible 上下文前切断对 ModLoader 的解析委托与程序集缓存，
+        /// 否则 ModLoadContext → ModLoader → EngineSystemRegistrar → GameEngine 的环会阻止 ALC 回收。
+        /// </summary>
+        internal void ReleaseUnloadReferences()
+        {
+            _sharedAssemblyResolver = null;
+            _managedAssembliesByPath.Clear();
+            _resolvers.Clear();
+            _registeredMainAssemblyPaths.Clear();
         }
     }
 

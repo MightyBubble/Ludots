@@ -70,6 +70,34 @@ namespace Ludots.Client.Raylib.Rendering
         /// Continental admin cells are kilometers wide; draping each texel draws a square mosaic and hides terrain.
         /// </summary>
         public int DiscreteOwnershipDrapeMaxCellSizeCm { get; set; } = 5_000;
+        /// <summary>Flow 场走逐格贴地渲染的格边长上限(导航格可达数十米,走廊格数有限,逐格四边形可承受)。</summary>
+        public int FlowDrapeMaxCellSizeCm { get; set; } = 10_000;
+
+        /// <summary>
+        /// Flow / Walkable 场是否由本渲染器直接绘制(false = 宿主改走地形贴花槽位,
+        /// 本渲染器仍负责纹理暂存与上传,见 TryGetStagedTexture)。
+        /// </summary>
+        public bool DrawFlowKind { get; set; } = true;
+        public FogDecalPalette? FogPalette { get; set; }
+
+        /// <summary>
+        /// Fog 场是否由本渲染器直接绘制(false = 宿主把迷雾三态纹理改道到地形贴花槽位,
+        /// 随地形起伏整张贴花;本渲染器仍负责纹理暂存与上传)。
+        /// </summary>
+        public bool DrawFogKind { get; set; } = true;
+
+        /// <summary>取某场记录已上传的纹理(贴花槽位用;纹理内容随后续帧原地更新)。</summary>
+        public bool TryGetStagedTexture(GlobalFieldVisualId id, out Texture2D texture)
+        {
+            if (_stateById.TryGetValue(id, out FieldTextureState? state) && state.TextureLoaded)
+            {
+                texture = state.Texture;
+                return true;
+            }
+
+            texture = default;
+            return false;
+        }
 
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
@@ -108,11 +136,27 @@ namespace Ludots.Client.Raylib.Rendering
                 if (descriptor.Id.Kind is not (
                     GlobalFieldVisualKind.Fog or
                     GlobalFieldVisualKind.Influence or
+                    GlobalFieldVisualKind.Flow or
+                    GlobalFieldVisualKind.Walkable or
                     GlobalFieldVisualKind.DiscreteOwnership))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
                         $"Raylib Global Field renderer does not support field kind '{descriptor.Id.Kind}' yet. Publish through the shared buffer, then add an explicit Raylib renderer contract for that kind.");
+                }
+
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.Walkable &&
+                    descriptor.ValueKind != GlobalFieldVisualValueKind.Vector4)
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib walkable field renderer requires Vector4 cells (direct RGBA), but field '{descriptor.Id}' published {descriptor.ValueKind}.");
+                }
+
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.Flow &&
+                    descriptor.ValueKind != GlobalFieldVisualValueKind.Vector4)
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib flow field renderer requires Vector4 cells (dirX, dirY, strength, 0), but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.Id.Kind == GlobalFieldVisualKind.Fog &&
@@ -143,8 +187,8 @@ namespace Ludots.Client.Raylib.Rendering
 
                 if (fullUpload)
                 {
-                    ClearRect(state, new IntRect(0, 0, state.Width, state.Height));
-                    ApplyCells(state, cells);
+                    ClearRect(state, new IntRect(0, 0, state.Width, state.Height), FogPalette);
+                    ApplyCells(state, cells, FogPalette);
                     SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
                 }
                 else
@@ -152,8 +196,8 @@ namespace Ludots.Client.Raylib.Rendering
                     BuildDirtyRects(state, dirtyRects);
                     if (state.DirtyRectCount > 0)
                     {
-                        ClearDirtyRects(state);
-                        ApplyCells(state, cells);
+                        ClearDirtyRects(state, FogPalette);
+                        ApplyCells(state, cells, FogPalette);
                     }
                 }
 
@@ -213,13 +257,21 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly RaylibFieldTexturePlan plan = ref plans[i];
                 FieldTextureState state = _stateById[plan.Id];
                 UploadDirtyRects(state);
-                if (state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
+                int drapeMaxCellSizeCm = state.Id.Kind == GlobalFieldVisualKind.Flow
+                    ? FlowDrapeMaxCellSizeCm
+                    : DiscreteOwnershipDrapeMaxCellSizeCm;
+                bool drapeCapable = state.Id.Kind is GlobalFieldVisualKind.DiscreteOwnership or GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable;
+                bool kindSuppressed = state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable && !DrawFlowKind;
+                kindSuppressed = kindSuppressed ||
+                    (state.Id.Kind == GlobalFieldVisualKind.Fog && !DrawFogKind);
+                if (!kindSuppressed &&
+                    drapeCapable &&
                     HeightSampleSource is IContinuousHeightmap heightSampleSource &&
-                    ShouldDrapeDiscreteOwnership(plan.CellSizeCm, DiscreteOwnershipDrapeMaxCellSizeCm))
+                    ShouldDrapeDiscreteOwnership(plan.CellSizeCm, drapeMaxCellSizeCm))
                 {
                     DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
                 }
-                else
+                else if (!kindSuppressed)
                 {
                     DrawTexturePlane(state, plan.CellSizeCm);
                 }
@@ -312,7 +364,10 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private static void ApplyCells(FieldTextureState state, ReadOnlySpan<GlobalFieldVisualCell> cells)
+        private static void ApplyCells(
+            FieldTextureState state,
+            ReadOnlySpan<GlobalFieldVisualCell> cells,
+            FogDecalPalette? fogPalette)
         {
             for (int i = 0; i < cells.Length; i++)
             {
@@ -322,7 +377,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SetPixel(state, x, y, in cell);
+                SetPixel(state, x, y, in cell, fogPalette);
             }
         }
 
@@ -341,11 +396,11 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static void ClearDirtyRects(FieldTextureState state)
+        private static void ClearDirtyRects(FieldTextureState state, FogDecalPalette? fogPalette)
         {
             for (int i = 0; i < state.DirtyRectCount; i++)
             {
-                ClearRect(state, state.DirtyRects[i]);
+                ClearRect(state, state.DirtyRects[i], fogPalette);
             }
         }
 
@@ -404,9 +459,9 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private static void ClearRect(FieldTextureState state, IntRect rect)
+        private static void ClearRect(FieldTextureState state, IntRect rect, FogDecalPalette? fogPalette)
         {
-            ResolveClearColorBytes(state.Id.Kind, out byte r, out byte g, out byte b, out byte a);
+            ResolveClearColorBytes(state.Id.Kind, fogPalette, out byte r, out byte g, out byte b, out byte a);
             int endY = rect.Y + rect.Height;
             int endX = rect.X + rect.Width;
             for (int y = rect.Y; y < endY; y++)
@@ -427,13 +482,15 @@ namespace Ludots.Client.Raylib.Rendering
             FieldTextureState state,
             int x,
             int y,
-            in GlobalFieldVisualCell cell)
+            in GlobalFieldVisualCell cell,
+            FogDecalPalette? fogPalette)
         {
             ResolveCellColorBytes(
                 state.Id.Kind,
                 state.ValueKind,
                 state.PaletteId,
                 in cell,
+                fogPalette,
                 out byte r,
                 out byte g,
                 out byte b,
@@ -445,9 +502,9 @@ namespace Ludots.Client.Raylib.Rendering
             state.Pixels[pixel + 3] = a;
         }
 
-        public static Color ResolveFogColor(byte visibility)
+        public static Color ResolveFogColor(byte visibility, FogDecalPalette palette)
         {
-            ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
+            ResolveFogColorBytes(visibility, palette, out byte r, out byte g, out byte b, out byte a);
             return new Color(r, g, b, a);
         }
 
@@ -461,6 +518,52 @@ namespace Ludots.Client.Raylib.Rendering
                 out byte b,
                 out byte a);
             return new Color(r, g, b, a);
+        }
+
+        /// <summary>
+        /// Flow 场契约:FloatValue = (dirX, dirY, strength, 0)——方向取色相(东 0° 红、
+        /// 北 90° 绿、西 180° 青、南 270° 紫,与世界 +X/+Z 平面一致),强度取不透明度;
+        /// 零方向 / 零强度 = 透明(未到达格不显示)。
+        /// </summary>
+        internal static void ResolveFlowColorBytes(
+            in GlobalFieldVisualCell cell,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            Vector4 v = cell.FloatValue;
+            float dirX = v.X, dirY = v.Y, strength = Math.Clamp(v.Z, 0f, 1f);
+            float lenSq = dirX * dirX + dirY * dirY;
+            if (lenSq < 1e-6f || strength <= 0f)
+            {
+                r = 0; g = 0; b = 0; a = 0;
+                return;
+            }
+
+            float angle = MathF.Atan2(dirY, dirX);
+            if (angle < 0f) angle += MathF.Tau;
+            HsvToRgb(angle / MathF.Tau, 0.85f, 1f, out r, out g, out b);
+            a = (byte)Math.Clamp((int)(strength * 230f), 0, 255);
+        }
+
+        private static void HsvToRgb(float h, float s, float v, out byte r, out byte g, out byte b)
+        {
+            float c = v * s;
+            float x = c * (1f - MathF.Abs((h * 6f) % 2f - 1f));
+            float m = v - c;
+            (float rr, float gg, float bb) = (int)(h * 6f) switch
+            {
+                0 => (c, x, 0f),
+                1 => (x, c, 0f),
+                2 => (0f, c, x),
+                3 => (0f, x, c),
+                4 => (x, 0f, c),
+                _ => (c, 0f, x),
+            };
+            r = ToColorByte(rr + m);
+            g = ToColorByte(gg + m);
+            b = ToColorByte(bb + m);
         }
 
         public static Vector4 ResolveDiscreteOwnershipColorVector(int projectedId)
@@ -523,6 +626,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void ResolveClearColorBytes(
             GlobalFieldVisualKind kind,
+            FogDecalPalette? fogPalette,
             out byte r,
             out byte g,
             out byte b,
@@ -530,7 +634,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (kind == GlobalFieldVisualKind.Fog)
             {
-                ResolveFogColorBytes(FogVisibilityUnseen, out r, out g, out b, out a);
+                ResolveFogColorBytes(FogVisibilityUnseen, fogPalette, out r, out g, out b, out a);
                 return;
             }
 
@@ -554,6 +658,7 @@ namespace Ludots.Client.Raylib.Rendering
             GlobalFieldVisualValueKind valueKind,
             int paletteId,
             in GlobalFieldVisualCell cell,
+            FogDecalPalette? fogPalette,
             out byte r,
             out byte g,
             out byte b,
@@ -561,13 +666,30 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (kind == GlobalFieldVisualKind.Fog)
             {
-                ResolveFogColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                ResolveFogColorBytes(cell.ByteValue, fogPalette, out r, out g, out b, out a);
                 return;
             }
 
             if (kind == GlobalFieldVisualKind.Influence)
             {
                 ResolveInfluenceColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                return;
+            }
+
+            if (kind == GlobalFieldVisualKind.Flow)
+            {
+                ResolveFlowColorBytes(in cell, out r, out g, out b, out a);
+                return;
+            }
+
+            if (kind == GlobalFieldVisualKind.Walkable)
+            {
+                // 直接 RGBA(数据端已着色,渲染端不再映射)
+                Vector4 c = cell.FloatValue;
+                r = ToColorByte(c.X);
+                g = ToColorByte(c.Y);
+                b = ToColorByte(c.Z);
+                a = ToColorByte(c.W);
                 return;
             }
 
@@ -628,37 +750,24 @@ namespace Ludots.Client.Raylib.Rendering
             a = (byte)Math.Clamp((int)Math.Round(70 + (160 * t)), 0, 255);
         }
 
-        private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)
+        private static void ResolveFogColorBytes(
+            byte visibility,
+            FogDecalPalette? palette,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
         {
-            switch (visibility)
+            if (palette == null)
             {
-                case FogVisibilityVisible:
-                    r = 72;
-                    g = 214;
-                    b = 255;
-                    a = 90;
-                    return;
-                case FogVisibilityExplored:
-                    r = 32;
-                    g = 58;
-                    b = 92;
-                    a = 150;
-                    return;
-                case FogVisibilityDenied:
-                    r = 224;
-                    g = 34;
-                    b = 82;
-                    a = 178;
-                    return;
-                case FogVisibilityUnseen:
-                    r = 0;
-                    g = 0;
-                    b = 0;
-                    a = 190;
-                    return;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(visibility), visibility, "Unsupported fog visibility.");
+                throw new InvalidOperationException("迷雾贴花缺少调色板：没有模块发布 FogDecalPalette 服务。");
             }
+
+            FogDecalColor color = palette.For(visibility);
+            r = color.R;
+            g = color.G;
+            b = color.B;
+            a = color.A;
         }
 
         private void UploadDirtyRects(FieldTextureState state)
@@ -716,6 +825,11 @@ namespace Ludots.Client.Raylib.Rendering
             Image image = Rl.GenImageColor(state.Width, state.Height, Color.BLANK);
             state.Texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
+            // Flow 方向场 / Walkable 可走区域层 / Fog 迷雾三态层走地形贴花槽或软边缘平面,
+            // 双线性过滤把格粒度抹成连续渐变(权属保留最近邻的硬边)
+            Rl.SetTextureFilter(state.Texture, state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable or GlobalFieldVisualKind.Fog
+                ? Rl.TextureFilter.TEXTURE_FILTER_BILINEAR
+                : Rl.TextureFilter.TEXTURE_FILTER_POINT);
             state.TextureLoaded = true;
             state.GpuUploaded = false;
         }

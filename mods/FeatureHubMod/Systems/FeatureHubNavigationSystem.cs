@@ -75,20 +75,20 @@ namespace FeatureHubMod.Systems
             int startX = 16;
             int startY = 16;
 
-            overlay.AddRect(startX, startY, panelWidth, panelHeight, bg, border);
-            overlay.AddText(startX + padding, startY + padding, "LUDOTS FEATURE SHOWCASE", 18, titleColor);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, startX, startY, panelWidth, panelHeight, bg, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, startX + padding, startY + padding, "LUDOTS FEATURE SHOWCASE", 18, titleColor);
 
             int y = startY + padding + lineHeight + 8;
             for (int i = 0; i < Entries.Length; i++)
             {
-                overlay.AddText(startX + padding, y, Entries[i].label, 15, itemColor);
+                overlay.AddText(PresentationOverlayLayer.TopMost, startX + padding, y, Entries[i].label, 15, itemColor);
                 y += lineHeight;
             }
 
             y += 8;
-            overlay.AddText(startX + padding, y, "F5=Config  F6=Mods  F7=Attributes  F8=TurnBased", 13, hintColor);
+            overlay.AddText(PresentationOverlayLayer.TopMost, startX + padding, y, "F5=Config  F6=Mods  F7=Attributes  F8=TurnBased", 13, hintColor);
             y += lineHeight;
-            overlay.AddText(startX + padding, y, "Diagnostics overlays available in all scenes.", 13, hintColor);
+            overlay.AddText(PresentationOverlayLayer.TopMost, startX + padding, y, "Diagnostics overlays available in all scenes.", 13, hintColor);
         }
 
         private void HandleNavigation()

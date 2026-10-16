@@ -29,7 +29,7 @@
 
 ## 目标（预期）
 
-唯一基准单位是 **`CellCm`**。`Cell` 是所有 board、bake、flow、avoidance、broadphase 尺度换算的原子单位。NAV-0 新增 `src/Core/Spatial/SpatialScaleDefaults.cs`，集中命名现有尺度默认值；后续配置项必须引用本文档中的目标名和 owner。
+唯一基准单位是 **`CellCm`**。`Cell` 是 board、bake、flow、avoidance、broadphase 尺度换算的原子单位。群体模拟的导航格、导航 tile、迷雾格按厘米配置，不从 `CellCm` 派生，见层级表 `NavCell`、`NavTile`（群体）、`FogCell`。NAV-0 新增 `src/Core/Spatial/SpatialScaleDefaults.cs`，集中命名现有尺度默认值；后续配置项必须引用本文档中的目标名和 owner。米与厘米的换算用 `SpatialScaleDefaults.CentimetersPerMeter`，不借 `CellCm`。
 
 #1567 在此之上把空间配置归位为四个域，每个域一份声明、一个家：
 
@@ -46,7 +46,7 @@ In scope：
 
 - 本页定义尺度 taxonomy、owner、约束和现状名到目标名映射。
 - 新增命名常量模块，集中 `256` / `64` / `100` / `50` / `16` 等尺度默认值。
-- 添加全仓扫描 contract，禁止 board、bake、MassNavigationFlow 代码重新内联 `256` / `64` / `100` 尺度字面量。
+- 添加路径白名单 contract：扫描板烘焙（`/Map/Board/`、`/NavMesh/Bake/`、`NavBake.`）、`Ludots.Tool` 的地图转换入口，以及文件名含 `NavTileBuilder` / `MassNavigationFlow` / `FlowField` 的源码；群体模拟另扫 `src/Core/CrowdSimulation/`、`mods/capabilities/navigation/CrowdSimulationMod/`、`mods/showcases/crowd_simulation/`。这些路径禁止内联 `256` / `64` / `100`。常驻豁免：`SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs`。`src/Core/` 每个一级目录登记为扫描根或“未纳入扫描”，漏登记则测试失败。
 - 更新 GitBook 索引。
 
 Out of scope：
@@ -65,16 +65,19 @@ Out of scope：
 | `HexEdgeLengthCm` | hex 边长，非 cell 派生 | 默认 400 | `SpatialScaleDefaults.DefaultHexEdgeLengthCm`，板配置写 `Boards[].Hex.EdgeLengthCm` | HexGrid board 的 hex 轴长、world position / AOI / render layout | 是，仅 Hex / HexGrid board 生效 | 必须 > 0；不影响 Grid / NodeGraph board |
 | `PartitionChunk` | `PartitionChunkCells`，默认 64 | `PartitionChunkCells * CellCm` | `BoardConfig.ChunkSizeCells` / `SpatialScaleDefaults.PartitionChunkCells`；#1567 目标态归 `World.Tuning.PartitionChunkCells`，分区是世界层预算，不挂板 | 空间分区、AOI、query backend | 是 | 必须 > 0 且为 2 的幂 |
 | `TerrainChunk` | `TerrainChunkCells`，固定 64 | `TerrainChunkCells * CellCm` 的逻辑足迹；hex bake 还会乘 hex metric | `VertexChunk.ChunkSize` / `SpatialScaleDefaults.TerrainChunkCells` | 逻辑地形块；当前等于 NavTile 足迹 | 否 | 当前固定 64；grid/hex 共用抽象在 #286 落地 |
-| `NavTile footprint` | = `TerrainChunk` | = `TerrainChunk` footprint | NavMesh bake (`NavTileBuilder` / `BakePipeline`)；#1567 目标态解除与 `TerrainChunk` 的焊接，颗粒度见 `NavTileGranularity` | navmesh 产物 tile 足迹 | 否 | 现状只作为 `TerrainChunk` 的用途；#1567 切 3 后此行废止，由 navmesh.json 显式声明取代 |
+| `NavTile footprint` | = `TerrainChunk` | = `TerrainChunk` footprint | NavMesh bake (`NavTileBuilder` / `BakePipeline`)；#1567 目标态解除与 `TerrainChunk` 的焊接，颗粒度见 `NavTileGranularity` | 地形 navmesh 产物 tile 足迹。群体导航 tile 见 `NavTile`（群体），两边长不同 | 否 | 现状只作为 `TerrainChunk` 的用途；#1567 切 3 后此行废止，由 navmesh.json 显式声明取代 |
 | `NavTileGranularity`（#1567 目标态） | 由声明值与世界 cm 决定 | `tileWorldWidthCm` × `tileWorldHeightCm` | `Navigation/navmesh.json` 每板寻址条目 | nav 烘焙/重烤的瓦片颗粒度预算，独立于板与地形块 | 是 | 必须 > 0；不从 `CellSizeCm × ChunkSizeCells` 推导；hex 两轴（如 44340×38400）由此表达 |
 | `TerrainPage`（地形数据页） | `TerrainPageCells` = `MapTile.Size` = 256 | `TerrainPageCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.TerrainPageCells` | 世界层 IO/寻址地形数据页；#1567 目标态为派生值（由 `World.WidthCm/HeightCm` 换算），不再进 authoring | 否，数量可配 | `TerrainPageCells` 引用 `MapTile.Size`；数量键 `WidthInMacroTiles` / `HeightInMacroTiles` 自 #1567 切 1 起 fail-fast |
 | `StreamingChunk` | N x `PartitionChunk` | N x `PartitionChunkCells * CellCm` | streaming/loaded chunk owner；NodeGraph 当前通过 `WorldGridLoadedChunks` 消费；#1567 目标态容量归 `World.Tuning` | 流式加载、loaded graph rebuild | 是 | 必须显式配置或由分区推导；禁止私有 loader fallback |
 | `WorldExtent` | 根板 `floor(WidthCm / CellSizeCm)` / boot `WidthCm / CellCm` | 根板 `WidthCm` / `HeightCm` | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧地形数据页数量键加载即失败，无别名兼容 |
 | `BoardExtent` | `floor(WidthCm / CellSizeCm)` | `WidthCm` / `HeightCm` | map JSON `Boards[]` | 板的厘米矩形。格数是矩形除以 `Grid.CellSizeCm` 向下取整，余数留在局部坐标大的一侧 | 是 | 宽高必须盖住至少一格；六边形板另写 `Hex.EdgeLengthCm`，只保留能放进矩形的整圈 |
-| `BoardAnchor` | —— | `Anchor.LocalXCm/LocalYCm` 与 `Anchor.WorldXCm/WorldYCm` | map JSON `Boards[]` | 板上一个点在 Ludots 世界的位置。`Local` 从铺格子的角量起，`World` 是 Ludots 厘米。格子角的世界坐标 = `World − Local` | 是 | 根板 `World` 必须是 `(0, 0)`，这是 Ludots 原点；矩形必须落在根板内；拓扑原点不在 Ludots 原点的板暂不参与导航 |
+| `BoardAnchor` | —— | `Anchor.LocalXCm/LocalYCm` 与 `Anchor.WorldXCm/WorldYCm` | map JSON `Boards[]` | 板上一个点在 Ludots 世界的位置。`Local` 从铺格子的角量起，`World` 是 Ludots 厘米。格子角的世界坐标 = `World − Local` | 是 | 根板 `World` 必须是 `(0, 0)`，这是 Ludots 原点；矩形必须落在根板内；拓扑原点不在 Ludots 原点的板暂不参与导航。群体地图装载时 `Local` 与 `World` 四值必须为 0 |
+| `NavCell` | 每边数 = 板宽 ÷ 边长，标准配置 256 | `profiles[].cellSizeCm`，标准 6250 | `Navigation/navmesh.json` 的 `profiles[].cellSizeCm` | 群体导航格。`SurfaceGrid` / `NavHeightField` / `NavSurfaceAsset` 的边长与宽高格数用 `NavCellSizeCm`、`NavCellsX` / `NavCellsY`；格总数是 `NavCellTotal` | 边长可配；每边数派生，不进配置 | 边长 > 0 且整除板宽；每边数 16..1024。与 `CellCm` 各有 owner，群体内核不读板格边长 |
+| `NavTile`（群体） | 派生格数 = `navtile.sizeCm / profiles[].cellSizeCm`，标准 16 | `navtile.sizeCm`，标准 100000 | `CrowdSimulationConfig.navtile.sizeCm` | 群体导航 tile，也是 HPA 抽象图的一块（`HpaTileBlock`）。与上一行地形 `NavTile footprint` 的 64 板格不是同一个长度 | 边长可配 | 整除 `profiles[].cellSizeCm`；派生格数 4..128；整除每边导航格数 |
+| `FogCell` | 群体每边数 = ceil(每边导航格数 ÷ 派生倍数)，标准配置 64 | 主干 Vision `fog_layers[].cellSizeCm`（ground / detection 100，air 250）；群体 `fog.cellSizeCm` 标准 25000 | Vision `assets/Vision/fog_layers.json`；群体 `CrowdSimulationConfig.fog.cellSizeCm` | 迷雾格。两处 owner 独立，共用 `FogCell` 这个名字 | 是 | 群体边长 ≥ 100 cm，整除 `profiles[].cellSizeCm`，派生倍数 1..32。视野半径另有上限守卫 |
 | `FlowWindow` | `FieldWidthCm / CellCm` by `FieldHeightCm / CellCm` | `FieldWidthCm` x `FieldHeightCm` | MassNavigationFlow solver config | 执行层滑窗/工作区 | 是 | 宽高必须 > 0；必须能被 `FlowCell`、`AvoidanceHashCell` 整除 |
 | `FlowCell` | `FlowCellSizeCm / CellCm` | 默认 100 | MassNavigationFlow solver `flowCellSizeCm` / `SpatialScaleDefaults.FlowCellCm` | 流场网格 cell | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
-| `AvoidanceHashCell` | `separationHashCellSizeCm / CellCm` 或 `hardResolveHashCellSizeCm / CellCm` | separation 默认 100；hard-resolve 默认 50 | MassNavigationFlow solver / `SpatialScaleDefaults.Avoidance*HashCellCm` | 分离邻居哈希、硬解析候选哈希 | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
+| `AvoidanceHashCell` | `separationHashCellSizeCm / CellCm` 或 `hardResolveHashCellSizeCm / CellCm`。群体哈希格数由半径与环数派生 | separation 默认 100；hard-resolve 默认 50。群体 `CrowdSpatialHash.CellSizeCm` 为派生厘米 | MassNavigationFlow solver / `SpatialScaleDefaults.Avoidance*HashCellCm`；群体 `CrowdSpatialHash.CellSizeCm` 与 `CellsPerSide` | 分离邻居哈希、硬解析候选哈希。群体避让哈希是派生值，不进配置（`avoidance.hashRings` 仍可配） | MassNavigationFlow 可配；群体不可配 | 必须 > 0；`FlowWindow` 宽高必须整除它。群体侧无作者边长 |
 | `PhysicsBroadphaseCell` | `PhysicsBroadphaseCellCm / CellCm` | 默认 100 | Physics2D / future physics broadphase config | broadphase spatial hash | 是 | 必须显式配置；禁止缺失时静默 fallback |
 
 每个概念恰好一个名字、一个 owner。`NavTile footprint` 是 `TerrainChunk` 的用途，不再作为独立尺度 owner。
@@ -95,8 +98,11 @@ Out of scope：
 - `BoardExtent`：板的厘米矩形。格数是矩形除以 `Grid.CellSizeCm` 向下取整。
 - `BoardAnchor`：板上一个点在 Ludots 世界的位置。格子角 = `Anchor.World − Anchor.Local`。根板 `World` 为 `(0, 0)`。见 `gitbook/navmesh-features/board-addressing.md`。
 - `NavTileGranularity`（#1567）：nav 瓦片颗粒度，navmesh.json 显式两轴世界尺寸，独立于 `TerrainChunk` 与板。
+- `NavCell`：群体导航格。边长 `profiles[].cellSizeCm`，每边数由板宽整除得到。
+- `NavTile`（群体）：群体导航 tile，边长 `navtile.sizeCm`，同时是 HPA 的一块。与地形 `NavTile footprint` 分开记账。
+- `FogCell`：迷雾格。主干 Vision 写 `fog_layers[].cellSizeCm`；群体写 `fog.cellSizeCm`。
 - `FlowWindow` + `FlowCell`：MassNavigationFlow 执行层滑窗与流场分辨率。
-- `AvoidanceHashCell`：MassNavigationFlow 分离/硬解析哈希 cell。
+- `AvoidanceHashCell`：MassNavigationFlow 分离/硬解析哈希 cell。群体避让哈希同名，边长派生、不进配置。
 - `PhysicsBroadphaseCell`：physics broadphase cell。
 
 ## 现状名到目标名映射
@@ -130,6 +136,41 @@ Out of scope：
 | 板恒居中（无 origin 字段），以及 `OriginXCm` / `OriginYCm` | `Boards[].Anchor` | 格子角钉在作者写的点上。根板 `World` 为 `(0, 0)`。没写过原点的存量图，格子角留在 Ludots `(0, 0)` |
 | `GameConfig.WorldWidthInMacroTiles` 三件套 | map `World` 节 | 切 1：升格迁入，消灭双真相源 |
 
+群体模拟词汇（改名前 → 现行名）。配置旧键出现即失败，无别名。配置不再带 `version`，版本在 `mod.json`。标准参数在 `CrowdSimulationStandardMod`。
+
+| 改名前 | 现行名 | 说明 |
+|---|---|---|
+| `NavCellCount` / `CellCount` / `N` / `mapCellCount`（每边导航格数） | `NavCellsPerSide` | 派生，不进配置。格总数（每边数的平方）是 `NavCellTotal` |
+| `SurfaceGrid` / `NavHeightField` / `NavSurfaceAsset` 的 `CellSizeCm` | `NavCellSizeCm` | 导航格边长，厘米 |
+| `CellsX` / `CellsY` | `NavCellsX` / `NavCellsY` | 导航格宽高 |
+| `hpa.clusterSize`（格数，标准 16） | `navtile.sizeCm`（厘米，标准 100000） | 整除 `profiles[].cellSizeCm`，派生格数 4..128，且整除每边导航格数 |
+| `ClusterSize` / `T` / `tileCells` | `NavCellsPerTile` | 由 `navtile.sizeCm / profiles[].cellSizeCm` 派生 |
+| `ClustersPerSide` / `C` | `NavTilesPerSide` | 每边导航 tile 数 |
+| tile 总数 `cc` | `NavTileCount` | 个数 |
+| `HpaClusterBlock` | `HpaTileBlock` | HPA 的一块就是导航 tile |
+| `fog.cellCells`（倍数，标准 4） | `fog.cellSizeCm`（厘米，标准 25000） | 整除导航格，派生倍数 `NavCellsPerFogCell` 为 1..32 |
+| `FcsCm` / `F` / `K` / `G` | `FogCellSizeCm` / `FogCellsPerSide` / `NavCellsPerFogCell` / `VisionGroupCount` | 迷雾格边长、每边数、每格含几个导航格、视野组数 |
+| `CrowdSpatialHash.CellSize` / `Dim` | `CellSizeCm` / `CellsPerSide` | 避让哈希格，派生 |
+| `spawn.clusterSpacing` | `spawn.groupSpacingScale` | 无量纲，乘个人半径 |
+| `navmesh.minRegionArea` | `minRegionNavCellArea` | 导航格² |
+| `navmesh.maxSimplificationError` / `maxEdgeLen` | `maxSimplificationErrorNavCells` / `maxEdgeLenNavCells` | 导航格长度 |
+| `navmesh.portalInsetCells` | `portalInsetNavCells` | 栅格内缩 |
+| `hpa.maxEntranceWidth` | `maxEntranceWidthNavCells` | 边界扫描格数 |
+| `flowfield.corridorPadding` | `corridorPaddingNavTiles` | tile 掩码外扩 |
+| `movement.maxStepCells` | `maxStepNavCells` | 子步上限，导航格 |
+| `structures.portalCells` | `portalReachNavCells` | 上层入口腐蚀格数，现在写在各结构模板的 `effect` 里 |
+| `jump.rangeCells` | `rangeNavCells` | 链接候选格距，现在写在 `traversal.json` 的 `agentTypes.<id>.links.<kind>` 里 |
+| `formation.magicBoxPadCells` | `magicBoxPadCm` | 点选框外扩，世界厘米，与包围盒厘米坐标比较 |
+| `spawn.cellInset` | `navCellInsetFraction` | 格内比例 |
+| `formation.slotSightCells` / `slotArriveCells` / `goalArriveCells` / `settleRadiusCells` / `minClumpCells` | `slotSightCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 世界距离。装载时 `cm / navCellSizeCm` 再 `Fix64.FromDouble` |
+| `formation.leaderLookAhead` | `leaderLookAheadCm` | 世界距离，同上 |
+| `movement.wakeDistanceCells` | `wakeDistanceCm` | 世界距离，同上 |
+| `deploy.spreadCells` / `baseJitterCells` | `spreadCm` / `baseJitterCm` | 世界距离，同上 |
+| `formations[].spacing` / `formation.spacingScale` | `formations.<id>.spacingDiameterScale` / `spacingScale` | 无量纲。阵型表以 id 为键 |
+| `movement.laneSpread` | `laneSpreadSpeedRatio` | 乘速度 |
+| 公开坐标 `X` / `Y`、足迹 `R` / `W` | `XCm` / `YCm`、`RadiusCm` / `WidthCm` | 世界厘米 |
+| 拖线阵面 `FaceWidthM` | `FaceWidthCm` | 字段存的是厘米 |
+
 ## User Story
 
 US-0.1：作为接手导航的开发者，我要一份现状清单、目标命名和映射表，以便不再逆向猜每个尺度数字的含义。
@@ -138,7 +179,7 @@ Given 仓库存在 board/bake/MassNavigationFlow 多套尺度词；When 我打�
 
 US-0.2：作为评审者，我要尺度魔数集中到常量模块，以便新增代码不能重新散落 `256` / `64` / `100`。
 
-Given `SpatialScaleDefaults` 已落地；When 有人在 board/bake/MassNavigationFlow 代码中写入字面尺度；Then `NavigationSpatialScaleMagicNumberContractTests` 失败并输出文件与行号。
+Given `SpatialScaleDefaults` 已落地；When 有人在扫描根（板烘焙、`NavTileBuilder` / `MassNavigationFlow` / `FlowField`、群体模拟三处目录）写入字面 `256` / `64` / `100`，且该文件不是常驻豁免；Then `NavigationSpatialScaleMagicNumberContractTests` 失败并输出文件与行号。`src/Core/` 新增一级目录未登记也失败。
 
 ## UAT Showcase（钉死）
 
@@ -173,6 +214,28 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | `MassNavigationFlowSolverConfig.flowCellSizeCm` | `FlowCell` | cm | > 0 | MassNavigationFlow solver |
 | `MassNavigationFlowSolverConfig.separationHashCellSizeCm` | `AvoidanceHashCell` | cm | > 0 | MassNavigationFlow solver |
 | `MassNavigationFlowSolverConfig.hardResolveHashCellSizeCm` | `AvoidanceHashCell` | cm | > 0 | MassNavigationFlow solver |
+| `profiles[].cellSizeCm` | `NavCell` | cm | > 0，整除板宽；每边数 16..1024。本会话用到的能力档必须相同 | `Navigation/navmesh.json` |
+| `navtile.sizeCm` | `NavTile`（群体） | cm | 整除 `profiles[].cellSizeCm`；派生格数 4..128；整除每边导航格数。标准 100000 | `CrowdSimulationConfig.json` |
+| `fog.cellSizeCm` | `FogCell` | cm | ≥ 100，整除 `profiles[].cellSizeCm`，派生倍数 1..32。标准 25000。主干 Vision 的迷雾格是另一张表：`fog_layers[].cellSizeCm` | `CrowdSimulationConfig.json`；Vision `assets/Vision/fog_layers.json` |
+| `navmesh.minRegionNavCellArea` | 区域面积阈值 | 导航格² | 声明式范围 | `CrowdSimulationConfig.json` |
+| `navmesh.maxSimplificationErrorNavCells` / `maxEdgeLenNavCells` / `portalInsetNavCells` | 轮廓与 portal | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
+| `hpa.maxEntranceWidthNavCells` | HPA 入口宽 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
+| `flowfield.corridorPaddingNavTiles` | 走廊外扩 | 导航 tile | 声明式范围 | `CrowdSimulationConfig.json` |
+| `movement.maxStepNavCells` | 子步上限 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
+| `structures.templates.<id>.effect.portalReachNavCells` | 上层入口可达 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
+| `agentTypes.<id>.links.<kind>.rangeNavCells` | 链接格距 | 导航格 | 与 `.navsurface` 候选比较 | `CrowdSimulation/traversal.json` |
+| `formation.magicBoxPadCm` | 点选框外扩 | cm | 直接当厘米用，标准 6250。与包围盒厘米坐标比较 | `CrowdSimulationConfig.json` |
+| `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0..1 | `CrowdSimulationConfig.json` |
+| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 装载时除以 `profiles[].cellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
+| `formation.magicBoxMaxSpreadCm` | 点选框最大跨度 | cm | 直接当厘米用，`Fix64.FromDouble`，标准 250000 | `CrowdSimulationConfig.json` |
+| `movement.wakeDistanceCm` | 唤醒距离 | cm | 装载时除以 `profiles[].cellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
+| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 装载时除以 `profiles[].cellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
+| `fog.visionCm` / `fog.eyeCm` | 视野半径 / 眼高 | cm | 视野半径相对迷雾格对角线有上限 | `CrowdSimulationConfig.json` |
+| `spawn.groupSpacingScale` | 部署团间距 | 无量纲 | 乘个人半径 | `CrowdSimulationConfig.json` |
+| `formations.<id>.spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 乘直径或个人间距 | `CrowdSimulationConfig.json` |
+| `movement.laneSpreadSpeedRatio` | 车道展开 | 速度比 | 乘速度 | `CrowdSimulationConfig.json` |
+
+阵型距离、唤醒距离和部署散布在装载器里用 double 做 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。`magicBoxPadCm` 与 `magicBoxMaxSpreadCm` 的厘米值直接 `Fix64.FromDouble`。栅格算法量保持导航格或导航 tile 计数。
 
 更短的查表入口见 `gitbook/reference/spatial-scale-configuration.md`。
 
@@ -183,7 +246,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | 修改板的 `Grid.CellSizeCm` | 厘米矩形不变，格数按除法向下取整变化 | 板范围 contract |
 | 修改 `PartitionChunkCells` 或 `ChunkSizeCells` | spatial query/AOI 分区粒度变化，世界范围不变化 | 现有 spatial partition tests + #283 补充 |
 | 修改 `FlowCellSizeCm` | MassNavigationFlow grid 宽高按 `FieldWidthCm / FlowCellSizeCm` 改变 | 现有 `MassNavigationFlowSolverStateConfigurationTests` + #288 补充 |
-| 在 board/bake/MassNavigationFlow 代码内联 `256` / `64` / `100` | 不允许 | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号 |
+| 在扫描根（板烘焙、`NavTileBuilder` / `MassNavigationFlow` / `FlowField`、群体模拟三处目录）内联 `256` / `64` / `100` | 不允许。常驻豁免只有 `SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs` | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号；`src/Core/` 一级目录未登记同样失败 |
 | 修改 map `World.WidthCm/HeightCm`（#1567 切 1 后） | 世界边界、越界校验、minimap 全图按声明变化；地形数据页数为派生值 | #1567 切 1 contract：World 派生链 + 全 mod 扫描 |
 | 修改 `Boards[].Anchor` | 格子角移到 `World − Local`，矩形跟着走。根板世界范围仍是根板自己的厘米矩形 | 锚点 contract：根板 `World` 必须是 `(0, 0)`；拓扑原点不在 Ludots 原点的板暂不参与导航 |
 | 修改 navmesh.json `tileWorldWidthCm/HeightCm`（#1567 切 3 后） | nav 瓦片颗粒度与重烤预算变化，板范围与地形块不变 | #1567 切 3 contract |
@@ -204,7 +267,7 @@ NAV-0 不合并任何外部分支，不试合 PR #235/#186。复用项：
 - 无 fallback：NAV-0 不新增任何缺失配置兜底。
 - 无重复数据源：`TerrainPageCells` 引用 `MapTile.Size`；`WorldExtentSpec` 产出 `WorldSizeSpec`，不替换。
 - 大小写严格 fail-fast：本步不改变 loader；后续 #283/#285/#287 迁移时沿用严格 loader。
-- 附 contract test：`NavigationSpatialScaleMagicNumberContractTests` 扫描 board/bake/MassNavigationFlow 代码。
+- 附 contract test：`NavigationSpatialScaleMagicNumberContractTests` 扫描板烘焙、MassNavigationFlow 与群体模拟目录，常驻豁免 `SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs`。`src/Core/` 一级目录必须登记为扫描根或“未纳入扫描”。`SpatialVocabularyContractTests` 钉住群体配置后缀、退役键名和米域文件范围。
 - 更新 GitBook：本页加入 `gitbook/architecture/README.md` 与 `gitbook/SUMMARY.md`，配置查表加入 `gitbook/reference/`。
 - 回链总单：本文回链 #281 与 #282。
 - #1567 回链：四域归位每一切的 owner、键位与派生规则变更，以本页层级表/映射表为唯一词汇来源，切 PR 回链 #1567。

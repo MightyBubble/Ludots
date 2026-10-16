@@ -96,6 +96,42 @@ flowchart TD
 - `TerrainPage`（地形数据页） 只用于 IO/寻址地形数据页和世界范围 authoring；不要拿它解释 streaming chunk 或 terrain chunk。
 - 障碍数据源仍使用 `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState`。
 
+## 群体模拟
+
+群体模拟的格不从 `CellCm` 派生。权威定义在架构页层级表的 `NavCell`、`NavTile`（群体）、`FogCell`、`AvoidanceHashCell`。导航格边长写在 `Navigation/navmesh.json` 的能力档 `profiles[].cellSizeCm`。其余标准参数在 `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json`，文件不再带 `version`。下表的旧键出现即失败。怎么拆 Mod、怎么覆盖、时钟写在哪，见架构页「作者怎么配」。
+
+| 配置 | 目标概念 | 单位 | 标准值 | 含义 / 约束 |
+|---|---|---:|---:|---|
+| `profiles[].cellSizeCm` | `NavCell` | cm | 6250 | 导航格边长。每边数 = 板宽 ÷ 边长，16..1024，不进配置。板格 `Boards[].Grid.CellSizeCm` 不参与这条换算。 |
+| `navtile.sizeCm` | `NavTile`（群体） | cm | 100000 | 导航 tile 边长，也是 HPA 的一块。整除导航格边长；派生格数 4..128；整除每边导航格数。地形 navmesh 的 64 板格足迹是另一行。 |
+| `fog.cellSizeCm` | `FogCell` | cm | 25000 | 群体迷雾格边长。≥ 100 cm，整除导航格边长，派生倍数 1..32。主干 Vision 的迷雾格写在 `assets/Vision/fog_layers.json` 的 `fog_layers[].cellSizeCm`，owner 分开。 |
+| `navmesh.minRegionNavCellArea` | 区域阈值 | 导航格² | 12 | 栅格算法量，数字是格数。 |
+| `navmesh.maxSimplificationErrorNavCells` / `maxEdgeLenNavCells` / `portalInsetNavCells` | 轮廓 / portal | 导航格 | 1.3 / 12 / 0.5 | 栅格算法量。 |
+| `hpa.maxEntranceWidthNavCells` | HPA 入口 | 导航格 | 6 | 边界扫描格数。旧键 `hpa.clusterSize` 已删除，边长改 `navtile.sizeCm`。 |
+| `flowfield.corridorPaddingNavTiles` | 走廊外扩 | 导航 tile | 1 | tile 掩码外扩。 |
+| `movement.maxStepNavCells` | 子步上限 | 导航格 | 0.45 | 防穿格。 |
+| `structures.templates.<id>.effect.portalReachNavCells` | 上层入口 | 导航格 | 4 | `surface` 效果的入口格数，每个模板各写各的。 |
+| `agentTypes.<id>.links.<kind>.rangeNavCells` | 链接 | 导航格 | 按移动类型 | 写在 `CrowdSimulation/traversal.json`。与 `.navsurface` 候选的格距比较。 |
+| `formation.magicBoxPadCm` | 点选框外扩 | cm | 6250 | 世界厘米，与包围盒厘米坐标比较。 |
+| `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0.02 | 0..1。 |
+| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 100000 / 37500 / 2187.5 / 6250 / 12500 / 9375 | 装载时 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。 |
+| `formation.magicBoxMaxSpreadCm` | 点选框最大跨度 | cm | 250000 | 直接当厘米用，`Fix64.FromDouble`。 |
+| `movement.wakeDistanceCm` | 唤醒 | cm | 12500 | 装载时 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。 |
+| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 187500 / 125000 | 装载时 `厘米 / profiles[].cellSizeCm`，再 `Fix64.FromDouble`。 |
+| `fog.visionCm` / `fog.eyeCm` | 视野 / 眼高 | cm | 80000 / 1000 | 视野半径相对迷雾格有上限。 |
+| `spawn.groupSpacingScale` | 团间距 | 无量纲 | 2.2 | 乘个人半径。旧键 `spawn.clusterSpacing`。 |
+| `formations.<id>.spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 1 或 1.8 / 1.1 | 乘直径或个人间距。键是阵型 id。 |
+| `movement.laneSpreadSpeedRatio` | 车道展开 | 速度比 | 0.5 | 乘速度。 |
+| `movement.blendRatePerSec` / `stallDecayPerSec` | 混合 / 卡住衰减 | 1/仿真秒 | 2.5 / 0.5 | `min(1, rate × dt)`；卡住计时按 `dt × stallDecayPerSec` 衰减。 |
+| `formation.leaderTurnRatePerSec` | 领队转向 | 1/仿真秒 | 3 | `min(1, dt × leaderTurnRatePerSec)`。 |
+| `avoidance.accelerationPerSec` | 分离加速 | 1/仿真秒 | 4 | `1 − exp(−accelerationPerSec × dt)`，dt 为子步仿真秒。 |
+| `movement.unitTurnRateRadPerSec` | 单位转向 | 弧度/仿真秒 | 2.5 | `unitTurnRateRadPerSec × dt`。 |
+| `movement.slotCheckIntervalSubSteps` | 槽位视线检查 | 子步 | 4 | 每隔这么多子步查一次，按单位句柄错峰。 |
+
+旧键 `movement.blendRate`、`movement.stallDecay`、`formation.leaderTurnRate`、`avoidance.acceleration`、`movement.unitTurnRate`、`movement.slotCheckInterval` 出现即失败。
+
+避让哈希格 `CrowdSpatialHash.CellSizeCm` / `CellsPerSide` 由半径和 `avoidance.hashRings` 派生，没有边长配置键。
+
 ## 四域归位目标键位（#1567）
 
 空间配置按世界/板/导航/执行四域归位后，authoring 键位与 owner 如下；各切合入前现状键仍生效，旧键在新键生效后 fail-fast。

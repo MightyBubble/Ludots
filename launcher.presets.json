@@ -3736,6 +3736,123 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_1337_raylib",
+      "name": "CrowdSimulation S1 Terrain (seed 1337) Raylib",
+      "selectors": [
+        "$crowd_simulation_s1_terrain_1337"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_2024_raylib",
+      "name": "CrowdSimulation S1 Terrain (seed 2024) Raylib",
+      "selectors": [
+        "$crowd_simulation_s1_terrain_2024"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_7_raylib",
+      "name": "CrowdSimulation S1 Terrain (seed 7) Raylib",
+      "selectors": [
+        "$crowd_simulation_s1_terrain_7"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s3_path_1337_raylib",
+      "name": "CrowdSimulation S3 Path (seed 1337) Raylib",
+      "selectors": [
+        "$crowd_simulation_s3_path_1337"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s4_deploy_1337_raylib",
+      "name": "CrowdSimulation S4 Deploy (seed 1337) Raylib",
+      "selectors": [
+        "$crowd_simulation_s4_deploy_1337"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_minimal_raylib",
+      "name": "CrowdSimulation Minimal Raylib",
+      "selectors": [
+        "$crowd_simulation_minimal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_march_raylib",
+      "name": "CrowdSimulation Showcase March Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_march"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_reversal_raylib",
+      "name": "CrowdSimulation Showcase Reversal Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_reversal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_repeat_click_raylib",
+      "name": "CrowdSimulation Showcase Repeat Click Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_repeat_click"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_fog_explore_raylib",
+      "name": "CrowdSimulation Showcase Fog Explore Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_fog_explore"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_fog_reroute_raylib",
+      "name": "CrowdSimulation Showcase Fog Reroute Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_fog_reroute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_fog_shared_vision_raylib",
+      "name": "CrowdSimulation Showcase Fog Shared Vision Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_fog_shared_vision"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_showcase_stress_50k_raylib",
+      "name": "CrowdSimulation Showcase Stress 50k Raylib",
+      "selectors": [
+        "$crowd_simulation_showcase_stress_50k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

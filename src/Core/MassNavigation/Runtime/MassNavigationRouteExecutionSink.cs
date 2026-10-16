@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 
@@ -10,7 +11,6 @@ namespace Ludots.Core.MassNavigation.Runtime;
 public enum MassNavigationRouteSinkStatus : byte
 {
     Applied = 0,
-    NoConfiguredAgentType = 1,
     ServiceMissing = 2,
     SolveFailed = 3,
     CopyFailed = 4,
@@ -84,9 +84,13 @@ public sealed class MassNavigationRouteExecutionSink
     private readonly PathDomain[] _snapshotResolvedDomains;
     private readonly bool[] _snapshotRouteReady;
     private readonly bool[] _snapshotForceResetNextApply;
+    private readonly bool[] _snapshotNavPublicationKnown;
+    private readonly int[] _snapshotNavLayer;
+    private readonly int[] _snapshotNavProfile;
+    private readonly uint[] _snapshotNavRevision;
     private readonly int[] _snapshotPointXCm;
     private readonly int[] _snapshotPointYCm;
-    private PathingAgentTypeConfig[] _agentTypesByProfileId = Array.Empty<PathingAgentTypeConfig>();
+    private readonly Dictionary<string, PathingAgentTypeConfig> _agentTypesById;
     private readonly int[] _xScratch;
     private readonly int[] _yScratch;
     private int _syncPlanCount;
@@ -126,6 +130,10 @@ public sealed class MassNavigationRouteExecutionSink
         _snapshotResolvedDomains = new PathDomain[routeStateCapacity];
         _snapshotRouteReady = new bool[routeStateCapacity];
         _snapshotForceResetNextApply = new bool[routeStateCapacity];
+        _snapshotNavPublicationKnown = new bool[routeStateCapacity];
+        _snapshotNavLayer = new int[routeStateCapacity];
+        _snapshotNavProfile = new int[routeStateCapacity];
+        _snapshotNavRevision = new uint[routeStateCapacity];
         _snapshotPointXCm = new int[routeStateCapacity * waypointCapacityPerAgent];
         _snapshotPointYCm = new int[routeStateCapacity * waypointCapacityPerAgent];
         for (int i = 0; i < routeStateCapacity; i++)
@@ -135,7 +143,7 @@ public sealed class MassNavigationRouteExecutionSink
 
         _xScratch = new int[waypointCapacityPerAgent];
         _yScratch = new int[waypointCapacityPerAgent];
-        RebuildProfileIndex();
+        _agentTypesById = BuildAgentTypeIndex(pathingConfig);
     }
 
     public int ActiveRouteCount => _routesByKey.Count;
@@ -194,7 +202,7 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         MassNavigationAgent authoredAgent = world.Get<MassNavigationAgent>(agent);
-        _ = TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType);
+        PathingAgentTypeConfig agentType = RequireAgentType(authoredAgent.AgentTypeId);
 
         if (!_syncInProgress)
         {
@@ -260,10 +268,11 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: agentIndex);
         }
 
-        if (!TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType))
+        // 命令组校验只记失败。模板上的未知 agentTypeId 在地图绑定点抛。
+        if (!TryResolveAgentType(authoredAgent.AgentTypeId, out _))
         {
             return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
+                MassNavigationRouteSinkStatus.InvalidRequest,
                 PathStatus.InvalidRequest,
                 PathDomain.None,
                 default,
@@ -519,6 +528,10 @@ public sealed class MassNavigationRouteExecutionSink
         _snapshotResolvedDomains[slot] = state.ResolvedDomain;
         _snapshotRouteReady[slot] = state.RouteReady;
         _snapshotForceResetNextApply[slot] = state.ForceResetNextApply;
+        _snapshotNavPublicationKnown[slot] = state.NavPublicationKnown;
+        _snapshotNavLayer[slot] = state.NavLayer;
+        _snapshotNavProfile[slot] = state.NavProfile;
+        _snapshotNavRevision[slot] = state.NavRevision;
 
         int offset = slot * _waypointCapacityPerAgent;
         Array.Copy(state.PointXCm, 0, _snapshotPointXCm, offset, state.PointCount);
@@ -538,6 +551,10 @@ public sealed class MassNavigationRouteExecutionSink
             state.ResolvedDomain = _snapshotResolvedDomains[slot];
             state.RouteReady = _snapshotRouteReady[slot];
             state.ForceResetNextApply = _snapshotForceResetNextApply[slot];
+            state.NavPublicationKnown = _snapshotNavPublicationKnown[slot];
+            state.NavLayer = _snapshotNavLayer[slot];
+            state.NavProfile = _snapshotNavProfile[slot];
+            state.NavRevision = _snapshotNavRevision[slot];
 
             int offset = slot * _waypointCapacityPerAgent;
             Array.Copy(_snapshotPointXCm, offset, state.PointXCm, 0, state.PointCount);
@@ -579,26 +596,24 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: state.AgentIndex);
         }
 
-        bool hasAgentType = TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType);
-        if (!hasAgentType)
-        {
-            state.InvalidateRoute();
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                orderToken: state.OrderToken,
-                agentIndex: state.AgentIndex);
-        }
+        PathingAgentTypeConfig agentType = RequireAgentType(authoredAgent.AgentTypeId);
 
         if (authoredAgent.ProfileId != state.ProfileId ||
             !string.Equals(agentType.Id, state.AgentTypeId, StringComparison.Ordinal))
         {
             state.ProfileId = authoredAgent.ProfileId;
             state.AgentTypeId = agentType.Id;
+            state.InvalidateRoute();
+        }
+
+        if (state.RouteReady &&
+            state.NavPublicationKnown &&
+            _pathService.TryReadNavPublication(state.AgentTypeId ?? string.Empty, out int layer, out int profile, out uint revision) &&
+            (layer != state.NavLayer || profile != state.NavProfile || revision != state.NavRevision))
+        {
+            Log.Info(
+                in LogChannels.Navigation,
+                $"MassNavigation route invalidated: agentType={state.AgentTypeId} layer={state.NavLayer} profile={state.NavProfile} solvedRevision={state.NavRevision} storeRevision={revision}");
             state.InvalidateRoute();
         }
 
@@ -704,16 +719,8 @@ public sealed class MassNavigationRouteExecutionSink
     {
         if (string.IsNullOrWhiteSpace(state.AgentTypeId))
         {
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                destinationWorldCm: state.DestinationWorldCm,
-                orderToken: state.OrderToken,
-                agentIndex: state.AgentIndex);
+            throw new InvalidOperationException(
+                "MassNavigationAgent.agentTypeId 为空，不在 Navigation/pathing.json 的 agentTypes 里。");
         }
 
         Vector2 startWorldCm = simulation.GetAgentWorldPositionCm(state.AgentIndex);
@@ -826,6 +833,7 @@ public sealed class MassNavigationRouteExecutionSink
         state.IsPartialRoute = partial;
         state.RouteReady = true;
         state.ForceResetNextApply = true;
+        RecordNavPublication(state);
         AdvanceWaypointCursor(simulation, state);
         return new MassNavigationRouteSinkResult(
             MassNavigationRouteSinkStatus.Applied,
@@ -840,52 +848,71 @@ public sealed class MassNavigationRouteExecutionSink
             agentIndex: state.AgentIndex);
     }
 
-    private bool TryResolveAgentType(int profileId, out PathingAgentTypeConfig agentType)
+    private void RecordNavPublication(RouteState state)
     {
-        if ((uint)profileId < (uint)_agentTypesByProfileId.Length)
+        if (state.ResolvedDomain != PathDomain.NavMesh)
         {
-            agentType = _agentTypesByProfileId[profileId];
-            return agentType != null;
+            state.ClearNavPublication();
+            return;
+        }
+
+        if (!_pathService.TryReadNavPublication(state.AgentTypeId ?? string.Empty, out int layer, out int profile, out uint revision))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation 路线已按网格求解，但读不到移动类型 \"{state.AgentTypeId}\" 的瓦片发布。");
+        }
+
+        state.NavPublicationKnown = true;
+        state.NavLayer = layer;
+        state.NavProfile = profile;
+        state.NavRevision = revision;
+    }
+
+    private PathingAgentTypeConfig RequireAgentType(string agentTypeId)
+    {
+        if (!TryResolveAgentType(agentTypeId, out PathingAgentTypeConfig agentType))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationAgent.agentTypeId \"{agentTypeId}\" 不在 Navigation/pathing.json 的 agentTypes 里。");
+        }
+
+        return agentType;
+    }
+
+    private bool TryResolveAgentType(string agentTypeId, out PathingAgentTypeConfig agentType)
+    {
+        if (!string.IsNullOrWhiteSpace(agentTypeId) && _agentTypesById.TryGetValue(agentTypeId, out agentType))
+        {
+            return true;
         }
 
         agentType = null!;
         return false;
     }
 
-    private void RebuildProfileIndex()
+    private static Dictionary<string, PathingAgentTypeConfig> BuildAgentTypeIndex(PathingConfig pathingConfig)
     {
-        int maxProfileId = 0;
-        for (int i = 0; i < _pathingConfig.AgentTypes.Count; i++)
+        var byId = new Dictionary<string, PathingAgentTypeConfig>(StringComparer.Ordinal);
+        if (pathingConfig.AgentTypes == null)
         {
-            PathingAgentTypeConfig agentType = _pathingConfig.AgentTypes[i];
-            if (agentType == null)
+            return byId;
+        }
+
+        for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+        {
+            PathingAgentTypeConfig agentType = pathingConfig.AgentTypes[i];
+            if (agentType == null || string.IsNullOrWhiteSpace(agentType.Id))
             {
                 continue;
             }
 
-            if (MassNavigationProfileRegistry.TryGetId(agentType.ProfileId, out int profileId) && profileId > maxProfileId)
+            if (!byId.TryAdd(agentType.Id, agentType))
             {
-                maxProfileId = profileId;
+                throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agentType.Id}'.");
             }
         }
 
-        _agentTypesByProfileId = maxProfileId > 0
-            ? new PathingAgentTypeConfig[maxProfileId + 1]
-            : Array.Empty<PathingAgentTypeConfig>();
-
-        for (int i = 0; i < _pathingConfig.AgentTypes.Count; i++)
-        {
-            PathingAgentTypeConfig agentType = _pathingConfig.AgentTypes[i];
-            if (agentType == null)
-            {
-                continue;
-            }
-
-            if (MassNavigationProfileRegistry.TryGetId(agentType.ProfileId, out int profileId))
-            {
-                _agentTypesByProfileId[profileId] = agentType;
-            }
-        }
+        return byId;
     }
 
     private void EnsureScratch(int required)
@@ -1041,6 +1068,10 @@ public sealed class MassNavigationRouteExecutionSink
         public PathDomain ResolvedDomain { get; set; }
         public bool RouteReady { get; set; }
         public bool ForceResetNextApply { get; set; }
+        public bool NavPublicationKnown { get; set; }
+        public int NavLayer { get; set; }
+        public int NavProfile { get; set; }
+        public uint NavRevision { get; set; }
 
         public Vector2 CurrentWaypointWorldCm
         {
@@ -1063,6 +1094,15 @@ public sealed class MassNavigationRouteExecutionSink
             LastAppliedWaypointIndex = -1;
             ResolvedDomain = PathDomain.None;
             ForceResetNextApply = true;
+            ClearNavPublication();
+        }
+
+        public void ClearNavPublication()
+        {
+            NavPublicationKnown = false;
+            NavLayer = 0;
+            NavProfile = 0;
+            NavRevision = 0;
         }
 
         public void Reset(long key, int orderToken, int agentIndex)
