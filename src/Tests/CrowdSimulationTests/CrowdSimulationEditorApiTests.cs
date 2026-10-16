@@ -280,7 +280,7 @@ public class CrowdSimulationEditorApiTests
         JsonObject view = UnitTemplates(CrowdSimulationEditorApi.Load(FindRepoRoot(), Minimal));
         string[] schema = ((JsonArray)view["fields"]!).Select(field => Text((JsonObject)field!, "name")).ToArray();
         Assert.That(schema, Is.EqualTo(CrowdUnitTemplateFacts.AuthoredFields.Select(field => field.Name).ToArray()));
-        Assert.That(view["agentTypes"]!.ToJsonString(), Does.Contain("\"foot\""));
+        Assert.That(view["agentProfiles"]!.ToJsonString(), Does.Contain("\"navProfileId\":\"foot\""));
 
         JsonObject unit = Item(view, MinimalUnit);
         Assert.That(Flag(unit, "ownedBySelection"), Is.True);
@@ -400,10 +400,10 @@ public class CrowdSimulationEditorApiTests
         try
         {
             JsonObject draft = TemplatesDraft(Minimal, copy);
-            Agent(draft, MinimalUnit)["agentTypeId"] = "hover";
+            Profile(draft, "crowd_minimal_unit")["navProfileId"] = "hover";
             JsonObject result = CrowdSimulationEditorApi.Validate(FindRepoRoot(), Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
-            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("agentTypeId \\u0022hover\\u0022").Or.Contain("agentTypeId \"hover\""));
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("navProfileId").And.Contain("hover"));
             Assert.That(result["issues"]!.ToJsonString(), Does.Contain("CrowdSimulation/traversal.json"));
         }
         finally

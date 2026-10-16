@@ -568,25 +568,19 @@ public sealed class CrowdSimulationConfigLoader
                 throw new InvalidOperationException($"Entities/templates.json: 模板 \"{template.TemplateId}\" 重复。");
             }
 
-            if (!traversal.TryGetRow(template.AgentTypeId, out _))
-            {
-                throw new InvalidOperationException(
-                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的 agentTypeId \"{template.AgentTypeId}\" 不在 {CrowdTraversalConfig.RelativePath} 的 agentTypes 里。");
-            }
-
             if (!profileById.TryGetValue(template.ProfileId, out var body))
             {
                 throw new InvalidOperationException(
                     $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的 profileId \"{template.ProfileId}\" 不在 Navigation/agent_profiles.json。");
             }
 
-            if (!string.Equals(body.NavProfileId, template.AgentTypeId, StringComparison.Ordinal))
+            if (!traversal.TryGetRow(body.NavProfileId, out _))
             {
                 throw new InvalidOperationException(
-                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的档案 \"{body.Id}\" 的 navProfileId 是 \"{body.NavProfileId}\"，群体要求它等于移动类型 \"{template.AgentTypeId}\"。");
+                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的档案 \"{body.Id}\" 的 navProfileId \"{body.NavProfileId}\" 不在 {CrowdTraversalConfig.RelativePath} 的 agentTypes 里。");
             }
 
-            referencedAgentIds.Add(template.AgentTypeId);
+            referencedAgentIds.Add(body.NavProfileId);
         }
 
         var selectedRows = new List<TraversalRow>();
@@ -606,7 +600,7 @@ public sealed class CrowdSimulationConfigLoader
 
         foreach (var template in templates)
         {
-            membersByAgent[agentIndexById[template.AgentTypeId]].Add(template);
+            membersByAgent[agentIndexById[profileById[template.ProfileId].NavProfileId]].Add(template);
         }
 
         var avoidance = Fix64.FromDouble(config.Agents.AvoidanceRadiusScale);

@@ -237,7 +237,7 @@ public class NavSchemaAuditTests
     [Test]
     public void Template_MissingEachRequiredField_Fails()
     {
-        string[] fields = { "profileId", "agentTypeId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "special" };
+        string[] fields = { "profileId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "special" };
         foreach (string field in fields)
         {
             JsonObject template = FullTemplate();
@@ -304,7 +304,7 @@ public class NavSchemaAuditTests
         Entity entity = world.Create();
         InvalidOperationException agentType = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "agentType": "foot" }""")!))!;
-        Assert.That(agentType.Message, Does.Contain("agentTypeId"));
+        Assert.That(agentType.Message, Does.Contain("unsupported property 'agentType'"));
 
         InvalidOperationException radiusClass = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "radiusClassCm": 100 }""")!))!;
@@ -366,7 +366,6 @@ public class NavSchemaAuditTests
         => JsonNode.Parse("""
             {
               "profileId": "foot_r100",
-              "agentTypeId": "foot",
               "speedCmPerSecond": 1400,
               "personalRadiusCm": 600,
               "pushPriority": 2,

@@ -195,22 +195,23 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void TemplateAgentType_NotInPathing_IsRejected()
+    public void TemplateNavProfile_NotInTraversal_IsRejected()
     {
         var templates = TestDefaults.DemoTemplates();
         var first = templates[0];
-        templates[0] = new CrowdUnitTemplateFacts
+        var profiles = TestDefaults.DemoProfiles();
+        var list = new List<Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig>(profiles.Count);
+        for (int i = 0; i < profiles.Count; i++)
         {
-            TemplateId = first.TemplateId,
-            ProfileId = first.ProfileId,
-            AgentTypeId = "ghost",
-            SpeedCmPerSecond = first.SpeedCmPerSecond,
-            PersonalRadiusCm = first.PersonalRadiusCm,
-            PushPriority = first.PushPriority,
-            Special = first.Special,
-        };
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
-        Assert.That(ex!.Message, Does.Contain("ghost"));
+            list.Add(profiles[i]);
+        }
+
+        list.Single(profile => profile.Id == first.ProfileId).NavProfileId = "ghost";
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(
+            profiles: new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(list),
+            templates: templates));
+        Assert.That(ex!.Message, Does.Contain("navProfileId"));
+        Assert.That(ex.Message, Does.Contain("ghost"));
         Assert.That(ex.Message, Does.Contain(first.TemplateId));
     }
 
@@ -218,7 +219,8 @@ public class CrowdSimulationConfigTests
     public void PathingAgentType_WithoutTemplate_IsNotBound()
     {
         var templates = TestDefaults.DemoTemplates();
-        templates.RemoveAll(item => item.AgentTypeId == "foot");
+        var profiles = TestDefaults.DemoProfiles();
+        templates.RemoveAll(item => profiles.Require(item.ProfileId, item.TemplateId).NavProfileId == "foot");
         var runtime = TestDefaults.Assemble(templates: templates);
         Assert.That(runtime.AgentTypes.Any(agent => agent.Id == "foot"), Is.False);
         Assert.That(runtime.AgentTypes[0].Id, Is.EqualTo("hull"));

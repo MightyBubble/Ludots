@@ -66,23 +66,14 @@ public class TemplatePipelineIntegrationTests
             var agent = session.World.Get<CrowdSimulationAgent>(entity);
             var templateNode = wiring.TemplateRegistry.Get(templateId)!.Components["CrowdSimulationAgent"]!;
             string profileId = templateNode["profileId"]!.GetValue<string>();
-            string agentTypeId = templateNode["agentTypeId"]!.GetValue<string>();
             int expectedProfile = -1;
+            int expectedAgent = -1;
             for (int p = 0; p < runtime.Profiles.Count; p++)
             {
                 if (runtime.Profiles[p].Id == profileId)
                 {
                     expectedProfile = p;
-                    break;
-                }
-            }
-
-            int expectedAgent = -1;
-            for (int a = 0; a < runtime.AgentTypes.Count; a++)
-            {
-                if (runtime.AgentTypes[a].Id == agentTypeId)
-                {
-                    expectedAgent = runtime.AgentTypes[a].AgentTypeIndex;
+                    expectedAgent = runtime.Profiles[p].AgentTypeIndex;
                     break;
                 }
             }
@@ -91,7 +82,7 @@ public class TemplatePipelineIntegrationTests
             Assert.That(agent.ProfileIndex, Is.EqualTo(expectedProfile),
                 $"单位 {handle:x} 档案下标应在生成时从模板 profileId 解析");
             Assert.That(agent.AgentTypeIndex, Is.EqualTo(expectedAgent),
-                $"单位 {handle:x} 移动类型下标应在生成时从模板 agentTypeId 解析");
+                $"单位 {handle:x} 移动类型下标应在生成时从体型 navProfileId 解析");
             Assert.That(agent.PersonalRadiusCm, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["personalRadiusCm"]!.GetValue<int>())),
                 $"单位 {handle:x} 个人半径应来自模板写真");
             Assert.That(agent.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["pushPriority"]!.GetValue<int>())),

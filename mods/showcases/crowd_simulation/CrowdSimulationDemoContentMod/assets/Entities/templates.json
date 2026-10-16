@@ -7,7 +7,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r100",
-        "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 600,
         "pushPriority": 2,
@@ -23,7 +22,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r200",
-        "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
@@ -39,7 +37,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r300",
-        "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
@@ -55,7 +52,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "foot_r400",
-        "agentTypeId": "foot",
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
@@ -71,7 +67,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r100",
-        "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 600,
         "pushPriority": 2,
@@ -87,7 +82,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r200",
-        "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
@@ -103,7 +97,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r300",
-        "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
@@ -119,7 +112,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "hull_r400",
-        "agentTypeId": "hull",
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
@@ -135,7 +127,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r100",
-        "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 600,
         "pushPriority": 3,
@@ -151,7 +142,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r200",
-        "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1200,
         "pushPriority": 4,
@@ -167,7 +157,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r300",
-        "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1800,
         "pushPriority": 5,
@@ -183,7 +172,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "climber_r400",
-        "agentTypeId": "climber",
         "speedCmPerSecond": 800,
         "personalRadiusCm": 2400,
         "pushPriority": 6,
@@ -199,7 +187,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r100",
-        "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 600,
         "pushPriority": 1,
@@ -215,7 +202,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r200",
-        "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1200,
         "pushPriority": 2,
@@ -231,7 +217,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r300",
-        "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1800,
         "pushPriority": 3,
@@ -247,7 +232,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "amphib_r400",
-        "agentTypeId": "amphib",
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 2400,
         "pushPriority": 4,
@@ -263,7 +247,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r100",
-        "agentTypeId": "leaper",
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 600,
         "pushPriority": 2,
@@ -279,7 +262,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r200",
-        "agentTypeId": "leaper",
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
@@ -295,7 +277,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r300",
-        "agentTypeId": "leaper",
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
@@ -311,7 +292,6 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "leaper_r400",
-        "agentTypeId": "leaper",
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 2400,
         "pushPriority": 5,

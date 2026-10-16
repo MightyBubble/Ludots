@@ -24,7 +24,7 @@ const draft = JSON.stringify(
         id: 'crowd_minimal.unit',
         components: {
           Name: { Value: 'crowd_minimal.unit' },
-          CrowdSimulationAgent: { profileId: 'crowd_minimal_unit', agentTypeId: 'foot', speedCmPerSecond: 1400, special: false },
+          CrowdSimulationAgent: { profileId: 'crowd_minimal_unit', speedCmPerSecond: 1400, special: false },
         },
       },
       { id: 'derived.unit', extends: 'crowd_minimal.unit' },
@@ -44,7 +44,7 @@ assert(authoredValue('string', 'hover') === 'hover', 'string fields store text a
 
 const faster = setAgentField(draft, component, 'crowd_minimal.unit', 'speedCmPerSecond', 1650);
 assert(draftAgent(faster, component, 'crowd_minimal.unit')?.speedCmPerSecond === 1650, 'speed edit lands in the draft');
-assert(draftAgent(faster, component, 'crowd_minimal.unit')?.agentTypeId === 'foot', 'other fields stay');
+assert(draftAgent(faster, component, 'crowd_minimal.unit')?.profileId === 'crowd_minimal_unit', 'other fields stay');
 assert(JSON.parse(faster).agentProfiles[0].radiusCm === 150, 'other draft sections stay');
 assert(faster.includes('\n  "unitTypes": [\n'), 'draft keeps two-space indentation');
 
@@ -91,7 +91,7 @@ assert(issuesFor(issues, 'other').length === 1, 'omission issues are matched by 
 assert(issueForField(mine, 'speedCmPerSecond') === issues[0], 'speed issue is attached to the speed field');
 assert(issueForField(mine, 'personalRadiusCm') === issues[1], 'mismatch issue is attached to personalRadiusCm');
 assert(issueForField(mine, 'radiusCm') === issues[2], 'profile radius issue is attached to radiusCm');
-assert(issueForField(mine, 'agentTypeId') === undefined, 'fields without an issue get no hint');
+assert(issueForField(mine, 'profileId') === undefined, 'fields without an issue get no hint');
 
 const source = { sourceMod: 'CrowdSimulationDemoContentMod', sourceFile: 'CrowdSimulationDemoContentMod:Entities/templates.json' };
 assert(describeSource(source) === 'CrowdSimulationDemoContentMod · Entities/templates.json', 'source shows mod and file');
@@ -118,7 +118,7 @@ const presenterProblems: Issue[] = [
 ];
 const unitProblems = issuesFor(presenterProblems, 'crowd_minimal.unit', 'crowd_minimal_unit');
 assert(presenterIssues(unitProblems).length === 2, 'both presenter checks are shown in the presenter section');
-for (const field of ['profileId', 'agentTypeId', 'pushPriority', 'special']) {
+for (const field of ['profileId', 'pushPriority', 'special']) {
   assert(issueForField(presenterIssues(unitProblems), field) === undefined, `presenter issues do not attach to ${field}`);
 }
 assert(presenterIssues(mine).length === 0, 'field issues stay out of the presenter section');

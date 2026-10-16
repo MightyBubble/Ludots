@@ -16,18 +16,15 @@ public sealed class CrowdUnitTemplateFacts
 {
     public const string ComponentName = "CrowdSimulationAgent";
     public const string ProfileIdField = "profileId";
-    public const string AgentTypeIdField = "agentTypeId";
     public const string SpeedField = "speedCmPerSecond";
     public const string PersonalRadiusField = "personalRadiusCm";
     public const string PushPriorityField = "pushPriority";
     public const string SpecialField = "special";
     public const string AgentProfilesReference = "agentProfiles";
-    public const string AgentTypesReference = "agentTypes";
 
     public static readonly IReadOnlyList<CrowdUnitTemplateField> AuthoredFields =
     [
         new(ProfileIdField, "string", AgentProfilesReference),
-        new(AgentTypeIdField, "string", AgentTypesReference),
         new(SpeedField, "number", null),
         new(PersonalRadiusField, "number", null),
         new(PushPriorityField, "number", null),
@@ -36,7 +33,6 @@ public sealed class CrowdUnitTemplateFacts
 
     public required string TemplateId { get; init; }
     public required string ProfileId { get; init; }
-    public required string AgentTypeId { get; init; }
     public required Fix64 SpeedCmPerSecond { get; init; }
     public required Fix64 PersonalRadiusCm { get; init; }
     public required Fix64 PushPriority { get; init; }
@@ -68,12 +64,12 @@ public sealed class CrowdUnitTemplateFacts
     {
         ArgumentNullException.ThrowIfNull(obj);
         RejectRetiredKeys(obj);
+        RejectUnknownKeys(obj);
         string Prefix(string field) => $"Entities/templates.json: 模板 \"{templateId}\" 的 {ComponentName}.{field}";
         return new CrowdUnitTemplateFacts
         {
             TemplateId = templateId,
             ProfileId = RequireString(obj, ProfileIdField, Prefix(ProfileIdField)),
-            AgentTypeId = RequireString(obj, AgentTypeIdField, Prefix(AgentTypeIdField)),
             SpeedCmPerSecond = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
             PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
             PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
@@ -83,17 +79,33 @@ public sealed class CrowdUnitTemplateFacts
 
     public static void RejectRetiredKeys(JsonObject obj)
     {
-        if (obj.ContainsKey("agentType"))
-        {
-            throw new InvalidOperationException("CrowdSimulationAgent 已删除 agentType，改用 agentTypeId。");
-        }
-
         if (obj.ContainsKey("radiusClassCm") || obj.ContainsKey("radiusCm"))
         {
             throw new InvalidOperationException(
                 "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId；个人半径写 personalRadiusCm。");
         }
 
+    }
+
+    public static void RejectUnknownKeys(JsonObject obj)
+    {
+        foreach (var (key, _) in obj)
+        {
+            bool known = false;
+            for (int i = 0; i < AuthoredFields.Count; i++)
+            {
+                if (string.Equals(AuthoredFields[i].Name, key, StringComparison.Ordinal))
+                {
+                    known = true;
+                    break;
+                }
+            }
+
+            if (!known)
+            {
+                throw new InvalidOperationException($"{ComponentName} contains unsupported property '{key}'.");
+            }
+        }
     }
 
     private static bool RequireBool(JsonObject obj, string name, string path)

@@ -10,21 +10,20 @@ namespace Ludots.Tool;
 
 /// <summary>
 /// 纯数据群体地图 Mod 的起步文件：一张 1,600,000 cm 见方的图，两名玩家，一种单位。
-/// 地形类型、单位的通行行和代理体型都由调用方点名，必须是依赖的标准参数 Mod 里已有的 id。
+/// 地形类型和单位体型的移动类型都由调用方点名，必须是依赖的标准参数 Mod 里已有的 id。移动类型写在体型的 navProfileId。
 /// 不写逻辑地形、高度图和 .navsurface，这三份由 nav init-crowd-terrain / init-crowd-heightmap / bake-crowd-navsurface 生成。
 /// </summary>
 /// <summary>骨架引用的参数 Mod id：<paramref name="TerrainTypes"/> 按 .navsurface 格值顺序，第一个是初始地形的底色。</summary>
-public sealed record CrowdModScaffoldIds(IReadOnlyList<string> TerrainTypes, string NavProfile, string AgentType)
+public sealed record CrowdModScaffoldIds(IReadOnlyList<string> TerrainTypes, string NavProfile)
 {
-    public static CrowdModScaffoldIds Parse(string? terrainTypes, string? navProfile, string? agentType)
+    public static CrowdModScaffoldIds Parse(string? terrainTypes, string? navProfile)
     {
         if (string.IsNullOrWhiteSpace(terrainTypes)) throw new InvalidOperationException("--template crowd-data 需要 --terrainTypes（逗号分隔）。");
         if (string.IsNullOrWhiteSpace(navProfile)) throw new InvalidOperationException("--template crowd-data 需要 --navProfile。");
-        if (string.IsNullOrWhiteSpace(agentType)) throw new InvalidOperationException("--template crowd-data 需要 --agentType。");
         string[] types = terrainTypes.Split(',', StringSplitOptions.TrimEntries);
         if (Array.Exists(types, string.IsNullOrEmpty)) throw new InvalidOperationException($"--terrainTypes \"{terrainTypes}\" 里有空 id。");
         if (new HashSet<string>(types, StringComparer.Ordinal).Count != types.Length) throw new InvalidOperationException($"--terrainTypes \"{terrainTypes}\" 有重复 id。");
-        return new CrowdModScaffoldIds(types, navProfile.Trim(), agentType.Trim());
+        return new CrowdModScaffoldIds(types, navProfile.Trim());
     }
 }
 
@@ -183,7 +182,6 @@ public static class CrowdModScaffold
                     ["CrowdSimulationAgent"] = new JsonObject
                     {
                         ["profileId"] = mapId + "_unit",
-                        ["agentTypeId"] = ids.AgentType,
                         ["speedCmPerSecond"] = 1400,
                         ["personalRadiusCm"] = 900,
                         ["pushPriority"] = 2,

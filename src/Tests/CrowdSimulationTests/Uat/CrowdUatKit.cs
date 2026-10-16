@@ -98,7 +98,6 @@ internal static class CrowdUatKit
         {
             TemplateId = t.TemplateId,
             ProfileId = t.ProfileId,
-            AgentTypeId = t.AgentTypeId,
             SpeedCmPerSecond = speedCmPerSecond ?? t.SpeedCmPerSecond,
             PersonalRadiusCm = radiusCmByClass == null
                 ? t.PersonalRadiusCm
