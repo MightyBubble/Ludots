@@ -159,9 +159,5 @@
     "spreadCm": 187500,
     "baseJitterCm": 125000,
     "centersPerGroup": 3
-  },
-  "telemetry": {
-    "turnEpsRad": 0.035,
-    "ema": 0.2
   }
 }

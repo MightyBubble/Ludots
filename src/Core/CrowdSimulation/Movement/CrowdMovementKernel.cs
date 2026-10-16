@@ -711,7 +711,9 @@ public sealed class CrowdMovementKernel
             LeaderSpeedRatio = fc.LeaderSpeedRatio,
             LeaderTurnRate = fc.LeaderTurnRatePerSec,
             FaceTurnScale = fc.FaceTurnScale,
-            TurnEpsRad = cfg.Telemetry.TurnEpsRad,
+            TurnEpsRad = session.MotionTurnEpsRad > Fix64.Zero
+                ? session.MotionTurnEpsRad
+                : throw new InvalidOperationException("启用移动前须设置 MotionTurnEpsRad。"),
         };
         // 结构重烘的唤醒可能早于首次收拢，按稠密下标读这些行。
         kernel.EnsureCapacity(session.Units.Capacity);

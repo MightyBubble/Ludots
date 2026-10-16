@@ -4,44 +4,80 @@
       "bridge": {
         "layer": "upper",
         "footprint": "path",
-        "effect": { "kind": "surface", "area": "deck", "portalReachNavCells": 4 },
+        "effect": {
+          "kind": "surface",
+          "area": "deck",
+          "portalReachNavCells": 4
+        },
         "placement": {
           "kind": "spanEnds",
-          "endpointAreas": ["shallow", "open"],
-          "interiorAreas": ["deep"]
+          "endpointAreas": [
+            "shallow",
+            "open"
+          ],
+          "interiorAreas": [
+            "deep"
+          ]
         },
         "lifetimeSec": null
       },
       "timedBridge": {
         "layer": "upper",
         "footprint": "path",
-        "effect": { "kind": "surface", "area": "deck", "portalReachNavCells": 4 },
+        "effect": {
+          "kind": "surface",
+          "area": "deck",
+          "portalReachNavCells": 4
+        },
         "placement": {
           "kind": "spanEnds",
-          "endpointAreas": ["shallow", "open"],
-          "interiorAreas": ["deep"]
+          "endpointAreas": [
+            "shallow",
+            "open"
+          ],
+          "interiorAreas": [
+            "deep"
+          ]
         },
         "lifetimeSec": 4
       },
       "road": {
         "layer": "base",
         "footprint": "path",
-        "effect": { "kind": "setArea", "area": "road", "priority": 10 },
-        "placement": { "kind": "unrestricted" },
+        "effect": {
+          "kind": "setArea",
+          "area": "road",
+          "priority": 10
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
         "lifetimeSec": null
       },
       "flood": {
         "layer": "base",
         "footprint": "disc",
-        "effect": { "kind": "setArea", "area": "flooded", "priority": 20 },
-        "placement": { "kind": "unrestricted" },
+        "effect": {
+          "kind": "setArea",
+          "area": "flooded",
+          "priority": 20
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
         "lifetimeSec": null
       },
       "fire": {
         "layer": "base",
         "footprint": "disc",
-        "effect": { "kind": "setArea", "area": "burning", "priority": 40 },
-        "placement": { "kind": "unrestricted" },
+        "effect": {
+          "kind": "setArea",
+          "area": "burning",
+          "priority": 40
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
         "lifetimeSec": 900
       }
     }

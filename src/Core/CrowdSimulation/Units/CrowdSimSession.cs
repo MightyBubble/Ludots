@@ -41,6 +41,7 @@ public sealed class CrowdSimSession
         Orders = new CrowdOrderBook();
         MemberStamp = new int[Units.Capacity];
         MemberCapture = new uint[Units.Capacity];
+        MotionTurnEpsRad = Fix64.Zero;
 
         // 子步数取本图实际绑定模板的最快可能速度。马达按格的速度除数缩放速度，除数小于 1 的区域会更快，
         // 所以每个模板按其移动类型最小的可走除数折算。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
@@ -78,6 +79,9 @@ public sealed class CrowdSimSession
 
     /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>
     public CrowdSimulationTelemetry Telemetry { get; } = new();
+
+    /// <summary>运动质量采样用的航向变化阈值（弧度），由调试视图配置在启用移动前写入。</summary>
+    public Fix64 MotionTurnEpsRad { get; set; }
 
     public CrowdSimulationRuntimeConfig Config { get; }
     public ArchWorld World { get; }

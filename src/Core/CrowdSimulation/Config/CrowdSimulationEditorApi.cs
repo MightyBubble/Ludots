@@ -33,7 +33,7 @@ public static partial class CrowdSimulationEditorApi
     private static readonly string[] GlobalsKeys =
     [
         "worker", "agents", "navmesh", "hpa", "navtile", "flowfield", "planning", "fog",
-        "formation", "formations", "movement", "avoidance", "push", "pairRules", "sim", "spawn", "telemetry",
+        "formation", "formations", "movement", "avoidance", "push", "pairRules", "sim", "spawn",
     ];
 
     private static readonly string[] ScenarioConfigKeys = ["world", "deploy"];

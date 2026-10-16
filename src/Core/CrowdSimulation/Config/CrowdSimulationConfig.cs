@@ -36,7 +36,6 @@ public sealed class CrowdSimulationConfig
     public required SpawnSection Spawn { get; init; }
     public required StructuresSection Structures { get; init; }
     public required DeploySection Deploy { get; init; }
-    public required TelemetrySection Telemetry { get; init; }
 
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
@@ -418,9 +417,4 @@ public sealed class CrowdSimulationConfig
         public required int YCm { get; init; }
     }
 
-    public sealed class TelemetrySection
-    {
-        public required double TurnEpsRad { get; init; }
-        public required double Ema { get; init; }
-    }
 }

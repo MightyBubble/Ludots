@@ -362,11 +362,6 @@ public sealed class CrowdSimulationConfigLoader
                     YCm = b.YCm,
                 }),
             },
-            Telemetry = new RuntimeTelemetrySection
-            {
-                TurnEpsRad = Fix64.FromDouble(config.Telemetry.TurnEpsRad),
-                Ema = Fix64.FromDouble(config.Telemetry.Ema),
-            },
         };
     }
 

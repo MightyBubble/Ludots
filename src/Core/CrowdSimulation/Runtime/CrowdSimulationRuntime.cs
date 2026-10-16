@@ -22,6 +22,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -380,6 +381,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             CoreServiceKeys.FogDecalPalette,
             CrowdFogDecalSettings.LoadMerged(engine.ConfigPipeline, catalog, engine.ConfigConflictReport));
 
+        JsonObject presentationPalette = CrowdPresentationPalette.LoadMerged(
+            engine.ConfigPipeline, catalog, engine.ConfigConflictReport);
+
         if (!catalog.TryGet(CrowdSimulationDebugViewPath, out var viewEntry))
         {
             _debugView = null;
@@ -390,7 +394,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             {
                 var viewMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in viewEntry, tracked)
                     ?? throw new InvalidOperationException($"{CrowdSimulationDebugViewPath} 存在目录登记但合并为空。");
-                return CrowdSimulationDebugViewConfig.Load(viewMerged, CrowdSimulationDebugViewPath);
+                var withPalette = CrowdPresentationPalette.MergeInto(
+                    (JsonObject)viewMerged.DeepClone(), presentationPalette, CrowdSimulationDebugViewPath);
+                return CrowdSimulationDebugViewConfig.Load(withPalette, CrowdSimulationDebugViewPath);
             });
         }
 
@@ -404,13 +410,25 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         {
             var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in playerViewEntry, tracked)
                 ?? throw new InvalidOperationException($"{CrowdSimulationPlayerViewPath} 存在目录登记但合并为空。");
-            return CrowdPlayerViewConfig.Load(merged, CrowdSimulationPlayerViewPath);
+            var withPalette = CrowdPresentationPalette.MergeInto(
+                (JsonObject)merged.DeepClone(), presentationPalette, CrowdSimulationPlayerViewPath);
+            return CrowdPlayerViewConfig.Load(withPalette, CrowdSimulationPlayerViewPath);
         });
     }
 
     private TimeSpan RequirePlanTimeout()
         => _planTimeout ?? throw new InvalidOperationException(
             "CrowdSimulationConfig.json: 路径服务需要 worker.planTimeoutMs。");
+
+    private Fix64 RequireMotionTurnEpsRad()
+    {
+        if (_debugView == null)
+            throw new InvalidOperationException("CrowdSimulationDebugView.json: 启用移动需要调试视图配置。");
+        double rad = _debugView.MotionTurnEpsRad;
+        if (!(rad > 0d) || double.IsNaN(rad) || double.IsInfinity(rad))
+            throw new InvalidOperationException("CrowdSimulationDebugView.json: motionTurnEpsRad 必须是 > 0 的有限数。");
+        return Fix64.FromDouble(rad);
+    }
 
     internal static JsonArray ComposeDemoScript(int initialUnits, CrowdDebugScriptEntry[]? script)
     {
@@ -644,6 +662,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         TimeSpan planTimeout = RequirePlanTimeout();
         _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, planTimeout, _session.ResolveNavContext);
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
+        _session.MotionTurnEpsRad = RequireMotionTurnEpsRad();
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.BindVision(
             engine.GetService(CoreServiceKeys.VisionFogLayerRegistry),
@@ -904,6 +923,7 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
                 replay.Navs, session.Config, workerThreads: 1, RequirePlanTimeout(), replay.ResolveNavContext);
             replay.BindVision(new FogLayerRegistry(), new FogFieldStore());
+            replay.MotionTurnEpsRad = session.MotionTurnEpsRad;
             replay.EnableMovement(
                 CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));

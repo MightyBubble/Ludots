@@ -221,6 +221,7 @@ public class CrowdBeliefTerrainTests
             session.RebakeSources = sources;
             session.NavTileCache = cache;
             session.BindVision(new FogLayerRegistry(), new FogFieldStore());
+            session.MotionTurnEpsRad = Fix64.FromDouble(0.035);
             var service = new PathQueryService(navs, config, 1, System.TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
 
