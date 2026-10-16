@@ -226,13 +226,14 @@ public static class CrowdDeployment
 
     private static int PlayerIdOf(CrowdSimulationRuntimeConfig cfg, int tableIndex)
     {
+        var ids = cfg.PairRules.PlayerIds;
+        if ((uint)tableIndex >= (uint)ids.Length)
+            throw new InvalidOperationException($"玩家表序 {tableIndex} 没有玩家号。");
+        int playerId = ids[tableIndex];
         var indexBy = cfg.PairRules.IndexByPlayerId;
-        for (int playerId = 1; playerId < indexBy.Length; playerId++)
-        {
-            if (indexBy[playerId] == tableIndex) return playerId;
-        }
-
-        throw new InvalidOperationException($"玩家表序 {tableIndex} 没有玩家号。");
+        if (playerId == 0 || (uint)playerId >= (uint)indexBy.Length || indexBy[playerId] != tableIndex)
+            throw new InvalidOperationException($"玩家表序 {tableIndex} 没有玩家号。");
+        return playerId;
     }
 
     /// <summary>全体半径级，radiusCm 升序去重。</summary>

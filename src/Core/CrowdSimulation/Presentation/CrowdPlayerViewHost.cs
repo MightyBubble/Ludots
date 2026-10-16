@@ -683,18 +683,18 @@ internal sealed class CrowdPlayerViewHost
                 continue;
             }
 
-            bool shown = false;
-            for (int slot = _windowMin; slot <= _windowMax; slot++)
+            bool template = false;
+            for (int t = 0; t < _layers.Length; t++)
             {
-                int unitType = _clickUnit[slot];
-                if (_layers[unitType] && _agentIndex[unitType] == group.LayerIdx && _clickRadiusOf[slot] == group.RIdx)
+                if (_layers[t] && _agentIndex[t] == group.LayerIdx)
                 {
-                    shown = true;
+                    template = true;
                     break;
                 }
             }
 
-            CrowdPlayerLayerScope.Apply(session.World, entity, tag, shown);
+            // 点选表只裁部署窗。层开关按单位行隐藏，半径级没有单独的窗，整表都算在范围内。
+            CrowdPlayerLayerScope.Apply(session.World, entity, tag, CrowdPlayerLayerScope.Included(template, true));
         }
     }
 
