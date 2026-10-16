@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Presentation;
@@ -28,6 +29,8 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private int _wireNavId = -1;
     private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
     private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
+    private PathResult? _routeCacheSource;
+    private Vector2[] _routePoints = Array.Empty<Vector2>();
 
     internal S3PathDemoPresentationSystem(
         S3PathDemoRuntime runtime,
@@ -78,19 +81,31 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         var current = _runtime.Current;
         if (current?.Points != null)
         {
-            int pointCount = current.PointCount / 2;
-            Span<Vector2> pts = pointCount <= CrowdSimulationLimits.RoutePolylineStackLimit
-                ? stackalloc Vector2[pointCount]
-                : new Vector2[pointCount];
-            for (int k = 0; k < pointCount; k++)
-            {
-                pts[k] = new Vector2(
-                    (float)current.Points[k * 2].ToDouble() * navCellVisual,
-                    (float)current.Points[k * 2 + 1].ToDouble() * navCellVisual);
-            }
+            EnsureRoutePolyline(current, navCellVisual);
+            _routeVisuals.AddPolylineShared(RouteLine, _routePoints, navCellVisual * 0.35f, Magenta);
+        }
+        else
+        {
+            _routeCacheSource = null;
+            _routePoints = Array.Empty<Vector2>();
+        }
+    }
 
-            // 视觉尺寸跟导航格走(本图 62.5 m/格),不写死米数
-            _routeVisuals.AddPolyline(RouteLine, pts, navCellVisual * 0.35f, Magenta);
+    private void EnsureRoutePolyline(PathResult current, float navCellVisual)
+    {
+        if (ReferenceEquals(_routeCacheSource, current)) return;
+        _routeCacheSource = current;
+        int pointCount = current.PointCount / 2;
+        if (_routePoints.Length != pointCount)
+        {
+            _routePoints = new Vector2[pointCount];
+        }
+
+        for (int k = 0; k < pointCount; k++)
+        {
+            _routePoints[k] = new Vector2(
+                (float)current.Points![k * 2].ToDouble() * navCellVisual,
+                (float)current.Points[k * 2 + 1].ToDouble() * navCellVisual);
         }
     }
 
