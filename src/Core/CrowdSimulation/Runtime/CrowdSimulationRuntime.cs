@@ -381,8 +381,8 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             CoreServiceKeys.FogDecalPalette,
             CrowdFogDecalSettings.LoadMerged(engine.ConfigPipeline, catalog, engine.ConfigConflictReport));
 
-        JsonObject presentationPalette = CrowdPresentationPalette.LoadMerged(
-            engine.ConfigPipeline, catalog, engine.ConfigConflictReport);
+        CrowdPresentationPalette.TryLoadMerged(
+            engine.ConfigPipeline, catalog, engine.ConfigConflictReport, out JsonObject presentationPalette);
 
         if (!catalog.TryGet(CrowdSimulationDebugViewPath, out var viewEntry))
         {
@@ -394,9 +394,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             {
                 var viewMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in viewEntry, tracked)
                     ?? throw new InvalidOperationException($"{CrowdSimulationDebugViewPath} 存在目录登记但合并为空。");
-                var withPalette = CrowdPresentationPalette.MergeInto(
-                    (JsonObject)viewMerged.DeepClone(), presentationPalette, CrowdSimulationDebugViewPath);
-                return CrowdSimulationDebugViewConfig.Load(withPalette, CrowdSimulationDebugViewPath);
+                JsonObject viewRoot = (JsonObject)viewMerged.DeepClone();
+                if (presentationPalette.Count > 0)
+                    viewRoot = CrowdPresentationPalette.MergeInto(viewRoot, presentationPalette, CrowdSimulationDebugViewPath);
+                return CrowdSimulationDebugViewConfig.Load(viewRoot, CrowdSimulationDebugViewPath);
             });
         }
 
@@ -410,9 +411,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         {
             var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in playerViewEntry, tracked)
                 ?? throw new InvalidOperationException($"{CrowdSimulationPlayerViewPath} 存在目录登记但合并为空。");
-            var withPalette = CrowdPresentationPalette.MergeInto(
-                (JsonObject)merged.DeepClone(), presentationPalette, CrowdSimulationPlayerViewPath);
-            return CrowdPlayerViewConfig.Load(withPalette, CrowdSimulationPlayerViewPath);
+            JsonObject playerRoot = (JsonObject)merged.DeepClone();
+            if (presentationPalette.Count > 0)
+                playerRoot = CrowdPresentationPalette.MergeInto(playerRoot, presentationPalette, CrowdSimulationPlayerViewPath);
+            return CrowdPlayerViewConfig.Load(playerRoot, CrowdSimulationPlayerViewPath);
         });
     }
 

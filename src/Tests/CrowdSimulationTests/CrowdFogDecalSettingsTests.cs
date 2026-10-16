@@ -20,10 +20,10 @@ public sealed class CrowdFogDecalSettingsTests
         Assert.That(palette.Unseen.A, Is.GreaterThan(palette.Explored.A));
     }
 
-    [TestCase("""{"unseen":[0,0,0,255],"explored":[0,0,0,128],"visible":[0,0,0,0]}""", "denied")]
-    [TestCase("""{"unseen":[0,0,0],"explored":[0,0,0,128],"visible":[0,0,0,0],"denied":[1,1,1,1]}""", "unseen")]
-    [TestCase("""{"unseen":[0,0,0,256],"explored":[0,0,0,128],"visible":[0,0,0,0],"denied":[1,1,1,1]}""", "unseen[3]")]
-    [TestCase("""{"unseen":[0,0,0,1],"explored":[0,0,0,128],"visible":[0,0,0,0],"denied":[1,1,1,1],"extra":1}""", "extra")]
+    [TestCase("""{"unseen":{"red":0,"green":0,"blue":0,"alpha":255},"explored":{"red":0,"green":0,"blue":0,"alpha":128},"visible":{"red":0,"green":0,"blue":0,"alpha":0}}""", "denied")]
+    [TestCase("""{"unseen":{"red":0,"green":0,"blue":0},"explored":{"red":0,"green":0,"blue":0,"alpha":128},"visible":{"red":0,"green":0,"blue":0,"alpha":0},"denied":{"red":1,"green":1,"blue":1,"alpha":1}}""", "alpha")]
+    [TestCase("""{"unseen":{"red":0,"green":0,"blue":0,"alpha":256},"explored":{"red":0,"green":0,"blue":0,"alpha":128},"visible":{"red":0,"green":0,"blue":0,"alpha":0},"denied":{"red":1,"green":1,"blue":1,"alpha":1}}""", "unseen")]
+    [TestCase("""{"unseen":{"red":0,"green":0,"blue":0,"alpha":1},"explored":{"red":0,"green":0,"blue":0,"alpha":128},"visible":{"red":0,"green":0,"blue":0,"alpha":0},"denied":{"red":1,"green":1,"blue":1,"alpha":1},"extra":1}""", "extra")]
     public void BadPalette_Throws(string json, string fragment)
     {
         var ex = Assert.Throws<InvalidOperationException>(

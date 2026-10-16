@@ -175,11 +175,8 @@ public class CrowdDebugViewSessionTests
 
     private static CrowdSimulationDebugViewConfig LoadView()
     {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
-            dir = Path.GetDirectoryName(dir);
-        if (dir == null) throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
-        string path = Path.Combine(dir, "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
-        return CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path);
+        string path = ViewPath();
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        return CrowdSimulationDebugViewConfig.Load(CrowdPresentationPaletteTestMerge.MergedDebugView(root), path);
     }
 }

@@ -41,7 +41,7 @@ public sealed class CrowdSimSession
         Orders = new CrowdOrderBook();
         MemberStamp = new int[Units.Capacity];
         MemberCapture = new uint[Units.Capacity];
-        MotionTurnEpsRad = Fix64.Zero;
+        MotionTurnEpsRad = Fix64.FromDouble(0.035);
 
         // 子步数取本图实际绑定模板的最快可能速度。马达按格的速度除数缩放速度，除数小于 1 的区域会更快，
         // 所以每个模板按其移动类型最小的可走除数折算。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
