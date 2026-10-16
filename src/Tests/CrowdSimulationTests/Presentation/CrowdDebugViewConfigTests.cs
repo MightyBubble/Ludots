@@ -54,7 +54,8 @@ public class CrowdDebugViewConfigTests
     private static JsonObject Shipped()
     {
         string path = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
-        return JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        return CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
     }
 
     private static string FindRepoRoot()
