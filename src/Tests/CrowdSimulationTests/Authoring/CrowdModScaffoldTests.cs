@@ -14,6 +14,8 @@ namespace CrowdSimulationTests.Authoring;
 /// mod init --template crowd-data 写出的骨架，跑完三条 nav 命令就能进图：会话建起来，两名玩家的单位都生成并朝对方基地走。
 /// 工具按仓库根找 Mod，所以骨架放在临时仓库根里，依赖的三个 Mod 拷进去；进图时依赖用仓库里的原件。
 /// </summary>
+[Category("ci-gate")]
+[Category("crowd-authoring")]
 [TestFixture]
 public sealed class CrowdModScaffoldTests
 {
