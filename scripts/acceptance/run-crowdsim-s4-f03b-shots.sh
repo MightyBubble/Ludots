@@ -5,14 +5,15 @@
 # 报告后的真实时间 2.5s,单张定点抓不可靠。
 # crowd tick 真值取自运行日志 "CrowdSimulation tick N" 行:引擎 tick 与会话 tick 无
 # 固定比值(规划停摆让会话持续落后引擎),桥的 session.info tick 不能当会话时钟。
-# 重烘帧抓脚本建筑 op(tick 120→123)的重烘与改道,不经合成输入;建造帧只做 B 模式
-# 切换 + 指针预览,不提交现场指令(回放结论保持逐位一致)。B 键必须 keyDown/停/keyUp
-# 跨帧按住:press 的点按时长短于一个呈现帧,演示的边沿采样会整拍漏掉。
+# 重烘帧抓脚本建筑 op(tick 120→123)的重烘与改道,不经合成输入;建造帧用语义动作
+# CrowdSimulation.S4.ToggleBuild 切换 + 指针预览,不提交现场指令(回放结论保持逐位一致)。
+# press/release 跨帧按住:单次 press 点按时长短于一个呈现帧,演示的边沿采样会整拍漏掉。
 set -u
 cd "$(dirname "$0")/../.."
 
 BRIDGE=http://127.0.0.1:47921
 LOG=artifacts/acceptance/crowdsimulation-s1/f03b-run.log
+TOGGLE_BUILD_ACTION=CrowdSimulation.S4.ToggleBuild
 # 建造预览指针(屏幕像素,1280x720):屏幕左中已探明为可放点(足迹避开脚本道路条带,
 # 地面 y≈5641~5671、x≈4968~5218),且位于流场走廊上;右中与下中均压条带为不可放
 SHOT_X=320
@@ -21,7 +22,14 @@ mkdir -p artifacts/acceptance/crowdsimulation-s1
 
 rpc() { curl -s -m 5 -X POST "$BRIDGE/rpc" -H 'Content-Type: application/json' -d "$1"; }
 crowdtick() { grep -a "CrowdSimulation tick " "$LOG" | tail -1 | sed 's/.*CrowdSimulation tick \([0-9]*\).*/\1/'; }
-shot() { rpc "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"ludots.screenshot\",\"params\":{\"name\":\"$1\"}}" >/dev/null; }
+shot() {
+  local base="$1"
+  local tick
+  tick=$(crowdtick)
+  [ -n "$tick" ] || tick=unknown
+  rpc "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"ludots.screenshot\",\"params\":{\"name\":\"${base}-t${tick}.png\"}}" >/dev/null
+}
+inject() { rpc "{\"jsonrpc\":\"2.0\",\"id\":$2,\"method\":\"ludots.input.inject\",\"params\":{\"actionId\":\"$1\",\"mode\":\"$3\"}}" >/dev/null; }
 waittick() { # 等日志 crowd tick ≥ $1
   for i in $(seq 1 400); do
     T=$(crowdtick)
@@ -49,7 +57,7 @@ echo; echo "[bridge up]"
 waittick 120
 SHOTPIDS=()
 for k in $(seq 1 20); do
-  shot "f03b-rebake-b$k.png" &
+  shot "f03b-rebake-b$k" &
   SHOTPIDS+=($!)
   sleep 0.2
 done
@@ -65,16 +73,16 @@ for i in $(seq 1 600); do
 done
 grep -a "CrowdSimulation replay" "$LOG" | tail -1 || true
 sleep 1
-for k in 1 2 3; do shot "f03b-hud-b$k.png"; sleep 0.4; done
+for k in 1 2 3; do shot "f03b-hud-b$k"; sleep 0.4; done
 echo "[shots] hud x3 @crowd $(crowdtick)"
 
-# 5) 建造帧:B 按住跨帧切建造模式,指针落在可放点,预览稳定后连拍
-rpc '{"jsonrpc":"2.0","id":2,"method":"ludots.input.raw","params":{"op":"keyDown","key":"B"}}' >/dev/null
+# 5) 建造帧:ToggleBuild 按住跨帧切建造模式,指针落在可放点,预览稳定后连拍
+inject "$TOGGLE_BUILD_ACTION" 2 press
 sleep 0.4
-rpc '{"jsonrpc":"2.0","id":3,"method":"ludots.input.raw","params":{"op":"keyUp","key":"B"}}' >/dev/null
+inject "$TOGGLE_BUILD_ACTION" 3 release
 rpc "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"ludots.input.raw\",\"params\":{\"op\":\"pointerMove\",\"x\":$SHOT_X,\"y\":$SHOT_Y}}" >/dev/null
 sleep 1.5
-for k in 1 2 3; do shot "f03b-build-b$k.png"; sleep 0.4; done
+for k in 1 2 3; do shot "f03b-build-b$k"; sleep 0.4; done
 echo "[shots] build x3 @crowd $(crowdtick)"
 
 # 6) 杀游戏进程树:先按 launcher 输出的 pid=,再按桥端口(47921)的监听者兜底——
@@ -85,4 +93,4 @@ if [ -n "$PID" ]; then taskkill //PID "$PID" //T //F >/dev/null 2>&1; fi
 PORTPID=$(netstat -ano | grep ':47921' | grep -i listening | awk '{print $NF}' | awk '$1 > 4' | head -1)
 if [ -n "$PORTPID" ]; then taskkill //PID "$PORTPID" //T //F >/dev/null 2>&1; fi
 kill $LAUNCHER 2>/dev/null
-ls -la artifacts/agent-bridge/shots/f03b-*.png 2>/dev/null || echo "NO SHOTS"
+ls -la artifacts/agent-bridge/shots/f03b-*-t*.png 2>/dev/null || echo "NO SHOTS"

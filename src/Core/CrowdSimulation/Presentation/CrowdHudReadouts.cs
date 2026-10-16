@@ -162,6 +162,7 @@ public record struct CrowdInspectReadout
     public int DivergentCells;
     public int Ghosts;
     public bool Funnel;
+    public bool FormationSlots;
     public bool Corridor;
     public bool HpaGraph;
     public bool NavPolygons;
