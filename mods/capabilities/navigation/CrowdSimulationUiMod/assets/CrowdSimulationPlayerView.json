@@ -122,5 +122,11 @@
     "goal": { "red": 236, "green": 220, "blue": 160, "alpha": 230 },
     "ripple": { "red": 150, "green": 42, "blue": 72, "alpha": 160 },
     "enemyMark": { "red": 255, "green": 96, "blue": 32, "alpha": 255 }
+  },
+  "shapeLabels": {
+    "box": "方阵",
+    "line": "横队",
+    "wedge": "楔形",
+    "loose": "松散"
   }
 }

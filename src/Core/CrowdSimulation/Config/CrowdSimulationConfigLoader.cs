@@ -308,7 +308,6 @@ public sealed class CrowdSimulationConfigLoader
             Formations = OrderedById(config.Formations, (id, f) => new RuntimeFormationShape
             {
                 Id = id,
-                Label = f.Label,
                 SpacingDiameterScale = Fix64.FromDouble(f.SpacingDiameterScale),
                 Aspect = Fix64.FromDouble(f.Aspect),
                 Wedge = f.Wedge,

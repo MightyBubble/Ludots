@@ -175,7 +175,12 @@ internal sealed class CrowdPlayerViewHost
         for (int i = 0; i < formations.Count; i++)
         {
             _shapeIds[i] = formations[i].Id;
-            _shapeLabels[i] = formations[i].Label;
+            if (!_config.ShapeLabels.TryGetValue(formations[i].Id, out string? shapeLabel) || string.IsNullOrWhiteSpace(shapeLabel))
+            {
+                throw new InvalidOperationException($"玩家视图 shapeLabels 缺少阵型 {formations[i].Id}。");
+            }
+
+            _shapeLabels[i] = shapeLabel;
             if (string.Equals(formations[i].Id, _config.DefaultShapeId, StringComparison.Ordinal))
             {
                 shape = i;
@@ -185,6 +190,24 @@ internal sealed class CrowdPlayerViewHost
         if (shape < 0)
         {
             throw new InvalidOperationException($"玩家视图默认阵型 {_config.DefaultShapeId} 不在阵型表里。");
+        }
+
+        foreach (string id in _config.ShapeLabels.Keys)
+        {
+            bool known = false;
+            for (int i = 0; i < _shapeIds.Length; i++)
+            {
+                if (string.Equals(_shapeIds[i], id, StringComparison.Ordinal))
+                {
+                    known = true;
+                    break;
+                }
+            }
+
+            if (!known)
+            {
+                throw new InvalidOperationException($"玩家视图 shapeLabels.{id} 不在阵型表里。");
+            }
         }
 
         int templates = _config.ClickTemplates.Length;

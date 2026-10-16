@@ -227,7 +227,6 @@ public sealed class RuntimeFormationSection
 public sealed class RuntimeFormationShape
 {
     public required string Id { get; init; }
-    public required string Label { get; init; }
     public required Fix64 SpacingDiameterScale { get; init; }
     public required Fix64 Aspect { get; init; }
     public required bool Wedge { get; init; }

@@ -49,6 +49,7 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public string BoxingContextId { get; init; } = "";
     [JsonRequired] public string FogSceneUri { get; init; } = "";
     [JsonRequired] public string DefaultShapeId { get; init; } = "";
+    [JsonRequired] public Dictionary<string, string> ShapeLabels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewActions Actions { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewLabels Labels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewColors Colors { get; init; } = null!;
@@ -122,6 +123,16 @@ internal sealed class CrowdPlayerViewConfig
         RequireText(path, "boxingContextId", BoxingContextId);
         RequireText(path, "fogSceneUri", FogSceneUri);
         RequireText(path, "defaultShapeId", DefaultShapeId);
+        if (ShapeLabels == null || ShapeLabels.Count == 0)
+            throw new InvalidOperationException($"{path}: shapeLabels 至少一条。");
+        foreach (var pair in ShapeLabels)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                throw new InvalidOperationException($"{path}: shapeLabels 的键不能为空。");
+            if (string.IsNullOrWhiteSpace(pair.Value))
+                throw new InvalidOperationException($"{path}: shapeLabels.{pair.Key} 不能为空。");
+        }
+
         Actions.Validate(path);
         Labels.Validate(path);
         Colors.Validate(path);

@@ -381,6 +381,13 @@ public sealed class CrowdPlayerViewTests
             ["boxingContextId"] = "boxing",
             ["fogSceneUri"] = "mod:asset",
             ["defaultShapeId"] = "box",
+            ["shapeLabels"] = new JsonObject
+            {
+                ["box"] = "方阵",
+                ["line"] = "横队",
+                ["wedge"] = "楔形",
+                ["loose"] = "松散",
+            },
             ["actions"] = actions,
             ["labels"] = labels,
             ["colors"] = colors,

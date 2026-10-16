@@ -263,7 +263,6 @@ public sealed class CrowdSimulationConfig
 
     public sealed class FormationShapeEntry
     {
-        public required string Label { get; init; }
         public required double SpacingDiameterScale { get; init; }
         public required double Aspect { get; init; }
         public required bool Wedge { get; init; }
