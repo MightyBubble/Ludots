@@ -13,15 +13,17 @@
 | `Navigation/navmesh.json` 的 `maps.<mapId>` | DeepObject | 地图 Mod | `NavMeshBakeConfigLoader`；群体只读 `solver=crowd-simulation` 的键集 |
 | `Navigation/agent_profiles.json` | ArrayById | `CrowdSimulationStandardMod`；地图 Mod 追加体型 | `AgentProfileRegistry`；移动类型取 `navProfileId` |
 | `Presentation/crowd_structure_palette.json` | DeepObject | `CrowdSimulationDemoContentMod`；S4 等追加条目 | `CrowdStructurePalette`（表现层，内核不读） |
-| `CrowdSimulationDebug.json` | DeepObject | 各演示 Mod 自登记 | `CrowdSimulationDebugConfig` |
-| `CrowdSimulationPlayerView.json` | DeepObject | `CrowdSimulationUiMod` 等 | `CrowdPlayerViewConfig` |
+| `Presentation/crowd_player_colors.json` | DeepObject | 各地图 Mod（`Players` 每名玩家一条） | `CrowdPlayerColors` → 会话激活时 `TeamColorPalette` |
+| `CrowdSimulationDebug.json` | DeepObject | `CrowdSimulationUiMod` 默认；演示 Mod 覆盖 `presentation` / `session` 等 | `CrowdSimulationDebugConfig` |
+| `CrowdSimulationPlayerView.json` | DeepObject | `CrowdSimulationUiMod` 默认；演示 Mod 可覆盖 | `CrowdPlayerViewConfig` |
 | `CrowdSimulationDebugView.json` | DeepObject | 同上 | `CrowdSimulationDebugViewConfig` |
-| `CrowdSimulationPresentationPalette.json` | DeepObject | 表现层 Mod | `CrowdPresentationPalette`（玩家视图与调试视图共用色） |
+| `CrowdSimulationPresentationPalette.json` | DeepObject | `CrowdSimulationUiMod` | `CrowdPresentationPalette`（合并进两份视图的 `colors`） |
 | `terrain/<map>.navsurface` | 烘焙产物 | 工具 `nav bake-crowd-navsurface` | `NavSurfaceAsset`；`NavSurfaceContract` 对照配置 |
 
 正本 JSON 在仓库 Mod 里，例如：
 
 - `mods/capabilities/navigation/CrowdSimulationMod/assets/config_catalog.json`
+- `mods/capabilities/navigation/CrowdSimulationUiMod/assets/config_catalog.json`
 - `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulation/traversal.json`
 - `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json`
 - `mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod/assets/…`
@@ -186,6 +188,38 @@
 | `gesture.toOffsetCm` | 仅 `fixedPath`；`xCm`、`yCm` 不能全 0 |
 
 `path` 足迹模板必须用 `fixedPath` 或 `twoPoint`；其它足迹必须用 `point`。
+
+## `Presentation/crowd_player_colors.json`
+
+目录在 `CrowdSimulationMod` 的 `config_catalog.json` 登记（DeepObject 合并）。解析：`CrowdPlayerColors.Load` / `LoadMerged`；进图激活时 `RequirePlayers` 对照地图 `Players[].PlayerId`。
+
+| 键 | 类型 | 约束 |
+| --- | --- | --- |
+| `<playerId>` | string（十进制玩家号） | ≥ 1；值 `#rrggbb` 或 `#rrggbbaa` |
+
+地图 `Players` 里每个 `PlayerId` 都必须有颜色；表内不能有多余玩家号。正本示例：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets/Presentation/crowd_player_colors.json`。
+
+## 表现与调试配置（D 类）
+
+三份 JSON 不必在合同里逐键罗列；装载一律严格 DTO（缺键、未知键、越界即失败）。分工如下。
+
+| 职责 | 默认提供方 | 演示常见覆盖 |
+| --- | --- | --- |
+| 共用底色 `plan` / `ink` / `paper` | `CrowdSimulationUiMod` · `CrowdSimulationPresentationPalette.json` | 一般不改 |
+| 玩家 HUD 与点选玩法 | `CrowdSimulationUiMod` · `CrowdSimulationPlayerView.json` | 演示 Mod 换相机、座位、模板列表、`labels`、`shapeLabels` 等 |
+| 调试叠层与检视 | `CrowdSimulationUiMod` · `CrowdSimulationDebugView.json` | 演示 Mod 改默认叠层、检视 agentType 等 |
+| 调试工具条 / 脚本 / HUD 文案 | `CrowdSimulationUiMod` · `CrowdSimulationDebug.json`（`tools`、`rates`、`fuzz`） | 演示 Mod 的 `presentation`（`deploy` 或 `path` 二选一）、`session.script` |
+
+合同要点：
+
+- **阵型文案**：`CrowdSimulationPlayerView.json` 的 `shapeLabels` 以 `CrowdSimulationConfig.json` 里 `formations.<id>` 为键，必须全覆盖；`defaultShapeId` 必须是其中之一。HUD 用这些字符串，不在调试 JSON 里重复。
+- **调试视图文案**：`CrowdSimulationDebug.json` → `presentation.viewLabels` 按视图 id 写全（如 `terrain` / `walkable` / `navmesh`）；每个带 `presentation.deploy` 的演示自己写完整表，供 V 键巡回与 HUD 占位符 `{view}`。
+- **`presentation` 块**：根下恰好 `deploy` 或 `path` 之一（无 `kind`）。`deploy` 含 `palette`、`actions`、放置预览色等；`path` 用于路径演示。带 `deploy` 时必须同时有 `tools`、`rates`、`fuzz`。
+- **`fuzz.ops`**：字符串 id 数组，只列操作名（如 `spawn`、`order`、`place`、`remove`、`placePath`、`removePath`、`kill`）；字段含义见 `CrowdSimRegressCatalog`。
+- **颜色对象**：玩家视图、调试视图、`presentation.deploy` 里的预览色统一 `{ "red", "green", "blue", "alpha" }`（0–255）。共用色只写在 `CrowdSimulationPresentationPalette.json`，视图 `colors` 不得与 palette 键重复（装载时 `CrowdPresentationPalette.MergeInto`）。
+- **视线初始值**：群体迷雾是否做遮挡采样只认 `CrowdSimulationConfig.json` → `fog.lineOfSight`（bool）。HUD 的 `ToggleLos` 走运行时 `fogSight` 命令，不在 PlayerView / Debug JSON 里再写一份初始开关。
+- **散开（scatter）范围**：`scatter` 指令给每名有单位的出生玩家随机 box 目标；坐标均匀取自 `[0, NavCellsPerSide × navCellSizeCm)`，由当前地图求解器板与 `navmesh` 推导，不在调试 JSON 里配置。
+- **爆炸（kill）半径**：`CrowdSimulationDebug.json` → `tools.boomRadiusCm`（> 0）与 `ringScale`（> 1）；外圈冲量用 `impulse`。演示左键爆炸时把该半径写入 `kill` 指令。
 
 ## `CrowdSimulationDebug.json`（摘要）
 
