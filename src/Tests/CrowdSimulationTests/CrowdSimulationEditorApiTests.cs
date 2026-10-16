@@ -424,7 +424,9 @@ public class CrowdSimulationEditorApiTests
             Agent(draft, MinimalUnit)["personalRadiusCm"] = 1200;
             JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
-            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("unsupported property 'personalRadiusCm'"));
+            string issues = result["issues"]!.ToJsonString();
+            Assert.That(issues, Does.Contain("unsupported property"));
+            Assert.That(issues, Does.Contain("personalRadiusCm"));
             Assert.That(File.ReadAllText(profilesPath), Is.EqualTo(before));
         }
         finally
