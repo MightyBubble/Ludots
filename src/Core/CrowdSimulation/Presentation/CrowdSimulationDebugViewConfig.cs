@@ -273,7 +273,7 @@ internal sealed class CrowdDebugViewActions
     }
 }
 
-/// <summary>导航与遥测面板的初始开关（对应调试快捷键第九、第十项）。面板布局与采样节奏属于界面 mod，不在这里。</summary>
+/// <summary>F9/F10 面板的初始开关。面板布局与采样节奏属于界面 mod，不在这里。</summary>
 internal sealed class CrowdDebugViewPanels
 {
     [JsonRequired] public bool Nav { get; init; }

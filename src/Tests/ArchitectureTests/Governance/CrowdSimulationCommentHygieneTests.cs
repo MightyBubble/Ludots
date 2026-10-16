@@ -14,7 +14,7 @@ namespace Ludots.Tests.Architecture.Governance;
 public sealed class CrowdSimulationCommentHygieneTests
 {
     private static readonly Regex BoardItemReference = new(
-        @"(?<![\w])(?:[LEGCDMT]\d{2}|S\d{2})\b",
+        @"(?<![\w])(?:[LEGCDMT]\d{2}|F0\d|S\d{2})\b",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex IssueReference = new(
