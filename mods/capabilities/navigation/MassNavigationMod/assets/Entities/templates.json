@@ -8,6 +8,14 @@
     }
   },
   {
+    "id": "mass_navigation_ai_player",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.AiPlayer"
+      }
+    }
+  },
+  {
     "id": "mass_navigation_local_player",
     "initialInteractionContext": "interaction.context.case_e.battle",
     "components": {
