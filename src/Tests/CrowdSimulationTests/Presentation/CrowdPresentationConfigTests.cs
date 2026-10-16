@@ -75,8 +75,7 @@ public sealed class CrowdPresentationConfigTests
         ["ringScale"] = 2,
         ["impulse"] = 4,
         ["spawnCount"] = 24,
-        ["spawnUnitType"] = 0,
-        ["spawnRadiusClass"] = 0,
+        ["spawnTemplate"] = "crowd_simulation.unit.infantry.r100",
         ["placeEntry"] = "building",
         ["speedStepsPermille"] = new JsonArray(500, 1000, 2000, 4000),
     };
@@ -178,6 +177,29 @@ public sealed class CrowdPresentationConfigTests
         var size = JsonNode.Parse("""{"e":{"template":"t","label":"l","gesture":{"kind":"point"},"sizeCm":0}}""")!.AsObject();
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdStructurePalette.Load(size));
         Assert.That(ex!.Message, Does.Contain("sizeCm"));
+    }
+
+    [Test]
+    public void SpawnTemplate_UnknownKeyAndMissingCatalogId_AreRejected()
+    {
+        var unknown = MinimalTools();
+        unknown["spawnUnitType"] = 0;
+        var key = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = unknown }));
+        Assert.That(key!.Message, Does.Contain("spawnUnitType"));
+
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        var tools = new CrowdDebugTools
+        {
+            BoomRadiusCm = 12500,
+            RingScale = 2,
+            Impulse = 4,
+            SpawnCount = 24,
+            SpawnTemplate = "missing.unit",
+            PlaceEntry = "building",
+            SpeedStepsPermille = new[] { 500, 1000, 2000, 4000 },
+        };
+        var missing = Assert.Throws<InvalidOperationException>(() => tools.ResolveSpawn(session.Config));
+        Assert.That(missing!.Message, Does.Contain("missing.unit"));
     }
 
     [Test]

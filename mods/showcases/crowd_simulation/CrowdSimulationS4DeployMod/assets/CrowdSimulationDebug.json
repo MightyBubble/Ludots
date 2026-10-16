@@ -133,8 +133,7 @@
     "ringScale": 2,
     "impulse": 4,
     "spawnCount": 24,
-    "spawnUnitType": 0,
-    "spawnRadiusClass": 0,
+    "spawnTemplate": "crowd_simulation.unit.infantry.r100",
     "placeEntry": "building",
     "speedStepsPermille": [
       500,

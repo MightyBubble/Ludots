@@ -421,8 +421,7 @@ public sealed class CrowdDeployToolTests
         RingScale = 2,
         Impulse = 4,
         SpawnCount = 24,
-        SpawnUnitType = 0,
-        SpawnRadiusClass = 0,
+        SpawnTemplate = "crowd_simulation.unit.infantry.r100",
         PlaceEntry = "building",
         SpeedStepsPermille = new[] { 500, 1000, 2000, 4000 },
     };

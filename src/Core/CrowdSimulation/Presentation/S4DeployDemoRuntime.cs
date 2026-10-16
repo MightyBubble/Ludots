@@ -157,6 +157,7 @@ public sealed class S4DeployDemoRuntime
             ClearSpan();
         }
 
+        _tools?.ResolveSpawn(session.Config);
         session.PlaybackHeld = PlaybackHeld;
     }
 
@@ -295,6 +296,22 @@ public sealed class S4DeployDemoRuntime
     private void SubmitSpawnAt(int xCm, int yCm)
     {
         CrowdDebugTools tools = RequireTools();
+        int unitType;
+        int radius;
+        if (ClickSpawnUnitType is int clickUnit && ClickSpawnRadiusClass is int clickRadius)
+        {
+            unitType = clickUnit;
+            radius = clickRadius;
+        }
+        else
+        {
+            if (!TrySession(out CrowdSimSession session))
+                throw new InvalidOperationException("部署演示还没有会话，不能解析生成模板。");
+            tools.ResolveSpawn(session.Config);
+            unitType = tools.SpawnUnitType;
+            radius = tools.SpawnRadiusClass;
+        }
+
         SubmitInteractive(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.SpawnAt,
@@ -302,8 +319,8 @@ public sealed class S4DeployDemoRuntime
             XCm = xCm,
             YCm = yCm,
             Count = ClickSpawnCount ?? tools.SpawnCount,
-            UnitType = ClickSpawnUnitType ?? tools.SpawnUnitType,
-            RIdx = ClickSpawnRadiusClass ?? tools.SpawnRadiusClass,
+            UnitType = unitType,
+            RIdx = radius,
         });
     }
 
