@@ -479,13 +479,13 @@ internal static class CrowdHudFormat
     public static void ClickLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
     {
         b.Clear();
-        b.Append(Inv, $"{labels.ClickSpawn} {labels.UnitType} {hud.ClickUnitType} · {labels.Radius} {hud.ClickRadius} · {labels.Count} {hud.ClickCount}");
+        b.Append(Inv, $"{labels.ClickSpawn} {labels.UnitType} {hud.ClickTemplate} · {labels.Count} {hud.ClickCount}");
     }
 
     public static void DeployLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
     {
         b.Clear();
-        b.Append(Inv, $"{labels.Deploy} {hud.DeployCount} · {labels.Radius} {hud.RadiusMin}-{hud.RadiusMax} · {labels.Layer} {hud.Layer}");
+        b.Append(Inv, $"{labels.Deploy} {hud.DeployCount} · {labels.Radius} {hud.WindowFrom}-{hud.WindowTo} · {labels.Layer} {hud.LayerId}");
         if (hud.SceneKind == 1) b.Append(Inv, $" · {labels.SceneOutside}");
         else if (hud.SceneKind == 2) b.Append(Inv, $" · {labels.SceneBehind}");
     }

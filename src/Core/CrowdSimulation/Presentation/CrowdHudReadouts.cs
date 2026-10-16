@@ -186,13 +186,12 @@ public record struct CrowdPlayerHud
     public bool FogHide;
     public bool Route;
     public bool LineOfSight;
-    public int ClickUnitType;
-    public int ClickRadius;
+    public string ClickTemplate = "";
     public int ClickCount;
     public int DeployCount;
-    public int RadiusMin;
-    public int RadiusMax;
-    public int Layer;
+    public string WindowFrom = "";
+    public string WindowTo = "";
+    public string LayerId = "";
     public int SceneKind;
 }
 

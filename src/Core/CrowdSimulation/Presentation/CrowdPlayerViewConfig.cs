@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -26,10 +27,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int ClickCountStep { get; init; }
     [JsonRequired] public int ClickCountMin { get; init; }
     [JsonRequired] public int ClickCountMax { get; init; }
-    [JsonRequired] public int ClickUnitType { get; init; }
-    [JsonRequired] public int ClickRadiusClass { get; init; }
-    [JsonRequired] public int RadiusMinIndex { get; init; }
-    [JsonRequired] public int RadiusMaxIndex { get; init; }
+    [JsonRequired] public string ClickTemplate { get; init; } = "";
+    [JsonRequired] public string[] ClickTemplates { get; init; } = Array.Empty<string>();
     [JsonRequired] public int RippleMs { get; init; }
     [JsonRequired] public int RippleRadiusCm { get; init; }
     [JsonRequired] public int DashCm { get; init; }
@@ -88,14 +87,20 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: clickCountStep 需为 ≥ 1 的整数。");
         if (ClickCountMin < 1 || ClickCountMax < ClickCountMin)
             throw new InvalidOperationException($"{path}: clickCountMin/Max 非法。");
-        if (ClickUnitType < 0 || ClickRadiusClass < 0)
-            throw new InvalidOperationException($"{path}: clickUnitType 与 clickRadiusClass 需为 ≥ 0 的整数。");
-        if (RadiusMinIndex < 0)
-            throw new InvalidOperationException($"{path}: radiusMinIndex 需为 ≥ 0 的整数。");
-        if (RadiusMaxIndex < -1)
-            throw new InvalidOperationException($"{path}: radiusMaxIndex 需为 ≥ -1 的整数，-1 表示绑到半径级表的最后一档。");
-        if (RadiusMaxIndex >= 0 && RadiusMaxIndex < RadiusMinIndex)
-            throw new InvalidOperationException($"{path}: radiusMaxIndex 不能小于 radiusMinIndex。");
+        if (ClickTemplates == null || ClickTemplates.Length == 0)
+            throw new InvalidOperationException($"{path}: clickTemplates 至少一条。");
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < ClickTemplates.Length; i++)
+        {
+            string id = ClickTemplates[i];
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 不能为空。");
+            if (!seen.Add(id))
+                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 重复。");
+        }
+
+        if (string.IsNullOrWhiteSpace(ClickTemplate) || !seen.Contains(ClickTemplate))
+            throw new InvalidOperationException($"{path}: clickTemplate 必须是 clickTemplates 里的模板 id。");
         if (RippleMs < 1)
             throw new InvalidOperationException($"{path}: rippleMs 需为 ≥ 1 的整数。");
         if (RippleRadiusCm < 1)

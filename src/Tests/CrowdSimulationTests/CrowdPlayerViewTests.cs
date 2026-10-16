@@ -176,6 +176,28 @@ public sealed class CrowdPlayerViewTests
     }
 
     [Test]
+    public void ClickTemplate_UnknownKeyOutsideListAndMissingCatalog_AreRejected()
+    {
+        var oldKey = ViewJson();
+        oldKey["clickUnitType"] = 0;
+        var key = Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(oldKey, "player-view"));
+        Assert.That(key!.Message, Does.Contain("clickUnitType"));
+
+        var outside = ViewJson();
+        outside["clickTemplate"] = "crowd_simulation.unit.navy.r100";
+        var list = Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(outside, "player-view"));
+        Assert.That(list!.Message, Does.Contain("clickTemplate"));
+
+        var missing = ViewJson();
+        missing["clickTemplate"] = "missing.unit";
+        missing["clickTemplates"] = new JsonArray("missing.unit");
+        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(missing, "player-view"));
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        var catalog = Assert.Throws<InvalidOperationException>(() => host.Bind(session));
+        Assert.That(catalog!.Message, Does.Contain("missing.unit"));
+    }
+
+    [Test]
     public void StatusCard_LabelsEveryCount()
     {
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
@@ -198,9 +220,9 @@ public sealed class CrowdPlayerViewTests
         };
 
         Assert.That(texts, Does.Contain("idle · countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
-        Assert.That(texts, Does.Contain("clickSpawn unitType 0 · radius 0 · count 8"));
-        Assert.That(texts, Has.Some.StartsWith("deploy 24 · radius 0-"));
-        Assert.That(texts, Has.Some.Contains(" · layer 0"));
+        Assert.That(texts, Does.Contain("clickSpawn unitType crowd_simulation.unit.infantry.r100 · count 8"));
+        Assert.That(texts, Has.Some.StartsWith("deploy 24 · radius crowd_simulation.unit.infantry.r100-"));
+        Assert.That(texts, Has.Some.Contains(" · layer foot"));
         Assert.That(texts, Has.Some.Contains("self"));
         Assert.That(string.Join("\n", texts), Does.Not.Contain("*"));
     }
@@ -335,10 +357,10 @@ public sealed class CrowdPlayerViewTests
             ["clickCountStep"] = 1,
             ["clickCountMin"] = 1,
             ["clickCountMax"] = 64,
-            ["clickUnitType"] = 0,
-            ["clickRadiusClass"] = 0,
-            ["radiusMinIndex"] = 0,
-            ["radiusMaxIndex"] = -1,
+            ["clickTemplate"] = "crowd_simulation.unit.infantry.r100",
+            ["clickTemplates"] = new JsonArray(
+                "crowd_simulation.unit.infantry.r100",
+                "crowd_simulation.unit.infantry.r200"),
             ["rippleMs"] = 700,
             ["rippleRadiusCm"] = 6000,
             ["dashCm"] = 8000,
