@@ -8,6 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -138,6 +139,14 @@ public sealed class CrowdDebugUnitMirrorTests
             engine.SetService(CoreServiceKeys.ScreenRayProvider, ground);
             engine.SetService(CoreServiceKeys.ContinuousHeightmap, ground);
             engine.SetService(CoreServiceKeys.ViewController, ground);
+            engine.SetService(CoreServiceKeys.TeamColorPalette, new TeamColorPalette(new[]
+            {
+                default,
+                TeamColorPalette.ParseHex("#4DB2FF", "test"),
+                TeamColorPalette.ParseHex("#7ED957", "test"),
+                TeamColorPalette.ParseHex("#FFC53D", "test"),
+                TeamColorPalette.ParseHex("#C792FF", "test"),
+            }, new[] { 1, 2, 3, 4 }));
             var frame = CrowdHudSamplingTests.ShippedDebugView();
             frame.BindEngine(engine);
             frame.SetViewport(SpawnXCm - 20000f, SpawnYCm - 20000f, SpawnXCm + 20000f, SpawnYCm + 20000f, 20f);

@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -29,6 +30,7 @@ internal sealed class CrowdDebugViewFrame
     private readonly CrowdFlowFieldVisualSource _flowSource = new();
     private readonly CrowdFlowFieldVisualProjector _flow;
     private GameEngine? _engine;
+    private TeamColorPalette? _palette;
 
     private bool _viewValid;
     private float _minX, _minY, _maxX, _maxY;
@@ -130,6 +132,12 @@ internal sealed class CrowdDebugViewFrame
     }
 
     internal void BindEngine(GameEngine engine) => _engine = engine;
+
+    internal void UsePalette(TeamColorPalette palette)
+    {
+        ArgumentNullException.ThrowIfNull(palette);
+        _palette = palette;
+    }
 
     internal void SetViewport(float minX, float minY, float maxX, float maxY, float cellPx)
     {
@@ -641,7 +649,7 @@ internal sealed class CrowdDebugViewFrame
             if (!TryScreen(pos.X.ToFloat(), pos.Y.ToFloat(), projector, height, out int sx, out int sy)) continue;
             Vector4 color = UnitColorMode switch
             {
-                CrowdSimulationDebugViewConfig.ColorTeam => CrowdDebugViewColors.At(_config.Colors.Teams, movement.PlayerIdx[unit], path, "colors.teams"),
+                CrowdSimulationDebugViewConfig.ColorTeam => TeamColor(session, movement.PlayerIdx[unit]),
                 CrowdSimulationDebugViewConfig.ColorPriority => CrowdDebugViewColors.At(_config.Colors.Priorities, movement.PushPriorities[unit].ToInt(), path, "colors.priorities"),
                 CrowdSimulationDebugViewConfig.ColorTemplate => TemplateColor(session, movement.States[unit].GroupId, radii, path),
                 _ => default,
@@ -656,6 +664,29 @@ internal sealed class CrowdDebugViewFrame
             if (overlay.AddRect(PresentationOverlayLayer.UnderUi, sx - mark / 2, sy - mark / 2, mark, mark, color, color))
                 used = overlay.Count;
         }
+    }
+
+    private Vector4 TeamColor(CrowdSimSession session, int playerIndex)
+    {
+        TeamColorPalette? palette = null;
+        if (_engine != null
+            && _engine.TryGetService(CoreServiceKeys.TeamColorPalette, out TeamColorPalette? bound)
+            && bound != null)
+        {
+            palette = bound;
+        }
+
+        palette ??= _palette;
+        if (palette == null)
+            throw new InvalidOperationException("调试视图按队伍着色需要玩家调色板。");
+
+        int[] ids = session.Config.PairRules.PlayerIds;
+        if ((uint)playerIndex >= (uint)ids.Length)
+            throw new InvalidOperationException($"调试视图按队伍着色：玩家表序 {playerIndex} 越界。");
+        int playerId = ids[playerIndex];
+        if (!palette.TryGet(playerId, out Vector4 color))
+            throw new InvalidOperationException($"调试视图按队伍着色：玩家 {playerId} 没有颜色。");
+        return color;
     }
 
     private Vector4 TemplateColor(CrowdSimSession session, int groupId, int radii, string path)

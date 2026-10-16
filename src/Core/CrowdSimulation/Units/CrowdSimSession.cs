@@ -79,6 +79,7 @@ public sealed class CrowdSimSession
     /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>
     public CrowdSimulationTelemetry Telemetry { get; } = new();
 
+    /// <summary>运动质量采样用的航向变化阈值（弧度），由调试视图配置在启用移动前写入。</summary>
     public CrowdSimulationRuntimeConfig Config { get; }
     public ArchWorld World { get; }
     public CrowdSimUnits Units { get; }

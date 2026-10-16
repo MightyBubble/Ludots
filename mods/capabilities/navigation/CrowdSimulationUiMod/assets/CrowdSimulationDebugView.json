@@ -33,12 +33,6 @@
       "blue": 160,
       "alpha": 210
     },
-    "plan": {
-      "red": 150,
-      "green": 42,
-      "blue": 72,
-      "alpha": 180
-    },
     "tile": {
       "red": 214,
       "green": 154,
@@ -50,18 +44,6 @@
       "green": 170,
       "blue": 40,
       "alpha": 230
-    },
-    "ink": {
-      "red": 24,
-      "green": 18,
-      "blue": 28,
-      "alpha": 210
-    },
-    "paper": {
-      "red": 236,
-      "green": 230,
-      "blue": 214,
-      "alpha": 48
     },
     "twoWay": {
       "red": 70,
@@ -111,56 +93,6 @@
       "blue": 90,
       "alpha": 240
     },
-    "teams": [
-      {
-        "red": 229,
-        "green": 57,
-        "blue": 57,
-        "alpha": 230
-      },
-      {
-        "red": 229,
-        "green": 186,
-        "blue": 57,
-        "alpha": 230
-      },
-      {
-        "red": 143,
-        "green": 229,
-        "blue": 57,
-        "alpha": 230
-      },
-      {
-        "red": 57,
-        "green": 229,
-        "blue": 100,
-        "alpha": 230
-      },
-      {
-        "red": 57,
-        "green": 229,
-        "blue": 229,
-        "alpha": 230
-      },
-      {
-        "red": 57,
-        "green": 100,
-        "blue": 229,
-        "alpha": 230
-      },
-      {
-        "red": 143,
-        "green": 57,
-        "blue": 229,
-        "alpha": 230
-      },
-      {
-        "red": 229,
-        "green": 57,
-        "blue": 186,
-        "alpha": 230
-      }
-    ],
     "templates": [
       {
         "red": 242,

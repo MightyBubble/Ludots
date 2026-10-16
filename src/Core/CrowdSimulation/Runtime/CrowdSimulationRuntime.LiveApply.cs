@@ -32,6 +32,9 @@ public sealed partial class CrowdSimulationRuntime
         {
             GameEngine engine = RequireLiveEngine();
             JsonObject document = ReadMergedObject(engine, CrowdSimulationDebugViewPath);
+            JsonObject palette = CrowdPresentationPalette.LoadMerged(
+                engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+            document = CrowdPresentationPalette.MergeInto(document, palette, CrowdSimulationDebugViewPath);
             return CrowdSimulationLiveApply.ApplyDebugView(document, () => CommitDebugView(document)).ToJson();
         }
         catch (Exception ex)

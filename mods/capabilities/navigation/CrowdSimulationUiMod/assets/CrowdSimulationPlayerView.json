@@ -2,7 +2,6 @@
   "magicBox": true,
   "fogHide": false,
   "playerRoute": true,
-  "lineOfSight": false,
   "layersStartEnabled": true,
   "deployCount": 24,
   "deployCountStep": 4,
@@ -43,11 +42,8 @@
   "routeThicknessCm": 300,
   "markerRadiusCm": 2000,
   "crossArmCm": 3000,
-  "killRadiusCm": 1300000,
   "killRingScale": 2,
   "killImpulse": 0,
-  "killXCm": 800000,
-  "killYCm": 800000,
   "enemyMarkRadiusCm": 2400,
   "hillshadeStrength": 1.2,
   "maxBeliefMarkers": 1024,
@@ -112,15 +108,53 @@
     "self": "本方"
   },
   "colors": {
-    "plan": { "red": 150, "green": 42, "blue": 72, "alpha": 180 },
-    "ink": { "red": 24, "green": 18, "blue": 28, "alpha": 210 },
-    "paper": { "red": 236, "green": 230, "blue": 214, "alpha": 48 },
-    "selected": { "red": 255, "green": 255, "blue": 255, "alpha": 255 },
-    "terrainLow": { "red": 78, "green": 96, "blue": 62, "alpha": 255 },
-    "terrainHigh": { "red": 214, "green": 206, "blue": 176, "alpha": 255 },
-    "terrainShade": { "red": 36, "green": 32, "blue": 48, "alpha": 255 },
-    "goal": { "red": 236, "green": 220, "blue": 160, "alpha": 230 },
-    "ripple": { "red": 150, "green": 42, "blue": 72, "alpha": 160 },
-    "enemyMark": { "red": 255, "green": 96, "blue": 32, "alpha": 255 }
+    "selected": {
+      "red": 255,
+      "green": 255,
+      "blue": 255,
+      "alpha": 255
+    },
+    "terrainLow": {
+      "red": 78,
+      "green": 96,
+      "blue": 62,
+      "alpha": 255
+    },
+    "terrainHigh": {
+      "red": 214,
+      "green": 206,
+      "blue": 176,
+      "alpha": 255
+    },
+    "terrainShade": {
+      "red": 36,
+      "green": 32,
+      "blue": 48,
+      "alpha": 255
+    },
+    "goal": {
+      "red": 236,
+      "green": 220,
+      "blue": 160,
+      "alpha": 230
+    },
+    "ripple": {
+      "red": 150,
+      "green": 42,
+      "blue": 72,
+      "alpha": 160
+    },
+    "enemyMark": {
+      "red": 255,
+      "green": 96,
+      "blue": 32,
+      "alpha": 255
+    }
+  },
+  "shapeLabels": {
+    "box": "方阵",
+    "line": "横队",
+    "wedge": "楔形",
+    "loose": "松散"
   }
 }

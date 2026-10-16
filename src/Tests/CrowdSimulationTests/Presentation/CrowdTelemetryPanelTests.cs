@@ -425,7 +425,9 @@ public class CrowdTelemetryPanelTests
     private static CrowdSimulationDebugViewConfig LoadShipped()
     {
         string path = ShippedPath();
-        return CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path);
+        var merged = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+        return CrowdSimulationDebugViewConfig.Load(merged, path);
     }
 
     private static JsonObject Shipped() => JsonNode.Parse(File.ReadAllText(ShippedPath()))!.AsObject();
@@ -437,7 +439,7 @@ public class CrowdTelemetryPanelTests
         CrowdHudSettings.Parse(node.ToJsonString(), CrowdHudSettings.RelativePath);
 
     private static string ShippedPath() => Path.Combine(
-        RepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
 
     private static string RepoRoot()
     {

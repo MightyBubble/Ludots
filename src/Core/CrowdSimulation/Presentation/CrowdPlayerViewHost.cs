@@ -142,7 +142,6 @@ internal sealed class CrowdPlayerViewHost
         };
         _fogHide = config.FogHide;
         _route = config.PlayerRoute;
-        _lineOfSight = config.LineOfSight;
         _deployCount = config.DeployCount;
         _clickCount = config.ClickCount;
     }
@@ -154,6 +153,7 @@ internal sealed class CrowdPlayerViewHost
     public void Bind(CrowdSimSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
+        _lineOfSight = session.Config.Fog.LineOfSight;
         int players = session.Config.PairRules.PlayerCount;
         if (players < 1 || players > MaxPlayers)
         {
@@ -175,7 +175,12 @@ internal sealed class CrowdPlayerViewHost
         for (int i = 0; i < formations.Count; i++)
         {
             _shapeIds[i] = formations[i].Id;
-            _shapeLabels[i] = formations[i].Label;
+            if (!_config.ShapeLabels.TryGetValue(formations[i].Id, out string? shapeLabel) || string.IsNullOrWhiteSpace(shapeLabel))
+            {
+                throw new InvalidOperationException($"玩家视图 shapeLabels 缺少阵型 {formations[i].Id}。");
+            }
+
+            _shapeLabels[i] = shapeLabel;
             if (string.Equals(formations[i].Id, _config.DefaultShapeId, StringComparison.Ordinal))
             {
                 shape = i;
@@ -185,6 +190,24 @@ internal sealed class CrowdPlayerViewHost
         if (shape < 0)
         {
             throw new InvalidOperationException($"玩家视图默认阵型 {_config.DefaultShapeId} 不在阵型表里。");
+        }
+
+        foreach (string id in _config.ShapeLabels.Keys)
+        {
+            bool known = false;
+            for (int i = 0; i < _shapeIds.Length; i++)
+            {
+                if (string.Equals(_shapeIds[i], id, StringComparison.Ordinal))
+                {
+                    known = true;
+                    break;
+                }
+            }
+
+            if (!known)
+            {
+                throw new InvalidOperationException($"玩家视图 shapeLabels.{id} 不在阵型表里。");
+            }
         }
 
         int templates = _config.ClickTemplates.Length;
@@ -790,7 +813,7 @@ internal sealed class CrowdPlayerViewHost
     private void LaunchOutside(CrowdSimSession session, S4DeployDemoRuntime demo)
     {
         CrowdFogCheckScene scene = RequireScene();
-        EnqueueKill(demo);
+        EnqueueKill(session, demo);
         EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         EnqueueCluster(session, demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
@@ -841,7 +864,7 @@ internal sealed class CrowdPlayerViewHost
             throw new InvalidOperationException("墙后敌方收进导航格心后离开了遮挡东侧那一格迷雾。");
         }
 
-        EnqueueKill(demo);
+        EnqueueKill(session, demo);
         EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
@@ -944,14 +967,30 @@ internal sealed class CrowdPlayerViewHost
             _enemyMark);
     }
 
-    private void EnqueueKill(S4DeployDemoRuntime demo)
+    internal static void BoardDisc(CrowdSimSession session, out int xCm, out int yCm, out int radiusCm)
     {
+        ArgumentNullException.ThrowIfNull(session);
+        int side = checked(session.Config.NavCellsPerSide * session.Config.NavCellSizeCm);
+        if (side < 2)
+            throw new InvalidOperationException("击杀圈需要导航板边长至少 2 厘米。");
+        int center = side / 2;
+        int far = side - center;
+        xCm = center;
+        yCm = center;
+        double reach = Math.Sqrt(((double)far * far) + ((double)far * far));
+        int whole = (int)reach;
+        radiusCm = (double)whole < reach ? whole + 1 : whole;
+    }
+
+    private void EnqueueKill(CrowdSimSession session, S4DeployDemoRuntime demo)
+    {
+        BoardDisc(session, out int xCm, out int yCm, out int radiusCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.Kill,
-            XCm = _config.KillXCm,
-            YCm = _config.KillYCm,
-            RadiusCm = _config.KillRadiusCm,
+            XCm = xCm,
+            YCm = yCm,
+            RadiusCm = radiusCm,
             RingScale = Fix64.FromDouble(_config.KillRingScale),
             Impulse = Fix64.FromDouble(_config.KillImpulse),
         });

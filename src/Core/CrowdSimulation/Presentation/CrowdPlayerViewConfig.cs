@@ -16,7 +16,6 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public bool MagicBox { get; init; }
     [JsonRequired] public bool FogHide { get; init; }
     [JsonRequired] public bool PlayerRoute { get; init; }
-    [JsonRequired] public bool LineOfSight { get; init; }
     [JsonRequired] public bool LayersStartEnabled { get; init; }
     [JsonRequired] public int DeployCount { get; init; }
     [JsonRequired] public int DeployCountStep { get; init; }
@@ -36,11 +35,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int RouteThicknessCm { get; init; }
     [JsonRequired] public int MarkerRadiusCm { get; init; }
     [JsonRequired] public int CrossArmCm { get; init; }
-    [JsonRequired] public int KillRadiusCm { get; init; }
     [JsonRequired] public double KillRingScale { get; init; }
     [JsonRequired] public double KillImpulse { get; init; }
-    [JsonRequired] public int KillXCm { get; init; }
-    [JsonRequired] public int KillYCm { get; init; }
     [JsonRequired] public int EnemyMarkRadiusCm { get; init; }
     [JsonRequired] public float HillshadeStrength { get; init; }
     [JsonRequired] public int MaxBeliefMarkers { get; init; }
@@ -49,6 +45,7 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public string BoxingContextId { get; init; } = "";
     [JsonRequired] public string FogSceneUri { get; init; } = "";
     [JsonRequired] public string DefaultShapeId { get; init; } = "";
+    [JsonRequired] public Dictionary<string, string> ShapeLabels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewActions Actions { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewLabels Labels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewColors Colors { get; init; } = null!;
@@ -108,8 +105,6 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
         if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1 || EnemyMarkRadiusCm < 1)
             throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm、crossArmCm 与 enemyMarkRadiusCm 需为 ≥ 1 的整数。");
-        if (KillRadiusCm < 1)
-            throw new InvalidOperationException($"{path}: killRadiusCm 需为 ≥ 1 的整数。");
         if (!(KillRingScale > 1d) || !double.IsFinite(KillRingScale))
             throw new InvalidOperationException($"{path}: killRingScale 必须 > 1。");
         if (KillImpulse < 0d || !double.IsFinite(KillImpulse))
@@ -122,6 +117,16 @@ internal sealed class CrowdPlayerViewConfig
         RequireText(path, "boxingContextId", BoxingContextId);
         RequireText(path, "fogSceneUri", FogSceneUri);
         RequireText(path, "defaultShapeId", DefaultShapeId);
+        if (ShapeLabels == null || ShapeLabels.Count == 0)
+            throw new InvalidOperationException($"{path}: shapeLabels 至少一条。");
+        foreach (var pair in ShapeLabels)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                throw new InvalidOperationException($"{path}: shapeLabels 的键不能为空。");
+            if (string.IsNullOrWhiteSpace(pair.Value))
+                throw new InvalidOperationException($"{path}: shapeLabels.{pair.Key} 不能为空。");
+        }
+
         Actions.Validate(path);
         Labels.Validate(path);
         Colors.Validate(path);

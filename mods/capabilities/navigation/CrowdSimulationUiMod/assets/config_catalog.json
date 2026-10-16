@@ -1,5 +1,9 @@
 [
   {
+    "Path": "CrowdSimulationPresentationPalette.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "CrowdSimulationDebug.json",
     "Policy": "DeepObject"
   },

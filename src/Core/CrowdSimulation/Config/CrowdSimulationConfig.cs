@@ -62,6 +62,11 @@ public sealed class CrowdSimulationConfig
                 "CrowdSimulationConfig.json: worker.planTimeoutMs 需为 > 0 的整数毫秒。");
         }
 
+        if (!(cfg.Telemetry.TurnEpsRad > 0d) || double.IsNaN(cfg.Telemetry.TurnEpsRad) || double.IsInfinity(cfg.Telemetry.TurnEpsRad))
+        {
+            throw new InvalidOperationException("CrowdSimulationConfig.json: telemetry.turnEpsRad 必须是 > 0 的有限数。");
+        }
+
         return cfg;
     }
 
@@ -263,7 +268,6 @@ public sealed class CrowdSimulationConfig
 
     public sealed class FormationShapeEntry
     {
-        public required string Label { get; init; }
         public required double SpacingDiameterScale { get; init; }
         public required double Aspect { get; init; }
         public required bool Wedge { get; init; }
@@ -417,13 +421,10 @@ public sealed class CrowdSimulationConfig
         public required int PlayerId { get; init; }
         public required int XCm { get; init; }
         public required int YCm { get; init; }
-        /// <summary>该玩家的单位配色(#rrggbb;呈现层调色板数据,仿真空口)。</summary>
-        public string? Color { get; init; }
     }
 
     public sealed class TelemetrySection
     {
         public required double TurnEpsRad { get; init; }
-        public required double Ema { get; init; }
     }
 }

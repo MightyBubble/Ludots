@@ -160,7 +160,6 @@ internal sealed class CrowdDebugViewColors
     [JsonRequired] public CrowdDebugRgba BeliefGhost { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Leader { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Funnel { get; init; } = null!;
-    [JsonRequired] public CrowdDebugRgba[] Teams { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Templates { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Priorities { get; init; } = null!;
 
@@ -180,7 +179,6 @@ internal sealed class CrowdDebugViewColors
         BeliefGhost.Validate(path, "colors.beliefGhost");
         Leader.Validate(path, "colors.leader");
         Funnel.Validate(path, "colors.funnel");
-        Palette(path, "colors.teams", Teams);
         Palette(path, "colors.templates", Templates);
         Palette(path, "colors.priorities", Priorities);
     }

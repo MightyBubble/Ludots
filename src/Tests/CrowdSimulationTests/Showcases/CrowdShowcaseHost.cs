@@ -132,8 +132,16 @@ internal sealed class CrowdShowcaseHost : IDisposable
     public static JsonObject MergedConfig(GameEngine engine, string path)
     {
         var entry = ConfigPipeline.RequireEntry(engine.ConfigCatalog, path, ConfigMergePolicy.DeepObject);
-        return engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
+        JsonObject merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{path} 合并为空。");
+        if (path is "CrowdSimulationDebugView.json" or "CrowdSimulationPlayerView.json")
+        {
+            JsonObject palette = CrowdPresentationPalette.LoadMerged(
+                engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+            merged = CrowdPresentationPalette.MergeInto(merged, palette, path);
+        }
+
+        return merged;
     }
 
     /// <summary>脚本里 <paramref name="type"/> 行（可选按玩家）的 tick，按脚本顺序。</summary>

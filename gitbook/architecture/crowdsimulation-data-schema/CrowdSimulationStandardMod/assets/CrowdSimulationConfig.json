@@ -161,7 +161,6 @@
     "centersPerGroup": 3
   },
   "telemetry": {
-    "turnEpsRad": 0.035,
-    "ema": 0.2
+    "turnEpsRad": 0.035
   }
 }

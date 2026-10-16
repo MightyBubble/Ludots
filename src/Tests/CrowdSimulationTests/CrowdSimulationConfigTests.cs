@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -118,31 +119,38 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void MixedBaseColors_AreRejected()
+    public void BaseColor_IsNotARuleField()
     {
         var json = TestDefaults.DefaultConfigJson();
-        ((JsonObject)json["deploy"]!["bases"]![1]!).Remove("color");
-        var config = CrowdSimulationConfig.Load(json);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
-        Assert.That(ex.Message, Does.Contain("deploy.bases[1].color"));
+        ((JsonObject)json["deploy"]!["bases"]![0]!).Add("color", "#4DB2FF");
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain("color"));
     }
 
     [Test]
-    public void BasesWithoutColors_StillAssemble()
+    public void PlayerColors_MissingPlayer_IsRejected()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        foreach (var basis in json["deploy"]!["bases"]!.AsArray())
-        {
-            ((JsonObject)basis!).Remove("color");
-        }
+        var palette = CrowdPlayerColors.Load(new JsonObject { ["1"] = "#4DB2FF" });
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdPlayerColors.RequirePlayers(palette, new[] { 1, 2 }, "demo"));
+        Assert.That(ex!.Message, Does.Contain("缺少玩家 2"));
+    }
 
-        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json));
-        Assert.That(runtime.Deploy.Bases.Count, Is.GreaterThan(1));
-        foreach (var basis in runtime.Deploy.Bases)
-        {
-            Assert.That(basis.Color, Is.Null);
-        }
+    [Test]
+    public void PlayerColors_UnknownPlayer_IsRejected()
+    {
+        var palette = CrowdPlayerColors.Load(new JsonObject { ["1"] = "#4DB2FF", ["9"] = "#FFC53D" });
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdPlayerColors.RequirePlayers(palette, new[] { 1 }, "demo"));
+        Assert.That(ex!.Message, Does.Contain("玩家 9"));
+    }
+
+    [Test]
+    public void PlayerColors_BadKey_IsRejected()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            CrowdPlayerColors.Load(new JsonObject { ["red"] = "#4DB2FF" }));
+        Assert.That(ex!.Message, Does.Contain("red"));
     }
 
     [Test]

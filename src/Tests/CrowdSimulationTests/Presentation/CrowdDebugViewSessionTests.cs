@@ -12,6 +12,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Utils;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -34,6 +35,14 @@ public class CrowdDebugViewSessionTests
         frameOn.Funnel = frameOn.Corridor = frameOn.HpaGraph = frameOn.NavPolygons = frameOn.TileGrid = true;
         frameOn.Flow = frameOn.Density = frameOn.Blocked = frameOn.Links = frameOn.Belief = true;
         frameOn.UnitColorMode = CrowdSimulationDebugViewConfig.ColorTeam;
+        frameOn.UsePalette(new TeamColorPalette(new[]
+        {
+            default,
+            TeamColorPalette.ParseHex("#4DB2FF", "test"),
+            TeamColorPalette.ParseHex("#7ED957", "test"),
+            TeamColorPalette.ParseHex("#FFC53D", "test"),
+            TeamColorPalette.ParseHex("#C792FF", "test"),
+        }, new[] { 1, 2, 3, 4 }));
         frameOn.SetViewport(480000f, 540000f, 560000f, 620000f, 20f);
         frameOn.ControllingPlayer = 0;
         var frameOff = new CrowdDebugViewFrame(LoadView());
@@ -123,7 +132,8 @@ public class CrowdDebugViewSessionTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         string path = ViewPath();
-        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        var root = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
 
         var oldKey = (JsonObject)root.DeepClone();
         oldKey["inspect"]!["layerIndex"] = 0;
@@ -160,16 +170,13 @@ public class CrowdDebugViewSessionTests
         while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
             dir = Path.GetDirectoryName(dir);
         if (dir == null) throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
-        return Path.Combine(dir, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        return Path.Combine(dir, "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
     }
 
     private static CrowdSimulationDebugViewConfig LoadView()
     {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
-            dir = Path.GetDirectoryName(dir);
-        if (dir == null) throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
-        string path = Path.Combine(dir, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
-        return CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path);
+        string path = ViewPath();
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        return CrowdSimulationDebugViewConfig.Load(CrowdPresentationPaletteTestMerge.MergedDebugView(root), path);
     }
 }

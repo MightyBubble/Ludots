@@ -62,25 +62,21 @@
   },
   "formations": {
     "box": {
-      "label": "方阵",
       "spacingDiameterScale": 1,
       "aspect": 1.5,
       "wedge": false
     },
     "line": {
-      "label": "横队",
       "spacingDiameterScale": 1,
       "aspect": 6,
       "wedge": false
     },
     "wedge": {
-      "label": "楔形",
       "spacingDiameterScale": 1,
       "aspect": 1.5,
       "wedge": true
     },
     "loose": {
-      "label": "松散",
       "spacingDiameterScale": 1.8,
       "aspect": 1.5,
       "wedge": false
@@ -159,7 +155,6 @@
     "centersPerGroup": 3
   },
   "telemetry": {
-    "turnEpsRad": 0.035,
-    "ema": 0.2
+    "turnEpsRad": 0.035
   }
 }

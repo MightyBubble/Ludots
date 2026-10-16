@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrowdSimulationTests.Presentation;
 using Ludots.Core.CrowdSimulation.Config;
 using NUnit.Framework;
 
@@ -246,12 +247,13 @@ public class CrowdSimulationEditorApiTests
         string path = Path.Combine(
             FindRepoRoot(),
             "mods",
-            "showcases",
-            "crowd_simulation",
-            "CrowdSimulationS4DeployMod",
+            "capabilities",
+            "navigation",
+            "CrowdSimulationUiMod",
             "assets",
             "CrowdSimulationDebugView.json");
-        JsonObject node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        JsonObject node = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
         node["extra"] = 1;
         CrowdSimulationEditorResult result = CrowdSimulationLiveApply.ApplyDebugView(node, () => committed = true);
         Assert.That(result.Ok, Is.False);

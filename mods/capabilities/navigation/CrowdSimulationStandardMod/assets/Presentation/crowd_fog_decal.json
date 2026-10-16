@@ -1,6 +1,26 @@
 {
-  "unseen": [0, 0, 0, 232],
-  "explored": [0, 0, 0, 148],
-  "visible": [0, 0, 0, 0],
-  "denied": [64, 8, 16, 214]
+  "unseen": {
+    "red": 0,
+    "green": 0,
+    "blue": 0,
+    "alpha": 232
+  },
+  "explored": {
+    "red": 0,
+    "green": 0,
+    "blue": 0,
+    "alpha": 148
+  },
+  "visible": {
+    "red": 0,
+    "green": 0,
+    "blue": 0,
+    "alpha": 0
+  },
+  "denied": {
+    "red": 64,
+    "green": 8,
+    "blue": 16,
+    "alpha": 214
+  }
 }

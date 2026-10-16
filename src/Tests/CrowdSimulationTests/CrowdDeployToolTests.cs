@@ -210,7 +210,6 @@ public sealed class CrowdDeployToolTests
         var session = host.Session;
         var presentation = new CrowdPresentationConfig
         {
-            Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
             ViewLabels = CrowdViewCatalog.Named(("route", "路线")),
             Hud = new CrowdHudConfig
@@ -428,8 +427,6 @@ public sealed class CrowdDeployToolTests
 
     private static CrowdDebugRates Rates() => new()
     {
-        TickHzMin = 10,
-        TickHzMax = 60,
         AvoidHzMin = 1,
         AvoidHzMax = 30,
         AvoidStep = 1,
