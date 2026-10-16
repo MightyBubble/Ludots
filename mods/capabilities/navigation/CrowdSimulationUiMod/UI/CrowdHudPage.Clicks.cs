@@ -28,15 +28,15 @@ internal sealed partial class CrowdHudPage
     {
         _observeShape = () => _player.ShapeIndex;
         _observeTeam = () => _player.LocalPlayer;
-        _observeLayer = () => _player.Layer;
-        _observeClickType = () => _player.ClickUnitType;
-        _observeClickRadius = () => _player.ClickRadius;
-        _observeRadiusRange = () => RadiusKey(_player.RadiusMin, _player.RadiusMax);
+        _observeLayer = LayerTypeIndex;
+        _observeClickType = () => ClickTemplateIndex(_player.ClickTemplate);
+        _observeClickRadius = () => ClickTemplateIndex(_player.ClickTemplate);
+        _observeRadiusRange = () => RadiusKey(WindowLo(), WindowHi());
         _observeDeployCount = () => _player.DeployCount;
         _observeClickCount = () => _player.ClickCount;
         _observeUnitColor = () => (int)_inspect.UnitColor;
-        _observeInspectLayer = () => _inspect.LayerIndex;
-        _observeInspectRadius = () => _inspect.RadiusIndex;
+        _observeInspectLayer = InspectAgentIndex;
+        _observeInspectRadius = InspectRadiusIndex;
         _observeSlices = () => _deploy.RebakeSlices;
         _observeAvoid = () => AvoidIndex(_deploy.AvoidHz);
     }
@@ -172,9 +172,31 @@ internal sealed partial class CrowdHudPage
         Cycle(keys.CycleLayer, _observeLayer, type, Math.Max(1, Catalog.UnitTypes.Count), keys.ToggleLayer);
     }
 
-    private void PickSpawnType(int type) => Cycle(PlayerKeys.CycleClickTemplate, _observeClickType, type, Math.Max(1, Catalog.UnitTypes.Count));
+    private void PickSpawnType(int unitTypeIndex)
+    {
+        CrowdHudCatalog c = Catalog;
+        for (int i = 0; i < c.ClickTemplates.Count; i++)
+        {
+            if (c.ClickUnitType[i] == unitTypeIndex)
+            {
+                Cycle(PlayerKeys.CycleClickTemplate, _observeClickType, i, Math.Max(1, c.ClickTemplates.Count));
+                return;
+            }
+        }
+    }
 
-    private void PickSpawnRadius(int radius) => Cycle(PlayerKeys.CycleClickRadius, _observeClickRadius, radius, Math.Max(1, Catalog.RadiusCm.Count));
+    private void PickSpawnRadius(int radiusClass)
+    {
+        CrowdHudCatalog c = Catalog;
+        for (int i = 0; i < c.ClickTemplates.Count; i++)
+        {
+            if (c.ClickRadiusClass[i] == radiusClass)
+            {
+                Cycle(PlayerKeys.CycleClickRadius, _observeClickRadius, i, Math.Max(1, c.ClickTemplates.Count));
+                return;
+            }
+        }
+    }
 
     private void PickInspectLayer(int index) => Cycle(DebugKeys.CycleInspectLayer, _observeInspectLayer, index, Math.Max(1, Catalog.AgentTypes.Count));
 
@@ -184,16 +206,29 @@ internal sealed partial class CrowdHudPage
     /// 原型 RadiusControl：点区间外的档扩到它，点区间端点收掉它，中间档不响应。
     /// 演示的半径窗键只会走 (0,末) → (1,1) → (1,2) … → (末,末) → (0,末) 这一圈，所以 (0, k&lt;末) 到不了，点了不动。
     /// </summary>
-    private void PickDeployRadius(int radius)
+    private void PickDeployRadius(int radiusClass)
     {
-        int lo = _player.RadiusMin, hi = _player.RadiusMax;
-        int last = Catalog.RadiusCm.Count - 1;
+        CrowdHudCatalog c = Catalog;
+        int lo = WindowLo(), hi = WindowHi();
+        int last = c.ClickTemplates.Count - 1;
+        if (last < 0) return;
         int nextLo = lo, nextHi = hi;
-        if (radius < lo) nextLo = radius;
-        else if (radius > hi) nextHi = radius;
+        int template = -1;
+        for (int i = 0; i < c.ClickTemplates.Count; i++)
+        {
+            if (c.ClickRadiusClass[i] == radiusClass)
+            {
+                template = i;
+                break;
+            }
+        }
+
+        if (template < 0) return;
+        if (template < lo) nextLo = template;
+        else if (template > hi) nextHi = template;
         else if (lo == hi) return;
-        else if (radius == lo) nextLo = lo + 1;
-        else if (radius == hi) nextHi = hi - 1;
+        else if (template == lo) nextLo = lo + 1;
+        else if (template == hi) nextHi = hi - 1;
         else return;
         if (nextLo == 0 && nextHi < last) return;
         int states = (last + 1) * (last + 2) / 2 + 1;

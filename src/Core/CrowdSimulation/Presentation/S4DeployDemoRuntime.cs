@@ -149,7 +149,6 @@ public sealed class S4DeployDemoRuntime
         }
 
         _tools?.ResolveSpawn(session.Config);
-        TickHzWindow = session.Config.FixedHz.ToString(System.Globalization.CultureInfo.InvariantCulture);
         session.PlaybackHeld = PlaybackHeld;
     }
 

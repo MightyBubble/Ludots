@@ -245,8 +245,7 @@ internal sealed partial class CrowdHudPage
             return;
         }
 
-        int tmin = Math.Min(c.TickHzMin, d.FixedHz), tmax = Math.Max(c.TickHzMax, d.FixedHz);
-        CrowdHudCanvas.DrawSlider(_tickSlider, tmax > tmin ? (d.FixedHz - tmin) / (double)(tmax - tmin) : 0d);
+        CrowdHudCanvas.DrawSlider(_tickSlider, 1d);
         double amax = d.FixedHz;
         CrowdHudCanvas.DrawSlider(_avoidSlider, amax > c.AvoidHzMin ? (d.AvoidHz - c.AvoidHzMin) / (amax - c.AvoidHzMin) : 0d);
     }
@@ -255,6 +254,8 @@ internal sealed partial class CrowdHudPage
 
     private void WritePlayer(in CrowdPlayerHud p)
     {
+        CrowdHudCatalog? c = _catalog;
+        int clickIdx = ClickTemplateIndex(p.ClickTemplate);
         for (int i = 1; i <= p.PlayerCount && i < _units.Length; i++) Put(_playerCounts[i], CrowdHudFormat.Int(_unitsShown[i]));
         for (int i = 0; i < _playerChips.Count; i++) Mark(_playerChips[i].Set(i + 1 == p.LocalPlayer));
         Put(OrderMode, p.Mode switch
@@ -277,22 +278,32 @@ internal sealed partial class CrowdHudPage
             Mark(_layerEyes[t].Show(on));
             Mark(_layerEyesOff[t].Show(!on));
             Mark(_deployTypeChips[t].Set(on));
-            Mark(_spawnTypeChips[t].Set(t == p.ClickUnitType));
+            bool spawnType = clickIdx >= 0 && c != null && (uint)clickIdx < (uint)c.ClickUnitType.Count && c.ClickUnitType[clickIdx] == t;
+            Mark(_spawnTypeChips[t].Set(spawnType));
         }
 
+        int windowLo = WindowLo(), windowHi = WindowHi();
         for (int r = 0; r < _deployRadiusChips.Count; r++)
         {
-            Mark(_deployRadiusChips[r].Set(r >= p.RadiusMin && r <= p.RadiusMax));
-            Mark(_spawnRadiusChips[r].Set(r == p.ClickRadius));
+            bool inWindow = false;
+            if (c != null && windowLo >= 0 && windowHi >= windowLo)
+            {
+                for (int t = windowLo; t <= windowHi; t++)
+                {
+                    if ((uint)t < (uint)c.ClickRadiusClass.Count && c.ClickRadiusClass[t] == r) inWindow = true;
+                }
+            }
+
+            Mark(_deployRadiusChips[r].Set(inWindow));
+            bool spawnRadius = clickIdx >= 0 && c != null && (uint)clickIdx < (uint)c.ClickRadiusClass.Count && c.ClickRadiusClass[clickIdx] == r;
+            Mark(_spawnRadiusChips[r].Set(spawnRadius));
         }
 
-        CrowdHudCatalog? c = _catalog;
         Put(DeployCount, CrowdHudFormat.Int(p.DeployCount));
         Put(SpawnCount, CrowdHudFormat.Int(p.ClickCount));
         CrowdHudCanvas.DrawSlider(_deployCountSlider, c == null ? double.NaN : Fraction(p.DeployCount, c.DeployCount));
         CrowdHudCanvas.DrawSlider(_spawnCountSlider, c == null ? double.NaN : Fraction(p.ClickCount, c.ClickCount));
-        if (c != null && (uint)p.ClickUnitType < (uint)c.UnitTypes.Count) Put(SpawnHead, c.UnitTypes[p.ClickUnitType]);
-        else Put(SpawnHead, CrowdHudFormat.Missing);
+        Put(SpawnHead, string.IsNullOrEmpty(p.ClickTemplate) ? CrowdHudFormat.Missing : p.ClickTemplate);
     }
 
     private static double Fraction(int value, CrowdHudRange range) =>
@@ -304,10 +315,13 @@ internal sealed partial class CrowdHudPage
         CrowdHudCatalog? c = _catalog;
         string? unit = null;
         int radiusCm = 0;
-        if (_playerReady && c != null && (uint)_player.ClickUnitType < (uint)c.UnitTypes.Count && (uint)_player.ClickRadius < (uint)c.RadiusCm.Count)
+        int clickIndex = ClickTemplateIndex(_player.ClickTemplate);
+        if (_playerReady && c != null && clickIndex >= 0
+            && (uint)clickIndex < (uint)c.ClickRadiusClass.Count
+            && (uint)c.ClickRadiusClass[clickIndex] < (uint)c.RadiusCm.Count)
         {
-            unit = c.UnitTypes[_player.ClickUnitType];
-            radiusCm = c.RadiusCm[_player.ClickRadius];
+            unit = _player.ClickTemplate;
+            radiusCm = c.RadiusCm[c.ClickRadiusClass[clickIndex]];
         }
 
         CrowdHudFormat.ToolHint(W, _feed.Text, in _deploy, _player.ClickCount, unit, radiusCm);
@@ -316,11 +330,13 @@ internal sealed partial class CrowdHudPage
 
     private void WriteInspect(in CrowdInspectReadout r)
     {
-        for (int i = 0; i < _inspectLayerChips.Count; i++) Mark(_inspectLayerChips[i].Set(i == r.LayerIndex));
-        for (int i = 0; i < _inspectRadiusChips.Count; i++) Mark(_inspectRadiusChips[i].Set(i == r.RadiusIndex));
+        int agentIndex = InspectAgentIndex();
+        int radiusIndex = InspectRadiusIndex();
+        for (int i = 0; i < _inspectLayerChips.Count; i++) Mark(_inspectLayerChips[i].Set(i == agentIndex));
+        for (int i = 0; i < _inspectRadiusChips.Count; i++) Mark(_inspectRadiusChips[i].Set(i == radiusIndex));
         Put(InspectColor, CrowdHudFormat.ColorLabel(r.UnitColor));
         Put(InspectTerrain, r.TerrainTypes ? "开" : "关");
-        if (r.Belief) W.Append(CrowdHudFormat.Inv, $"{r.BeliefGroup} · {CrowdHudFormat.Int(r.DivergentCells)} / {CrowdHudFormat.Int(r.Ghosts)}");
+        if (r.Belief) W.Append(CrowdHudFormat.Inv, $"P{r.BeliefPlayer} · {CrowdHudFormat.Int(r.DivergentCells)} / {CrowdHudFormat.Int(r.Ghosts)}");
         else W.Append("关");
         Flush(InspectBelief);
 
