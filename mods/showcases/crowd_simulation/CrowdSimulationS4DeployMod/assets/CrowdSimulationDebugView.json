@@ -442,6 +442,6 @@
   },
   "panels": {
     "nav": false,
-    "telemetry": false
+    "telemetry": true
   }
 }
