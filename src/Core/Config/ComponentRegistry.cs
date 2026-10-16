@@ -1996,7 +1996,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 SpeedCmPerSecond = facts.SpeedCmPerSecond,
                 PersonalRadiusCm = facts.PersonalRadiusCm,
                 PushPriority = facts.PushPriority,
-                Special = facts.Special,
+                AutoDeploy = facts.AutoDeploy,
             });
         }
 

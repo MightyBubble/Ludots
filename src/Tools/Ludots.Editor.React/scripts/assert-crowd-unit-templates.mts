@@ -24,7 +24,7 @@ const draft = JSON.stringify(
         id: 'crowd_minimal.unit',
         components: {
           Name: { Value: 'crowd_minimal.unit' },
-          CrowdSimulationAgent: { profileId: 'crowd_minimal_unit', speedCmPerSecond: 1400, special: false },
+          CrowdSimulationAgent: { profileId: 'crowd_minimal_unit', speedCmPerSecond: 1400, autoDeploy: true },
         },
       },
       { id: 'derived.unit', extends: 'crowd_minimal.unit' },
@@ -118,7 +118,7 @@ const presenterProblems: Issue[] = [
 ];
 const unitProblems = issuesFor(presenterProblems, 'crowd_minimal.unit', 'crowd_minimal_unit');
 assert(presenterIssues(unitProblems).length === 2, 'both presenter checks are shown in the presenter section');
-for (const field of ['profileId', 'pushPriority', 'special']) {
+for (const field of ['profileId', 'pushPriority', 'autoDeploy']) {
   assert(issueForField(presenterIssues(unitProblems), field) === undefined, `presenter issues do not attach to ${field}`);
 }
 assert(presenterIssues(mine).length === 0, 'field issues stay out of the presenter section');

@@ -185,7 +185,7 @@ public static class CrowdModScaffold
                         ["speedCmPerSecond"] = 1400,
                         ["personalRadiusCm"] = 900,
                         ["pushPriority"] = 2,
-                        ["special"] = false,
+                        ["autoDeploy"] = true,
                     },
                 },
             }));

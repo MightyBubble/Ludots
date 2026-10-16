@@ -148,8 +148,8 @@ public sealed class RuntimeAgentProfile
     public required Fix64 PushPriority { get; init; }
     /// <summary>该模板的速度（厘米 / 仿真秒）。领队步伐取同组最小，子步数取实际绑定模板的最大。</summary>
     public required Fix64 SpeedCmPerSecond { get; init; }
-    /// <summary>true 不参与批量部署。同一移动类型的模板不必相同。</summary>
-    public required bool Special { get; init; }
+    /// <summary>true 参与批量部署和随机测试。同一移动类型的模板不必相同。</summary>
+    public required bool AutoDeploy { get; init; }
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>
     public required int ClearanceNavCells { get; init; }

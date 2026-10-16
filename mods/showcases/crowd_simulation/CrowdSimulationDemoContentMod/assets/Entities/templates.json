@@ -10,7 +10,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -25,7 +25,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -40,7 +40,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -55,7 +55,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -70,7 +70,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -85,7 +85,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -100,7 +100,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -115,7 +115,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -130,7 +130,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 600,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -145,7 +145,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1200,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -160,7 +160,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1800,
         "pushPriority": 5,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -175,7 +175,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 2400,
         "pushPriority": 6,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -190,7 +190,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 600,
         "pushPriority": 1,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -205,7 +205,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1200,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -220,7 +220,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1800,
         "pushPriority": 3,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -235,7 +235,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 2400,
         "pushPriority": 4,
-        "special": false
+        "autoDeploy": true
       }
     }
   },
@@ -250,7 +250,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "special": true
+        "autoDeploy": false
       }
     }
   },
@@ -265,7 +265,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "special": true
+        "autoDeploy": false
       }
     }
   },
@@ -280,7 +280,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "special": true
+        "autoDeploy": false
       }
     }
   },
@@ -295,7 +295,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "special": true
+        "autoDeploy": false
       }
     }
   }

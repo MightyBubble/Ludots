@@ -237,7 +237,7 @@ public class NavSchemaAuditTests
     [Test]
     public void Template_MissingEachRequiredField_Fails()
     {
-        string[] fields = { "profileId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "special" };
+        string[] fields = { "profileId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "autoDeploy" };
         foreach (string field in fields)
         {
             JsonObject template = FullTemplate();
@@ -369,7 +369,7 @@ public class NavSchemaAuditTests
               "speedCmPerSecond": 1400,
               "personalRadiusCm": 600,
               "pushPriority": 2,
-              "special": false
+              "autoDeploy": true
             }
             """)!.AsObject();
 

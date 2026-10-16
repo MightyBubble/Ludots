@@ -103,7 +103,7 @@ internal static class CrowdUatKit
                 ? t.PersonalRadiusCm
                 : CrowdSimulationSpace.PersonalRadiusCm(Fix64.FromInt(radiusOf[t.ProfileId]), scale),
             PushPriority = t.PushPriority,
-            Special = t.Special,
+            AutoDeploy = t.AutoDeploy,
         }).ToList();
         CrowdTraversalConfig? traversal = null;
         if (tuneTraversal != null)

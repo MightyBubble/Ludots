@@ -19,7 +19,7 @@ public sealed class CrowdUnitTemplateFacts
     public const string SpeedField = "speedCmPerSecond";
     public const string PersonalRadiusField = "personalRadiusCm";
     public const string PushPriorityField = "pushPriority";
-    public const string SpecialField = "special";
+    public const string AutoDeployField = "autoDeploy";
     public const string AgentProfilesReference = "agentProfiles";
 
     public static readonly IReadOnlyList<CrowdUnitTemplateField> AuthoredFields =
@@ -28,7 +28,7 @@ public sealed class CrowdUnitTemplateFacts
         new(SpeedField, "number", null),
         new(PersonalRadiusField, "number", null),
         new(PushPriorityField, "number", null),
-        new(SpecialField, "bool", null),
+        new(AutoDeployField, "bool", null),
     ];
 
     public required string TemplateId { get; init; }
@@ -36,7 +36,7 @@ public sealed class CrowdUnitTemplateFacts
     public required Fix64 SpeedCmPerSecond { get; init; }
     public required Fix64 PersonalRadiusCm { get; init; }
     public required Fix64 PushPriority { get; init; }
-    public required bool Special { get; init; }
+    public required bool AutoDeploy { get; init; }
 
     public static List<CrowdUnitTemplateFacts> FromTemplates(IEnumerable<EntityTemplate> templates)
     {
@@ -73,7 +73,7 @@ public sealed class CrowdUnitTemplateFacts
             SpeedCmPerSecond = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
             PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
             PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
-            Special = RequireBool(obj, SpecialField, Prefix(SpecialField)),
+            AutoDeploy = RequireBool(obj, AutoDeployField, Prefix(AutoDeployField)),
         };
     }
 
