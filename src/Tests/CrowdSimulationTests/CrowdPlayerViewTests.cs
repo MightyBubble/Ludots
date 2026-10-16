@@ -346,7 +346,6 @@ public sealed class CrowdPlayerViewTests
             ["magicBox"] = true,
             ["fogHide"] = false,
             ["playerRoute"] = true,
-            ["lineOfSight"] = false,
             ["layersStartEnabled"] = true,
             ["deployCount"] = 24,
             ["deployCountStep"] = 4,

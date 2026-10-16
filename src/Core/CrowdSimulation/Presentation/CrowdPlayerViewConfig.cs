@@ -16,7 +16,6 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public bool MagicBox { get; init; }
     [JsonRequired] public bool FogHide { get; init; }
     [JsonRequired] public bool PlayerRoute { get; init; }
-    [JsonRequired] public bool LineOfSight { get; init; }
     [JsonRequired] public bool LayersStartEnabled { get; init; }
     [JsonRequired] public int DeployCount { get; init; }
     [JsonRequired] public int DeployCountStep { get; init; }

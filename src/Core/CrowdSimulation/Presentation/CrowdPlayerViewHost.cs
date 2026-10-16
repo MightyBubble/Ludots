@@ -142,7 +142,6 @@ internal sealed class CrowdPlayerViewHost
         };
         _fogHide = config.FogHide;
         _route = config.PlayerRoute;
-        _lineOfSight = config.LineOfSight;
         _deployCount = config.DeployCount;
         _clickCount = config.ClickCount;
     }
@@ -154,6 +153,7 @@ internal sealed class CrowdPlayerViewHost
     public void Bind(CrowdSimSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
+        _lineOfSight = session.Config.Fog.LineOfSight;
         int players = session.Config.PairRules.PlayerCount;
         if (players < 1 || players > MaxPlayers)
         {
