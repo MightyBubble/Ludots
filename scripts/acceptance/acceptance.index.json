@@ -6,10 +6,11 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 28,
+    "runnable": 29,
     "testOnly": 0,
     "localOnly": 24,
-    "total": 52
+    "crowdAuthoringGates": 1,
+    "total": 54
   },
   "runnable": [
     {
@@ -201,6 +202,14 @@
       "preset": "nav_gate_raylib",
       "binding": "nav_gate",
       "testFilter": "NavGateShowcaseContractTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "panel_button_commands",
+      "preset": "panel_button_commands_raylib",
+      "binding": "panel_button_commands",
+      "testFilter": "Ludots.Tests.GAS.Production.PanelButtonCommandsShowcaseAcceptanceTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
     },
@@ -454,6 +463,16 @@
       "artifactDir": "artifacts/acceptance/engine_raylib_water",
       "hasScreenshotEvidence": true,
       "localOnly": "requires a real OpenGL/WGL window context; GitHub windows runner has no GL driver, so headless execution crashes in raylib InitWindow"
+    }
+  ],
+  "crowdAuthoringGates": [
+    {
+      "id": "crowd_simulation_minimal",
+      "mapId": "crowd_minimal",
+      "binding": "crowd_simulation_minimal",
+      "preset": "crowd_simulation_minimal_raylib",
+      "testCategory": "crowd-authoring",
+      "testFilter": "CrowdSimulationTests.Authoring.CrowdSimulationMinimalModTests"
     }
   ]
 }
