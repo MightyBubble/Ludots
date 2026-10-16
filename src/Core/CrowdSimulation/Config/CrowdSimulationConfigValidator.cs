@@ -39,7 +39,6 @@ public static class CrowdSimulationConfigValidator
         Rule("agents.avoidanceRadiusScale", config.Agents.AvoidanceRadiusScale, gt: 0);
         Rule("spawn.groupSpacingScale", config.Spawn.GroupSpacingScale, gt: 0);
         Rule("spawn.placementTries", config.Spawn.PlacementTries, intRequired: true, min: 1);
-        Rule("spawn.targetSearchTries", config.Spawn.TargetSearchTries, intRequired: true, min: 1);
         Rule("spawn.navCellInsetFraction", config.Spawn.NavCellInsetFraction, min: 0, lt: 0.5);
         Rule("movement.sightHysteresisScale", config.Movement.SightHysteresisScale, min: 1);
         Rule("movement.wakeDistanceCm", config.Movement.WakeDistanceCm, min: 0);

@@ -135,7 +135,6 @@
   "spawn": {
     "placementTries": 8,
     "groupSpacingScale": 2.2,
-    "targetSearchTries": 400,
     "navCellInsetFraction": 0.02
   },
   "structures": {

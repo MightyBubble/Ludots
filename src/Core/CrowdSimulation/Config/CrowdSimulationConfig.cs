@@ -461,7 +461,6 @@ public sealed class CrowdSimulationConfig
     {
         public required int PlacementTries { get; init; }
         public required double GroupSpacingScale { get; init; }
-        public required int TargetSearchTries { get; init; }
         public required double NavCellInsetFraction { get; init; }
     }
 

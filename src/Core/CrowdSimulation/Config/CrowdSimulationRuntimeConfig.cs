@@ -367,7 +367,6 @@ public sealed class RuntimeSpawnSection
 {
     public required int PlacementTries { get; init; }
     public required Fix64 GroupSpacingScale { get; init; }
-    public required int TargetSearchTries { get; init; }
     public required Fix64 NavCellInsetFraction { get; init; }
 }
 

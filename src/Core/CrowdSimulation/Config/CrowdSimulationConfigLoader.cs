@@ -361,7 +361,6 @@ public sealed class CrowdSimulationConfigLoader
             {
                 PlacementTries = config.Spawn.PlacementTries,
                 GroupSpacingScale = Fix64.FromDouble(config.Spawn.GroupSpacingScale),
-                TargetSearchTries = config.Spawn.TargetSearchTries,
                 NavCellInsetFraction = Fix64.FromDouble(config.Spawn.NavCellInsetFraction),
             },
             Structures = new RuntimeStructuresSection
