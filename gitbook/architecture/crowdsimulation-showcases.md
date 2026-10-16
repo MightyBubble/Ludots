@@ -69,3 +69,14 @@ dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedNa
 | 5 万单位 | `stress_50k_hud_paused.png`（134，暂停步进）、`stress_50k_hud.png`（149，实时） |
 
 5 万单位场景在 Mesa llvmpipe 软件渲染下，遥测面板的 Sim 读数是 21.0–25.5 ms，FPS 0.6，也就是一帧约 1.7 s，几乎全花在软件渲染上。这个数不代表 50k 门禁的计时。
+
+## 50k 帧时：Web 与 C# 对照
+
+同一场景文件 `assets/CrowdSimulation/regress/stress-50k.json`（演示与 `CrowdKernel50KBenchmarkTests` 共用）。计时只含仿真步进（运动、迷雾、认知、校验码），不含 Raylib 渲染。
+
+| 端 | 命令 | 典型环境（4 vCPU / 15 GiB，Release） |
+|---|---|---|
+| C# | `dotnet build mods/LudotsCoreMod -c Release` 后 `dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedName~CrowdKernel50KBenchmarkTests"` | 产物 `artifacts/benchmarks/crowd-kernel-50k-tick/trace.jsonl`（含 avg / p50 / p95 / max）；硬门 P95 &lt; 33 ms 仅 Release |
+| Web | 沙盒根目录 `node scripts/benchmarkStress50k.mjs --warmup 40 --measured 200`（脚本正本 `tools/crowdsimulation-export/benchmarkStress50k.mjs`） | 产物 `artifacts/benchmarks/crowd-stress50k-web/web-timing.json`（`tickAvgMs` / `tickP95Ms`）；墙钟随机器变化，与 C# 比趋势不比逐位 |
+
+测量前读 `/proc/loadavg`：1 分钟负载高于核数时 C# 门禁会最多等 180 s 再开窗（见 `CrowdKernel50KBenchmarkTests` 注释）。Web 脚本把场景跑一遍并报告 headless `runScenario` 的 tick 统计；两端数字写入上表路径，更新文档时替换本段表格中的示例值。
