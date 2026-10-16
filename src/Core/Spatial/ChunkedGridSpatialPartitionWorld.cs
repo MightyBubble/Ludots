@@ -129,6 +129,13 @@ namespace Ludots.Core.Spatial
             int endX = Math.Min(maxCellX - chunkMinCellX, _chunkSize - 1);
             int endY = Math.Min(maxCellY - chunkMinCellY, _chunkSize - 1);
 
+            long coveredCells = (long)(endX - startX + 1) * (endY - startY + 1);
+            if ((long)chunk.OccupiedCount * SparseScanFactor < coveredCells)
+            {
+                QueryOccupiedCells(chunk, startX, startY, endX, endY, buffer, ref count, ref dropped);
+                return;
+            }
+
             for (int y = startY; y <= endY; y++)
             {
                 for (int x = startX; x <= endX; x++)
@@ -141,6 +148,51 @@ namespace Ludots.Core.Spatial
                         else dropped++;
                     }
                 }
+            }
+        }
+
+        // Visiting occupied cells costs a bounds test plus a sort; scanning the
+        // covered rect costs one slot read per cell. Below this ratio scanning wins.
+        private const int SparseScanFactor = 8;
+        private const int StackCellLimit = 256;
+
+        private void QueryOccupiedCells(Chunk chunk, int startX, int startY, int endX, int endY,
+            Span<Entity> buffer, ref int count, ref int dropped)
+        {
+            int occupied = chunk.OccupiedCount;
+            int[]? rented = null;
+            Span<int> hits = occupied <= StackCellLimit
+                ? stackalloc int[StackCellLimit]
+                : (rented = ArrayPool<int>.Shared.Rent(occupied));
+            try
+            {
+                int hitCount = 0;
+                ReadOnlySpan<int> cells = chunk.OccupiedCells;
+                for (int i = 0; i < cells.Length; i++)
+                {
+                    int idx = cells[i];
+                    int x = idx & _chunkMask;
+                    int y = idx >> _chunkShift;
+                    if (x < startX || x > endX || y < startY || y > endY) continue;
+                    hits[hitCount++] = idx;
+                }
+
+                // Row-major cell order keeps results identical to the full rect scan.
+                Span<int> ordered = hits.Slice(0, hitCount);
+                ordered.Sort();
+                for (int i = 0; i < ordered.Length; i++)
+                {
+                    CellList list = chunk.CellAt(ordered[i]);
+                    for (int j = 0; j < list.Count; j++)
+                    {
+                        if (count < buffer.Length) buffer[count++] = list[j];
+                        else dropped++;
+                    }
+                }
+            }
+            finally
+            {
+                if (rented != null) ArrayPool<int>.Shared.Return(rented);
             }
         }
 
@@ -190,6 +242,7 @@ namespace Ludots.Core.Spatial
             private readonly int _size;
             private readonly CellList?[] _cells;
             private readonly RecyclePool _pool;
+            private int[] _occupiedCells = new int[16];
             private int _occupied;
 
             public Chunk(int size, RecyclePool pool)
@@ -198,6 +251,12 @@ namespace Ludots.Core.Spatial
                 _cells = new CellList[size * size];
                 _pool = pool;
             }
+
+            public int OccupiedCount => _occupied;
+
+            public ReadOnlySpan<int> OccupiedCells => new ReadOnlySpan<int>(_occupiedCells, 0, _occupied);
+
+            public CellList CellAt(int idx) => _cells[idx]!;
 
             public void Clear()
             {
@@ -215,7 +274,9 @@ namespace Ludots.Core.Spatial
                 {
                     list = _pool.TakeCell();
                     _cells[idx] = list;
-                    _occupied++;
+                    if (_occupied == _occupiedCells.Length) Array.Resize(ref _occupiedCells, _occupied * 2);
+                    list.Slot = _occupied;
+                    _occupiedCells[_occupied++] = idx;
                 }
 
                 list.Add(entity);
@@ -229,9 +290,12 @@ namespace Ludots.Core.Spatial
                 int before = list.Count;
                 list.Remove(entity);
                 if (list.Count != 0 || before == 0) return false;
+                int slot = list.Slot;
+                int lastIdx = _occupiedCells[--_occupied];
+                _occupiedCells[slot] = lastIdx;
+                _cells[lastIdx]!.Slot = slot;
                 _cells[idx] = null;
                 _pool.ReturnCell(list);
-                _occupied--;
                 return _occupied == 0;
             }
 
@@ -246,6 +310,8 @@ namespace Ludots.Core.Spatial
         {
             private readonly List<Entity> _entities = new(4);
             private readonly Dictionary<Entity, int> _indices = new(4);
+
+            public int Slot;
 
             public int Count => _entities.Count;
 

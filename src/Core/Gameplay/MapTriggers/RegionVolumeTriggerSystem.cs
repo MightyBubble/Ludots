@@ -91,7 +91,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private Entity[] _broadphaseBuffer = new Entity[InitialBroadphaseCapacity];
         private VolumeRuntimeState[] _sweepVolumes = Array.Empty<VolumeRuntimeState>();
         private WorldAabbCm[] _sweepBounds = Array.Empty<WorldAabbCm>();
-        private SweepEndpoint[] _sweepEndpoints = Array.Empty<SweepEndpoint>();
+        private ulong[] _sweepEndpoints = Array.Empty<ulong>();
         private double[] _moverMinY = Array.Empty<double>();
         private double[] _moverMaxY = Array.Empty<double>();
         private int[] _activeVolumes = Array.Empty<int>();
@@ -479,21 +479,28 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 Grow(ref _sweepEndpoints, endpointCount);
             }
 
+            if ((ulong)Math.Max(_sweepVolumeCount, moverCount) > SweepIndexMask)
+            {
+                throw new InvalidOperationException("Region volume travel sweep has more rings or travelers than its endpoint key can index.");
+            }
+
             int endpoint = 0;
             for (int i = 0; i < _sweepVolumeCount; i++)
             {
                 WorldAabbCm box = _sweepBounds[i];
-                _sweepEndpoints[endpoint++] = new SweepEndpoint(box.Left, i, SweepEndpointKind.VolumeStart);
-                _sweepEndpoints[endpoint++] = new SweepEndpoint(box.Right, i, SweepEndpointKind.VolumeEnd);
+                _sweepEndpoints[endpoint++] = SweepKey(box.Left, SweepEndpointKind.VolumeStart, i);
+                _sweepEndpoints[endpoint++] = SweepKey(box.Right, SweepEndpointKind.VolumeEnd, i);
             }
 
+            // Traveler X spans widen to whole centimeters so the endpoints sort as
+            // integers; EvaluateVolume re-tests the exact segment against the box.
             for (int i = 0; i < moverCount; i++)
             {
                 _movers.SegmentBounds(i, out double minX, out double minY, out double maxX, out double maxY);
                 _moverMinY[i] = minY;
                 _moverMaxY[i] = maxY;
-                _sweepEndpoints[endpoint++] = new SweepEndpoint(minX, i, SweepEndpointKind.MoverStart);
-                _sweepEndpoints[endpoint++] = new SweepEndpoint(maxX, i, SweepEndpointKind.MoverEnd);
+                _sweepEndpoints[endpoint++] = SweepKey((int)IntegralCentimeter(minX, ceiling: false), SweepEndpointKind.MoverStart, i);
+                _sweepEndpoints[endpoint++] = SweepKey((int)IntegralCentimeter(maxX, ceiling: true), SweepEndpointKind.MoverEnd, i);
             }
 
             Array.Sort(_sweepEndpoints, 0, endpoint);
@@ -501,22 +508,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _activeMoverCount = 0;
             for (int i = 0; i < endpoint; i++)
             {
-                SweepEndpoint item = _sweepEndpoints[i];
-                switch (item.Kind)
+                ulong key = _sweepEndpoints[i];
+                int index = (int)(key & SweepIndexMask);
+                switch ((SweepEndpointKind)((key >> SweepIndexBits) & 0x3))
                 {
                     case SweepEndpointKind.VolumeStart:
-                        RecordVolumeAgainstActiveMovers(item.Index);
-                        ActivateVolume(item.Index);
+                        RecordVolumeAgainstActiveMovers(index);
+                        ActivateVolume(index);
                         break;
                     case SweepEndpointKind.MoverStart:
-                        RecordMoverAgainstActiveVolumes(item.Index);
-                        ActivateMover(item.Index);
+                        RecordMoverAgainstActiveVolumes(index);
+                        ActivateMover(index);
                         break;
                     case SweepEndpointKind.VolumeEnd:
-                        DeactivateVolume(item.Index);
+                        DeactivateVolume(index);
                         break;
                     default:
-                        DeactivateMover(item.Index);
+                        DeactivateMover(index);
                         break;
                 }
             }
@@ -525,6 +533,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 throw new InvalidOperationException("Region volume travel sweep left an interval active.");
             }
+        }
+
+        // Endpoint key, high to low: X with the sign bit flipped (so unsigned order
+        // is signed order), kind (starts before ends at the same X, so touching
+        // intervals overlap), then the ring or traveler index.
+        private const int SweepIndexBits = 30;
+        private const ulong SweepIndexMask = (1UL << SweepIndexBits) - 1;
+
+        private static ulong SweepKey(int x, SweepEndpointKind kind, int index)
+        {
+            return ((ulong)(uint)(x ^ int.MinValue) << 32) | ((ulong)kind << SweepIndexBits) | (uint)index;
         }
 
         private void RecordVolumeAgainstActiveMovers(int volume)
@@ -1007,31 +1026,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             MoverStart = 1,
             VolumeEnd = 2,
             MoverEnd = 3,
-        }
-
-        private readonly struct SweepEndpoint : IComparable<SweepEndpoint>
-        {
-            public readonly double X;
-            public readonly int Index;
-            public readonly SweepEndpointKind Kind;
-
-            public SweepEndpoint(double x, int index, SweepEndpointKind kind)
-            {
-                X = x;
-                Index = index;
-                Kind = kind;
-            }
-
-            public int CompareTo(SweepEndpoint other)
-            {
-                int order = X.CompareTo(other.X);
-                if (order != 0)
-                {
-                    return order;
-                }
-
-                return Kind - other.Kind;
-            }
         }
 
         private readonly struct TrackedEntity
