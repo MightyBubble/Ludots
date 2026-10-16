@@ -27,8 +27,8 @@ public static class TilePathQuery
         public Dictionary<int, Fix64> Ey = new(4096);
         public Dictionary<int, int> Parent = new(4096);
         public HashSet<int> Closed = new(4096);
-        /// <summary>逐 (navId, tile 条目) 的底层多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
-        public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> BaseLayerCostMemo = new(1024);
+        /// <summary>逐 (navId, tile 下标) 的底层多边形代价备忘。上界 = 上下文数 × tile 数;重烘后按 navId 淘汰。</summary>
+        public Dictionary<(int NavId, int Tile), Fix64[]> BaseLayerCostMemo = new(1024);
         public List<Fix64> Portals = new();
         public List<Fix64> FunnelPoints = new();
         public HashSet<int> PortalSeen = new();
@@ -253,7 +253,7 @@ public static class TilePathQuery
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var e = nav.Tiles![tile];
-        if (s.BaseLayerCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
+        if (s.BaseLayerCostMemo.TryGetValue((nav.Id, tile), out var memo)) return memo;
         int ox = tile % navTilesPerSide * navCellsPerTile, oy = tile / navTilesPerSide * navCellsPerTile;
         var pc = s.RentCost();
         if (pc.Length < e.Count) pc = new Fix64[e.Count];
@@ -271,7 +271,7 @@ public static class TilePathQuery
         }
 
         for (int p = 0; p < e.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
-        s.BaseLayerCostMemo[(nav.Id, e)] = pc;
+        s.BaseLayerCostMemo[(nav.Id, tile)] = pc;
         return pc;
     }
 

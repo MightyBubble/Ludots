@@ -180,6 +180,7 @@ public static class CrowdNavRebake
 
         nav.Version++;
         nav.InvalidateReach();
+        nav.ClearStitchMemo();
         return tiles;
     }
 
