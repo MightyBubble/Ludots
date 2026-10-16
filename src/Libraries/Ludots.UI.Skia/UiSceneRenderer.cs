@@ -653,6 +653,10 @@ public sealed class SkiaUiRenderer : IUiRenderer
 				_vectorFillPaint.Color = command.Color.ToSKColor();
 				canvas.DrawRect(content.Left + command.X * w, content.Top + command.Y * h, command.Width * w, command.Height * h, _vectorFillPaint);
 				break;
+			case UiVectorCommandKind.FillCircle:
+				_vectorFillPaint.Color = command.Color.ToSKColor();
+				canvas.DrawCircle(content.Left + command.X * w, content.Top + command.Y * h, command.Width, _vectorFillPaint);
+				break;
 			case UiVectorCommandKind.StrokePolyline:
 			case UiVectorCommandKind.FillPolygon:
 				if (command.PointCount < 2)

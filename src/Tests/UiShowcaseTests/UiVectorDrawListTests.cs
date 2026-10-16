@@ -77,6 +77,25 @@ public sealed class UiVectorDrawListTests
 	}
 
 	[Test]
+	public void FillCircle_KeepsAPixelRadiusInAWideBox()
+	{
+		var list = new UiVectorDrawList(1, 0);
+		list.FillCircle(0.25f, 0.5f, 8f, Red);
+		var scene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+		scene.Mount(new UiNode(new UiNodeId(1), UiNodeKind.Custom,
+			UiStyle.Default with { Width = UiLength.Px(Width), Height = UiLength.Px(20f) },
+			canvasContent: list, tagName: "canvas"));
+
+		using SKBitmap bitmap = RenderToBitmap(scene);
+
+		Assert.That(bitmap.GetPixel(50, 10), Is.EqualTo(new SKColor(255, 0, 0, 255)), "centre at 25% of 200 px, 50% of 20 px");
+		Assert.That(bitmap.GetPixel(50, 3).Red, Is.EqualTo(255), "7 px above the centre is inside an 8 px radius");
+		Assert.That(bitmap.GetPixel(60, 10).Alpha, Is.EqualTo(0), "10 px right of the centre is outside, so the radius did not stretch with the 10:1 box");
+		Assert.That(bitmap.GetPixel(40, 10).Alpha, Is.EqualTo(0));
+		Assert.Throws<ArgumentOutOfRangeException>(() => list.FillCircle(0f, 0f, 0f, Red));
+	}
+
+	[Test]
 	public void PointUpdates_LayoutAndSkiaFrames_AllocateNothingAfterWarmup()
 	{
 		var list = new UiVectorDrawList(4, SparkPoints);

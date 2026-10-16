@@ -6,7 +6,9 @@ public enum UiVectorCommandKind : byte
 {
 	FillRect,
 	StrokePolyline,
-	FillPolygon
+	FillPolygon,
+	/// <summary>圆心是 <see cref="UiVectorCommand.X"/>/<see cref="UiVectorCommand.Y"/>（归一化），半径按像素存在 <see cref="UiVectorCommand.Width"/>，框变形也保持正圆。</summary>
+	FillCircle
 }
 
 public readonly struct UiVectorCommand
@@ -104,6 +106,16 @@ public sealed class UiVectorDrawList : IUiCanvasContent
 	{
 		ThrowIfPathOpen();
 		Append(new UiVectorCommand(UiVectorCommandKind.FillRect, color, 0f, x, y, width, height, 0, 0));
+	}
+
+	public void FillCircle(float centerX, float centerY, float radiusPx, UiColor color)
+	{
+		if (radiusPx <= 0f)
+		{
+			throw new ArgumentOutOfRangeException(nameof(radiusPx), radiusPx, "Circle radius must be positive.");
+		}
+		ThrowIfPathOpen();
+		Append(new UiVectorCommand(UiVectorCommandKind.FillCircle, color, 0f, centerX, centerY, radiusPx, radiusPx, 0, 0));
 	}
 
 	public void BeginPolyline(UiColor color, float strokeWidth)
