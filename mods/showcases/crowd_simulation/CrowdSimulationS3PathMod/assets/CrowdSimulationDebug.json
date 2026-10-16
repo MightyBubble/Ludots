@@ -1,4 +1,7 @@
 {
+  "tools": null,
+  "rates": null,
+  "fuzz": null,
   "presentation": {
     "kind": "path",
     "title": "CrowdSimulation S3 · 两点路径与固定生效帧",
@@ -20,6 +23,7 @@
         "toggleSlow": "CrowdSimulation.S3.ToggleSlow",
         "cycleView": "CrowdSimulation.S3.CycleView"
       }
-    }
+    },
+    "deploy": null
   }
 }

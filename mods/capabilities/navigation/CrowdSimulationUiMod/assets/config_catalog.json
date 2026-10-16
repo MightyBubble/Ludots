@@ -1,7 +1,10 @@
 [
   {
     "Path": "CrowdSimulationDebug.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ReplaceObjectFields": [
+      "viewLabels"
+    ]
   },
   {
     "Path": "CrowdSimulationDebugView.json",

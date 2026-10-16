@@ -246,9 +246,9 @@ public class CrowdSimulationEditorApiTests
         string path = Path.Combine(
             FindRepoRoot(),
             "mods",
-            "showcases",
-            "crowd_simulation",
-            "CrowdSimulationS4DeployMod",
+            "capabilities",
+            "navigation",
+            "CrowdSimulationUiMod",
             "assets",
             "CrowdSimulationDebugView.json");
         JsonObject node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();

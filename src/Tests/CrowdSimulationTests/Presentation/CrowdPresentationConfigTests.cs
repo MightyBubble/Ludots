@@ -25,7 +25,7 @@ public sealed class CrowdPresentationConfigTests
         Assert.That(s4.Kind, Is.EqualTo(CrowdPresentationConfig.KindDeploy));
         Assert.That(s4.Deploy!.Actions.Validate, Is.EqualTo("CrowdSimulation.Validate"));
         Assert.That(s4.Deploy.Actions.Fuzz, Is.EqualTo("CrowdSimulation.S4.Fuzz"));
-        var s4Debug = CrowdSimulationDebugConfig.Load(JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject());
+        var s4Debug = CrowdSimulationDebugConfig.Load(ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json"));
         Assert.That(s4Debug.Fuzz!.SliceMs, Is.EqualTo(8));
         Assert.That(s4Debug.Fuzz.ToPlan(s4Debug.Tools!).BoomRadiusCm, Is.EqualTo(s4Debug.Tools!.BoomRadiusCm));
         Assert.That(s4.Deploy!.Palette.Select(p => p.Entry),
@@ -221,7 +221,7 @@ public sealed class CrowdPresentationConfigTests
     [Test]
     public void ToolsPlaceEntry_MustNameAPaletteSlot()
     {
-        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject();
+        var debug = ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json");
         debug["tools"]!["placeEntry"] = "absent";
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
         Assert.That(ex!.Message, Does.Contain("absent"));
@@ -230,7 +230,7 @@ public sealed class CrowdPresentationConfigTests
     [Test]
     public void PaletteSlot_DuplicateSelectAction_IsRejected()
     {
-        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod")))!.AsObject();
+        var debug = ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json");
         var palette = debug["presentation"]!["deploy"]!["palette"]!.AsArray();
         palette[1]!["selectAction"] = palette[0]!["selectAction"]!.GetValue<string>();
         Assert.Throws<InvalidOperationException>(() => CrowdPresentationConfig.ParseOptional(debug));
@@ -238,7 +238,7 @@ public sealed class CrowdPresentationConfigTests
 
     private static CrowdPresentationConfig ParseMod(string mod)
     {
-        var debug = JsonNode.Parse(File.ReadAllText(DebugPath(mod)))!.AsObject();
+        var debug = ModConfigChain.Open(mod).Merged("CrowdSimulationDebug.json");
         return CrowdSimulationDebugConfig.Load(debug).Presentation!;
     }
 

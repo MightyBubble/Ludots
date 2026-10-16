@@ -160,7 +160,7 @@ public class CrowdDebugViewSessionTests
         while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
             dir = Path.GetDirectoryName(dir);
         if (dir == null) throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
-        return Path.Combine(dir, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        return Path.Combine(dir, "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
     }
 
     private static CrowdSimulationDebugViewConfig LoadView()
@@ -169,7 +169,7 @@ public class CrowdDebugViewSessionTests
         while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
             dir = Path.GetDirectoryName(dir);
         if (dir == null) throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
-        string path = Path.Combine(dir, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        string path = Path.Combine(dir, "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
         return CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path);
     }
 }

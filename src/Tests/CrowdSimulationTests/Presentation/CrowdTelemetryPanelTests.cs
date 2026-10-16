@@ -437,7 +437,7 @@ public class CrowdTelemetryPanelTests
         CrowdHudSettings.Parse(node.ToJsonString(), CrowdHudSettings.RelativePath);
 
     private static string ShippedPath() => Path.Combine(
-        RepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        RepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
 
     private static string RepoRoot()
     {

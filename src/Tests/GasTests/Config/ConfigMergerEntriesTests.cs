@@ -175,6 +175,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void MergeDeepObject_ReplaceObjectField_KeepsLaterKeyOrder()
+        {
+            var entry = new ConfigCatalogEntry(
+                "CrowdSimulationDebug.json",
+                ConfigMergePolicy.DeepObject,
+                replaceObjectFields: new[] { "viewLabels" });
+            JsonNode? merged = ConfigMerger.MergeMany(new JsonNode[]
+            {
+                JsonNode.Parse("""{"presentation":{"viewLabels":{"terrain":"地形","walkable":"可走区域"},"title":"基座"}}""")!,
+                JsonNode.Parse("""{"presentation":{"viewLabels":{"route":"路线","walkable":"可走"},"title":"路径"}}""")!,
+            }, in entry);
+
+            JsonObject labels = merged!["presentation"]!["viewLabels"]!.AsObject();
+            var ids = new List<string>();
+            foreach (var pair in labels) ids.Add(pair.Key);
+            That(ids, Is.EqualTo(new[] { "route", "walkable" }));
+            That(merged["presentation"]!["title"]!.GetValue<string>(), Is.EqualTo("路径"));
+        }
+
+        [Test]
         public void MergeArrayByIdToEntries_NonArrayFragment_IsRejected()
         {
             var frags = new List<ConfigFragment>

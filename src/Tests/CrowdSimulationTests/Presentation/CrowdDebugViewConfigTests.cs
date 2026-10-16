@@ -11,7 +11,7 @@ public class CrowdDebugViewConfigTests
     [Test]
     public void ShippedFile_Loads()
     {
-        string path = Path.Combine(FindRepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        string path = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
         var node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
         var cfg = CrowdSimulationDebugViewConfig.Load(node, path);
         Assert.That(cfg.ArrowMinScreenPx, Is.EqualTo(10));
@@ -52,7 +52,7 @@ public class CrowdDebugViewConfigTests
 
     private static JsonObject Shipped()
     {
-        string path = Path.Combine(FindRepoRoot(), "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
+        string path = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
         return JsonNode.Parse(File.ReadAllText(path))!.AsObject();
     }
 
