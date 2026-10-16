@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using Ludots.Core.CrowdSimulation.Nav;
+
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
@@ -18,6 +20,8 @@ public sealed class CrowdNavGroupSet
         /// <summary>当前规划句柄(双句柄之"认知"):真相号或认知变体号(槽切换时重挂)。
         /// 意图/领队/规划读它;马达物理读 BodyNavId(永远真相)。</summary>
         public int NavId { get; set; }
+        /// <summary>槽切换时在 tick 边界钉住的规划导航(热路径读它,不再进路径服务锁)。</summary>
+        internal NavContext? Nav { get; set; }
         /// <summary>真相句柄(双句柄之"身体"):生成时定,不再变。</summary>
         public int BodyNavId { get; set; }
         public int Count { get; set; }
@@ -77,6 +81,7 @@ public sealed class CrowdNavGroupSet
         g.RIdx = rIdx;
         g.NavId = navId;
         g.BodyNavId = navId;
+        g.Nav = null;
         g.Count = 0;
         g.OrderId = 0;
         g.Leader = null;

@@ -172,10 +172,8 @@ public static class CrowdIntents
         Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cell];
         if (divHere != Fix64.OneValue) spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
 
-        // 槽位世界坐标 = 领队位置 + 槽位偏移旋进领队系
-        Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
-        Fix64 tx = leader.XCm - leader.Hy * lat - leader.Hx * back;
-        Fix64 ty = leader.YCm + leader.Hx * lat - leader.Hy * back;
+        var slot = leader.SlotWorldCm(kin.SlotOffsetCm);
+        Fix64 tx = slot.X, ty = slot.Y;
         int sc = tx >= Fix64.Zero && ty >= Fix64.Zero && tx < s.WorldSizeCm && ty < s.WorldSizeCm
             ? CellCoord(ty, s.NavCellSizeCm) * s.NavN + CellCoord(tx, s.NavCellSizeCm)
             : -1;

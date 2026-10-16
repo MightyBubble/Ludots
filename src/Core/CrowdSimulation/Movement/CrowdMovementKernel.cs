@@ -395,7 +395,7 @@ public sealed class CrowdMovementKernel
         {
             if (NavStamp[gid] != GroupMemoEpoch)
             {
-                NavMemo[gid] = Session.ResolveNavContext(g.NavId);
+                NavMemo[gid] = g.Nav ?? throw new InvalidOperationException($"导航组 {gid} 没有钉住的 NavContext(槽切换后未 AttachGroupNav)。");
                 Volatile.Write(ref NavStamp[gid], GroupMemoEpoch);
             }
 

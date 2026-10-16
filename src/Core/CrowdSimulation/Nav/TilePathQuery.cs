@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -27,8 +28,8 @@ public static class TilePathQuery
         public Dictionary<int, Fix64> Ey = new(4096);
         public Dictionary<int, int> Parent = new(4096);
         public HashSet<int> Closed = new(4096);
-        /// <summary>逐 (navId, tile 条目) 的底层多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
-        public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> BaseLayerCostMemo = new(1024);
+        /// <summary>逐 (navId, tile 下标) 的底层多边形代价备忘。上界 = 上下文数 × tile 数;条目引用或导航版本变了就原位重算。</summary>
+        public Dictionary<(int NavId, int Tile), BaseLayerCostEntry> BaseLayerCostMemo = new(1024);
         public List<Fix64> Portals = new();
         public List<Fix64> FunnelPoints = new();
         public HashSet<int> PortalSeen = new();
@@ -248,14 +249,22 @@ public static class TilePathQuery
         return p < 0 ? -1 : tile * 2 * navCellsPerTile * navCellsPerTile + p;
     }
 
-    // 底层 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
+    public struct BaseLayerCostEntry
+    {
+        public NavTileEntry? Entry;
+        public int Version;
+        public Fix64[]? Cost;
+    }
+
+    // 底层 tile 的逐多边形代价(格代价均值)。tile 条目跨上下文共享,代价随导航重烘变,所以条目引用和导航版本都要对上
     private static Fix64[] BaseLayerCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var e = nav.Tiles![tile];
-        if (s.BaseLayerCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
+        ref var memo = ref CollectionsMarshal.GetValueRefOrAddDefault(s.BaseLayerCostMemo, (nav.Id, tile), out _);
+        if (ReferenceEquals(memo.Entry, e) && memo.Version == nav.Version) return memo.Cost!;
         int ox = tile % navTilesPerSide * navCellsPerTile, oy = tile / navTilesPerSide * navCellsPerTile;
-        var pc = s.RentCost();
+        var pc = memo.Cost is { Length: > 0 } kept && kept.Length >= e.Count ? kept : s.RentCost();
         if (pc.Length < e.Count) pc = new Fix64[e.Count];
         Array.Clear(pc, 0, e.Count);
         if (s.CostCount.Length < e.Count) s.CostCount = new int[e.Count];
@@ -271,7 +280,9 @@ public static class TilePathQuery
         }
 
         for (int p = 0; p < e.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
-        s.BaseLayerCostMemo[(nav.Id, e)] = pc;
+        memo.Entry = e;
+        memo.Version = nav.Version;
+        memo.Cost = pc;
         return pc;
     }
 

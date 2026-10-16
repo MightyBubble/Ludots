@@ -177,7 +177,7 @@ public static class CrowdBeliefSync
         {
             var g = changedGroups[gi];
             if (g == null || !changed.Contains(fog.GroupOf[g.Player])) continue;
-            g.NavId = sim.NavIdFor(g.Player, g.LayerIdx, g.RIdx);
+            sim.AttachGroupNav(g);
             moved2.Add(g);
             if (g.OrderId != 0)
             {

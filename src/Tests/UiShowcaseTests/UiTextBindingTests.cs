@@ -52,6 +52,46 @@ public sealed class UiTextBindingTests
 	}
 
 	[Test]
+	public void BindingUpdate_MoreNodesChangedThanAnyEarlierFrame_AllocatesNothing()
+	{
+		const int count = 8;
+		var bindings = new UiTextBinding[count];
+		var spans = new UiNode[count];
+		for (int i = 0; i < count; i++)
+		{
+			bindings[i] = new UiTextBinding("0");
+			spans[i] = new UiNode(new UiNodeId(10 + i), UiNodeKind.Text, UiStyle.Default with { FontSize = FontSize }, textBinding: bindings[i], tagName: "span");
+		}
+		var root = new UiNode(
+			new UiNodeId(1),
+			UiNodeKind.Container,
+			UiStyle.Default with
+			{
+				Display = UiDisplay.Flex,
+				FlexDirection = UiFlexDirection.Column,
+				AlignItems = UiAlignItems.Start,
+				Width = UiLength.Px(400f),
+				Height = UiLength.Px(300f),
+			},
+			children: spans,
+			tagName: "div");
+		var scene = new UiScene(new HalfEmTextMeasurer(), new FixedImageSizeProvider());
+		scene.Mount(root);
+		Warmup(scene, bindings[0]);
+		for (int i = 0; i < count; i++)
+		{
+			bindings[i].Set(Values[1]);
+		}
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		scene.Layout(800f, 600f);
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.That(allocated, Is.EqualTo(0), $"first frame changing {count} bound spans allocated {allocated} bytes");
+		Assert.That(scene.LastTextRelayoutDirtyLeaves, Is.EqualTo(count));
+	}
+
+	[Test]
 	public void BindingUpdate_InFixedWidthCell_MarksNothingDirty()
 	{
 		var binding = new UiTextBinding("0");

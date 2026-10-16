@@ -12,6 +12,8 @@ namespace CrowdSimulationTests.Authoring;
 /// 群体单位模板到表现的链接走真实 Mod 装载：最小样板复制到临时目录，只改 presenters.json。
 /// 引用不存在的表现定义在表现装载时失败；单位模板没有表现在群体会话激活时失败。
 /// </summary>
+[Category("ci-gate")]
+[Category("crowd-authoring")]
 [TestFixture]
 public sealed class CrowdUnitPresenterContractTests
 {

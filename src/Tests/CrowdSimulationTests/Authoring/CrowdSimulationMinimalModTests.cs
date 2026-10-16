@@ -22,6 +22,8 @@ namespace CrowdSimulationTests.Authoring;
 /// 马达贴墙滑动只去掉最后一个接触法线方向的速度（和 Web 参考同一算法）。墙南端与水面夹出的凹角里，
 /// 朝水的速度一直留着，被人群推进角里的单位出不来，所以到达比例不要求 100%。
 /// </summary>
+[Category("ci-gate")]
+[Category("crowd-authoring")]
 [TestFixture]
 public sealed class CrowdSimulationMinimalModTests
 {

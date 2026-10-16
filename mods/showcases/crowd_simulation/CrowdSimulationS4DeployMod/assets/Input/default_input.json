@@ -69,7 +69,8 @@
     { "id": "CrowdSimulation.S4.Fuzz", "name": "CrowdSimulation_S4_Fuzz", "type": "Button" },
     { "id": "CrowdSimulation.S4.ToggleNavPanel", "name": "CrowdSimulation_S4_ToggleNavPanel", "type": "Button" },
     { "id": "CrowdSimulation.S4.ToggleTelemetryPanel", "name": "CrowdSimulation_S4_ToggleTelemetryPanel", "type": "Button" },
-    { "id": "CrowdSimulation.S4.ProbePathFault", "name": "CrowdSimulation_S4_ProbePathFault", "type": "Button" }
+    { "id": "CrowdSimulation.S4.ProbePathFault", "name": "CrowdSimulation_S4_ProbePathFault", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleFormationSlots", "name": "CrowdSimulation_S4_ToggleFormationSlots", "type": "Button" }
   ],
   "contexts": [
     {
@@ -123,6 +124,7 @@
         { "actionId": "CrowdSimulation.S4.ToggleNavPanel", "path": "<Keyboard>/f9" },
         { "actionId": "CrowdSimulation.S4.ToggleTelemetryPanel", "path": "<Keyboard>/f10" },
         { "actionId": "CrowdSimulation.S4.ProbePathFault", "path": "<Keyboard>/f12" },
+        { "actionId": "CrowdSimulation.S4.ToggleFormationSlots", "path": "<Keyboard>/backquote" },
         { "actionId": "CrowdSimulation.Player.NextTeam", "path": "<Keyboard>/tab" },
         { "actionId": "CrowdSimulation.Player.SelectAll", "path": "<Keyboard>/6" },
         { "actionId": "CrowdSimulation.Player.ClearSelection", "path": "<Keyboard>/7" },

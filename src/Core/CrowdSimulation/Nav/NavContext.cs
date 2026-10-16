@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -79,6 +80,27 @@ public sealed class NavContext
     internal readonly List<int> ChangedTileList = new(16);
     internal readonly HashSet<int> SameTiles = new(16);
     internal NavTileEntry?[]? PrevTiles;
+
+    private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>
+    {
+        public bool Equals((NavTileEntry A, int SideA, NavTileEntry B) x, (NavTileEntry A, int SideA, NavTileEntry B) y)
+            => ReferenceEquals(x.A, y.A) && ReferenceEquals(x.B, y.B) && x.SideA == y.SideA;
+
+        public int GetHashCode((NavTileEntry A, int SideA, NavTileEntry B) obj)
+            => HashCode.Combine(RuntimeHelpers.GetHashCode(obj.A), obj.SideA, RuntimeHelpers.GetHashCode(obj.B));
+    }
+
+    /// <summary>tile 边界缝合对的记忆化(随本上下文释放;每次全局拼装前清空)。</summary>
+    internal readonly Dictionary<(NavTileEntry A, int SideA, NavTileEntry B), int[]> StitchMemo = new(new StitchKeyComparer());
+    internal readonly object StitchMemoLock = new();
+
+    public void ClearStitchMemo()
+    {
+        lock (StitchMemoLock)
+        {
+            StitchMemo.Clear();
+        }
+    }
 
     /// <summary>导航版本:cost / passable 增量重烘各 +1;在途规划与流场答复按它判陈旧。</summary>
     public int Version { get; set; }
