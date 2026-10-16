@@ -96,8 +96,6 @@ public sealed class PathQueryService : IDisposable
     private readonly Dictionary<int, long> _sentAtMs;
     private readonly HashSet<int> _discarded;
     private readonly List<Thread> _workers = new();
-    private readonly List<WorkerBuffers> _workerScratch = new();
-    private readonly object _workerScratchGate = new();
     private readonly System.Collections.Concurrent.ConcurrentBag<FlowPool> _pools = new();
     private readonly Dictionary<PathResult, ReplySlot> _slotOf;
     private readonly object _slotGate = new();
@@ -123,7 +121,8 @@ public sealed class PathQueryService : IDisposable
     public int Waits { get; private set; }
 
     /// <summary>测试钩:导航互斥锁进入次数(结构重烘与变体物化)。</summary>
-    internal long NavExclusiveEnterCount { get; private set; }
+    internal long NavExclusiveEnterCount => Interlocked.Read(ref _navExclusiveEnterCount);
+    private long _navExclusiveEnterCount;
 
     /// <summary>还没取走的请求数。组消失或状态序对不上时也要取走，否则这里会涨。</summary>
     public int OutstandingReplyCount
@@ -176,11 +175,6 @@ public sealed class PathQueryService : IDisposable
         _slotOf = new Dictionary<PathResult, ReplySlot>(slots);
         if (workerThreads < 1) throw new ArgumentOutOfRangeException(nameof(workerThreads));
         SetWorkerCount(workerThreads);
-        int tileCells = _config.Hpa.NavCellsPerTile * _config.Hpa.NavCellsPerTile;
-        lock (_workerScratchGate)
-        {
-            _workerScratch.Add(new WorkerBuffers(tileCells));
-        }
     }
 
     /// <summary>
@@ -418,7 +412,6 @@ public sealed class PathQueryService : IDisposable
 
         for (int i = 0; i < flowCapacity; i++) pool.Give(flowStock[i]);
         var buffers = new WorkerBuffers(_config.Hpa.NavCellsPerTile * _config.Hpa.NavCellsPerTile);
-        lock (_workerScratchGate) _workerScratch.Add(buffers);
         buffers.EnsureMasks(tileCount);
         for (int i = 0; i < ReplySlotCapacity(_config); i++)
         {
@@ -505,13 +498,13 @@ public sealed class PathQueryService : IDisposable
     /// <summary>导航态互斥执行(结构变更重烘在锁内应用,见 _navGate)。</summary>
     public void RunExclusive(Action action)
     {
-        NavExclusiveEnterCount++;
+        Interlocked.Increment(ref _navExclusiveEnterCount);
         lock (_navGate) action();
     }
 
     public T RunExclusive<T>(Func<T> action)
     {
-        NavExclusiveEnterCount++;
+        Interlocked.Increment(ref _navExclusiveEnterCount);
         lock (_navGate) return action();
     }
 
@@ -520,51 +513,8 @@ public sealed class PathQueryService : IDisposable
     /// </summary>
     public T RunExclusive<TState, T>(TState state, Func<TState, T> action)
     {
-        NavExclusiveEnterCount++;
+        Interlocked.Increment(ref _navExclusiveEnterCount);
         lock (_navGate) return action(state);
-    }
-
-    /// <summary>增量重烘换 tile 条目后,按 navId 淘汰路径查询代价备忘(上界 = tile 数)。</summary>
-    public void InvalidateTileCostMemos(int navId)
-    {
-        lock (_workerScratchGate)
-        {
-            for (int i = 0; i < _workerScratch.Count; i++)
-            {
-                var memo = _workerScratch[i].Scratch.Tile.BaseLayerCostMemo;
-                var keys = memo.Keys.ToArray();
-                for (int k = 0; k < keys.Length; k++)
-                {
-                    if (keys[k].NavId == navId) memo.Remove(keys[k]);
-                }
-            }
-        }
-    }
-
-    internal int CountTileCostMemos(int navId)
-    {
-        int count = 0;
-        lock (_workerScratchGate)
-        {
-            for (int i = 0; i < _workerScratch.Count; i++)
-            {
-                foreach (var key in _workerScratch[i].Scratch.Tile.BaseLayerCostMemo.Keys)
-                {
-                    if (key.NavId == navId) count++;
-                }
-            }
-        }
-
-        return count;
-    }
-
-    internal void SeedTileCostMemo(int navId, int tile, int polyCount)
-    {
-        lock (_workerScratchGate)
-        {
-            var scratch = _workerScratch[0].Scratch.Tile;
-            scratch.BaseLayerCostMemo[(navId, tile)] = new Fix64[Math.Max(polyCount, 1)];
-        }
     }
 
     // 变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)

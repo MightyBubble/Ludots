@@ -225,17 +225,6 @@ public static class CrowdStructureOps
                 call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Sim.TickCount);
         }
 
-        if (call.Sim.Planner is { } pathPlanner)
-        {
-            for (int i = 0; i < results.Count; i++)
-            {
-                if (results[i].DirtyTiles.Count > 0)
-                {
-                    pathPlanner.Service.InvalidateTileCostMemos(results[i].NavId);
-                }
-            }
-        }
-
         return results;
     };
 
