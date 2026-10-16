@@ -132,6 +132,7 @@ public sealed class CrowdPlayerViewTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         var fog = session.Fog!;
         int viewer = 1;
         int ally = 3;

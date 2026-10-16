@@ -13,8 +13,8 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// 迷雾/认知对拍(脚本:部署 → 行军 → 未知建筑 → 发现改道 → 拆除残影 → 再见遗忘 →
-/// reveal/obscure/forget → fogShare 并组 → fogTerrain 开关对照):迷雾开启口径,不置
-/// TruthNavFrozen(参考端 S7-b 块不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)。
+/// reveal/obscure/forget → fogShare 并组 → fogTerrain 开关对照):会话装迷雾,
+/// 规划经认知槽。
 /// 迷雾 digest 主门:每组每 tick visible/explored/belief/tiles 计数、beliefKey、
 /// 槽号、entRev/rev 计数器 + 全局槽账(seq/switches/entry/dormant/beliefCount)——整数/集合态,
 /// 逐位硬门,无带宽口径(哈希碰撞藏不住变更:计数器与 key 双轨)。
@@ -50,6 +50,7 @@ public sealed class S7FogTruthTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         session.VerifyIncrementalNav = true;
 

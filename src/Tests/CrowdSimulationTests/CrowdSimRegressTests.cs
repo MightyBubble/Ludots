@@ -117,12 +117,12 @@ public sealed class CrowdSimRegressTests
         Script = new JsonArray(),
         Ticks = ticks,
         Movement = true,
-        TruthNavFrozen = true,
+        WithFog = false,
     };
 
     private static CrowdSimRegressHost OpenLand(CrowdSimRegressScenario _)
     {
-        var world = CrowdBeliefTerrainTests.LandWorld.Open();
+        var world = CrowdBeliefTerrainTests.LandWorld.Open(withFog: false);
         return new CrowdSimRegressHost
         {
             Session = world.Session,

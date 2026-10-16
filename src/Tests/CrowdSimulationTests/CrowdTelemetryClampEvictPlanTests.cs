@@ -32,6 +32,7 @@ public sealed class CrowdTelemetryClampEvictPlanTests
 
         using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         int spawned = CrowdDeployment.SpawnAt(
             session, Fix64.FromInt(480000), Fix64.FromInt(560000), 8, 1, 0, 0);

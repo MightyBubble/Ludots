@@ -14,7 +14,7 @@ public sealed class CrowdSimRegressScenario
     public JsonArray? Script { get; init; }
     public int Ticks { get; init; }
     public bool Movement { get; init; }
-    public bool TruthNavFrozen { get; init; }
+    public bool WithFog { get; init; }
     public IReadOnlyList<string>? ExpectAbsentTemplates { get; init; }
     public IReadOnlyList<string>? ExpectPresentTemplates { get; init; }
 }
@@ -177,7 +177,11 @@ public static class CrowdSimRegress
                 using var host = request.OpenScenario(scenario);
                 bake = repeat == 0 ? host.BakeMs : Math.Max(bake, host.BakeMs);
                 var session = host.Session;
-                session.TruthNavFrozen = scenario.TruthNavFrozen;
+                if ((session.Fog != null) != scenario.WithFog)
+                {
+                    throw new InvalidOperationException($"场景 {scenario.Id} 要求 withFog={scenario.WithFog}，打开的会话不符。");
+                }
+
                 session.DiagnosticDigest = true;
                 session.BlockOnDueReplies = true;
                 var script = CrowdReferenceScript.Load(scenario.Script, session.Units.Capacity);

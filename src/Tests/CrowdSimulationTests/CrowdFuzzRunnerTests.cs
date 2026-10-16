@@ -104,7 +104,6 @@ public sealed class CrowdFuzzRunnerTests
             using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
             session.BlockOnDueReplies = true;
-            session.TruthNavFrozen = true;
             var plan = new CrowdFuzzPlan
             {
                 Seed = seed,
@@ -158,8 +157,7 @@ public sealed class CrowdFuzzRunnerTests
     [Test]
     public void Runner_PlaceAndRemove_MatchesStructuresAndNav()
     {
-        using var world = CrowdBeliefTerrainTests.LandWorld.Open();
-        world.Session.TruthNavFrozen = true;
+        using var world = CrowdBeliefTerrainTests.LandWorld.Open(withFog: false);
         var place = new CrowdFuzzOp { Id = "place", Structure = true };
         var remove = new CrowdFuzzOp { Id = "remove", Structure = true };
         var result = CrowdFuzzRunner.Run(world.Session, Plan(seed: 5, opCount: 2, place, remove));

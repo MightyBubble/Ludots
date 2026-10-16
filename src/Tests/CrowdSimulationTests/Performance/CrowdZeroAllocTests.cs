@@ -71,6 +71,7 @@ public sealed class CrowdZeroAllocTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var host = new CrowdSimulationRuntime();
         Bind(host, session);

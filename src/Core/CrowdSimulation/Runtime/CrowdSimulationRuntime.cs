@@ -657,10 +657,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, planTimeout, _session.ResolveNavContext);
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
-        _session.BindVision(
+        _session.EnableMovement(kernel, planner);
+        _session.EnableFog(
             engine.GetService(CoreServiceKeys.VisionFogLayerRegistry),
             engine.GetService(CoreServiceKeys.VisionFogFieldStore));
-        _session.EnableMovement(kernel, planner);
         if (_session.Fog != null &&
             engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
             seats != null)
@@ -915,10 +915,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         {
             using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
                 replay.Navs, session.Config, workerThreads: 1, RequirePlanTimeout(), replay.ResolveNavContext);
-            replay.BindVision(new FogLayerRegistry(), new FogFieldStore());
             replay.EnableMovement(
                 CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));
+            if (session.Fog != null) replay.EnableFog(new FogLayerRegistry(), new FogFieldStore());
             replay.SetStaticBlockers(session.Structures == null ? session.Blockers : null);
             replay.BlockOnDueReplies = true;
             replay.Commands.Schedule(replay, entries);

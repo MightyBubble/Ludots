@@ -18,34 +18,34 @@
       "scriptAsset": "CrowdSimulation/parity/s4-deploy-truth.json",
       "ticksFrom": "frames",
       "movement": false,
-      "truthNavFrozen": true
+      "withFog": false
     },
     "rebake": {
       "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
       "scriptAsset": "CrowdSimulation/parity/s7-rebake-truth.json",
       "ticksFrom": "ticks",
       "movement": true,
-      "truthNavFrozen": true
+      "withFog": false
     },
     "areas": {
       "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
       "scriptAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/areas-road-flood-fire.json",
       "ticksFrom": "ticks",
       "movement": false,
-      "truthNavFrozen": true
+      "withFog": false
     },
     "stress": {
       "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
       "scriptAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json",
       "ticksFrom": "ticks",
       "movement": true,
-      "truthNavFrozen": false
+      "withFog": true
     }
   },
   "fuzz": {
     "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod/assets",
     "movement": true,
-    "truthNavFrozen": true,
+    "withFog": false,
     "stepsPerOp": 2,
     "probeHandles": 32,
     "spawnCount": 8,

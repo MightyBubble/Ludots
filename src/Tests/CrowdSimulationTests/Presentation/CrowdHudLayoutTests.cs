@@ -169,6 +169,7 @@ public sealed class CrowdHudLayoutTests
         (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var live = session;
         feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => live);

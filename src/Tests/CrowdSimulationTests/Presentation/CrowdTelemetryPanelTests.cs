@@ -367,6 +367,7 @@ public class CrowdTelemetryPanelTests
         using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromMilliseconds(80), session.ResolveNavContext);
         service.TestDelayPerJob = TimeSpan.FromSeconds(2);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = false;
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
         session.Commands.Submit(session, MoveOrder(session, 1, 1200000, 800000), CrowdSimCommands.Exec);
