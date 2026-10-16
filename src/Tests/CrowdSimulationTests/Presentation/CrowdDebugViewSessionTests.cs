@@ -42,7 +42,7 @@ public class CrowdDebugViewSessionTests
             TeamColorPalette.ParseHex("#7ED957", "test"),
             TeamColorPalette.ParseHex("#FFC53D", "test"),
             TeamColorPalette.ParseHex("#C792FF", "test"),
-        }));
+        }, new[] { 1, 2, 3, 4 }));
         frameOn.SetViewport(480000f, 540000f, 560000f, 620000f, 20f);
         frameOn.ControllingPlayer = 0;
         var frameOff = new CrowdDebugViewFrame(LoadView());

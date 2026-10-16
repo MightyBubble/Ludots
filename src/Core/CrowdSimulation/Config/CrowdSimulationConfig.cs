@@ -36,6 +36,7 @@ public sealed class CrowdSimulationConfig
     public required SpawnSection Spawn { get; init; }
     public required StructuresSection Structures { get; init; }
     public required DeploySection Deploy { get; init; }
+    public required TelemetrySection Telemetry { get; init; }
 
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
@@ -59,6 +60,11 @@ public sealed class CrowdSimulationConfig
         {
             throw new InvalidOperationException(
                 "CrowdSimulationConfig.json: worker.planTimeoutMs 需为 > 0 的整数毫秒。");
+        }
+
+        if (!(cfg.Telemetry.TurnEpsRad > 0d) || double.IsNaN(cfg.Telemetry.TurnEpsRad) || double.IsInfinity(cfg.Telemetry.TurnEpsRad))
+        {
+            throw new InvalidOperationException("CrowdSimulationConfig.json: telemetry.turnEpsRad 必须是 > 0 的有限数。");
         }
 
         return cfg;
@@ -417,4 +423,8 @@ public sealed class CrowdSimulationConfig
         public required int YCm { get; init; }
     }
 
+    public sealed class TelemetrySection
+    {
+        public required double TurnEpsRad { get; init; }
+    }
 }

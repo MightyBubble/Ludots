@@ -17,7 +17,7 @@ namespace Ludots.Core.Config
                 case ConfigMergePolicy.Replace:
                     return fragments[^1].DeepClone();
                 case ConfigMergePolicy.DeepObject:
-                    return MergeDeepObject(fragments, entry.ArrayAppendFields ?? Array.Empty<string>(), entry.ReplaceObjectFields ?? Array.Empty<string>());
+                    return MergeDeepObject(fragments, entry.ArrayAppendFields ?? Array.Empty<string>());
                 case ConfigMergePolicy.ArrayReplace:
                     return MergeArrayReplace(fragments);
                 case ConfigMergePolicy.ArrayAppend:
@@ -98,12 +98,12 @@ namespace Ludots.Core.Config
             }
         }
 
-        private static JsonNode MergeDeepObject(IReadOnlyList<JsonNode> fragments, string[] arrayAppendFields, string[] replaceObjectFields)
+        private static JsonNode MergeDeepObject(IReadOnlyList<JsonNode> fragments, string[] arrayAppendFields)
         {
             var merged = new JsonObject();
             for (int i = 0; i < fragments.Count; i++)
             {
-                if (fragments[i] is JsonObject obj) MergeObject(merged, obj, arrayAppendFields, replaceObjectFields);
+                if (fragments[i] is JsonObject obj) MergeObject(merged, obj, arrayAppendFields);
             }
             return merged;
         }
@@ -252,10 +252,9 @@ namespace Ludots.Core.Config
             return bool.TryParse(node.ToString(), out value);
         }
 
-        public static void MergeObject(JsonNode target, JsonObject source, string[] arrayAppendFields, string[]? replaceObjectFields = null)
+        public static void MergeObject(JsonNode target, JsonObject source, string[] arrayAppendFields)
         {
             if (target is not JsonObject tObj) return;
-            replaceObjectFields ??= Array.Empty<string>();
 
             foreach (var kvp in source)
             {
@@ -270,13 +269,7 @@ namespace Ludots.Core.Config
 
                 if (existing is JsonObject exObj && value is JsonObject vObj)
                 {
-                    if (ShouldReplaceObjectField(key, replaceObjectFields))
-                    {
-                        tObj[key] = vObj.DeepClone();
-                        continue;
-                    }
-
-                    MergeObject(exObj, vObj, arrayAppendFields, replaceObjectFields);
+                    MergeObject(exObj, vObj, arrayAppendFields);
                     continue;
                 }
 
@@ -302,15 +295,6 @@ namespace Ludots.Core.Config
             for (int i = 0; i < arrayAppendFields.Length; i++)
             {
                 if (string.Equals(arrayAppendFields[i], fieldName, StringComparison.Ordinal)) return true;
-            }
-            return false;
-        }
-
-        private static bool ShouldReplaceObjectField(string fieldName, string[] replaceObjectFields)
-        {
-            for (int i = 0; i < replaceObjectFields.Length; i++)
-            {
-                if (string.Equals(replaceObjectFields[i], fieldName, StringComparison.Ordinal)) return true;
             }
             return false;
         }

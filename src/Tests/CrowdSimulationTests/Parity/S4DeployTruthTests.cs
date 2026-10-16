@@ -269,7 +269,6 @@ public class S4DeployTruthTests
         session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.LinkCandidates);
         session.NavTileCache = cache;
         session.BindVision(new FogLayerRegistry(), new FogFieldStore());
-        session.MotionTurnEpsRad = Fix64.FromDouble(0.035);
         return (runtime, session);
     }
 

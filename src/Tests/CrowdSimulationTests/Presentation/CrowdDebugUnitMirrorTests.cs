@@ -146,7 +146,7 @@ public sealed class CrowdDebugUnitMirrorTests
                 TeamColorPalette.ParseHex("#7ED957", "test"),
                 TeamColorPalette.ParseHex("#FFC53D", "test"),
                 TeamColorPalette.ParseHex("#C792FF", "test"),
-            }));
+            }, new[] { 1, 2, 3, 4 }));
             var frame = CrowdHudSamplingTests.ShippedDebugView();
             frame.BindEngine(engine);
             frame.SetViewport(SpawnXCm - 20000f, SpawnYCm - 20000f, SpawnXCm + 20000f, SpawnYCm + 20000f, 20f);

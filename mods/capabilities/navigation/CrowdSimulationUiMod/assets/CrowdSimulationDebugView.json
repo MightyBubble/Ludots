@@ -374,6 +374,5 @@
   "panels": {
     "nav": false,
     "telemetry": false
-  },
-  "motionTurnEpsRad": 0.035
+  }
 }

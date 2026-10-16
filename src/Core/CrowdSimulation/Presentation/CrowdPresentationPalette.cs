@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 
@@ -10,31 +9,18 @@ internal static class CrowdPresentationPalette
 {
     public const string RelativePath = "CrowdSimulationPresentationPalette.json";
 
-    public static bool TryLoadMerged(
-        ConfigPipeline pipeline,
-        ConfigCatalog catalog,
-        ConfigConflictReport report,
-        out JsonObject palette)
-    {
-        ArgumentNullException.ThrowIfNull(pipeline);
-        palette = new JsonObject();
-        if (!catalog.TryGet(RelativePath, out ConfigCatalogEntry entry))
-            return false;
-        JsonObject? merged = pipeline.MergeDeepObjectFromCatalog(in entry, report);
-        if (merged == null || merged.Count == 0)
-            throw new InvalidOperationException($"{RelativePath}: 存在目录登记但合并为空。");
-        palette = merged;
-        return true;
-    }
-
     public static JsonObject LoadMerged(
         ConfigPipeline pipeline,
         ConfigCatalog catalog,
         ConfigConflictReport report)
     {
-        if (!TryLoadMerged(pipeline, catalog, report, out JsonObject palette))
+        ArgumentNullException.ThrowIfNull(pipeline);
+        if (!catalog.TryGet(RelativePath, out ConfigCatalogEntry entry))
             throw new InvalidOperationException($"{RelativePath}: 未在配置目录登记。");
-        return palette;
+        JsonObject? merged = pipeline.MergeDeepObjectFromCatalog(in entry, report);
+        if (merged == null || merged.Count == 0)
+            throw new InvalidOperationException($"{RelativePath}: 存在目录登记但合并为空。");
+        return merged;
     }
 
     public static JsonObject MergeInto(JsonObject viewRoot, JsonObject palette, string viewPath)

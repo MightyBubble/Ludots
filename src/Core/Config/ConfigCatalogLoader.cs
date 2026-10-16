@@ -100,13 +100,7 @@ namespace Ludots.Core.Config
                     allowEmpty = allowEmptyNode.GetValue<bool>();
                 }
 
-                string[] replaceObjectFields = Array.Empty<string>();
-                if (obj.TryGetPropertyValue("ReplaceObjectFields", out var replaceNode))
-                {
-                    replaceObjectFields = ReadStringArray(replaceNode, path, "ReplaceObjectFields");
-                }
-
-                catalog.Add(new ConfigCatalogEntry(path, policy, idField, appendFields, shardDirectories, allowEmpty, replaceObjectFields));
+                catalog.Add(new ConfigCatalogEntry(path, policy, idField, appendFields, shardDirectories, allowEmpty));
             }
 
             return catalog;
@@ -157,7 +151,7 @@ namespace Ludots.Core.Config
         {
             foreach (var pair in obj)
             {
-                if (pair.Key is "Path" or "Policy" or "IdField" or "ArrayAppendFields" or "ShardDirectories" or "AllowEmpty" or "ReplaceObjectFields")
+                if (pair.Key is "Path" or "Policy" or "IdField" or "ArrayAppendFields" or "ShardDirectories" or "AllowEmpty")
                 {
                     continue;
                 }

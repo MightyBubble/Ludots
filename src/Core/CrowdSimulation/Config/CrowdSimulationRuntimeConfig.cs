@@ -55,6 +55,7 @@ public sealed class CrowdSimulationRuntimeConfig
     public required RuntimeSpawnSection Spawn { get; init; }
     public required RuntimeStructuresSection Structures { get; init; }
     public required RuntimeDeploySection Deploy { get; init; }
+    public required RuntimeTelemetrySection Telemetry { get; init; }
 
     /// <summary>半径厘米升序去重表。</summary>
     public required IReadOnlyList<int> RadiusClasses { get; init; }
@@ -488,5 +489,10 @@ public sealed class RuntimeDeployBase
     public required int PlayerId { get; init; }
     public required int XCm { get; init; }
     public required int YCm { get; init; }
+}
+
+public sealed class RuntimeTelemetrySection
+{
+    public required Fix64 TurnEpsRad { get; init; }
 }
 

@@ -66,7 +66,7 @@ internal sealed class CrowdHudTestHost : IDisposable
                 TeamColorPalette.ParseHex("#ff5a4c", "test"),
                 TeamColorPalette.ParseHex("#73ff8c", "test"),
                 TeamColorPalette.ParseHex("#ffd966cc", "test"),
-            }));
+            }, new[] { 1, 2, 3, 4 }));
         }
 
         Controller = new CrowdHudController(Settings, styleSheet);

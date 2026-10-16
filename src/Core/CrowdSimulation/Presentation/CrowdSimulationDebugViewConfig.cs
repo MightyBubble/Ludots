@@ -27,7 +27,6 @@ internal sealed class CrowdSimulationDebugViewConfig
     [JsonRequired] public int DensityMax { get; init; }
     [JsonRequired] public int OverlayReserve { get; init; }
     [JsonRequired] public int DirtyPulsePercent { get; init; }
-    [JsonRequired] public double MotionTurnEpsRad { get; init; }
     [JsonRequired] public CrowdDebugViewInspect Inspect { get; init; } = null!;
     [JsonRequired] public int BeliefPlayer { get; init; }
     [JsonRequired] public string UnitColor { get; init; } = "";
@@ -75,8 +74,6 @@ internal sealed class CrowdSimulationDebugViewConfig
             throw new InvalidOperationException($"{path}: maxScreenSegments 与 overlayReserve 之和超过屏幕叠加容量 {ScreenOverlayBuffer.MaxItems}。");
         if (DirtyPulsePercent < 1 || DirtyPulsePercent > CrowdSimulationLimits.FullPercent)
             throw new InvalidOperationException($"{path}: dirtyPulsePercent 需为 1..{CrowdSimulationLimits.FullPercent} 的整数。");
-        if (!(MotionTurnEpsRad > 0d) || double.IsNaN(MotionTurnEpsRad) || double.IsInfinity(MotionTurnEpsRad))
-            throw new InvalidOperationException($"{path}: motionTurnEpsRad 必须是 > 0 的有限数。");
         if (string.IsNullOrWhiteSpace(Inspect.AgentType))
             throw new InvalidOperationException($"{path}: inspect.agentType 不能为空。");
         if (string.IsNullOrWhiteSpace(Inspect.Profile))
