@@ -9,6 +9,7 @@ public static class CrowdWebFuzzChecksum
 {
     private const uint Offset = 0x811c9dc5;
     private const uint Prime = 0x01000193;
+    private const float CmPerMeter = CrowdReferenceMeters.CentimetersPerMeter;
 
     public static string UnitHex(CrowdSimSession session)
     {
@@ -19,17 +20,17 @@ public static class CrowdWebFuzzChecksum
         {
             for (int i = 0; i < n; i++)
             {
-                h = HashFloat(h, (float)movement.Positions[i].X.ToDouble() / 100f);
-                h = HashFloat(h, (float)movement.Positions[i].Y.ToDouble() / 100f);
+                h = HashFloat(h, (float)movement.Positions[i].X.ToDouble() / CmPerMeter);
+                h = HashFloat(h, (float)movement.Positions[i].Y.ToDouble() / CmPerMeter);
             }
 
             for (int i = 0; i < n; i++)
             {
                 var kin = movement.Kins[i];
-                h = HashFloat(h, (float)kin.Velocity.X.ToDouble() / 100f);
-                h = HashFloat(h, (float)kin.Velocity.Y.ToDouble() / 100f);
-                h = HashFloat(h, (float)kin.SlotOffsetCm.X.ToDouble() / 100f);
-                h = HashFloat(h, (float)kin.SlotOffsetCm.Y.ToDouble() / 100f);
+                h = HashFloat(h, (float)kin.Velocity.X.ToDouble() / CmPerMeter);
+                h = HashFloat(h, (float)kin.Velocity.Y.ToDouble() / CmPerMeter);
+                h = HashFloat(h, (float)kin.SlotOffsetCm.X.ToDouble() / CmPerMeter);
+                h = HashFloat(h, (float)kin.SlotOffsetCm.Y.ToDouble() / CmPerMeter);
                 h = HashFloat(h, (float)kin.Blend.ToDouble());
                 h = HashFloat(h, (float)kin.StallSeconds.ToDouble());
             }
@@ -46,8 +47,8 @@ public static class CrowdWebFuzzChecksum
             {
                 var entity = session.Units.EntityAt(i);
                 var pos = session.World.Get<WorldPositionCm>(entity).Value;
-                h = HashFloat(h, (float)pos.X.ToDouble() / 100f);
-                h = HashFloat(h, (float)pos.Y.ToDouble() / 100f);
+                h = HashFloat(h, (float)pos.X.ToDouble() / CmPerMeter);
+                h = HashFloat(h, (float)pos.Y.ToDouble() / CmPerMeter);
                 var state = session.World.Get<CrowdSimulationUnitState>(entity);
                 h = Mix(h, state.State);
                 h = Mix(h, (uint)state.GroupId);

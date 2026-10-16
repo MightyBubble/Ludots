@@ -22,6 +22,14 @@ public static class CrowdWebFuzzRunner
 
     public const long PositionStatSlackCmPerUnit = 4;
 
+    // 三种类型分开：统一成 int 会把 double 乘法降成 float 乘法或整数除，取整结果随之改变。
+    private const int CmPerMeter = CrowdReferenceMeters.CentimetersPerMeter;
+    private const float CmPerMeterF = CrowdReferenceMeters.CentimetersPerMeter;
+    private const double CmPerMeterD = CrowdReferenceMeters.CentimetersPerMeter;
+
+    private const int DragWidthMinCm = 10000;
+    private const int DragWidthSpanCm = 80000;
+
     public static CrowdWebFuzzRunResult Run(
         CrowdSimSession session, int opCount, CrowdWebFuzzBlast blast, CrowdWebFuzzPalette palette, long seed)
     {
@@ -150,12 +158,12 @@ public static class CrowdWebFuzzRunner
                 var entity = units.EntityAt(i);
                 float d = MathF.Sqrt(d2);
                 var agent = world.Get<CrowdSimulationAgent>(entity);
-                float speed = (float)agent.SpeedCmPerSec.ToDouble() / 100f;
+                float speed = (float)agent.SpeedCmPerSec.ToDouble() / CmPerMeterF;
                 float f = (1f - d / ring) * speed * (float)blast.Impulse.ToDouble() / d;
                 var kin = world.Get<CrowdSimulationKinematics>(entity);
                 kin.Velocity = new Fix64Vec2(
-                    kin.Velocity.X + Fix64.FromDouble(dx * f * 100),
-                    kin.Velocity.Y + Fix64.FromDouble(dy * f * 100));
+                    kin.Velocity.X + Fix64.FromDouble(dx * f * CmPerMeter),
+                    kin.Velocity.Y + Fix64.FromDouble(dy * f * CmPerMeter));
                 world.Set(entity, kin);
             }
         }
@@ -203,7 +211,7 @@ public static class CrowdWebFuzzRunner
     }
 
     private static double WorldSizeMeters(CrowdSimSession session)
-        => session.Config.NavCellsPerSide * session.Config.NavCellSizeCm / 100.0;
+        => session.Config.NavCellsPerSide * session.Config.NavCellSizeCm / CmPerMeterD;
 
     private static (double X, double Y) PickPoint(CrowdSimSession session, CrowdSimRng rng, List<uint> draws, double sizeM)
     {
@@ -234,8 +242,8 @@ public static class CrowdWebFuzzRunner
             p = session.World.Get<WorldPositionCm>(entity).Value;
         }
 
-        float xm = (float)(p.X.ToDouble() / 100.0);
-        float ym = (float)(p.Y.ToDouble() / 100.0);
+        float xm = (float)(p.X.ToDouble() / CmPerMeterD);
+        float ym = (float)(p.Y.ToDouble() / CmPerMeterD);
         return (xm, ym);
     }
 
@@ -292,7 +300,7 @@ public static class CrowdWebFuzzRunner
         var order = new List<int>(anchors.Count);
         foreach (var (x, y) in anchors)
         {
-            var key = ((long)Math.Round(x * 100.0), (long)Math.Round(y * 100.0));
+            var key = ((long)Math.Round(x * CmPerMeterD), (long)Math.Round(y * CmPerMeterD));
             if (!idByAnchor.Remove(key, out int id))
             {
                 throw new InvalidOperationException($"模糊对拍调色板: Web 开局结构锚点 ({x}, {y}) 在 C# 结构仓里找不到。");
@@ -344,12 +352,12 @@ public static class CrowdWebFuzzRunner
             }
 
             double xm = fp.Shape == CrowdStructureShape.Path
-                ? fp.X0.ToDouble() / 100.0
-                : fp.CenterXCm.ToDouble() / 100.0;
+                ? fp.X0.ToDouble() / CmPerMeterD
+                : fp.CenterXCm.ToDouble() / CmPerMeterD;
             double ym = fp.Shape == CrowdStructureShape.Path
-                ? fp.Y0.ToDouble() / 100.0
-                : fp.CenterYCm.ToDouble() / 100.0;
-            CrowdStructureOps.RemoveStructureAt(session, Fix64.FromDouble(xm * 100.0), Fix64.FromDouble(ym * 100.0));
+                ? fp.Y0.ToDouble() / CmPerMeterD
+                : fp.CenterYCm.ToDouble() / CmPerMeterD;
+            CrowdStructureOps.RemoveStructureAt(session, Fix64.FromDouble(xm * CmPerMeterD), Fix64.FromDouble(ym * CmPerMeterD));
             return new CrowdWebFuzzOpRecord
             {
                 Kind = "structure",
@@ -371,11 +379,11 @@ public static class CrowdWebFuzzRunner
         double clampW(double v) => Math.Min(sizeM - 1, Math.Max(0, v));
         double tx = clampW(x + Math.Cos(ang) * len);
         double ty = clampW(y + Math.Sin(ang) * len);
-        int xCmPlace = (int)Math.Round(x * 100);
-        int yCmPlace = (int)Math.Round(y * 100);
-        int sizeCm = (int)Math.Round(sizeVal * 100);
-        int toX = (int)Math.Round(tx * 100);
-        int toY = (int)Math.Round(ty * 100);
+        int xCmPlace = (int)Math.Round(x * CmPerMeter);
+        int yCmPlace = (int)Math.Round(y * CmPerMeter);
+        int sizeCm = (int)Math.Round(sizeVal * CmPerMeter);
+        int toX = (int)Math.Round(tx * CmPerMeter);
+        int toY = (int)Math.Round(ty * CmPerMeter);
         var cmd = new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -467,8 +475,8 @@ public static class CrowdWebFuzzRunner
         int player = pIndex + 1;
         int made = CrowdDeployment.SpawnAt(
             session,
-            Fix64.FromDouble(x * 100.0),
-            Fix64.FromDouble(y * 100.0),
+            Fix64.FromDouble(x * CmPerMeterD),
+            Fix64.FromDouble(y * CmPerMeterD),
             count,
             player,
             unitType,
@@ -506,7 +514,7 @@ public static class CrowdWebFuzzRunner
         bool drag = Draw(rng, draws) < 0.3;
         string shapeId = formationIds[DrawIndex(rng, draws, formationIds.Length)];
         bool auto = Draw(rng, draws) < 0.8;
-        int widthCm = drag ? (int)Math.Round((100 + Draw(rng, draws) * 800) * 100) : 0;
+        int widthCm = drag ? (int)Math.Round((DragWidthMinCm / CmPerMeterD + Draw(rng, draws) * (DragWidthSpanCm / CmPerMeterD)) * CmPerMeter) : 0;
         bool fogTerrain = Draw(rng, draws) < 0.5;
         Fix64? faceX = null;
         Fix64? faceY = null;
@@ -528,8 +536,8 @@ public static class CrowdWebFuzzRunner
             {
                 Kind = CrowdSimCommandKind.Order,
                 Player = player,
-                XCm = (int)Math.Round(x * 100),
-                YCm = (int)Math.Round(y * 100),
+                XCm = (int)Math.Round(x * CmPerMeter),
+                YCm = (int)Math.Round(y * CmPerMeter),
                 ShapeId = shapeId,
                 HasAuto = true,
                 Auto = auto,
@@ -566,10 +574,10 @@ public static class CrowdWebFuzzRunner
         double bx = Math.Max(x0, x1);
         double ay = Math.Min(y0, y1);
         double by = Math.Max(y0, y1);
-        double axCm = ax * 100;
-        double bxCm = bx * 100;
-        double ayCm = ay * 100;
-        double byCm = by * 100;
+        double axCm = ax * CmPerMeter;
+        double bxCm = bx * CmPerMeter;
+        double ayCm = ay * CmPerMeter;
+        double byCm = by * CmPerMeter;
         for (int i = 0; i < session.Units.Count; i++)
         {
             var entity = session.Units.EntityAt(i);
@@ -580,8 +588,8 @@ public static class CrowdWebFuzzRunner
             }
 
             var (xm, ym) = UnitPositionMeters(session, i);
-            double xcm = xm * 100;
-            double ycm = ym * 100;
+            double xcm = xm * CmPerMeter;
+            double ycm = ym * CmPerMeter;
             bool inside = xcm >= axCm && xcm <= bxCm && ycm >= ayCm && ycm <= byCm;
             if (inside) selection[i] = true;
             else if (!additive) selection[i] = false;
@@ -624,7 +632,7 @@ public static class CrowdWebFuzzRunner
 
     private static void StepTwice(CrowdSimSession session)
     {
-        int guard = 64;
+        int guard = CrowdSimulationLimits.AdvanceStallGuardFactor;
         for (int i = 0; i < 2; i++)
         {
             while (!session.Step(out _))
@@ -662,7 +670,7 @@ public static class CrowdWebFuzzRunner
         for (int i = 0; i < session.Units.Count; i++)
         {
             var (xm, ym) = UnitPositionMeters(session, i);
-            sum += (long)Math.Round(xm * 100.0) + (long)Math.Round(ym * 100.0);
+            sum += (long)Math.Round(xm * CmPerMeterD) + (long)Math.Round(ym * CmPerMeterD);
         }
 
         return sum;

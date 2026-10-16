@@ -50,6 +50,7 @@ public sealed class SpatialVocabularyContractTests
         "src/Core/CrowdSimulation/Fog/CrowdFogArea.cs",
         "src/Core/CrowdSimulation/Fog/CrowdFog.cs",
         "src/Core/CrowdSimulation/Nav/UpperLayerBake.cs",
+        "src/Core/CrowdSimulation/Diagnostics/CrowdWebFuzzRunner.cs",
     ];
 
     private static readonly HashSet<string> ConversionIdentifiers = new(StringComparer.Ordinal)
