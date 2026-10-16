@@ -284,7 +284,7 @@ public sealed class CrowdPairRules
     public required CrowdPushResponse[] ResponseByPair { get; init; }
     public required bool[] SharesVisionByPair { get; init; }
     public required int[] IndexByPlayerId { get; init; }
-    public required int[] PlayerIds { get; init; }
+    internal required int[] PlayerIds { get; init; }
 
     public static CrowdPairRules Matrices(int playerCount, CrowdPushResponse[] responseByPair, bool[] sharesVisionByPair)
     {
