@@ -494,10 +494,12 @@ public sealed class UiScene
 			children.Add(beforeNode);
 		}
 		string? textContent = element.TextContent;
-		if ((beforeNode != null || afterNode != null) && textContent != null)
+		UiTextBinding? textBinding = element.TextBinding;
+		if ((beforeNode != null || afterNode != null) && (textContent != null || textBinding != null))
 		{
-			children.Add(new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, textContent, null, null, "span"));
+			children.Add(new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, textContent, null, null, "span", textBinding: textBinding));
 			textContent = null;
+			textBinding = null;
 		}
 		for (int i = 0; i < element.Children.Count; i++)
 		{
@@ -507,7 +509,8 @@ public sealed class UiScene
 		{
 			children.Add(afterNode);
 		}
-		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, textContent, children, null, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle);
+		UiActionHandle[]? actionHandles = element.ClickHandler == null ? null : new[] { Dispatcher.Register(element.ClickHandler) };
+		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, textContent, children, actionHandles, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle, element.CanvasContent, textBinding: textBinding);
 	}
 
 	private UiNode? TryBuildPseudoElementNode(UiElement element, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets)
