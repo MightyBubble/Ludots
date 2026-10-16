@@ -18,7 +18,6 @@ internal sealed class CrowdSimulationDebugViewConfig
     public const int ColorTemplate = 2;
     public const int ColorPriority = 3;
 
-    [JsonRequired] public int Version { get; init; }
     [JsonRequired] public int ArrowMinScreenPx { get; init; }
     [JsonRequired] public int LineThicknessPx { get; init; }
     [JsonRequired] public int UnitMarkPx { get; init; }
@@ -62,8 +61,6 @@ internal sealed class CrowdSimulationDebugViewConfig
 
     private void Validate(string path)
     {
-        if (Version != 1)
-            throw new InvalidOperationException($"{path}: version 需为 1。");
         AtLeast(path, "arrowMinScreenPx", ArrowMinScreenPx, 1);
         AtLeast(path, "lineThicknessPx", LineThicknessPx, 1);
         AtLeast(path, "unitMarkPx", UnitMarkPx, 1);

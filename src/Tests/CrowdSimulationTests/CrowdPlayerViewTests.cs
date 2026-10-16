@@ -316,7 +316,6 @@ public sealed class CrowdPlayerViewTests
 
         return new JsonObject
         {
-            ["version"] = 1,
             ["magicBox"] = true,
             ["fogHide"] = false,
             ["playerRoute"] = true,

@@ -10,7 +10,6 @@ internal sealed class CrowdHudSettings
     public const int MaxHistory = 120;
     public const string RelativePath = "assets/CrowdSimulationUi/hud.json";
 
-    [JsonRequired] public int Version { get; init; }
     [JsonRequired] public CrowdHudSampleRates SampleMs { get; init; } = null!;
     [JsonRequired] public int History { get; init; }
     [JsonRequired] public CrowdHudAlerts Alerts { get; init; } = null!;
@@ -34,7 +33,6 @@ internal sealed class CrowdHudSettings
 
     private void Validate(string path)
     {
-        if (Version != 1) throw new InvalidOperationException($"{path}: version 需为 1。");
         SampleMs.Validate(path);
         if (History < 2 || History > MaxHistory)
             throw new InvalidOperationException($"{path}: history 需为 2..{MaxHistory} 的整数。");

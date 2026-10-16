@@ -240,14 +240,23 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void LiveApply_DebugViewWrongVersion_DoesNotCommit()
+    public void LiveApply_DebugViewUnknownKey_DoesNotCommit()
     {
         bool committed = false;
-        CrowdSimulationEditorResult result = CrowdSimulationLiveApply.ApplyDebugView(
-            new JsonObject { ["version"] = 2 },
-            () => committed = true);
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "crowd_simulation",
+            "CrowdSimulationS4DeployMod",
+            "assets",
+            "CrowdSimulationDebugView.json");
+        JsonObject node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        node["extra"] = 1;
+        CrowdSimulationEditorResult result = CrowdSimulationLiveApply.ApplyDebugView(node, () => committed = true);
         Assert.That(result.Ok, Is.False);
         Assert.That(committed, Is.False);
+        Assert.That(result.ToJson()["issues"]!.ToJsonString(), Does.Contain("extra"));
     }
 
     [Test]
