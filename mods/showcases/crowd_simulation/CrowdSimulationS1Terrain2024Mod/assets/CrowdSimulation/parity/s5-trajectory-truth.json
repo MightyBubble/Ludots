@@ -13,8 +13,7 @@
         "xCm": 480000,
         "yCm": 560000,
         "count": 120,
-        "unitType": 0,
-        "rIdx": 0
+        "template": "crowd_simulation.unit.infantry.r100"
       }
     },
     {
@@ -25,8 +24,7 @@
         "xCm": 1120000,
         "yCm": 1040000,
         "count": 60,
-        "unitType": 1,
-        "rIdx": 0
+        "template": "crowd_simulation.unit.navy.r100"
       }
     },
     {
@@ -37,8 +35,7 @@
         "xCm": 1120000,
         "yCm": 480000,
         "count": 60,
-        "unitType": 2,
-        "rIdx": 0
+        "template": "crowd_simulation.unit.mountaineer.r100"
       }
     },
     {
@@ -49,8 +46,7 @@
         "xCm": 480000,
         "yCm": 1120000,
         "count": 1,
-        "unitType": 4,
-        "rIdx": 0
+        "template": "crowd_simulation.unit.jumper.r100"
       }
     },
     {

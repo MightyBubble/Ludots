@@ -55,7 +55,7 @@ public sealed class CrowdTelemetryEventTests
         session.Commands.Schedule(session, new[]
         {
             new CrowdCommand(session.TickCount, CrowdSimCommand.Parse(
-                JsonNode.Parse("""{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":4,"unitType":0,"rIdx":0}""")!)),
+                JsonNode.Parse("""{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":4,"template":"crowd_simulation.unit.infantry.r100"}""")!)),
         });
         session.BlockOnDueReplies = false;
         Assert.That(session.Step(out _), Is.False, "到期规划在路径延迟下应停摆");

@@ -143,7 +143,7 @@ public sealed class CrowdSimulationValidatorTests
         var scriptJson = new JsonArray();
         foreach (var (tick, json) in new (int Tick, string Json)[]
         {
-            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"unitType":0,"rIdx":0}"""),
+            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"template":"crowd_simulation.unit.infantry.r100"}"""),
             (2, """{"type":"order","xCm":1200000,"yCm":800000,"player":1,"shape":"box"}"""),
             (30, """{"type":"placeStructure","template":"building","xCm":503125,"yCm":565625,"sizeCm":14000}"""),
             (60, """{"type":"removeStructureAt","xCm":503125,"yCm":565625}"""),

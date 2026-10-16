@@ -90,7 +90,7 @@ public sealed class CrowdParallelDeterminismTests
                 ["cmd"] = new JsonObject
                 {
                     ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
-                    ["count"] = 220, ["unitType"] = 0, ["rIdx"] = 0,
+                    ["count"] = 220, ["template"] = "crowd_simulation.unit.infantry.r100",
                 },
             },
             new JsonObject

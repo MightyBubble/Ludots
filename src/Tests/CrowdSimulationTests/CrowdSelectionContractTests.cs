@@ -23,7 +23,7 @@ public sealed class CrowdSelectionContractTests
     {
         var script = new JsonArray
         {
-            Row(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":6,"unitType":0,"rIdx":0}"""),
+            Row(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":6,"template":"crowd_simulation.unit.infantry.r100"}"""),
             Row(1, """{"type":"selectAll","player":1}"""),
             Row(2, """{"type":"order","player":1,"xCm":800000,"yCm":800000,"shape":"box"}"""),
             Row(3, """{"type":"clearSelection"}"""),

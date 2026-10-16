@@ -47,6 +47,11 @@ public sealed class CrowdPlayerViewTests
         Assert.That(scene["behindFromCellWestCm"]!.GetValue<int>(), Is.EqualTo(4000));
         Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.EqualTo(529000));
         Assert.That(scene["behindDistanceCm"]!.GetValue<int>(), Is.EqualTo(31000));
+        Assert.That(scene["template"]!.GetValue<string>(), Is.EqualTo(fixture["template"]!.GetValue<string>()));
+        scene["unitType"] = 0;
+        using var doc = System.Text.Json.JsonDocument.Parse(scene.ToJsonString());
+        var rejected = Assert.Throws<InvalidOperationException>(() => CrowdFogCheckScene.Load(doc.RootElement, "player-fog-check.json"));
+        Assert.That(rejected!.Message, Does.Contain("unitType"));
     }
 
     [Test]

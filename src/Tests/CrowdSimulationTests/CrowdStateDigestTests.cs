@@ -278,7 +278,7 @@ public sealed class CrowdStateDigestTests
                 ["cmd"] = new JsonObject
                 {
                     ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
-                    ["count"] = 4, ["unitType"] = 0, ["rIdx"] = 0,
+                    ["count"] = 4, ["template"] = "crowd_simulation.unit.infantry.r100",
                 },
             },
             new JsonObject
@@ -327,7 +327,7 @@ public sealed class CrowdStateDigestTests
                 ["cmd"] = new JsonObject
                 {
                     ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
-                    ["count"] = 4, ["unitType"] = 0, ["rIdx"] = 0,
+                    ["count"] = 4, ["template"] = "crowd_simulation.unit.infantry.r100",
                 },
             },
             new JsonObject

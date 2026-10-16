@@ -344,7 +344,7 @@ public sealed class DefenseUatTests
             case "march":
                 Add(1, new JsonObject
                 {
-                    ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = w * 3 / 10, ["yCm"] = w * 3 / 10, ["count"] = 300, ["unitType"] = 0, ["rIdx"] = 0,
+                    ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = w * 3 / 10, ["yCm"] = w * 3 / 10, ["count"] = 300, ["template"] = "crowd_simulation.unit.infantry.r100",
                 });
                 Add(2, new JsonObject { ["type"] = "clearSelection" });
                 Add(2, new JsonObject

@@ -214,6 +214,37 @@ public static class CrowdDeployment
     /// <summary>全体半径级，radiusCm 升序去重。</summary>
     public static IReadOnlyList<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg) => cfg.RadiusClasses;
 
+    /// <summary>单位模板 id → (单位行, 半径级)。表里没有这个 id 即报错。</summary>
+    public static (int UnitType, int RadiusIndex) LocateTemplate(CrowdSimulationRuntimeConfig cfg, string templateId)
+    {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            throw new InvalidOperationException("单位模板 id 为空。");
+        }
+
+        var radiusClasses = DistinctRadiusClasses(cfg);
+        for (int t = 0; t < cfg.UnitTypes.Count; t++)
+        {
+            var templates = cfg.UnitTypes[t].TemplatesByRadiusCm;
+            if (templates == null)
+            {
+                continue;
+            }
+
+            foreach (var pair in templates)
+            {
+                if (!string.Equals(pair.Value, templateId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return (t, IndexOfRadiusClass(radiusClasses, pair.Key));
+            }
+        }
+
+        throw new InvalidOperationException($"未知单位模板 \"{templateId}\"。");
+    }
+
     public static int IndexOfRadiusClass(IReadOnlyList<int> radiusClasses, int radiusCm)
     {
         for (int i = 0; i < radiusClasses.Count; i++)

@@ -785,8 +785,8 @@ internal sealed class CrowdPlayerViewHost
     {
         CrowdFogCheckScene scene = RequireScene();
         EnqueueKill(demo);
-        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
-        EnqueueCluster(demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
+        EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
+        EnqueueCluster(session, demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -836,7 +836,7 @@ internal sealed class CrowdPlayerViewHost
         }
 
         EnqueueKill(demo);
-        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
+        EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -845,7 +845,7 @@ internal sealed class CrowdPlayerViewHost
             YCm = wallY,
             SizeCm = scene.WallSizeCm,
         });
-        EnqueueCluster(demo, scene, scene.EnemyPlayer, behindX, clusterY, scene.BehindClusterSpacingCm);
+        EnqueueCluster(session, demo, scene, scene.EnemyPlayer, behindX, clusterY, scene.BehindClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand { Kind = CrowdSimCommandKind.FogSight, On = _lineOfSight });
         Occupy(session, scene.ViewerPlayer);
         Frame(scene.BehindLookXCm, scene.BehindLookYCm, scene.BehindDistanceCm, scene.BehindYaw, scene.BehindPitch);
@@ -951,13 +951,14 @@ internal sealed class CrowdPlayerViewHost
         });
     }
 
-    private static void EnqueueCluster(S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm, int spacingCm)
+    private static void EnqueueCluster(CrowdSimSession session, S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm, int spacingCm)
     {
+        var (unitType, rIdx) = CrowdDeployment.LocateTemplate(session.Config, scene.Template);
         int count = scene.SpawnCount;
         int origin = -((count - 1) * spacingCm) / 2;
         for (int i = 0; i < count; i++)
         {
-            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacingCm), 1, scene.UnitType, scene.RIdx);
+            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacingCm), 1, unitType, rIdx);
         }
     }
 
