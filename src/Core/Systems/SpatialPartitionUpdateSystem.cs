@@ -17,12 +17,9 @@ namespace Ludots.Core.Systems
 
         private ISpatialPartitionWorld _partition;
         private WorldSizeSpec _spec;
-        private readonly QueryDescription _trackedWithPreviousQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef>()
-            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
-        private readonly QueryDescription _trackedWithoutPreviousQuery = new QueryDescription()
+        private readonly QueryDescription _trackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm, SpatialCellRef>()
-            .WithNone<PreviousWorldPositionCm, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm>()
             // Static presentation entities are indexed once (they never move, so the tracked
@@ -82,8 +79,7 @@ namespace Ludots.Core.Systems
             ResetSuspendedMemberships();
             AddMissingSpatialRefs();
 
-            MoveTracked(in _trackedWithoutPreviousQuery, gateOnCurrentCell: false);
-            MoveTracked(in _trackedWithPreviousQuery, gateOnCurrentCell: true);
+            MoveTracked();
         }
 
         public SpatialMembershipValidationResult ValidateSynchronize(Entity entity)
@@ -418,9 +414,13 @@ namespace Ludots.Core.Systems
             }
         }
 
-        private void MoveTracked(in QueryDescription queryDescription, bool gateOnCurrentCell)
+        // Membership follows the stored cell, never PreviousWorldPositionCm: position
+        // writers run after this system, so a previous/current snapshot taken here
+        // reads as unmoved for every entity. SynchronizeTracked returns early while
+        // the position stays inside the stored cell.
+        private void MoveTracked()
         {
-            foreach (ref var chunk in World.Query(in queryDescription))
+            foreach (ref var chunk in World.Query(in _trackedQuery))
             {
                 ref var entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -429,16 +429,6 @@ namespace Ludots.Core.Systems
                 foreach (var index in chunk)
                 {
                     ref SpatialCellRef cellRef = ref cellRefs[index];
-                    // Active 且位置仍在已挂格内才免重挂。判据必须是格身份而非 Previous==Current
-                    // 快照：位置写者（massnav / GAS 位移）可能晚于本系统调度，快照判据恒真，
-                    // 移动实体的格籍会冻结在初始格、空间查询全数落空。
-                    if (gateOnCurrentCell &&
-                        cellRef.State == SpatialMembershipState.Active &&
-                        IsInsideCell(positions[index].Value.ToWorldCmInt2(), cellRef.CellX, cellRef.CellY, _spec.GridCellSizeCm))
-                    {
-                        continue;
-                    }
-
                     var entity = Unsafe.Add(ref entityFirst, index);
                     switch (cellRef.State)
                     {
