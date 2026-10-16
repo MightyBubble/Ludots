@@ -103,7 +103,6 @@ public sealed class CrowdTelemetryClampEvictPlanTests
     {
         var presentation = new CrowdPresentationConfig
         {
-            Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
             ViewLabels = CrowdViewCatalog.Named(("route", "路线"), ("walkable", "可走"), ("wire", "线框")),
             Hud = new CrowdHudConfig { Keys = "k {view}" },

@@ -184,7 +184,6 @@ public sealed class CrowdHudAllocTests
 
     internal static CrowdPresentationConfig DeployPresentation() => new()
     {
-        Kind = CrowdPresentationConfig.KindDeploy,
         Title = "S4",
         ViewLabels = CrowdViewCatalog.Named(("route", "路线"), ("walkable", "可走"), ("wire", "线框")),
         Hud = new CrowdHudConfig
