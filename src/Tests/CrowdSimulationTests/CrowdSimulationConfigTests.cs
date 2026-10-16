@@ -235,13 +235,34 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void RetiredVersionKey_IsRejected()
+    public void UnknownKey_IsRejectedAtRootNestedObjectAndDictionaryValue()
     {
-        var json = TestDefaults.DefaultConfigJson();
-        json["version"] = 6;
-        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
-        Assert.That(ex!.Message, Does.Contain("已删除 version"));
-        Assert.That(ex.Message, Does.Contain("配置不再带版本号，由严格 schema 与 mod.json semver 管理"));
+        var root = TestDefaults.DefaultConfigJson();
+        root["version"] = 6;
+        var rootEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(root));
+        AssertUnknown(rootEx, "version");
+
+        var nested = TestDefaults.DefaultConfigJson();
+        nested["worker"]!["planTimeout"] = 1;
+        var nestedEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(nested));
+        AssertUnknown(nestedEx, "planTimeout");
+
+        var formation = TestDefaults.DefaultConfigJson();
+        formation["formations"]!["box"]!["spacing"] = 1;
+        var formationEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(formation));
+        AssertUnknown(formationEx, "spacing");
+
+        var effect = WithTemplate(Building);
+        effect["structures"]!["templates"]!["x"]!["effect"]!["extra"] = 1;
+        var effectEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(effect));
+        AssertUnknown(effectEx, "extra");
+    }
+
+    private static void AssertUnknown(InvalidOperationException? ex, string key)
+    {
+        Assert.That(ex, Is.Not.Null);
+        Assert.That(ex!.Message, Does.Contain(key));
+        Assert.That(ex.Message, Does.Contain("could not be mapped"));
     }
 
     [Test]
@@ -380,17 +401,16 @@ public class CrowdSimulationConfigTests
         Assert.That(byId["s7barrier"].LifetimeSecRaw, Is.EqualTo(4.0));
     }
 
-    [TestCase("blockCoverage", "0.5", "effect.coverage")]
-    [TestCase("portalReachNavCells", "4", "effect.portalReachNavCells")]
-    [TestCase("anchorTerrain", "[\"land\"]", "placement.endpointAreas")]
-    [TestCase("spanTerrain", "[\"water\"]", "placement.interiorAreas")]
-    public void StructureSection_RetiredKey_NamesItsReplacement(string key, string value, string replacement)
+    [TestCase("blockCoverage", "0.5")]
+    [TestCase("portalReachNavCells", "4")]
+    [TestCase("anchorTerrain", "[\"land\"]")]
+    [TestCase("spanTerrain", "[\"water\"]")]
+    public void StructureSection_UnknownKey_IsRejected(string key, string value)
     {
         var json = TestDefaults.DefaultConfigJson();
         json["structures"]![key] = JsonNode.Parse(value);
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
-        Assert.That(ex!.Message, Does.Contain($"已删除 structures.{key}"));
-        Assert.That(ex.Message, Does.Contain(replacement));
+        AssertUnknown(ex, key);
     }
 
     [TestCase("name", "\"X\"")]
@@ -398,12 +418,12 @@ public class CrowdSimulationConfigTests
     [TestCase("area", "\"road\"")]
     [TestCase("priority", "1")]
     [TestCase("layered", "true")]
-    public void StructureTemplate_RetiredKey_IsRejected(string key, string value)
+    public void StructureTemplate_UnknownKey_IsRejected(string key, string value)
     {
         var json = WithTemplate(Building);
         json["structures"]!["templates"]!["x"]![key] = JsonNode.Parse(value);
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
-        Assert.That(ex!.Message, Does.Contain($"已删除 structures.templates.x.{key}"));
+        AssertUnknown(ex, key);
     }
 
     [Test]
@@ -580,66 +600,6 @@ public class CrowdSimulationConfigTests
                 $"玩家号 [{string.Join(',', ids)}] 应被拒绝");
             Assert.That(ex!.Message, Does.Contain(expected), $"[{string.Join(',', ids)}] 的报错应写明规则");
         }
-    }
-
-    [Test]
-    public void RetiredSpatialKeys_NameTheReplacement()
-    {
-        foreach (var (oldPath, newKey) in CrowdSimulationConfig.RetiredSpatialKeys)
-        {
-            var json = TestDefaults.DefaultConfigJson();
-            string concrete = PlaceRetiredKey(json, oldPath);
-            var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json), oldPath);
-            Assert.That(ex!.Message, Does.Contain(concrete), oldPath);
-            Assert.That(ex.Message, Does.Contain(newKey), oldPath);
-            Assert.That(ex.Message, Does.Contain("已删除"), oldPath);
-        }
-    }
-
-    [Test]
-    public void RetiredSpatialKeys_AreNotEmptied()
-    {
-        var old = new HashSet<string>(CrowdSimulationConfig.RetiredSpatialKeys.Select(entry => entry.OldPath));
-        Assert.That(old, Does.Contain("formation.settleTime"));
-        Assert.That(old, Does.Contain("movement.slotTimeConstant"));
-        Assert.That(old, Does.Contain("sim.timeScale"));
-        Assert.That(old, Does.Contain("formations[].spacing"));
-        Assert.That(old, Does.Contain("fog.cellCells"));
-        Assert.That(old, Does.Contain("movement.blendRate"));
-        Assert.That(old, Does.Contain("movement.unitTurnRate"));
-        Assert.That(old, Does.Contain("movement.stallDecay"));
-        Assert.That(old, Does.Contain("movement.slotCheckInterval"));
-        Assert.That(old, Does.Contain("formation.leaderTurnRate"));
-        Assert.That(old, Does.Contain("avoidance.acceleration"));
-        Assert.That(old, Does.Contain("relations"));
-        Assert.That(old, Does.Contain("push.modes"));
-    }
-
-    private static string PlaceRetiredKey(JsonObject root, string oldPath)
-    {
-        if (oldPath == "formations[].spacing")
-        {
-            root["formations"]!["box"]!["spacing"] = 1;
-            return "formations.box.spacing";
-        }
-
-        const string templateKey = "structures.templates[].";
-        if (oldPath.StartsWith(templateKey, StringComparison.Ordinal))
-        {
-            string key = oldPath[templateKey.Length..];
-            root["structures"]!["templates"]!["building"]![key] = 1;
-            return "structures.templates.building." + key;
-        }
-
-        var parts = oldPath.Split('.');
-        JsonObject obj = root;
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            obj = obj[parts[i]]!.AsObject();
-        }
-
-        obj[parts[^1]] = 1;
-        return oldPath;
     }
 
     [Test]

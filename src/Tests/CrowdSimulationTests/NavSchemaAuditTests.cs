@@ -281,40 +281,58 @@ public class NavSchemaAuditTests
     }
 
     [Test]
-    public void MapAgentTypes_NamesNavProfiles()
+    public void Map_UnknownKey_IsRejected()
     {
         JsonObject navmesh = MinimalNavmesh();
         navmesh["maps"] = JsonNode.Parse("""
             {
               "demo": {
+                "solver": "crowd-simulation",
+                "navCellSizeCm": 100,
+                "terrainTypes": ["land"],
                 "agentTypes": ["Humanoid"]
               }
             }
             """);
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
             NavMeshBakeConfigLoader.Parse(navmesh, Bodies("Small")))!;
-        Assert.That(ex.Message, Does.Contain("maps.demo.agentTypes"));
-        Assert.That(ex.Message, Does.Contain("navProfiles"));
+        Assert.That(ex.Message, Does.Contain("unknown property 'agentTypes'"));
     }
 
     [Test]
-    public void ComponentLoader_RetiredKeys_NameTheReplacement()
+    public void ComponentLoader_UnknownFields_AreRejected()
     {
         using World world = World.Create();
         Entity entity = world.Create();
         InvalidOperationException agentType = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "agentType": "foot" }""")!))!;
-        Assert.That(agentType.Message, Does.Contain("agentTypeId"));
+        Assert.That(agentType.Message, Does.Contain("unsupported property 'agentType'"));
 
         InvalidOperationException radiusClass = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "radiusClassCm": 100 }""")!))!;
-        Assert.That(radiusClass.Message, Does.Contain("profileId"));
-        Assert.That(radiusClass.Message, Does.Contain("personalRadiusCm"));
+        Assert.That(radiusClass.Message, Does.Contain("unsupported property 'radiusClassCm'"));
 
         InvalidOperationException radius = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "radiusCm": 100 }""")!))!;
-        Assert.That(radius.Message, Does.Contain("profileId"));
-        Assert.That(radius.Message, Does.Contain("personalRadiusCm"));
+        Assert.That(radius.Message, Does.Contain("unsupported property 'radiusCm'"));
+    }
+
+    [Test]
+    public void UnitTemplateFacts_UnknownField_IsRejected()
+    {
+        JsonObject obj = JsonNode.Parse("""
+            {
+              "profileId": "Small",
+              "agentTypeId": "foot",
+              "speedCmPerSecond": 100,
+              "personalRadiusCm": 40,
+              "pushPriority": 1,
+              "special": false,
+              "agentType": "foot"
+            }
+            """)!.AsObject();
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => CrowdUnitTemplateFacts.Parse("scout", obj))!;
+        Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.agentType 是未知字段"));
     }
 
     [Test]
