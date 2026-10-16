@@ -130,6 +130,7 @@ public sealed class CrowdDebugUnitMirrorTests
                 TestDelayPerJob = replyDelay,
             };
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+            TestDefaults.EnableFog(session);
             Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(SpawnXCm), Fix64.FromInt(SpawnYCm), 24, 1, 0, 0), Is.EqualTo(24));
             session.FlushDueCommands();
 

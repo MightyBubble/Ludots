@@ -41,6 +41,7 @@ public sealed class PairedTickProbe
         using var service = new PathQueryService(
             session.Navs, runtime, 1, TimeSpan.FromSeconds(180), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         session.Commands.Schedule(session, new List<CrowdCommand>
         {

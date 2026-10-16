@@ -1,7 +1,6 @@
 using Arch.Core;
 using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Units;
-using Ludots.Core.Vision;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -76,8 +75,6 @@ public sealed class CrowdSimReplayTests
         session.Structures = live.Structures;
         session.RebakeSources = live.RebakeSources;
         session.NavTileCache = live.NavTileCache;
-        session.BindVision(new FogLayerRegistry(), new FogFieldStore());
-        session.Presentation.TruthNavFrozen = live.Presentation.TruthNavFrozen;
         return session;
     }
 }

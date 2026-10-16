@@ -269,6 +269,7 @@ public sealed class CrowdStateDigestTests
         using var service = new PathQueryService(
             session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var script = CrowdDemoScript.Load(new JsonArray
         {
@@ -318,6 +319,7 @@ public sealed class CrowdStateDigestTests
         session.DiagnosticDigest = true;
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var script = CrowdDemoScript.Load(new JsonArray
         {

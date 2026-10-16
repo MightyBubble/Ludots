@@ -798,7 +798,6 @@ public sealed class CrowdFlowCacheAndStrayTests
         var planner = new CrowdSimPlanner(session, service);
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
         session.BlockOnDueReplies = true;
-        session.Presentation.TruthNavFrozen = true;
         int per = session.Config.Hpa.NavCellsPerTile;
         int tilesPerSide = per > 0 ? session.Config.NavCellsPerSide / per : 1;
         return new Harness(session, service, planner, tilesPerSide * tilesPerSide);

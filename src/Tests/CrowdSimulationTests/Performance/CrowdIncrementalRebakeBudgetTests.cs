@@ -31,6 +31,7 @@ public sealed class CrowdIncrementalRebakeBudgetTests
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         Assert.That(session.VerifyIncrementalNav, Is.False);
 

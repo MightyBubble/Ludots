@@ -49,6 +49,7 @@ public sealed class CrowdStructuralLifecycleTests
         using var service = new Ludots.Core.CrowdSimulation.Nav.Pathing.PathQueryService(
             session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
         for (int i = 0; i < session.Units.Count; i++)

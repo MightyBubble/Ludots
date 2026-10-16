@@ -31,6 +31,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         session.VerifyIncrementalNav = false;
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         var script = CrowdDemoScript.Load(Script());
         script.ValidateStructure(session);
         script.Schedule(session);
@@ -78,6 +79,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         var planner = new CrowdSimPlanner(session, service);
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
+        TestDefaults.EnableFog(session);
         var script = LoadS4Script();
         script.ValidateStructure(session);
         script.Schedule(session);
@@ -129,6 +131,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         session.VerifyIncrementalNav = false;
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         var script = LoadS4Script();
         script.ValidateStructure(session);
         script.Schedule(session);
@@ -201,6 +204,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         using var service = new PathQueryService(session.Navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         var planner = new CrowdSimPlanner(session, service);
         session.EnableMovement(CrowdMovementKernel.Create(session), planner);
+        TestDefaults.EnableFog(session);
         var script = LoadS4Script();
         script.ValidateStructure(session);
         script.Schedule(session);

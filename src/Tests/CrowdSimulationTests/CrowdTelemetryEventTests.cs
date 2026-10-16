@@ -18,6 +18,7 @@ public sealed class CrowdTelemetryEventTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         Assert.That(session.Step(out _), Is.True);

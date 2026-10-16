@@ -45,6 +45,7 @@ public sealed class CrowdFogLineOfSightTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337", lineOfSight: false);
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(60), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
         var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(
             root,
@@ -68,6 +69,7 @@ public sealed class CrowdFogLineOfSightTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337", lineOfSight: false);
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(60), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         Ludots.Core.CrowdSimulation.Diagnostics.CrowdFogAcceptance.RunTerrain(session, scene, optimistic);
     }
 
@@ -101,6 +103,7 @@ public sealed class CrowdFogLineOfSightTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s7", lineOfSight);
         var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         return new Harness(service, session);
     }

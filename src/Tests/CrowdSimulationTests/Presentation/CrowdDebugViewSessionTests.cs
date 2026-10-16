@@ -27,9 +27,11 @@ public class CrowdDebugViewSessionTests
         var (runtimeA, onSession) = S4DeployTruthTests.BuildSession("s7");
         using var serviceA = new PathQueryService(onSession.Navs, runtimeA, 1, TimeSpan.FromSeconds(30), onSession.ResolveNavContext);
         onSession.EnableMovement(CrowdMovementKernel.Create(onSession), new CrowdSimPlanner(onSession, serviceA));
+        TestDefaults.EnableFog(onSession);
         var (runtimeB, offSession) = S4DeployTruthTests.BuildSession("s7");
         using var serviceB = new PathQueryService(offSession.Navs, runtimeB, 1, TimeSpan.FromSeconds(30), offSession.ResolveNavContext);
         offSession.EnableMovement(CrowdMovementKernel.Create(offSession), new CrowdSimPlanner(offSession, serviceB));
+        TestDefaults.EnableFog(offSession);
 
         var frameOn = new CrowdDebugViewFrame(LoadView());
         frameOn.Funnel = frameOn.Corridor = frameOn.HpaGraph = frameOn.NavPolygons = frameOn.TileGrid = true;
@@ -69,6 +71,7 @@ public class CrowdDebugViewSessionTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         var store = session.Structures!;
         CrowdStructureOps.PlaceStructure(session, "building", Fix64.FromInt(503125), Fix64.FromInt(565625), Fix64.FromInt(14000), Fix64.Zero, Fix64.Zero);
         var beforeArea = (byte[])store.Area.Clone();
@@ -131,6 +134,7 @@ public class CrowdDebugViewSessionTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         string path = ViewPath();
         var root = CrowdPresentationPaletteTestMerge.MergedDebugView(
             JsonNode.Parse(File.ReadAllText(path))!.AsObject());

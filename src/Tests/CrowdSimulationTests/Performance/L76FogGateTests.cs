@@ -93,6 +93,7 @@ public sealed class L76FogGateTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         CrowdFog fog = session.Fog!;
         int period = fog.Period;

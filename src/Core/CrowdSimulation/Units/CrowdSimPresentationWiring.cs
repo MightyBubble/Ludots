@@ -51,8 +51,6 @@ public sealed class CrowdSimPresentationWiring
     public OwnershipResolver? Ownership { get; set; }
     /// <summary><see cref="HiddenTemplateTag"/> 的标签 id。0 = 无头接线,不剔除任何本方单位。</summary>
     public int HiddenTemplateTagId { get; set; }
-    /// <summary>对拍/回归专用:跳过迷雾刷新与认知同步。生产装配保持 false。</summary>
-    public bool TruthNavFrozen { get; set; }
 
     /// <summary>移动类型 × 半径级 → 模板表。体型的 navProfileId 与档案半径必须和这一格一致。
     /// 引擎装配与无头装配共用同一份口径。</summary>

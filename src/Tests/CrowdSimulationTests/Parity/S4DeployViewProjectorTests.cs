@@ -26,6 +26,7 @@ public class S4DeployViewProjectorTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
 
         int truthId = session.Navs.Keys.Min();
         int navTilesPerSide = session.Navs[truthId].Hpa!.NavTilesPerSide;
@@ -105,6 +106,7 @@ public class S4DeployViewProjectorTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         int truthId = session.Navs.Keys.Min();
         int navTilesPerSide = session.Navs[truthId].Hpa!.NavTilesPerSide;
         var unknown = Enumerable.Range(0, navTilesPerSide * navTilesPerSide / 2).ToList();
@@ -148,6 +150,7 @@ public class S4DeployViewProjectorTests
         var (runtime, session) = S4DeployTruthTests.BuildSession(seed);
         var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         int truthId = session.Navs.Keys.Min();
         int navTilesPerSide = session.Navs[truthId].Hpa!.NavTilesPerSide;
         var unknown = Enumerable.Range(0, navTilesPerSide * navTilesPerSide / 2).ToList();

@@ -23,6 +23,7 @@ public sealed class FogHudCountTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         Assert.That(session.Fog, Is.Not.Null);
         Assert.That(session.Fog!.Store, Is.SameAs(session.Structures));

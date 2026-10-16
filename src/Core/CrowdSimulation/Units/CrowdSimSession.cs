@@ -18,8 +18,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// 指令簿(领队/阵型)、规划器与固定帧率推进。
 /// 引擎只有一个时钟(Engine/clock.json 的 FixedHz),会话的 tick 就是 FixedHz 的一步:
 /// 每步先冲刷到点指令，再落到点的路径答复，再推进运动内核。
-/// 未冻结时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync。
-/// <see cref="CrowdSimPresentationWiring.TruthNavFrozen"/> 为真时跳过这两步(对拍/回归专用)。
+/// 装了迷雾(<see cref="EnableFog"/>)时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync；
+/// 没装迷雾的会话规划直接走真相 nav。
 /// 答复未按生效帧返回时本 tick 停摆(固定生效帧语义,结果不降级)。
 /// </summary>
 public sealed class CrowdSimSession
@@ -99,7 +99,7 @@ public sealed class CrowdSimSession
     /// 否则用宿主按地图阻挡物建的静态索引(null = 无阻挡碰撞)。</summary>
     public CrowdBlockerColliders? Blockers => Structures?.Colliders ?? _staticBlockers;
 
-    /// <summary>静态阻挡盒索引(无结构仓的会话用;S5 冻结口径)。</summary>
+    /// <summary>静态阻挡盒索引(无结构仓的会话用)。</summary>
     private CrowdBlockerColliders? _staticBlockers;
 
     /// <summary>无结构仓会话的静态阻挡盒装配入口(有仓时无效——仓是唯一真相)。</summary>
@@ -165,15 +165,6 @@ public sealed class CrowdSimSession
         Movement.RebuildHash();
     }
 
-    private FogLayerRegistry? _visionLayers;
-    private FogFieldStore? _visionFields;
-
-    public void BindVision(FogLayerRegistry layers, FogFieldStore fields)
-    {
-        _visionLayers = layers ?? throw new ArgumentNullException(nameof(layers));
-        _visionFields = fields ?? throw new ArgumentNullException(nameof(fields));
-    }
-
     public void EnableMovement(CrowdMovementKernel kernel, CrowdSimPlanner planner)
     {
         Movement = kernel;
@@ -181,22 +172,27 @@ public sealed class CrowdSimSession
         kernel.OnStray = planner.NoteStray;
         BaseStride = kernel.Stride;
         AvoidHz = Config.Avoidance.RateHz;
-        // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。盖章前要先绑定雾层和雾场。有迷雾就注入高度表。
-        if (Structures != null)
-        {
-            if (_visionLayers == null || _visionFields == null)
-            {
-                throw new InvalidOperationException("迷雾盖章需要先绑定雾层注册表和雾场。");
-            }
-
-            Fog = new CrowdFog(Config, Config.PairRules, Structures, _visionLayers, _visionFields);
-            Fog.EnsureHeights(RebakeSources!.HeightS);
-            Beliefs = new CrowdBeliefNavs(this);
-            Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
-        }
     }
 
-    /// <summary>迷雾状态。null = 没有结构仓，或没有调用 EnableMovement。马达永远走真相，规划经认知槽。</summary>
+    /// <summary>
+    /// 装迷雾与认知。只能在 <see cref="EnableMovement"/> 之后、挂好结构仓与重烘源时调用一次；
+    /// 迷雾盖章写进传入的雾层注册表和雾场。不装迷雾的会话规划走真相 nav。
+    /// </summary>
+    public void EnableFog(FogLayerRegistry layers, FogFieldStore fields)
+    {
+        ArgumentNullException.ThrowIfNull(layers);
+        ArgumentNullException.ThrowIfNull(fields);
+        if (Movement == null) throw new InvalidOperationException("迷雾需要先启用运动。");
+        var structures = Structures ?? throw new InvalidOperationException("迷雾需要结构仓。");
+        var sources = RebakeSources ?? throw new InvalidOperationException("迷雾需要重烘源的高度表。");
+        if (Fog != null) throw new InvalidOperationException("迷雾已启用。");
+        Fog = new CrowdFog(Config, Config.PairRules, structures, layers, fields);
+        Fog.EnsureHeights(sources.HeightS);
+        Beliefs = new CrowdBeliefNavs(this);
+        Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
+    }
+
+    /// <summary>迷雾状态。null = 没有调用 <see cref="EnableFog"/>。马达永远走真相，规划经认知槽。</summary>
     public CrowdFog? Fog { get; private set; }
     public CrowdBeliefNavs? Beliefs { get; private set; }
     public CrowdBeliefState? Belief { get; private set; }
@@ -254,7 +250,7 @@ public sealed class CrowdSimSession
     public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
     {
         int truth = NavByLayerRadius[(layerIdx, rIdx)].Id;
-        if (Fog == null || Belief == null || Presentation.TruthNavFrozen) return truth;
+        if (Fog == null || Belief == null) return truth;
         int slot = Belief.Slot[Fog.GroupOf[playerIndex]];
         return slot == 0 ? truth : slot * CrowdBeliefNavs.BeliefStride + truth;
     }
@@ -384,8 +380,8 @@ public sealed class CrowdSimSession
     /// <summary>
     /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
-    /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
-    /// → tickCount+1 → 流场刷新排队 → 校验码。接线 TruthNavFrozen 时跳过迷雾和认知同步。
+    /// (领队→意图→马达)× SubSteps → 散回单位 → 装了迷雾时 Fog.Update 然后 CrowdBeliefSync.Sync
+    /// → tickCount+1 → 流场刷新排队 → 校验码。
     /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
     /// checksum 与 <see cref="LastDigest"/> 仅在 true 时有效。
     /// </summary>
@@ -441,8 +437,7 @@ public sealed class CrowdSimSession
                 _stateHistogramMembers = Units.Count;
             }
 
-            // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
-            if (Fog != null && !Presentation.TruthNavFrozen)
+            if (Fog != null)
             {
                 Fog.Update(TickCount, this);
                 telemetry.AddFogTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));

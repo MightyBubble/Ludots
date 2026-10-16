@@ -19,6 +19,7 @@ public sealed class S5EngineStallProbe
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         // 引擎口径:停摆让出,不阻塞
         session.BlockOnDueReplies = false;
 

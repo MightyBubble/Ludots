@@ -17,7 +17,7 @@ namespace CrowdSimulationTests.Performance;
 
 /// <summary>
 /// 50k 单位 tick 门(种子 1337,spawn 按 deploy.bases 分布,每座基地各下一令远点行军,200 tick 稳态窗)。
-/// 迷雾不冻结:计时含运动内核、迷雾盖章、认知同步和校验码。
+/// 装迷雾:计时含运动内核、迷雾盖章、认知同步和校验码。
 /// 硬门只在优化构建上生效:P95 必须低于 33 ms。Debug 只把数字写进产物,然后记为未测。
 /// 测量窗开始时读 /proc/loadavg 的 1 分钟负载。高于 Environment.ProcessorCount 就每 5 秒再读,
 /// 最多等 180 秒;到期仍高也开测,不重跑。产物记下实际开测时的负载。
@@ -35,6 +35,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         var bases = session.Config.Deploy.Bases;
@@ -74,7 +75,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         Advance(session, reference, watch, measuredTicks, elapsed, phases, notes);
         string loadAfter = File.ReadAllText("/proc/loadavg").Trim();
         Assert.That(session.Units.Count, Is.EqualTo(units), "基准单位数");
-        Assert.That(session.Presentation.TruthNavFrozen, Is.False);
+        Assert.That(session.Fog, Is.Not.Null);
         Assert.That(session.Telemetry.FogRefreshes, Is.GreaterThan(0), "计时窗必须走过迷雾刷新");
         var order = new int[measuredTicks];
         for (int i = 0; i < measuredTicks; i++) order[i] = i;
@@ -100,7 +101,7 @@ public sealed class CrowdKernel50KBenchmarkTests
             $"# 50k 单位 tick 门(种子 1337,deploy.bases 分布,每座基地远点行军,{measuredTicks} tick 稳态窗)\n\n" +
             $"| 指标 | 毫秒/tick |\n|---|---|\n| 平均 | {avg:F4} |\n| P50 | {p50:F4} |\n| P95 | {p95:F4} |\n| 最大 | {max:F4} |\n\n" +
             $"- 单位 {units},按 deploy.bases 分布,预热 {warmupTicks} tick(计时窗不含生成与下令)\n" +
-            $"- Release,迷雾不冻结,计时是推进成功的 session.Step(运动、迷雾、认知同步、校验码)\n" +
+            $"- Release,装迷雾,计时是推进成功的 session.Step(运动、迷雾、认知同步、校验码)\n" +
             $"- 迷雾刷新 {session.Telemetry.FogRefreshes} 次,并行工人 {session.Config.Sim.ParallelWorkerCount}\n" +
             $"- 开测时 1 分钟 load {load1.ToString("F2", CultureInfo.InvariantCulture)},核数 {cores},等待 {loadWait.ElapsedMilliseconds} ms;load average 开测 `{loadAtWindow}`,测后 `{loadAfter}`\n" +
             $"- 开测规则:1 分钟负载高于核数则每 5 秒再读,最多 180 秒,到期仍高也计时,不重跑\n" +

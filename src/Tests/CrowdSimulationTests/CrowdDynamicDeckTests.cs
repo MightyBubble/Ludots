@@ -388,11 +388,9 @@ public class CrowdDynamicDeckTests
             session.Structures = store;
             session.RebakeSources = new CrowdRebakeSources(config, heights, deck, surface.LinkCandidates);
             session.NavTileCache = cache;
-            session.BindVision(new FogLayerRegistry(), new FogFieldStore());
             var service = new PathQueryService(navs, config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
             session.BlockOnDueReplies = true;
-            session.Presentation.TruthNavFrozen = true;
             session.VerifyIncrementalNav = true;
             return new RiverWorld(service)
             {
