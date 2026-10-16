@@ -73,6 +73,42 @@ public sealed class MarkupSurfaceBindingTests
 	}
 
 	[Test]
+	public void GeneratedChildren_ClearedAndRegenerated_ReplaceTheOldNodesOnRebuild()
+	{
+		Fixture fixture = Mount();
+		UiElement root = fixture.Document.FindById("root")!;
+		var list = new UiElement("div");
+		list.Attributes["id"] = "chips";
+		root.AddChild(list);
+		int picked = -1;
+		for (int i = 0; i < 3; i++)
+		{
+			int index = i;
+			var chip = new UiElement("button", UiNodeKind.Button) { TextContent = "c" + i, ClickHandler = _ => picked = index };
+			chip.Attributes["id"] = "chip-" + i;
+			list.AddChild(chip);
+		}
+		fixture.Host.Invalidate(fixture.Lease);
+		fixture.Root.Render();
+		Assert.That(fixture.Root.Scene!.FindByElementId("chips")!.Children.Count, Is.EqualTo(3));
+
+		UiElement old = list.Children[0];
+		list.ClearChildren();
+		Assert.That(old.Parent, Is.Null);
+		var only = new UiElement("button", UiNodeKind.Button) { TextContent = "only", ClickHandler = _ => picked = 9 };
+		only.Attributes["id"] = "chip-only";
+		list.AddChild(only);
+		fixture.Host.Invalidate(fixture.Lease);
+		fixture.Root.Render();
+
+		UiScene scene = fixture.Root.Scene!;
+		Assert.That(scene.FindByElementId("chips")!.Children.Count, Is.EqualTo(1));
+		Assert.That(scene.FindByElementId("chip-0"), Is.Null);
+		Click(fixture.Root, scene.FindByElementId("chip-only")!);
+		Assert.That(picked, Is.EqualTo(9));
+	}
+
+	[Test]
 	public void BoundTextAndCanvasUpdates_AllocateNothingAndSkipFullLayout()
 	{
 		Fixture fixture = Mount();

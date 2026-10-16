@@ -82,6 +82,15 @@ public sealed class UiElement
 		return this;
 	}
 
+	public void ClearChildren()
+	{
+		foreach (UiElement child in _children)
+		{
+			child.Parent = null;
+		}
+		_children.Clear();
+	}
+
 	public bool HasClass(string className)
 	{
 		return ClassNames.Contains<string>(className, StringComparer.OrdinalIgnoreCase);
