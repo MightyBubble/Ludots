@@ -65,6 +65,78 @@
       "Template": "mass_navigation_local_player"
     },
     {
+      "InstanceId": "crimson_team",
+      "Template": "mass_navigation_player_team",
+      "Overrides": {
+        "Name": {
+          "Value": "MassNavigation.CrimsonTeam"
+        }
+      },
+      "Relations": [
+        {
+          "To": "crimson_team",
+          "Type": "Friendly"
+        }
+      ]
+    },
+    {
+      "InstanceId": "crimson_player",
+      "Template": "mass_navigation_ai_player",
+      "Overrides": {
+        "Name": {
+          "Value": "MassNavigation.CrimsonPlayer"
+        }
+      }
+    },
+    {
+      "InstanceId": "amber_team",
+      "Template": "mass_navigation_player_team",
+      "Overrides": {
+        "Name": {
+          "Value": "MassNavigation.AmberTeam"
+        }
+      },
+      "Relations": [
+        {
+          "To": "amber_team",
+          "Type": "Friendly"
+        }
+      ]
+    },
+    {
+      "InstanceId": "amber_player",
+      "Template": "mass_navigation_ai_player",
+      "Overrides": {
+        "Name": {
+          "Value": "MassNavigation.AmberPlayer"
+        }
+      }
+    },
+    {
+      "InstanceId": "emerald_team",
+      "Template": "mass_navigation_player_team",
+      "Overrides": {
+        "Name": {
+          "Value": "MassNavigation.EmeraldTeam"
+        }
+      },
+      "Relations": [
+        {
+          "To": "emerald_team",
+          "Type": "Friendly"
+        }
+      ]
+    },
+    {
+      "InstanceId": "emerald_player",
+      "Template": "mass_navigation_ai_player",
+      "Overrides": {
+        "Name": {
+          "Value": "MassNavigation.EmeraldPlayer"
+        }
+      }
+    },
+    {
       "InstanceId": "west_gate",
       "Template": "mass_navigation_blocker",
       "Overrides": {
@@ -174,6 +246,18 @@
     {
       "TeamId": 1,
       "RepresentativeInstanceId": "player_team"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "crimson_team"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "amber_team"
+    },
+    {
+      "TeamId": 4,
+      "RepresentativeInstanceId": "emerald_team"
     }
   ],
   "Players": [
@@ -181,6 +265,21 @@
       "PlayerId": 1,
       "TeamId": 1,
       "RepresentativeInstanceId": "local_player"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "crimson_player"
+    },
+    {
+      "PlayerId": 3,
+      "TeamId": 3,
+      "RepresentativeInstanceId": "amber_player"
+    },
+    {
+      "PlayerId": 4,
+      "TeamId": 4,
+      "RepresentativeInstanceId": "emerald_player"
     }
   ]
 }
