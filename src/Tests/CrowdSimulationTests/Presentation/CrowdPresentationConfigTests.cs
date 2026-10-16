@@ -15,7 +15,9 @@ public sealed class CrowdPresentationConfigTests
     {
         var s3 = ParseMod("CrowdSimulationS3PathMod");
         Assert.That(s3.Kind, Is.EqualTo(CrowdPresentationConfig.KindPath));
-        Assert.That(s3.ViewLabels, Has.Length.EqualTo(3));
+        Assert.That(s3.ViewLabels.Length, Is.EqualTo(3));
+        Assert.That(s3.ViewLabels.Ids, Is.EqualTo(new[] { "route", "walkable", "navmesh" }));
+        Assert.That(s3.ViewLabels.LabelOf("walkable"), Is.EqualTo("可走区域"));
         Assert.That(s3.Path!.TruthAsset, Does.Contain("s3c-query-truth.json"));
         Assert.That(s3.Deploy, Is.Null);
 
@@ -31,6 +33,20 @@ public sealed class CrowdPresentationConfigTests
         Assert.That(s4Debug.Tools!.PlaceEntry, Is.EqualTo("building"));
         Assert.That(s4.Deploy.Actions.ToolBoom, Is.EqualTo("CrowdSimulation.S4.ToolBoom"));
         Assert.That(s4.Deploy.Actions.Stress, Is.EqualTo("CrowdSimulation.S4.Stress"));
+    }
+
+    [Test]
+    public void ViewLabels_NumericKeyAndUnknownId_Fail()
+    {
+        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS3PathMod")))!.AsObject();
+        var numeric = (JsonObject)debug.DeepClone();
+        numeric["presentation"]!["viewLabels"] = new JsonObject { ["0"] = "路线" };
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdPresentationConfig.ParseOptional(numeric));
+        Assert.That(ex!.Message, Does.Contain("0"));
+
+        var loaded = CrowdPresentationConfig.ParseOptional(debug);
+        var missing = Assert.Throws<InvalidOperationException>(() => loaded!.ViewLabels.LabelOf("missing-view"));
+        Assert.That(missing!.Message, Does.Contain("missing-view"));
     }
 
     [Test]

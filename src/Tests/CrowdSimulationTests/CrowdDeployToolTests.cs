@@ -212,7 +212,7 @@ public sealed class CrowdDeployToolTests
         {
             Kind = CrowdPresentationConfig.KindDeploy,
             Title = "S4",
-            ViewLabels = new[] { "路线" },
+            ViewLabels = CrowdViewCatalog.Named(("route", "路线")),
             Hud = new CrowdHudConfig
             {
                 Keys = "左键 {tool} · {activity}{pending}",
@@ -459,7 +459,7 @@ public sealed class CrowdDeployToolTests
         }
 
         var demo = new S4DeployDemoRuntime(engine);
-        demo.UseViewLabels(new[] { "路线" });
+        demo.UseViewLabels(CrowdViewCatalog.Named(("route", "路线")));
         demo.UsePalette(new[]
         {
             new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, 14000, 0, 0, "t1"),

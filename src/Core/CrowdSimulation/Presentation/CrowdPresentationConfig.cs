@@ -14,7 +14,9 @@ internal sealed class CrowdPresentationConfig
 
     [JsonRequired] public string Kind { get; set; } = string.Empty;
     [JsonRequired] public string Title { get; set; } = string.Empty;
-    [JsonRequired] public string[] ViewLabels { get; set; } = Array.Empty<string>();
+    [JsonRequired]
+    [JsonConverter(typeof(CrowdViewCatalogConverter))]
+    public CrowdViewCatalog ViewLabels { get; set; } = null!;
     [JsonRequired] public CrowdHudConfig Hud { get; set; } = new();
     public CrowdPathPresentation? Path { get; set; }
     public CrowdDeployPresentation? Deploy { get; set; }
@@ -43,11 +45,6 @@ internal sealed class CrowdPresentationConfig
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.title 必填。");
         if (cfg.ViewLabels == null || cfg.ViewLabels.Length == 0)
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.viewLabels 至少一条。");
-        for (int i = 0; i < cfg.ViewLabels.Length; i++)
-        {
-            if (string.IsNullOrWhiteSpace(cfg.ViewLabels[i]))
-                throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.viewLabels[{i}] 必填。");
-        }
 
         if (cfg.Hud == null)
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.hud 必填。");

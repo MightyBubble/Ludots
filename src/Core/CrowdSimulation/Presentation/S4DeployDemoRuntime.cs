@@ -113,12 +113,13 @@ public sealed class S4DeployDemoRuntime
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
 
-    public void UseViewLabels(string[] labels)
+    public void UseViewLabels(CrowdViewCatalog catalog)
     {
-        if (labels == null || labels.Length == 0)
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (catalog.Length == 0)
             throw new InvalidOperationException("部署演示视图名至少一条。");
-        _viewLabels = labels;
-        _viewModeCount = labels.Length;
+        _viewLabels = catalog.Labels;
+        _viewModeCount = catalog.Length;
     }
 
     public void UsePalette(PaletteChoice[] choices)
