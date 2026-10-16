@@ -329,6 +329,8 @@ public static class CrowdStructureOps
             var pos = sim.World.Get<Components.WorldPositionCm>(entity).Value;
             Fix64 dx = pos.X < ax ? ax - pos.X : pos.X > bx ? pos.X - bx : Fix64.Zero;
             Fix64 dy = pos.Y < ay ? ay - pos.Y : pos.Y > by ? pos.Y - by : Fix64.Zero;
+            // 跨图距离的厘米平方超出 Q31.32；单轴已超 pad 必在触及范围外，先剔除再平方
+            if (dx > pad || dy > pad) continue;
             if (dx * dx + dy * dy <= pad * pad) kernel.Calm[i] = 0;
         }
     }

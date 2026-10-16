@@ -66,6 +66,8 @@ public sealed class CrowdFuzzCursor
 {
     private readonly CrowdFuzzPlan _plan;
     private readonly IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? _extra;
+    private readonly IReadOnlyList<string>? _recordedOps;
+    private readonly List<CrowdFuzzStepRecord>? _trace;
     private readonly List<CrowdFuzzOp> _drawable;
     private readonly IReadOnlyList<string> _reserved;
     private CrowdSimRng? _rng;
@@ -74,11 +76,22 @@ public sealed class CrowdFuzzCursor
     private bool _previousBlock;
     private bool _opened;
 
-    public CrowdFuzzCursor(CrowdFuzzPlan plan, IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extraExecutors = null)
+    public CrowdFuzzCursor(
+        CrowdFuzzPlan plan,
+        IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extraExecutors = null,
+        IReadOnlyList<string>? recordedOps = null,
+        List<CrowdFuzzStepRecord>? trace = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         _plan = plan;
         _extra = extraExecutors;
+        _recordedOps = recordedOps;
+        _trace = trace;
+        if (_recordedOps != null && _recordedOps.Count != plan.OpCount)
+        {
+            throw new ArgumentException("recordedOps 长度须与 OpCount 相同。", nameof(recordedOps));
+        }
+
         _reserved = CrowdFuzzRunner.ReservedWithoutExecutor(plan.Ops, extraExecutors);
         _drawable = new List<CrowdFuzzOp>(plan.Ops.Count);
         for (int i = 0; i < plan.Ops.Count; i++)
@@ -144,7 +157,24 @@ public sealed class CrowdFuzzCursor
             while (Completed < _plan.OpCount)
             {
                 if (Completed > began && watch.Elapsed >= budget) return;
-                var op = _drawable[CrowdFuzzRunner.NextInt(_rng!, _drawable.Count)];
+                int pick = CrowdFuzzRunner.NextInt(_rng!, _drawable.Count);
+                CrowdFuzzOp op;
+                if (_recordedOps != null)
+                {
+                    string id = _recordedOps[Completed];
+                    op = _drawable.Find(o => o.Id == id)
+                        ?? throw new InvalidOperationException($"夹具第 {Completed + 1} 步操作 {id} 不在可执行表内。");
+                    if (op != _drawable[pick])
+                    {
+                        throw new InvalidOperationException(
+                            $"夹具第 {Completed + 1} 步操作 {id} 与种子流抽中的 {_drawable[pick].Id} 不一致。");
+                    }
+                }
+                else
+                {
+                    op = _drawable[pick];
+                }
+
                 int step = Completed + 1;
                 try
                 {
@@ -188,6 +218,18 @@ public sealed class CrowdFuzzCursor
                 {
                     Finish(CrowdFuzzRunner.Fail(_plan, _reserved, step, op.Id, ex.Message));
                     return;
+                }
+
+                if (_trace != null)
+                {
+                    var digest = CrowdSimChecksum.Compute(session);
+                    _trace.Add(new CrowdFuzzStepRecord
+                    {
+                        OpId = op.Id,
+                        Units = session.Units.Count,
+                        StateDigest = digest.State,
+                        PositionDigest = digest.Position,
+                    });
                 }
 
                 Completed = step;
@@ -237,6 +279,33 @@ public static class CrowdFuzzRunner
         var cursor = new CrowdFuzzCursor(plan, extraExecutors);
         cursor.Advance(session, TimeSpan.MaxValue);
         return cursor.Result ?? Fail(plan, Array.Empty<string>(), 0, "", "模糊运行没有结果。");
+    }
+
+    public static CrowdFuzzResult RunRecorded(
+        CrowdSimSession session,
+        CrowdFuzzPlan plan,
+        IReadOnlyList<string> recordedOps,
+        IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extraExecutors = null,
+        List<CrowdFuzzStepRecord>? trace = null)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(recordedOps);
+        var cursor = new CrowdFuzzCursor(plan, extraExecutors, recordedOps, trace);
+        cursor.Advance(session, TimeSpan.MaxValue);
+        return cursor.Result ?? Fail(plan, Array.Empty<string>(), 0, "", "模糊运行没有结果。");
+    }
+
+    public static (CrowdFuzzResult Result, IReadOnlyList<CrowdFuzzStepRecord> Trace) RunWithTrace(
+        CrowdSimSession session,
+        CrowdFuzzPlan plan,
+        IReadOnlyDictionary<string, CrowdFuzzOpExecutor>? extraExecutors = null)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        var trace = new List<CrowdFuzzStepRecord>(plan.OpCount);
+        var cursor = new CrowdFuzzCursor(plan, extraExecutors, trace: trace);
+        cursor.Advance(session, TimeSpan.MaxValue);
+        var result = cursor.Result ?? Fail(plan, Array.Empty<string>(), 0, "", "模糊运行没有结果。");
+        return (result, trace);
     }
 
     public static CrowdFuzzHandleProbe[] Snapshot(CrowdSimSession session, int count, CrowdSimRng rng)

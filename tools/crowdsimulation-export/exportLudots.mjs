@@ -1,7 +1,7 @@
-// 导出为 Ludots Mod（LU-21 / AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
+// 导出为 Ludots Mod（AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
 // 产物：.height（CHTM v2，uint16 缩放）、.navsurface（v1）、Maps/<id>.json（队伍 / 关系 / 阻挡物 / 桥）、
 //       CrowdSimulationConfig.json 覆盖片段、Navigation/navmesh.json 的地图地形事实、
-//       parity/s1-truth.json（FNV-1a 摘要，供 C# 端逐格对拍）。
+//       parity/s1-truth.json（FNV-1a 摘要；对拍口径见 crowdsimulation-and-navsurface.md 行为对拍定案）。
 // 正本在 Ludots 仓库（本文件即正本）；运行时位于 CrowdSimulation Web 沙盒的 scripts/ 下，
 // 依赖沙盒内 src/engine/ 的生成器（相对导入按该布局解析）。
 // 用法：node scripts/exportLudots.mjs --seed 1337 --map-id crowd_simulation_s1 --out exports/crowd_simulation_s1
