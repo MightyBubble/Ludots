@@ -6,9 +6,9 @@
 
 | 预设 | 场景 Mod | 演示什么 |
 |---|---|---|
-| `crowd_simulation_showcase_march_raylib` | `CrowdSimulationMarchShowcaseMod` | 120 人方块在图中心集结（约 441 tick），tick 450 向东行军，tick 480 改令转向约 60° |
+| `crowd_simulation_showcase_march_raylib` | `CrowdSimulationMarchShowcaseMod` | 120 人方块在图中心集结（约 443 tick），tick 450 向东行军，tick 480 改令转向约 60° |
 | `crowd_simulation_showcase_reversal_raylib` | `CrowdSimulationReversalShowcaseMod` | 方块向东出发，tick 3 掉头往西，tick 46 同向再令一次 |
-| `crowd_simulation_showcase_repeat_click_raylib` | `CrowdSimulationRepeatClickShowcaseMod` | 方块集结后，从 tick 441 起每 10 tick 对同一目标再点一次，共 8 次 |
+| `crowd_simulation_showcase_repeat_click_raylib` | `CrowdSimulationRepeatClickShowcaseMod` | 方块集结后，从 tick 450 起每 10 tick 对同一目标再点一次，共 8 次 |
 | `crowd_simulation_showcase_fog_explore_raylib` | `CrowdSimulationFogExploreShowcaseMod` | 视野外的敌方小队、敌方目标和南边的新建筑都不画；tick 80 有 5 个敌人出现在本方旁边；tick 110 本方向南探索，约 tick 2689 看见建筑 |
 | `crowd_simulation_showcase_fog_reroute_raylib` | `CrowdSimulationFogRerouteShowcaseMod` | 60 人从西向东横穿地图，tick 10、12 在迷雾里放两栋建筑，第一栋压在领队路线上；约 tick 2184 看见后改道 |
 | `crowd_simulation_showcase_fog_shared_vision_raylib` | `CrowdSimulationFogAllyVisionShowcaseMod` | 玩家 1 原地不动，盟友玩家 3 去看东边的建筑（约 tick 185 看见）、再往西路过敌人（约 tick 609）；tick 800 拆掉建筑，玩家 1 这边留残影，盟友回去后约 tick 1281 残影消失 |
