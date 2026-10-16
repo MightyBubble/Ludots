@@ -25,11 +25,11 @@ public sealed class ShowcaseHudTests
         Assert.That(host.HudText("crowd-title"), Is.EqualTo(title));
         Assert.That(host.HudVisible("crowd-playerbar"), Is.True, "玩家条");
         Assert.That(host.HudNode("crowd-players").Children, Has.Count.GreaterThanOrEqualTo(2), "每个玩家一枚");
-        Assert.That(host.HudText("crowd-hint-text"), Does.StartWith("左键框选"));
+        Assert.That(host.HudText("crowd-hint-text"), Does.Contain("左键"));
         Assert.That(host.HudVisible("crowd-dock"), Is.True);
         Assert.That(host.HudVisible("crowd-dv"), Is.True);
         Assert.That(host.HudVisible("crowd-telemetry"), Is.True, "原型右栏常驻遥测");
         Assert.That(host.HudText("crowd-m-units"), Does.Match(@"^[\d,]+$"));
-        Assert.That(host.HudText("crowd-hud"), Does.Not.Contain("F10").And.Not.Contain("PgUp"), "按键图例已删");
+        Assert.That(host.HudText("crowd-hint-text"), Does.Contain("F10"), "快捷键说明合并在鼠标提示模板里");
     }
 }

@@ -166,12 +166,12 @@ public sealed class CrowdPlayerViewTests
         var range = (JsonObject)valid.DeepClone();
         range["colors"]!["plan"]!["red"] = 256;
         Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(range, "player-view"));
-        var missingLabel = (JsonObject)valid.DeepClone();
-        missingLabel["labels"]!.AsObject().Remove("countPlanning");
-        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(missingLabel, "player-view"));
-        var unknownLabel = (JsonObject)valid.DeepClone();
-        unknownLabel["labels"]!.AsObject()["extra"] = "x";
-        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(unknownLabel, "player-view"));
+        var emptyShape = (JsonObject)valid.DeepClone();
+        emptyShape["shapeLabels"]!["box"] = "";
+        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(emptyShape, "player-view"));
+        var badClick = (JsonObject)valid.DeepClone();
+        badClick["clickTemplate"] = "crowd_simulation.unit.missing";
+        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(badClick, "player-view"));
     }
 
     [Test]
