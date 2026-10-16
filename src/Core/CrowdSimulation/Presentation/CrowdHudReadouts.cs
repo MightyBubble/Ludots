@@ -157,8 +157,8 @@ public record struct CrowdDeployHud
 public record struct CrowdInspectReadout
 {
     public bool NavOverlays;
-    public string AgentTypeId = "";
-    public string ProfileId = "";
+    public string AgentTypeId;
+    public string ProfileId;
     public CrowdUnitColorMode UnitColor;
     public bool TerrainTypes;
     public bool Belief;
@@ -186,12 +186,12 @@ public record struct CrowdPlayerHud
     public bool FogHide;
     public bool Route;
     public bool LineOfSight;
-    public string ClickTemplate = "";
+    public string ClickTemplate;
     public int ClickCount;
     public int DeployCount;
-    public string WindowFrom = "";
-    public string WindowTo = "";
-    public string LayerId = "";
+    public string WindowFrom;
+    public string WindowTo;
+    public string LayerId;
     public int SceneKind;
 }
 

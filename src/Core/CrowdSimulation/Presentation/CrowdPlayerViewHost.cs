@@ -684,10 +684,10 @@ internal sealed class CrowdPlayerViewHost
             }
 
             bool shown = false;
-            for (int i = _windowMin; i <= _windowMax; i++)
+            for (int slot = _windowMin; slot <= _windowMax; slot++)
             {
-                int unitType = _clickUnit[i];
-                if (_layers[unitType] && _agentIndex[unitType] == group.LayerIdx && _clickRadiusOf[i] == group.RIdx)
+                int unitType = _clickUnit[slot];
+                if (_layers[unitType] && _agentIndex[unitType] == group.LayerIdx && _clickRadiusOf[slot] == group.RIdx)
                 {
                     shown = true;
                     break;
