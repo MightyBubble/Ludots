@@ -142,7 +142,6 @@ public sealed class S4DeployDemoRuntime
         _avoidMin = Fix64.FromDouble(rates.AvoidHzMin);
         _avoidMax = Fix64.FromDouble(rates.AvoidHzMax);
         _avoidStep = Fix64.FromDouble(rates.AvoidStep);
-        TickHzWindow = rates.TickWindowText;
         _speedIndex = IndexOfSpeed(tools.SpeedStepsPermille, TimeFlowService.DefaultScalePermille);
         SpeedPermille = tools.SpeedStepsPermille[_speedIndex];
         ApplyPlaceEntry();
@@ -159,6 +158,7 @@ public sealed class S4DeployDemoRuntime
         }
 
         _tools?.ResolveSpawn(session.Config);
+        TickHzWindow = session.Config.FixedHz.ToString(System.Globalization.CultureInfo.InvariantCulture);
         session.PlaybackHeld = PlaybackHeld;
     }
 

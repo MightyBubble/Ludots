@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -47,7 +46,7 @@ internal sealed class CrowdSimulationDebugConfig
         if (cfg.Tools != null) ValidateTools(cfg.Tools);
         if (cfg.Rates != null) ValidateRates(cfg.Rates);
         if (cfg.Fuzz != null) ValidateFuzz(cfg.Fuzz);
-        if (cfg.Presentation?.Kind == CrowdPresentationConfig.KindDeploy && (cfg.Tools == null || cfg.Rates == null || cfg.Fuzz == null))
+        if (cfg.Presentation?.Deploy != null && (cfg.Tools == null || cfg.Rates == null || cfg.Fuzz == null))
         {
             throw new InvalidOperationException("CrowdSimulationDebug.json: 部署演示必须带 tools、rates 与 fuzz。");
         }
@@ -166,9 +165,7 @@ internal sealed class CrowdSimulationDebugConfig
         bool placePath = false;
         for (int i = 0; i < fuzz.Ops.Length; i++)
         {
-            if (string.IsNullOrWhiteSpace(fuzz.Ops[i].Id))
-                throw new InvalidOperationException($"CrowdSimulationDebug.json: fuzz.ops[{i}].id 必填。");
-            if (fuzz.Ops[i].Id == "placePath") placePath = true;
+            if (fuzz.Ops[i] == "placePath") placePath = true;
         }
 
         if (!placePath) return;
@@ -182,12 +179,6 @@ internal sealed class CrowdSimulationDebugConfig
 
     private static void ValidateRates(CrowdDebugRates rates)
     {
-        if (rates.TickHzMin < 1 || rates.TickHzMax < rates.TickHzMin)
-        {
-            throw new InvalidOperationException(
-                "CrowdSimulationDebug.json: rates.tickHzMin / tickHzMax 需满足 1 ≤ min ≤ max。");
-        }
-
         if (!(rates.AvoidHzMin > 0d) || rates.AvoidHzMax < rates.AvoidHzMin
             || double.IsNaN(rates.AvoidHzMin) || double.IsNaN(rates.AvoidHzMax)
             || double.IsInfinity(rates.AvoidHzMin) || double.IsInfinity(rates.AvoidHzMax))
@@ -251,22 +242,11 @@ internal sealed class CrowdDebugFuzz
     public string PathTemplate { get; init; } = "";
     public int PathWidthCm { get; init; }
     public int PathLengthCm { get; init; }
-    [JsonRequired] public CrowdDebugFuzzOp[] Ops { get; init; } = Array.Empty<CrowdDebugFuzzOp>();
+    [JsonRequired] public string[] Ops { get; init; } = Array.Empty<string>();
 
     public CrowdFuzzPlan ToPlan(CrowdDebugTools tools)
     {
-        var ops = new CrowdFuzzOp[Ops.Length];
-        for (int i = 0; i < Ops.Length; i++)
-        {
-            CrowdDebugFuzzOp row = Ops[i];
-            ops[i] = new CrowdFuzzOp
-            {
-                Id = row.Id,
-                Structure = row.Structure,
-                ProbeHandles = row.ProbeHandles,
-                Reserved = row.Reserved,
-            };
-        }
+        CrowdFuzzOp[] ops = CrowdFuzzOpTraits.ResolveAll(Ops, "CrowdSimulationDebug.json: fuzz.ops");
 
         return new CrowdFuzzPlan
         {
@@ -291,24 +271,11 @@ internal sealed class CrowdDebugFuzz
     }
 }
 
-internal sealed class CrowdDebugFuzzOp
-{
-    [JsonRequired] public string Id { get; init; } = string.Empty;
-    [JsonRequired] public bool Structure { get; init; }
-    [JsonRequired] public bool ProbeHandles { get; init; }
-    [JsonRequired] public bool Reserved { get; init; }
-}
-
 internal sealed class CrowdDebugRates
 {
-    [JsonRequired] public int TickHzMin { get; init; }
-    [JsonRequired] public int TickHzMax { get; init; }
     [JsonRequired] public double AvoidHzMin { get; init; }
     [JsonRequired] public double AvoidHzMax { get; init; }
     [JsonRequired] public double AvoidStep { get; init; }
-
-    public string TickWindowText =>
-        string.Create(CultureInfo.InvariantCulture, $"{TickHzMin}–{TickHzMax}");
 }
 
 internal sealed class CrowdDebugSession

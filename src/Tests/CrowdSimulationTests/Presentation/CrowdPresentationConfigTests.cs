@@ -76,8 +76,6 @@ public sealed class CrowdPresentationConfigTests
 
         var rates = new JsonObject
         {
-            ["tickHzMin"] = 10,
-            ["tickHzMax"] = 60,
             ["avoidHzMin"] = 0,
             ["avoidHzMax"] = 30,
             ["avoidStep"] = 1,

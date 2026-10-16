@@ -14,8 +14,6 @@
     ]
   },
   "rates": {
-    "tickHzMin": 10,
-    "tickHzMax": 60,
     "avoidHzMin": 1,
     "avoidHzMax": 30,
     "avoidStep": 1
@@ -36,52 +34,16 @@
     "pathWidthCm": 6250,
     "pathLengthCm": 62500,
     "ops": [
-      {
-        "id": "spawn",
-        "structure": false,
-        "probeHandles": false,
-        "reserved": false
-      },
-      {
-        "id": "order",
-        "structure": false,
-        "probeHandles": false,
-        "reserved": false
-      },
-      {
-        "id": "place",
-        "structure": true,
-        "probeHandles": false,
-        "reserved": false
-      },
-      {
-        "id": "remove",
-        "structure": true,
-        "probeHandles": false,
-        "reserved": false
-      },
-      {
-        "id": "placePath",
-        "structure": true,
-        "probeHandles": false,
-        "reserved": false
-      },
-      {
-        "id": "removePath",
-        "structure": true,
-        "probeHandles": false,
-        "reserved": false
-      },
-      {
-        "id": "kill",
-        "structure": false,
-        "probeHandles": true,
-        "reserved": false
-      }
+      "spawn",
+      "order",
+      "place",
+      "remove",
+      "placePath",
+      "removePath",
+      "kill"
     ]
   },
   "presentation": {
-    "kind": "deploy",
     "title": "CrowdSimulation S4 · 部署演示(种子 1337,脚本行军 + 交互建造)",
     "viewLabels": {
       "terrain": "地形",
@@ -126,30 +88,30 @@
       "placeOverlapsBlocked": "(压到阻挡格)",
       "placeInteriorArea": "(跨越段地形不可放)",
       "placeEndpointArea": "(桥端不可锚)",
-      "placeLegal": [
-        89,
-        230,
-        115,
-        242
-      ],
-      "placeIllegal": [
-        255,
-        77,
-        64,
-        242
-      ],
-      "placeEndpoint": [
-        255,
-        214,
-        64,
-        242
-      ],
-      "placePortal": [
-        64,
-        196,
-        255,
-        242
-      ],
+      "placeLegal": {
+        "red": 89,
+        "green": 230,
+        "blue": 115,
+        "alpha": 242
+      },
+      "placeIllegal": {
+        "red": 255,
+        "green": 77,
+        "blue": 64,
+        "alpha": 242
+      },
+      "placeEndpoint": {
+        "red": 255,
+        "green": 214,
+        "blue": 64,
+        "alpha": 242
+      },
+      "placePortal": {
+        "red": 64,
+        "green": 196,
+        "blue": 255,
+        "alpha": 242
+      },
       "pendingNav": " · 导航变体未就绪",
       "palette": [
         {
