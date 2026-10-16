@@ -288,7 +288,6 @@ namespace Ludots.Adapter.Web.Streaming
                 BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)item.StringId);
                 _pos += 2;
                 WriteTextPacket(in item.Text);
-                _buffer[_pos++] = (byte)item.Layer;
             }
 
             int stringCount = 0;
