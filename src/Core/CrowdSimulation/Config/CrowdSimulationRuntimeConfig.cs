@@ -206,10 +206,10 @@ public sealed class RuntimeFogSection
 public sealed class RuntimeFormationSection
 {
     public required Fix64 SpacingScale { get; init; }
-    public required Fix64 LeaderSpeed { get; init; }
+    public required Fix64 LeaderSpeedRatio { get; init; }
     public required Fix64 LeaderTurnRatePerSec { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
-    public required Fix64 CatchUp { get; init; }
+    public required Fix64 CatchUpSpeedRatio { get; init; }
     public required Fix64 SlotSightNavCells { get; init; }
     public required Fix64 SettleTimeSec { get; init; }
     public required Fix64 LeaderLookAheadNavCells { get; init; }
@@ -218,7 +218,7 @@ public sealed class RuntimeFormationSection
     public required Fix64 SlotArriveNavCells { get; init; }
     public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SettleRadiusNavCells { get; init; }
-    public required Fix64 ClumpSlack { get; init; }
+    public required Fix64 ClumpSlackScale { get; init; }
     public required Fix64 MinClumpNavCells { get; init; }
     public required Fix64 HeadingInheritDot { get; init; }
     public required Fix64 MirrorFlipDot { get; init; }
@@ -239,9 +239,9 @@ public sealed class RuntimeMovementSection
     public required int MaxSubSteps { get; init; }
     public required Fix64 SlotTimeConstantSec { get; init; }
     public required Fix64 BlendRatePerSec { get; init; }
-    public required Fix64 BlendCommit { get; init; }
+    public required Fix64 BlendCommitRatio { get; init; }
     public required int SlotCheckIntervalSubSteps { get; init; }
-    public required Fix64 SightHysteresis { get; init; }
+    public required Fix64 SightHysteresisScale { get; init; }
     public required Fix64 LaneSpreadSpeedRatio { get; init; }
     public required Fix64 WakeDistanceNavCells { get; init; }
     public required Fix64 StallSpeedRatio { get; init; }
@@ -263,12 +263,12 @@ public sealed class RuntimeAvoidanceSection
     public required Fix64 AccelerationPerSec { get; init; }
     public required Fix64 RestDeadband { get; init; }
     public required Fix64 MaxPush { get; init; }
-    public required Fix64 Smoothing { get; init; }
+    public required Fix64 SmoothingRatio { get; init; }
 }
 
 public sealed class RuntimePushSection
 {
-    public required Fix64 MovingBonus { get; init; }
+    public required Fix64 MovingPriorityBonus { get; init; }
     public required Fix64 DominantShare { get; init; }
 }
 

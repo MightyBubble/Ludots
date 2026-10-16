@@ -9,7 +9,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// <summary>
 /// 局部避让(Fix64 厘米域):非对称分离——
 /// 重叠对的让出份额按玩家对功能位分摊。Yield:有效优先级 = 兵种推挤优先级
-/// +(移动中 + movingBonus),低者让(1 - dominantShare)、相等对半、高者近不动。
+/// +(移动中 + movingPriorityBonus),低者让(1 - dominantShare)、相等对半、高者近不动。
 /// Hold:优先级失效,休息单位对移动单位不可动、同状态对半。同导航组且都在移动:
 /// 对称对半,不查功能位。穿越链接(Traversing)的单位腾空:半径记 0,不收推也不推人。
 /// 两个预算保证最坏 O(n) 而不偏袒谁被看见:maxNeighbors 只数重叠对,maxScan 数所有
@@ -65,7 +65,7 @@ public static class CrowdAvoidance
                 gl[kk] = state.Level;
                 gg[kk] = state.GroupId;
                 gm[kk] = moving ? (byte)1 : (byte)0;
-                ge[kk] = k.PushPriorities[j] + (moving ? k.MovingBonus : Fix64.Zero);
+                ge[kk] = k.PushPriorities[j] + (moving ? k.MovingPriorityBonus : Fix64.Zero);
                 if (moving || traversing || calm[j] == 0 || kin.Velocity.X != Fix64.Zero || kin.Velocity.Y != Fix64.Zero) aw = 1;
             }
 
@@ -85,7 +85,7 @@ public static class CrowdAvoidance
         int width = hash2.Width;
         Fix64 cellCm = hash2.CellSizeCm;
         Fix64 reach = hash2.Reach;
-        Fix64 keep = Fix64.OneValue - k.Smoothing;
+        Fix64 keep = Fix64.OneValue - k.SmoothingRatio;
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
         var gp = k.GatherPlayer; var gm = k.GatherMoving; var gl = k.GatherLevel; var gg = k.GatherGroup;
         var calm = k.Calm; var awake = k.Awake;
@@ -201,7 +201,7 @@ public static class CrowdAvoidance
                 }
 
                 var previous = k.Separation[i2];
-                k.Separation[i2] = new Fix64Vec2(previous.X * k.Smoothing + sx * keep, previous.Y * k.Smoothing + sy * keep);
+                k.Separation[i2] = new Fix64Vec2(previous.X * k.SmoothingRatio + sx * keep, previous.Y * k.SmoothingRatio + sy * keep);
             }
         }
     }

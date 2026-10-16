@@ -312,12 +312,12 @@ public class CrowdSimulationConfigTests
     public void PartialOverride_MergesOverDefaults()
     {
         var merged = TestDefaults.DefaultConfigJson();
-        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formation": { "leaderSpeed": 0.6 } }""")!.AsObject());
+        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formation": { "leaderSpeedRatio": 0.6 } }""")!.AsObject());
 
         var config = CrowdSimulationConfig.Load(merged);
         var runtime = TestDefaults.Assemble(config);
 
-        Assert.That(runtime.Formation.LeaderSpeed, Is.EqualTo(Fix64.FromDouble(0.6)));
+        Assert.That(runtime.Formation.LeaderSpeedRatio, Is.EqualTo(Fix64.FromDouble(0.6)));
         Assert.That(runtime.Formation.SpacingScale, Is.EqualTo(Fix64.FromDouble(1.1)));
         Assert.That(runtime.NavCellSizeCm, Is.EqualTo(6250));
     }

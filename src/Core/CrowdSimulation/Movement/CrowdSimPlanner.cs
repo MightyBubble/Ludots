@@ -997,7 +997,7 @@ public sealed class CrowdSimPlanner
         // reachCells:聚拢按触碰判到达只认这个半径。槽位视线门槛是 max(slotSightNavCells, reachCells),它把门槛抬高。
         if (o.Mode == CrowdOrderMode.Converge)
         {
-            o.ReachCells = (int)Fix64.Max(fc.MinClumpNavCells, (fc.ClumpSlack * Fix64Math.Sqrt(area / Fix64.Pi)) / navCellCm).ToLong();
+            o.ReachCells = (int)Fix64.Max(fc.MinClumpNavCells, (fc.ClumpSlackScale * Fix64Math.Sqrt(area / Fix64.Pi)) / navCellCm).ToLong();
         }
         else if (o.Mode == CrowdOrderMode.Preserve)
         {

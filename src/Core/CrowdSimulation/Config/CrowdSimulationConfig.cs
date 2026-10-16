@@ -365,10 +365,10 @@ public sealed class CrowdSimulationConfig
     public sealed class FormationSection
     {
         public required double SpacingScale { get; init; }
-        public required double LeaderSpeed { get; init; }
+        public required double LeaderSpeedRatio { get; init; }
         public required double LeaderTurnRatePerSec { get; init; }
         public required double FaceTurnScale { get; init; }
-        public required double CatchUp { get; init; }
+        public required double CatchUpSpeedRatio { get; init; }
         public required double SlotSightCm { get; init; }
         public required double SettleTimeSec { get; init; }
         public required double LeaderLookAheadCm { get; init; }
@@ -377,7 +377,7 @@ public sealed class CrowdSimulationConfig
         public required double SlotArriveCm { get; init; }
         public required double GoalArriveCm { get; init; }
         public required double SettleRadiusCm { get; init; }
-        public required double ClumpSlack { get; init; }
+        public required double ClumpSlackScale { get; init; }
         public required double MinClumpCm { get; init; }
         /// <summary>与上一任领队朝向的点积：不低于该值则继承朝向；不高于 mirrorFlipDot 则反转。</summary>
         public required double HeadingInheritDot { get; init; }
@@ -399,9 +399,9 @@ public sealed class CrowdSimulationConfig
         public required int MaxSubSteps { get; init; }
         public required double SlotTimeConstantSec { get; init; }
         public required double BlendRatePerSec { get; init; }
-        public required double BlendCommit { get; init; }
+        public required double BlendCommitRatio { get; init; }
         public required int SlotCheckIntervalSubSteps { get; init; }
-        public required double SightHysteresis { get; init; }
+        public required double SightHysteresisScale { get; init; }
         public required double LaneSpreadSpeedRatio { get; init; }
         public required double WakeDistanceCm { get; init; }
         public required double StallSpeedRatio { get; init; }
@@ -423,13 +423,13 @@ public sealed class CrowdSimulationConfig
         public required double AccelerationPerSec { get; init; }
         public required double RestDeadband { get; init; }
         public required double MaxPush { get; init; }
-        public required double Smoothing { get; init; }
+        public required double SmoothingRatio { get; init; }
     }
 
     /// <summary>Yield 分支的内核参数。让不让路由 pairRules.yieldsTo 投影，不在这里选。</summary>
     public sealed class PushSection
     {
-        public required double MovingBonus { get; init; }
+        public required double MovingPriorityBonus { get; init; }
         public required double DominantShare { get; init; }
     }
 
