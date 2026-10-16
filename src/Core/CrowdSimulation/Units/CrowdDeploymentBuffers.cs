@@ -8,9 +8,12 @@ internal sealed class CrowdDeploymentBuffers
     public List<CrowdNavGroupSet.Group>[] PerPlayer = [];
     public readonly Dictionary<int, List<int>> Centers = new(32);
     public readonly Dictionary<int, int> TypeOf = new(32);
-    private readonly List<List<int>> _centerListPool = new(32);
-    private int _centerListPoolTop;
+    private readonly List<List<int>> _centerLists = new(32);
+    private int _centerListsRented;
 
+    public int PooledCenterLists => _centerLists.Count;
+
+    /// <summary>开始一次部署。上一次借出的中心列表在这里全部收回，不论是否进了 <see cref="Centers"/>。</summary>
     public void BeginSpawn(int playerCount)
     {
         if (PerPlayer.Length != playerCount)
@@ -29,29 +32,16 @@ internal sealed class CrowdDeploymentBuffers
             }
         }
 
-        ReturnCenterLists();
+        _centerListsRented = 0;
         Centers.Clear();
         TypeOf.Clear();
     }
 
     public List<int> RentCenterList()
     {
-        if (_centerListPoolTop > 0)
-        {
-            List<int> list = _centerListPool[--_centerListPoolTop];
-            list.Clear();
-            return list;
-        }
-
-        return new List<int>(8);
-    }
-
-    private void ReturnCenterLists()
-    {
-        foreach (List<int> list in Centers.Values)
-        {
-            _centerListPool.Add(list);
-            _centerListPoolTop++;
-        }
+        if (_centerListsRented == _centerLists.Count) _centerLists.Add(new List<int>(8));
+        List<int> list = _centerLists[_centerListsRented++];
+        list.Clear();
+        return list;
     }
 }
