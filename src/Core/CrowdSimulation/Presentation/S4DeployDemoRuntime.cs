@@ -72,25 +72,14 @@ public sealed class S4DeployDemoRuntime
     public bool Active { get; set; } = true;
     public int ViewMode { get; private set; }
     public CrowdClickTool Tool { get; private set; }
-    public bool BuildMode => Tool == CrowdClickTool.Structure;
     public int TemplateIndex { get; private set; }
     public bool PlaybackHeld { get; private set; }
     public int SpeedPermille { get; private set; } = TimeFlowService.DefaultScalePermille;
     public int BoomRadiusCm { get; private set; }
     public Fix64 BlastRingScale { get; private set; }
-    public string TickHzWindow { get; private set; } = string.Empty;
     public bool HasSpanAnchor { get; private set; }
     public int SpanAnchorX { get; private set; }
     public int SpanAnchorY { get; private set; }
-    public string ToolLabel => Tool switch
-    {
-        CrowdClickTool.Off => "关闭",
-        CrowdClickTool.Boom => "爆炸",
-        CrowdClickTool.Spawn => "生成",
-        CrowdClickTool.Structure => "结构",
-        CrowdClickTool.Demolish => "拆除",
-        _ => throw new InvalidOperationException($"未知点击工具 {Tool}。"),
-    };
     /// <summary>现场指令已进入本次会话(自动回放停用;会话重激活时随运行时一起复位)。</summary>
     public bool InteractiveMode { get; private set; }
 
@@ -110,6 +99,8 @@ public sealed class S4DeployDemoRuntime
     private int _viewModeCount = 3;
     public PaletteChoice Choice => _choices[TemplateIndex];
     public int StructureCount => _choices.Length;
+    internal IReadOnlyList<PaletteChoice> Choices => _choices;
+    internal CrowdDebugRates? Rates => _rates;
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
 

@@ -16,7 +16,6 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Platform.Abstractions;
-using CrowdSimulationUiMod.UI;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -198,36 +197,6 @@ public sealed class CrowdPlayerViewTests
     }
 
     [Test]
-    public void StatusCard_LabelsEveryCount()
-    {
-        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
-        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
-        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(ViewJson(), "player-view"));
-        host.Bind(session);
-        var routes = new RouteVisualBuffer();
-        host.Draw(session, routes, new ScreenOverlayBuffer());
-        var hud = default(CrowdPlayerHud);
-        var units = new int[9];
-        host.ReadPanel(ref hud, units);
-        var labels = host.Labels;
-        var texts = new System.Collections.Generic.List<string>
-        {
-            Write(b => CrowdHudFormat.TeamLine(b, in hud, units, labels)),
-            Write(b => CrowdHudFormat.CardLine(b, in hud, labels)),
-            Write(b => CrowdHudFormat.ModeLine(b, in hud, labels)),
-            Write(b => CrowdHudFormat.ClickLine(b, in hud, labels)),
-            Write(b => CrowdHudFormat.DeployLine(b, in hud, labels)),
-        };
-
-        Assert.That(texts, Does.Contain("idle · countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
-        Assert.That(texts, Does.Contain("clickSpawn unitType infantry.r100 · count 8"));
-        Assert.That(texts, Has.Some.StartsWith("deploy 24 · radius infantry.r100-"));
-        Assert.That(texts, Has.Some.Contains(" · layer foot"));
-        Assert.That(texts, Has.Some.Contains("self"));
-        Assert.That(string.Join("\n", texts), Does.Not.Contain("*"));
-    }
-
-    [Test]
     public void SteadyPresentationFrame_AllocatesNothing()
     {
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
@@ -274,13 +243,6 @@ public sealed class CrowdPlayerViewTests
         Assert.That(ReadAlpha(world), Is.EqualTo(1f).Within(0.0001f));
     }
 
-    private static string Write(Action<Ludots.UI.Runtime.UiTextBuffer> write)
-    {
-        var buffer = new Ludots.UI.Runtime.UiTextBuffer();
-        write(buffer);
-        return buffer.ToString();
-    }
-
     private static CrowdOrderMode Choose(
         int minX, int minY, int maxX, int maxY, int clickX, int clickY, Fix64 pad, Fix64 spread, bool drag, bool autoOff)
         => CrowdOrderModeChooser.Choose(
@@ -318,18 +280,6 @@ public sealed class CrowdPlayerViewTests
         })
         {
             actions[name] = name;
-        }
-
-        var labels = new JsonObject();
-        foreach (var name in new[]
-        {
-            "planning", "moving", "arrived", "partial", "idle", "magicOn", "magicOff", "formation", "converge",
-            "preserve", "fogOn", "fogOff", "routeOn", "routeOff", "losOn", "losOff", "clickSpawn",
-            "sceneOutside", "sceneBehind", "countPlanning", "countMoving", "countOther",
-            "unitType", "radius", "count", "deploy", "layer", "self",
-        })
-        {
-            labels[name] = name;
         }
 
         var colors = new JsonObject();
@@ -385,7 +335,6 @@ public sealed class CrowdPlayerViewTests
                 ["loose"] = "松散",
             },
             ["actions"] = actions,
-            ["labels"] = labels,
             ["colors"] = colors,
         };
     }

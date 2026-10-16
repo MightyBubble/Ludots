@@ -83,16 +83,19 @@ public sealed class CrowdTelemetryClampEvictPlanTests
         using var ui = new CrowdHudTestHost(engine);
 
         ui.Frame(feed);
-        string collapsed = ui.Text("crowd-status");
+        Assert.That(ui.Click("crowd-dock-tab-tests"), Is.True);
+        ui.Frame(feed, 1);
+        string collapsed = ui.Text("crowd-counters-line");
         Assert.That(collapsed, Does.Contain("subStepClamped 1"));
         Assert.That(collapsed, Does.Contain("evictStuck 3"));
         Assert.That(collapsed, Does.Contain("plans 2"));
         Assert.That(collapsed, Does.Not.Contain("contacts"));
         Assert.That(collapsed, Does.Not.Contain("pathWait"));
-        Assert.That(ui.Has("crowd-counter-detail-line"), Is.False);
+        Assert.That(ui.Visible("crowd-counter-detail"), Is.False);
 
         chunkDebug.Visible = true;
         ui.FrameAfterAllPeriods(feed);
+        Assert.That(ui.Visible("crowd-counter-detail"), Is.True);
         string expanded = ui.Text("crowd-counter-detail-line");
         Assert.That(expanded, Does.Contain("contacts 7"));
         Assert.That(expanded, Does.Contain("pathWait 1"));

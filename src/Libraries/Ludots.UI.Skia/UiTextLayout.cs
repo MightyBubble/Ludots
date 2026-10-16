@@ -516,6 +516,7 @@ public static class UiTextLayout
 		private string? _lastFamily;
 		private bool _lastBold;
 		private bool _lastItalic;
+		private bool _seeded;
 
 		/// <summary>同一个字体族串（按引用）、粗斜体、字号且注册表没变时直接命中，省掉按族名查首选字体。</summary>
 		public bool Matches(UiStyle style)
@@ -532,6 +533,18 @@ public static class UiTextLayout
 			_lastFamily = style.FontFamily;
 			_lastBold = style.Bold;
 			_lastItalic = style.Italic;
+			if (_seeded)
+			{
+				return;
+			}
+			_seeded = true;
+			// 数字格式会晚于第一段文字才出现的符号（负号、单位、千分位）在建表时就解析完，
+			// 否则第一次写出它们要现选字体，稳态帧会分配。
+			ReadOnlySpan<char> seed = "0123456789+-. ,%/\u00B7\u2013\u2014\u00B2\u2026KBMNAx";
+			for (int i = 0; i < seed.Length; i++)
+			{
+				Get(seed[i], style);
+			}
 		}
 
 		public Glyph Get(char c, UiStyle style)

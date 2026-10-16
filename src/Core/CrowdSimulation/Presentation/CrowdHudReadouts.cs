@@ -92,12 +92,11 @@ public record struct CrowdDeployHud
     public int RebakeSlices;
 
     public CrowdClickTool Tool;
-    public string ToolLabel;
-    public bool BuildMode;
     public bool PlaybackHeld;
     public int SpeedPermille;
+    /// <summary>当前模板要点两下（起点、终点）。</summary>
+    public bool TemplateTwoPoint;
     public bool HasSpanAnchor;
-    public string TickHzWindow;
     public int ViewMode;
     public string ViewLabel;
     public int TemplateIndex;
@@ -111,9 +110,6 @@ public record struct CrowdDeployHud
     public CrowdPlacementReject PreviewReason;
 
     public bool HasRebake;
-    public int RebakeExecTick;
-    public int RebakeReportTick;
-    public bool RebakeIsPlace;
     public int RebakeTiles;
     public int RebakeCostOnly;
     public int RebakeContexts;
@@ -165,6 +161,15 @@ public record struct CrowdInspectReadout
     public int BeliefPlayer;
     public int DivergentCells;
     public int Ghosts;
+    public bool Funnel;
+    public bool Corridor;
+    public bool HpaGraph;
+    public bool NavPolygons;
+    public bool TileGrid;
+    public bool Flow;
+    public bool Density;
+    public bool Blocked;
+    public bool Links;
 
     public readonly bool Visible => NavOverlays || Belief || UnitColor != CrowdUnitColorMode.Off;
 }
@@ -193,6 +198,37 @@ public record struct CrowdPlayerHud
     public string WindowTo;
     public string LayerId;
     public int SceneKind;
+    /// <summary>当前阵型在 <see cref="CrowdHudCatalog.Formations"/> 里的下标；配置里找不到时为 -1。</summary>
+    public int ShapeIndex;
+    /// <summary>按兵种下标的启用位。</summary>
+    public int LayerMask;
+    /// <summary>本方最近的指令，按指令号从新到旧；只填前 <see cref="NoticeCount"/> 条。</summary>
+    public int NoticeCount;
+    public CrowdOrderNotice Notice0;
+    public CrowdOrderNotice Notice1;
+    public CrowdOrderNotice Notice2;
+
+    public const int MaxNotices = 3;
+
+    public readonly CrowdOrderNotice Notice(int index) => index switch
+    {
+        0 => Notice0,
+        1 => Notice1,
+        2 => Notice2,
+        _ => throw new ArgumentOutOfRangeException(nameof(index)),
+    };
+}
+
+/// <summary>一条指令按单位状态的计数。规划中的组里未到达的单位都算规划中。</summary>
+public record struct CrowdOrderNotice
+{
+    public int Id;
+    public CrowdOrderMode Mode;
+    public int Units;
+    public int Planning;
+    public int Moving;
+    public int Arrived;
+    public int Unreachable;
 }
 
 /// <summary>导航缓存与路径服务的一次读数。读不到的项为 NaN 或对应 Has* 为 false。</summary>
@@ -215,9 +251,7 @@ public record struct CrowdNavReadout
     public long PlanRequests;
     public int PendingReplies;
     public double RoundTripLastMs;
-    public double RoundTripMeanMs;
     public double WorkerLastMs;
-    public double WorkerMeanMs;
     public long WaitTicks;
     public int Tick;
     public int CommandLog;
@@ -252,9 +286,7 @@ public record struct CrowdNavReadout
             PlanRequests = hasPath ? stats.Requests : 0,
             PendingReplies = hasPath ? stats.Pending : 0,
             RoundTripLastMs = hasPath ? stats.RoundTripLastMs : double.NaN,
-            RoundTripMeanMs = hasPath ? stats.RoundTripMeanMs : double.NaN,
             WorkerLastMs = hasPath ? stats.WorkerLastMs : double.NaN,
-            WorkerMeanMs = hasPath ? stats.WorkerMeanMs : double.NaN,
             WaitTicks = session.Telemetry.StallTicks,
             Tick = session.TickCount,
             CommandLog = session.Commands.Log.Count,
@@ -296,7 +328,6 @@ public record struct CrowdTelemetryReadout
     public int WorldCacheMisses;
     public bool HasExtend;
     public int ExtendCount;
-    public double ExtendMs;
 
     internal static CrowdTelemetryReadout From(CrowdSimSession session, CrowdSimulationRuntime? runtime)
     {
@@ -343,7 +374,6 @@ public record struct CrowdTelemetryReadout
             WorldCacheMisses = baked ? runtime!.WorldBakeCacheMisses : 0,
             HasExtend = session.Planner != null,
             ExtendCount = session.Planner?.ExtendSubmits ?? 0,
-            ExtendMs = hasPath ? stats.ExtendMs : 0,
         };
     }
 }

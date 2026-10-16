@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
 using Ludots.Core.CrowdSimulation;
@@ -22,7 +23,7 @@ public class CrowdTelemetryPanelTests
     {
         var cfg = LoadShipped();
         Assert.That(cfg.Panels.Nav, Is.False);
-        Assert.That(cfg.Panels.Telemetry, Is.False);
+        Assert.That(cfg.Panels.Telemetry, Is.True, "原型右栏常驻遥测");
         Assert.That(cfg.Actions.ToggleNavPanel, Is.EqualTo("CrowdSimulation.S4.ToggleNavPanel"));
         Assert.That(cfg.Actions.ProbePathFault, Is.EqualTo("CrowdSimulation.S4.ProbePathFault"));
         Assert.That(Shipped().ContainsKey("telemetry"), Is.False, "采样与告警归 UI mod 的 hud.json");
@@ -35,8 +36,12 @@ public class CrowdTelemetryPanelTests
         Assert.That(settings.SampleMs.Telemetry, Is.EqualTo(250));
         Assert.That(settings.SampleMs.Nav, Is.EqualTo(500));
         Assert.That(settings.SampleMs.Status, Is.EqualTo(250));
-        Assert.That(settings.History, Is.EqualTo(48));
-        Assert.That(settings.Alerts.LowFps, Is.EqualTo(90));
+        Assert.That(settings.History, Is.EqualTo(90), "照原型 debugView.js telemetry.history");
+        Assert.That(settings.Alerts.LowFps, Is.EqualTo(30));
+        Assert.That(settings.Alerts.SimMs, Is.EqualTo(16));
+        Assert.That(settings.Alerts.AvoidMs, Is.EqualTo(12));
+        Assert.That(settings.Alerts.HeadingDeg, Is.EqualTo(8));
+        Assert.That(settings.Alerts.FlipPct, Is.EqualTo(10));
     }
 
     [Test]
@@ -117,23 +122,23 @@ public class CrowdTelemetryPanelTests
             PlanRequests = 9,
             PendingReplies = 1,
             RoundTripLastMs = double.NaN,
-            RoundTripMeanMs = double.NaN,
             WorkerLastMs = 4.2,
-            WorkerMeanMs = 3.1,
             WaitTicks = 6,
             Tick = 12,
             CommandLog = 4,
             PlanTimeoutMs = 500,
         };
-        string[] lines = NavText(in reading);
-        Assert.That(lines[1], Does.Contain("容量 32").And.Contain("在册 7").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
-        Assert.That(lines[1], Does.Contain("75%"));
-        Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("N/A").And.Contain("无结果缓存"));
-        Assert.That(lines[3], Does.Contain("常驻导航 5"));
-        Assert.That(lines[4], Does.Contain("规划请求 9").And.Contain("待回 1").And.Contain("500"));
-        Assert.That(lines[5], Does.Contain("N/A").And.Contain("4.2"));
-        Assert.That(lines[6], Does.Contain("6"));
-        Assert.That(lines[7], Does.Contain("tick 12").And.Contain("命令日志 4"));
+        using var ui = Mounted(out CrowdHudPage page);
+        page.WriteNav(in reading);
+        Assert.That(page.TileCacheHead.ToString(), Is.EqualTo("7/32 · 命中 75%"));
+        Assert.That(page.TileCacheDetail.ToString(), Is.EqualTo("hit 3 · miss 1 · evict 2"));
+        Assert.That(page.FlowCacheHead.ToString(), Is.EqualTo(CrowdHudFormat.Missing), "流场没有结果缓存");
+        Assert.That(page.FlowCacheDetail.ToString(), Is.Empty);
+        Assert.That(page.NavResident.ToString(), Is.EqualTo("5"));
+        Assert.That(page.NavRequests.ToString(), Is.EqualTo("9 / 1"));
+        Assert.That(page.NavRoundTrip.ToString(), Is.EqualTo("— / 4.2 ms"));
+        Assert.That(page.NavWaits.ToString(), Is.EqualTo("6"));
+        Assert.That(page.NavTick.ToString(), Is.EqualTo("12 / 4"));
     }
 
     [Test]
@@ -156,20 +161,22 @@ public class CrowdTelemetryPanelTests
             NavCellCm = 100,
             TileCount = 16,
         };
-        var host = new CrowdHostReadout(double.NaN, double.NaN, double.NaN, double.NaN, 0, 0);
-        string[] lines = TelemetryText(in reading, in host);
-        var text = string.Join('\n', lines);
-        Assert.That(text, Does.Contain("采样 250 ms · 曲线 48"));
-        Assert.That(text, Does.Contain("FPS N/A"));
-        Assert.That(text, Does.Contain("堆增长 N/A"));
-        Assert.That(text, Does.Contain("走廊扩展 N/A"));
-        Assert.That(text, Does.Contain("UI 重绘峰值 N/A ms · 面板编排 N/A ms"));
-        Assert.That(text, Does.Not.Contain("渲染"), "旧的“渲染”只量叠层文字，已改名为 UI 重绘峰值");
-        Assert.That(text, Does.Contain("分辨率 N/A"));
-        Assert.That(text, Does.Contain("NavMesh 8.0"));
-        Assert.That(text, Does.Contain("nav格 100 cm"));
-        Assert.That(text, Does.Contain("tile 16"));
-        Assert.That(text, Does.Contain("仿真Worker/宿主RPC N/A"));
+        using var ui = Mounted(out CrowdHudPage page);
+        page.WriteTelemetry(in reading, double.NaN, double.NaN, double.NaN, double.NaN, double.NaN, double.NaN);
+        Assert.That(page.Fps.ToString(), Is.EqualTo(CrowdHudFormat.Missing));
+        Assert.That(page.FrameMs.ToString(), Is.EqualTo("FPS · — ms"));
+        Assert.That(page.HeapRate.ToString(), Is.EqualTo("N/A"));
+        Assert.That(page.HeapUnit.ToString(), Is.Empty);
+        Assert.That(page.Extend.ToString(), Is.EqualTo(CrowdHudFormat.Missing));
+        Assert.That(page.UiMs.ToString(), Is.EqualTo("— / —"));
+        Assert.That(page.RenderMs.ToString(), Is.EqualTo(CrowdHudFormat.Missing));
+        Assert.That(page.NavMeshMs.ToString(), Is.EqualTo("8.00"));
+        Assert.That(page.FlowMs.ToString(), Is.EqualTo("1.5"));
+        Assert.That(page.NavCell.ToString(), Is.EqualTo("1.0"));
+        Assert.That(page.Clusters.ToString(), Is.EqualTo("4²"));
+        Assert.That(page.FixedHz.ToString(), Is.EqualTo("20"));
+        Assert.That(page.FixedUnit.ToString(), Is.EqualTo("Hz · 0.05 s/tick"));
+        Assert.That(page.Heading.ToString(), Is.EqualTo(CrowdHudFormat.Missing));
     }
 
     [Test]
@@ -184,9 +191,10 @@ public class CrowdTelemetryPanelTests
             FlowMisses = 1,
             FlowEvicts = 2,
         };
-        string[] lines = NavText(in reading);
-        Assert.That(lines[2], Does.Contain("流场容量 80").And.Contain("在册 4").And.Contain("75%").And.Contain("hit 3").And.Contain("miss 1").And.Contain("evict 2"));
-        Assert.That(lines[2], Does.Not.Contain("无结果缓存"));
+        using var ui = Mounted(out CrowdHudPage page);
+        page.WriteNav(in reading);
+        Assert.That(page.FlowCacheHead.ToString(), Is.EqualTo("4/80 · 命中 75%"));
+        Assert.That(page.FlowCacheDetail.ToString(), Is.EqualTo("hit 3 · miss 1 · evict 2"));
     }
 
     [Test]
@@ -196,7 +204,6 @@ public class CrowdTelemetryPanelTests
         {
             HasExtend = true,
             ExtendCount = 6,
-            ExtendMs = 1.2,
             SimMs = 1,
             AvoidMs = 1,
             HashMs = 1,
@@ -204,17 +211,20 @@ public class CrowdTelemetryPanelTests
             HasFlip = true,
             FixedHz = 20,
         };
-        var host = new CrowdHostReadout(1, 1, 1, 1, 1920, 1080);
-        string[] lines = TelemetryText(in reading, in host);
-        Assert.That(lines[10], Is.EqualTo("走廊扩展 6 次 1.2 ms"));
-        Assert.That(lines[13], Does.StartWith("分辨率 1920x1080"));
+        using var ui = Mounted(out CrowdHudPage page);
+        page.WriteTelemetry(in reading, 60, 16.7, 2, 0.4, 0.1, 0);
+        Assert.That(page.Extend.ToString(), Is.EqualTo("6"));
+        Assert.That(page.Fps.ToString(), Is.EqualTo("60"));
+        Assert.That(page.FrameMs.ToString(), Is.EqualTo("FPS · 16.7 ms"));
+        Assert.That(page.UiMs.ToString(), Is.EqualTo("0.40 / 0.10"));
+        Assert.That(page.HeapRate.ToString(), Is.EqualTo("0 KB"));
+        Assert.That(page.HeapUnit.ToString(), Is.EqualTo("/s"));
     }
 
     [Test]
-    public void Alerts_FireOnlyWhenTheReadingCrossesItsThreshold()
+    public void Alerts_MoveTheReadingIntoTheRedSpanOnlyWhenItCrossesItsThreshold()
     {
-        var alerts = ParseHud(Hud()).Alerts;
-        var hot = new bool[CrowdHudState.TelemetryLineCount];
+        using var ui = Mounted(out CrowdHudPage page);
         var quiet = new CrowdTelemetryReadout
         {
             SimMs = 1,
@@ -224,34 +234,32 @@ public class CrowdTelemetryPanelTests
             FlipPct = 1,
             HasFlip = true,
         };
-        CrowdHudFormat.MarkAlerts(in quiet, 120, alerts, hot);
-        Assert.That(hot, Has.None.True);
+        page.WriteTelemetry(in quiet, 120, 8.3, 1, 0, 0, double.NaN);
+        Assert.That(new[] { page.FpsLow, page.SimMsAlert, page.AvoidMsAlert, page.HeadingAlert, page.FlipAlert }.Select(b => b.ToString()), Has.All.Empty);
+        Assert.That(page.Fps.ToString(), Is.EqualTo("120"));
+        Assert.That(page.SimMs.ToString(), Is.EqualTo("1.00"));
 
         var loud = quiet;
         loud.SimMs = 40;
         loud.AvoidMs = 20;
         loud.HeadingDeg = 40;
         loud.FlipPct = 80;
-        CrowdHudFormat.MarkAlerts(in loud, 10, alerts, hot);
-        Assert.That(hot[CrowdHudState.FpsLine], Is.True);
-        Assert.That(hot[CrowdHudState.SimLine], Is.True);
-        Assert.That(hot[CrowdHudState.AvoidLine], Is.True);
-        Assert.That(hot[CrowdHudState.HeadingLine], Is.True);
-        Assert.That(hot[CrowdHudState.FlipLine], Is.True);
+        page.WriteTelemetry(in loud, 10, 100, 1, 0, 0, double.NaN);
+        Assert.That(page.FpsLow.ToString(), Is.EqualTo("10"));
+        Assert.That(page.SimMsAlert.ToString(), Is.EqualTo("40.00"));
+        Assert.That(page.AvoidMsAlert.ToString(), Is.EqualTo("20.00"));
+        Assert.That(page.HeadingAlert.ToString(), Is.EqualTo("40.00"));
+        Assert.That(page.FlipAlert.ToString(), Is.EqualTo("80.0"));
+        Assert.That(new[] { page.Fps, page.SimMs, page.AvoidMs, page.Heading, page.Flip }.Select(b => b.ToString()), Has.All.Empty);
 
         var missing = loud;
         missing.HasHeading = false;
         missing.HasFlip = false;
-        CrowdHudFormat.MarkAlerts(in missing, double.NaN, alerts, hot);
-        Assert.That(hot[CrowdHudState.FpsLine], Is.False);
-        Assert.That(hot[CrowdHudState.HeadingLine], Is.False);
-        Assert.That(hot[CrowdHudState.FlipLine], Is.False);
-        Assert.That(hot[CrowdHudState.SimLine], Is.True);
-
-        string[] lines = TelemetryText(in missing, new CrowdHostReadout(double.NaN, double.NaN, double.NaN, double.NaN, 0, 0));
-        Assert.That(lines[CrowdHudState.SimLine], Is.EqualTo("Sim 40.0 ms"), "告警走角标绑定，不改行文字");
-        Assert.That(CrowdHudState.IsAlertable(CrowdHudState.SimLine), Is.True);
-        Assert.That(CrowdHudState.IsAlertable(0), Is.False);
+        page.WriteTelemetry(in missing, double.NaN, double.NaN, double.NaN, double.NaN, double.NaN, double.NaN);
+        Assert.That(page.FpsLow.ToString(), Is.Empty, "没有帧时长不报低帧");
+        Assert.That(page.HeadingAlert.ToString(), Is.Empty);
+        Assert.That(page.FlipAlert.ToString(), Is.Empty);
+        Assert.That(page.SimMsAlert.ToString(), Is.EqualTo("40.00"));
     }
 
     [Test]
@@ -375,27 +383,29 @@ public class CrowdTelemetryPanelTests
         Assert.That(stats.Requests, Is.GreaterThan(0));
         Assert.That(double.IsNaN(stats.RoundTripLastMs), Is.True);
         var nav = CrowdNavReadout.From(session);
-        string[] lines = NavText(in nav);
-        Assert.That(lines[1], Does.Contain("容量"));
-        Assert.That(lines[2], Does.Contain("流场容量").And.Contain("在册").And.Contain("hit").And.Contain("miss").And.Contain("evict"));
-        Assert.That(lines[4], Does.Contain("规划请求"));
+        using (var ui = Mounted(out CrowdHudPage page))
+        {
+            page.WriteNav(in nav);
+            Assert.That(page.TileCacheHead.ToString(), Does.Contain("命中"));
+            Assert.That(page.FlowCacheDetail.ToString(), Does.Contain("hit").And.Contain("miss").And.Contain("evict"));
+            Assert.That(page.NavRequests.ToString(), Does.Match(@"^\d+ / \d+$"));
+            Assert.That(page.NavRoundTrip.ToString(), Does.StartWith("— /"), "往返超时没有结果");
+        }
+
         Assert.That(() => session.Step(out _), Throws.Nothing);
         session.BlockOnDueReplies = true;
         Assert.Throws<PathServiceFaultException>(() => session.Step(out _));
     }
 
-    private static string[] NavText(in CrowdNavReadout reading)
+    private static CrowdHudTestHost Mounted(out CrowdHudPage page)
     {
-        HudLine[] lines = HudLine.Many(CrowdHudState.NavLineCount);
-        CrowdHudFormat.WriteNav(in reading, lines);
-        return Array.ConvertAll(lines, l => l.ToString());
-    }
-
-    private static string[] TelemetryText(in CrowdTelemetryReadout reading, in CrowdHostReadout host)
-    {
-        HudLine[] lines = HudLine.Many(CrowdHudState.TelemetryLineCount);
-        CrowdHudFormat.WriteTelemetry(in reading, in host, 250, 48, lines);
-        return Array.ConvertAll(lines, l => l.ToString());
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
+        feed.UseDebugView(CrowdHudSamplingTests.ShippedDebugView());
+        var ui = new CrowdHudTestHost();
+        ui.Frame(feed);
+        page = ui.Controller.Page ?? throw new AssertionException("HUD 没挂上");
+        return ui;
     }
 
     private static void Observe(

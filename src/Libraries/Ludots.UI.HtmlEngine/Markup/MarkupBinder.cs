@@ -19,6 +19,57 @@ public static class MarkupBinder
 		BindNode(scene, scene.Root, codeBehind);
 	}
 
+	/// <summary>
+	/// 在挂进任何场景之前绑定文档：<c>ui-click</c> 指向点击方法，<c>ui-canvas</c> 指向画布工厂，
+	/// <c>ui-text</c> 指向返回 <see cref="UiTextBinding"/> 的字段、属性或无参方法。绑定落在
+	/// <see cref="UiElement"/> 上，所以 <see cref="Compose.UiElementBuilder.FromElement"/> 每次重建都会带上，
+	/// 适合交给 <see cref="Surface.UiSurfaceHost"/> 的租约发布。
+	/// </summary>
+	public static void Bind(UiDocument document, object codeBehind)
+	{
+		ArgumentNullException.ThrowIfNull(document, "document");
+		ArgumentNullException.ThrowIfNull(codeBehind, "codeBehind");
+		BindElement(document.Root, codeBehind);
+	}
+
+	private static void BindElement(UiElement element, object codeBehind)
+	{
+		string? click = element.Attributes["ui-click"] ?? element.Attributes["data-click"];
+		if (!string.IsNullOrWhiteSpace(click))
+		{
+			MethodInfo method = ResolveMethod(codeBehind.GetType(), click);
+			element.ClickHandler = ctx => InvokeMethod(codeBehind, method, ctx);
+		}
+		string? canvas = element.Attributes["ui-canvas"] ?? element.Attributes["data-canvas"];
+		if (!string.IsNullOrWhiteSpace(canvas))
+		{
+			element.CanvasContent = InvokeCanvasFactory(codeBehind, ResolveCanvasMethod(codeBehind.GetType(), canvas));
+		}
+		string? text = element.Attributes["ui-text"] ?? element.Attributes["data-text"];
+		if (!string.IsNullOrWhiteSpace(text))
+		{
+			element.TextBinding = ResolveTextBinding(codeBehind, text);
+		}
+		foreach (UiElement child in element.Children)
+		{
+			BindElement(child, codeBehind);
+		}
+	}
+
+	private static UiTextBinding ResolveTextBinding(object codeBehind, string memberName)
+	{
+		const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+		Type type = codeBehind.GetType();
+		object? value = type.GetField(memberName, Flags)?.GetValue(codeBehind)
+			?? type.GetProperty(memberName, Flags)?.GetValue(codeBehind);
+		if (value == null && type.GetMethod(memberName, Flags, Type.EmptyTypes) is MethodInfo method)
+		{
+			value = method.Invoke(codeBehind, null);
+		}
+		return value as UiTextBinding
+			?? throw new InvalidOperationException($"Text binding '{memberName}' on '{type.FullName}' must be a non-null UiTextBinding field, property or parameterless method.");
+	}
+
 	private static void BindNode(UiScene scene, UiNode node, object codeBehind)
 	{
 		string text = node.Attributes["ui-click"] ?? node.Attributes["data-click"];

@@ -9,7 +9,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.UI.HtmlEngine.Markup;
+using Ludots.UI.Input;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using Ludots.UI.Surface;
@@ -35,14 +35,15 @@ internal sealed class CrowdHudTestHost : IDisposable
         Settings = CrowdHudSettings.Parse(
             File.ReadAllText(Path.Combine(modRoot, CrowdHudSettings.RelativePath)),
             CrowdHudSettings.RelativePath);
-        var styleSheet = UiCssParser.ParseStyleSheet(File.ReadAllText(Path.Combine(modRoot, CrowdSimulationUiModEntry.StyleSheetPath)));
+        string html = File.ReadAllText(Path.Combine(modRoot, CrowdSimulationUiModEntry.MarkupPath));
+        string css = File.ReadAllText(Path.Combine(modRoot, CrowdSimulationUiModEntry.StyleSheetPath));
 
         OwnsEngine = engine == null;
         Engine = engine ?? new GameEngine();
-        var renderer = new SkiaUiRenderer();
+        Renderer = new SkiaUiRenderer();
         _surface = SKSurface.Create(new SKImageInfo((int)Width, (int)Height));
-        renderer.SetCanvas(_surface.Canvas);
-        Root = new UIRoot(renderer);
+        Renderer.SetCanvas(_surface.Canvas);
+        Root = new UIRoot(Renderer);
         Root.Resize(Width, Height);
         var textMeasurer = new SkiaTextMeasurer();
         TextMeasurer = textMeasurer;
@@ -69,7 +70,7 @@ internal sealed class CrowdHudTestHost : IDisposable
             }, new[] { 1, 2, 3, 4 }));
         }
 
-        Controller = new CrowdHudController(Settings, styleSheet);
+        Controller = new CrowdHudController(Settings, html, css);
         _clock = Stopwatch.Frequency;
     }
 
@@ -84,15 +85,14 @@ internal sealed class CrowdHudTestHost : IDisposable
     public CrowdHudController Controller { get; }
     public int Renders { get; private set; }
 
-    /// <summary>推进一帧：时钟前进 <paramref name="ms"/> 毫秒后跑控制器，UIRoot 脏了才清屏重画（渲染器直接画进目标画布）。</summary>
+    /// <summary>推进一帧：时钟前进 <paramref name="ms"/> 毫秒后跑控制器，UIRoot 脏了才重画；清屏和只重画改动区都由渲染器在保留的画布上做，和 Raylib 合成器一样。</summary>
     public void Frame(CrowdHudFeed? feed, double ms = 16d)
     {
-        _clock += (long)(ms * Stopwatch.Frequency / 1000d);
-        Controller.Tick(Engine, feed, _clock);
-        if (!Root.IsDirty) return;
-        _surface.Canvas.Clear(SKColors.Transparent);
-        Root.Render();
-        Renders++;
+		_clock += (long)(ms * Stopwatch.Frequency / 1000d);
+		Controller.Tick(Engine, feed, _clock);
+		if (!Root.IsDirty) return;
+		Root.Render();
+		Renders++;
     }
 
     /// <summary>跨过所有面板的采样周期，保证下一帧每个开着的面板都到点。</summary>
@@ -125,7 +125,61 @@ internal sealed class CrowdHudTestHost : IDisposable
         return sb.ToString();
     }
 
-    public string AllText() => Text(CrowdHudView.RootId);
+    public string AllText() => Text(CrowdHudPage.RootId);
+
+    /// <summary>节点及祖先都没有 nf-hidden 才算看得见。</summary>
+    public bool Visible(string id)
+    {
+        for (UiNode? node = Find(id) ?? throw new AssertionException($"UI 文档里没有 #{id}"); node != null; node = node.Parent)
+        {
+            if (node.HasClass("nf-hidden")) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>在节点中心按下再抬起左键，走 UIRoot 的命中测试，和 Raylib 宿主转发鼠标同一条路。</summary>
+    public bool Click(string id, float fractionX = 0.5f)
+    {
+        UiRect r = Rect(id);
+        float x = r.X + r.Width * fractionX;
+        float y = r.Y + r.Height * 0.5f;
+        bool down = Root.HandleInput(new PointerEvent { PointerId = 0, Action = PointerAction.Down, Button = PointerButton.Left, X = x, Y = y });
+        bool up = Root.HandleInput(new PointerEvent { PointerId = 0, Action = PointerAction.Up, Button = PointerButton.Left, X = x, Y = y });
+        return down || up;
+    }
+
+    public SkiaUiRenderer Renderer { get; }
+
+    /// <summary>
+    /// 保留画布上的像素和另起一张画布整张重画的结果逐像素比较，返回不同的像素数和它们的外接框。
+    /// </summary>
+    public int DiffAgainstFullRepaint(out SKRectI bounds)
+    {
+        using var fresh = SKSurface.Create(new SKImageInfo((int)Width, (int)Height));
+        fresh.Canvas.Clear(SKColors.Transparent);
+        new SkiaUiRenderer().RenderToCanvas(Root.Scene!, fresh.Canvas, Width, Height);
+        using var expected = fresh.Snapshot();
+        using var actual = _surface.Snapshot();
+        using var expectedPixels = expected.PeekPixels();
+        using var actualPixels = actual.PeekPixels();
+        ReadOnlySpan<uint> e = expectedPixels.GetPixelSpan<uint>();
+        ReadOnlySpan<uint> a = actualPixels.GetPixelSpan<uint>();
+        int width = (int)Width, diff = 0, left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
+        for (int i = 0; i < e.Length; i++)
+        {
+            if (e[i] == a[i]) continue;
+            diff++;
+            if (diff < 12) NUnit.Framework.TestContext.Progress.WriteLine($"DIFF x={i % (int)Width} y={i / (int)Width} expected={e[i]:X8} actual={a[i]:X8}");
+            int x = i % width, y = i / width;
+            left = Math.Min(left, x);
+            top = Math.Min(top, y);
+            right = Math.Max(right, x + 1);
+            bottom = Math.Max(bottom, y + 1);
+        }
+        bounds = diff == 0 ? SKRectI.Empty : new SKRectI(left, top, right, bottom);
+        return diff;
+    }
 
     /// <summary>把最后一次渲染的 HUD 叠在战场底色上存成 PNG。</summary>
     public void SavePng(string path)

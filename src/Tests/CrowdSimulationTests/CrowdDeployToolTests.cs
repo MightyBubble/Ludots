@@ -240,10 +240,14 @@ public sealed class CrowdDeployToolTests
         var feed = new CrowdHudFeed(host.Demo, presentation, () => session, () => null, null);
         using var ui = new CrowdHudTestHost();
         ui.Frame(feed);
-        string idle = ui.AllText();
-        Assert.That(idle, Does.Contain("工具 关闭"));
-        Assert.That(idle, Does.Contain(host.Demo.TickHzWindow));
-        Assert.That(idle, Does.Contain("×1"));
+        var page = ui.Controller.Page!;
+        Assert.That(ui.Click("crowd-dock-tab-tools"), Is.True);
+        ui.Frame(feed, 1);
+        Assert.That(ui.Find("crowd-tool-off")!.HasClass("nf-btn-on"), Is.True);
+        Assert.That(page.ToolHint.ToString(), Is.EqualTo("观察"));
+        Assert.That(page.TickRate.ToString(), Is.EqualTo($"{session.Config.FixedHz} Hz"));
+        Assert.That(page.Speed.ToString(), Is.EqualTo("1x"));
+        Assert.That(ui.Visible("crowd-rebake"), Is.False);
 
         Submit(session, new CrowdSimCommand { Kind = CrowdSimCommandKind.RebakeSlices, Slices = 1 });
         host.Demo.EnqueueTool(CrowdClickTool.Structure);
@@ -253,14 +257,17 @@ public sealed class CrowdDeployToolTests
         host.Demo.EnqueueMapClick(x, y);
         host.Demo.Tick();
         ui.FrameAfterAllPeriods(feed);
-        string after = ui.AllText();
-        Assert.That(after, Does.Contain("工具 结构"));
-        Assert.That(after, Does.Contain("脏 tile"));
-        Assert.That(after, Does.Contain("仅代价"));
-        Assert.That(after, Does.Contain("可通行"));
-        Assert.That(after, Does.Contain("耗时"));
-        Assert.That(after, Does.Contain("左键 结构"));
-        Assert.That(after, Does.Contain("切片"));
+        Assert.That(ui.Find("crowd-tool-place")!.HasClass("nf-btn-on"), Is.True);
+        Assert.That(ui.Find("crowd-tool-off")!.HasClass("nf-btn-on"), Is.False);
+        Assert.That(page.ToolHint.ToString(), Does.StartWith("建造 · "));
+        Assert.That(ui.Visible("crowd-rebake"), Is.True);
+        Assert.That(ui.Visible("crowd-rebake-rows"), Is.True);
+        Assert.That(ui.Visible("crowd-rebake-empty"), Is.False);
+        Assert.That(page.RebakeTiles.ToString(), Does.Match(@"^\d+ · \d+ 个 nav 上下文$"));
+        Assert.That(page.RebakeCost.ToString(), Does.EndWith("个上下文"));
+        Assert.That(page.RebakeCache.ToString(), Does.StartWith("命中 "));
+        Assert.That(page.RebakeMs.ToString(), Does.EndWith(" ms"));
+        Assert.That(ui.Find("crowd-slice-1")!.HasClass("nf-chip-on"), Is.True, "分帧 1 = 原型的“关闭”");
     }
 
     [Test]

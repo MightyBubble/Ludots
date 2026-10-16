@@ -71,6 +71,9 @@ public sealed class UiNode
 	/// <summary>上次排版量过的绑定版本。</summary>
 	internal int MeasuredTextVersion { get; set; }
 
+	/// <summary>场景上次交给渲染的 <see cref="UiVectorDrawList.Version"/>。</summary>
+	internal int PaintedVectorVersion { get; set; }
+
 	/// <summary>上次完整排版时这个节点对应的 flex 节点；文字变了靠它只标脏这一条链。</summary>
 	internal FlexLayoutSharp.Node? FlexNode { get; set; }
 

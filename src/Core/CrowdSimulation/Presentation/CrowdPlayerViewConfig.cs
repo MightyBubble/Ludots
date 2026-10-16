@@ -47,7 +47,6 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public string DefaultShapeId { get; init; } = "";
     [JsonRequired] public Dictionary<string, string> ShapeLabels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewActions Actions { get; init; } = null!;
-    [JsonRequired] public CrowdPlayerViewLabels Labels { get; init; } = null!;
     [JsonRequired] public CrowdPlayerViewColors Colors { get; init; } = null!;
 
     public static CrowdPlayerViewConfig Load(JsonObject node, string path)
@@ -128,7 +127,6 @@ internal sealed class CrowdPlayerViewConfig
         }
 
         Actions.Validate(path);
-        Labels.Validate(path);
         Colors.Validate(path);
     }
 
@@ -206,72 +204,6 @@ internal sealed class CrowdPlayerViewActions
 
     private static void Require(string path, string field, string value)
         => CrowdPlayerViewConfig.RequireText($"{path}.actions", field, value);
-}
-
-/// <summary>玩家视图状态卡文案，来自 CrowdSimulationPlayerView.json labels。</summary>
-public sealed class CrowdPlayerViewLabels
-{
-    [JsonRequired] public string Planning { get; init; } = "";
-    [JsonRequired] public string Moving { get; init; } = "";
-    [JsonRequired] public string Arrived { get; init; } = "";
-    [JsonRequired] public string Partial { get; init; } = "";
-    [JsonRequired] public string Idle { get; init; } = "";
-    [JsonRequired] public string MagicOn { get; init; } = "";
-    [JsonRequired] public string MagicOff { get; init; } = "";
-    [JsonRequired] public string Formation { get; init; } = "";
-    [JsonRequired] public string Converge { get; init; } = "";
-    [JsonRequired] public string Preserve { get; init; } = "";
-    [JsonRequired] public string FogOn { get; init; } = "";
-    [JsonRequired] public string FogOff { get; init; } = "";
-    [JsonRequired] public string RouteOn { get; init; } = "";
-    [JsonRequired] public string RouteOff { get; init; } = "";
-    [JsonRequired] public string LosOn { get; init; } = "";
-    [JsonRequired] public string LosOff { get; init; } = "";
-    [JsonRequired] public string ClickSpawn { get; init; } = "";
-    [JsonRequired] public string SceneOutside { get; init; } = "";
-    [JsonRequired] public string SceneBehind { get; init; } = "";
-    [JsonRequired] public string CountPlanning { get; init; } = "";
-    [JsonRequired] public string CountMoving { get; init; } = "";
-    [JsonRequired] public string CountOther { get; init; } = "";
-    [JsonRequired] public string UnitType { get; init; } = "";
-    [JsonRequired] public string Radius { get; init; } = "";
-    [JsonRequired] public string Count { get; init; } = "";
-    [JsonRequired] public string Deploy { get; init; } = "";
-    [JsonRequired] public string Layer { get; init; } = "";
-    [JsonRequired] public string Self { get; init; } = "";
-
-    internal void Validate(string path)
-    {
-        string prefix = $"{path}.labels";
-        CrowdPlayerViewConfig.RequireText(prefix, "planning", Planning);
-        CrowdPlayerViewConfig.RequireText(prefix, "moving", Moving);
-        CrowdPlayerViewConfig.RequireText(prefix, "arrived", Arrived);
-        CrowdPlayerViewConfig.RequireText(prefix, "partial", Partial);
-        CrowdPlayerViewConfig.RequireText(prefix, "idle", Idle);
-        CrowdPlayerViewConfig.RequireText(prefix, "magicOn", MagicOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "magicOff", MagicOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "formation", Formation);
-        CrowdPlayerViewConfig.RequireText(prefix, "converge", Converge);
-        CrowdPlayerViewConfig.RequireText(prefix, "preserve", Preserve);
-        CrowdPlayerViewConfig.RequireText(prefix, "fogOn", FogOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "fogOff", FogOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "routeOn", RouteOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "routeOff", RouteOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "losOn", LosOn);
-        CrowdPlayerViewConfig.RequireText(prefix, "losOff", LosOff);
-        CrowdPlayerViewConfig.RequireText(prefix, "clickSpawn", ClickSpawn);
-        CrowdPlayerViewConfig.RequireText(prefix, "sceneOutside", SceneOutside);
-        CrowdPlayerViewConfig.RequireText(prefix, "sceneBehind", SceneBehind);
-        CrowdPlayerViewConfig.RequireText(prefix, "countPlanning", CountPlanning);
-        CrowdPlayerViewConfig.RequireText(prefix, "countMoving", CountMoving);
-        CrowdPlayerViewConfig.RequireText(prefix, "countOther", CountOther);
-        CrowdPlayerViewConfig.RequireText(prefix, "unitType", UnitType);
-        CrowdPlayerViewConfig.RequireText(prefix, "radius", Radius);
-        CrowdPlayerViewConfig.RequireText(prefix, "count", Count);
-        CrowdPlayerViewConfig.RequireText(prefix, "deploy", Deploy);
-        CrowdPlayerViewConfig.RequireText(prefix, "layer", Layer);
-        CrowdPlayerViewConfig.RequireText(prefix, "self", Self);
-    }
 }
 
 internal sealed class CrowdPlayerViewColors
