@@ -22,6 +22,7 @@ uniform vec4 uControlBounds;
 uniform int uUseNavWalkability;
 uniform vec4 uNavWalkabilityBounds;
 uniform float uNavWalkabilityBlend;
+uniform int uNavWalkabilityTopRowIsMaxY;
 uniform sampler2D texture0;
 uniform sampler2D texture1;
 uniform sampler2D texture2;
@@ -159,7 +160,7 @@ void main()
         if (all(greaterThanEqual(worldCm, boundsMin)) && all(lessThanEqual(worldCm, boundsMax)))
         {
             vec2 uv = (worldCm - boundsMin) / max(boundsMax - boundsMin, vec2(1e-5));
-            uv.y = 1.0 - uv.y;
+            if (uNavWalkabilityTopRowIsMaxY != 0) uv.y = 1.0 - uv.y;
             vec4 navTint = texture(uNavWalkabilityMap, clamp(uv, vec2(0.0), vec2(1.0)));
             // 贴花槽位共用:流场/可走层取软化混合(0.35),战争迷雾取全强度(1.0)表达"不可见=黑"
             albedo = mix(albedo, navTint.rgb, clamp(navTint.a, 0.0, 1.0) * uNavWalkabilityBlend);

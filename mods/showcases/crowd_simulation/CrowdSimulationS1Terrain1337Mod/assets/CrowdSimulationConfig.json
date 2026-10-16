@@ -3,39 +3,42 @@
     "seed": 1337
   },
   "deploy": {
+    "initialUnits": 0,
     "bases": [
       {
         "playerId": 1,
         "xCm": 480000,
-        "yCm": 560000,
-        "color": "#4DB2FF"
+        "yCm": 560000
       },
       {
         "playerId": 2,
         "xCm": 1120000,
-        "yCm": 1040000,
-        "color": "#7ED957"
+        "yCm": 1040000
       },
       {
         "playerId": 3,
         "xCm": 1120000,
-        "yCm": 480000,
-        "color": "#FFC53D"
+        "yCm": 480000
       },
       {
         "playerId": 4,
         "xCm": 480000,
-        "yCm": 1120000,
-        "color": "#C792FF"
+        "yCm": 1120000
       }
     ]
   },
   "structures": {
     "templates": {
       "s7barrier": {
-        "name": "路障",
-        "footprint": "rect",
-        "blocker": true,
+        "layer": "base",
+        "footprint": "square",
+        "effect": {
+          "kind": "block",
+          "coverage": 0.5
+        },
+        "placement": {
+          "kind": "unrestricted"
+        },
         "lifetimeSec": 4
       }
     }

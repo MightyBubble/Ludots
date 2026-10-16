@@ -1,0 +1,10 @@
+{
+  "s7barrier": {
+    "template": "s7barrier",
+    "label": "路障)",
+    "gesture": {
+      "kind": "point"
+    },
+    "sizeCm": 7000
+  }
+}

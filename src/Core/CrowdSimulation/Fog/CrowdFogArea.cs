@@ -99,7 +99,7 @@ public sealed record CrowdFogShape
 
 /// <summary>形状 → fog 格。rect 覆盖触到的每一格；circle / poly 用格心。
 /// 空结果回退锚点格（circle 心 / poly 首顶点）。米坐标 FromDouble 后除以格长。
-/// 乘用 MulExact，除用精确商，开方用 SqrtPrecise。circle / poly 超出 ±46340 m 抛错；
+/// 乘用 MulExact，除用精确商，开方用 SqrtPrecise；poly 扫描线交点 128 位先乘后除。circle / poly 超出 ±46340 m 抛错；
 /// rect 不设这个守卫。命令在 tick 内执行。</summary>
 public static class CrowdFogArea
 {
@@ -202,9 +202,10 @@ public static class CrowdFogArea
                     if ((yi > py) != (yj > py))
                     {
                         if (nx == xs.Length) Array.Resize(ref xs, nx * 2);
-                        // t = (py−yi)/(yj−yi)。端点落在扫描线上时 t 可以是 0。
-                        Fix64 t = (py - yi) / (yj - yi);
-                        xs[nx++] = pts[i][0] + Fix64Math.MulExact(t, pts[j][0] - pts[i][0]);
+                        // 128 位先乘后除、只截断一次：先除的截断商会把恰在斜边上的格心推到边外一个最小单位，
+                        // 闭合边界漏格。|py−yi| < |yj−yi|，商不超过 |xj−xi|，不会溢出。
+                        Int128 num = (Int128)(py - yi).RawValue * (pts[j][0] - pts[i][0]).RawValue;
+                        xs[nx++] = pts[i][0] + Fix64.FromRaw((long)(num / (yj - yi).RawValue));
                     }
                 }
 

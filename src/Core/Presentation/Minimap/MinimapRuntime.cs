@@ -453,6 +453,7 @@ namespace Ludots.Core.Presentation.Minimap
             if (NativeChromeVisible)
             {
                 overlay.AddRect(
+                    PresentationOverlayLayer.TopMost,
                     _panelX,
                     _panelY,
                     _panelWidth,
@@ -460,6 +461,7 @@ namespace Ludots.Core.Presentation.Minimap
                     new Vector4(0.02f, 0.05f, 0.07f, 1f),
                     new Vector4(0.48f, 0.70f, 0.86f, 1f));
                 overlay.AddRect(
+                    PresentationOverlayLayer.TopMost,
                     _fieldX,
                     _fieldY,
                     _fieldSize,
@@ -469,12 +471,13 @@ namespace Ludots.Core.Presentation.Minimap
                     stableId: 0,
                     dirtySerial: 0,
                     clipShape: fieldClip);
-                overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
-                overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
+                overlay.AddText(PresentationOverlayLayer.TopMost, _panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
+                overlay.AddText(PresentationOverlayLayer.TopMost, _panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
             }
             else
             {
                 overlay.AddRect(
+                    PresentationOverlayLayer.TopMost,
                     _fieldX,
                     _fieldY,
                     _fieldSize,
@@ -497,11 +500,11 @@ namespace Ludots.Core.Presentation.Minimap
             RenderToggleButtons(overlay);
             if (!string.IsNullOrWhiteSpace(_diagnostic))
             {
-                overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
+                overlay.AddText(PresentationOverlayLayer.TopMost, _fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
             }
 
             int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 21;
-            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
+            overlay.AddText(PresentationOverlayLayer.TopMost, _panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
         }
 
         public bool ContainsField(Vector2 screenPosition)
@@ -1230,14 +1233,14 @@ namespace Ludots.Core.Presentation.Minimap
             Vector4 fill = new(0.93f, 0.72f, 0.28f, 0.98f);
             Vector4 thumb = new(1f, 0.93f, 0.62f, 1f);
             Vector4 border = new(0.48f, 0.70f, 0.86f, 1f);
-            overlay.AddRect(trackX, trackY, _zoomSliderWidth, ZoomSliderTrackHeight, track, border);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, trackX, trackY, _zoomSliderWidth, ZoomSliderTrackHeight, track, border);
             int fillWidth = Math.Max(0, thumbCenterX - trackX);
             if (fillWidth > 0)
             {
-                overlay.AddRect(trackX, trackY, fillWidth, ZoomSliderTrackHeight, fill, fill);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, trackX, trackY, fillWidth, ZoomSliderTrackHeight, fill, fill);
             }
 
-            overlay.AddRect(thumbX, thumbY, ZoomSliderThumbWidth, ZoomSliderThumbHeight, thumb, border);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, thumbX, thumbY, ZoomSliderThumbWidth, ZoomSliderThumbHeight, thumb, border);
         }
 
         private void RenderToggleButtons(ScreenOverlayBuffer overlay)
@@ -1274,8 +1277,8 @@ namespace Ludots.Core.Presentation.Minimap
             Vector4 text = active
                 ? new Vector4(0.98f, 0.96f, 0.72f, 1f)
                 : new Vector4(0.70f, 0.80f, 0.88f, 1f);
-            overlay.AddRect(x, y, ToggleButtonWidth, ToggleButtonHeight, fill, border);
-            overlay.AddText(x + 8, y + 5, label, 12, text);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, ToggleButtonWidth, ToggleButtonHeight, fill, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 8, y + 5, label, 12, text);
         }
 
         private float ResolveMetricGridStepCm()
@@ -1335,6 +1338,7 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             overlay.AddLine(
+                PresentationOverlayLayer.TopMost,
                 (int)MathF.Round(x0),
                 (int)MathF.Round(y0),
                 (int)MathF.Round(x1),
@@ -1474,16 +1478,17 @@ namespace Ludots.Core.Presentation.Minimap
                 Vector4 targetColor = new(1f, 0.95f, 0.55f, 1f);
                 int cx = (int)MathF.Round(targetX);
                 int cy = (int)MathF.Round(targetY);
-                overlay.AddRect(cx - CameraCenterCrossHalfExtent - 1, cy - 2, (CameraCenterCrossHalfExtent * 2) + 2, CameraCenterCrossThickness + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
-                overlay.AddRect(cx - 2, cy - CameraCenterCrossHalfExtent - 1, CameraCenterCrossThickness + 2, (CameraCenterCrossHalfExtent * 2) + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
-                overlay.AddRect(cx - CameraCenterCrossHalfExtent, cy - 1, CameraCenterCrossHalfExtent * 2, CameraCenterCrossThickness, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
-                overlay.AddRect(cx - 1, cy - CameraCenterCrossHalfExtent, CameraCenterCrossThickness, CameraCenterCrossHalfExtent * 2, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - CameraCenterCrossHalfExtent - 1, cy - 2, (CameraCenterCrossHalfExtent * 2) + 2, CameraCenterCrossThickness + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - 2, cy - CameraCenterCrossHalfExtent - 1, CameraCenterCrossThickness + 2, (CameraCenterCrossHalfExtent * 2) + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - CameraCenterCrossHalfExtent, cy - 1, CameraCenterCrossHalfExtent * 2, CameraCenterCrossThickness, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - 1, cy - CameraCenterCrossHalfExtent, CameraCenterCrossThickness, CameraCenterCrossHalfExtent * 2, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
             }
         }
 
         private static void AddScreenLine(ScreenOverlayBuffer overlay, Vector2 a, Vector2 b, int thickness, Vector4 color, PresentationClipShape clipShape)
         {
             overlay.AddLine(
+                PresentationOverlayLayer.TopMost,
                 (int)MathF.Round(a.X),
                 (int)MathF.Round(a.Y),
                 (int)MathF.Round(b.X),

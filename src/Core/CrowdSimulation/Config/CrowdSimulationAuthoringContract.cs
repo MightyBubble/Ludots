@@ -65,7 +65,8 @@ public static class CrowdSimulationAuthoringContract
                 throw new InvalidOperationException($"Maps/{map.Id}.json: 实体 \"{entity.InstanceId}\" 引用未知模板 \"{entity.Template}\"。");
             }
 
-            var obstacle = CrowdSimulationMapSurfaceSource.EffectiveObstacle(template, entity);
+            var obstacle = CrowdSimulationMapSurfaceSource.EffectiveObstacle(
+                template, entity, $"Maps/{map.Id}.json: 实体 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）");
             if (obstacle == null)
             {
                 continue;

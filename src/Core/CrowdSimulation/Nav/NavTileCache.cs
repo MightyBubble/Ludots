@@ -7,7 +7,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// Tile 缓存:以 tile 的精确输入为键(逐格 0 = 不可走,
 /// 否则区域编号 + 1;不做哈希,无碰撞)。内容相同的 tile 跨位置 / 跨上下文共享一份烘焙;
-/// 拆建筑恢复原键即命中。LRU 容量来自 navtile.cacheCapacity。
+/// 拆结构恢复原键即命中。LRU 容量来自 navtile.cacheCapacity。
 /// 这份缓存归烘焙/重烘。路径服务不持第二份导航态,worker 只持搜索暂存,计算时拿 PathQueryService 的导航锁。
 /// 缓存自己的烘焙暂存不可重入。
 /// 槽位在构造时备好。未命中领取空槽并写入,不分配;已发布的条目对象不被原地覆盖,
@@ -46,6 +46,7 @@ public sealed class NavTileCache
     /// <summary>累计烘焙耗时(遥测,不参与任何状态与摘要)。</summary>
     public double BakeMs { get; private set; }
     public int Count => _live;
+    public int Capacity => _capacity;
 
     /// <summary>测试 / 对拍用:逐条目的内容键与条目。</summary>
     public IEnumerable<(string Key, NavTileEntry Entry)> Entries

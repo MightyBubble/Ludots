@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -7,7 +8,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// 一个导航上下文（移动类型 × 净空）的烘焙产物：
-/// 代价栅格、可走栅格（净空腐蚀后）、升序可走格表、连通域、跳跃链接。
+/// 代价栅格、可走栅格（净空腐蚀后）、升序可走格表、连通域、链接。
 /// </summary>
 public sealed class NavContext
 {
@@ -30,34 +31,34 @@ public sealed class NavContext
     /// 增量重烘把新表写进已有缓冲,计数变化不再分配。</summary>
     public required int[] Cells { get; set; }
     public int CellCount { get; set; }
-    /// <summary>逐格连通域编号（-1 = 不可通行）。先 4 连通洪泛；有桥时 portal 把地面域和桥面洪泛块并到同一编号。跳跃链接不参与标号。</summary>
+    /// <summary>底层格连通域编号（-1 = 不可通行）。先 4 连通洪泛；入口 portal 把同一条上层条带连上的底层域并成同一编号。链接不参与标号。</summary>
     public required int[] Comp { get; set; }
     public required int CompCount { get; set; }
-    /// <summary>跳跃链接。无跳跃档、没有候选、或过滤后一条链接都没有，三者都是 null。</summary>
+    /// <summary>链接。无链接能力、没有候选、或过滤后一条链接都没有，三者都是 null。</summary>
     public required NavLinkSet? Links { get; set; }
-    /// <summary>桥面层可走格（无桥时全 0）。</summary>
+    /// <summary>上层可走格（无上层时全 0）。</summary>
     public required byte[] UpPass { get; init; }
-    /// <summary>桥头 portal 格（桥面与地面唯一互通处）。</summary>
+    /// <summary>入口 portal 格（上层与底层唯一互通处）。</summary>
     public required byte[] Portal { get; init; }
-    /// <summary>桥面可走格的区域编号（UpPass 处有效;tiles 缓存输入）。</summary>
+    /// <summary>上层可走格的区域编号（UpPass 处有效;tiles 缓存输入）。</summary>
     public required byte[] UpArea { get; init; }
-    /// <summary>桥面逐格代价（UpPass 处 = 区域代价;上行 HPA* / 流场用）。</summary>
+    /// <summary>上层逐格代价（UpPass 处 = 区域代价;上行 HPA* / 流场用）。</summary>
     public required Fix64[] UpCost { get; init; }
-    /// <summary>桥面逐格速度除数。未写 speedDivisor 时与 UpCost 逐格相同。</summary>
+    /// <summary>上层逐格速度除数。未写 speedDivisor 时与 UpCost 逐格相同。</summary>
     public required Fix64[] UpSpeedDivisor { get; init; }
     /// <summary>逐 tile 的缓存条目(拼装 / 查询的输入;仅在烘焙拿到缓存时填充)。</summary>
     public NavTileEntry?[]? Tiles { get; set; }
-    /// <summary>桥面 tile 条目(tile → 条目 + 桥头格 + 逐多边形代价;无桥为 null)。</summary>
+    /// <summary>上层 tile 条目(tile → 条目 + 入口格 + 逐多边形代价;无上层为 null)。</summary>
     public Dictionary<int, UpperTileInfo>? UpperTiles { get; set; }
     /// <summary>该移动类型最便宜的已定价区域代价(A* 启发缩放)。</summary>
     public required Fix64 MinCost { get; init; }
     /// <summary>HPA* 抽象图(烘焙末尾随上下文一起构建)。</summary>
     public HpaGraph? Hpa { get; set; }
-    /// <summary>桥面格 → 全局连通域编号(地面域之后顺排;-1 = 无桥面)。</summary>
+    /// <summary>上层格的连通域编号。按 upPass 的 4 连通分块，编号接在底层连通域之后，格号升序首见。-1 = 该格没有上层。不相连的上层条带各有各的号，即使区域相同。</summary>
     public int[]? UpComp { get; set; }
-    /// <summary>连通域总数(地面 + 桥面),可达备忘的键步长。</summary>
+    /// <summary>连通域总数（底层编号用尽之后的下一个号），可达备忘的键步长。</summary>
     public int CompCountTotal { get; set; }
-    /// <summary>合并可达图:跳跃链接出边 + 桥头双层互通边。桥面可达节点按 UpArea 首见编号，不是按桥的连通块。标准配置里每座桥都是区域 deck，所有桥头的地面域接到同一个节点。</summary>
+    /// <summary>合并可达图：链接出边，加上入口格上底层域与上层域的双向边。上层节点按上层连通块编号。</summary>
     public Dictionary<int, HashSet<int>>? ReachOut { get; set; }
 
     private readonly Dictionary<long, bool> _reachMemo = new(4096);
@@ -68,16 +69,38 @@ public sealed class NavContext
     // 增量重烘的全图缓冲。首次重烘分配，之后原地复用。CloneNav 不拷这些缓冲，变体上是 null，该变体第一次重烘才分配。
     internal int[]? FloodQueue;
     internal int[]? MergeBuffer;
-    internal int[]? DeckCompBuffer;
+    internal int[]? UpperLayerCompBuffer;
     internal int[]? UnionParent;
     internal int[]? UnionDense;
     internal byte[]? ErodeRow;
-    internal readonly Dictionary<int, int> AreaCompScratch = new(8);
+    internal byte[]? UpperLayerWin;
+    internal byte[]? UpperLayerEroded;
     internal readonly List<int> TileScratch = new(16);
     internal readonly HashSet<int> TileSeenScratch = new(16);
     internal readonly List<int> ChangedTileList = new(16);
     internal readonly HashSet<int> SameTiles = new(16);
     internal NavTileEntry?[]? PrevTiles;
+
+    private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>
+    {
+        public bool Equals((NavTileEntry A, int SideA, NavTileEntry B) x, (NavTileEntry A, int SideA, NavTileEntry B) y)
+            => ReferenceEquals(x.A, y.A) && ReferenceEquals(x.B, y.B) && x.SideA == y.SideA;
+
+        public int GetHashCode((NavTileEntry A, int SideA, NavTileEntry B) obj)
+            => HashCode.Combine(RuntimeHelpers.GetHashCode(obj.A), obj.SideA, RuntimeHelpers.GetHashCode(obj.B));
+    }
+
+    /// <summary>tile 边界缝合对的记忆化(随本上下文释放;每次全局拼装前清空)。</summary>
+    internal readonly Dictionary<(NavTileEntry A, int SideA, NavTileEntry B), int[]> StitchMemo = new(new StitchKeyComparer());
+    internal readonly object StitchMemoLock = new();
+
+    public void ClearStitchMemo()
+    {
+        lock (StitchMemoLock)
+        {
+            StitchMemo.Clear();
+        }
+    }
 
     /// <summary>导航版本:cost / passable 增量重烘各 +1;在途规划与流场答复按它判陈旧。</summary>
     public int Version { get; set; }
@@ -89,14 +112,14 @@ public sealed class NavContext
     /// <summary>连通域重标后失效可达备忘(comp 编号随重烘改变,旧键不再对应)。</summary>
     public void InvalidateReach() => _reachMemo.Clear();
 
-    /// <summary>格在某层的连通域(0 地面 / 1 桥面;桥面格没有桥面编号时 -1)。</summary>
+    /// <summary>格在某层的连通域(0 底层 / 1 上层;上层格没有上层编号时 -1)。</summary>
     public int CompAt(int cell, int level = 0)
     {
         if (level == 0) return Comp[cell];
         return UpComp != null ? UpComp[cell] : -1;
     }
 
-    /// <summary>连通域 a 能否到达 b(域内可走,域间靠跳跃链接与桥头互通边)。</summary>
+    /// <summary>连通域 a 能否到达 b(域内可走,域间靠链接与入口互通边)。</summary>
     public bool CanReach(int a, int b)
     {
         if (a == b) return a >= 0;
@@ -142,7 +165,6 @@ public sealed class NavContext
     /// 初始烘焙留下的小集合不回收：它们一加边就会再分配。</summary>
     internal void PrefillRebakePools()
     {
-        AreaCompScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSpanReserve);
         TileScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
         TileSeenScratch.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
         ChangedTileList.EnsureCapacity(CrowdSimulationLimits.HotPathSlotReserve);
@@ -173,19 +195,19 @@ public sealed class NavContext
     }
 }
 
-/// <summary>桥面 tile 的查询视图。</summary>
+/// <summary>上层 tile 的查询视图。</summary>
 public sealed class UpperTileInfo
 {
     public required NavTileEntry Entry { get; init; }
-    /// <summary>桥头 portal 格(tile 内 T² 下标)——与地面层唯一的互通处。</summary>
+    /// <summary>入口 portal 格(tile 内 T² 下标)——与底层唯一的互通处。</summary>
     public required int[] Portals { get; init; }
-    /// <summary>逐多边形代价(桥面区域代价按多边形格均值)。</summary>
+    /// <summary>逐多边形代价(上层区域代价按多边形格均值)。</summary>
     public required Fix64[] PolyCost { get; init; }
 }
 
 /// <summary>
-/// 有向离网链接集（跳跃）：from → to,cost = 格距 × 跳跃代价;two = 双向。
-/// 备忘在 NavContext 上。链接集只有 CompOut（跳跃边）；桥头边在 ReachOut。
+/// 有向离网链接集（穿越）：from → to,cost = 格距 × 链接代价;two = 双向。
+/// 备忘在 NavContext 上。链接集只有 CompOut（穿越边）；入口边在 ReachOut。
 /// </summary>
 public sealed class NavLinkSet
 {
@@ -199,7 +221,7 @@ public sealed class NavLinkSet
     public required int[] OutList { get; init; }
     public required int[] InStart { get; init; }
     public required int[] InList { get; init; }
-    /// <summary>连通域 → 可达连通域（有向;只含跳跃链接边,桥头互通边在 NavContext.ReachOut 合并）。
+    /// <summary>连通域 → 可达连通域（有向;只含链接边,入口互通边在 NavContext.ReachOut 合并）。
     /// 增量重烘的 relink 会按新连通域标号整表重导出(链表本体不动)。</summary>
     public required Dictionary<int, HashSet<int>> CompOut { get; set; }
     internal readonly Stack<HashSet<int>> CompSetPool = new(1024);

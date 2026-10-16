@@ -1,0 +1,508 @@
+<div id="crowd-hud">
+  <div id="crowd-left" class="crowd-rail">
+    <div id="crowd-brand-panel" class="nf-panel">
+      <div class="nf-brand">
+        <span class="nf-brand-title">NAVFORGE</span>
+        <span id="crowd-title" class="nf-label nf-mono nf-brand-sub" ui-text="Title"></span>
+      </div>
+
+      <div id="crowd-pr" class="nf-group">
+        <div class="nf-group-head">
+          <span class="nf-code">PR</span>
+          <span class="nf-group-title">生产参数</span>
+          <span class="nf-label nf-group-note">玩法规则 · 同生产</span>
+        </div>
+        <div class="nf-section">
+          <div class="nf-section-head">
+            <span class="nf-section-title">阵型</span>
+            <span id="crowd-order-mode" class="nf-primary-text" ui-text="OrderMode"></span>
+          </div>
+          <div id="crowd-formations" class="nf-seg"></div>
+          <div id="crowd-magic" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleMagicBox">
+            <span class="nf-switch-label">Magic Box</span>
+            <div id="crowd-magic-switch" class="nf-switch"><div class="nf-thumb"></div></div>
+          </div>
+          <span class="nf-label nf-para">目标在选中单位包围框外 → 保持相对位置平移；框内 → 聚拢成阵。右键拖拽划线 → 指定宽度与朝向（总是成阵）。</span>
+        </div>
+        <div class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">视野规则</span></div>
+          <div id="crowd-los" class="nf-switch-row" ui-click="ToggleLos">
+            <div class="nf-switch-text">
+              <span class="nf-switch-label">视线遮挡</span>
+              <span class="nf-label">建筑与更高的地形挡住视线</span>
+            </div>
+            <div id="crowd-los-switch" class="nf-switch"><div class="nf-thumb"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="crowd-path" class="nf-section nf-hidden">
+        <div class="nf-section-head"><span class="nf-section-title">两点路径</span></div>
+        <span id="crowd-path-detail" class="nf-label nf-para" ui-text="PathDetail"></span>
+        <span id="crowd-keys" class="nf-label nf-para" ui-text="PathKeys"></span>
+      </div>
+    </div>
+
+    <div id="crowd-dv" class="nf-panel nf-fill nf-scroll">
+      <div class="nf-group">
+        <div class="nf-group-head">
+          <span class="nf-code">DV</span>
+          <span class="nf-group-title">调试视图</span>
+          <span class="nf-label nf-group-note">只读 · 不改状态</span>
+        </div>
+        <div class="nf-tabbar nf-tabbar-fill">
+          <button id="crowd-dv-tab-player" class="nf-tab nf-tab-fill" ui-click="PickDvPlayer"><span class="nf-tab-face">玩家显示</span><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dv-tab-layers" class="nf-tab nf-tab-fill" ui-click="PickDvLayers"><span class="nf-tab-face">图层</span><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dv-tab-inspect" class="nf-tab nf-tab-fill" ui-click="PickDvInspect"><span class="nf-tab-face">检视</span><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dv-tab-overlays" class="nf-tab nf-tab-fill" ui-click="PickDvOverlays"><span class="nf-tab-face">叠加层</span><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dv-tab-cache" class="nf-tab nf-tab-fill" ui-click="PickDvCache"><span class="nf-tab-face">缓存</span><div class="nf-tab-ink"></div></button>
+        </div>
+
+        <div id="crowd-dv-player" class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">玩家显示</span></div>
+          <div class="nf-divide">
+            <div id="crowd-pv-route" class="nf-switch-row" ui-click="ToggleRoute">
+              <div class="nf-switch-text">
+                <span class="nf-switch-label">路线指示器</span>
+                <span class="nf-label">本方指令的剩余路线与终点</span>
+              </div>
+              <div id="crowd-pv-route-switch" class="nf-switch"><div class="nf-thumb"></div></div>
+            </div>
+            <div id="crowd-pv-fog" class="nf-switch-row" ui-click="ToggleFog">
+              <div class="nf-switch-text">
+                <span class="nf-switch-label">迷雾隐藏信息</span>
+                <span class="nf-label">视野外的敌方单位、敌方目标与未发现的实体不显示；实体按上次所见绘制</span>
+              </div>
+              <div id="crowd-pv-fog-switch" class="nf-switch"><div class="nf-thumb"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="crowd-dv-layers" class="nf-section">
+          <div class="nf-section-head">
+            <span class="nf-section-title">图层显示</span>
+            <span class="nf-label">单位数</span>
+          </div>
+          <div id="crowd-layer-rows" class="nf-stack-1"></div>
+        </div>
+
+        <div id="crowd-dv-inspect" class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">DB-09 · 导航上下文检视</span></div>
+          <div class="nf-stack-15">
+            <div id="crowd-inspect-layers" class="nf-seg"></div>
+            <div id="crowd-inspect-radii" class="nf-seg"></div>
+          </div>
+          <div class="nf-kv-list nf-mt-3">
+            <div class="nf-kv"><span class="nf-label">着色</span><span class="nf-value" ui-text="InspectColor"></span></div>
+            <div class="nf-kv"><span class="nf-label">地形类型</span><span class="nf-value" ui-text="InspectTerrain"></span></div>
+            <div class="nf-kv"><span class="nf-label">玩家 · 分歧 / 残影</span><span id="crowd-belief-line" class="nf-value" ui-text="InspectBelief"></span></div>
+          </div>
+          <div class="nf-row-wrap nf-mt-2">
+            <button class="nf-chip" ui-click="CycleBeliefGroup">下一视野组</button>
+          </div>
+        </div>
+
+        <div id="crowd-dv-overlays" class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">DB-07 · 叠加层</span></div>
+          <div class="nf-divide">
+            <div id="crowd-ov-byplayer" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleColorTeam"><span class="nf-switch-label">按队伍着色（关=按兵种色）· 形状=兵种</span><div id="crowd-ov-byplayer-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-pushprio" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleColorPriority"><span class="nf-switch-label">按推挤优先级着色（蓝=低 · 红=高）</span><div id="crowd-ov-pushprio-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-path" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleFunnel"><span class="nf-switch-label">NavMesh 漏斗路径 + 领队（本方）</span><div id="crowd-ov-path-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-density" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleDensity"><span class="nf-switch-label">单位密度热力</span><div id="crowd-ov-density-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-corridor" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleCorridor"><span class="nf-switch-label">HPA* 走廊（本方 · 检视层）</span><div id="crowd-ov-corridor-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-hpa" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleHpaGraph"><span class="nf-switch-label">HPA* 抽象图</span><div id="crowd-ov-hpa-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-navmesh" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleNavPolygons"><span class="nf-switch-label">NavMesh 多边形（检视层）</span><div id="crowd-ov-navmesh-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-tiles" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleTileGrid"><span class="nf-switch-label">Nav tile 网格（琥珀闪 = 刚重烘焙的 dirty tile）</span><div id="crowd-ov-tiles-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-flow" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleFlow"><span class="nf-switch-label">流场方向（放大可见）</span><div id="crowd-ov-flow-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-areas" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleObstacles"><span class="nf-switch-label">导航区域（按区域着色）</span><div id="crowd-ov-areas-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-belief" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleBelief"><span class="nf-switch-label">认知分歧（所选玩家 · 琥珀=分歧区块 · 虚线=残影 · 红=未知实体）</span><div id="crowd-ov-belief-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+            <div id="crowd-ov-links" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleLinks"><span class="nf-switch-label">跳跃链接（检视层 · 靛蓝=双向 · 琥珀=单向↓）</span><div id="crowd-ov-links-switch" class="nf-switch"><div class="nf-thumb"></div></div></div>
+          </div>
+        </div>
+
+        <div id="crowd-dv-cache" class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">DB-10 · 导航缓存与路径服务</span></div>
+          <div class="nf-stack-4">
+            <div class="nf-cache">
+              <div class="nf-kv"><span class="nf-text">Nav tiles（按 tile 内容）</span><span class="nf-value nf-muted" ui-text="TileCacheHead"></span></div>
+              <canvas class="nf-bar-1" ui-canvas="TileCacheBar"></canvas>
+              <span class="nf-value nf-muted nf-small" ui-text="TileCacheDetail"></span>
+            </div>
+            <div class="nf-cache">
+              <div class="nf-kv"><span class="nf-text">Flowfield</span><span class="nf-value nf-muted" ui-text="FlowCacheHead"></span></div>
+              <canvas class="nf-bar-1" ui-canvas="FlowCacheBar"></canvas>
+              <span class="nf-value nf-muted nf-small" ui-text="FlowCacheDetail"></span>
+            </div>
+            <div class="nf-kv-list">
+              <div class="nf-kv"><span class="nf-label">Nav 上下文（常驻 · worker 镜像）</span><span class="nf-value" ui-text="NavResident"></span></div>
+              <div class="nf-kv"><span class="nf-label">规划请求 / 待回</span><span class="nf-value" ui-text="NavRequests"></span></div>
+              <div class="nf-kv"><span class="nf-label">上次往返 / worker 计算</span><span class="nf-value" ui-text="NavRoundTrip"></span></div>
+              <div class="nf-kv"><span class="nf-label">等待 worker 的 tick</span><span class="nf-value" ui-text="NavWaits"></span></div>
+              <div class="nf-kv"><span class="nf-label">tick / 指令日志</span><span class="nf-value" ui-text="NavTick"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="crowd-center">
+    <div id="crowd-top">
+      <div id="crowd-playerbar" class="nf-panel">
+        <div id="crowd-players" class="nf-row-1"></div>
+        <div class="nf-vrule"></div>
+        <div class="nf-row-inline">
+          <span class="nf-label">已选</span>
+          <span class="nf-value" ui-text="Selected"></span>
+        </div>
+        <button class="nf-btn" ui-click="SelectAll">全选</button>
+        <button class="nf-btn" ui-click="ClearSelection">清除</button>
+      </div>
+      <div id="crowd-hint" class="nf-panel">
+        <span id="crowd-hint-text" class="nf-label" ui-text="Hint"></span>
+      </div>
+      <div id="crowd-fault" class="nf-panel nf-hidden">
+        <span class="nf-fault-title">任务失败</span>
+        <span id="crowd-fault-line" class="nf-mono nf-fault-text" ui-text="Fault"></span>
+      </div>
+      <div id="crowd-computing" class="nf-panel nf-hidden">
+        <span class="nf-pill-text">COMPUTING…</span>
+      </div>
+    </div>
+
+    <div id="crowd-notice-row">
+      <div id="crowd-notices">
+        <div id="crowd-notice-0" class="nf-panel nf-notice nf-hidden">
+          <div class="nf-kv">
+            <span class="nf-text" ui-text="Notice0Title"></span>
+            <div class="nf-metric-value">
+              <span class="nf-text" ui-text="Notice0Status"></span>
+              <span class="nf-text nf-muted" ui-text="Notice0StatusMuted"></span>
+              <span class="nf-text nf-bad" ui-text="Notice0StatusBad"></span>
+              <span class="nf-text nf-good" ui-text="Notice0StatusGood"></span>
+            </div>
+          </div>
+          <span class="nf-label" ui-text="Notice0Detail"></span>
+        </div>
+        <div id="crowd-notice-1" class="nf-panel nf-notice nf-hidden">
+          <div class="nf-kv">
+            <span class="nf-text" ui-text="Notice1Title"></span>
+            <div class="nf-metric-value">
+              <span class="nf-text" ui-text="Notice1Status"></span>
+              <span class="nf-text nf-muted" ui-text="Notice1StatusMuted"></span>
+              <span class="nf-text nf-bad" ui-text="Notice1StatusBad"></span>
+              <span class="nf-text nf-good" ui-text="Notice1StatusGood"></span>
+            </div>
+          </div>
+          <span class="nf-label" ui-text="Notice1Detail"></span>
+        </div>
+        <div id="crowd-notice-2" class="nf-panel nf-notice nf-hidden">
+          <div class="nf-kv">
+            <span class="nf-text" ui-text="Notice2Title"></span>
+            <div class="nf-metric-value">
+              <span class="nf-text" ui-text="Notice2Status"></span>
+              <span class="nf-text nf-muted" ui-text="Notice2StatusMuted"></span>
+              <span class="nf-text nf-bad" ui-text="Notice2StatusBad"></span>
+              <span class="nf-text nf-good" ui-text="Notice2StatusGood"></span>
+            </div>
+          </div>
+          <span class="nf-label" ui-text="Notice2Detail"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nf-grow"></div>
+
+    <div id="crowd-dock" class="nf-panel">
+      <div id="crowd-dock-body" class="nf-dock-body">
+        <div id="crowd-dock-deploy" class="nf-grid2">
+          <div class="nf-section">
+            <div class="nf-section-head"><span class="nf-section-title">部署命令</span></div>
+            <div class="nf-row-start">
+              <div id="crowd-deploy-params" class="nf-params">
+                <div class="nf-param">
+                  <span class="nf-label nf-param-label">单位数</span>
+                  <div class="nf-param-body">
+                    <canvas id="crowd-deploy-count-slider" class="nf-slider" ui-canvas="DeployCountSlider" ui-click="PickDeployCount"></canvas>
+                    <span class="nf-value nf-slider-value" ui-text="DeployCount"></span>
+                  </div>
+                </div>
+                <div class="nf-param">
+                  <span class="nf-label nf-param-label">单位类型</span>
+                  <div id="crowd-deploy-types" class="nf-param-body"></div>
+                </div>
+                <div class="nf-param">
+                  <span class="nf-label nf-param-label">半径 cm</span>
+                  <div id="crowd-deploy-radii" class="nf-param-body"></div>
+                </div>
+              </div>
+              <div class="nf-tiles">
+                <button class="nf-btn nf-tile nf-btn-primary" ui-click="Deploy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#faf8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span class="nf-tile-label">部署</span></button>
+                <button class="nf-btn nf-tile" ui-click="Scatter"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"/><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"/></svg><span class="nf-tile-label">随机指令</span></button>
+                <button class="nf-btn nf-tile nf-btn-danger" ui-click="Stress"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b53e30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg><span class="nf-tile-label" ui-text="StressLabel"></span></button>
+              </div>
+            </div>
+          </div>
+          <div id="crowd-spawn-section" class="nf-section">
+            <div class="nf-section-head">
+              <span class="nf-section-title">点击生成单位</span>
+              <span class="nf-label" ui-text="SpawnHead"></span>
+            </div>
+            <div class="nf-row-start">
+              <div class="nf-params">
+                <div class="nf-param">
+                  <span class="nf-label nf-param-label">单位类型</span>
+                  <div id="crowd-spawn-types" class="nf-param-body"></div>
+                </div>
+                <div class="nf-param">
+                  <span class="nf-label nf-param-label">半径 cm</span>
+                  <div id="crowd-spawn-radii" class="nf-param-body"></div>
+                </div>
+                <div class="nf-param">
+                  <span class="nf-label nf-param-label">数量</span>
+                  <div class="nf-param-body">
+                    <canvas id="crowd-spawn-count-slider" class="nf-slider" ui-canvas="SpawnCountSlider" ui-click="PickSpawnCount"></canvas>
+                    <span class="nf-value nf-slider-value" ui-text="SpawnCount"></span>
+                  </div>
+                </div>
+              </div>
+              <button id="crowd-spawn-tile" class="nf-btn nf-tile" ui-click="ToggleSpawnTool"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg><span class="nf-tile-label" ui-text="SpawnTileLabel"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div id="crowd-dock-tools" class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">DB-02 · 点击工具</span></div>
+          <div class="nf-row-wrap nf-gap-2">
+            <button id="crowd-tool-off" class="nf-btn nf-tile" ui-click="ToolOff"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg><span class="nf-tile-label">关闭</span></button>
+            <button id="crowd-tool-boom" class="nf-btn nf-tile" ui-click="ToolBoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="13" r="9"/><path d="M14.35 4.65 16.3 2.7a2.41 2.41 0 0 1 3.4 0l1.6 1.6a2.4 2.4 0 0 1 0 3.4l-1.95 1.95"/><path d="m22 2-1.5 1.5"/></svg><span class="nf-tile-label">爆炸</span></button>
+            <button id="crowd-tool-spawn" class="nf-btn nf-tile" ui-click="ToolSpawn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg><span class="nf-tile-label">生成</span></button>
+            <button id="crowd-tool-place" class="nf-btn nf-tile" ui-click="ToolPlace"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span class="nf-tile-label">放置实体</span></button>
+            <button id="crowd-tool-remove" class="nf-btn nf-tile" ui-click="ToolRemove"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"/></svg><span class="nf-tile-label">移除实体</span></button>
+            <div class="nf-vrule-tall"></div>
+            <button class="nf-btn nf-tile" ui-click="ClearCaches"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg><span class="nf-tile-label">清空流场缓存</span></button>
+          </div>
+          <span id="crowd-tool-hint" class="nf-label nf-mt-2" ui-text="ToolHint"></span>
+          <div id="crowd-structures" class="nf-row-wrap nf-gap-15 nf-mt-3 nf-hidden"></div>
+          <div id="crowd-rebake" class="nf-box nf-mt-3 nf-hidden">
+            <span class="nf-text nf-mb-2">上次重烘焙</span>
+            <span id="crowd-rebake-empty" class="nf-label" ui-text="RebakeEmpty"></span>
+            <div id="crowd-rebake-rows" class="nf-kv-list">
+              <div class="nf-kv"><span class="nf-label">Dirty tiles</span><span class="nf-value" ui-text="RebakeTiles"></span></div>
+              <div class="nf-kv"><span class="nf-label">仅代价 / 可通行变化</span><span class="nf-value" ui-text="RebakeCost"></span></div>
+              <div class="nf-kv"><span class="nf-label">Tile cache</span><span class="nf-value" ui-text="RebakeCache"></span></div>
+              <div class="nf-kv"><span class="nf-label">重规划指令 / 挤出单位</span><span class="nf-value" ui-text="RebakeOrders"></span></div>
+              <div class="nf-kv"><span class="nf-label">无处可挤出（卡在阻挡格）</span><span class="nf-value" ui-text="RebakeStuck"></span></div>
+              <div class="nf-kv"><span class="nf-label">重烘焙耗时</span><span class="nf-value" ui-text="RebakeMs"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="crowd-dock-tests" class="nf-grid2">
+          <div class="nf-section">
+            <div class="nf-section-head"><span class="nf-section-title">DB-03~06 · 校验与测试</span></div>
+            <div class="nf-row-wrap nf-gap-2">
+              <button class="nf-btn nf-tile" ui-click="Validate"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg><span class="nf-tile-label">一致性校验</span></button>
+              <button class="nf-btn nf-tile" ui-click="Fuzz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"/><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"/></svg><span class="nf-tile-label">模糊测试</span></button>
+            </div>
+            <div id="crowd-validation" class="nf-result nf-mt-3">
+              <span id="crowd-validation-line" class="nf-result-text" ui-text="Validation"></span>
+            </div>
+            <div id="crowd-fuzz" class="nf-result nf-mt-2">
+              <span id="crowd-fuzz-line" class="nf-result-text" ui-text="FuzzLine"></span>
+            </div>
+            <div class="nf-kv-list nf-mt-3">
+              <div class="nf-kv"><span class="nf-label">确定性回放</span><span id="crowd-replay-line" class="nf-value" ui-text="Replay"></span></div>
+              <div class="nf-kv"><span class="nf-label">计数</span><span id="crowd-counters-line" class="nf-value" ui-text="Counters"></span></div>
+              <div id="crowd-counter-detail" class="nf-kv"><span class="nf-label">区块调试</span><span id="crowd-counter-detail-line" class="nf-value" ui-text="CounterDetail"></span></div>
+            </div>
+          </div>
+          <div class="nf-section">
+            <div class="nf-section-head"><span class="nf-section-title">迷雾核对场景</span></div>
+            <div class="nf-row-wrap nf-gap-2">
+              <button class="nf-btn nf-tile" ui-click="SceneOutside"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg><span class="nf-tile-label">敌方在视野外</span></button>
+              <button class="nf-btn nf-tile" ui-click="SceneBehind"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3c3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span class="nf-tile-label">墙后敌方</span></button>
+            </div>
+          </div>
+        </div>
+
+        <div id="crowd-dock-prefs" class="nf-grid2">
+          <div class="nf-section">
+            <div class="nf-section-head"><span class="nf-section-title">DB-08 · 速率覆盖</span></div>
+            <div class="nf-field">
+              <div class="nf-kv nf-mb-2"><span class="nf-label">逻辑 Tick</span><span class="nf-value" ui-text="TickRate"></span></div>
+              <canvas class="nf-slider nf-slider-full" ui-canvas="TickSlider"></canvas>
+            </div>
+            <div class="nf-field nf-mt-3">
+              <div class="nf-kv nf-mb-2"><span class="nf-label">避障</span><span class="nf-value" ui-text="AvoidRate"></span></div>
+              <canvas id="crowd-avoid-slider" class="nf-slider nf-slider-full" ui-canvas="AvoidSlider" ui-click="PickAvoid"></canvas>
+            </div>
+            <span class="nf-label nf-para nf-mt-2">渲染始终按显示器帧率在两个 tick 之间插值；降低避障频率时按行错峰分摊计算，没有周期性尖峰。</span>
+          </div>
+          <div class="nf-section">
+            <div class="nf-section-head"><span class="nf-section-title">重烘焙分帧</span></div>
+            <div class="nf-seg">
+              <div class="nf-seg-row">
+                <button id="crowd-slice-1" class="nf-chip" ui-click="PickSlice1">关闭</button>
+                <button id="crowd-slice-2" class="nf-chip" ui-click="PickSlice2">2 帧</button>
+                <button id="crowd-slice-3" class="nf-chip" ui-click="PickSlice3">3 帧</button>
+              </div>
+            </div>
+            <span class="nf-label nf-para nf-mt-2">放置 / 移除实体时：第 1 帧重烘焙真实导航并同步认知，之后的帧依次做受影响单位的反应与重新规划。关闭 = 全部在同一帧完成。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="nf-dock-bar">
+        <button id="crowd-play" class="nf-btn nf-btn-primary nf-btn-square" ui-click="TogglePause">
+          <svg id="crowd-play-pause" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#faf8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+          <svg id="crowd-play-play" class="nf-hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#faf8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        </button>
+        <div class="nf-speed">
+          <button class="nf-speed-btn" ui-click="SpeedDown"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#827c73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button>
+          <span class="nf-value nf-speed-value" ui-text="Speed"></span>
+          <button class="nf-speed-btn" ui-click="SpeedUp"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#827c73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+        </div>
+        <div class="nf-vrule"></div>
+        <div class="nf-tabbar nf-dock-tabs">
+          <button id="crowd-dock-tab-deploy" class="nf-tab" ui-click="PickDockDeploy"><div class="nf-tab-face"><span class="nf-tab-code">CM</span><span class="nf-tab-label">部署</span></div><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dock-tab-tools" class="nf-tab" ui-click="PickDockTools"><div class="nf-tab-face"><span class="nf-tab-code">CM</span><span class="nf-tab-label">DB-02 点击工具</span></div><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dock-tab-tests" class="nf-tab" ui-click="PickDockTests"><div class="nf-tab-face"><span class="nf-tab-code">CM</span><span class="nf-tab-label">DB-03~06 校验测试</span></div><div class="nf-tab-ink"></div></button>
+          <button id="crowd-dock-tab-prefs" class="nf-tab" ui-click="PickDockPrefs"><div class="nf-tab-face"><span class="nf-tab-code">DP</span><span class="nf-tab-label">调试偏好</span></div><div class="nf-tab-ink"></div></button>
+        </div>
+        <button class="nf-collapse" ui-click="ToggleDock">
+          <svg id="crowd-dock-down" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#827c73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <svg id="crowd-dock-up" class="nf-hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#827c73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="crowd-right" class="crowd-rail">
+    <div id="crowd-telemetry" class="nf-panel nf-fill nf-hidden">
+      <div class="nf-tel-head">
+        <div class="nf-tel-titles">
+          <span class="nf-tel-title">TELEMETRY</span>
+          <span class="nf-label nf-small">DB-11 · 调试视图 · 只读</span>
+        </div>
+        <div class="nf-live">
+          <div class="nf-live-dot"></div>
+          <span class="nf-live-text">LIVE</span>
+        </div>
+      </div>
+      <div class="nf-fill nf-scroll nf-card">
+        <div class="nf-tel-body">
+        <div class="nf-hero">
+          <div class="nf-hero-row">
+            <div class="nf-hero-col">
+              <div class="nf-metric-value">
+                <span id="crowd-m-fps" class="nf-hero-num nf-primary-text" ui-text="Fps"></span>
+                <span id="crowd-m-fps-low" class="nf-hero-num nf-bad" ui-text="FpsLow"></span>
+              </div>
+              <span class="nf-label nf-mt-15" ui-text="FrameMs"></span>
+            </div>
+            <div class="nf-hero-col nf-hero-right">
+              <span id="crowd-m-units" class="nf-hero-num" ui-text="Units"></span>
+              <span class="nf-label nf-mt-15">Units</span>
+            </div>
+          </div>
+          <canvas class="nf-spark-32 nf-mt-3" ui-canvas="FpsSpark"></canvas>
+        </div>
+
+        <div class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">Performance</span></div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Sim step</span><div class="nf-metric-value"><span id="crowd-m-sim" class="nf-value nf-13" ui-text="SimMs"></span><span id="crowd-m-sim-alert" class="nf-value nf-13 nf-bad" ui-text="SimMsAlert"></span><span class="nf-unit">ms</span></div></div>
+            <canvas class="nf-spark-18" ui-canvas="SimSpark"></canvas>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Local Avoidance</span><div class="nf-metric-value"><span id="crowd-m-avoid" class="nf-value nf-13" ui-text="AvoidMs"></span><span id="crowd-m-avoid-alert" class="nf-value nf-13 nf-bad" ui-text="AvoidMsAlert"></span><span class="nf-unit">ms</span></div></div>
+            <canvas class="nf-spark-18" ui-canvas="AvoidSpark"></canvas>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Spatial hash</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="HashMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Render</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="RenderMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">UI 重绘峰值 / 面板编排</span><div class="nf-metric-value"><span id="crowd-m-ui" class="nf-value nf-13" ui-text="UiMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Allocations / sec（同进程堆 Δ）</span><div class="nf-metric-value"><span id="crowd-m-heap" class="nf-value nf-13" ui-text="HeapRate"></span><span class="nf-unit" ui-text="HeapUnit"></span></div></div>
+          </div>
+        </div>
+
+        <div class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">Motion quality · sim 层</span></div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Heading Δ / step（移动中）</span><div class="nf-metric-value"><span id="crowd-m-heading" class="nf-value nf-13" ui-text="Heading"></span><span id="crowd-m-heading-alert" class="nf-value nf-13 nf-bad" ui-text="HeadingAlert"></span><span class="nf-unit">°</span></div></div>
+            <canvas class="nf-spark-18" ui-canvas="HeadingSpark"></canvas>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">转向反复率（左右抖）</span><div class="nf-metric-value"><span id="crowd-m-flip" class="nf-value nf-13" ui-text="Flip"></span><span id="crowd-m-flip-alert" class="nf-value nf-13 nf-bad" ui-text="FlipAlert"></span><span class="nf-unit">%</span></div></div>
+            <canvas class="nf-spark-18" ui-canvas="FlipSpark"></canvas>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Fixed tick</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="FixedHz"></span><span class="nf-unit" ui-text="FixedUnit"></span></div></div>
+          </div>
+        </div>
+
+        <div class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">Pathfinding</span></div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">NavMesh A*+Funnel · last</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="NavMeshMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">HPA* search · last</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="HpaMs"></span><span class="nf-unit">ms</span></div></div>
+            <canvas class="nf-spark-18" ui-canvas="HpaSpark"></canvas>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Flowfield build</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="FlowMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">走廊扩展重建</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="Extend"></span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">指令规划</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="PlanMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">NavMesh bake</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="NavBakeMs"></span><span class="nf-unit">ms</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Dirty tile 重烘焙</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="RebakeTelMs"></span><span class="nf-unit" ui-text="RebakeTelUnit"></span></div></div>
+          </div>
+        </div>
+
+        <div class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">Agents</span></div>
+          <canvas class="nf-bar-15" ui-canvas="AgentsBar"></canvas>
+          <div class="nf-legend nf-mt-3">
+            <div class="nf-legend-row">
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-primary"></div><span class="nf-label">移动中</span></div><span class="nf-value" ui-text="AgentsMoving"></span></div>
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-success"></div><span class="nf-label">已抵达</span></div><span class="nf-value" ui-text="AgentsArrived"></span></div>
+            </div>
+            <div class="nf-legend-row">
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-destructive"></div><span class="nf-label">不可达</span></div><span class="nf-value" ui-text="AgentsUnreachable"></span></div>
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-muted"></div><span class="nf-label">待命</span></div><span class="nf-value" ui-text="AgentsIdle"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nf-section">
+          <div class="nf-section-head"><span class="nf-section-title">World</span></div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Nav cell</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="NavCell"></span><span class="nf-unit">m</span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">Nav tiles = HPA clusters</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="Clusters"></span></div></div>
+          </div>
+          <div class="nf-metric">
+            <div class="nf-metric-line"><span class="nf-label">World gen</span><div class="nf-metric-value"><span class="nf-value nf-13" ui-text="WorldGen"></span><span class="nf-unit" ui-text="WorldGenUnit"></span></div></div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

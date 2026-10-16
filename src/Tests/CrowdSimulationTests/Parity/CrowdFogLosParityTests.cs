@@ -20,15 +20,13 @@ namespace CrowdSimulationTests.Parity;
 /// </summary>
 public sealed class CrowdFogLosParityTests
 {
-    /// <summary>真值文件用 0 表示无不透明格，所以第 0 格无法以不透明格出现在对拍用例里。</summary>
-    private const int TruthNoOpaqueCell = 0;
-
     [Test]
     public void Sight_EngineeredHeights_MatchSandboxTruth()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         var fog = session.Fog!;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
@@ -57,8 +55,12 @@ public sealed class CrowdFogLosParityTests
                 hMax[int.Parse(kv.Key)] = Fix64.FromRaw(kv.Value!.GetValue<long>());
             }
 
-            int oc = c["opaque"]!.GetValue<int>();
-            if (oc != TruthNoOpaqueCell) opaque[oc] = 1;
+            var opaqueNode = c["opaque"];
+            if (opaqueNode != null)
+            {
+                int oc = opaqueNode.GetValue<int>();
+                opaque[oc] = 1;
+            }
             hAvgField.SetValue(fog, hAvg);
             hMaxField.SetValue(fog, hMax);
             opaqueField.SetValue(fog, opaque);

@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -22,6 +23,7 @@ public sealed class FogHudCountTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         Assert.That(session.Fog, Is.Not.Null);
         Assert.That(session.Fog!.Store, Is.SameAs(session.Structures));
@@ -30,28 +32,34 @@ public sealed class FogHudCountTests
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7fog-truth.json")))!;
         int ticks = meta["ticks"]!.GetValue<int>();
         Assert.That(ticks, Is.GreaterThanOrEqualTo(300));
-        var script = new List<CrowdCommand>();
+        var rows = new List<(int Tick, JsonNode Cmd)>();
         foreach (var entry in meta["script"]!.AsArray())
         {
-            script.Add(new CrowdCommand(entry!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(entry["cmd"]!)));
+            rows.Add((entry!["tick"]!.GetValue<int>(), entry["cmd"]!.DeepClone()));
         }
 
-        script.Add(new CrowdCommand(6, CrowdSimCommand.Parse(JsonNode.Parse(
-            """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}""")!)));
-        script.Add(new CrowdCommand(7, CrowdSimCommand.Parse(JsonNode.Parse(
-            """{"type":"reveal","player":1,"rect":[610000,610000,630000,630000]}""")!)));
-        script.Sort((a, b) => a.Tick.CompareTo(b.Tick));
-        session.Commands.Schedule(session, script);
+        rows.Add((6, JsonNode.Parse(
+            """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}""")!));
+        rows.Add((7, JsonNode.Parse(
+            """{"type":"reveal","player":1,"rect":[610000,610000,630000,630000]}""")!));
+        rows.Sort((a, b) => a.Tick.CompareTo(b.Tick));
+        var script = new JsonArray();
+        foreach (var row in rows)
+        {
+            script.Add(new JsonObject { ["tick"] = row.Tick, ["cmd"] = row.Cmd });
+        }
+
+        var reference = CrowdReferenceScript.Load(script, session.Units.Capacity);
 
         var fog = session.Fog;
         int sawVisible = 0, sawExplored = 0, sawGhost = 0;
         int entitiesAfterBarrier = -1, entitiesAfterExpiry = -1;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!reference.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!reference.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }
@@ -64,11 +72,11 @@ public sealed class FogHudCountTests
             for (int g = 0; g < fog.VisionGroupCount; g++)
             {
                 int visible = 0, explored = 0;
-                int origin = g * f2;
                 for (int c = 0; c < f2; c++)
                 {
-                    if (fog.Visible[origin + c] != 0) visible++;
-                    if (fog.Explored[origin + c] != 0) explored++;
+                    CellVisibility visibility = fog.CellVisibilityOf(g, c);
+                    if (visibility == CellVisibility.Visible) visible++;
+                    if (visibility == CellVisibility.Visible || visibility == CellVisibility.Explored) explored++;
                 }
 
                 int ghosts = 0;
@@ -77,8 +85,8 @@ public sealed class FogHudCountTests
                     if (!fog.Store.TryGetFootprint(id, out _)) ghosts++;
                 }
 
-                Assert.That(fog.VisibleCount[g], Is.EqualTo(visible), $"tick {t} 组 {g} 可见格");
-                Assert.That(fog.ExploredCount[g], Is.EqualTo(explored), $"tick {t} 组 {g} 已探索格");
+                Assert.That(fog.VisibleCountOf(g), Is.EqualTo(visible), $"tick {t} 组 {g} 可见格");
+                Assert.That(fog.ExploredCountOf(g), Is.EqualTo(explored), $"tick {t} 组 {g} 已探索格");
                 Assert.That(fog.GhostCount[g], Is.EqualTo(ghosts), $"tick {t} 组 {g} 残影");
                 if (visible > sawVisible) sawVisible = visible;
                 if (explored > sawExplored) sawExplored = explored;

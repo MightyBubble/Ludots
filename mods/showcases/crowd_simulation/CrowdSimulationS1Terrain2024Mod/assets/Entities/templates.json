@@ -36,6 +36,9 @@
         "navRadiusCm": 0,
         "localOffsetXCm": 0,
         "localOffsetYCm": 0
+      },
+      "CrowdSimulationStructure": {
+        "template": "building"
       }
     }
   },
@@ -60,6 +63,9 @@
         "navRadiusCm": 0,
         "localOffsetXCm": 0,
         "localOffsetYCm": 0
+      },
+      "CrowdSimulationStructure": {
+        "template": "building"
       }
     }
   },
@@ -84,6 +90,9 @@
         "navRadiusCm": 0,
         "localOffsetXCm": 0,
         "localOffsetYCm": 0
+      },
+      "CrowdSimulationStructure": {
+        "template": "building"
       }
     }
   },
@@ -99,17 +108,15 @@
           "Y": 0
         }
       },
-      "CrowdSimulationBridgeSpan": {
-        "x0Cm": 0,
-        "y0Cm": 0,
-        "x1Cm": 0,
-        "y1Cm": 0,
-        "widthCm": 0
+      "CrowdSimulationStructure": {
+        "template": "bridge"
       },
-      "CrowdSimulationNavArea": {
-        "area": "deck",
-        "priority": 30,
-        "layered": true
+      "CrowdSimulationPathSpan": {
+        "fromXCm": 0,
+        "fromYCm": 0,
+        "toXCm": 0,
+        "toYCm": 0,
+        "widthCm": 0
       }
     }
   }

@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -93,6 +94,8 @@ namespace Ludots.Core.Presentation.Systems
                 ArgumentNullException.ThrowIfNull(_definitions);
                 ArgumentNullException.ThrowIfNull(_stableIds);
             }
+
+            PresentationLifecycleConsumption.InstallConsumer(world);
         }
 
         public override void Update(in float dt)

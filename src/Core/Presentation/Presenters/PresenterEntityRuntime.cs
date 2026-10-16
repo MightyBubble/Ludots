@@ -3910,14 +3910,19 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (!_world.Has<CullState>(owner))
             {
-                ownerCullVisible = true;
+                ownerCullVisible = !HiddenByPresentation(owner);
                 ownerLod = LODLevel.High;
                 return;
             }
 
             ref readonly CullState cull = ref _world.Get<CullState>(owner);
-            ownerCullVisible = cull.IsVisible;
+            ownerCullVisible = cull.IsVisible && !HiddenByPresentation(owner);
             ownerLod = cull.LOD;
+        }
+
+        private bool HiddenByPresentation(Entity owner)
+        {
+            return _world.Has<PresentationHidden>(owner) && _world.Get<PresentationHidden>(owner).Hidden;
         }
 
         private void RemoveOwnerPayloadRef(Entity owner)

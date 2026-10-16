@@ -214,6 +214,7 @@ namespace Ludots.Tests.GAS
                             AxisMove = new ControlSchemeAxisMove
                             {
                                 ActionId = "Move",
+                                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
                                 OrderTypeKey = "moveTo",
                                 ThrottleTicks = 6,
                                 StepDistanceCm = 400,

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -35,35 +34,21 @@ public sealed class NavMeshView
 /// </summary>
 public static class NavMeshAssembler
 {
-    // 边界重叠对(stitchPairs):(条目A, sideA, 条目B) → [i, j, lo, hi]×k
-    // 键是条目引用(条目不可变且被缓存共享;uid 跨缓存实例会撞号,静态 memo 不能只靠 uid)
-    // 记忆化结果是条目的纯函数,多 worker 查询共享;加锁只保线程安全,不影响结果
-    private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>
+    public static int[] StitchPairs(NavContext memoOwner, NavTileEntry ea, NavTileEntry eb, int sideA, int sideB)
     {
-        public bool Equals((NavTileEntry A, int SideA, NavTileEntry B) x, (NavTileEntry A, int SideA, NavTileEntry B) y)
-            => ReferenceEquals(x.A, y.A) && ReferenceEquals(x.B, y.B) && x.SideA == y.SideA;
-
-        public int GetHashCode((NavTileEntry A, int SideA, NavTileEntry B) obj)
-            => HashCode.Combine(RuntimeHelpers.GetHashCode(obj.A), obj.SideA, RuntimeHelpers.GetHashCode(obj.B));
-    }
-
-    private static readonly Dictionary<(NavTileEntry A, int SideA, NavTileEntry B), int[]> _stitchMemo = new(new StitchKeyComparer());
-    private static readonly object _stitchMemoLock = new();
-
-    public static int[] StitchPairs(NavTileEntry ea, NavTileEntry eb, int sideA, int sideB)
-    {
+        ArgumentNullException.ThrowIfNull(memoOwner);
         var key = (ea, sideA, eb);
-        lock (_stitchMemoLock)
+        lock (memoOwner.StitchMemoLock)
         {
-            if (_stitchMemo.TryGetValue(key, out var cached)) return cached;
+            if (memoOwner.StitchMemo.TryGetValue(key, out var cached)) return cached;
         }
 
         var res = new List<int>();
         StitchInto(ea, eb, sideA, sideB, res);
         var output = res.ToArray();
-        lock (_stitchMemoLock)
+        lock (memoOwner.StitchMemoLock)
         {
-            _stitchMemo[key] = output;
+            memoOwner.StitchMemo[key] = output;
         }
 
         return output;
@@ -92,20 +77,12 @@ public static class NavMeshAssembler
         }
     }
 
-    /// <summary>清空记忆化。键是条目引用,清空是为了放开仍被静态字典留着的旧条目。</summary>
-    public static void ClearStitchMemo()
-    {
-        lock (_stitchMemoLock)
-        {
-            _stitchMemo.Clear();
-        }
-    }
-
     /// <summary>拼装某上下文的全部 tile(传 null 的槽位 = 该 tile 无内容,按空处理)。</summary>
-    public static NavMeshView Assemble(NavTileEntry?[] tiles, Fix64[] cost, int navCellsPerSide, int navCellsPerTile)
+    public static NavMeshView Assemble(NavContext memoOwner, NavTileEntry?[] tiles, Fix64[] cost, int navCellsPerSide, int navCellsPerTile)
     {
+        ArgumentNullException.ThrowIfNull(memoOwner);
         ArgumentNullException.ThrowIfNull(tiles);
-        ClearStitchMemo(); // memo 键是条目引用,跨烘焙复用;新会话清空避免老条目常驻
+        memoOwner.ClearStitchMemo();
         int navTilesPerSide = navCellsPerSide / navCellsPerTile, navTileCount = navTilesPerSide * navTilesPerSide;
 
         var polyBase = new int[navTileCount + 1];
@@ -168,7 +145,7 @@ public static class NavMeshAssembler
         {
             var ea = tiles[ta] ?? EmptyEntry;
             var eb = tiles[tb] ?? EmptyEntry;
-            var pairs = StitchPairs(ea, eb, sa, sb);
+            var pairs = StitchPairs(memoOwner, ea, eb, sa, sb);
             for (int k = 0; k < pairs.Length; k += 4)
             {
                 int i = pairs[k], j = pairs[k + 1], lo = pairs[k + 2], hi = pairs[k + 3];

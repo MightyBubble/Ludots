@@ -1,0 +1,46 @@
+{
+  "session": {
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 1,
+          "xCm": 715625,
+          "yCm": 828125,
+          "count": 200,
+          "template": "crowd_minimal.unit"
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 2,
+          "xCm": 715625,
+          "yCm": 765625,
+          "count": 200,
+          "template": "crowd_minimal.unit"
+        }
+      },
+      {
+        "tick": 1,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 890625,
+          "yCm": 828125
+        }
+      },
+      {
+        "tick": 1,
+        "cmd": {
+          "type": "order",
+          "player": 2,
+          "xCm": 890625,
+          "yCm": 765625
+        }
+      }
+    ]
+  }
+}

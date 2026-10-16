@@ -67,7 +67,7 @@ namespace Ludots.Tests.Gas
                   },
                   "navMesh": {
                     "areaCosts": [
-                      { "areaId": 0, "cost": 1.0 }
+                      { "areaId": 0, "cost": 1.0, "passable": true }
                     ]
                   },
                   "nodeGraph": {

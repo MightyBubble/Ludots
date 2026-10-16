@@ -655,6 +655,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         int instructionX = layout.X + layout.InstructionColumnX;
         int instructionY = layout.Y + layout.Padding;
         _overlay.AddRect(
+            PresentationOverlayLayer.TopMost,
             layout.X,
             layout.Y,
             layout.Width,
@@ -663,9 +664,10 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             PanelBorder,
             stableId: 71400,
             dirtySerial: 1);
-        _overlay.AddText(statusX, statusY, hud.Title, layout.TitleFontSize, Title, stableId: 71401, dirtySerial: 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, hud.Title, layout.TitleFontSize, Title, stableId: 71401, dirtySerial: 1);
         statusY += layout.TitleFontSize + 6;
         _overlay.AddText(
+            PresentationOverlayLayer.TopMost,
             statusX,
             statusY,
             visibleRoomStatusText,
@@ -674,47 +676,47 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             stableId: 71402,
             dirtySerial: dynamicDirtySerial);
         statusY += layout.LineHeight;
-        _overlay.AddText(instructionX, instructionY, hud.Objective, layout.StatusFontSize, Accent, stableId: 71404, dirtySerial: 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, instructionX, instructionY, hud.Objective, layout.StatusFontSize, Accent, stableId: 71404, dirtySerial: 1);
         instructionY += layout.TitleFontSize + 6;
-        _overlay.AddText(instructionX, instructionY, hud.GatherHint, layout.BodyFontSize, Text, stableId: 71405, dirtySerial: 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, instructionX, instructionY, hud.GatherHint, layout.BodyFontSize, Text, stableId: 71405, dirtySerial: 1);
         instructionY += layout.LineHeight;
-        _overlay.AddText(instructionX, instructionY, hud.TrainHint, layout.BodyFontSize, Text, stableId: 71406, dirtySerial: 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, instructionX, instructionY, hud.TrainHint, layout.BodyFontSize, Text, stableId: 71406, dirtySerial: 1);
         instructionY += layout.LineHeight;
-        _overlay.AddText(instructionX, instructionY, hud.AttackHint, layout.BodyFontSize, Text, stableId: 71407, dirtySerial: 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, instructionX, instructionY, hud.AttackHint, layout.BodyFontSize, Text, stableId: 71407, dirtySerial: 1);
         if (snapshot.Phase is FrontlineMatchPhase.WaitingForPlayers or FrontlineMatchPhase.Countdown)
         {
-            _overlay.AddText(statusX, statusY, hud.ReadyHint, layout.BodyFontSize, Accent, stableId: 71408, dirtySerial: 1);
+            _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, hud.ReadyHint, layout.BodyFontSize, Accent, stableId: 71408, dirtySerial: 1);
             statusY += layout.LineHeight;
             if (_sideStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _sideStatusText, layout.BodyFontSize, Text, stableId: 71403, dirtySerial: dynamicDirtySerial);
+                _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, _sideStatusText, layout.BodyFontSize, Text, stableId: 71403, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_connectionStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71412, dirtySerial: dynamicDirtySerial);
+                _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71412, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_opponentStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71413, dirtySerial: dynamicDirtySerial);
+                _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71413, dirtySerial: dynamicDirtySerial);
             }
         }
         else
         {
             if (_commandStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _commandStatusText, layout.BodyFontSize, Accent, stableId: 71414, dirtySerial: dynamicDirtySerial);
+                _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, _commandStatusText, layout.BodyFontSize, Accent, stableId: 71414, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_connectionStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71415, dirtySerial: dynamicDirtySerial);
+                _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71415, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_opponentStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71416, dirtySerial: dynamicDirtySerial);
+                _overlay.AddText(PresentationOverlayLayer.TopMost, statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71416, dirtySerial: dynamicDirtySerial);
             }
         }
 
@@ -734,6 +736,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
             int outcomeY = layout.Y + layout.Height + layout.OutcomeGap;
             _overlay.AddRect(
+                PresentationOverlayLayer.TopMost,
                 layout.X,
                 outcomeY,
                 layout.OutcomeWidth,
@@ -743,6 +746,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 stableId: 71410,
                 dirtySerial: (int)outcome);
             _overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 statusX,
                 outcomeY + layout.Padding,
                 _outcomeText,

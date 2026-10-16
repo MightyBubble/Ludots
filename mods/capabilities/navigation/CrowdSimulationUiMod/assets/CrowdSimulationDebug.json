@@ -1,0 +1,46 @@
+{
+  "tools": {
+    "boomRadiusCm": 12500,
+    "ringScale": 2,
+    "impulse": 4,
+    "spawnCount": 24,
+    "spawnTemplate": "crowd_simulation.unit.infantry.r100",
+    "placeEntry": "building",
+    "speedStepsPermille": [
+      500,
+      1000,
+      2000,
+      4000
+    ]
+  },
+  "rates": {
+    "avoidHzMin": 1,
+    "avoidHzMax": 30,
+    "avoidStep": 1
+  },
+  "fuzz": {
+    "sliceMs": 8,
+    "opCount": 200,
+    "seed": 7,
+    "stepsPerOp": 2,
+    "probeHandles": 32,
+    "spawnCount": 8,
+    "placeTemplate": "building",
+    "placeSizeCm": 14000,
+    "orderShape": "box",
+    "orderMemberCap": 8,
+    "stallGuard": 64,
+    "pathTemplate": "bridge",
+    "pathWidthCm": 6250,
+    "pathLengthCm": 62500,
+    "ops": [
+      "spawn",
+      "order",
+      "place",
+      "remove",
+      "placePath",
+      "removePath",
+      "kill"
+    ]
+  }
+}

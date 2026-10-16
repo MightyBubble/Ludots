@@ -57,6 +57,19 @@ namespace Ludots.Raylib.Render
                 "RIGHTCTRL" => KeyboardKey.KEY_RIGHT_CONTROL,
                 "RIGHTALT" => KeyboardKey.KEY_RIGHT_ALT,
                 "LEFTCTRL" => KeyboardKey.KEY_LEFT_CONTROL,
+                "LEFTSUPER" => KeyboardKey.KEY_LEFT_SUPER,
+                "RIGHTSUPER" => KeyboardKey.KEY_RIGHT_SUPER,
+                "LEFTCMD" => KeyboardKey.KEY_LEFT_SUPER,
+                "RIGHTCMD" => KeyboardKey.KEY_RIGHT_SUPER,
+                "COMMA" => KeyboardKey.KEY_COMMA,
+                "PERIOD" => KeyboardKey.KEY_PERIOD,
+                "SLASH" => KeyboardKey.KEY_SLASH,
+                "SEMICOLON" => KeyboardKey.KEY_SEMICOLON,
+                "APOSTROPHE" => KeyboardKey.KEY_APOSTROPHE,
+                "PAUSE" => KeyboardKey.KEY_PAUSE,
+                "PRINTSCREEN" => KeyboardKey.KEY_PRINT_SCREEN,
+                "LEFTBRACKET" => KeyboardKey.KEY_LEFT_BRACKET,
+                "RIGHTBRACKET" => KeyboardKey.KEY_RIGHT_BRACKET,
                 _ => null
             };
         }

@@ -13,7 +13,6 @@ using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Terrain;
 
@@ -36,7 +35,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     public bool Active { get; set; } = true;
     public int TickCounter { get; private set; }
     public int ContextIndex { get; private set; }
-    /// <summary>视图模式:0 路线(方向场+折线) · 1 可走区域(不可走红罩/桥面/portal) · 2 NavMesh+HPA 线框。</summary>
+    /// <summary>视图模式:0 路线(方向场+折线) · 1 可走区域(不可走红罩/上层/portal) · 2 NavMesh+HPA 线框。</summary>
     public int ViewMode { get; private set; }
     private string[]? _viewLabels;
     private int _viewModeCount = 3;
@@ -67,8 +66,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             ?? throw new InvalidOperationException("S3 路径演示需要 AgentProfiles 服务。");
         var navmesh = new NavMeshBakeConfigLoader(engine.ConfigPipeline, agentProfiles)
             .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
-        var pathing = new PathingConfigLoader(engine.ConfigPipeline)
-            .Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var traversal = CrowdTraversalConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
         var templateFacts = CrowdUnitTemplateFacts.FromTemplates(engine.MapLoader.TemplateRegistry.GetAll());
         int fixedHz = (int)MathF.Round(1f / Time.FixedDeltaTime);
         var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
@@ -77,14 +75,14 @@ public sealed class S3PathDemoRuntime : IDisposable
             ?? throw new InvalidOperationException("S3 路径演示需要 PlayerEntityLookup。");
         var projected = CrowdPairRulesProjection.Project(configDto, map, teamRelations, players, engine.World);
         var runtime = CrowdSimulationConfigLoader.Load(
-            configDto, map, agentProfiles, navmesh, pathing, templateFacts, fixedHz, projected.Rules);
+            configDto, map, agentProfiles, navmesh, traversal, templateFacts, fixedHz, projected.Rules);
         var templatesById = engine.MapLoader.TemplateRegistry.GetAll()
             .Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        var surface = NavSurfaceAsset.Read(CrowdSimulationRuntime.OpenAsset(engine, "assets/" + runtime.SurfaceAsset));
+        string surfaceAssetPath = "assets/" + runtime.SurfaceAsset;
+        var surface = NavSurfaceAsset.Read(CrowdSimulationRuntime.OpenAsset(engine, surfaceAssetPath));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
-        var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
         string? heightRel = map.ContinuousHeightmap?.Asset;
         if (string.IsNullOrWhiteSpace(heightRel))
         {
@@ -92,8 +90,20 @@ public sealed class S3PathDemoRuntime : IDisposable
         }
 
         var heightAsset = ContinuousHeightmapBinary.Read(CrowdSimulationRuntime.OpenAsset(engine, heightRel));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
+        var board = NavSolverDeclaration.RequireBoard(map, NavSolverDeclaration.RequireMap(navmesh, map.Id));
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtime,
+            board.WidthCm,
+            board.HeightCm,
+            surface,
+            surfaceAssetPath,
+            heightAsset,
+            heightRel,
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
+        var grid = ingested.Grid;
+        var heights = ingested.Heights;
+        var upperLayer = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
 
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
@@ -108,7 +118,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         {
             foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
-                var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
+                var nav = NavContextBaker.Bake(runtime, grid, heights, upperLayer, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
                 contexts.Add(nav);
                 labels.Add($"{runtime.AgentTypes[a].Id} c{clearance}");
@@ -136,12 +146,13 @@ public sealed class S3PathDemoRuntime : IDisposable
     public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
     public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }
     public void EnqueueCycleThreads() { lock (_inputGate) _inputQueue.Enqueue(() => Service.SetWorkerCount(Service.WorkerCount == 1 ? 2 : Service.WorkerCount == 2 ? 4 : 1)); }
-    public void UseViewLabels(string[] labels)
+    internal void UseViewLabels(CrowdViewCatalog catalog)
     {
-        if (labels == null || labels.Length == 0)
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (catalog.Length == 0)
             throw new InvalidOperationException("路径演示视图名至少一条。");
-        _viewLabels = labels;
-        _viewModeCount = labels.Length;
+        _viewLabels = catalog.Labels;
+        _viewModeCount = catalog.Length;
     }
 
     public void EnqueueCycleView() { lock (_inputGate) _inputQueue.Enqueue(() => ViewMode = (ViewMode + 1) % _viewModeCount); }

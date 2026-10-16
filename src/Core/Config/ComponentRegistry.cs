@@ -137,8 +137,8 @@ namespace Ludots.Core.Config
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
             Register("CrowdSimulationAgent", SetCrowdSimulationAgent, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>.ComponentType);
-            Register("CrowdSimulationBridgeSpan", SetCrowdSimulationBridgeSpan, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationBridgeSpan>.ComponentType);
-            Register("CrowdSimulationNavArea", SetCrowdSimulationNavArea, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationNavArea>.ComponentType);
+            Register("CrowdSimulationStructure", SetCrowdSimulationStructure, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationStructure>.ComponentType);
+            Register("CrowdSimulationPathSpan", SetCrowdSimulationPathSpan, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationPathSpan>.ComponentType);
             Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
@@ -1985,60 +1985,47 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
             }
 
-            Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.RejectRetiredKeys(obj);
-            ValidateProperties(
-                obj,
-                "CrowdSimulationAgent",
-                "profileId",
-                "agentTypeId",
-                "speedCmPerSecond",
-                "personalRadiusCm",
-                "pushPriority",
-                "special");
             var facts = Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.Parse("template", obj);
             // 模板装载不持有会话的档案表。下标在 CrowdSimUnits 生成时写入；0 是合法下标，未写入用 -1。
             entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent
             {
                 ProfileIndex = -1,
                 AgentTypeIndex = -1,
-                SpeedCmPerSecond = facts.SpeedCmPerSecond,
-                PersonalRadiusCm = facts.PersonalRadiusCm,
+                SpeedCmPerSec = facts.SpeedCmPerSec,
                 PushPriority = facts.PushPriority,
-                Special = facts.Special,
+                AutoDeploy = facts.AutoDeploy,
             });
         }
 
-        private static void SetCrowdSimulationNavArea(Entity entity, JsonNode data)
+        private static void SetCrowdSimulationStructure(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("CrowdSimulationNavArea requires an object payload.");
+                throw new InvalidOperationException("CrowdSimulationStructure requires an object payload.");
             }
 
-            ValidateProperties(obj, "CrowdSimulationNavArea", "area", "priority", "layered");
-            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationNavArea
+            ValidateProperties(obj, "CrowdSimulationStructure", "template");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationStructure
             {
-                Area = RequireStringProperty(obj, "area", "CrowdSimulationNavArea"),
-                Priority = ReadIntProperty(obj, "priority", "CrowdSimulationNavArea"),
-                Layered = ParseBooleanByte(RequireProperty(obj, "layered", "CrowdSimulationNavArea"), "CrowdSimulationNavArea.layered") != 0,
+                Template = RequireStringProperty(obj, "template", "CrowdSimulationStructure"),
             });
         }
 
-        private static void SetCrowdSimulationBridgeSpan(Entity entity, JsonNode data)
+        private static void SetCrowdSimulationPathSpan(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("CrowdSimulationBridgeSpan requires an object payload.");
+                throw new InvalidOperationException("CrowdSimulationPathSpan requires an object payload.");
             }
 
-            ValidateProperties(obj, "CrowdSimulationBridgeSpan", "x0Cm", "y0Cm", "x1Cm", "y1Cm", "widthCm");
-            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationBridgeSpan
+            ValidateProperties(obj, "CrowdSimulationPathSpan", "fromXCm", "fromYCm", "toXCm", "toYCm", "widthCm");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationPathSpan
             {
-                X0Cm = ReadIntProperty(obj, "x0Cm", "CrowdSimulationBridgeSpan"),
-                Y0Cm = ReadIntProperty(obj, "y0Cm", "CrowdSimulationBridgeSpan"),
-                X1Cm = ReadIntProperty(obj, "x1Cm", "CrowdSimulationBridgeSpan"),
-                Y1Cm = ReadIntProperty(obj, "y1Cm", "CrowdSimulationBridgeSpan"),
-                WidthCm = ReadIntProperty(obj, "widthCm", "CrowdSimulationBridgeSpan"),
+                FromXCm = ReadIntProperty(obj, "fromXCm", "CrowdSimulationPathSpan"),
+                FromYCm = ReadIntProperty(obj, "fromYCm", "CrowdSimulationPathSpan"),
+                ToXCm = ReadIntProperty(obj, "toXCm", "CrowdSimulationPathSpan"),
+                ToYCm = ReadIntProperty(obj, "toYCm", "CrowdSimulationPathSpan"),
+                WidthCm = ReadIntProperty(obj, "widthCm", "CrowdSimulationPathSpan"),
             });
         }
 

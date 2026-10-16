@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Arch.Core;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -9,6 +10,7 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.EntityCollections;
@@ -16,9 +18,11 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Systems;
+using Ludots.Core.Vision;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Parity;
@@ -40,12 +44,10 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
-
-        session.Commands.Schedule(session, script);
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
         for (int t = 0; t < frames.Length; t++)
         {
-            Assert.That(session.Step(out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
+            Assert.That(script.Step(session, out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
             Assert.That(CrowdSimChecksum.Format(hash), Is.EqualTo(frames[t]), $"{seed} 第 {t + 1} 帧校验码不一致");
         }
 
@@ -86,20 +88,94 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
-
-        session.Commands.Schedule(session, script);
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
         var first = new List<ulong>();
-        session.Advance(frames.Length, first);
+        script.Advance(session, frames.Length, first);
+        var log = session.Commands.Log.Select(e => new CrowdCommand(e.Tick, e.Cmd)).ToArray();
+        Assert.That(log.Any(e => e.Cmd.Kind is CrowdSimCommandKind.Order && (e.Cmd.Members == null || e.Cmd.Members.Length == 0)), Is.False);
 
-        // 同一份记录回放:全新会话(参考实现的回放也是新仿真,句柄代从 0 起)
+        // 同一份译后日志回放:全新会话,不再带选中记录
         var (_, session2) = BuildSession(seed);
-        session2.Commands.Schedule(session2, script);
+        session2.Commands.Schedule(session2, log);
         var second = new List<ulong>();
         session2.Advance(frames.Length, second);
 
         Assert.That(second, Is.EqualTo(first).AsCollection, $"{seed} 回放与首跑校验码不一致");
         Assert.That(second.Select(CrowdSimChecksum.Format), Is.EqualTo(frames).AsCollection, $"{seed} 回放与沙盒校验码不一致");
+    }
+
+    [Test]
+    public void Clear_ExcludesUnitsImmediately_AndRequestsLifecycleDestroy()
+    {
+        var (_, session) = BuildSession("s1337");
+        int made = CrowdDeployment.Spawn(session, 1);
+        Assert.That(made, Is.EqualTo(1));
+        var entity = session.Units.EntityAt(0);
+        Assert.That(session.World.IsAlive(entity), Is.True);
+        session.Units.Clear();
+        Assert.That(session.Units.Count, Is.EqualTo(0));
+        Assert.That(session.World.IsAlive(entity), Is.False);
+        Assert.That(session.World.Size, Is.EqualTo(0));
+        CrowdMovementKernel.Create(session).GatherUnits();
+    }
+
+    [Test]
+    public void Clear_HeadlessWaves_KeepLiveEntityCountAtLastWave()
+    {
+        var (_, session) = BuildSession("s1337");
+        int[] waves = { 40, 40, 25 };
+        foreach (int count in waves)
+        {
+            session.Units.Clear();
+            int made = CrowdDeployment.Spawn(session, count);
+            Assert.That(made, Is.EqualTo(count));
+            Assert.That(session.Units.Count, Is.EqualTo(count));
+            Assert.That(session.World.Size, Is.EqualTo(count));
+        }
+    }
+
+    [Test]
+    public void Deploy_ChunkOrderMatchesDenseIndex()
+    {
+        var (_, session) = BuildSession("s1337");
+        int made = CrowdDeployment.Spawn(session, 200);
+        Assert.That(made, Is.EqualTo(200));
+        var query = new QueryDescription()
+            .WithAll<CrowdSimulationUnitState, CrowdSimulationKinematics, WorldPositionCm, CrowdSimulationAgent, PlayerOwner>()
+            .WithNone<PresentationDestroyPending>();
+        int expect = 0;
+        foreach (ref var chunk in session.World.Query(in query))
+        {
+            var states = chunk.GetSpan<CrowdSimulationUnitState>();
+            foreach (int index in chunk)
+            {
+                int dense = session.Units.DenseOfSlot(states[index].Slot);
+                Assert.That(dense, Is.EqualTo(expect));
+                expect++;
+            }
+        }
+
+        Assert.That(expect, Is.EqualTo(made));
+    }
+
+    [Test]
+    public void Deploy_ChunkOrderRejectsArchetypeThatIsNotTheDenseSet()
+    {
+        var (_, session) = BuildSession("s1337");
+        Assert.That(CrowdDeployment.Spawn(session, 2), Is.EqualTo(2));
+        Archetype archetype = session.World.GetArchetype(session.Units.EntityAt(0));
+        session.World.Create(archetype.Signature);
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => CrowdDeployment.Spawn(session, 2))!;
+        Assert.That(ex.Message, Does.Contain("must contain exactly the dense set"));
+    }
+
+    [Test]
+    public void Deploy_UsesTemplateBatchCreate()
+    {
+        var (_, session) = BuildSession("s1337");
+        int made = CrowdDeployment.Spawn(session, 200);
+        Assert.That(made, Is.EqualTo(200));
+        Assert.That(session.Units.LargestSpawnBatch, Is.GreaterThan(1));
     }
 
     private static long CanonRaw(double meters) => (long)(meters * 100 * 4294967296.0);
@@ -112,16 +188,51 @@ public class S4DeployTruthTests
     }
 
     internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, bool lineOfSight = false)
+        => BuildSession(seed, lineOfSight, pairRules: null);
+
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, CrowdPairRules pairRules)
+        => BuildSession(seed, lineOfSight: false, pairRules);
+
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, NavSurfaceAsset surface)
+        => BuildSession(seed, lineOfSight: false, pairRules: null, surface);
+
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed, Action<JsonObject> tuneConfig)
+        => BuildSession(seed, lineOfSight: false, pairRules: null, S1SurfaceTruthTests.ReadSurface(seed), tuneConfig);
+
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
+        string seed, Action<JsonObject>? tuneConfig, CrowdTestBodies bodies)
+        => BuildSession(seed, lineOfSight: false, pairRules: null, S1SurfaceTruthTests.ReadSurface(seed), tuneConfig, bodies);
+
+    private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules)
+        => BuildSession(seed, lineOfSight, pairRules, S1SurfaceTruthTests.ReadSurface(seed));
+
+    private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, NavSurfaceAsset surface,
+        Action<JsonObject>? tuneConfig = null, CrowdTestBodies? bodies = null)
     {
         CrowdTestScheduler.Ensure();
-        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight);
-        var surface = S1SurfaceTruthTests.ReadSurface(seed);
+        var runtime = S1SurfaceTruthTests.LoadRuntime(seed, lineOfSight, pairRules, tuneConfig, bodies);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
-        var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
+        var map = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "Maps", $"crowd_simulation_{seed}.json")))!;
+        int boardWidthCm = map["Boards"]![0]!["WidthCm"]!.GetValue<int>();
+        int boardHeightCm = map["Boards"]![0]!["HeightCm"]!.GetValue<int>();
+        string heightAssetPath = map["ContinuousHeightmap"]!["Asset"]!.GetValue<string>();
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
-            Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
+            Path.Combine(S1Dir(seed), heightAssetPath["assets/".Length..])));
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtime,
+            boardWidthCm,
+            boardHeightCm,
+            surface,
+            "assets/" + runtime.SurfaceAsset,
+            heightAsset,
+            heightAssetPath,
+            mapSurface.Blockers,
+            mapSurface.LayeredPaths);
+        var grid = ingested.Grid;
+        var heights = ingested.Heights;
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
@@ -148,33 +259,26 @@ public class S4DeployTruthTests
         }
 
         var world = ArchWorld.Create();
-        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world));
+        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world, bodies?.Profiles ?? TestDefaults.DemoProfiles()));
         // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
-        // 桥进入认知仓，不进地面栅格与碰撞。id 按 span 列表顺序续在阻挡物之后。
-        if (mapSurface.Bridges.Count > 0)
-        {
-            int bridgeTpl = session.Structures.TemplateIndexOf("bridge");
-            if (bridgeTpl >= 0)
-            {
-                session.Structures.InstallMapBridges(
-                    bridgeTpl, mapSurface.Bridges.Select(b => b.Span).ToList());
-            }
-        }
+        session.Structures.UseUpperLayer(deck);
+        session.Structures.InstallMapLayeredPaths(mapSurface.LayeredPaths);
 
-        session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
+        session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.LinkCandidates);
         session.NavTileCache = cache;
         return (runtime, session);
     }
 
     /// <summary>单位创建单路径的无头装配:模板注册表与模板键走引擎同一装载链
-    /// (VFS 挂载 CrowdSimulationMod 资产 → ConfigPipeline → MapLoader.LoadTemplates),
+    /// (VFS 挂载 CrowdSimulationDemoContentMod 资产 → ConfigPipeline → MapLoader.LoadTemplates),
     /// 单位实例化与真机同走 EntityBuilder.UseTemplate→Build;选中属主置空,不镜像。</summary>
-    private static CrowdSimPresentationWiring BuildWiring(CrowdSimulationRuntimeConfig runtime, ArchWorld world)
+    private static CrowdSimPresentationWiring BuildWiring(
+        CrowdSimulationRuntimeConfig runtime, ArchWorld world, Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry profiles)
     {
         var vfs = new VirtualFileSystem();
-        vfs.Mount("Core", Path.Combine("assets", "crowdmod"));
+        vfs.Mount("Core", Path.Combine("assets", "crowddemo"));
         var pipeline = new ConfigPipeline(vfs, modLoader: null!);
         var mapLoader = new MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
         mapLoader.LoadTemplates(ConfigCatalogLoader.Load(pipeline));
@@ -183,12 +287,12 @@ public class S4DeployTruthTests
         {
             StableIds = new PresentationStableIdAllocator(),
             TemplateRegistry = mapLoader.TemplateRegistry,
+            TemplateKeys = mapLoader.EntityTemplateKeys,
             TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
-                runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, TestDefaults.DemoProfiles(), "测试装配(CrowdSimulationTests)"),
+                runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, profiles, "测试装配(CrowdSimulationTests)"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
                 Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusKey),
-            SelectionOwner = Arch.Core.Entity.Null,
-            SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectionMirror.CollectionKey),
+            SelectedCollectionKeyId = collections.KeyRegistry.Register(CrowdSimPresentationWiring.SelectedCollectionKey),
             Collections = collections,
         };
     }

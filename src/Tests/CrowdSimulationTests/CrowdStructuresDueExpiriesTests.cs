@@ -20,7 +20,7 @@ public class CrowdStructuresDueExpiriesTests
         Assert.That(tpl, Is.GreaterThanOrEqualTo(0));
         var fp = new CrowdStructureFootprint
         {
-            Shape = CrowdStructureShape.Rect,
+            Shape = CrowdStructureShape.Square,
             CenterXCm = Fix64.FromInt(3000),
             CenterYCm = Fix64.FromInt(3000),
             Hx = Fix64.FromInt(200),
@@ -64,7 +64,7 @@ public class CrowdStructuresDueExpiriesTests
             TerrainType = new byte[n2],
             Area = new byte[n2],
             Blocked = new byte[n2],
-            JumpCandidates = [],
+            LinkCandidates = [],
         };
         return CrowdStructuresStore.Build(config, grid, []);
     }

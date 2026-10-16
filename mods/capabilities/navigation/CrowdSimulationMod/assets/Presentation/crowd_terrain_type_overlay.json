@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "action": "CrowdSimulation.ToggleTerrainTypes",
+  "blocked": { "red": 211, "green": 47, "blue": 47, "alpha": 230 }
+}

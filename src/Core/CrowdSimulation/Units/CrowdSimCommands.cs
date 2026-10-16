@@ -1,13 +1,15 @@
 using System.Collections.Generic;
+using System.Globalization;
+using Ludots.Core.Components;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// S4+S5 指令集:spawn(批量部署)、spawnAt(点名生成)、select(框选)、selectAll(全选)、
-/// clearSelection(清空选择)、order(移动下令:S5,右键点=移动,拖线=摆阵)、迷雾面
-/// (fogSight/reveal/obscure/forget/fogShare)与结构面(placeStructure/removeStructureAt)。
-/// 指令是 struct 数据,只在 tick 边界执行——仿真频率就是 FixedHz,不存在第二个时钟。
+/// 指令集:spawn、spawnAt、order(成员句柄在入队时钉死，全体己方选择在执行时取)、迷雾面、结构面、
+/// kill、scatter、rates、rebakeSlices、clearCaches。
+/// 指令是 struct 数据,只在 tick 边界执行。仿真频率就是 FixedHz,不存在第二个时钟。
 /// </summary>
 public static class CrowdSimCommands
 {
@@ -27,19 +29,77 @@ public static class CrowdSimCommands
     /// 日志再停摆,live 与回放不对称。会话域两面:玩家号表外(1..P);迷雾面指令与
     /// order.fogTerrain 在迷雾未启用(会话无 Fog)的会话上。载荷结构面(字段缺失/类型/
     /// area 恰一/obscure ticks 值)由边界 CrowdSimCommand.Parse 一次成形,不在这里。</summary>
-    public static void Validate(CrowdSimSession sim, CrowdSimCommand cmd)
+    public static CrowdSimCommand Validate(CrowdSimSession sim, CrowdSimCommand cmd)
     {
+        if (cmd.Kind == CrowdSimCommandKind.SpawnAt)
+        {
+            if (string.IsNullOrEmpty(cmd.TemplateId))
+            {
+                if ((uint)cmd.UnitType >= (uint)sim.Config.UnitTypes.Count
+                    || (uint)cmd.RIdx >= (uint)sim.Config.RadiusClasses.Count)
+                {
+                    throw new System.InvalidOperationException("spawnAt: 单位行或半径级不在表内。");
+                }
+            }
+            else
+            {
+                var (unitType, radiusIndex) = CrowdDeployment.LocateTemplate(sim.Config, cmd.TemplateId);
+                cmd = cmd with { UnitType = unitType, RIdx = radiusIndex };
+            }
+        }
+
         if (cmd.Kind is CrowdSimCommandKind.FogSight or CrowdSimCommandKind.Reveal
             or CrowdSimCommandKind.Obscure or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare)
         {
             RequireFog(sim, CrowdSimCommand.KindName(cmd.Kind));
         }
 
-        if (cmd.Kind is not (CrowdSimCommandKind.SpawnAt or CrowdSimCommandKind.Select or CrowdSimCommandKind.SelectAll
+        switch (cmd.Kind)
+        {
+            case CrowdSimCommandKind.Kill:
+                if (cmd.RadiusCm <= 0)
+                    throw new System.InvalidOperationException("kill: radiusCm 必须 > 0。");
+                if (cmd.RingScale <= Fix64.OneValue)
+                    throw new System.InvalidOperationException("kill: ringScale 必须 > 1。");
+                if (cmd.Impulse < Fix64.Zero)
+                    throw new System.InvalidOperationException("kill: impulse 必须 ≥ 0。");
+                break;
+            case CrowdSimCommandKind.Rates:
+                RequireMovement(sim, "rates");
+                if (cmd.TickHz != sim.Config.FixedHz)
+                {
+                    throw new System.InvalidOperationException(
+                        $"rates: tickHz = {cmd.TickHz}，会话时钟是 FixedHz {sim.Config.FixedHz}。仿真步长由 Engine/clock.json 固定，这条指令不能改 tick 频率。");
+                }
+
+                double avoidHz = cmd.AvoidHz.ToDouble();
+                int stepHz = sim.Config.FixedHz * sim.SubSteps;
+                if (!(avoidHz > 0d) || avoidHz > stepHz)
+                {
+                    throw new System.InvalidOperationException(
+                        $"rates: avoidHz = {avoidHz.ToString(CultureInfo.InvariantCulture)}，需为 > 0 且不超过步进频率 {stepHz} Hz。");
+                }
+
+                break;
+            case CrowdSimCommandKind.RebakeSlices:
+                if (cmd.Slices < 1 || cmd.Slices > CrowdSimulationConfigValidator.MaxRebakeSlices)
+                {
+                    throw new System.InvalidOperationException(
+                        $"rebakeSlices: slices = {cmd.Slices}，需为 1..{CrowdSimulationConfigValidator.MaxRebakeSlices}。");
+                }
+
+                break;
+            case CrowdSimCommandKind.ClearCaches:
+                if (sim.Planner == null)
+                    throw new System.InvalidOperationException("clearCaches: 运动内核未启用。");
+                break;
+        }
+
+        if (cmd.Kind is not (CrowdSimCommandKind.SpawnAt
             or CrowdSimCommandKind.Order or CrowdSimCommandKind.Reveal or CrowdSimCommandKind.Obscure
             or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare))
         {
-            return;
+            return cmd;
         }
 
         RequirePlayer(sim, cmd.Player);
@@ -48,6 +108,96 @@ public static class CrowdSimCommands
         {
             if (cmd.HasFogTerrain) RequireFog(sim, "order");
             _ = Movement.CrowdFormations.ShapeOf(sim.Config.Formations, cmd.ShapeId!);
+            if (cmd.AllOwnMembers)
+            {
+                if (cmd.Members != null)
+                    throw new System.InvalidOperationException("order: 成员句柄和全体己方选择只能给一个。");
+            }
+            else if (cmd.Members == null || cmd.Members.Length == 0)
+            {
+                throw new System.InvalidOperationException("order: 成员集为空。");
+            }
+        }
+
+        return cmd;
+    }
+
+    private static Movement.CrowdMovementKernel RequireMovement(CrowdSimSession sim, string type) =>
+        sim.Movement ?? throw new System.InvalidOperationException($"{type}: 运动内核未启用。");
+
+    private const int SaltScatter = 999983;
+
+    /// <summary>半径内移除,外圈沿离心方向加冲量。冲量 = 该单位速度 × impulse。从稠密表尾部往前删,交换搬走的行已经处理过。</summary>
+    private static void Kill(CrowdSimSession sim, CrowdSimCommand cmd)
+    {
+        sim.Units.MaterializePending();
+        Fix64 cx = Fix64.FromInt(cmd.XCm);
+        Fix64 cy = Fix64.FromInt(cmd.YCm);
+        Fix64 radius = Fix64.FromInt(cmd.RadiusCm);
+        Fix64 ring = radius * cmd.RingScale;
+        var world = sim.World;
+        var units = sim.Units;
+        var kernel = sim.Movement;
+        for (int i = units.Count - 1; i >= 0; i--)
+        {
+            var entity = units.EntityAt(i);
+            var pos = world.Get<WorldPositionCm>(entity).Value;
+            Fix64 dx = pos.X - cx;
+            Fix64 dy = pos.Y - cy;
+            Fix64 dist = Movement.CrowdFix.Hypot(dx, dy);
+            if (dist <= radius)
+            {
+                int last = units.Count - 1;
+                if (i != last) kernel?.MoveAvoidanceRow(last, i);
+                var unitState = world.Get<CrowdSimulationUnitState>(entity);
+                kernel?.ClearMotionSlot(unitState.Slot);
+                int groupId = unitState.GroupId;
+                units.ReleaseDense(i);
+                if (!sim.Groups.TryGet(groupId, out var group))
+                {
+                    throw new System.InvalidOperationException($"kill: 组 {groupId} 不存在。");
+                }
+
+                group.Count--;
+                if (group.Count < 0)
+                {
+                    throw new System.InvalidOperationException($"kill: 组 {groupId} 计数为负。");
+                }
+
+                continue;
+            }
+
+            if (dist <= ring && cmd.Impulse > Fix64.Zero && dist > Fix64.Zero)
+            {
+                var agent = world.Get<CrowdSimulationAgent>(entity);
+                Fix64 scale = agent.SpeedCmPerSec * cmd.Impulse / dist;
+                var kin = world.Get<CrowdSimulationKinematics>(entity);
+                kin.Velocity = new Fix64Vec2(kin.Velocity.X + dx * scale, kin.Velocity.Y + dy * scale);
+                world.Set(entity, kin);
+            }
+        }
+
+        sim.Groups.ReleaseEmpty();
+        sim.Orders.Prune(sim.Groups);
+    }
+
+    /// <summary>每个有单位的出生玩家一条 box 指令。目标从本指令自己的加盐流里取,成员按稠密序。</summary>
+    private static void Scatter(CrowdSimSession sim)
+    {
+        sim.Units.MaterializePending();
+        var cfg = sim.Config;
+        var rng = CrowdSimRng.Create((long)cfg.WorldSeed + (long)++sim.ScatterSeq * SaltScatter);
+        Fix64 world = Fix64.FromInt(cfg.NavCellsPerSide) * Fix64.FromInt(cfg.NavCellSizeCm);
+        var bases = cfg.Deploy.Bases;
+        for (int i = 0; i < bases.Count; i++)
+        {
+            int player = bases[i].PlayerId;
+            int count = sim.Units.CopyOwnHandles(player, sim.MemberCapture);
+            if (count == 0) continue;
+            Fix64 x = rng.Next() * world;
+            Fix64 y = rng.Next() * world;
+            Movement.CrowdIssueOrder.Issue(
+                sim, x, y, player, "box", null, null, Fix64.Zero, sim.MemberCapture.AsSpan(0, count));
         }
     }
 
@@ -62,6 +212,7 @@ public static class CrowdSimCommands
         // 每条指令前收尾未完的重烘 job。指令看到的结构变更必须完整生效。
         // 只在结构 op 前收尾会让紧随的非结构指令的报告 tick 错位一拍。
         if (sim.RebakeJob != null) Structures.CrowdStructureOps.FinishRebake(sim);
+        sim.KernelMirrorStale = true;
         switch (cmd.Kind)
         {
             case CrowdSimCommandKind.Spawn:
@@ -76,24 +227,6 @@ public static class CrowdSimCommands
                     cmd.Player,
                     cmd.UnitType,
                     cmd.RIdx);
-            case CrowdSimCommandKind.Select:
-                RequirePlayer(sim, cmd.Player);
-                SelectRect(
-                    sim,
-                    cmd.Player,
-                    Fix64.FromInt(cmd.X0Cm),
-                    Fix64.FromInt(cmd.Y0Cm),
-                    Fix64.FromInt(cmd.X1Cm),
-                    Fix64.FromInt(cmd.Y1Cm),
-                    cmd.Additive);
-                return null;
-            case CrowdSimCommandKind.SelectAll:
-                RequirePlayer(sim, cmd.Player);
-                SelectAll(sim, cmd.Player);
-                return null;
-            case CrowdSimCommandKind.ClearSelection:
-                ClearSelection(sim);
-                return null;
             case CrowdSimCommandKind.Order:
                 RequirePlayer(sim, cmd.Player);
                 // 乐观迷雾开关随下令提交，写进指令日志，回放可复现。切换后立刻同步认知。
@@ -107,6 +240,20 @@ public static class CrowdSimCommands
                     }
                 }
 
+                System.ReadOnlySpan<uint> members = cmd.Members;
+                if (cmd.AllOwnMembers)
+                {
+                    sim.Units.MaterializePending();
+                    int count = sim.Units.CopyOwnHandles(cmd.Player, sim.MemberCapture);
+                    if (count == 0)
+                    {
+                        sim.NotifyEmptyOrderSelection(cmd.Player);
+                        return null;
+                    }
+
+                    members = sim.MemberCapture.AsSpan(0, count);
+                }
+
                 // 模式是值类型。tick 的 Flush 把返回值收成 object，直接 return 会装箱。
                 Movement.CrowdIssueOrder.Issue(
                     sim,
@@ -116,7 +263,8 @@ public static class CrowdSimCommands
                     cmd.ShapeId!,
                     cmd.HasAuto ? cmd.Auto : null,
                     cmd.HasFace ? new Fix64Vec2(cmd.FaceX, cmd.FaceY) : null,
-                    Fix64.FromInt(cmd.WidthCm));
+                    Fix64.FromInt(cmd.WidthCm),
+                    members);
                 return null;
             case CrowdSimCommandKind.FogSight:
                 (sim.Fog ?? throw new System.InvalidOperationException("fogSight: 迷雾未启用(会话没有运动内核)。")).Los =
@@ -141,6 +289,27 @@ public static class CrowdSimCommands
                     sim,
                     Fix64.FromInt(cmd.XCm),
                     Fix64.FromInt(cmd.YCm));
+            case CrowdSimCommandKind.Kill:
+                Kill(sim, cmd);
+                return null;
+            case CrowdSimCommandKind.Scatter:
+                Scatter(sim);
+                return null;
+            case CrowdSimCommandKind.Rates:
+            {
+                var movement = RequireMovement(sim, "rates");
+                int stepHz = sim.Config.FixedHz * sim.SubSteps;
+                movement.Stride = Movement.CrowdMovementKernel.AvoidanceStride(stepHz, cmd.AvoidHz.ToDouble());
+                movement.Phase = 0;
+                sim.SetAvoidHz(cmd.AvoidHz);
+                return null;
+            }
+            case CrowdSimCommandKind.RebakeSlices:
+                sim.RebakeSliceCount = cmd.Slices;
+                return null;
+            case CrowdSimCommandKind.ClearCaches:
+                (sim.Planner ?? throw new System.InvalidOperationException("clearCaches: 运动内核未启用。")).InvalidateFlows();
+                return null;
             default:
                 throw new System.InvalidOperationException($"未知指令 {CrowdSimCommand.KindName(cmd.Kind)}。");
         }
@@ -193,64 +362,5 @@ public static class CrowdSimCommands
         }
 
         return g;
-    }
-
-    /// <summary>框选，位置单位厘米。其余玩家的选择每次都清掉。additive 只决定框外的本方单位是否保留。</summary>
-    public static void SelectRect(CrowdSimSession sim, int player, Fix64 x0, Fix64 y0, Fix64 x1, Fix64 y1, bool additive)
-    {
-        var (ax, bx) = x0 < x1 ? (x0, x1) : (x1, x0);
-        var (ay, by) = y0 < y1 ? (y0, y1) : (y1, y0);
-        int count = 0;
-        for (int i = 0; i < sim.Units.Count; i++)
-        {
-            var entity = sim.Units.EntityAt(i);
-            var owner = sim.World.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId;
-            var state = sim.World.Get<CrowdSimulationUnitState>(entity);
-            if (owner != player)
-            {
-                if (state.Selected != 0) { state.Selected = 0; sim.World.Set(entity, state); }
-                continue;
-            }
-
-            var pos = sim.World.Get<Components.WorldPositionCm>(entity).Value;
-            bool inside = pos.X >= ax && pos.X <= bx && pos.Y >= ay && pos.Y <= by;
-            byte next = inside ? (byte)1 : additive ? state.Selected : (byte)0;
-            if (next != state.Selected) { state.Selected = next; sim.World.Set(entity, state); }
-            if (next != 0) count++;
-        }
-
-        sim.SetSelectedCount(count);
-        SelectionMirror.Sync(sim);
-    }
-
-    /// <summary>全选(selectAll):本方全部单位入选。</summary>
-    public static void SelectAll(CrowdSimSession sim, int player)
-    {
-        int count = 0;
-        for (int i = 0; i < sim.Units.Count; i++)
-        {
-            var entity = sim.Units.EntityAt(i);
-            var owner = sim.World.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId;
-            var state = sim.World.Get<CrowdSimulationUnitState>(entity);
-            byte next = owner == player ? (byte)1 : (byte)0;
-            if (next != state.Selected) { state.Selected = next; sim.World.Set(entity, state); }
-            if (next != 0) count++;
-        }
-
-        sim.SetSelectedCount(count);
-        SelectionMirror.Sync(sim);
-    }
-
-    public static void ClearSelection(CrowdSimSession sim)
-    {
-        for (int i = 0; i < sim.Units.Count; i++)
-        {
-            var entity = sim.Units.EntityAt(i);
-            var state = sim.World.Get<CrowdSimulationUnitState>(entity);
-            if (state.Selected != 0) { state.Selected = 0; sim.World.Set(entity, state); }
-        }
-
-        sim.SetSelectedCount(0);
-        SelectionMirror.Sync(sim);
     }
 }

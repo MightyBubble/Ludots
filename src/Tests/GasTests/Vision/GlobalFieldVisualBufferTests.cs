@@ -238,6 +238,109 @@ namespace Ludots.Tests.GAS
             Assert.That(allocated, Is.EqualTo(0));
         }
 
+        [Test]
+        public void FogGlobalFieldVisualProjector_CellBlockField_CoversWholeBlockAndFarCornerReadsUnseen()
+        {
+            const int Side = 32;
+            FogFieldStore store = CreateFogStore(out FogLayerId layerId);
+            Assert.That(store.TryGet(5, layerId, out FogField field), Is.True);
+            field.EnsureCellBlock(Side);
+
+            var buffer = new GlobalFieldVisualBuffer(recordCapacity: 4, cellCapacity: Side * Side, dirtyRectCapacity: 4);
+            var projector = new FogGlobalFieldVisualProjector();
+            buffer.BeginFrame();
+            projector.Project(store, buffer);
+            ref readonly GlobalFieldVisualRecord untouched = ref buffer.GetRecords()[0];
+            Assert.That(untouched.Descriptor.BoundsCells, Is.EqualTo(new IntRect(0, 0, Side, Side)), "没写过任何格也要整块上传");
+
+            field.SetVisible(new FogCell(1, 1));
+            field.SetExplored(new FogCell(2, 1));
+            buffer.BeginFrame();
+            projector.Project(store, buffer);
+
+            ref readonly GlobalFieldVisualRecord record = ref buffer.GetRecords()[0];
+            Assert.That(record.Descriptor.BoundsCells, Is.EqualTo(new IntRect(0, 0, Side, Side)));
+            ReadOnlySpan<GlobalFieldVisualCell> cells = buffer.GetCells(record);
+            Assert.That(ReadDecalByte(record, cells, new FieldCell2D(Side - 1, Side - 1)), Is.EqualTo((byte)CellVisibility.Unseen));
+            Assert.That(ReadDecalByte(record, cells, new FieldCell2D(1, 1)), Is.EqualTo((byte)CellVisibility.Visible));
+            Assert.That(ReadDecalByte(record, cells, new FieldCell2D(2, 1)), Is.EqualTo((byte)CellVisibility.Explored));
+        }
+
+        [Test]
+        public void FogGlobalFieldVisualProjector_CellBlockField_ExploringTheWholeBlockAllocatesNothingAfterActivation()
+        {
+            const int Side = 32;
+            WarmStampAndProjectCodePath(Side);
+
+            FogFieldStore store = CreateFogStore(out FogLayerId layerId);
+            Assert.That(store.TryGet(5, layerId, out FogField field), Is.True);
+            field.EnsureCellBlock(Side);
+            var buffer = new GlobalFieldVisualBuffer(recordCapacity: 4, cellCapacity: Side * Side, dirtyRectCapacity: 4);
+            var projector = new FogGlobalFieldVisualProjector();
+            buffer.BeginFrame();
+            projector.Project(store, buffer);
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long allocated = MeasureExploreAndProject(projector, store, field, buffer, Side);
+            Assert.That(field.ExploredInclusiveCount, Is.EqualTo(Side * Side));
+            Assert.That(buffer.GetRecords()[0].Descriptor.BoundsCells, Is.EqualTo(new IntRect(0, 0, Side, Side)));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        /// <summary>首次走到"有脏格"分支时运行时自己会分配(JIT/类型装载)；在另一套实例上先走一遍，被测实例从激活起算。</summary>
+        private static void WarmStampAndProjectCodePath(int side)
+        {
+            FogFieldStore store = CreateFogStore(out FogLayerId layerId);
+            Assert.That(store.TryGet(5, layerId, out FogField field), Is.True);
+            field.EnsureCellBlock(side);
+            var buffer = new GlobalFieldVisualBuffer(recordCapacity: 4, cellCapacity: side * side, dirtyRectCapacity: 4);
+            var projector = new FogGlobalFieldVisualProjector();
+            buffer.BeginFrame();
+            projector.Project(store, buffer);
+            field.SetVisible(new FogCell(0, 0));
+            buffer.BeginFrame();
+            projector.Project(store, buffer);
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureExploreAndProject(
+            FogGlobalFieldVisualProjector projector,
+            FogFieldStore store,
+            FogField field,
+            GlobalFieldVisualBuffer buffer,
+            int side)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < side * side; i++)
+            {
+                field.SetVisible(new FogCell(i % side, i / side));
+                buffer.BeginFrame();
+                projector.Project(store, buffer);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        /// <summary>渲染端的读法：边界内没列出的格就是 Unseen。</summary>
+        private static byte ReadDecalByte(in GlobalFieldVisualRecord record, ReadOnlySpan<GlobalFieldVisualCell> cells, FieldCell2D target)
+        {
+            IntRect bounds = record.Descriptor.BoundsCells;
+            Assert.That(target.X >= bounds.Left && target.X < bounds.Right && target.Y >= bounds.Top && target.Y < bounds.Bottom, Is.True,
+                $"{target} 不在贴花边界 {bounds} 内");
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (cells[i].Cell == target)
+                {
+                    return cells[i].ByteValue;
+                }
+            }
+
+            return (byte)CellVisibility.Unseen;
+        }
+
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private static long MeasureFogProjectionAllocations(
             FogGlobalFieldVisualProjector projector,

@@ -1,6 +1,7 @@
 {
   "maps": {
     "navmesh_debug_grid": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,
@@ -17,6 +18,7 @@
       ]
     },
     "navmesh_debug_openworld": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 25600,
@@ -31,6 +33,7 @@
       ]
     },
     "navmesh_debug_vhtm": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,

@@ -187,6 +187,18 @@ public sealed class UiInlineFlowTests
 		}
 
 		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
+
+		public UiTextSize MeasureSize(ReadOnlySpan<char> text, UiStyle style, float availableWidth, bool constrainWidth)
+		{
+			float width = text.Length * style.FontSize * 0.5f;
+			float lineHeight = style.FontSize * 1.4f;
+			if (constrainWidth && availableWidth > 0f && width > availableWidth)
+			{
+				int lines = Math.Max(1, (int)Math.Ceiling(width / availableWidth));
+				return new UiTextSize(availableWidth, lineHeight * lines);
+			}
+			return new UiTextSize(width, lineHeight);
+		}
 	}
 
 	private sealed class ConstantImageSizeProvider : IUiImageSizeProvider

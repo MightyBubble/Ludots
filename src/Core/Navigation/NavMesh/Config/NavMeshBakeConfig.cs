@@ -91,6 +91,9 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
     public sealed class NavMapNavBoardsConfig
     {
+        /// <summary>navmesh、mass-navigation 或 crowd-simulation。一张图只有这一个值。</summary>
+        public string Solver { get; set; }
+
         public Dictionary<string, NavTileGridConfig> Boards { get; set; } = new Dictionary<string, NavTileGridConfig>();
 
         /// <summary>
@@ -103,13 +106,27 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         /// </summary>
         public List<string> NavAreas { get; set; }
 
-        /// <summary>有序绑定。数组下标就是 .navsurface 里的地形类型编号。</summary>
-        public List<NavTerrainAreaBinding> TerrainAreas { get; set; }
+        /// <summary>crowd-simulation 图的导航格边长（厘米）。</summary>
+        public int? NavCellSizeCm { get; set; }
+
+        /// <summary>crowd-simulation 图的有序地形 id。数组下标就是地编资产和 .navsurface 里的地形编号。</summary>
+        public List<string> TerrainTypes { get; set; }
+
+        /// <summary>
+        /// 地编 React 网格的 Mod 内相对路径。运行时不把它装成 LogicTerrain。
+        /// </summary>
+        public string LogicTerrainAsset { get; set; }
+
+        /// <summary>
+        /// 按链接种类 id 写的候选烘焙几何参数。缺省表示这张图不生成候选。端点和硬缝地形由群体通行矩阵推导，不写在这里。
+        /// </summary>
+        public Dictionary<string, NavLinkCandidateBakeConfig>? LinkCandidateBake { get; set; }
     }
 
-    public sealed class NavTerrainAreaBinding
+    public sealed class NavLinkCandidateBakeConfig
     {
-        public string TerrainId { get; set; } = string.Empty;
-        public string AreaId { get; set; } = string.Empty;
+        public int MaxGapCm { get; set; }
+        public int LinkSpacingCm { get; set; }
+        public double EndpointMaxSlopeDeg { get; set; }
     }
 }

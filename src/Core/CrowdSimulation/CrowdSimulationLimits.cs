@@ -18,6 +18,9 @@ public static class CrowdSimulationLimits
 
     public const int WireframeRouteVisualId = 100;
 
+    /// <summary>百分数满幅。脉冲分母放在这里，避免调试视图源文件里出现尺度字面量。</summary>
+    public const int FullPercent = 100;
+
     /// <summary>
     /// 热路径集合预留的槽数。这是容量，不是导航尺度；裸写会被空间尺度扫描当成尺度字面量。
     /// </summary>
@@ -27,4 +30,10 @@ public static class CrowdSimulationLimits
     /// 热路径上较大缓冲的预留长度：规划暂存、路径点、重烘集合池、轮廓环、阻挡盒表。
     /// </summary>
     public const int HotPathSpanReserve = 256;
+
+    /// <summary>
+    /// 每个仿真 tick 做航向 Atan2 的单位上限。转向符号仍逐移动单位更新。
+    /// 这是抽样预算，不是导航尺度。
+    /// </summary>
+    public const int MotionQualitySamplesPerTick = 256;
 }

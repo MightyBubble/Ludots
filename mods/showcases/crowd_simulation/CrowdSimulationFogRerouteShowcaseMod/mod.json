@@ -1,0 +1,23 @@
+{
+  "name": "CrowdSimulationFogRerouteShowcaseMod",
+  "version": "0.1.0",
+  "description": "迷雾改道演示：玩家 1 的 60 人从西向东横穿地图，出发后在它领队路线前方的迷雾里放一栋 11 格见方的建筑，再在东北放第二栋。没看见之前小队按认知照旧朝建筑走，不因放置重新规划；看见之后改道绕开。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c03",
+    "fog",
+    "reroute"
+  ]
+}

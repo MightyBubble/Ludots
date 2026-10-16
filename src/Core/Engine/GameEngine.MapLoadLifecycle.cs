@@ -668,8 +668,8 @@ namespace Ludots.Core.Engine
 
         /// <summary>
         /// MovePlan order adapter (Projection + Lifecycle) installs when the mass-navigation
-        /// runtime activates on its configured mapId — the activation contract — so downstream
-        /// mods never wire the adapter themselves. Lives in the engine composition layer because
+        /// runtime activates because maps.&lt;mapId&gt;.solver is mass-navigation — the activation
+        /// contract — so downstream mods never wire the adapter themselves. Lives in the engine composition layer because
         /// RFC-0065 keeps the MassNavigation execution domain free of order-type knowledge; the
         /// projection system anchors directly before the MovePlan execution system the runtime
         /// installed during activation.

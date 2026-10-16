@@ -1,7 +1,7 @@
-// 导出为 Ludots Mod（LU-21 / AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
+// 导出为 Ludots Mod（AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
 // 产物：.height（CHTM v2，uint16 缩放）、.navsurface（v1）、Maps/<id>.json（队伍 / 关系 / 阻挡物 / 桥）、
 //       CrowdSimulationConfig.json 覆盖片段、Navigation/navmesh.json 的地图地形事实、
-//       parity/s1-truth.json（FNV-1a 摘要，供 C# 端逐格对拍）。
+//       parity/s1-truth.json（FNV-1a 摘要；对拍口径见 crowdsimulation-and-navsurface.md 行为对拍定案）。
 // 正本在 Ludots 仓库（本文件即正本）；运行时位于 CrowdSimulation Web 沙盒的 scripts/ 下，
 // 依赖沙盒内 src/engine/ 的生成器（相对导入按该布局解析）。
 // 用法：node scripts/exportLudots.mjs --seed 1337 --map-id crowd_simulation_s1 --out exports/crowd_simulation_s1
@@ -205,6 +205,7 @@ for (const terrain of config.terrainTypes) {
 writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
   maps: {
     [mapId]: {
+      solver: 'crowd-simulation',
       navAreas: ['Default', 'shallow', 'rough', 'sheer', 'deep', 'road', 'deck', 'flooded', 'burning'],
       terrainAreas,
     },
@@ -261,7 +262,7 @@ function fnv1a(buf) {
   const bytes = w.build();
   writeFileSync(join(outRoot, 'parity', 's1-truth.json'), JSON.stringify(stamp({
     mapId, seed, navCellsPerSide: N, navCellSizeCm: cellSizeCm,
-    blockers: blockers.length, bridges: bridges.length, jumpCandidates: world.jumps.count,
+    blockers: blockers.length, layeredPaths: bridges.length, linkCandidates: world.jumps.count,
     fnv1a: fnv1a(bytes),
   }), null, 2));
 }
@@ -559,7 +560,7 @@ function canonComp(comp, n2) {
     }
 
     // ───────────────────────────── S4:部署与指令回放真相 ─────────────────────────────
-    // 规范校验码(Fix64 原始值口径,甲方体系):生成位置按 Fix64 语义逐 op 求值
+    // 规范校验码(按 Ludots Fix64 原始值计算):生成位置按 Fix64 语义逐 op 求值
     // (镜像侧 S4 归一补丁,globalThis.__S4_FIX64_SPAWN__;FromDouble 向零截断、乘法向 -∞ 取整到
     // 2^-32 网格,与 Ludots Fix64 同语义);字段顺序与参考实现 unitChecksum 一致。
     // 脚本玩家编号用 Ludots 约定(1..P;参考端 0 基,运行时在 spawn/select 处换算)。
@@ -659,7 +660,7 @@ function canonComp(comp, n2) {
     }
 
     // ───────────────────────────── S5:移动与阵型轨迹真相 ─────────────────────────────
-    // 轨迹是浮点派生量:参考端 f64(detMath),Ludots 端 Fix64(甲方体系)——对拍口径 =
+    // 轨迹是浮点派生量:参考端 f64(detMath),Ludots 端 Fix64——对拍口径 =
     // 状态机字段逐位 + 位置逐 tick 带宽(带值实证校准后写进测试,不藏在导出器里)。
     {
       globalThis.__S4_FIX64_SPAWN__ = true;

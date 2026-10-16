@@ -14,7 +14,7 @@ public sealed class SpatialVocabularyContractTests
     [
         "CmPerSecond", "NavCellArea", "NavCells", "NavTiles", "Fraction",
         "Capacity", "Count", "Scale", "Ratio", "Ticks", "Tries", "Rings", "Slices",
-        "Cm", "Dot", "Deg", "Rad", "Hz", "Sec", "SubSteps",
+        "Cm", "Dot", "Deg", "Rad", "Hz", "Sec", "Ms", "SubSteps",
     ];
 
     private static readonly string[] BareLengthWords = ["Len", "Width", "Padding", "Spacing", "Error", "Area", "LookAhead"];
@@ -22,24 +22,23 @@ public sealed class SpatialVocabularyContractTests
     private static readonly HashSet<string> DimensionlessConfigNames = new(StringComparer.Ordinal)
     {
         "Version", "Seed", "WorldSeed", "Cost", "Layer", "PushPriority", "NavProfileIndex",
-        "CostByArea", "SpeedDivisorByArea", "AgentTypeIndex", "NavContextId", "MaxVertsPerPoly",
+        "CostByArea", "SpeedDivisorByArea", "SpeedDivisor", "CostPerNavCell", "AgentTypeIndex", "NavContextId", "MaxVertsPerPoly",
         "NavCellsPerTile", "NavCellsPerSide", "NavCellsPerFogCell", "FogCellsPerSide",
-        "MaxRebuildsPerTick", "MaxRefreshesPerTick", "LeaderSpeed",
-        "CatchUp", "ClumpSlack", "Aspect", "MaxSubSteps", "SimSecondsPerTickSecond", "SimSecondsPerTickSecondRaw",
-        "BlendCommit", "SightHysteresis",
+        "MaxRebuildsPerTick", "MaxRefreshesPerTick",
+        "Aspect", "MaxSubSteps", "SimSecondsPerTickSecond", "SimSecondsPerTickSecondRaw",
         "MaxNeighbors", "MaxScan", "SeparationWeight",
-        "RestDeadband", "MaxPush", "Smoothing", "MovingBonus", "DominantShare",
-        "PlayerA", "PlayerB", "MaxUnits", "BlockCoverage", "AreaIndex",
+        "RestDeadband", "MaxPush", "MovingPriorityBonus", "DominantShare",
+        "PlayerA", "PlayerB", "MaxUnits", "BlockCoverage", "Coverage", "AreaIndex",
         "Priority", "LifetimeSecRaw", "InitialUnits", "CentersPerGroup", "PlayerId", "Ema",
         "IndexByPlayerId", "PlayerCount",
     };
 
     private static readonly HashSet<string> ParityStructuralKeys = new(StringComparer.Ordinal)
     {
-        "additive", "agentType", "bakes", "blockers", "box", "bridges", "cases", "cells",
+        "additive", "agentType", "bakes", "blockers", "box", "cases", "cells",
         "clearance", "cmd", "contexts", "count", "entryHashes", "expect", "fnv1a",
         "fogCellsPerSide", "fogTerrain", "frames", "fromFogCell", "got", "hAvgTRaw", "hMaxRaw",
-        "hits", "hpaEdges", "hpaNodes", "jumpCandidates", "kind", "mapId", "misses", "name",
+        "hits", "hpaEdges", "hpaNodes", "kind", "layeredPaths", "linkCandidates", "mapId", "misses", "name",
         "navCellsPerFogCell", "navCellsPerSide", "navId", "navTileEntries", "note", "opaque",
         "pairs", "player", "polys", "rIdx", "reachable", "rect", "script", "seed", "shape",
         "spawnSeq", "template", "tick", "ticks", "toFogCell", "type", "unitType", "value", "with",
@@ -51,6 +50,7 @@ public sealed class SpatialVocabularyContractTests
         "src/Core/CrowdSimulation/Fog/CrowdFogArea.cs",
         "src/Core/CrowdSimulation/Fog/CrowdFog.cs",
         "src/Core/CrowdSimulation/Nav/UpperLayerBake.cs",
+        "src/Core/CrowdSimulation/Diagnostics/CrowdWebFuzzRunner.cs",
     ];
 
     private static readonly HashSet<string> ConversionIdentifiers = new(StringComparer.Ordinal)

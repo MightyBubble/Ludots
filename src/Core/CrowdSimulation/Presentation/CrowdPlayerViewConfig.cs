@@ -1,0 +1,235 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using Ludots.Core.Config;
+
+namespace Ludots.Core.CrowdSimulation.Presentation;
+
+/// <summary>
+/// CrowdSimulationPlayerView.json。缺字段、未知键、越界在装载时失败，不补值。
+/// 颜色只出现在这份配置里。
+/// </summary>
+internal sealed class CrowdPlayerViewConfig
+{
+    [JsonRequired] public bool MagicBox { get; init; }
+    [JsonRequired] public bool FogHide { get; init; }
+    [JsonRequired] public bool PlayerRoute { get; init; }
+    [JsonRequired] public bool LayersStartEnabled { get; init; }
+    [JsonRequired] public int DeployCount { get; init; }
+    [JsonRequired] public int DeployCountStep { get; init; }
+    [JsonRequired] public int DeployCountMin { get; init; }
+    [JsonRequired] public int DeployCountMax { get; init; }
+    [JsonRequired] public int ClickCount { get; init; }
+    [JsonRequired] public int ClickCountStep { get; init; }
+    [JsonRequired] public int ClickCountMin { get; init; }
+    [JsonRequired] public int ClickCountMax { get; init; }
+    [JsonRequired] public string ClickTemplate { get; init; } = "";
+    [JsonRequired] public string[] ClickTemplates { get; init; } = Array.Empty<string>();
+    [JsonRequired] public int RippleMs { get; init; }
+    [JsonRequired] public int RippleRadiusCm { get; init; }
+    [JsonRequired] public int DashCm { get; init; }
+    [JsonRequired] public int GapCm { get; init; }
+    [JsonRequired] public int MaxDashes { get; init; }
+    [JsonRequired] public int RouteThicknessCm { get; init; }
+    [JsonRequired] public int MarkerRadiusCm { get; init; }
+    [JsonRequired] public int CrossArmCm { get; init; }
+    [JsonRequired] public double KillRingScale { get; init; }
+    [JsonRequired] public double KillImpulse { get; init; }
+    [JsonRequired] public int EnemyMarkRadiusCm { get; init; }
+    [JsonRequired] public float HillshadeStrength { get; init; }
+    [JsonRequired] public int MaxBeliefMarkers { get; init; }
+    [JsonRequired] public string CameraId { get; init; } = "";
+    [JsonRequired] public string SeatId { get; init; } = "";
+    [JsonRequired] public string BoxingContextId { get; init; } = "";
+    [JsonRequired] public string FogSceneUri { get; init; } = "";
+    [JsonRequired] public string DefaultShapeId { get; init; } = "";
+    [JsonRequired] public Dictionary<string, string> ShapeLabels { get; init; } = null!;
+    [JsonRequired] public CrowdPlayerViewActions Actions { get; init; } = null!;
+    [JsonRequired] public CrowdPlayerViewColors Colors { get; init; } = null!;
+
+    public static CrowdPlayerViewConfig Load(JsonObject node, string path)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        ArgumentException.ThrowIfNullOrEmpty(path);
+        CrowdPlayerViewConfig cfg;
+        try
+        {
+            cfg = node.Deserialize<CrowdPlayerViewConfig>(StrictJsonOptions.CreateCamelCase())
+                ?? throw new InvalidOperationException($"{path}: 反序列化结果为空。");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"{path}: {ex.Message}", ex);
+        }
+
+        cfg.Validate(path);
+        return cfg;
+    }
+
+    private void Validate(string path)
+    {
+        RequireRange(path, "deployCount", DeployCount, DeployCountMin, DeployCountMax);
+        if (DeployCountStep < 1)
+            throw new InvalidOperationException($"{path}: deployCountStep 需为 ≥ 1 的整数。");
+        if (DeployCountMin < 1 || DeployCountMax < DeployCountMin)
+            throw new InvalidOperationException($"{path}: deployCountMin/Max 非法。");
+        RequireRange(path, "clickCount", ClickCount, ClickCountMin, ClickCountMax);
+        if (ClickCountStep < 1)
+            throw new InvalidOperationException($"{path}: clickCountStep 需为 ≥ 1 的整数。");
+        if (ClickCountMin < 1 || ClickCountMax < ClickCountMin)
+            throw new InvalidOperationException($"{path}: clickCountMin/Max 非法。");
+        if (ClickTemplates == null || ClickTemplates.Length == 0)
+            throw new InvalidOperationException($"{path}: clickTemplates 至少一条。");
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < ClickTemplates.Length; i++)
+        {
+            string id = ClickTemplates[i];
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 不能为空。");
+            if (!seen.Add(id))
+                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 重复。");
+        }
+
+        if (string.IsNullOrWhiteSpace(ClickTemplate) || !seen.Contains(ClickTemplate))
+            throw new InvalidOperationException($"{path}: clickTemplate 必须是 clickTemplates 里的模板 id。");
+        if (RippleMs < 1)
+            throw new InvalidOperationException($"{path}: rippleMs 需为 ≥ 1 的整数。");
+        if (RippleRadiusCm < 1)
+            throw new InvalidOperationException($"{path}: rippleRadiusCm 需为 ≥ 1 的整数。");
+        if (DashCm < 1 || GapCm < 1)
+            throw new InvalidOperationException($"{path}: dashCm 与 gapCm 需为 ≥ 1 的整数。");
+        if (MaxDashes < 1 || MaxDashes > (1 << 8))
+            throw new InvalidOperationException($"{path}: maxDashes 需为 1..256 的整数。");
+        if (RouteThicknessCm < 1 || MarkerRadiusCm < 1 || CrossArmCm < 1 || EnemyMarkRadiusCm < 1)
+            throw new InvalidOperationException($"{path}: routeThicknessCm、markerRadiusCm、crossArmCm 与 enemyMarkRadiusCm 需为 ≥ 1 的整数。");
+        if (!(KillRingScale > 1d) || !double.IsFinite(KillRingScale))
+            throw new InvalidOperationException($"{path}: killRingScale 必须 > 1。");
+        if (KillImpulse < 0d || !double.IsFinite(KillImpulse))
+            throw new InvalidOperationException($"{path}: killImpulse 必须 ≥ 0。");
+        RequirePositive(path, "hillshadeStrength", HillshadeStrength);
+        if (MaxBeliefMarkers < 1 || MaxBeliefMarkers > 4096)
+            throw new InvalidOperationException($"{path}: maxBeliefMarkers 需为 1..4096 的整数。");
+        RequireText(path, "cameraId", CameraId);
+        RequireText(path, "seatId", SeatId);
+        RequireText(path, "boxingContextId", BoxingContextId);
+        RequireText(path, "fogSceneUri", FogSceneUri);
+        RequireText(path, "defaultShapeId", DefaultShapeId);
+        if (ShapeLabels == null || ShapeLabels.Count == 0)
+            throw new InvalidOperationException($"{path}: shapeLabels 至少一条。");
+        foreach (var pair in ShapeLabels)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                throw new InvalidOperationException($"{path}: shapeLabels 的键不能为空。");
+            if (string.IsNullOrWhiteSpace(pair.Value))
+                throw new InvalidOperationException($"{path}: shapeLabels.{pair.Key} 不能为空。");
+        }
+
+        Actions.Validate(path);
+        Colors.Validate(path);
+    }
+
+    private static void RequireRange(string path, string field, int value, int min, int max)
+    {
+        if (value < min || value > max)
+            throw new InvalidOperationException($"{path}: {field} 需落在 {min}..{max}。");
+    }
+
+    private static void RequirePositive(string path, string field, float value)
+    {
+        if (!float.IsFinite(value) || value <= 0f)
+            throw new InvalidOperationException($"{path}: {field} 必须是 > 0 的有限数。");
+    }
+
+    internal static void RequireText(string path, string field, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidOperationException($"{path}: {field} 不能为空。");
+    }
+}
+
+internal sealed class CrowdPlayerViewActions
+{
+    [JsonRequired] public string NextTeam { get; init; } = "";
+    [JsonRequired] public string SelectAll { get; init; } = "";
+    [JsonRequired] public string ClearSelection { get; init; } = "";
+    [JsonRequired] public string ToggleLayer { get; init; } = "";
+    [JsonRequired] public string CycleLayer { get; init; } = "";
+    [JsonRequired] public string ToggleFog { get; init; } = "";
+    [JsonRequired] public string SceneOutside { get; init; } = "";
+    [JsonRequired] public string SceneBehind { get; init; } = "";
+    [JsonRequired] public string ToggleLos { get; init; } = "";
+    [JsonRequired] public string ToggleRoute { get; init; } = "";
+    [JsonRequired] public string DeployCountDown { get; init; } = "";
+    [JsonRequired] public string DeployCountUp { get; init; } = "";
+    [JsonRequired] public string CycleClickTemplate { get; init; } = "";
+    [JsonRequired] public string CycleClickRadius { get; init; } = "";
+    [JsonRequired] public string ToggleMagicBox { get; init; } = "";
+    [JsonRequired] public string CycleShape { get; init; } = "";
+    [JsonRequired] public string ClickCountDown { get; init; } = "";
+    [JsonRequired] public string ClickCountUp { get; init; } = "";
+    [JsonRequired] public string CycleRadiusRange { get; init; } = "";
+    [JsonRequired] public string BoxSelectBegin { get; init; } = "";
+    [JsonRequired] public string SecondaryHold { get; init; } = "";
+    [JsonRequired] public string FormationCommit { get; init; } = "";
+    [JsonRequired] public string PrimaryTap { get; init; } = "";
+
+    public void Validate(string path)
+    {
+        Require(path, "nextTeam", NextTeam);
+        Require(path, "selectAll", SelectAll);
+        Require(path, "clearSelection", ClearSelection);
+        Require(path, "toggleLayer", ToggleLayer);
+        Require(path, "cycleLayer", CycleLayer);
+        Require(path, "toggleFog", ToggleFog);
+        Require(path, "sceneOutside", SceneOutside);
+        Require(path, "sceneBehind", SceneBehind);
+        Require(path, "toggleLos", ToggleLos);
+        Require(path, "toggleRoute", ToggleRoute);
+        Require(path, "deployCountDown", DeployCountDown);
+        Require(path, "deployCountUp", DeployCountUp);
+        Require(path, "cycleClickTemplate", CycleClickTemplate);
+        Require(path, "cycleClickRadius", CycleClickRadius);
+        Require(path, "toggleMagicBox", ToggleMagicBox);
+        Require(path, "cycleShape", CycleShape);
+        Require(path, "clickCountDown", ClickCountDown);
+        Require(path, "clickCountUp", ClickCountUp);
+        Require(path, "cycleRadiusRange", CycleRadiusRange);
+        Require(path, "boxSelectBegin", BoxSelectBegin);
+        Require(path, "secondaryHold", SecondaryHold);
+        Require(path, "formationCommit", FormationCommit);
+        Require(path, "primaryTap", PrimaryTap);
+    }
+
+    private static void Require(string path, string field, string value)
+        => CrowdPlayerViewConfig.RequireText($"{path}.actions", field, value);
+}
+
+internal sealed class CrowdPlayerViewColors
+{
+    [JsonRequired] public CrowdDebugRgba Plan { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba Ink { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba Paper { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba Selected { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba TerrainLow { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba TerrainHigh { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba TerrainShade { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba Goal { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba Ripple { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba EnemyMark { get; init; } = null!;
+
+    public void Validate(string path)
+    {
+        Plan.Validate(path, "colors.plan");
+        Ink.Validate(path, "colors.ink");
+        Paper.Validate(path, "colors.paper");
+        Selected.Validate(path, "colors.selected");
+        TerrainLow.Validate(path, "colors.terrainLow");
+        TerrainHigh.Validate(path, "colors.terrainHigh");
+        TerrainShade.Validate(path, "colors.terrainShade");
+        Goal.Validate(path, "colors.goal");
+        Ripple.Validate(path, "colors.ripple");
+        EnemyMark.Validate(path, "colors.enemyMark");
+    }
+}

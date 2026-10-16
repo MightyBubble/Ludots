@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Map.Hex;
@@ -34,15 +35,37 @@ namespace Ludots.Tool
             var modIdOption = new Option<string>("--id", "The ID of the mod");
             modIdOption.IsRequired = true;
             var dirOption = new Option<string>("--dir", "Directory to create the mod in (default: mods/)");
-            var templateOption = new Option<string>("--template", () => "empty", "Template: empty, gameplay");
+            var templateOption = new Option<string>("--template", () => "empty", "Template: empty, gameplay, crowd-data");
+            var initMapIdOption = new Option<string?>("--mapId", () => null, "Map id (crowd-data only)");
+            var initTerrainTypesOption = new Option<string?>("--terrainTypes", () => null, "Comma-separated terrain type ids in .navsurface cell order (crowd-data only)");
+            var initNavProfileOption = new Option<string?>("--navProfile", () => null, "Traversal row id written as the unit profile navProfileId (crowd-data only)");
             initCommand.AddOption(modIdOption);
             initCommand.AddOption(dirOption);
             initCommand.AddOption(templateOption);
+            initCommand.AddOption(initMapIdOption);
+            initCommand.AddOption(initTerrainTypesOption);
+            initCommand.AddOption(initNavProfileOption);
             initCommand.SetHandler((InvocationContext ctx) =>
             {
                 var id = ctx.ParseResult.GetValueForOption(modIdOption);
                 var dir = ctx.ParseResult.GetValueForOption(dirOption);
                 var template = ctx.ParseResult.GetValueForOption(templateOption) ?? "empty";
+                var mapId = ctx.ParseResult.GetValueForOption(initMapIdOption);
+                var terrainTypes = ctx.ParseResult.GetValueForOption(initTerrainTypesOption);
+                var navProfile = ctx.ParseResult.GetValueForOption(initNavProfileOption);
+                if (string.Equals(template, "crowd-data", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.ExitCode = InitCrowdDataMod(id, dir, mapId, terrainTypes, navProfile);
+                    return;
+                }
+
+                if (mapId != null || terrainTypes != null || navProfile != null)
+                {
+                    Console.WriteLine("Error: --mapId / --terrainTypes / --navProfile are only used by --template crowd-data.");
+                    ctx.ExitCode = 2;
+                    return;
+                }
+
                 InitMod(id, dir, template);
             });
             
@@ -490,9 +513,109 @@ namespace Ludots.Tool
                 ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(estimateRecastReactNavCommand);
+
+            var bakeCrowdNavSurfaceCommand = new Command(
+                "bake-crowd-navsurface",
+                "Bake a CrowdSimulation .navsurface from the board's React terrain: terrain type cells, plus link candidates for each kind in the map's linkCandidateBake.");
+            var crowdOutOption = new Option<string>("--out", "Output .navsurface path") { IsRequired = true };
+            var crowdModIdOption = new Option<string>("--modId", "Mod that authors the map") { IsRequired = true };
+            var crowdOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
+            bakeCrowdNavSurfaceCommand.AddOption(mapIdOption);
+            bakeCrowdNavSurfaceCommand.AddOption(crowdModIdOption);
+            bakeCrowdNavSurfaceCommand.AddOption(crowdOutOption);
+            bakeCrowdNavSurfaceCommand.AddOption(crowdOverwriteOption);
+            bakeCrowdNavSurfaceCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(crowdModIdOption);
+                var outFile = ctx.ParseResult.GetValueForOption(crowdOutOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(crowdOverwriteOption);
+                ctx.ExitCode = BakeCrowdNavSurface(mapId, modId, outFile, overwrite);
+            });
+            navCommand.AddCommand(bakeCrowdNavSurfaceCommand);
+
+            var initCrowdTerrainCommand = new Command(
+                "init-crowd-terrain",
+                "Write the map's logicTerrainAsset for a new CrowdSimulation map: fill every nav cell with one terrain type, then paint inclusive nav-cell rectangles in order.");
+            var initTerrainFillOption = new Option<string>("--fill", "Terrain id (from maps.<mapId>.terrainTypes) for every cell") { IsRequired = true };
+            var initTerrainRectOption = new Option<string[]>("--rect", () => Array.Empty<string>(), "terrainId:minCol,minRow,maxCol,maxRow (repeatable)")
+            {
+                Arity = ArgumentArity.ZeroOrMore,
+            };
+            initCrowdTerrainCommand.AddOption(mapIdOption);
+            initCrowdTerrainCommand.AddOption(crowdModIdOption);
+            initCrowdTerrainCommand.AddOption(initTerrainFillOption);
+            initCrowdTerrainCommand.AddOption(initTerrainRectOption);
+            initCrowdTerrainCommand.AddOption(crowdOverwriteOption);
+            initCrowdTerrainCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(crowdModIdOption);
+                var fill = ctx.ParseResult.GetValueForOption(initTerrainFillOption);
+                var rects = ctx.ParseResult.GetValueForOption(initTerrainRectOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(crowdOverwriteOption);
+                ctx.ExitCode = InitCrowdTerrain(mapId, modId, fill, rects, overwrite);
+            });
+            navCommand.AddCommand(initCrowdTerrainCommand);
+
+            var initCrowdHeightmapCommand = new Command(
+                "init-crowd-heightmap",
+                "Write a flat ContinuousHeightmap.asset (uint16 scaled, one sample per nav cell) for a new CrowdSimulation map.");
+            var initHeightCmOption = new Option<int>("--heightCm", () => 0, "Height of every sample in cm");
+            initCrowdHeightmapCommand.AddOption(mapIdOption);
+            initCrowdHeightmapCommand.AddOption(crowdModIdOption);
+            initCrowdHeightmapCommand.AddOption(initHeightCmOption);
+            initCrowdHeightmapCommand.AddOption(crowdOverwriteOption);
+            initCrowdHeightmapCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(crowdModIdOption);
+                var heightCm = ctx.ParseResult.GetValueForOption(initHeightCmOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(crowdOverwriteOption);
+                ctx.ExitCode = InitCrowdHeightmap(mapId, modId, heightCm, overwrite);
+            });
+            navCommand.AddCommand(initCrowdHeightmapCommand);
+
+            var importNavSurfaceReactCommand = new Command(
+                "import-navsurface-react",
+                "Write a React terrain bin whose AreaId equals each .navsurface cell. Link candidates are not copied.");
+            var importNavSurfaceInOption = new Option<string>("--in", "Input .navsurface path") { IsRequired = true };
+            var importNavSurfaceOutOption = new Option<string>("--out", "Output React map_data.bin path") { IsRequired = true };
+            var importNavSurfaceOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
+            importNavSurfaceReactCommand.AddOption(importNavSurfaceInOption);
+            importNavSurfaceReactCommand.AddOption(importNavSurfaceOutOption);
+            importNavSurfaceReactCommand.AddOption(importNavSurfaceOverwriteOption);
+            importNavSurfaceReactCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var inputPath = ctx.ParseResult.GetValueForOption(importNavSurfaceInOption);
+                var outFile = ctx.ParseResult.GetValueForOption(importNavSurfaceOutOption);
+                var overwrite = ctx.ParseResult.GetValueForOption(importNavSurfaceOverwriteOption);
+                ctx.ExitCode = ImportNavSurfaceReact(inputPath, outFile, overwrite);
+            });
+            navCommand.AddCommand(importNavSurfaceReactCommand);
             rootCommand.AddCommand(navCommand);
 
             return await rootCommand.InvokeAsync(args);
+        }
+
+        static int InitCrowdDataMod(string modId, string dir, string? mapId, string? terrainTypes, string? navProfile)
+        {
+            try
+            {
+                string modsRoot = !string.IsNullOrWhiteSpace(dir)
+                    ? dir
+                    : FindModsRoot() ?? throw new InvalidOperationException("Could not find 'mods' in hierarchy. Use --dir to specify a target directory.");
+                string modDir = Path.GetFullPath(Path.Combine(modsRoot, modId));
+                CrowdModScaffold.Write(modDir, modId, mapId!, CrowdModScaffoldIds.Parse(terrainTypes, navProfile));
+                Console.WriteLine($"Mod '{modId}' initialized at {modDir}");
+                Console.WriteLine($"Next: nav init-crowd-terrain / init-crowd-heightmap / bake-crowd-navsurface --mapId {mapId} --modId {modId}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
         }
 
         static void InitMod(string modId, string dir, string template)
@@ -524,7 +647,7 @@ namespace Ludots.Tool
             bool isGameplay = string.Equals(template, "gameplay", StringComparison.OrdinalIgnoreCase);
             if (!isGameplay && !string.Equals(template, "empty", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"Error: Unknown template '{template}'. Valid values: empty, gameplay");
+                Console.WriteLine($"Error: Unknown template '{template}'. Valid values: empty, gameplay, crowd-data");
                 return;
             }
 
@@ -1510,6 +1633,105 @@ namespace {modId}
             string relative = Path.GetRelativePath(assetsRoot, fullInput)
                 .Replace('\\', '/');
             return "Core:" + relative;
+        }
+
+        static int BakeCrowdNavSurface(string mapId, string modId, string outFile, bool overwrite)
+        {
+            try
+            {
+                NavSurfaceAsset asset = CrowdNavSurfaceAuthoring.BakeAuthoredFile(FindAssetsRoot(), modId, mapId, outFile, overwrite);
+                Console.WriteLine(
+                    $"Wrote {Path.GetFullPath(outFile)} ({asset.NavCellsX}x{asset.NavCellsY}, types={asset.TerrainTypeIds.Length}, linkKinds=[{string.Join(",", asset.LinkKindIds)}], linkCandidates={asset.LinkCandidates.Length}, bakeInputsDigest=0x{asset.BakeInputsDigest:X8})");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int InitCrowdTerrain(string mapId, string modId, string fill, string[] rectTexts, bool overwrite)
+        {
+            try
+            {
+                var rects = new CrowdNavSurfaceAuthoring.CrowdTerrainRect[rectTexts.Length];
+                for (int i = 0; i < rectTexts.Length; i++)
+                {
+                    rects[i] = CrowdNavSurfaceAuthoring.CrowdTerrainRect.Parse(rectTexts[i]);
+                }
+
+                CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
+                    CrowdNavSurfaceAuthoring.WriteInitialTerrain(FindAssetsRoot(), modId, mapId, fill, rects, overwrite);
+                Console.WriteLine(
+                    $"Wrote {start.TerrainFullPath} ({start.NavCellsPerSide}x{start.NavCellsPerSide}, fill={fill}, rects={rects.Length})");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int InitCrowdHeightmap(string mapId, string modId, int heightCm, bool overwrite)
+        {
+            try
+            {
+                CrowdNavSurfaceAuthoring.CrowdAuthoringStart start =
+                    CrowdNavSurfaceAuthoring.WriteFlatHeightmap(FindAssetsRoot(), modId, mapId, heightCm, overwrite);
+                Console.WriteLine(
+                    $"Wrote {start.HeightFullPath} ({start.NavCellsPerSide}x{start.NavCellsPerSide} samples, {heightCm} cm)");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static int ImportNavSurfaceReact(string inputPath, string outFile, bool overwrite)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(inputPath) || !File.Exists(inputPath))
+                {
+                    throw new InvalidOperationException($"Input not found: {inputPath}");
+                }
+
+                if (string.IsNullOrWhiteSpace(outFile))
+                {
+                    throw new InvalidOperationException("--out is required.");
+                }
+
+                if (File.Exists(outFile) && !overwrite)
+                {
+                    throw new IOException($"File exists: {outFile}");
+                }
+
+                NavSurfaceAsset asset;
+                using (FileStream input = File.OpenRead(inputPath))
+                {
+                    asset = NavSurfaceAsset.Read(input);
+                }
+
+                string fullOut = Path.GetFullPath(outFile);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullOut)!);
+                using (FileStream output = File.Create(fullOut))
+                {
+                    CrowdNavSurfaceAuthoring.WriteReactAreaGrid(asset, output);
+                }
+
+                Console.WriteLine(
+                    $"Wrote {fullOut} ({asset.NavCellsX}x{asset.NavCellsY} area cells; jump candidates were not copied)");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
         }
 
         static void GenerateReactMapDataBin(string outFile, int widthChunks, int heightChunks, string preset, bool overwrite)

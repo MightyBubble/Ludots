@@ -20,6 +20,8 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
+using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation;
@@ -592,6 +594,7 @@ namespace Ludots.Adapter.Raylib
                 var presentFrames = new List<ViewportDrawFrame>(4);
                 int frameIndex = 0;
                 string? navWalkabilityOverlayMapId = null;
+                var terrainTypeOverlay = new RaylibTerrainTypeOverlayBinding();
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
@@ -852,6 +855,11 @@ namespace Ludots.Adapter.Raylib
                             continuousHeightmapRenderer,
                             renderDebug.DrawNavWalkabilityTexture,
                             ref navWalkabilityOverlayMapId);
+                        terrainTypeOverlay.Apply(
+                            continuousHeightmapRenderer,
+                            engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out CrowdSimulationRuntime? crowdRuntime)
+                                ? crowdRuntime?.TerrainTypeOverlay
+                                : null);
                         Color frameClearColor = skyEnvironment.IsActive
                             ? skyEnvironment.ResolveClearColor()
                             : (activeMapRequestsDeepBackground
@@ -1128,6 +1136,7 @@ namespace Ludots.Adapter.Raylib
                                 {
                                     // Window-anchored overlay text is composited once for the whole frame.
                                     screenOverlayBuffer?.AddText(
+                                        PresentationOverlayLayer.TopMost,
                                         10,
                                         40,
                                         navMeshPresentationBuffer.FormatMetadataLine(),
@@ -1153,41 +1162,40 @@ namespace Ludots.Adapter.Raylib
 
                             if (drawFieldOverlays && globalFieldVisualBuffer != null)
                             {
-                                // Flow / Walkable / Fog 场:有连续高度图渲染器时改走地形贴花槽位(整张贴花,非小方块);
-                                // 本渲染器只负责纹理暂存上传,绘制由地形着色器完成。
-                                // 槽位唯一:Flow/Walkable 优先,无流场时迷雾三态层占用(混合强度 1.0)
-                                Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor? decalField = null;
-                                Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor? fogDecal = null;
-                                foreach (var fieldRecord in globalFieldVisualBuffer.GetRecords())
+                                // Flow / Walkable 优先占用唯一贴花槽。迷雾只贴本视口座位的视野组；
+                                // 没有座位或该座位没有 scope 时不贴，也不把缓冲里的雾画成平面四边形。
+                                bool seatScopeResolved = false;
+                                int seatScopeKeyId = 0;
+                                string? seatId = viewport.Frame.SeatId;
+                                if (!string.IsNullOrEmpty(seatId) &&
+                                    engine.TryGetService(CoreServiceKeys.SeatVisionScope, out Ludots.Core.Presentation.Rendering.ISeatVisionScope? seatVision) &&
+                                    seatVision != null)
                                 {
-                                    if (!fieldRecord.IsActive)
-                                    {
-                                        continue;
-                                    }
-
-                                    if (fieldRecord.Descriptor.Id.Kind is Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Flow or Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Walkable)
-                                    {
-                                        decalField = fieldRecord.Descriptor;
-                                        break;
-                                    }
-
-                                    fogDecal ??= fieldRecord.Descriptor.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Fog
-                                        ? fieldRecord.Descriptor
-                                        : null;
+                                    seatScopeResolved = seatVision.TryGetScopeKeyId(seatId, out seatScopeKeyId);
                                 }
 
-                                decalField ??= fogDecal;
-                                bool fogOwnsDecal = decalField is { } bound && bound.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Fog;
+                                bool hasDecal = Ludots.Core.Presentation.Rendering.TerrainDecalSelection.TrySelect(
+                                    globalFieldVisualBuffer,
+                                    seatScopeResolved,
+                                    seatScopeKeyId,
+                                    out Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor decalField);
+                                bool fogOwnsDecal = hasDecal && decalField.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Fog;
+                                fieldRenderPresenter.FogPalette = engine.TryGetService(
+                                    CoreServiceKeys.FogDecalPalette,
+                                    out Ludots.Core.Presentation.Rendering.FogDecalPalette? fogPalette)
+                                    ? fogPalette
+                                    : null;
 
-                                fieldRenderPresenter.DrawFlowKind = decalField == null;
-                                fieldRenderPresenter.DrawFogKind = !fogOwnsDecal;
+                                fieldRenderPresenter.DrawFlowKind = !hasDecal;
+                                fieldRenderPresenter.DrawFogKind = seatScopeResolved && !fogOwnsDecal;
                                 long fieldRenderStart = Stopwatch.GetTimestamp();
                                 fieldRenderPresenter.Draw(globalFieldVisualBuffer);
-                                if (decalField is { } decalDescriptor &&
-                                    fieldRenderPresenter.TryGetStagedTexture(decalDescriptor.Id, out Texture2D decalTexture))
+                                // 地形类型叠层已在本帧绘制前占住贴花槽。场贴花不再改绑，也不清外部纹理。
+                                if (!terrainTypeOverlay.Bound && hasDecal &&
+                                    fieldRenderPresenter.TryGetStagedTexture(decalField.Id, out Texture2D decalTexture))
                                 {
-                                    var bounds = decalDescriptor.BoundsCells;
-                                    float cs = decalDescriptor.CellSizeCm;
+                                    var bounds = decalField.BoundsCells;
+                                    float cs = decalField.CellSizeCm;
                                     // 迷雾/流场都要求全缩放可见(overview 网格下保留贴花)
                                     continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = true;
                                     continuousHeightmapRenderer.SetNavWalkabilityOverlayExternal(
@@ -1199,7 +1207,7 @@ namespace Ludots.Adapter.Raylib
                                             (bounds.Y + bounds.Height) * cs),
                                         fogOwnsDecal ? 1f : Ludots.Raylib.Render.RaylibContinuousHeightmapRenderer.DefaultNavWalkabilityBlendStrength);
                                 }
-                                else
+                                else if (!terrainTypeOverlay.Bound)
                                 {
                                     continuousHeightmapRenderer.ClearNavWalkabilityOverlayExternal();
                                     continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = false;

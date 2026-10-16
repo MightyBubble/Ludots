@@ -30,7 +30,7 @@ public class S2NavTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
@@ -101,7 +101,7 @@ public class S2NavTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface("s1337");
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface("s1337");
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
+        var deck = UpperLayerBake.RasterizeLayeredPaths(mapSurface.LayeredPaths, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir("s1337"), "terrain", "crowd_simulation_s1337.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
@@ -118,7 +118,8 @@ public class S2NavTruthTests
         var navmeshJson = TestDefaults.StandardNavmeshJson();
         var seedNav = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir("s1337"), "Navigation", "navmesh.json")))!;
         ConfigPipeline.DeepMerge(navmeshJson, seedNav);
-        navmeshJson["profiles"]!["leaper"]!["jump"]!["downCm"] = 5000;
+        var traversalJson = TestDefaults.DefaultTraversalJson();
+        traversalJson["agentTypes"]!["leaper"]!["links"]!["jump"]!["downCm"] = 5000;
 
         var map = System.Text.Json.JsonSerializer.Deserialize<Ludots.Core.Config.MapConfig>(
             File.ReadAllText(Path.Combine(S1Dir("s1337"), "Maps", "crowd_simulation_s1337.json")),
@@ -128,7 +129,7 @@ public class S2NavTruthTests
             map,
             TestDefaults.DemoProfiles(),
             TestDefaults.ParseNavmesh(navmeshJson),
-            TestDefaults.DemoPathing(),
+            TestDefaults.ParseTraversal(traversalJson),
             TestDefaults.DemoTemplates(),
             TestDefaults.FixedHz,
             TestDefaults.DemoPairRules());
@@ -141,7 +142,7 @@ public class S2NavTruthTests
             var set = new HashSet<(int, int)>(
                 narrowed.Links.From.Zip(narrowed.Links.To, (f, t) => (f, t)));
             int navCellsPerSide = runtime.NavCellsPerSide;
-            foreach (var cand in surface.JumpCandidates)
+            foreach (var cand in surface.LinkCandidates)
             {
                 if (cand.DropCm <= 5000) continue;
                 int a = cand.FromY * navCellsPerSide + cand.FromX, b = cand.ToY * navCellsPerSide + cand.ToX;

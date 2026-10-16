@@ -25,6 +25,9 @@ public sealed class CrowdCommandQueue
     public IReadOnlyList<(int Tick, CrowdSimCommand Cmd)> Log => _log;
     public int PendingCount => _queue.Count - _head;
 
+    /// <summary>未执行队列的第 <paramref name="index"/> 条（0 是下一条）。诊断摘要读队列里的那条。</summary>
+    internal (int Tick, CrowdSimCommand Cmd) PendingAt(int index) => _queue[_head + index];
+
     /// <summary>现场指令(JSON 边界):解析、校验、记日志、当 tick 执行一气呵成。</summary>
     public T Submit<T>(CrowdSimSession sim, JsonNode cmd, Func<CrowdSimSession, CrowdSimCommand, T> exec)
         => Submit(sim, CrowdSimCommand.Parse(cmd), exec);
@@ -32,12 +35,22 @@ public sealed class CrowdCommandQueue
     /// <summary>现场指令(已成形载荷):现场生成方直接构造 struct,不过 JSON 边界。</summary>
     public T Submit<T>(CrowdSimSession sim, CrowdSimCommand cmd, Func<CrowdSimSession, CrowdSimCommand, T> exec)
     {
-        CrowdSimCommands.Validate(sim, cmd);
+        cmd = CrowdSimCommands.Validate(sim, cmd);
+        // 现场提交时单位已经在，句柄当场核对。脚本入队的句柄和全体己方选择都留到执行 tick 再解析。
+        if (cmd.Kind == CrowdSimCommandKind.Order)
+        {
+            if (cmd.AllOwnMembers) throw new InvalidOperationException("order: 现场下令要给成员句柄，全体己方选择只用于脚本。");
+            sim.BindMemberSet(cmd.Members!, cmd.Player);
+        }
         _log.Add((sim.TickCount, cmd));
-        return exec(sim, cmd);
+        T result = exec(sim, cmd);
+        sim.Units.PlaybackStructuralChanges();
+        sim.SyncKernelMirror();
+        return result;
     }
 
-    /// <summary>脚本入队(须按 tick 升序;与未执行的存量按 tick 归并,同 tick 先到先执行)。</summary>
+    /// <summary>脚本入队(须按 tick 升序;与未执行的存量按 tick 归并,同 tick 先到先执行)。
+    /// 条目按 <see cref="CrowdSimCommand.Detached"/> 入队，与调用方的数组脱钩。</summary>
     public void Schedule(CrowdSimSession sim, IReadOnlyList<CrowdCommand> entries)
     {
         for (int k = 1; k < entries.Count; k++)
@@ -48,15 +61,19 @@ public sealed class CrowdCommandQueue
             }
         }
 
-        foreach (var e in entries) CrowdSimCommands.Validate(sim, e.Cmd);
+        var resolved = new CrowdCommand[entries.Count];
+        for (int i = 0; i < entries.Count; i++)
+        {
+            resolved[i] = new CrowdCommand(entries[i].Tick, CrowdSimCommands.Validate(sim, entries[i].Cmd));
+        }
 
         var rest = _queue.GetRange(_head, PendingCount);
-        var merged = new List<(int Tick, CrowdSimCommand Cmd)>(rest.Count + entries.Count);
+        var merged = new List<(int Tick, CrowdSimCommand Cmd)>(rest.Count + resolved.Length);
         int a = 0, b = 0;
-        while (a < rest.Count || b < entries.Count)
+        while (a < rest.Count || b < resolved.Length)
         {
-            if (b >= entries.Count || (a < rest.Count && rest[a].Tick <= entries[b].Tick)) merged.Add(rest[a++]);
-            else merged.Add((entries[b].Tick, entries[b++].Cmd));
+            if (b >= resolved.Length || (a < rest.Count && rest[a].Tick <= resolved[b].Tick)) merged.Add(rest[a++]);
+            else merged.Add((resolved[b].Tick, resolved[b++].Cmd.Detached()));
         }
 
         _queue = merged;

@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests;
 
-/// <summary>频率换算、寿命 tick 与对拍元数据。带 mapId 的对拍 JSON 必须 fixedHz = 30；若有 fnv1a 则必须是 8 位十六进制。不比对摘要是否与某次导出逐字相同。文件数锁 26。</summary>
+/// <summary>频率换算、寿命 tick 与对拍元数据。带 mapId 的对拍 JSON 必须 fixedHz = 30；若有 fnv1a 则必须是 8 位十六进制。不比对摘要是否与某次导出逐字相同。文件数锁 29。</summary>
 [TestFixture]
 public class CrowdSimulationRateTests
 {
@@ -62,7 +62,7 @@ public class CrowdSimulationRateTests
             }
         }
 
-        Assert.That(seen, Is.EqualTo(26));
+        Assert.That(seen, Is.EqualTo(29));
     }
 
     private static string FindRepoRoot()

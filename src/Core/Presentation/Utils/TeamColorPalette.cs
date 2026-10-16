@@ -13,11 +13,15 @@ namespace Ludots.Core.Presentation.Utils
     {
         private readonly Vector4[] _byPlayerId;
 
-        public TeamColorPalette(Vector4[] byPlayerId)
+        public TeamColorPalette(Vector4[] byPlayerId, IReadOnlyList<int> playerIds)
         {
             ArgumentNullException.ThrowIfNull(byPlayerId);
+            ArgumentNullException.ThrowIfNull(playerIds);
             _byPlayerId = byPlayerId;
+            PlayerIds = playerIds;
         }
+
+        public IReadOnlyList<int> PlayerIds { get; }
 
         public bool TryGet(int playerId, out Vector4 color)
         {

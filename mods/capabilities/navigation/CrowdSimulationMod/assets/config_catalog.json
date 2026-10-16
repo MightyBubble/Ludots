@@ -4,6 +4,10 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "CrowdSimulation/traversal.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Entities/templates.json",
     "Policy": "ArrayById",
     "IdField": "id"
@@ -14,13 +18,19 @@
     "IdField": "id"
   },
   {
-    "Path": "Presentation/mesh_assets.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
+    "Path": "Presentation/terrain_type_colors.json",
+    "Policy": "DeepObject"
   },
   {
-    "Path": "Presentation/host_assets.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
+    "Path": "Presentation/crowd_player_colors.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Presentation/crowd_terrain_type_overlay.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Presentation/crowd_fog_decal.json",
+    "Policy": "DeepObject"
   }
 ]

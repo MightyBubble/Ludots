@@ -36,16 +36,14 @@ public sealed class S7FogRecycleTruthTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7crecycle-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
+        var script = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
         var truthExecTicks = meta["opExecTicks"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray();
-        session.Commands.Schedule(session, script);
 
         var reports = new List<Ludots.Core.CrowdSimulation.Structures.CrowdRebakeReport>();
         session.RebakeReported += reports.Add;
@@ -64,10 +62,10 @@ public sealed class S7FogRecycleTruthTests
         string? firstMismatch = null, firstDigestMismatch = null;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!script.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!script.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }
@@ -113,7 +111,6 @@ public sealed class S7FogRecycleTruthTests
             }
 
             // ── 迷雾 digest:逐位硬门(槽号/槽账钉住淘汰次序) ──
-            int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
             for (int g = 0; g < groups; g++)
             {
                 int tVis = BitConverter.ToInt32(bin, cursor); cursor += 4;
@@ -125,12 +122,8 @@ public sealed class S7FogRecycleTruthTests
                 int tEntRev = BitConverter.ToInt32(bin, cursor); cursor += 4;
                 int tRev = BitConverter.ToInt32(bin, cursor); cursor += 4;
 
-                int vis = 0, exp = 0;
-                for (int c = g * f2, end = (g + 1) * f2; c < end; c++)
-                {
-                    if (fog.Visible[c] != 0) vis++;
-                    if (fog.Explored[c] != 0) exp++;
-                }
+                int vis = fog.VisibleCountOf(g);
+                int exp = fog.ExploredCountOf(g);
 
                 firstDigestMismatch ??= Mismatch(
                     ("visible", vis, tVis), ("explored", exp, tExp), ("belief", fog.Belief[g].Count, tBel),

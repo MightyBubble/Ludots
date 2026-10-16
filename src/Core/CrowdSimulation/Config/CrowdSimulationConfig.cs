@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -17,6 +18,7 @@ namespace Ludots.Core.CrowdSimulation.Config;
 public sealed class CrowdSimulationConfig
 {
     public required WorldSection World { get; init; }
+    public required WorkerSection Worker { get; init; }
     public required AgentsSection Agents { get; init; }
     public required NavmeshSection Navmesh { get; init; }
     public required HpaSection Hpa { get; init; }
@@ -39,17 +41,33 @@ public sealed class CrowdSimulationConfig
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
         ArgumentNullException.ThrowIfNull(configObject);
-        RejectRetiredKeys(configObject);
         RejectIdKeyedNulls(configObject);
+        RequireStructureKinds(configObject);
+        var options = StrictJsonOptions.CreateCamelCase();
+        options.AllowOutOfOrderMetadataProperties = true;
+        CrowdSimulationConfig cfg;
         try
         {
-            return configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
+            cfg = configObject.Deserialize<CrowdSimulationConfig>(options)
                 ?? throw new InvalidOperationException("CrowdSimulationConfig.json: 反序列化结果为空。");
         }
         catch (JsonException ex)
         {
             throw new InvalidOperationException($"CrowdSimulationConfig.json: {ex.Message}", ex);
         }
+
+        if (cfg.Worker.PlanTimeoutMs <= 0)
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationConfig.json: worker.planTimeoutMs 需为 > 0 的整数毫秒。");
+        }
+
+        if (!(cfg.Telemetry.TurnEpsRad > 0d) || double.IsNaN(cfg.Telemetry.TurnEpsRad) || double.IsInfinity(cfg.Telemetry.TurnEpsRad))
+        {
+            throw new InvalidOperationException("CrowdSimulationConfig.json: telemetry.turnEpsRad 必须是 > 0 的有限数。");
+        }
+
+        return cfg;
     }
 
     public static CrowdSimulationConfig Load(Stream stream)
@@ -64,77 +82,38 @@ public sealed class CrowdSimulationConfig
         return Load(obj);
     }
 
-    /// <summary>旧作者键只用于报错。命中即拒绝，不读取值。</summary>
-    internal static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
-    [
-        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
-        ("deploy.spreadCells", "deploy.spreadCm"),
-        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
-        ("fog.cellCells", "fog.cellSizeCm"),
-        ("formation.goalArriveCells", "formation.goalArriveCm"),
-        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
-        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
-        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
-        ("formation.minClumpCells", "formation.minClumpCm"),
-        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
-        ("formation.slotArriveCells", "formation.slotArriveCm"),
-        ("formation.slotSightCells", "formation.slotSightCm"),
-        ("formations[].spacing", "formations.<id>.spacingDiameterScale"),
-        ("hpa.clusterSize", "navtile.sizeCm"),
-        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
-        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
-        ("movement.maxStepCells", "movement.maxStepNavCells"),
-        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
-        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
-        ("agentTypes", "Navigation/pathing.json 的 agentTypes"),
-        ("agents.radiusClasses", "单位模板 CrowdSimulationAgent.pushPriority"),
-        ("agents.profilesUri", "Navigation/agent_profiles.json"),
-        ("unitTypes", "单位模板 CrowdSimulationAgent"),
-        ("navAreas", "Navigation/navmesh.json 的 areas"),
-        ("terrainAreas", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas"),
-        ("navProfiles", "Navigation/navmesh.json 的 profiles"),
-        ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas 数组顺序"),
-        ("world.surfaceAsset", "地图 ContinuousHeightmap.asset（同主干 .navsurface）"),
-        ("world.navCellSizeCm", "Navigation/navmesh.json 的 profiles[].cellSizeCm"),
-        ("world.mapId", "当前聚焦的地图"),
-        ("mapId", "当前聚焦的地图"),
-        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
-        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
-        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
-        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
-        ("spawn.cellInset", "spawn.navCellInsetFraction"),
-        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
-        ("structures.portalCells", "structures.portalReachNavCells"),
-        ("formation.settleTime", "formation.settleTimeSec"),
-        ("movement.slotTimeConstant", "movement.slotTimeConstantSec"),
-        ("sim.timeScale", "sim.simSecondsPerTickSecond"),
-        ("movement.blendRate", "movement.blendRatePerSec"),
-        ("movement.unitTurnRate", "movement.unitTurnRateRadPerSec"),
-        ("movement.stallDecay", "movement.stallDecayPerSec"),
-        ("movement.slotCheckInterval", "movement.slotCheckIntervalSubSteps"),
-        ("formation.leaderTurnRate", "formation.leaderTurnRatePerSec"),
-        ("avoidance.acceleration", "avoidance.accelerationPerSec"),
-        ("relations", "pairRules（yieldsTo / sharesVisionWith 各写 relation）"),
-        ("push.modes", "pairRules.yieldsTo"),
-    ];
-
     private static readonly string[] IdKeyedObjects =
     [
         "formations",
         "structures.templates",
     ];
 
-    private static void RejectRetiredKeys(JsonObject root)
+    private static readonly string[] StructureEffectKinds = ["block", "setArea", "surface"];
+    private static readonly string[] StructurePlacementKinds = ["unrestricted", "spanEnds"];
+
+    private static void RequireStructureKinds(JsonObject root)
     {
-        if (root.ContainsKey("version"))
+        if (root["structures"] is not JsonObject structures || structures["templates"] is not JsonObject templates)
         {
-            throw new InvalidOperationException(
-                "CrowdSimulationConfig.json: 已删除 version。配置不再带版本号，由严格 schema 与 mod.json semver 管理。");
+            return;
         }
 
-        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        foreach (var (id, node) in templates)
         {
-            RejectRetiredSpatialKey(root, oldPath.Split('.'), 0, "", newKey);
+            if (node is not JsonObject template) continue;
+            RequireKind(template, $"structures.templates.{id}", "effect", StructureEffectKinds);
+            RequireKind(template, $"structures.templates.{id}", "placement", StructurePlacementKinds);
+        }
+    }
+
+    private static void RequireKind(JsonObject template, string path, string key, string[] kinds)
+    {
+        if (template[key] is not JsonObject obj) return;
+        string? kind = obj["kind"] is JsonValue v && v.TryGetValue(out string? s) ? s : null;
+        if (kind == null || Array.IndexOf(kinds, kind) < 0)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: {path}.{key}.kind 需为 {string.Join(" / ", kinds)}。");
         }
     }
 
@@ -198,57 +177,15 @@ public sealed class CrowdSimulationConfig
         }
     }
 
-    private static void RejectRetiredSpatialKey(JsonNode? node, string[] segments, int index, string built, string newKey)
-    {
-        if (node is not JsonObject obj || index >= segments.Length)
-        {
-            return;
-        }
-
-        string segment = segments[index];
-        bool array = segment.EndsWith("[]", StringComparison.Ordinal);
-        string name = array ? segment[..^2] : segment;
-        if (!obj.ContainsKey(name))
-        {
-            return;
-        }
-
-        if (array)
-        {
-            if (obj[name] is JsonArray items)
-            {
-                for (int i = 0; i < items.Count; i++)
-                {
-                    RejectRetiredSpatialKey(items[i], segments, index + 1, $"{built}{name}[{i}].", newKey);
-                }
-
-                return;
-            }
-
-            if (obj[name] is JsonObject children)
-            {
-                foreach (var (key, child) in children)
-                {
-                    RejectRetiredSpatialKey(child, segments, index + 1, $"{built}{name}.{key}.", newKey);
-                }
-            }
-
-            return;
-        }
-
-        if (index == segments.Length - 1)
-        {
-            throw new InvalidOperationException(
-                $"CrowdSimulationConfig.json: 已删除 {built}{name}，改用 {newKey}。");
-        }
-
-        RejectRetiredSpatialKey(obj[name], segments, index + 1, built + name + ".", newKey);
-    }
-
     public sealed class WorldSection
     {
-        /// <summary>生成盐。地图覆盖里的 world.seed 深合并进来；缺键则为 0。</summary>
-        public int Seed { get; init; }
+        /// <summary>生成盐。地图覆盖写 world.seed；合并结果缺这个键则装载失败。</summary>
+        public required int Seed { get; init; }
+    }
+
+    public sealed class WorkerSection
+    {
+        public required int PlanTimeoutMs { get; init; }
     }
 
     public sealed class AgentsSection
@@ -300,7 +237,7 @@ public sealed class CrowdSimulationConfig
         public required int RevealTicks { get; init; }
         public required int SlotCacheCapacity { get; init; }
         public required int VariantCapacity { get; init; }
-        /// <summary>视线遮挡的初始开关。建筑挡住的 fog 格不透明，更高地形挡住视线。fogSight 可在运行时改 CrowdFog.Los。高度表在迷雾装配时注入。</summary>
+        /// <summary>视线遮挡的初始开关。结构挡住的 fog 格不透明，更高地形挡住视线。fogSight 可在运行时改 CrowdFog.Los。高度表在迷雾装配时注入。</summary>
         public required bool LineOfSight { get; init; }
         /// <summary>观察者眼高，厘米。</summary>
         public required int EyeCm { get; init; }
@@ -309,10 +246,10 @@ public sealed class CrowdSimulationConfig
     public sealed class FormationSection
     {
         public required double SpacingScale { get; init; }
-        public required double LeaderSpeed { get; init; }
+        public required double LeaderSpeedRatio { get; init; }
         public required double LeaderTurnRatePerSec { get; init; }
         public required double FaceTurnScale { get; init; }
-        public required double CatchUp { get; init; }
+        public required double CatchUpSpeedRatio { get; init; }
         public required double SlotSightCm { get; init; }
         public required double SettleTimeSec { get; init; }
         public required double LeaderLookAheadCm { get; init; }
@@ -321,7 +258,7 @@ public sealed class CrowdSimulationConfig
         public required double SlotArriveCm { get; init; }
         public required double GoalArriveCm { get; init; }
         public required double SettleRadiusCm { get; init; }
-        public required double ClumpSlack { get; init; }
+        public required double ClumpSlackScale { get; init; }
         public required double MinClumpCm { get; init; }
         /// <summary>与上一任领队朝向的点积：不低于该值则继承朝向；不高于 mirrorFlipDot 则反转。</summary>
         public required double HeadingInheritDot { get; init; }
@@ -331,7 +268,6 @@ public sealed class CrowdSimulationConfig
 
     public sealed class FormationShapeEntry
     {
-        public required string Label { get; init; }
         public required double SpacingDiameterScale { get; init; }
         public required double Aspect { get; init; }
         public required bool Wedge { get; init; }
@@ -343,9 +279,9 @@ public sealed class CrowdSimulationConfig
         public required int MaxSubSteps { get; init; }
         public required double SlotTimeConstantSec { get; init; }
         public required double BlendRatePerSec { get; init; }
-        public required double BlendCommit { get; init; }
+        public required double BlendCommitRatio { get; init; }
         public required int SlotCheckIntervalSubSteps { get; init; }
-        public required double SightHysteresis { get; init; }
+        public required double SightHysteresisScale { get; init; }
         public required double LaneSpreadSpeedRatio { get; init; }
         public required double WakeDistanceCm { get; init; }
         public required double StallSpeedRatio { get; init; }
@@ -355,7 +291,6 @@ public sealed class CrowdSimulationConfig
         public required double SpeedCapRatio { get; init; }
         public required double RestAccelScale { get; init; }
         public required double RestSeparationScale { get; init; }
-        public required double JumpSpeedRatio { get; init; }
     }
 
     public sealed class AvoidanceSection
@@ -368,13 +303,13 @@ public sealed class CrowdSimulationConfig
         public required double AccelerationPerSec { get; init; }
         public required double RestDeadband { get; init; }
         public required double MaxPush { get; init; }
-        public required double Smoothing { get; init; }
+        public required double SmoothingRatio { get; init; }
     }
 
     /// <summary>Yield 分支的内核参数。让不让路由 pairRules.yieldsTo 投影，不在这里选。</summary>
     public sealed class PushSection
     {
-        public required double MovingBonus { get; init; }
+        public required double MovingPriorityBonus { get; init; }
         public required double DominantShare { get; init; }
     }
 
@@ -406,28 +341,70 @@ public sealed class CrowdSimulationConfig
     {
         public required int PlacementTries { get; init; }
         public required double GroupSpacingScale { get; init; }
-        public required int TargetSearchTries { get; init; }
         public required double NavCellInsetFraction { get; init; }
     }
 
     public sealed class StructuresSection
     {
-        public required double BlockCoverage { get; init; }
-        public required int PortalReachNavCells { get; init; }
         /// <summary>键是模板 id。placeStructure / removeStructureAt 按 id 引用。运行时按 id 的序数排序，不看对象键顺序。</summary>
-        public Dictionary<string, StructureTemplateEntry>? Templates { get; init; }
+        public required Dictionary<string, StructureTemplateEntry> Templates { get; init; }
     }
 
-    /// <summary>footprint 必填且为 rect/disc/path；blocker 只允许 rect；area 与 priority 同进同出；lifetimeSec 若写则 &gt; 0。</summary>
+    /// <summary>layer、footprint、effect、placement 只允许 <see cref="CrowdSimulationConfigValidator"/> 列出的四种组合。</summary>
     public sealed class StructureTemplateEntry
     {
-        public string? Name { get; init; }
+        public required string Layer { get; init; }
         public required string Footprint { get; init; }
-        public bool Blocker { get; init; }
-        public string? Area { get; init; }
-        public int? Priority { get; init; }
-        public double? LifetimeSec { get; init; }
-        public bool Layered { get; init; }
+        public required StructureEffectEntry Effect { get; init; }
+        public required StructurePlacementEntry Placement { get; init; }
+        /// <summary>必写；null 表示永久。</summary>
+        public required double? LifetimeSec { get; init; }
+    }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+    [JsonDerivedType(typeof(StructureBlockEffect), "block")]
+    [JsonDerivedType(typeof(StructureSetAreaEffect), "setArea")]
+    [JsonDerivedType(typeof(StructureSurfaceEffect), "surface")]
+    public abstract class StructureEffectEntry
+    {
+    }
+
+    /// <summary>格被足迹盖住的面积份额（X、Y 两向之积）≥ coverage 时成为阻挡格。</summary>
+    public sealed class StructureBlockEffect : StructureEffectEntry
+    {
+        public required double Coverage { get; init; }
+    }
+
+    /// <summary>格心落在足迹里的底层格改成 area；重叠时 priority 高者胜，同级后放置者胜。</summary>
+    public sealed class StructureSetAreaEffect : StructureEffectEntry
+    {
+        public required string Area { get; init; }
+        public required int Priority { get; init; }
+    }
+
+    /// <summary>铺一条上层条带，格的通行参数取 area；离两端不到 portalReachNavCells 格的条带格是入口。</summary>
+    public sealed class StructureSurfaceEffect : StructureEffectEntry
+    {
+        public required string Area { get; init; }
+        public required int PortalReachNavCells { get; init; }
+    }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+    [JsonDerivedType(typeof(StructureUnrestrictedPlacement), "unrestricted")]
+    [JsonDerivedType(typeof(StructureSpanEndsPlacement), "spanEnds")]
+    public abstract class StructurePlacementEntry
+    {
+    }
+
+    public sealed class StructureUnrestrictedPlacement : StructurePlacementEntry
+    {
+    }
+
+    /// <summary>按格的静态地形区域判：两个端点格在 endpointAreas 里，其余盖住的格在 interiorAreas 里。</summary>
+    public sealed class StructureSpanEndsPlacement : StructurePlacementEntry
+    {
+        public required string[] EndpointAreas { get; init; }
+        public required string[] InteriorAreas { get; init; }
     }
 
     public sealed class DeploySection
@@ -444,13 +421,10 @@ public sealed class CrowdSimulationConfig
         public required int PlayerId { get; init; }
         public required int XCm { get; init; }
         public required int YCm { get; init; }
-        /// <summary>该玩家的单位配色(#rrggbb;呈现层调色板数据,仿真空口)。</summary>
-        public string? Color { get; init; }
     }
 
     public sealed class TelemetrySection
     {
         public required double TurnEpsRad { get; init; }
-        public required double Ema { get; init; }
     }
 }

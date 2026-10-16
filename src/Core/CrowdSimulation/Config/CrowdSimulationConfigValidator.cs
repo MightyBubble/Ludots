@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using static Ludots.Core.CrowdSimulation.Config.CrowdSimulationConfig;
 
 namespace Ludots.Core.CrowdSimulation.Config;
 
@@ -34,13 +35,12 @@ public static class CrowdSimulationConfigValidator
         Rule("planning.refreshLatencyTicks", config.Planning.RefreshLatencyTicks, intRequired: true, min: 1);
         Rule("planning.maxRefreshesPerTick", config.Planning.MaxRefreshesPerTick, intRequired: true, min: 1);
         Rule("push.dominantShare", config.Push.DominantShare, min: 0, max: 0.5);
-        Rule("push.movingBonus", config.Push.MovingBonus, min: 0);
+        Rule("push.movingPriorityBonus", config.Push.MovingPriorityBonus, min: 0);
         Rule("agents.avoidanceRadiusScale", config.Agents.AvoidanceRadiusScale, gt: 0);
         Rule("spawn.groupSpacingScale", config.Spawn.GroupSpacingScale, gt: 0);
         Rule("spawn.placementTries", config.Spawn.PlacementTries, intRequired: true, min: 1);
-        Rule("spawn.targetSearchTries", config.Spawn.TargetSearchTries, intRequired: true, min: 1);
         Rule("spawn.navCellInsetFraction", config.Spawn.NavCellInsetFraction, min: 0, lt: 0.5);
-        Rule("movement.sightHysteresis", config.Movement.SightHysteresis, min: 1);
+        Rule("movement.sightHysteresisScale", config.Movement.SightHysteresisScale, min: 1);
         Rule("movement.wakeDistanceCm", config.Movement.WakeDistanceCm, min: 0);
         Rule("movement.stallDecayPerSec", config.Movement.StallDecayPerSec, min: 0);
         Rule("movement.maxSubSteps", config.Movement.MaxSubSteps, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxSubSteps);
@@ -50,15 +50,14 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.maxStepNavCells", config.Movement.MaxStepNavCells, gt: 0, lt: 1);
         Rule("movement.slotTimeConstantSec", config.Movement.SlotTimeConstantSec, gt: 0);
         Rule("movement.unitTurnRateRadPerSec", config.Movement.UnitTurnRateRadPerSec, gt: 0);
-        Rule("movement.jumpSpeedRatio", config.Movement.JumpSpeedRatio, gt: 0);
         Rule("movement.blendRatePerSec", config.Movement.BlendRatePerSec, gt: 0);
         Rule("movement.speedCapRatio", config.Movement.SpeedCapRatio, gt: 0);
         Rule("movement.stopSpeedRatio", config.Movement.StopSpeedRatio, gt: 0);
         Rule("movement.stallSpeedRatio", config.Movement.StallSpeedRatio, gt: 0);
         Rule("movement.slotCheckIntervalSubSteps", config.Movement.SlotCheckIntervalSubSteps, intRequired: true, min: 1);
         Rule("movement.laneSpreadSpeedRatio", config.Movement.LaneSpreadSpeedRatio, min: 0, max: 1);
-        Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
-        Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
+        Rule("movement.blendCommitRatio", config.Movement.BlendCommitRatio, gt: 0, lt: 1);
+        Rule("avoidance.smoothingRatio", config.Avoidance.SmoothingRatio, min: 0, lt: 1);
         RequireRelationId("pairRules.yieldsTo.relation", config.PairRules.YieldsTo.Relation);
         RequireRelationId("pairRules.sharesVisionWith.relation", config.PairRules.SharesVisionWith.Relation);
 
@@ -71,14 +70,14 @@ public static class CrowdSimulationConfigValidator
         Rule("avoidance.maxNeighbors", config.Avoidance.MaxNeighbors, intRequired: true, min: 1);
         Rule("avoidance.maxScan", config.Avoidance.MaxScan, intRequired: true, min: 1);
         Rule("formation.spacingScale", config.Formation.SpacingScale, gt: 0);
-        Rule("formation.catchUp", config.Formation.CatchUp, gt: 0);
+        Rule("formation.catchUpSpeedRatio", config.Formation.CatchUpSpeedRatio, gt: 0);
         Rule("formation.slotSightCm", config.Formation.SlotSightCm, gt: 0);
         Rule("formation.magicBoxMaxSpreadCm", config.Formation.MagicBoxMaxSpreadCm, gt: 0);
-        Rule("formation.clumpSlack", config.Formation.ClumpSlack, gt: 0);
+        Rule("formation.clumpSlackScale", config.Formation.ClumpSlackScale, gt: 0);
         Rule("formation.minClumpCm", config.Formation.MinClumpCm, gt: 0);
         Rule("formation.settleTimeSec", config.Formation.SettleTimeSec, min: 0);
         Rule("formation.magicBoxPadCm", config.Formation.MagicBoxPadCm, min: 0);
-        Rule("formation.leaderSpeed", config.Formation.LeaderSpeed, gt: 0);
+        Rule("formation.leaderSpeedRatio", config.Formation.LeaderSpeedRatio, gt: 0);
         Rule("formation.leaderTurnRatePerSec", config.Formation.LeaderTurnRatePerSec, gt: 0);
         Rule("formation.faceTurnScale", config.Formation.FaceTurnScale, gt: 0);
         Rule("formation.slotArriveCm", config.Formation.SlotArriveCm, gt: 0);
@@ -97,8 +96,6 @@ public static class CrowdSimulationConfigValidator
         Rule("sim.maxUnits", config.Sim.MaxUnits, intRequired: true, min: 1, max: 200000);
         Rule("sim.parallelWorkerCount", config.Sim.ParallelWorkerCount, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxParallelWorkers);
         Rule("sim.simSecondsPerTickSecond", config.Sim.SimSecondsPerTickSecond, gt: 0);
-        Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
-        Rule("structures.portalReachNavCells", config.Structures.PortalReachNavCells, intRequired: true, min: 1);
         ValidateStructureTemplates(config);
         Rule("deploy.initialUnits", config.Deploy.InitialUnits, intRequired: true, min: 0);
         Rule("deploy.centersPerGroup", config.Deploy.CentersPerGroup, intRequired: true, min: 1);
@@ -143,14 +140,14 @@ public static class CrowdSimulationConfigValidator
         }
     }
 
-    /// <summary>只查 footprint 枚举、blocker 仅 rect、area 与 priority 同进同出、priority ≥ 0、
-    /// 非阻挡且无 area 拒绝、lifetimeSec 若写则 &gt; 0。区域名是否存在由装载解析。</summary>
+    /// <summary>
+    /// 允许的组合（layer, footprint, effect, placement）：
+    /// (base, square, block 或 setArea, unrestricted)、(base, disc, setArea, unrestricted)、
+    /// (base, path, setArea, unrestricted)、(upper, path, surface, spanEnds)。区域名是否存在由装载解析。
+    /// </summary>
     private static void ValidateStructureTemplates(CrowdSimulationConfig config)
     {
-        var templates = config.Structures.Templates;
-        if (templates == null) return;
-        var footprints = new HashSet<string> { "rect", "disc", "path" };
-        foreach (var (id, t) in templates)
+        foreach (var (id, t) in config.Structures.Templates)
         {
             string path = $"structures.templates.{id}";
             if (string.IsNullOrWhiteSpace(id))
@@ -158,34 +155,95 @@ public static class CrowdSimulationConfigValidator
                 throw Invalid(path, "id 需为非空字符串");
             }
 
-            if (!footprints.Contains(t.Footprint))
+            if (t.Layer is not ("base" or "upper"))
             {
-                throw Invalid($"{path}.footprint", "需为 rect / disc / path");
+                throw Invalid($"{path}.layer", "需为 base / upper");
             }
 
-            if (t.Blocker && t.Footprint != "rect")
+            if (t.Footprint is not ("square" or "disc" or "path"))
             {
-                throw Invalid($"{path}", "blocker 只支持 rect 占地");
+                throw Invalid($"{path}.footprint", "需为 square / disc / path");
             }
 
-            if ((t.Area == null) != (t.Priority == null))
+            switch (t.Effect)
             {
-                throw Invalid($"{path}", "area 与 priority 需同时给出");
+                case StructureBlockEffect block:
+                    Rule($"{path}.effect.coverage", block.Coverage, gt: 0, max: 1);
+                    break;
+                case StructureSetAreaEffect setArea:
+                    RequireText($"{path}.effect.area", setArea.Area);
+                    Rule($"{path}.effect.priority", setArea.Priority, min: 0);
+                    break;
+                case StructureSurfaceEffect surface:
+                    RequireText($"{path}.effect.area", surface.Area);
+                    Rule($"{path}.effect.portalReachNavCells", surface.PortalReachNavCells, min: 1);
+                    break;
             }
 
-            if (t.Priority is { } p && p < 0)
+            if (t.Placement is StructureSpanEndsPlacement spanEnds)
             {
-                throw Invalid($"{path}.priority", "需为 ≥ 0 的整数");
+                ValidateAreaIds($"{path}.placement.endpointAreas", spanEnds.EndpointAreas);
+                ValidateAreaIds($"{path}.placement.interiorAreas", spanEnds.InteriorAreas);
             }
 
-            if (!t.Blocker && t.Area == null)
+            string effect = EffectKind(t.Effect);
+            string placement = t.Placement is StructureSpanEndsPlacement ? "spanEnds" : "unrestricted";
+            bool allowed = (t.Layer, t.Footprint, effect, placement) switch
             {
-                throw Invalid($"{path}", "既不阻挡也不改导航区域（无效实体）");
+                ("base", "square", "block" or "setArea", "unrestricted") => true,
+                ("base", "disc" or "path", "setArea", "unrestricted") => true,
+                ("upper", "path", "surface", "spanEnds") => true,
+                _ => false,
+            };
+            if (!allowed)
+            {
+                throw Invalid(path,
+                    $"layer / footprint / effect / placement = {t.Layer} / {t.Footprint} / {effect} / {placement} 不是允许的组合。"
+                    + "允许：base / square / block 或 setArea / unrestricted，base / disc 或 path / setArea / unrestricted，upper / path / surface / spanEnds");
             }
 
-            if (t.LifetimeSec is { } life && !(life > 0))
+            if (t.LifetimeSec is { } life && !(IsFinite(life) && life > 0))
             {
-                throw Invalid($"{path}.lifetimeSec", "需 > 0");
+                throw Invalid($"{path}.lifetimeSec", "需 > 0，永久写 null");
+            }
+        }
+    }
+
+    private static string EffectKind(StructureEffectEntry effect) => effect switch
+    {
+        StructureBlockEffect => "block",
+        StructureSetAreaEffect => "setArea",
+        StructureSurfaceEffect => "surface",
+        _ => throw new InvalidOperationException($"未知的结构效果类型 {effect.GetType().Name}。"),
+    };
+
+    private static void RequireText(string path, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw Invalid(path, "需为非空字符串");
+        }
+    }
+
+    private static void ValidateAreaIds(string path, string[]? ids)
+    {
+        if (ids == null || ids.Length == 0)
+        {
+            throw Invalid(path, "需为非空的区域 id 数组");
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < ids.Length; i++)
+        {
+            string id = ids[i];
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw Invalid($"{path}[{i}]", "需为非空字符串");
+            }
+
+            if (!seen.Add(id))
+            {
+                throw Invalid($"{path}", $"区域 \"{id}\" 重复");
             }
         }
     }

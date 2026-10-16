@@ -1,0 +1,20 @@
+{
+  "world": {
+    "seed": 1
+  },
+  "deploy": {
+    "initialUnits": 0,
+    "bases": [
+      {
+        "playerId": 1,
+        "xCm": 715625,
+        "yCm": 828125
+      },
+      {
+        "playerId": 2,
+        "xCm": 715625,
+        "yCm": 765625
+      }
+    ]
+  }
+}

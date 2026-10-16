@@ -1,39 +1,17 @@
 {
   "maps": {
     "crowd_simulation_s1337": {
-      "navAreas": [
-        "Default",
-        "shallow",
-        "rough",
-        "sheer",
-        "deep",
-        "road",
-        "deck",
-        "flooded",
-        "burning"
-      ],
-      "terrainAreas": [
-        {
-          "terrainId": "water",
-          "areaId": "deep"
-        },
-        {
-          "terrainId": "shore",
-          "areaId": "shallow"
-        },
-        {
-          "terrainId": "land",
-          "areaId": "Default"
-        },
-        {
-          "terrainId": "mountain",
-          "areaId": "rough"
-        },
-        {
-          "terrainId": "cliff",
-          "areaId": "sheer"
+      "solver": "crowd-simulation",
+      "logicTerrainAsset": "terrain/crowd_simulation_s1337.map_data.bin",
+      "navCellSizeCm": 6250,
+      "terrainTypes": ["water", "shore", "land", "mountain", "cliff"],
+      "linkCandidateBake": {
+        "jump": {
+          "maxGapCm": 37500,
+          "linkSpacingCm": 31250,
+          "endpointMaxSlopeDeg": 22
         }
-      ]
+      }
     }
   }
 }

@@ -18,6 +18,7 @@ public sealed class CrowdTelemetryEventTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         Assert.That(session.Step(out _), Is.True);
@@ -44,28 +45,19 @@ public sealed class CrowdTelemetryEventTests
         Assert.That(session.Telemetry.Rebakes, Is.GreaterThan(rebakes), "重烘报告发布时应 MarkRebake");
 
         long waits = session.Telemetry.PathWaits;
-        session.Commands.Submit(
-            session,
-            new JsonObject
-            {
-                ["type"] = "order",
-                ["player"] = 1,
-                ["xCm"] = 1200000,
-                ["yCm"] = 800000,
-                ["shape"] = "box",
-            },
-            CrowdSimCommands.Exec);
+        // 工人取出任务时才读延迟。到期帧是推进 latency 之后的下一步，这两步本身还不会等到点。
+        service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
+        session.Commands.Submit(session, MoveOrder(session, 1, 1200000, 800000), CrowdSimCommands.Exec);
         session.Advance(session.Config.Planning.LatencyTicks);
         int membersBefore = session.Units.Count;
         int hist = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
-            + session.Telemetry.Unreachable + session.Telemetry.Jumping;
+            + session.Telemetry.Unreachable + session.Telemetry.Traversing;
         Assert.That(hist, Is.EqualTo(membersBefore));
         session.Commands.Schedule(session, new[]
         {
             new CrowdCommand(session.TickCount, CrowdSimCommand.Parse(
-                JsonNode.Parse("""{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":4,"unitType":0,"rIdx":0}""")!)),
+                JsonNode.Parse("""{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":4,"template":"crowd_simulation.unit.infantry.r100"}""")!)),
         });
-        service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
         session.BlockOnDueReplies = false;
         Assert.That(session.Step(out _), Is.False, "到期规划在路径延迟下应停摆");
 
@@ -74,7 +66,24 @@ public sealed class CrowdTelemetryEventTests
         Assert.That(session.Telemetry.StallTicks, Is.EqualTo(session.Telemetry.PathWaits), "无头 Step 的停摆与等路同一次计数");
         Assert.That(session.Units.Count, Is.EqualTo(membersBefore + 4));
         int histAfter = session.Telemetry.Idle + session.Telemetry.Moving + session.Telemetry.Arrived
-            + session.Telemetry.Unreachable + session.Telemetry.Jumping;
+            + session.Telemetry.Unreachable + session.Telemetry.Traversing;
         Assert.That(histAfter, Is.EqualTo(session.Units.Count), "等路停摆前 Flush 增加的成员要重数进直方");
+    }
+
+    private static JsonObject MoveOrder(CrowdSimSession session, int player, int xCm, int yCm)
+    {
+        var handles = new uint[session.Units.Count];
+        int count = session.Units.CopyOwnHandles(player, handles);
+        var members = new JsonArray();
+        for (int i = 0; i < count; i++) members.Add((long)handles[i]);
+        return new JsonObject
+        {
+            ["type"] = "order",
+            ["player"] = player,
+            ["xCm"] = xCm,
+            ["yCm"] = yCm,
+            ["shape"] = "box",
+            ["members"] = members,
+        };
     }
 }

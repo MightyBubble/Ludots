@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -37,6 +38,8 @@ public sealed class CrowdRebakeReport
     /// <summary>被挤离阻挡的单位数 / 无处安放计数。</summary>
     public int Evicted { get; set; }
     public int Stuck { get; set; }
+    /// <summary>各切片里实际工作的 Stopwatch 刻度之和。切片之间和暂停里的空等不计。不进校验码。</summary>
+    public long ElapsedTicks { get; set; }
     /// <summary>受影响导航摘要:逐上下文脏 tile 与类别。</summary>
     public List<CrowdNavRebakeContextResult> ContextResults { get; set; } = new();
     /// <summary>受影响 tile 并集，升序。</summary>
@@ -66,6 +69,8 @@ public sealed class CrowdRebakeJob
     public int Stuck { get; set; }
     /// <summary>反应末的流场刷新队列长快照(阶段 1;报告字段在阶段 2 发布,队列已被每 tick 预算排空)。</summary>
     public int Refreshes { get; set; }
+    /// <summary>阶段 0 与后续切片已经花掉的工作刻度。报告发布时抄进 <see cref="CrowdRebakeReport.ElapsedTicks"/>。</summary>
+    public long WorkTicks { get; set; }
 }
 
 /// <summary>
@@ -84,6 +89,9 @@ public static class CrowdStructureOps
         if (tpl < 0) throw new InvalidOperationException($"未知结构模板 \"{templateId}\"。");
         var template = sim.Config.Structures.Templates[tpl];
         var fp = CrowdStructureFootprint.Make(template, xCm, yCm, sizeCm, toXCm, toYCm);
+        var reject = store.JudgePlacement(template, fp);
+        sim.LastPlacementReject = reject;
+        if (reject != CrowdPlacementReject.None) return null;
         int expire = store.ExpireTickOf(template, sim.TickCount);
         var (id, rect) = store.PlaceEntity(tpl, fp, expire);
         sim.Fog?.OnTruth(id); // 真相实体出现 → 索引/key/truthRev/不透明位
@@ -120,7 +128,7 @@ public static class CrowdStructureOps
     {
         var job = sim.RebakeJob;
         if (job == null) return;
-        var slices = sim.Config.Planning.RebakeSlices;
+        var slices = sim.RebakeSliceCount;
         if (!all && sim.TickCount == job.LastTick) return;
         job.LastTick = sim.TickCount;
         int stages = 2;
@@ -144,11 +152,15 @@ public static class CrowdStructureOps
         CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect, byte kind, CrowdStructureFootprint fp)
     {
         FinishRebake(sim);
-        var planner = sim.Planner!;
+        long workStart = Stopwatch.GetTimestamp();
         var cache = sim.NavTileCache!;
         int h0 = cache.Hits, m0 = cache.Misses;
-        var dirty = planner.Service.RunExclusive(new RebakeCall(sim, rect, cache), RebakeExclusive);
-        // 真相重烘完调用 TruthChanged。全拷贝变体的数组不跟真相重烘一起改。
+        // 无头 BuildSession 不挂规划器。有路径服务时重烘必须进它的互斥域。
+        var call = new RebakeCall(sim, rect, cache);
+        List<CrowdNavRebakeContextResult> dirty = sim.Planner is { } planner
+            ? planner.Service.RunExclusive(call, RebakeExclusive)
+            : RebakeExclusive(call);
+        // 底层变更不改认知变体的数组。上层变更已在锁内重烘过。
         sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;
         foreach (var r in dirty)
@@ -174,8 +186,9 @@ public static class CrowdStructureOps
         job.Evicted = 0;
         job.Stuck = 0;
         job.Refreshes = 0;
+        job.WorkTicks = Stopwatch.GetTimestamp() - workStart;
         sim.RebakeJob = job;
-        if (sim.Config.Planning.RebakeSlices > 1) return null;
+        if (sim.RebakeSliceCount > 1) return null;
         FinishRebake(sim);
         return sim.LastRebakeReport;
     }
@@ -198,10 +211,18 @@ public static class CrowdStructureOps
     {
         var navs = call.Sim.Navs as Dictionary<int, NavContext>
             ?? throw new InvalidOperationException("导航表必须是 Dictionary，重烘按具体枚举器遍历。");
-        var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Rect, call.Cache);
+        var store = call.Sim.Structures!;
+        var results = CrowdNavRebake.RebakeContexts(navs, call.Sim.RebakeSources!, store, call.Rect, call.Cache);
+        // 上层变更时，已物化的变体在这把锁里按各自的场重烘。RebakeContexts 会换掉重烘结果缓冲。
+        if (store.LastMutationTouchedUpperLayer)
+        {
+            call.Sim.Beliefs?.RebakeMaterialized(call.Rect, call.Cache);
+        }
+
         if (call.Sim.VerifyIncrementalNav)
         {
-            CrowdNavRebake.VerifyAgainstFullBake(call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!);
+            CrowdNavRebake.VerifyAgainstFullBake(
+                call.Sim.Navs, call.Sim.RebakeSources!, call.Sim.Structures!, call.Sim.TickCount);
         }
 
         return results;
@@ -210,22 +231,29 @@ public static class CrowdStructureOps
     /// <summary>阶段 1:队伍反应(重规划清单 + 流场刷新)、唤醒变更附近休眠单位、挤离新阻挡。</summary>
     private static void StageReaction(CrowdSimSession sim, CrowdRebakeJob job)
     {
-        var planner = sim.Planner!;
-        var built = planner.ReactRebake(job.ContextResults);
-        job.Orders.Clear();
-        for (int i = 0; i < built.Count; i++) job.Orders.Add(built[i]);
-        // 反应结束时记下刷新队列长度。每 tick 预算会在步末排空队列，所以报告不在阶段 2 再读队列。
-        job.Refreshes = planner.RefreshQueueCount;
+        long workStart = Stopwatch.GetTimestamp();
+        if (sim.Planner is { } planner)
+        {
+            var built = planner.ReactRebake(job.ContextResults);
+            job.Orders.Clear();
+            for (int i = 0; i < built.Count; i++) job.Orders.Add(built[i]);
+            // 反应结束时记下刷新队列长度。每 tick 预算会在步末排空队列，所以报告不在阶段 2 再读队列。
+            job.Refreshes = planner.RefreshQueueCount;
+        }
         WakeNear(sim, job.Rect);
         job.Evicted = EvictBlocked(sim, job.Rect);
         job.Stuck = sim.EvictStuck;
+        job.WorkTicks += Stopwatch.GetTimestamp() - workStart;
     }
 
     /// <summary>阶段 2:受影响指令重规划(固定生效帧)+ 发布报告。</summary>
     private static void StagePublish(CrowdSimSession sim, CrowdRebakeJob job)
     {
-        var planner = sim.Planner!;
-        if (job.Orders.Count > 0) planner.Plan(job.Orders, sim.TickCount);
+        long workStart = Stopwatch.GetTimestamp();
+        if (sim.Planner is { } planner && job.Orders.Count > 0)
+        {
+            planner.Plan(job.Orders, sim.TickCount);
+        }
         var bbox = job.Fp.Bbox();
         var report = sim.ReportScratch ??= new CrowdRebakeReport();
         report.ExecTick = job.ExecTick;
@@ -272,6 +300,8 @@ public static class CrowdStructureOps
             unionTiles[j + 1] = value;
         }
         report.Tiles = union;
+        job.WorkTicks += Stopwatch.GetTimestamp() - workStart;
+        report.ElapsedTicks = job.WorkTicks;
         sim.LastRebakeReport = report;
         sim.NotifyRebake(report);
     }
@@ -299,11 +329,13 @@ public static class CrowdStructureOps
             var pos = sim.World.Get<Components.WorldPositionCm>(entity).Value;
             Fix64 dx = pos.X < ax ? ax - pos.X : pos.X > bx ? pos.X - bx : Fix64.Zero;
             Fix64 dy = pos.Y < ay ? ay - pos.Y : pos.Y > by ? pos.Y - by : Fix64.Zero;
+            // 跨图距离的厘米平方超出 Q31.32；单轴已超 pad 必在触及范围外，先剔除再平方
+            if (dx > pad || dy > pad) continue;
             if (dx * dx + dy * dy <= pad * pad) kernel.Calm[i] = 0;
         }
     }
 
-    /// <summary>站在刚变不可走地面上的单位挤到最近可走格中心。外扩 2 × 最大净空；跳跃单位改落点。无处可放计入 stuck。</summary>
+    /// <summary>站在刚变成不可走的底层格上的单位挤到最近可走格中心。外扩 2 × 最大净空；穿越中的单位改落点。无处可放计入 stuck。</summary>
     public static int EvictBlocked(CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect)
     {
         var kernel = sim.Movement;
@@ -325,9 +357,9 @@ public static class CrowdStructureOps
             var entity = units.EntityAt(i);
             var state = sim.World.Get<CrowdSimulationUnitState>(entity);
             var kin = sim.World.Get<CrowdSimulationKinematics>(entity);
-            bool jumping = state.State == (byte)CrowdUnitState.Jump;
-            var px = jumping ? kin.JumpToCm.X : sim.World.Get<Components.WorldPositionCm>(entity).Value.X;
-            var py = jumping ? kin.JumpToCm.Y : sim.World.Get<Components.WorldPositionCm>(entity).Value.Y;
+            bool traversing = state.State == (byte)CrowdUnitState.Traversing;
+            var px = traversing ? kin.LinkToCm.X : sim.World.Get<Components.WorldPositionCm>(entity).Value.X;
+            var py = traversing ? kin.LinkToCm.Y : sim.World.Get<Components.WorldPositionCm>(entity).Value.Y;
             if (px < ax || px >= bx || py < ay || py >= by) continue;
             if (!sim.Groups.TryGet(state.GroupId, out var g)) continue;
             var nav = sim.Navs[g.BodyNavId];
@@ -350,12 +382,12 @@ public static class CrowdStructureOps
 
             Fix64 x = Fix64.FromInt(c % navCellsPerSide * navCellSizeCm + navCellSizeCm / 2);
             Fix64 y = Fix64.FromInt(c / navCellsPerSide * navCellSizeCm + navCellSizeCm / 2);
-            if (jumping)
+            if (traversing)
             {
-                kin.JumpToCm = new Fix64Vec2(x, y);
+                kin.LinkToCm = new Fix64Vec2(x, y);
                 Fix64 len = CrowdFix.Hypot(x - kin.RestCm.X, y - kin.RestCm.Y);
                 // 下限 1e-3 米 = 0.1 厘米;Fix64 raw = 0.1 × 2^32 ≈ 429496730,有依据取整
-                kin.JumpLengthCm = Fix64.Max(Fix64.FromRaw(429496730), len);
+                kin.LinkLengthCm = Fix64.Max(Fix64.FromRaw(429496730), len);
                 sim.World.Set(entity, kin);
             }
             else

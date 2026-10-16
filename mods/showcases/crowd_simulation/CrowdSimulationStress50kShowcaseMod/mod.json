@@ -1,0 +1,23 @@
+{
+  "name": "CrowdSimulationStress50kShowcaseMod",
+  "version": "0.1.0",
+  "description": "5 万单位压力演示：和 50k 门禁同一个场景，开局 4 名玩家共 5 万步兵，第 2 tick 全部开往同一目标。遥测面板默认打开，单列模拟耗时和渲染耗时，F10 可收起。玩家视图不按迷雾隐藏敌方，4 方都画出来。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c04",
+    "stress",
+    "telemetry"
+  ]
+}
