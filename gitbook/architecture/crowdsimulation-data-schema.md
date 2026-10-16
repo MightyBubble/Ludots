@@ -220,6 +220,7 @@
 - **视线初始值**：群体迷雾是否做遮挡采样只认 `CrowdSimulationConfig.json` → `fog.lineOfSight`（bool）。HUD 的 `ToggleLos` 走运行时 `fogSight` 命令，不在 PlayerView / Debug JSON 里再写一份初始开关。
 - **散开（scatter）范围**：`scatter` 指令给每名有单位的出生玩家随机 box 目标；坐标均匀取自 `[0, NavCellsPerSide × navCellSizeCm)`，由当前地图求解器板与 `navmesh` 推导，不在调试 JSON 里配置。
 - **爆炸（kill）半径**：`CrowdSimulationDebug.json` → `tools.boomRadiusCm`（> 0）与 `ringScale`（> 1）；外圈冲量用 `impulse`。演示左键爆炸时把该半径写入 `kill` 指令。
+- **玩家视角清场范围**：迷雾检查场景开局清场用的 `kill` 指令，圆心取导航板中心，半径取能盖住整块板的外接圆（`CrowdPlayerViewHost.BoardDisc`，板边长 = `NavCellsPerSide × navCellSizeCm`）。`CrowdSimulationPlayerView.json` 只写 `killRingScale`（> 1）和 `killImpulse`（≥ 0），不写坐标和半径。
 
 ## `CrowdSimulationDebug.json`（摘要）
 
