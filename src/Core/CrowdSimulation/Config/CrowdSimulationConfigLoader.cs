@@ -204,8 +204,6 @@ public sealed class CrowdSimulationConfigLoader
             playerIds.Add(p.PlayerId);
         }
 
-        int coloredBases = 0;
-        int blankColorIndex = -1;
         for (int i = 0; i < config.Deploy.Bases.Length; i++)
         {
             var basis = config.Deploy.Bases[i];
@@ -213,21 +211,6 @@ public sealed class CrowdSimulationConfigLoader
             {
                 throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: deploy.bases[].playerId = {basis.PlayerId}，必须存在于地图 Players[]");
             }
-
-            if (string.IsNullOrWhiteSpace(basis.Color))
-            {
-                if (blankColorIndex < 0) blankColorIndex = i;
-            }
-            else
-            {
-                coloredBases++;
-            }
-        }
-
-        if (coloredBases > 0 && blankColorIndex >= 0)
-        {
-            throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: deploy.bases[{blankColorIndex}].color 未填。基地颜色必须全部填写，或全部不填。");
         }
 
         return new CrowdSimulationRuntimeConfig
@@ -377,7 +360,6 @@ public sealed class CrowdSimulationConfigLoader
                     PlayerId = b.PlayerId,
                     XCm = b.XCm,
                     YCm = b.YCm,
-                    Color = b.Color,
                 }),
             },
             Telemetry = new RuntimeTelemetrySection

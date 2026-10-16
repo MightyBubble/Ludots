@@ -663,18 +663,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
-        // 玩家调色板:deploy.bases[].color 要么全有要么全无。全有才注册；全无则不注册。
-        int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
-        var palette = new Vector4[maxPlayer + 1];
-        bool anyColor = false;
-        foreach (var b in runtimeConfig.Deploy.Bases)
-        {
-            if (string.IsNullOrWhiteSpace(b.Color)) continue;
-            palette[b.PlayerId] = TeamColorPalette.ParseHex(b.Color, $"deploy.bases player {b.PlayerId}");
-            anyColor = true;
-        }
-
-        if (anyColor) engine.SetService(CoreServiceKeys.TeamColorPalette, new TeamColorPalette(palette));
+        TeamColorPalette palette = CrowdPlayerColors.LoadMerged(
+            engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        CrowdPlayerColors.RequirePlayers(palette, runtimeConfig.PairRules.PlayerIds, runtimeConfig.MapId);
+        engine.SetService(CoreServiceKeys.TeamColorPalette, palette);
 
         // 脚本与自动回放都是指令流。开局人数取 deploy.initialUnits，排在调试脚本之前，成为 tick 0 的 spawn。
         // 对拍和回归自己带指令表，直接建 CrowdSimSession，不经过会话宿主。

@@ -14,10 +14,19 @@ namespace Ludots.Core.Presentation.Utils
         private readonly Vector4[] _byPlayerId;
 
         public TeamColorPalette(Vector4[] byPlayerId)
+            : this(byPlayerId, IndexOfNonZero(byPlayerId))
+        {
+        }
+
+        public TeamColorPalette(Vector4[] byPlayerId, IReadOnlyList<int> playerIds)
         {
             ArgumentNullException.ThrowIfNull(byPlayerId);
+            ArgumentNullException.ThrowIfNull(playerIds);
             _byPlayerId = byPlayerId;
+            PlayerIds = playerIds;
         }
+
+        public IReadOnlyList<int> PlayerIds { get; }
 
         public bool TryGet(int playerId, out Vector4 color)
         {
@@ -29,6 +38,24 @@ namespace Ludots.Core.Presentation.Utils
 
             color = default;
             return false;
+        }
+
+        private static int[] IndexOfNonZero(Vector4[] byPlayerId)
+        {
+            int count = 0;
+            for (int i = 1; i < byPlayerId.Length; i++)
+            {
+                if (byPlayerId[i] != default) count++;
+            }
+
+            var ids = new int[count];
+            int n = 0;
+            for (int i = 1; i < byPlayerId.Length; i++)
+            {
+                if (byPlayerId[i] != default) ids[n++] = i;
+            }
+
+            return ids;
         }
 
         /// <summary>#rrggbb / #rrggbbaa;非法输入抛fail-fast(配置即契约)。</summary>

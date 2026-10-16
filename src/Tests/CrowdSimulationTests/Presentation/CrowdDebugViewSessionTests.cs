@@ -12,6 +12,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Utils;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -34,6 +35,14 @@ public class CrowdDebugViewSessionTests
         frameOn.Funnel = frameOn.Corridor = frameOn.HpaGraph = frameOn.NavPolygons = frameOn.TileGrid = true;
         frameOn.Flow = frameOn.Density = frameOn.Blocked = frameOn.Links = frameOn.Belief = true;
         frameOn.UnitColorMode = CrowdSimulationDebugViewConfig.ColorTeam;
+        frameOn.UsePalette(new TeamColorPalette(new[]
+        {
+            default,
+            TeamColorPalette.ParseHex("#4DB2FF", "test"),
+            TeamColorPalette.ParseHex("#7ED957", "test"),
+            TeamColorPalette.ParseHex("#FFC53D", "test"),
+            TeamColorPalette.ParseHex("#C792FF", "test"),
+        }));
         frameOn.SetViewport(480000f, 540000f, 560000f, 620000f, 20f);
         frameOn.ControllingPlayer = 0;
         var frameOff = new CrowdDebugViewFrame(LoadView());

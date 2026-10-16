@@ -111,56 +111,6 @@
       "blue": 90,
       "alpha": 240
     },
-    "teams": [
-      {
-        "red": 229,
-        "green": 57,
-        "blue": 57,
-        "alpha": 230
-      },
-      {
-        "red": 229,
-        "green": 186,
-        "blue": 57,
-        "alpha": 230
-      },
-      {
-        "red": 143,
-        "green": 229,
-        "blue": 57,
-        "alpha": 230
-      },
-      {
-        "red": 57,
-        "green": 229,
-        "blue": 100,
-        "alpha": 230
-      },
-      {
-        "red": 57,
-        "green": 229,
-        "blue": 229,
-        "alpha": 230
-      },
-      {
-        "red": 57,
-        "green": 100,
-        "blue": 229,
-        "alpha": 230
-      },
-      {
-        "red": 143,
-        "green": 57,
-        "blue": 229,
-        "alpha": 230
-      },
-      {
-        "red": 229,
-        "green": 57,
-        "blue": 186,
-        "alpha": 230
-      }
-    ],
     "templates": [
       {
         "red": 242,

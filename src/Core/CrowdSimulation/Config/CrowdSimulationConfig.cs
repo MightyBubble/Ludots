@@ -416,8 +416,6 @@ public sealed class CrowdSimulationConfig
         public required int PlayerId { get; init; }
         public required int XCm { get; init; }
         public required int YCm { get; init; }
-        /// <summary>该玩家的单位配色(#rrggbb;呈现层调色板数据,仿真空口)。</summary>
-        public string? Color { get; init; }
     }
 
     public sealed class TelemetrySection

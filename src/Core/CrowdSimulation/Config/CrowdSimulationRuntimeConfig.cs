@@ -489,8 +489,6 @@ public sealed class RuntimeDeployBase
     public required int PlayerId { get; init; }
     public required int XCm { get; init; }
     public required int YCm { get; init; }
-    /// <summary>该玩家的单位配色(#rrggbb)。装载要求基地要么全部写颜色，要么全部不写。全部不写则不注册调色板。</summary>
-    public string? Color { get; init; }
 }
 
 public sealed class RuntimeTelemetrySection

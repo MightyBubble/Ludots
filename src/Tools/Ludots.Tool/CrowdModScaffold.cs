@@ -266,8 +266,8 @@ public static class CrowdModScaffold
             {
                 ["initialUnits"] = 0,
                 ["bases"] = new JsonArray(
-                    new JsonObject { ["playerId"] = 1, ["xCm"] = Player1BaseXCm, ["yCm"] = BaseYCm, ["color"] = "#4DB2FF" },
-                    new JsonObject { ["playerId"] = 2, ["xCm"] = Player2BaseXCm, ["yCm"] = BaseYCm, ["color"] = "#FFC53D" }),
+                    new JsonObject { ["playerId"] = 1, ["xCm"] = Player1BaseXCm, ["yCm"] = BaseYCm },
+                    new JsonObject { ["playerId"] = 2, ["xCm"] = Player2BaseXCm, ["yCm"] = BaseYCm }),
             },
         });
         WriteJson(assets, "CrowdSimulationDebug.json", new JsonObject
@@ -286,6 +286,11 @@ public static class CrowdModScaffold
             ["Path"] = "CrowdSimulationDebug.json",
             ["Policy"] = "DeepObject",
         }));
+        WriteJson(assets, "Presentation/crowd_player_colors.json", new JsonObject
+        {
+            ["1"] = "#4DB2FF",
+            ["2"] = "#FFC53D",
+        });
         WriteJson(assets, "Presentation/crowd_terrain_type_overlay.json", new JsonObject { ["enabled"] = true });
     }
 
