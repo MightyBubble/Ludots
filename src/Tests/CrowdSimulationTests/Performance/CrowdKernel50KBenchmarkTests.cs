@@ -96,7 +96,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         string dir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "crowd-kernel-50k-tick");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "trace.jsonl"),
-            $"{{\"units\":{units},\"ticks\":{measuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4},\"budgetMs\":{budgetMs},\"fogFrozen\":false,\"fogRefreshes\":{session.Telemetry.FogRefreshes},\"workers\":{session.Config.Sim.ParallelWorkerCount},\"spawn\":\"deploy.bases\",\"loadAtWindow\":\"{loadAtWindow}\",\"load1\":{load1.ToString("F2", CultureInfo.InvariantCulture)},\"cores\":{cores},\"loadWaitMs\":{loadWait.ElapsedMilliseconds},\"loadAfter\":\"{loadAfter}\"}}\n");
+            $"{{\"units\":{units},\"ticks\":{measuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4},\"budgetMs\":{budgetMs},\"withFog\":{(session.Fog != null ? "true" : "false")},\"fogRefreshes\":{session.Telemetry.FogRefreshes},\"workers\":{session.Config.Sim.ParallelWorkerCount},\"spawn\":\"deploy.bases\",\"loadAtWindow\":\"{loadAtWindow}\",\"load1\":{load1.ToString("F2", CultureInfo.InvariantCulture)},\"cores\":{cores},\"loadWaitMs\":{loadWait.ElapsedMilliseconds},\"loadAfter\":\"{loadAfter}\"}}\n");
         File.WriteAllText(Path.Combine(dir, "benchmark-report.md"),
             $"# 50k 单位 tick 门(种子 1337,deploy.bases 分布,每座基地远点行军,{measuredTicks} tick 稳态窗)\n\n" +
             $"| 指标 | 毫秒/tick |\n|---|---|\n| 平均 | {avg:F4} |\n| P50 | {p50:F4} |\n| P95 | {p95:F4} |\n| 最大 | {max:F4} |\n\n" +

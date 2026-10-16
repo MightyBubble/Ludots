@@ -344,7 +344,7 @@ DeepObject 合并：`formations`、`structures.templates`、`traversal.json` 的
 
 每个 tick 用缓存的 `QueryDescription` 把单位列扫一遍，按槽位映回稠密下标，收成 SoA。子步只读写这张表。tick 末按同一下标写回 chunk 列，不对单个单位做 `World.Get` / `World.Set`。迷雾盖章读的是刚写完的位置和玩家下标，不再按实体回查。指令和结构变更都在这次收拢之前。子步中间没有别的读者要看组件。校验码在 tick 末读 SoA。没有运动内核的部署会话仍直接读组件。意图层的指令簿线性扫和认知槽解析仍是组级备忘，只在 tick 边界失效。规划发生在收拢之前，它改的是组件，下一次收拢能看见。
 
-50k 单位 tick 门（种子 1337、按 deploy.bases 生成 50000、四座基地各下一令远点行军、预热 40 tick、测量 200 tick，`CrowdKernel50KBenchmarkTests`）。Release，迷雾不冻结。计时是推进成功的 `session.Step`，含运动、迷雾刷新、认知同步和校验码。硬门只在优化构建上生效：P95 < 33 ms。Debug 记下数字，然后记为未测。并行工人 4，迷雾刷新 60 次。开测时读 1 分钟 load；高于核数就每 5 秒再读，最多等 180 秒，到期仍高也开测，不重跑。
+50k 单位 tick 门（种子 1337、按 deploy.bases 生成 50000、四座基地各下一令远点行军、预热 40 tick、测量 200 tick，`CrowdKernel50KBenchmarkTests`）。Release，会话装迷雾（`EnableFog`）。计时是推进成功的 `session.Step`，含运动、迷雾刷新、认知同步和校验码。硬门只在优化构建上生效：P95 < 33 ms。Debug 记下数字，然后记为未测。并行工人 4，迷雾刷新 60 次。开测时读 1 分钟 load；高于核数就每 5 秒再读，最多等 180 秒，到期仍高也开测，不重跑。
 
 2026-10-12，4 核。开测 1 分钟 load 1.76，核数 4，等待 0 ms：平均 25.80 / P50 25.26 / P95 30.46 / 最大 31.86 ms。`CrowdKernel50KBenchmarkTests` 运行时把 trace 与报告写到测试工作目录（默认 `TestContext.WorkDirectory/crowd-kernel-50k-tick`；可用环境变量 `CROWD_50K_BENCHMARK_DIR` 覆盖），不再改写仓库 `artifacts/`。入库基线仍放在 `artifacts/benchmarks/crowd-kernel-50k-tick/`：在优化构建下跑通该测试后，把上述目录里的 `trace.jsonl` 与 `benchmark-report.md` 复制进仓库路径并提交。
 
