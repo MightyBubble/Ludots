@@ -157,7 +157,7 @@ public sealed class CrowdHudSamplingTests
         Assert.That(deploy, Does.Contain("24"), "部署数量");
 
         string layers = ui.Text("crowd-layer-rows");
-        Assert.That(layers, Does.Contain("crowd_simulation.unit.infantry"), "图层行显示移动类型 id");
+        Assert.That(layers, Does.Contain("infantry"), "图层行显示移动类型 id（配置里的 unitTypes.id）");
 
         string hint = ui.Text("crowd-hint");
         Assert.That(hint, Does.Not.Contain("*"));
