@@ -1,4 +1,4 @@
-// 从 Web 源码跑 fuzzIter，导出 crowd-fuzz-parity-v2 夹具（逐步 rng / op / 校验 / 位置统计）。
+// 从 Web 源码跑 fuzzIter，导出 crowd-fuzz-parity-v3 夹具（结构模板与阵型的抽取序 / 开局结构的 Web 迭代序 / 逐步 rng / op / 校验 / 位置统计）。
 // 用法：
 //   CROWD_WEB_SRC=/tmp/navforge/web node tools/crowdsimulation-export/exportFuzzParity.mjs \
 //     --seed 11111 --ops 40 --out mods/showcases/.../fuzz-parity-seed11111.json
@@ -176,6 +176,7 @@ function recordFuzz(sim, ops, blast, seed) {
   return { ok: true, steps: log };
 }
 
+const initialStructures = [...sim.structures.footprint.values()].map((fp) => (fp.shape === 'path' ? [fp.x0, fp.y0] : [fp.x, fp.y]));
 const recorded = recordFuzz(sim, opCount, blast, seed);
 if (!recorded.ok) {
   console.error(`录制 fuzz 在第 ${recorded.failedAt} 步失败`);
@@ -197,10 +198,13 @@ if (!last?.ok) {
 }
 
 const doc = {
-  paritySchema: 'crowd-fuzz-parity-v2',
+  paritySchema: 'crowd-fuzz-parity-v3',
   seed,
   opCount,
   blast,
+  templateOrder: sim.config.structures.templates.map((t) => t.id),
+  formationOrder: sim.config.formations.map((f) => f.id),
+  initialStructures,
   steps: recorded.steps,
 };
 mkdirSync(dirname(outPath), { recursive: true });

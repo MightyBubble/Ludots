@@ -18,7 +18,7 @@ internal static class CrowdWebFuzzOpParamAssert
     {
         var e = expected.Params ?? new JsonObject();
         var a = actual.Params ?? new JsonObject();
-        CompareNodes(e, a, $"第 {step} 步 op 参数", CrowdWebFuzzRunner.OpParamMeterBandwidth);
+        CompareNodes(e, a, $"第 {step} 步 op 参数", CrowdWebFuzzRunner.PositionAgreementMeters);
     }
 
     private static void CompareNodes(JsonNode expected, JsonNode actual, string path, double meterBandwidth)

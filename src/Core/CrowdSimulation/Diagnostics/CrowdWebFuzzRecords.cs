@@ -34,24 +34,45 @@ public sealed class CrowdWebFuzzRunResult
     public required IReadOnlyList<CrowdWebFuzzStepRecord> Steps { get; init; }
 }
 
+/// <summary>
+/// Web 端按数组下标抽取结构模板、阵型与待拆结构；C# 运行时表按 id 排序且可能多出地图专属模板，
+/// 开局结构的实体 id 序也取地图实体序，与 Web 结构表迭代序不同。下标必须落在 Web 序上，再解析到 C# 实体。
+/// </summary>
+public sealed class CrowdWebFuzzPalette
+{
+    public required IReadOnlyList<string> TemplateIds { get; init; }
+    public required IReadOnlyList<string> FormationIds { get; init; }
+
+    /// <summary>开局结构锚点（米；矩形与圆取中心，路径取起点），按 Web 结构表迭代序。</summary>
+    public required IReadOnlyList<(double X, double Y)> InitialStructureAnchors { get; init; }
+}
+
 public sealed class CrowdWebFuzzParityFixture
 {
-    public const string SchemaV2 = "crowd-fuzz-parity-v2";
+    public const string SchemaV3 = "crowd-fuzz-parity-v3";
 
     public required string ParitySchema { get; init; }
     public required long Seed { get; init; }
     public required int OpCount { get; init; }
     public required CrowdWebFuzzBlast Blast { get; init; }
+    public required CrowdWebFuzzPalette Palette { get; init; }
     public required IReadOnlyList<CrowdWebFuzzStepRecord> Steps { get; init; }
 
     public static CrowdWebFuzzParityFixture Load(string path)
     {
         var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
         string schema = RequireString(root, "paritySchema");
-        if (schema != SchemaV2)
+        if (schema != SchemaV3)
         {
-            throw new InvalidOperationException($"模糊对拍夹具 paritySchema 需为 {SchemaV2}，实际是 {schema}。");
+            throw new InvalidOperationException($"模糊对拍夹具 paritySchema 需为 {SchemaV3}，实际是 {schema}。");
         }
+
+        var palette = new CrowdWebFuzzPalette
+        {
+            TemplateIds = RequireIdList(root, "templateOrder"),
+            FormationIds = RequireIdList(root, "formationOrder"),
+            InitialStructureAnchors = RequirePointList(root, "initialStructures"),
+        };
 
         long seed = RequireLong(root, "seed");
         int opCount = RequireInt(root, "opCount", 1, null);
@@ -79,53 +100,9 @@ public sealed class CrowdWebFuzzParityFixture
             Seed = seed,
             OpCount = opCount,
             Blast = blast,
+            Palette = palette,
             Steps = steps,
         };
-    }
-
-    public void Save(string path)
-    {
-        var steps = new JsonArray();
-        foreach (var step in Steps)
-        {
-            var rng = new JsonArray();
-            for (int i = 0; i < step.RngDraws.Count; i++) rng.Add(step.RngDraws[i]);
-            var op = new JsonObject { ["kind"] = step.Op.Kind };
-            if (step.Op.Params != null) op["params"] = step.Op.Params.DeepClone();
-            var row = new JsonObject
-            {
-                ["rngDraws"] = rng,
-                ["op"] = op,
-                ["units"] = step.Units,
-                ["validateOk"] = step.ValidateOk,
-                ["unitChecksumHex"] = step.UnitChecksumHex,
-                ["positionStatL1Cm"] = step.PositionStatL1Cm,
-            };
-            if (step.ValidateErrors != null && step.ValidateErrors.Count > 0)
-            {
-                var errs = new JsonArray();
-                foreach (string e in step.ValidateErrors) errs.Add(e);
-                row["validateErrors"] = errs;
-            }
-
-            steps.Add(row);
-        }
-
-        var doc = new JsonObject
-        {
-            ["paritySchema"] = ParitySchema,
-            ["seed"] = Seed,
-            ["opCount"] = OpCount,
-            ["blast"] = new JsonObject
-            {
-                ["ringScale"] = Blast.RingScale.ToDouble(),
-                ["impulse"] = Blast.Impulse.ToDouble(),
-            },
-            ["steps"] = steps,
-        };
-        string? dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        File.WriteAllText(path, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private static CrowdWebFuzzStepRecord ParseStep(JsonObject row)
@@ -175,6 +152,56 @@ public sealed class CrowdWebFuzzParityFixture
         }
 
         return text;
+    }
+
+    private static IReadOnlyList<string> RequireIdList(JsonObject obj, string key)
+    {
+        if (obj[key] is not JsonArray arr || arr.Count == 0)
+        {
+            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为非空 id 数组。");
+        }
+
+        var ids = new List<string>(arr.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < arr.Count; i++)
+        {
+            if (arr[i] is not JsonValue value || !value.TryGetValue<string>(out string? id) || string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException($"模糊对拍夹具: {key}[{i}] 需为非空字符串。");
+            }
+
+            if (!seen.Add(id))
+            {
+                throw new InvalidOperationException($"模糊对拍夹具: {key} 中 id {id} 重复。");
+            }
+
+            ids.Add(id);
+        }
+
+        return ids;
+    }
+
+    private static IReadOnlyList<(double X, double Y)> RequirePointList(JsonObject obj, string key)
+    {
+        if (obj[key] is not JsonArray arr)
+        {
+            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为 [x, y] 数组。");
+        }
+
+        var points = new List<(double X, double Y)>(arr.Count);
+        for (int i = 0; i < arr.Count; i++)
+        {
+            if (arr[i] is not JsonArray pair || pair.Count != 2
+                || pair[0] is not JsonValue xv || !xv.TryGetValue<double>(out double x) || !double.IsFinite(x)
+                || pair[1] is not JsonValue yv || !yv.TryGetValue<double>(out double y) || !double.IsFinite(y))
+            {
+                throw new InvalidOperationException($"模糊对拍夹具: {key}[{i}] 需为两个有限数值。");
+            }
+
+            points.Add((x, y));
+        }
+
+        return points;
     }
 
     private static bool RequireBool(JsonObject obj, string key)

@@ -15,22 +15,22 @@ namespace Ludots.Core.CrowdSimulation.Diagnostics;
 public static class CrowdWebFuzzRunner
 {
     /// <summary>
-    /// 位置 L1 统计带宽（厘米）：fuzz 单步内全体单位坐标 f32 存储与 Fix64 口径的累积差上界。
-    /// 按行为对拍：结构性字段逐位，派生量按带宽；留约 3 倍于 seed 11111 首见最大单步差。
+    /// 对拍的位置口径：Web 存 f32 米、C# 存 Fix64 厘米，同一单位两端坐标每轴差不超过 1 厘米。
+    /// op 参数里从单位位姿读出的米制坐标按此比；位置 L1 统计（逐轴取整到厘米再求和）每单位最多差 4 厘米。
     /// </summary>
-    public const long PositionStatBandwidthCm = 500_000;
+    public const double PositionAgreementMeters = 0.01;
 
-    /// <summary>
-    /// op 参数里米制坐标（含从 f32 单位位姿读出的 pickPoint）与 Web 夹具比对的带宽。
-    /// Web 存 f32 米、爆炸/推挤用 f32 马达；C# 为 Fix64。对拍只约束 RNG 派生量与整数项逐位相等；
-    /// 米制坐标取行为带宽（seed 11111 第 3 步 explode pickPoint 最大约 0.46 m）。
-    /// </summary>
-    public const double OpParamMeterBandwidth = 0.5;
+    public const long PositionStatSlackCmPerUnit = 4;
 
-    public static CrowdWebFuzzRunResult Run(CrowdSimSession session, int opCount, CrowdWebFuzzBlast blast, long seed)
+    public static CrowdWebFuzzRunResult Run(
+        CrowdSimSession session, int opCount, CrowdWebFuzzBlast blast, CrowdWebFuzzPalette palette, long seed)
     {
         ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(palette);
         if (opCount < 0) throw new ArgumentOutOfRangeException(nameof(opCount));
+        var templates = ResolveTemplates(session, palette.TemplateIds);
+        var formationIds = ResolveFormationIds(session, palette.FormationIds);
+        var structureOrder = ResolveInitialStructureOrder(session, palette.InitialStructureAnchors);
         var rng = CrowdSimRng.Create(seed);
         var steps = new List<CrowdWebFuzzStepRecord>(opCount);
         var selection = new bool[session.Units.Capacity];
@@ -49,7 +49,7 @@ public static class CrowdWebFuzzRunner
                 {
                     if (opRoll >= 0.88)
                     {
-                        op = ExecStructure(session, rng, rngDraws, worldSizeM);
+                        op = ExecStructure(session, rng, rngDraws, worldSizeM, templates, structureOrder);
                     }
                     else if (opRoll < 0.3 && session.Units.Count > 0)
                     {
@@ -61,7 +61,7 @@ public static class CrowdWebFuzzRunner
                     }
                     else
                     {
-                        op = ExecOrder(session, rng, rngDraws, worldSizeM, selection);
+                        op = ExecOrder(session, rng, rngDraws, worldSizeM, selection, formationIds);
                     }
 
                     StepTwice(session);
@@ -191,7 +191,7 @@ public static class CrowdWebFuzzRunner
 
     private static int DrawIndex(CrowdSimRng rng, List<uint> draws, int count)
     {
-        if (count <= 1) return 0;
+        if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count));
         double u = Draw(rng, draws);
         return Math.Min(count - 1, (int)Math.Floor(u * count));
     }
@@ -239,14 +239,105 @@ public static class CrowdWebFuzzRunner
         return (xm, ym);
     }
 
-    private static CrowdWebFuzzOpRecord ExecStructure(CrowdSimSession session, CrowdSimRng rng, List<uint> draws, double sizeM)
+    private static RuntimeStructureTemplate[] ResolveTemplates(CrowdSimSession session, IReadOnlyList<string> ids)
     {
-        var store = session.Structures;
-        var templates = session.Config.Structures.Templates;
-        if (store != null && store.EntityIds.Count > 0 && Draw(rng, draws) < 0.4)
+        var byId = session.Config.Structures.Templates.ToDictionary(t => t.Id, StringComparer.Ordinal);
+        var resolved = new RuntimeStructureTemplate[ids.Count];
+        for (int i = 0; i < ids.Count; i++)
         {
-            var ids = store.EntityIds;
-            int pick = ids[DrawIndex(rng, draws, ids.Count)];
+            if (!byId.TryGetValue(ids[i], out var template))
+            {
+                throw new InvalidOperationException($"模糊对拍调色板: 结构模板 {ids[i]} 不在当前配置中。");
+            }
+
+            resolved[i] = template;
+        }
+
+        return resolved;
+    }
+
+    private static string[] ResolveFormationIds(CrowdSimSession session, IReadOnlyList<string> ids)
+    {
+        var known = new HashSet<string>(session.Config.Formations.Select(f => f.Id), StringComparer.Ordinal);
+        foreach (string id in ids)
+        {
+            if (!known.Contains(id))
+            {
+                throw new InvalidOperationException($"模糊对拍调色板: 阵型 {id} 不在当前配置中。");
+            }
+        }
+
+        return ids.ToArray();
+    }
+
+    private static List<int> ResolveInitialStructureOrder(CrowdSimSession session, IReadOnlyList<(double X, double Y)> anchors)
+    {
+        var store = session.Structures
+            ?? throw new InvalidOperationException("模糊对拍需要结构仓。");
+        if (anchors.Count != store.EntityIds.Count)
+        {
+            throw new InvalidOperationException($"模糊对拍调色板: Web 开局结构 {anchors.Count} 个，C# 结构仓 {store.EntityIds.Count} 个。");
+        }
+
+        var idByAnchor = new Dictionary<(long X, long Y), int>(store.EntityIds.Count);
+        foreach (int id in store.EntityIds)
+        {
+            var anchor = AnchorCm(store, id);
+            if (!idByAnchor.TryAdd(anchor, id))
+            {
+                throw new InvalidOperationException($"模糊对拍调色板: 结构 {idByAnchor[anchor]} 与 {id} 锚点重合，无法与 Web 序一一对应。");
+            }
+        }
+
+        var order = new List<int>(anchors.Count);
+        foreach (var (x, y) in anchors)
+        {
+            var key = ((long)Math.Round(x * 100.0), (long)Math.Round(y * 100.0));
+            if (!idByAnchor.Remove(key, out int id))
+            {
+                throw new InvalidOperationException($"模糊对拍调色板: Web 开局结构锚点 ({x}, {y}) 在 C# 结构仓里找不到。");
+            }
+
+            order.Add(id);
+        }
+
+        return order;
+    }
+
+    private static (long X, long Y) AnchorCm(CrowdStructuresStore store, int id)
+    {
+        if (!store.TryGetFootprint(id, out var fp))
+        {
+            throw new InvalidOperationException($"结构 {id} 无足迹。");
+        }
+
+        return fp.Shape == CrowdStructureShape.Path
+            ? ((long)Math.Round(fp.X0.ToDouble()), (long)Math.Round(fp.Y0.ToDouble()))
+            : ((long)Math.Round(fp.CenterXCm.ToDouble()), (long)Math.Round(fp.CenterYCm.ToDouble()));
+    }
+
+    /// <summary>与 Web 结构表（插入序 Map）同步：拆除与到期的从原位删掉，新放置的按放置序追加。</summary>
+    private static void SyncStructureOrder(CrowdStructuresStore store, List<int> order)
+    {
+        var live = new HashSet<int>(store.EntityIds);
+        order.RemoveAll(id => !live.Contains(id));
+        var known = new HashSet<int>(order);
+        foreach (int id in store.EntityIds)
+        {
+            if (known.Add(id)) order.Add(id);
+        }
+    }
+
+    private static CrowdWebFuzzOpRecord ExecStructure(
+        CrowdSimSession session, CrowdSimRng rng, List<uint> draws, double sizeM,
+        RuntimeStructureTemplate[] templates, List<int> structureOrder)
+    {
+        var store = session.Structures
+            ?? throw new InvalidOperationException("模糊对拍需要结构仓。");
+        SyncStructureOrder(store, structureOrder);
+        if (structureOrder.Count > 0 && Draw(rng, draws) < 0.4)
+        {
+            int pick = structureOrder[DrawIndex(rng, draws, structureOrder.Count)];
             if (!store.TryGetFootprint(pick, out var fp))
             {
                 throw new InvalidOperationException($"结构 {pick} 无足迹。");
@@ -266,7 +357,7 @@ public static class CrowdWebFuzzRunner
             };
         }
 
-        int tIdx = DrawIndex(rng, draws, templates.Count);
+        int tIdx = DrawIndex(rng, draws, templates.Length);
         var template = templates[tIdx];
         var (x, y) = PickPoint(session, rng, draws, sizeM);
         double ang = Draw(rng, draws) * Math.PI * 2;
@@ -398,7 +489,7 @@ public static class CrowdWebFuzzRunner
     }
 
     private static CrowdWebFuzzOpRecord ExecOrder(
-        CrowdSimSession session, CrowdSimRng rng, List<uint> draws, double sizeM, bool[] selection)
+        CrowdSimSession session, CrowdSimRng rng, List<uint> draws, double sizeM, bool[] selection, string[] formationIds)
     {
         int pIndex = DrawIndex(rng, draws, session.Config.PairRules.PlayerCount);
         int player = pIndex + 1;
@@ -411,12 +502,12 @@ public static class CrowdWebFuzzRunner
             SelectRect(session, player, selection, ax - 600, ay - 600, ax + 600, ay + 600, false);
         }
 
-        string shapeId = session.Config.Formations[DrawIndex(rng, draws, session.Config.Formations.Count)].Id;
-        bool auto = Draw(rng, draws) < 0.8;
-        bool drag = Draw(rng, draws) < 0.3;
         double ang = Draw(rng, draws) * Math.PI * 2;
-        bool fogTerrain = Draw(rng, draws) < 0.5;
+        bool drag = Draw(rng, draws) < 0.3;
+        string shapeId = formationIds[DrawIndex(rng, draws, formationIds.Length)];
+        bool auto = Draw(rng, draws) < 0.8;
         int widthCm = drag ? (int)Math.Round((100 + Draw(rng, draws) * 800) * 100) : 0;
+        bool fogTerrain = Draw(rng, draws) < 0.5;
         Fix64? faceX = null;
         Fix64? faceY = null;
         if (drag)
