@@ -98,12 +98,10 @@ function flushOutgoingInput(): void {
     return;
   }
 
-  // The server derives which button a pointer Down/Up changed from the mask it last saw; a state snapshot
-  // sent first would already carry the new mask and leave the transition with no changed button.
+  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
   for (const message of inputCapture.encoder.drainPointerMessages()) {
     socket.send(message);
   }
-  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
 }
 
 function worldToScreen2D(worldX: number, worldY: number): [number, number] | null {
@@ -151,8 +149,6 @@ function animate(): void {
     camera.lookAt(cam.tgtX, cam.tgtY, cam.tgtZ);
     camera.up.set(cam.upX, cam.upY, cam.upZ);
     camera.fov = cam.fov;
-    camera.near = cam.nearMeters;
-    camera.far = cam.farMeters;
     camera.updateProjectionMatrix();
 
     referenceWorldRenderer.update(cam.tgtX, cam.tgtY, cam.tgtZ);

@@ -204,18 +204,26 @@ namespace Ludots.Core.Input.AimSource
                 return false;
             }
 
-            CameraManager camera = ClientLocalSeatAccess.RequireLogicViews(_globals).RequireCamera(binding.LogicViewId);
-            CoreScreenRayProvider ray = _seatRay ??= new CoreScreenRayProvider(camera, hostView);
-            ray.Rebind(camera, new PresentBindingSurface(binding, hostView.Fov));
-            ScreenRay screenRay = ray.GetRay(ToBindingLocal(binding, hostView, screenX, screenY));
-            if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in screenRay, heightmap, worldSize, out WorldCmInt2 seatWorldCm))
+            try
+            {
+                CameraManager camera = ClientLocalSeatAccess.RequireLogicViews(_globals).RequireCamera(binding.LogicViewId);
+                CoreScreenRayProvider ray = _seatRay ??= new CoreScreenRayProvider(camera, hostView);
+                ray.Rebind(camera, new PresentBindingSurface(binding, hostView.Fov));
+                ScreenRay screenRay = ray.GetRay(ToBindingLocal(binding, hostView, screenX, screenY));
+                if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in screenRay, heightmap, worldSize, out WorldCmInt2 worldCm))
+                {
+                    groundCm = default;
+                    return false;
+                }
+
+                groundCm = new IntVector2(worldCm.X, worldCm.Y);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
             {
                 groundCm = default;
                 return false;
             }
-
-            groundCm = new IntVector2(seatWorldCm.X, seatWorldCm.Y);
-            return true;
         }
 
         public Entity PickScreenPointEntity(

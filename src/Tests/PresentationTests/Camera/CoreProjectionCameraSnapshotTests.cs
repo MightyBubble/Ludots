@@ -76,48 +76,6 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ProjectionServices_UseLogicCameraUntilPresenterPresentsFirstFrame()
-        {
-            var manager = new CameraManager();
-            manager.State.Yaw = 45f;
-            manager.State.Pitch = 55f;
-            manager.State.DistanceCm = 2800f;
-            manager.State.FovYDeg = 60f;
-            manager.State.TargetCm = new Vector2(6000f, 0f);
-            manager.PreviousState.Yaw = 45f;
-            manager.PreviousState.Pitch = 55f;
-            manager.PreviousState.DistanceCm = 2800f;
-            manager.PreviousState.FovYDeg = 60f;
-            manager.PreviousState.TargetCm = Vector2.Zero;
-
-            var view = new StubViewController();
-            var presenter = new CameraPresenter(new StubSpatialCoordinateConverter(), new StubCameraAdapter());
-            var projector = new CoreScreenProjector(manager, view);
-            var rayProvider = new CoreScreenRayProvider(manager, view);
-            projector.BindPresenter(presenter);
-            rayProvider.BindPresenter(presenter);
-
-            Assert.That(presenter.HasPresented, Is.False);
-            Assert.Throws<System.InvalidOperationException>(() => _ = presenter.SmoothedRenderState);
-
-            ScreenRay logicRay = rayProvider.GetRay(new Vector2(960f, 540f));
-            Assert.That(GroundRaycastUtil.TryGetGroundWorldCm(in logicRay, out WorldCmInt2 logicHit), Is.True);
-            Assert.That(logicHit.X, Is.EqualTo(6000).Within(1), "Before the first presented frame the ray uses the current logic camera.");
-            Vector2 logicTargetScreen = projector.WorldToScreen(
-                WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(6000, 0), yMeters: 0f));
-            Assert.That(Vector2.Distance(logicTargetScreen, new Vector2(960f, 540f)), Is.LessThan(1f));
-
-            presenter.Update(manager, 0f);
-
-            ScreenRay presentedRay = rayProvider.GetRay(new Vector2(960f, 540f));
-            Assert.That(GroundRaycastUtil.TryGetGroundWorldCm(in presentedRay, out WorldCmInt2 presentedHit), Is.True);
-            Assert.That(presentedHit.X, Is.EqualTo(0).Within(1), "Once presented, the ray follows the presenter's interpolated camera.");
-            Vector2 presentedTargetScreen = projector.WorldToScreen(
-                WorldUnits.WorldCmToVisualMeters(WorldCmInt2.Zero, yMeters: 0f));
-            Assert.That(Vector2.Distance(presentedTargetScreen, new Vector2(960f, 540f)), Is.LessThan(1f));
-        }
-
-        [Test]
         public void ScreenServices_RebindToPresentBindingSurfaceMetricsAndLogicViewCamera()
         {
             using var world = World.Create();

@@ -83,8 +83,6 @@ namespace Ludots.Adapter.Web.Streaming
             WriteFloat(cam.Target.X); WriteFloat(cam.Target.Y); WriteFloat(cam.Target.Z);
             WriteFloat(cam.Up.X); WriteFloat(cam.Up.Y); WriteFloat(cam.Up.Z);
             WriteFloat(cam.FovYDeg);
-            CameraClipPlanes clipPlanes = cam.ResolveClipPlanes();
-            WriteFloat(clipPlanes.NearMeters); WriteFloat(clipPlanes.FarMeters);
         }
 
         private int WritePrimitiveDelta(PrimitiveDrawBuffer? buf)

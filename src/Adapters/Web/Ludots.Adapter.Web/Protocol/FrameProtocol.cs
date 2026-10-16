@@ -25,7 +25,7 @@ namespace Ludots.Adapter.Web.Protocol
 
     public static class WireCameraState
     {
-        public const int SizeInBytes = 12 * 4;
+        public const int SizeInBytes = 10 * 4;
     }
 
     public static class WirePrimitiveDrawItem

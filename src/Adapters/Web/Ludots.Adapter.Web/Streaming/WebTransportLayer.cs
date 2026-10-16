@@ -2,7 +2,6 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -64,8 +63,6 @@ namespace Ludots.Adapter.Web.Streaming
             _sessions[id] = session;
             Log.Info(in LogChannel, $"Client connected: {id}");
 
-            WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure;
-            string? closeReason = null;
             try
             {
                 byte[]? meshMap = _meshMapMessage;
@@ -78,36 +75,9 @@ namespace Ludots.Adapter.Web.Streaming
                         ct);
                 }
 
-                using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                Task receiveTask = ReceiveLoopAsync(session, ct);
-                Task sendTask = SendLoopAsync(session, sendCts.Token);
-                Task first = await Task.WhenAny(receiveTask, sendTask);
-                if (first == sendTask && sendTask.IsFaulted)
-                {
-                    // The socket is no longer writable; abort so the pending receive completes too.
-                    ws.Abort();
-                }
-
-                // A close frame must never race an in-flight send: stop the send loop before closing.
-                sendCts.Cancel();
-                Exception? sendFault = await ObserveAsync(sendTask);
-                Exception? receiveFault = await ObserveAsync(receiveTask);
-                if (receiveFault is InvalidDataException protocolViolation)
-                {
-                    closeStatus = WebSocketCloseStatus.InvalidPayloadData;
-                    closeReason = protocolViolation.Message;
-                    Log.Error(in LogChannel, $"Client {id} violated the input protocol; closing: {protocolViolation.Message}");
-                }
-                else if (receiveFault != null && receiveFault is not WebSocketException)
-                {
-                    closeStatus = WebSocketCloseStatus.InternalServerError;
-                    closeReason = receiveFault.GetType().Name;
-                    Log.Error(in LogChannel, $"Client {id} receive loop failed; closing: {receiveFault}");
-                }
-                else if (sendFault != null && sendFault is not WebSocketException)
-                {
-                    Log.Error(in LogChannel, $"Client {id} send loop failed: {sendFault}");
-                }
+                var receiveTask = ReceiveLoopAsync(session, ct);
+                var sendTask = SendLoopAsync(session, ct);
+                await Task.WhenAny(receiveTask, sendTask);
             }
             catch (OperationCanceledException)
             {
@@ -119,51 +89,17 @@ namespace Ludots.Adapter.Web.Streaming
             {
                 _sessions.TryRemove(id, out _);
                 Log.Info(in LogChannel, $"Client disconnected: {id} (sent={session.FramesSent} bytes={session.BytesSent} dropped={session.FramesDropped})");
-                if (ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
+                if (ws.State == WebSocketState.Open)
                 {
                     try
                     {
-                        await ws.CloseAsync(closeStatus, TruncateCloseReason(closeReason), CancellationToken.None);
+                        await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
                     }
-                    catch (WebSocketException)
+                    catch
                     {
                     }
                 }
             }
-        }
-
-        private static async Task<Exception?> ObserveAsync(Task task)
-        {
-            try
-            {
-                await task;
-                return null;
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
-            catch (Exception ex)
-            {
-                return ex;
-            }
-        }
-
-        private static string? TruncateCloseReason(string? reason)
-        {
-            const int MaxCloseReasonBytes = 123;
-            if (reason == null || Encoding.UTF8.GetByteCount(reason) <= MaxCloseReasonBytes)
-            {
-                return reason;
-            }
-
-            int length = Math.Min(reason.Length, MaxCloseReasonBytes);
-            while (length > 0 && Encoding.UTF8.GetByteCount(reason.AsSpan(0, length)) > MaxCloseReasonBytes)
-            {
-                length--;
-            }
-
-            return reason[..length];
         }
 
         public void BroadcastFrame(ReadOnlySpan<byte> frameData)

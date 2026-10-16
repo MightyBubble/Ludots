@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using Ludots.Adapter.Web.Services;
 using Ludots.Adapter.Web.Streaming;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
@@ -26,11 +25,97 @@ namespace Ludots.Adapter.Web
 
         public static void Run(WebHostSetup setup, CancellationToken ct)
         {
-            int targetFps = setup.Config.TargetFps <= 0 ? 30 : setup.Config.TargetFps;
+            var engine = setup.Engine;
+            var config = setup.Config;
+
+            int targetFps = config.TargetFps <= 0 ? 30 : config.TargetFps;
             double targetFrameMs = 1000.0 / targetFps;
 
-            WebHostFrameDriver driver = WebHostFrameDriver.Start(setup);
-            Log.Info(in LogChannel, $"Web host loop started (target {targetFps} fps, map={setup.Config.StartupMapId})");
+            var viewController = setup.ViewController;
+            var cameraAdapter = setup.CameraAdapter;
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
+
+            var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+            var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+            engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
+            engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
+            engine.SetService(
+                CoreServiceKeys.ScreenRayProvider,
+                (IScreenRayProvider)new Ludots.Core.Client.PresentBindingScreenRayProvider(
+                    engine,
+                    screenRayProvider,
+                    () => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f));
+
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
+            screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+
+            var cullingSystem = new CameraCullingSystem(
+                engine.World,
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
+                engine.SpatialQueries,
+                viewController,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            if (engine.GetService(CoreServiceKeys.PresenterEntityRuntime) is PresenterEntityRuntime presenterInstances)
+            {
+                cullingSystem = new CameraCullingSystem(
+                    engine.World,
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
+                    engine.SpatialQueries,
+                    viewController,
+                    presenters: presenterInstances,
+                    cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            }
+            cullingSystem.DisarmPresentBindingCulling();
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
+            engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
+
+            var renderCameraDebug = new RenderCameraDebugState();
+            engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
+
+            engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
+
+            WorldHudToScreenSystem? hudProjection = null;
+            if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud &&
+                engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer) is ScreenHudBatchBuffer screenHud)
+            {
+                var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+                hudProjection = new WorldHudToScreenSystem(
+                    engine.World,
+                    worldHud,
+                    worldHudStrings,
+                    screenProjector,
+                    viewController,
+                    screenHud,
+                    heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
+            }
+
+            ValidateRequiredContext(engine);
+
+            var extractor = new PresentationExtractor(engine, cameraAdapter, setup.UiBridge);
+
+            engine.Start();
+            if (string.IsNullOrWhiteSpace(config.StartupMapId))
+            {
+                throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
+            }
+
+            engine.LoadStartupMap();
+            Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
+                engine,
+                screenProjector,
+                screenRayProvider,
+                viewController.Fov,
+                viewController,
+                cullingSystem);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+
+            BuildAndSendMeshMap(engine, setup.Transport);
+
+            setup.LoopStatus.MarkStarted();
+            Log.Info(in LogChannel, $"Web host loop started (target {targetFps} fps, map={config.StartupMapId})");
 
             var sw = Stopwatch.StartNew();
             long lastTickMs = 0;
@@ -60,11 +145,77 @@ namespace Ludots.Adapter.Web
 
                     try
                     {
-                        driver.Frame(dt);
+                        bool uiCaptured = setup.UiBridge.Update(dt);
+                        engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
+                        Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
+                            engine,
+                            screenProjector,
+                            screenRayProvider,
+                            viewController.Fov,
+                            viewController,
+                            cullingSystem);
+                        Ludots.Core.Client.PresentBindingPresentation.TryArmPresentBindingCullingPasses(
+                            engine,
+                            viewController.Fov,
+                            viewController,
+                            cullingSystem);
+                        engine.Tick(dt);
+
+                        float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TryDrivePresentBindings(
+                                engine,
+                                cameraPresenter,
+                                screenProjector,
+                                screenRayProvider,
+                                cameraAlpha,
+                                viewController.Fov,
+                                drawBinding: null,
+                                cameraDebug: renderCameraDebug,
+                                hostView: viewController,
+                                culling: cullingSystem))
+                        {
+                            if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seats) &&
+                                seats != null &&
+                                seats.Count > 0)
+                            {
+                                throw new InvalidOperationException(
+                                    "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
+                            }
+
+                            cameraPresenter.Update(
+                                ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine),
+                                cameraAlpha,
+                                renderCameraDebug);
+                        }
+                        hudProjection?.Update(dt);
+
+                        if (setup.Transport.HasClients)
+                        {
+                            var (data, len) = extractor.CaptureFrame();
+                            setup.Transport.BroadcastFrame(data.AsSpan(0, len));
+                        }
+
                         if (nowMs - lastDiagMs > 5000)
                         {
                             lastDiagMs = nowMs;
-                            driver.LogDiagnostics();
+                            var primBuf = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+                            int primCount = primBuf?.Count ?? 0;
+                            var skinnedBuf = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                            int visibleSkinnedCount = 0;
+                            if (skinnedBuf != null)
+                            {
+                                var skinnedSpan = skinnedBuf.GetSpan();
+                                for (int i = 0; i < skinnedSpan.Length; i++)
+                                {
+                                    if (skinnedSpan[i].Visibility == VisualVisibility.Visible)
+                                    {
+                                        visibleSkinnedCount++;
+                                    }
+                                }
+                            }
+                            var ddBuf = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+                            int ddLines = ddBuf?.Lines.Count ?? 0;
+                            Log.Info(in LogChannel, $"[Diag] Primitives={primCount} VisibleSkinned={visibleSkinnedCount} DebugLines={ddLines} Clients={setup.Transport.ClientCount} Tick={engine.GameSession?.CurrentTick ?? 0}");
                         }
                     }
                     catch (Exception ex)
@@ -77,225 +228,15 @@ namespace Ludots.Adapter.Web
             }
             finally
             {
-                driver.Stop();
+                if (!setup.LoopStatus.IsFaulted)
+                {
+                    setup.LoopStatus.MarkStopped();
+                }
+
+                engine.Stop();
+                setup.Transport.Dispose();
                 Log.Info(in LogChannel, "Web host loop stopped.");
             }
-        }
-    }
-
-    /// <summary>
-    /// One Web host session: composes presentation services and loads the startup map, then advances one host
-    /// frame per <see cref="Frame"/>. <see cref="WebHostLoop"/> paces it in real time;
-    /// headless tests step it directly.
-    /// </summary>
-    public sealed class WebHostFrameDriver
-    {
-        private static readonly LogChannel LogChannel = Log.RegisterChannel("WebHostLoop");
-
-        private readonly WebHostSetup _setup;
-        private readonly GameEngine _engine;
-        private readonly WebViewController _viewController;
-        private readonly PresentationFrameSetupSystem? _presentationFrameSetup;
-        private readonly CoreScreenProjector _screenProjector;
-        private readonly CoreScreenRayProvider _screenRayProvider;
-        private readonly CameraPresenter _cameraPresenter;
-        private readonly CameraCullingSystem _cullingSystem;
-        private readonly RenderCameraDebugState _renderCameraDebug;
-        private readonly WorldHudToScreenSystem? _hudProjection;
-        private readonly PresentationExtractor _extractor;
-
-        private WebHostFrameDriver(WebHostSetup setup)
-        {
-            _setup = setup;
-            _engine = setup.Engine;
-            var engine = _engine;
-            _viewController = setup.ViewController;
-            var viewController = _viewController;
-            var cameraAdapter = setup.CameraAdapter;
-            _presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
-            var presentationFrameSetup = _presentationFrameSetup;
-
-            _screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
-            _screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
-            engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
-            engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)_screenProjector);
-            engine.SetService(
-                CoreServiceKeys.ScreenRayProvider,
-                (IScreenRayProvider)new Ludots.Core.Client.PresentBindingScreenRayProvider(
-                    engine,
-                    _screenRayProvider,
-                    () => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f));
-
-            _cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
-            _screenProjector.BindPresenter(_cameraPresenter);
-            _screenRayProvider.BindPresenter(_cameraPresenter);
-            _screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
-            _screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
-
-            _cullingSystem = new CameraCullingSystem(
-                engine.World,
-                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
-                engine.SpatialQueries,
-                viewController,
-                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
-            if (engine.GetService(CoreServiceKeys.PresenterEntityRuntime) is PresenterEntityRuntime presenterInstances)
-            {
-                _cullingSystem = new CameraCullingSystem(
-                    engine.World,
-                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
-                    engine.SpatialQueries,
-                    viewController,
-                    presenters: presenterInstances,
-                    cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
-            }
-            _cullingSystem.DisarmPresentBindingCulling();
-            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(_cullingSystem);
-            engine.SetService(CoreServiceKeys.CameraCullingDebugState, _cullingSystem.DebugState);
-
-            _renderCameraDebug = new RenderCameraDebugState();
-            engine.SetService(CoreServiceKeys.RenderCameraDebugState, _renderCameraDebug);
-
-            engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
-
-            if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud &&
-                engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer) is ScreenHudBatchBuffer screenHud)
-            {
-                var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
-                _hudProjection = new WorldHudToScreenSystem(
-                    engine.World,
-                    worldHud,
-                    worldHudStrings,
-                    _screenProjector,
-                    viewController,
-                    screenHud,
-                    heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
-            }
-
-            ValidateRequiredContext(engine);
-
-            _extractor = new PresentationExtractor(engine, cameraAdapter, setup.UiBridge);
-        }
-
-        public CameraPresenter CameraPresenter => _cameraPresenter;
-
-        public static WebHostFrameDriver Start(WebHostSetup setup)
-        {
-            ArgumentNullException.ThrowIfNull(setup);
-            var driver = new WebHostFrameDriver(setup);
-            driver.StartSession();
-            return driver;
-        }
-
-        private void StartSession()
-        {
-            var engine = _engine;
-            engine.Start();
-            if (string.IsNullOrWhiteSpace(_setup.Config.StartupMapId))
-            {
-                throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
-            }
-
-            engine.LoadStartupMap();
-            Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
-                engine,
-                _screenProjector,
-                _screenRayProvider,
-                _viewController.Fov,
-                _viewController,
-                _cullingSystem);
-            engine.SetService(CoreServiceKeys.UiCaptured, false);
-
-            BuildAndSendMeshMap(engine, _setup.Transport);
-
-            _setup.LoopStatus.MarkStarted();
-        }
-
-        public void Frame(float dt)
-        {
-            var engine = _engine;
-            bool uiCaptured = _setup.UiBridge.Update(dt);
-            engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
-            Ludots.Core.Client.PresentBindingPresentation.TryEnsurePresentBindings(
-                engine,
-                _screenProjector,
-                _screenRayProvider,
-                _viewController.Fov,
-                _viewController,
-                _cullingSystem);
-            Ludots.Core.Client.PresentBindingPresentation.TryArmPresentBindingCullingPasses(
-                engine,
-                _viewController.Fov,
-                _viewController,
-                _cullingSystem);
-            engine.Tick(dt);
-
-            float cameraAlpha = _presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            if (!Ludots.Core.Client.PresentBindingPresentation.TryDrivePresentBindings(
-                    engine,
-                    _cameraPresenter,
-                    _screenProjector,
-                    _screenRayProvider,
-                    cameraAlpha,
-                    _viewController.Fov,
-                    drawBinding: null,
-                    cameraDebug: _renderCameraDebug,
-                    hostView: _viewController,
-                    culling: _cullingSystem))
-            {
-                if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
-                    seats != null &&
-                    seats.Count > 0)
-                {
-                    throw new InvalidOperationException(
-                        "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
-                }
-
-                _cameraPresenter.Update(
-                    ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine),
-                    cameraAlpha,
-                    _renderCameraDebug);
-            }
-            _hudProjection?.Update(dt);
-
-            if (_setup.Transport.HasClients)
-            {
-                var (data, len) = _extractor.CaptureFrame();
-                _setup.Transport.BroadcastFrame(data.AsSpan(0, len));
-            }
-        }
-
-        public void LogDiagnostics()
-        {
-            var engine = _engine;
-            var primBuf = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            int primCount = primBuf?.Count ?? 0;
-            var skinnedBuf = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-            int visibleSkinnedCount = 0;
-            if (skinnedBuf != null)
-            {
-                var skinnedSpan = skinnedBuf.GetSpan();
-                for (int i = 0; i < skinnedSpan.Length; i++)
-                {
-                    if (skinnedSpan[i].Visibility == VisualVisibility.Visible)
-                    {
-                        visibleSkinnedCount++;
-                    }
-                }
-            }
-            var ddBuf = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
-            int ddLines = ddBuf?.Lines.Count ?? 0;
-            Log.Info(in LogChannel, $"[Diag] Primitives={primCount} VisibleSkinned={visibleSkinnedCount} DebugLines={ddLines} Clients={_setup.Transport.ClientCount} Tick={engine.GameSession?.CurrentTick ?? 0}");
-        }
-
-        public void Stop()
-        {
-            if (!_setup.LoopStatus.IsFaulted)
-            {
-                _setup.LoopStatus.MarkStopped();
-            }
-
-            _engine.Stop();
-            _setup.Transport.Dispose();
         }
 
         private static void BuildAndSendMeshMap(GameEngine engine, WebTransportLayer transport)

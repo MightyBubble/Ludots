@@ -26,17 +26,8 @@ namespace Ludots.Core.Presentation.Camera
         /// <summary>
         /// The render-state that matches the actual 3D camera used for rendering.
         /// HUD projection should use this to stay in sync with 3D meshes.
-        /// Unavailable until the first <see cref="Update"/>; check <see cref="HasPresented"/> first.
         /// </summary>
-        public CameraRenderState3D SmoothedRenderState => HasPresented
-            ? _smoothedRenderState
-            : throw new InvalidOperationException(
-                "CameraPresenter has not presented a frame yet; there is no render camera to read. " +
-                "Check HasPresented and use the logical camera until the host presents the first frame.");
-
-        public bool HasPresented { get; private set; }
-
-        private CameraRenderState3D _smoothedRenderState;
+        public CameraRenderState3D SmoothedRenderState { get; private set; }
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
@@ -63,9 +54,8 @@ namespace Ludots.Core.Presentation.Camera
                 WorldUnits.CmToM(state.TargetCm.X),
                 WorldUnits.CmToM(state.TargetHeightCm),
                 WorldUnits.CmToM(state.TargetCm.Y));
-            _smoothedRenderState = CameraViewportUtil.StateToRenderState(state, cameraDebug);
-            HasPresented = true;
-            _adapter.UpdateCamera(_smoothedRenderState);
+            SmoothedRenderState = CameraViewportUtil.StateToRenderState(state, cameraDebug);
+            _adapter.UpdateCamera(SmoothedRenderState);
             _timingDiagnostics?.ObserveCameraPresenter((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
         }
     }

@@ -38,7 +38,6 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\capabilities\navigation\CrowdSimulationUiMod\CrowdSimulationUiMod.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
