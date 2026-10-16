@@ -647,7 +647,7 @@ public sealed class CrowdSimulationConfigLoader
                     RadiusCm = radiusCm,
                     PersonalRadiusCm = member.PersonalRadiusCm,
                     PushPriority = member.PushPriority,
-                    SpeedCmPerSecond = member.SpeedCmPerSecond,
+                    SpeedCmPerSec = member.SpeedCmPerSec,
                     AutoDeploy = member.AutoDeploy,
                     AgentTypeIndex = agentIndex,
                     ClearanceNavCells = clearance,

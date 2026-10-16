@@ -284,7 +284,7 @@ public class CrowdSimulationEditorApiTests
 
         JsonObject unit = Item(view, MinimalUnit);
         Assert.That(Flag(unit, "ownedBySelection"), Is.True);
-        Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1400));
+        Assert.That(unit["agent"]!["speedCmPerSec"]!.GetValue<int>(), Is.EqualTo(1400));
         foreach (CrowdUnitTemplateField field in CrowdUnitTemplateFacts.AuthoredFields)
         {
             JsonObject source = (JsonObject)unit["fields"]![field.Name]!;
@@ -364,7 +364,7 @@ public class CrowdSimulationEditorApiTests
         JsonObject view = UnitTemplates(CrowdSimulationEditorApi.Load(FindRepoRoot(), S4));
         JsonObject unit = Item(view, InfantryR100);
         Assert.That(Flag(unit, "ownedBySelection"), Is.False);
-        Assert.That(Text((JsonObject)unit["fields"]!["speedCmPerSecond"]!, "sourceMod"), Is.EqualTo(DemoContent));
+        Assert.That(Text((JsonObject)unit["fields"]!["speedCmPerSec"]!, "sourceMod"), Is.EqualTo(DemoContent));
         Assert.That(Text((JsonObject)unit["profile"]!, "id"), Is.EqualTo("foot_r100"));
     }
 
@@ -377,12 +377,12 @@ public class CrowdSimulationEditorApiTests
         try
         {
             JsonObject draft = TemplatesDraft(Minimal, copy);
-            Agent(draft, MinimalUnit)["speedCmPerSecond"] = -5;
+            Agent(draft, MinimalUnit)["speedCmPerSec"] = -5;
             JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
             JsonObject issue = (JsonObject)((JsonArray)result["issues"]!)[0]!;
-            Assert.That(Text(issue, "message"), Does.Contain($"模板 \"{MinimalUnit}\" 的 CrowdSimulationAgent.speedCmPerSecond 需为 > 0 的数值"));
-            Assert.That(Text(issue, "path"), Is.EqualTo("CrowdSimulationAgent.speedCmPerSecond"));
+            Assert.That(Text(issue, "message"), Does.Contain($"模板 \"{MinimalUnit}\" 的 CrowdSimulationAgent.speedCmPerSec 需为 > 0 的数值"));
+            Assert.That(Text(issue, "path"), Is.EqualTo("CrowdSimulationAgent.speedCmPerSec"));
             Assert.That(Text(issue, "sourceMod"), Is.EqualTo(Minimal));
             Assert.That(Text(issue, "sourceFile"), Does.EndWith("Entities/templates.json"));
             Assert.That(File.ReadAllText(templatesPath), Is.EqualTo(before));
@@ -441,7 +441,7 @@ public class CrowdSimulationEditorApiTests
         try
         {
             JsonObject draft = TemplatesDraft(Minimal, copy);
-            Agent(draft, MinimalUnit)["speedCmPerSecond"] = 1650;
+            Agent(draft, MinimalUnit)["speedCmPerSec"] = 1650;
             Agent(draft, MinimalUnit)["personalRadiusCm"] = 1200;
             Profile(draft, "crowd_minimal_unit")["radiusCm"] = 200;
             JsonObject result = CrowdSimulationEditorApi.Apply(repo, Minimal, "templates", draft, copy);
@@ -460,7 +460,7 @@ public class CrowdSimulationEditorApiTests
             Assert.That(templatesText, Does.Contain("crowd_minimal.wall_block"));
 
             JsonObject unit = Item(UnitTemplates(CrowdSimulationEditorApi.Load(repo, Minimal, copy)), MinimalUnit);
-            Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1650));
+            Assert.That(unit["agent"]!["speedCmPerSec"]!.GetValue<int>(), Is.EqualTo(1650));
             Assert.That(unit["agent"]!["personalRadiusCm"]!.GetValue<int>(), Is.EqualTo(1200));
             Assert.That(unit["profile"]!["values"]!["radiusCm"]!.GetValue<int>(), Is.EqualTo(200));
         }
@@ -500,7 +500,7 @@ public class CrowdSimulationEditorApiTests
         try
         {
             JsonObject draft = TemplatesDraft(S4, copy);
-            Agent(draft, InfantryR100)["speedCmPerSecond"] = 1500;
+            Agent(draft, InfantryR100)["speedCmPerSec"] = 1500;
             JsonObject result = CrowdSimulationEditorApi.Apply(repo, S4, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
             Assert.That(result["written"]!.ToJsonString(), Does.Contain(S4 + "/assets/Entities/templates.json"));
@@ -510,16 +510,16 @@ public class CrowdSimulationEditorApiTests
             var own = (JsonArray)JsonNode.Parse(File.ReadAllText(Path.Combine(copy, "assets", "Entities", "templates.json")))!;
             JsonObject entry = (JsonObject)own.Single(node => node!["id"]!.GetValue<string>() == InfantryR100)!;
             Assert.That(entry.ToJsonString(), Is.EqualTo(
-                "{\"id\":\"" + InfantryR100 + "\",\"components\":{\"CrowdSimulationAgent\":{\"speedCmPerSecond\":1500}}}"));
+                "{\"id\":\"" + InfantryR100 + "\",\"components\":{\"CrowdSimulationAgent\":{\"speedCmPerSec\":1500}}}"));
 
             JsonObject unit = Item(UnitTemplates(CrowdSimulationEditorApi.Load(repo, S4, copy)), InfantryR100);
             Assert.That(Flag(unit, "ownedBySelection"), Is.True);
-            Assert.That(unit["agent"]!["speedCmPerSecond"]!.GetValue<int>(), Is.EqualTo(1500));
-            Assert.That(Text((JsonObject)unit["fields"]!["speedCmPerSecond"]!, "sourceMod"), Is.EqualTo(S4));
+            Assert.That(unit["agent"]!["speedCmPerSec"]!.GetValue<int>(), Is.EqualTo(1500));
+            Assert.That(Text((JsonObject)unit["fields"]!["speedCmPerSec"]!, "sourceMod"), Is.EqualTo(S4));
             Assert.That(Text((JsonObject)unit["fields"]!["profileId"]!, "sourceMod"), Is.EqualTo(DemoContent));
 
             JsonObject reset = TemplatesDraft(S4, copy);
-            Agent(reset, InfantryR100)["speedCmPerSecond"] = 1400;
+            Agent(reset, InfantryR100)["speedCmPerSec"] = 1400;
             Assert.That(Flag(CrowdSimulationEditorApi.Apply(repo, S4, "templates", reset, copy), "ok"), Is.True);
             string ownAfterReset = File.ReadAllText(Path.Combine(copy, "assets", "Entities", "templates.json"));
             Assert.That(ownAfterReset, Does.Not.Contain(InfantryR100));

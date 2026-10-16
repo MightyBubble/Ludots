@@ -896,7 +896,7 @@ public sealed class CrowdSimPlanner
             {
                 foreach (int i in membersByGroup[gid])
                 {
-                    Fix64 speed = session.World.Get<CrowdSimulationAgent>(units.EntityAt(i)).SpeedCmPerSecond;
+                    Fix64 speed = session.World.Get<CrowdSimulationAgent>(units.EntityAt(i)).SpeedCmPerSec;
                     if (speed < pace)
                     {
                         pace = speed;

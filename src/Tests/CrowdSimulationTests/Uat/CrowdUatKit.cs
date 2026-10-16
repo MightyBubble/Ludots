@@ -75,10 +75,10 @@ internal static class CrowdUatKit
 
     /// <summary>演示体型表按半径级（升序）逐级换半径，单位模板的个人半径随之按避让倍数重算。</summary>
     public static CrowdTestBodies DemoBodiesWithRadii(params int[] radiusCmByClass)
-        => DemoBodies(radiusCmByClass, speedCmPerSecond: null, tuneTraversal: null);
+        => DemoBodies(radiusCmByClass, speedCmPerSec: null, tuneTraversal: null);
 
-    /// <summary>演示体型与模板；<paramref name="speedCmPerSecond"/> 给定时所有单位模板换成这一速度，<paramref name="tuneTraversal"/> 在演示 traversal.json 合并结果上改值。</summary>
-    public static CrowdTestBodies DemoBodies(int[]? radiusCmByClass, Fix64? speedCmPerSecond, Action<JsonObject>? tuneTraversal)
+    /// <summary>演示体型与模板；<paramref name="speedCmPerSec"/> 给定时所有单位模板换成这一速度，<paramref name="tuneTraversal"/> 在演示 traversal.json 合并结果上改值。</summary>
+    public static CrowdTestBodies DemoBodies(int[]? radiusCmByClass, Fix64? speedCmPerSec, Action<JsonObject>? tuneTraversal)
     {
         var profiles = System.Text.Json.JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             System.IO.File.ReadAllText(System.IO.Path.Combine("assets", "agent_profiles.json")),
@@ -98,7 +98,7 @@ internal static class CrowdUatKit
         {
             TemplateId = t.TemplateId,
             ProfileId = t.ProfileId,
-            SpeedCmPerSecond = speedCmPerSecond ?? t.SpeedCmPerSecond,
+            SpeedCmPerSec = speedCmPerSec ?? t.SpeedCmPerSec,
             PersonalRadiusCm = radiusCmByClass == null
                 ? t.PersonalRadiusCm
                 : CrowdSimulationSpace.PersonalRadiusCm(Fix64.FromInt(radiusOf[t.ProfileId]), scale),
@@ -226,14 +226,14 @@ internal static class CrowdUatKit
     }
 
     /// <summary>单位实体的速度来自实体模板，不读 <see cref="CrowdTestBodies"/> 的模板事实；换了模板速度的场景生成后用它把在场单位写成同一速度。</summary>
-    public static void SetUnitSpeed(CrowdSimSession session, Fix64 speedCmPerSecond)
+    public static void SetUnitSpeed(CrowdSimSession session, Fix64 speedCmPerSec)
     {
         session.Units.MaterializePending();
         for (int i = 0; i < session.Units.Count; i++)
         {
             var e = session.Units.EntityAt(i);
             var agent = session.World.Get<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>(e);
-            agent.SpeedCmPerSecond = speedCmPerSecond;
+            agent.SpeedCmPerSec = speedCmPerSec;
             session.World.Set(e, agent);
         }
     }

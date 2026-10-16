@@ -87,7 +87,7 @@ public sealed class TemplateBatchAdmissionContractTests
                 ["CrowdSimulationAgent"] = JsonNode.Parse("""
                     {
                       "profileId": "foot_r100",
-                      "speedCmPerSecond": 1400,
+                      "speedCmPerSec": 1400,
                       "personalRadiusCm": 600,
                       "pushPriority": 2,
                       "autoDeploy": true

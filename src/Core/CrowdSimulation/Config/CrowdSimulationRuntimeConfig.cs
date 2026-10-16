@@ -147,7 +147,7 @@ public sealed class RuntimeAgentProfile
     /// <summary>推挤优先级来自单位模板。</summary>
     public required Fix64 PushPriority { get; init; }
     /// <summary>该模板的速度（厘米 / 仿真秒）。领队步伐取同组最小，子步数取实际绑定模板的最大。</summary>
-    public required Fix64 SpeedCmPerSecond { get; init; }
+    public required Fix64 SpeedCmPerSec { get; init; }
     /// <summary>true 参与批量部署和随机测试。同一移动类型的模板不必相同。</summary>
     public required bool AutoDeploy { get; init; }
     public required int AgentTypeIndex { get; init; }

@@ -58,7 +58,7 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
 
         var foot = runtime.AgentTypes[0];
-        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSecond),
+        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSec),
             Is.All.EqualTo(Fix64.FromInt(1400)));
         // road 是合并后第 5 个区域；foot 对 road 代价 0.7。
         Assert.That(foot.CostByArea[5], Is.EqualTo(Fix64.FromDouble(0.7)));

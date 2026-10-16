@@ -237,7 +237,7 @@ public sealed class CrowdMovementKernel
                 kins[dense] = kinSpan[index];
                 positions[dense] = posSpan[index].Value;
                 var agent = agentSpan[index];
-                speeds[dense] = agent.SpeedCmPerSecond;
+                speeds[dense] = agent.SpeedCmPerSec;
                 radii[dense] = agent.PersonalRadiusCm;
                 push[dense] = agent.PushPriority;
                 playerIdx[dense] = playerIndex[ownerSpan[index].PlayerId];

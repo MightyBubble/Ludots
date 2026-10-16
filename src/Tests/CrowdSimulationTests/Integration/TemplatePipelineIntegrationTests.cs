@@ -87,7 +87,7 @@ public class TemplatePipelineIntegrationTests
                 $"单位 {handle:x} 个人半径应来自模板写真");
             Assert.That(agent.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["pushPriority"]!.GetValue<int>())),
                 $"单位 {handle:x} 推挤优先级应来自模板写真");
-            Assert.That(agent.SpeedCmPerSecond, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSecond"]!.GetValue<int>())),
+            Assert.That(agent.SpeedCmPerSec, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSec"]!.GetValue<int>())),
                 $"单位 {handle:x} 速度应来自模板写真");
             seenProfiles.Add(profileId);
         }

@@ -16,7 +16,7 @@ public sealed class CrowdUnitTemplateFacts
 {
     public const string ComponentName = "CrowdSimulationAgent";
     public const string ProfileIdField = "profileId";
-    public const string SpeedField = "speedCmPerSecond";
+    public const string SpeedField = "speedCmPerSec";
     public const string PersonalRadiusField = "personalRadiusCm";
     public const string PushPriorityField = "pushPriority";
     public const string AutoDeployField = "autoDeploy";
@@ -33,7 +33,7 @@ public sealed class CrowdUnitTemplateFacts
 
     public required string TemplateId { get; init; }
     public required string ProfileId { get; init; }
-    public required Fix64 SpeedCmPerSecond { get; init; }
+    public required Fix64 SpeedCmPerSec { get; init; }
     public required Fix64 PersonalRadiusCm { get; init; }
     public required Fix64 PushPriority { get; init; }
     public required bool AutoDeploy { get; init; }
@@ -70,7 +70,7 @@ public sealed class CrowdUnitTemplateFacts
         {
             TemplateId = templateId,
             ProfileId = RequireString(obj, ProfileIdField, Prefix(ProfileIdField)),
-            SpeedCmPerSecond = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
+            SpeedCmPerSec = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
             PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
             PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
             AutoDeploy = RequireBool(obj, AutoDeployField, Prefix(AutoDeployField)),

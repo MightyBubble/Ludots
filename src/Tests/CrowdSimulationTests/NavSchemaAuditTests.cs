@@ -237,7 +237,7 @@ public class NavSchemaAuditTests
     [Test]
     public void Template_MissingEachRequiredField_Fails()
     {
-        string[] fields = { "profileId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "autoDeploy" };
+        string[] fields = { "profileId", "speedCmPerSec", "personalRadiusCm", "pushPriority", "autoDeploy" };
         foreach (string field in fields)
         {
             JsonObject template = FullTemplate();
@@ -351,7 +351,7 @@ public class NavSchemaAuditTests
                 new AgentProfileConfigLoader(pipeline).Load(catalog))!;
             Assert.That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
             Assert.That(ex.Message, Does.Contain("templateId"));
-            Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.speedCmPerSecond"));
+            Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.speedCmPerSec"));
         }
         finally
         {
@@ -366,7 +366,7 @@ public class NavSchemaAuditTests
         => JsonNode.Parse("""
             {
               "profileId": "foot_r100",
-              "speedCmPerSecond": 1400,
+              "speedCmPerSec": 1400,
               "personalRadiusCm": 600,
               "pushPriority": 2,
               "autoDeploy": true

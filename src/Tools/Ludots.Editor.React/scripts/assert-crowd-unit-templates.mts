@@ -24,7 +24,7 @@ const draft = JSON.stringify(
         id: 'crowd_minimal.unit',
         components: {
           Name: { Value: 'crowd_minimal.unit' },
-          CrowdSimulationAgent: { profileId: 'crowd_minimal_unit', speedCmPerSecond: 1400, autoDeploy: true },
+          CrowdSimulationAgent: { profileId: 'crowd_minimal_unit', speedCmPerSec: 1400, autoDeploy: true },
         },
       },
       { id: 'derived.unit', extends: 'crowd_minimal.unit' },
@@ -42,17 +42,17 @@ assert(authoredValue('number', '') === '', 'an empty number field is passed thro
 assert(authoredValue('bool', true) === true && authoredValue('bool', false) === false, 'bool fields store booleans');
 assert(authoredValue('string', 'hover') === 'hover', 'string fields store text as typed');
 
-const faster = setAgentField(draft, component, 'crowd_minimal.unit', 'speedCmPerSecond', 1650);
-assert(draftAgent(faster, component, 'crowd_minimal.unit')?.speedCmPerSecond === 1650, 'speed edit lands in the draft');
+const faster = setAgentField(draft, component, 'crowd_minimal.unit', 'speedCmPerSec', 1650);
+assert(draftAgent(faster, component, 'crowd_minimal.unit')?.speedCmPerSec === 1650, 'speed edit lands in the draft');
 assert(draftAgent(faster, component, 'crowd_minimal.unit')?.profileId === 'crowd_minimal_unit', 'other fields stay');
 assert(JSON.parse(faster).agentProfiles[0].radiusCm === 150, 'other draft sections stay');
 assert(faster.includes('\n  "unitTypes": [\n'), 'draft keeps two-space indentation');
 
-const derived = setAgentField(draft, component, 'derived.unit', 'speedCmPerSecond', 900);
+const derived = setAgentField(draft, component, 'derived.unit', 'speedCmPerSec', 900);
 const derivedEntry = JSON.parse(derived).unitTypes[2];
 assert(derivedEntry.extends === 'crowd_minimal.unit', 'inherited template keeps extends');
 assert(
-  JSON.stringify(derivedEntry.components) === '{"CrowdSimulationAgent":{"speedCmPerSecond":900}}',
+  JSON.stringify(derivedEntry.components) === '{"CrowdSimulationAgent":{"speedCmPerSec":900}}',
   'inherited template only gets the edited field on its own entry',
 );
 
@@ -62,7 +62,7 @@ assert(draftProfile(wider, 'crowd_minimal_unit')?.heightCm === 180, 'other profi
 
 let missing = '';
 try {
-  setAgentField(draft, component, 'nope', 'speedCmPerSecond', 1);
+  setAgentField(draft, component, 'nope', 'speedCmPerSec', 1);
 } catch (err) {
   missing = (err as Error).message;
 }
@@ -71,8 +71,8 @@ assert(draftAgent('{not json', component, 'crowd_minimal.unit') === undefined, '
 
 const issues: Issue[] = [
   {
-    path: 'CrowdSimulationAgent.speedCmPerSecond',
-    message: 'Entities/templates.json: 模板 "crowd_minimal.unit" 的 CrowdSimulationAgent.speedCmPerSecond 需为 > 0 的数值。',
+    path: 'CrowdSimulationAgent.speedCmPerSec',
+    message: 'Entities/templates.json: 模板 "crowd_minimal.unit" 的 CrowdSimulationAgent.speedCmPerSec 需为 > 0 的数值。',
     sourceMod: 'CrowdSimulationMinimalMod',
     sourceFile: 'CrowdSimulationMinimalMod:Entities/templates.json',
   },
@@ -88,7 +88,7 @@ const issues: Issue[] = [
 const mine = issuesFor(issues, 'crowd_minimal.unit', 'crowd_minimal_unit');
 assert(mine.length === 3, `issues naming the template or its profile belong to it, got ${mine.length}`);
 assert(issuesFor(issues, 'other').length === 1, 'omission issues are matched by their unitTypes path');
-assert(issueForField(mine, 'speedCmPerSecond') === issues[0], 'speed issue is attached to the speed field');
+assert(issueForField(mine, 'speedCmPerSec') === issues[0], 'speed issue is attached to the speed field');
 assert(issueForField(mine, 'personalRadiusCm') === issues[1], 'mismatch issue is attached to personalRadiusCm');
 assert(issueForField(mine, 'radiusCm') === issues[2], 'profile radius issue is attached to radiusCm');
 assert(issueForField(mine, 'profileId') === undefined, 'fields without an issue get no hint');

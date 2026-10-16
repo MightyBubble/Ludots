@@ -151,7 +151,7 @@ public static class CrowdSimCommands
             if (dist <= ring && cmd.Impulse > Fix64.Zero && dist > Fix64.Zero)
             {
                 var agent = world.Get<CrowdSimulationAgent>(entity);
-                Fix64 scale = agent.SpeedCmPerSecond * cmd.Impulse / dist;
+                Fix64 scale = agent.SpeedCmPerSec * cmd.Impulse / dist;
                 var kin = world.Get<CrowdSimulationKinematics>(entity);
                 kin.Velocity = new Fix64Vec2(kin.Velocity.X + dx * scale, kin.Velocity.Y + dy * scale);
                 world.Set(entity, kin);

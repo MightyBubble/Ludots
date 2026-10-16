@@ -12,7 +12,7 @@ public struct CrowdSimulationAgent
 {
     public int ProfileIndex;
     public int AgentTypeIndex;
-    public Fix64 SpeedCmPerSecond;
+    public Fix64 SpeedCmPerSec;
     public Fix64 PersonalRadiusCm;
     public Fix64 PushPriority;
     /// <summary>true 参与批量部署和随机测试。为 false 的模板只能由生成工具点名。</summary>

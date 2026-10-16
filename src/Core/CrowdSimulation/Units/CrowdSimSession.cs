@@ -48,7 +48,7 @@ public sealed class CrowdSimSession
         for (int i = 0; i < config.Profiles.Count; i++)
         {
             var profile = config.Profiles[i];
-            maxSpeed = Fix64.Max(maxSpeed, profile.SpeedCmPerSecond / MinSpeedDivisor(config.AgentTypes[profile.AgentTypeIndex]));
+            maxSpeed = Fix64.Max(maxSpeed, profile.SpeedCmPerSec / MinSpeedDivisor(config.AgentTypes[profile.AgentTypeIndex]));
         }
         Fix64 simDt = config.Sim.SimSecondsPerTickSecond / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;

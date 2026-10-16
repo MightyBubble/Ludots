@@ -182,7 +182,7 @@ public static class CrowdModScaffold
                     ["CrowdSimulationAgent"] = new JsonObject
                     {
                         ["profileId"] = mapId + "_unit",
-                        ["speedCmPerSecond"] = 1400,
+                        ["speedCmPerSec"] = 1400,
                         ["personalRadiusCm"] = 900,
                         ["pushPriority"] = 2,
                         ["autoDeploy"] = true,
