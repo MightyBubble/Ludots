@@ -44,6 +44,7 @@ public sealed class CrowdCommandQueue
         }
         _log.Add((sim.TickCount, cmd));
         T result = exec(sim, cmd);
+        sim.Units.PlaybackStructuralChanges();
         sim.SyncKernelMirror();
         return result;
     }

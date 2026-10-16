@@ -148,7 +148,7 @@ public class CrowdBeliefTerrainTests
             FireCost = fireCost;
         }
 
-        public static LandWorld Open()
+        public static LandWorld Open(bool withFog = true)
         {
             var map = TestDefaults.DemoMap();
             const int boardCm = 100_000;
@@ -220,9 +220,9 @@ public class CrowdBeliefTerrainTests
             session.Structures = store;
             session.RebakeSources = sources;
             session.NavTileCache = cache;
-            session.BindVision(new FogLayerRegistry(), new FogFieldStore());
             var service = new PathQueryService(navs, config, 1, System.TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+            if (withFog) TestDefaults.EnableFog(session);
 
             int roadArea = IndexOfArea(config, "road");
             int fireArea = IndexOfArea(config, "burning");

@@ -32,7 +32,7 @@ namespace CrowdSimulationTests.Parity;
 /// 与 S5 首个分歧(tick 11 马达停车线骑线)同源:双算术体系在离散判定点翻转离散事件。
 /// 每次结构 op 的重烘焙报告逐字段硬门(执行 tick / 类别 / 报告 tick / tiles / contexts /
 /// costOnly / hits / misses / orders / refreshes / evicted / stuck / 受影响 tile 并集升序)。
-/// 口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾,
+/// 口径:会话不装迷雾,
 /// 组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;增量 vs 全量一致性
 /// 检查(VerifyIncrementalNav)在每次 op 后随路运行。
 /// </summary>
@@ -65,7 +65,6 @@ public sealed class S7RebakeTruthTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");

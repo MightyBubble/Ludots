@@ -32,7 +32,7 @@ public sealed class CrowdSimReplayReport
 
 /// <summary>
 /// 把捕获重放到调用方给的新会话上，对同一 tick 的合计和分区。
-/// 新会话要自己带同一套导航、运动策略和冻结开关，这里不重建世界。
+/// 新会话要自己带同一套导航、运动栈和迷雾装配，这里不重建世界。
 /// 运行时环比较仍走 <c>CrowdSimulationRuntime.RunReplay</c>。
 /// </summary>
 public static class CrowdSimReplay

@@ -22,7 +22,7 @@ public sealed class CrowdSimRegressScenarioSpec
     public bool ScriptFromRepo { get; init; }
     public string? TicksFrom { get; init; }
     public bool Movement { get; init; }
-    public bool TruthNavFrozen { get; init; }
+    public bool WithFog { get; init; }
 }
 
 /// <summary>
@@ -58,7 +58,7 @@ public sealed class CrowdSimRegressCatalog
         IReadOnlyDictionary<string, CrowdSimRegressScenarioSpec> scenarios,
         string fuzzSeedAssets,
         bool fuzzMovement,
-        bool fuzzTruthNavFrozen,
+        bool fuzzWithFog,
         int stepsPerOp,
         int probeHandles,
         int spawnCount,
@@ -86,7 +86,7 @@ public sealed class CrowdSimRegressCatalog
         Scenarios = scenarios;
         FuzzSeedAssets = fuzzSeedAssets;
         FuzzMovement = fuzzMovement;
-        FuzzTruthNavFrozen = fuzzTruthNavFrozen;
+        FuzzWithFog = fuzzWithFog;
         _stepsPerOp = stepsPerOp;
         _probeHandles = probeHandles;
         _spawnCount = spawnCount;
@@ -115,7 +115,7 @@ public sealed class CrowdSimRegressCatalog
     public IReadOnlyDictionary<string, CrowdSimRegressScenarioSpec> Scenarios { get; }
     public string FuzzSeedAssets { get; }
     public bool FuzzMovement { get; }
-    public bool FuzzTruthNavFrozen { get; }
+    public bool FuzzWithFog { get; }
     public CrowdSimRegressFogSpec Fog { get; }
 
     public CrowdFuzzPlan CreateFuzzPlan(long seed, int opCount) => new()
@@ -151,7 +151,7 @@ public sealed class CrowdSimRegressCatalog
         foreach (var id in full) RequireKnown(scenarios, "full", id);
         var fuzz = RequireObject(root, "fuzz");
         RequireExact(fuzz, "regress catalog fuzz",
-            "seedAssets", "movement", "truthNavFrozen", "stepsPerOp", "probeHandles", "spawnCount",
+            "seedAssets", "movement", "withFog", "stepsPerOp", "probeHandles", "spawnCount",
             "placeTemplate", "placeSizeCm", "orderShape", "orderMemberCap", "stallGuard",
             "boomRadiusCm", "ringScale", "impulse", "pathTemplate", "pathWidthCm", "pathLengthCm", "ops");
         return new CrowdSimRegressCatalog(
@@ -165,7 +165,7 @@ public sealed class CrowdSimRegressCatalog
             scenarios,
             RequireString(fuzz, "seedAssets"),
             RequireBool(fuzz, "movement"),
-            RequireBool(fuzz, "truthNavFrozen"),
+            RequireFogNeedsMovement(fuzz, "regress catalog fuzz"),
             RequireInt(fuzz, "stepsPerOp", 1, null),
             RequireInt(fuzz, "probeHandles", 0, null),
             RequireInt(fuzz, "spawnCount", 0, null),
@@ -239,7 +239,7 @@ public sealed class CrowdSimRegressCatalog
             }
 
             RequireExact(body, $"regress catalog 场景 {entry.Key}",
-                "seedAssets", "scriptAsset", "ticksFrom", "movement", "truthNavFrozen");
+                "seedAssets", "scriptAsset", "ticksFrom", "movement", "withFog");
             string ticksFrom = RequireString(body, "ticksFrom");
             if (ticksFrom is not ("frames" or "ticks"))
             {
@@ -254,7 +254,7 @@ public sealed class CrowdSimRegressCatalog
                 ScriptFromRepo = scriptAsset.StartsWith("mods/", StringComparison.Ordinal),
                 TicksFrom = ticksFrom,
                 Movement = RequireBool(body, "movement"),
-                TruthNavFrozen = RequireBool(body, "truthNavFrozen"),
+                WithFog = RequireFogNeedsMovement(body, $"regress catalog 场景 {entry.Key}"),
             });
         }
 
@@ -332,6 +332,17 @@ public sealed class CrowdSimRegressCatalog
         }
 
         return text;
+    }
+
+    private static bool RequireFogNeedsMovement(JsonObject obj, string where)
+    {
+        bool withFog = RequireBool(obj, "withFog");
+        if (withFog && !RequireBool(obj, "movement"))
+        {
+            throw new InvalidOperationException($"{where}: withFog 需要 movement（迷雾装在运动栈上）。");
+        }
+
+        return withFog;
     }
 
     private static bool RequireBool(JsonObject obj, string key)

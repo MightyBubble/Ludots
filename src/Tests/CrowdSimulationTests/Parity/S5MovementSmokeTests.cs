@@ -21,6 +21,7 @@ public sealed class S5MovementSmokeTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         CrowdDeployment.SpawnAt(session, Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(480000), Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(560000), 200, 1, 0, 0);
@@ -93,6 +94,7 @@ public sealed class S5MovementSmokeTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         var script = new JsonArray
@@ -110,6 +112,7 @@ public sealed class S5MovementSmokeTests
         var (runtime2, replay) = S4DeployTruthTests.BuildSession("s1337");
         using var service2 = new PathQueryService(replay.Navs, runtime2, 1, TimeSpan.FromSeconds(10), replay.ResolveNavContext);
         replay.EnableMovement(CrowdMovementKernel.Create(replay), new CrowdSimPlanner(replay, service2));
+        TestDefaults.EnableFog(replay);
         replay.BlockOnDueReplies = true;
         replay.Commands.Schedule(replay, log);
         var reHashes = new List<ulong>();

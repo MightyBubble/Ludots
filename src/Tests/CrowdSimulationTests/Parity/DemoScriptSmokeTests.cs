@@ -49,6 +49,7 @@ public sealed class DemoScriptSmokeTests
             var (runtime, session) = S4DeployTruthTests.BuildSession(seed);
             using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
             session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+            TestDefaults.EnableFog(session);
 
             var demo = CrowdDemoScript.Load(CrowdSimulationRuntime.ComposeDemoScript(0, rows));
             Assert.DoesNotThrow(() => demo.ValidateStructure(session),

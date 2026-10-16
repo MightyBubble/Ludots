@@ -5,9 +5,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Vision;
 
 namespace CrowdSimulationTests;
 
@@ -20,6 +22,9 @@ public static class TestDefaults
 {
     public const int FixedHz = 30;
     public const int WorldCm = 16000 * 100;
+
+    public static void EnableFog(CrowdSimSession session) =>
+        session.EnableFog(new FogLayerRegistry(), new FogFieldStore());
 
     public static JsonObject DefaultConfigJson()
     {

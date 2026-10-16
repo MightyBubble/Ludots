@@ -35,14 +35,14 @@ namespace CrowdSimulationRegress;
 /// </summary>
 static class SessionHost
 {
-    public static CrowdSimRegressHost Open(string seedDir, string standardDir, string demoDir, bool movement)
+    public static CrowdSimRegressHost Open(string seedDir, string standardDir, string demoDir, bool movement, bool withFog)
     {
         var bundle = Load(seedDir, standardDir, demoDir);
         var world = World.Create();
         PathQueryService? service = null;
         try
         {
-            var session = Bake(bundle, world, demoDir, standardDir, movement, out service, out double bakeMs);
+            var session = Bake(bundle, world, demoDir, standardDir, movement, withFog, out service, out double bakeMs);
             return new CrowdSimRegressHost
             {
                 Session = session,
@@ -68,6 +68,7 @@ static class SessionHost
         string demoDir,
         string standardDir,
         bool movement,
+        bool withFog,
         out PathQueryService? service,
         out double bakeMs)
     {
@@ -116,12 +117,16 @@ static class SessionHost
         session.RebakeSources = new CrowdRebakeSources(runtime, bundle.Heights, upperLayer, bundle.Surface.LinkCandidates);
         session.NavTileCache = cache;
         bakeMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-        session.BindVision(new FogLayerRegistry(), new FogFieldStore());
-        if (!movement) return session;
+        if (!movement)
+        {
+            if (withFog) throw new InvalidOperationException("迷雾装在运动栈上，withFog 需要 movement。");
+            return session;
+        }
 
         service = new PathQueryService(
             navs, runtime, workerThreads: 1, TimeSpan.FromMilliseconds(bundle.Config.Worker.PlanTimeoutMs), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        if (withFog) session.EnableFog(new FogLayerRegistry(), new FogFieldStore());
         return session;
     }
 

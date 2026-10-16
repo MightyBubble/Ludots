@@ -48,7 +48,7 @@ public sealed class Stress50kShowcaseTests
         TestContext.Out.WriteLine(
             $"stress: units {s.Units.Count}, orders {ordered.Length}, tick {s.TickCount}, fogRefreshes {s.Telemetry.FogRefreshes}, lastSimMs {s.Telemetry.LastTickMs:F2}, maxSimMs {maxSimMs:F2}");
         Assert.That(s.Units.Count, Is.EqualTo(units), "预热后单位数");
-        Assert.That(s.TruthNavFrozen, Is.False);
+        Assert.That(s.Fog, Is.Not.Null);
         Assert.That(s.Telemetry.FogRefreshes, Is.GreaterThan(0), "预热窗里迷雾应在刷新");
         Assert.That(maxSimMs, Is.GreaterThan(0), "遥测没有记到模拟耗时");
     }

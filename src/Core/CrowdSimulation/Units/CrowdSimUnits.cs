@@ -10,11 +10,11 @@ using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
@@ -65,6 +65,7 @@ public sealed class CrowdSimUnits
     private readonly RuntimeEntitySpawnRequest[] _requestScratch;
     private readonly RuntimeEntitySpawnReceipt[] _receiptScratch;
     private readonly CrowdUnitSpawnInitializer _initializer;
+    private readonly List<Entity> _deferredDestroys = new(64);
 
     public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring presentation)
     {
@@ -114,6 +115,31 @@ public sealed class CrowdSimUnits
         _initializerKind = _spawns.RegisterInstanceInitializer(_initializer);
         _spawns.RegisterBatchComponent<CrowdSimulationAgent>(AgentBatchComponentName);
         Clear();
+    }
+
+    /// <summary>指令冲刷后的结构变更同步点:无头世界在此收尾销毁;有呈现消费者时只挂 pending。</summary>
+    internal void PlaybackStructuralChanges()
+    {
+        if (_deferredDestroys.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _deferredDestroys.Count; i++)
+        {
+            Entity entity = _deferredDestroys[i];
+            if (!_world.IsAlive(entity))
+            {
+                continue;
+            }
+
+            if (PresentationLifecycleConsumption.HasNoConsumer(_world))
+            {
+                PresentationEntityFinalizeDestroySystem.FinalizeWithoutConsumer(_world, entity);
+            }
+        }
+
+        _deferredDestroys.Clear();
     }
 
     public int Capacity { get; }
@@ -591,7 +617,7 @@ public sealed class CrowdSimUnits
             }
 
             ReleaseOwnership(entity);
-            EntityLifecycleAtomicOps.ConsumeEntity(_world, entity, "CrowdSimulation.Release");
+            QueueDestroy(entity);
         }
 
         _gen[slot] = (ushort)((_gen[slot] + 1) & GenMask);
@@ -640,12 +666,13 @@ public sealed class CrowdSimUnits
             if (entity != Entity.Null && _world.IsAlive(entity))
             {
                 ReleaseOwnership(entity);
-                EntityLifecycleAtomicOps.ConsumeEntity(_world, entity, "CrowdSimulation.Clear");
+                QueueDestroy(entity);
             }
 
             _gen[_slotOfDense[i]] = (ushort)((_gen[_slotOfDense[i]] + 1) & GenMask);
         }
 
+        PlaybackStructuralChanges();
         _dense.Clear();
         _slotOfDense.Clear();
         _pendingCount = 0;
@@ -673,6 +700,17 @@ public sealed class CrowdSimUnits
     {
         if (_presentation.Ownership == null || entity == Entity.Null || !_world.IsAlive(entity)) return;
         _presentation.Ownership.ClearOwnership(entity);
+    }
+
+    private void QueueDestroy(Entity entity)
+    {
+        if (entity == Entity.Null || !_world.IsAlive(entity))
+        {
+            return;
+        }
+
+        PresentationEntityLifecycle.RequestDestroy(_world, entity, "CrowdSimulation.Release");
+        _deferredDestroys.Add(entity);
     }
 
     private void ClearOwnedCollections()
@@ -794,23 +832,30 @@ public sealed class CrowdSimUnits
             agent.ProfileIndex = pending.ProfileIndex;
             agent.AgentTypeIndex = pending.AgentTypeIndex;
             agent.PersonalRadiusCm = pending.PersonalRadiusCm;
-            SetOrAdd(world, entity, new CrowdSimulationUnitState
+            if (!world.Has<CrowdSimulationUnitState>(entity))
             {
-                Slot = pending.Slot,
-                GroupId = pending.GroupId,
-            });
-            SetOrAdd(world, entity, new CrowdSimulationKinematics());
-            SetOrAdd(world, entity, new PlayerOwner { PlayerId = pending.PlayerId });
-            SetOrAdd(world, entity, new ContinuousHeightmapSampleState());
+                throw new InvalidOperationException(
+                    $"单位模板 \"{pending.TemplateId}\" 缺少 CrowdSimulationUnitState；批车道应经 WriteChunk 写入。");
+            }
+
+            ref CrowdSimulationUnitState state = ref world.Get<CrowdSimulationUnitState>(entity);
+            state.Slot = pending.Slot;
+            state.GroupId = pending.GroupId;
+            if (!world.Has<CrowdSimulationKinematics>(entity)
+                || !world.Has<PlayerOwner>(entity)
+                || !world.Has<ContinuousHeightmapSampleState>(entity)
+                || !world.Has<BlackboardFloatBuffer>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"单位模板 \"{pending.TemplateId}\" 缺少批车道组件；单车道生成已禁用。");
+            }
+
+            world.Set(entity, default(CrowdSimulationKinematics));
+            world.Set(entity, new PlayerOwner { PlayerId = pending.PlayerId });
+            world.Set(entity, default(ContinuousHeightmapSampleState));
             var board = new BlackboardFloatBuffer();
             board.Set(_units._presentation.RadiusMetersBlackboardKeyId, WorldUnits.CmToM((float)pending.RadiusCm.ToDouble()));
-            SetOrAdd(world, entity, board);
-        }
-
-        private static void SetOrAdd<T>(ArchWorld world, Entity entity, T component) where T : struct
-        {
-            if (world.Has<T>(entity)) world.Set(entity, component);
-            else world.Add(entity, component);
+            world.Set(entity, board);
         }
     }
 }

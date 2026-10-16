@@ -138,7 +138,6 @@ public sealed class CrowdSimulationValidatorTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true;
 
         var scriptJson = new JsonArray();
         foreach (var (tick, json) in new (int Tick, string Json)[]
@@ -290,6 +289,7 @@ public sealed class CrowdSimulationValidatorTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
         session.Advance(2);

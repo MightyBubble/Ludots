@@ -62,6 +62,7 @@ public sealed class L76FogBaselineHarness
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         string dir = Path.Combine(Parity.S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
@@ -119,6 +120,7 @@ public sealed class L76FogBaselineHarness
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337", rules);
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         session.Commands.Schedule(session, new List<CrowdCommand>
         {
@@ -212,6 +214,7 @@ public sealed class L76FogBaselineHarness
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(180), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var reference = CrowdReferenceScript.Load(new JsonArray
         {

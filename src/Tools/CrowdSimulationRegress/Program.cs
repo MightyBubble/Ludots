@@ -98,18 +98,15 @@ public static class Program
                 Path.Combine(repo, catalog.Scenarios[scenario.Id].SeedAssets!),
                 Path.Combine(repo, catalog.StandardAssets),
                 Path.Combine(repo, catalog.DemoAssets),
-                scenario.Movement),
+                scenario.Movement,
+                scenario.WithFog),
             OpenFuzz = ops > 0
-                ? () =>
-                {
-                    var host = SessionHost.Open(
-                        Path.Combine(repo, catalog.FuzzSeedAssets),
-                        Path.Combine(repo, catalog.StandardAssets),
-                        Path.Combine(repo, catalog.DemoAssets),
-                        catalog.FuzzMovement);
-                    host.Session.TruthNavFrozen = catalog.FuzzTruthNavFrozen;
-                    return host;
-                }
+                ? () => SessionHost.Open(
+                    Path.Combine(repo, catalog.FuzzSeedAssets),
+                    Path.Combine(repo, catalog.StandardAssets),
+                    Path.Combine(repo, catalog.DemoAssets),
+                    catalog.FuzzMovement,
+                    catalog.FuzzWithFog)
                 : null,
         };
 
@@ -228,19 +225,22 @@ public static class Program
                 Path.Combine(repo, catalog.Fog.SeedAssets),
                 Path.Combine(repo, catalog.StandardAssets),
                 Path.Combine(repo, catalog.DemoAssets),
-                movement: true);
+                movement: true,
+                withFog: true);
             CrowdFogAcceptance.RunHide(hide.Session, scene);
             using var off = SessionHost.Open(
                 Path.Combine(repo, catalog.Fog.SeedAssets),
                 Path.Combine(repo, catalog.StandardAssets),
                 Path.Combine(repo, catalog.DemoAssets),
-                movement: true);
+                movement: true,
+                withFog: true);
             CrowdFogAcceptance.RunTerrain(off.Session, scene, optimistic: false);
             using var on = SessionHost.Open(
                 Path.Combine(repo, catalog.Fog.SeedAssets),
                 Path.Combine(repo, catalog.StandardAssets),
                 Path.Combine(repo, catalog.DemoAssets),
-                movement: true);
+                movement: true,
+                withFog: true);
             CrowdFogAcceptance.RunTerrain(on.Session, scene, optimistic: true);
         }
         finally
@@ -313,7 +313,7 @@ public static class Program
             Script = CrowdSimRegressCatalog.Script(document),
             Ticks = CrowdSimRegressCatalog.TickCount(document, spec.TicksFrom!),
             Movement = spec.Movement,
-            TruthNavFrozen = spec.TruthNavFrozen,
+            WithFog = spec.WithFog,
             ExpectAbsentTemplates = OptionalStrings(document, "expectAbsentTemplates"),
             ExpectPresentTemplates = OptionalStrings(document, "expectPresentTemplates"),
         };

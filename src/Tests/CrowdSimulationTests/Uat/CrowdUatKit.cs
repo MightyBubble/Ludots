@@ -58,6 +58,7 @@ internal static class CrowdUatKit
             : S4DeployTruthTests.BuildSession(seed, tuneConfig);
         var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var nav = session.NavFor(runtime.UnitTypes[0].AgentTypeIndex, 0);
         return new CrowdUatScene(runtime, session, service, nav);
@@ -69,6 +70,7 @@ internal static class CrowdUatKit
         var (runtime, session) = S4DeployTruthTests.BuildSession(seed, tuneConfig, bodies);
         var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         return new CrowdUatScene(runtime, session, service, session.NavFor(runtime.UnitTypes[0].AgentTypeIndex, 0));
     }

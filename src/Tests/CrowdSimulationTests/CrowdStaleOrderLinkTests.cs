@@ -19,6 +19,7 @@ public sealed class CrowdStaleOrderLinkTests
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s7", lineOfSight: false);
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
 
         var radii = CrowdDeployment.DistinctRadiusClasses(session.Config);

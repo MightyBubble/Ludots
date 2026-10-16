@@ -42,6 +42,7 @@ public sealed class CrowdHud50KUiPathTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var reference = CrowdReferenceScript.Load(scenario.Script, session.Units.Capacity);
         var watch = new Stopwatch();
