@@ -424,12 +424,18 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
 
     private Fix64 RequireMotionTurnEpsRad()
     {
-        if (_debugView == null)
-            throw new InvalidOperationException("CrowdSimulationDebugView.json: 启用移动需要调试视图配置。");
-        double rad = _debugView.MotionTurnEpsRad;
-        if (!(rad > 0d) || double.IsNaN(rad) || double.IsInfinity(rad))
-            throw new InvalidOperationException("CrowdSimulationDebugView.json: motionTurnEpsRad 必须是 > 0 的有限数。");
-        return Fix64.FromDouble(rad);
+        if (_debugView != null)
+        {
+            double rad = _debugView.MotionTurnEpsRad;
+            if (!(rad > 0d) || double.IsNaN(rad) || double.IsInfinity(rad))
+                throw new InvalidOperationException("CrowdSimulationDebugView.json: motionTurnEpsRad 必须是 > 0 的有限数。");
+            return Fix64.FromDouble(rad);
+        }
+
+        if (_session.MotionTurnEpsRad > Fix64.Zero)
+            return _session.MotionTurnEpsRad;
+
+        throw new InvalidOperationException("CrowdSimulationDebugView.json: 启用移动需要 motionTurnEpsRad。");
     }
 
     internal static JsonArray ComposeDemoScript(int initialUnits, CrowdDebugScriptEntry[]? script)
