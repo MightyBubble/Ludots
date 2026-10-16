@@ -27,6 +27,16 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 
 常用键沿用 S4：左键框选，右键下令，P 暂停，PgUp / PgDn 倍速，F10 开关遥测面板（Sim 一行是每 tick 的模拟耗时；渲染一行只计界面层，不含三维场景），0 开关迷雾隐藏。完整键位在 HUD 第一行。
 
+## S4 部署演示
+
+`CrowdSimulationS4DeployMod` 是种子 1337 上的交互部署场景：进图按 `deploy.initialUnits` 部署开局单位，并到点自动回放对拍。HUD 显示当前工具、避让频率、暂停/倍速、重烘切片、tick、单位状态分布、最近一笔重烘报告（脏 tile、代价/可通行变化、缓存命中、重规划、耗时）和回放结论。进入交互后自动回放停用；暂停时 tick 不推进但指令仍执行；倍速走 TimeFlow 的 Simulation 缩放；重烘脏 tile 会闪烁。
+
+键位在 `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/default_input.json`，HUD 第一行也有摘要。常用项：N 关闭工具、K 爆炸、G 生成、H 建筑、J 拆除、F 部署、R 散开、Y 满员、T 清缓存、`-`/`=` 避让频率、P 暂停、PgUp/PgDn 倍速、V 切视图、B 建造开关、X 拆除光标处、1–6 选结构模板、左键按当前工具提交。方形、圆、固定道路、两点连线都走 `placeStructure`。演示脚本可含迷雾命令（`reveal` / `obscure` / `forget` / `fogTerrain`），单位按认知改道；调试 HUD 读玩家 1 的可见/探索/残影格（`fogCells vis/explored/ghost`）。
+
+## S3 路径演示
+
+`CrowdSimulationS3PathMod`：左键设起点、右键设终点；Q 切换体型，T 在线程 1/2/4 间切换，G 放慢后台路径。画面显示折线、方向贴花，以及请求帧 / 生效帧 / 等待次数。
+
 ## 组成
 
 - `CrowdSimulationShowcaseStageMod`：所有场景共用的舞台。依赖 S4 部署演示，把开局部署人数设为 0，清空 S4 的演示脚本，关掉自动回放，玩家视图按迷雾隐藏敌方。
