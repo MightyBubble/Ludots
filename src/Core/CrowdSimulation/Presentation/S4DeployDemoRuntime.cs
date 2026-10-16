@@ -309,8 +309,8 @@ public sealed class S4DeployDemoRuntime
             if (!TrySession(out CrowdSimSession session))
                 throw new InvalidOperationException("部署演示还没有会话，不能解析生成模板。");
             tools.ResolveSpawn(session.Config);
-            unitType = tools.SpawnUnitType;
-            radius = tools.SpawnRadiusClass;
+            unitType = tools.ResolvedUnitType;
+            radius = tools.ResolvedRadiusClass;
         }
 
         SubmitInteractive(new CrowdSimCommand

@@ -479,15 +479,25 @@ internal static class CrowdHudFormat
     public static void ClickLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
     {
         b.Clear();
-        b.Append(Inv, $"{labels.ClickSpawn} {labels.UnitType} {hud.ClickTemplate} · {labels.Count} {hud.ClickCount}");
+        b.Append(Inv, $"{labels.ClickSpawn} {labels.UnitType} {ShortId(hud.ClickTemplate)} · {labels.Count} {hud.ClickCount}");
     }
 
     public static void DeployLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
     {
         b.Clear();
-        b.Append(Inv, $"{labels.Deploy} {hud.DeployCount} · {labels.Radius} {hud.WindowFrom}-{hud.WindowTo} · {labels.Layer} {hud.LayerId}");
+        b.Append(Inv, $"{labels.Deploy} {hud.DeployCount} · {labels.Radius} {ShortId(hud.WindowFrom)}-{ShortId(hud.WindowTo)} · {labels.Layer} {hud.LayerId}");
         if (hud.SceneKind == 1) b.Append(Inv, $" · {labels.SceneOutside}");
         else if (hud.SceneKind == 2) b.Append(Inv, $" · {labels.SceneBehind}");
+    }
+
+    /// <summary>状态卡按字宽裁在侧栏里，只留模板 id 的末两段。</summary>
+    private static string ShortId(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+        int last = id.LastIndexOf('.');
+        if (last <= 0) return id;
+        int prev = id.LastIndexOf('.', last - 1);
+        return prev < 0 ? id : id[(prev + 1)..];
     }
 }
 

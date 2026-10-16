@@ -234,15 +234,15 @@ internal sealed class CrowdDebugTools
     [JsonRequired] public int SpawnCount { get; init; }
     [JsonRequired] public string SpawnTemplate { get; init; } = string.Empty;
     [JsonRequired] public string PlaceEntry { get; init; } = string.Empty;
-    [JsonIgnore] public int SpawnUnitType { get; private set; }
-    [JsonIgnore] public int SpawnRadiusClass { get; private set; }
+    public int ResolvedUnitType { get; private set; }
+    public int ResolvedRadiusClass { get; private set; }
 
     public void ResolveSpawn(CrowdSimulationRuntimeConfig cfg)
     {
         ArgumentNullException.ThrowIfNull(cfg);
         var (unitType, radius) = CrowdDeployment.LocateTemplate(cfg, SpawnTemplate);
-        SpawnUnitType = unitType;
-        SpawnRadiusClass = radius;
+        ResolvedUnitType = unitType;
+        ResolvedRadiusClass = radius;
     }
     [JsonRequired] public int[] SpeedStepsPermille { get; init; } = Array.Empty<int>();
 }
