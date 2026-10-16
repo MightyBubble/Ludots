@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -248,11 +249,11 @@ public static class TilePathQuery
         return p < 0 ? -1 : tile * 2 * navCellsPerTile * navCellsPerTile + p;
     }
 
-    public sealed class BaseLayerCostEntry
+    public struct BaseLayerCostEntry
     {
-        public NavTileEntry Entry = null!;
+        public NavTileEntry? Entry;
         public int Version;
-        public Fix64[] Cost = Array.Empty<Fix64>();
+        public Fix64[]? Cost;
     }
 
     // 底层 tile 的逐多边形代价(格代价均值)。tile 条目跨上下文共享,代价随导航重烘变,所以条目引用和导航版本都要对上
@@ -260,18 +261,10 @@ public static class TilePathQuery
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var e = nav.Tiles![tile];
-        if (s.BaseLayerCostMemo.TryGetValue((nav.Id, tile), out var memo))
-        {
-            if (ReferenceEquals(memo.Entry, e) && memo.Version == nav.Version) return memo.Cost;
-        }
-        else
-        {
-            memo = new BaseLayerCostEntry();
-            s.BaseLayerCostMemo[(nav.Id, tile)] = memo;
-        }
-
+        ref var memo = ref CollectionsMarshal.GetValueRefOrAddDefault(s.BaseLayerCostMemo, (nav.Id, tile), out _);
+        if (ReferenceEquals(memo.Entry, e) && memo.Version == nav.Version) return memo.Cost!;
         int ox = tile % navTilesPerSide * navCellsPerTile, oy = tile / navTilesPerSide * navCellsPerTile;
-        var pc = memo.Cost.Length >= e.Count && memo.Cost.Length > 0 ? memo.Cost : s.RentCost();
+        var pc = memo.Cost is { Length: > 0 } kept && kept.Length >= e.Count ? kept : s.RentCost();
         if (pc.Length < e.Count) pc = new Fix64[e.Count];
         Array.Clear(pc, 0, e.Count);
         if (s.CostCount.Length < e.Count) s.CostCount = new int[e.Count];
