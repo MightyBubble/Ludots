@@ -227,6 +227,15 @@ internal sealed class CrowdDebugViewFrame
         readout.BeliefGroup = BeliefGroup;
         readout.DivergentCells = Belief ? _diffCount : 0;
         readout.Ghosts = Belief ? _ghostStat : 0;
+        readout.Funnel = Funnel;
+        readout.Corridor = Corridor;
+        readout.HpaGraph = HpaGraph;
+        readout.NavPolygons = NavPolygons;
+        readout.TileGrid = TileGrid;
+        readout.Flow = Flow;
+        readout.Density = Density;
+        readout.Blocked = Blocked;
+        readout.Links = Links;
     }
 
     public void Project(GlobalFieldVisualBuffer buffer, CrowdSimSession? session)

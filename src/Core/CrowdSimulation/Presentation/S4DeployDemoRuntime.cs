@@ -110,6 +110,8 @@ public sealed class S4DeployDemoRuntime
     private int _viewModeCount = 3;
     public PaletteChoice Choice => _choices[TemplateIndex];
     public int StructureCount => _choices.Length;
+    internal IReadOnlyList<PaletteChoice> Choices => _choices;
+    internal CrowdDebugRates? Rates => _rates;
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
 

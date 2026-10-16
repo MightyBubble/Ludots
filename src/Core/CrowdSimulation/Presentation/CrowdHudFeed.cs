@@ -22,6 +22,8 @@ public sealed class CrowdHudFeed
     private bool _previewShown;
     private bool _previewValid;
     private CrowdPlacementReject _previewReason;
+    private CrowdSimSession? _catalogSession;
+    private CrowdHudCatalog? _catalog;
 
     internal CrowdHudFeed(
         S3PathDemoRuntime path,
@@ -66,6 +68,27 @@ public sealed class CrowdHudFeed
     public int NavReads { get; private set; }
     public int TelemetryReads { get; private set; }
     public int FaultReads { get; private set; }
+
+    /// <summary>部署演示控件的动作号；路径演示为 null。</summary>
+    public CrowdHudActions? Actions { get; private set; }
+
+    /// <summary>当前会话的选项名单；没有会话或不是部署演示时为 null。会话不换就返回同一个实例。</summary>
+    public CrowdHudCatalog? Catalog
+    {
+        get
+        {
+            if (_deploy == null || _session() is not { } session) return null;
+            if (!ReferenceEquals(session, _catalogSession))
+            {
+                _catalog = new CrowdHudCatalog(session, _deploy.Choices, _playerView?.ViewConfig, _deploy.Rates);
+                _catalogSession = session;
+            }
+
+            return _catalog;
+        }
+    }
+
+    internal void UseActions(CrowdHudActions actions) => Actions = actions;
 
     internal void UseDebugView(CrowdDebugViewFrame frame) => _debugView = frame;
 

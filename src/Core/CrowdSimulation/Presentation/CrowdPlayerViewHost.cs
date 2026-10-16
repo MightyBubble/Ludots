@@ -68,6 +68,9 @@ internal sealed class CrowdPlayerViewHost
     private readonly Vector2[] _crossH = new Vector2[2];
     private readonly Vector2[] _crossV = new Vector2[2];
     private readonly int[] _counts = new int[MaxPlayers + 1];
+    private readonly CrowdOrder?[] _recent = new CrowdOrder?[CrowdPlayerHud.MaxNotices];
+    private readonly CrowdOrderNotice[] _notices = new CrowdOrderNotice[CrowdPlayerHud.MaxNotices];
+    private int _noticeCount;
 
     private int _playerCount;
     private int _radiusLast;
@@ -526,7 +529,13 @@ internal sealed class CrowdPlayerViewHost
         }
 
         int viewer = ViewerGroup(session);
-        CrowdOrder? latest = LatestOrder(session, _player);
+        int recent = RecentOrders(session, _player, _recent);
+        CrowdOrder? latest = recent > 0 ? _recent[0] : null;
+        for (int n = 0; n < recent; n++)
+        {
+            _notices[n] = new CrowdOrderNotice { Id = _recent[n]!.Id, Mode = _recent[n]!.Mode };
+        }
+
         int planning = 0;
         int moving = 0;
         int arrived = 0;
@@ -564,12 +573,27 @@ internal sealed class CrowdPlayerViewHost
             }
 
             var state = session.World.Get<CrowdSimulationUnitState>(entity);
-            if (!session.Groups.TryGet(state.GroupId, out CrowdNavGroupSet.Group group) || group.OrderId != latest.Id)
+            if (!session.Groups.TryGet(state.GroupId, out CrowdNavGroupSet.Group group))
             {
                 continue;
             }
 
             byte unitState = state.State;
+            for (int n = 1; n < recent; n++)
+            {
+                if (group.OrderId == _notices[n].Id)
+                {
+                    CountNotice(ref _notices[n], group.Planning, unitState);
+                    break;
+                }
+            }
+
+            if (group.OrderId != latest.Id)
+            {
+                continue;
+            }
+
+            CountNotice(ref _notices[0], group.Planning, unitState);
             if (group.Planning && unitState != (byte)CrowdUnitState.Arrived)
             {
                 planning++;
@@ -626,9 +650,43 @@ internal sealed class CrowdPlayerViewHost
         _card = CrowdCommandStatusCard.Classify(planning, moving, arrived, other);
         _latestShapeId = latest?.ShapeId;
         _latestMode = latest?.Mode;
+        _noticeCount = recent;
+        Array.Clear(_recent);
+    }
+
+    private static void CountNotice(ref CrowdOrderNotice notice, bool planning, byte unitState)
+    {
+        notice.Units++;
+        if (planning && unitState != (byte)CrowdUnitState.Arrived) notice.Planning++;
+        else if (unitState == (byte)CrowdUnitState.Moving || unitState == (byte)CrowdUnitState.Traversing) notice.Moving++;
+        else if (unitState == (byte)CrowdUnitState.Arrived) notice.Arrived++;
+        else if (unitState == (byte)CrowdUnitState.Unreachable) notice.Unreachable++;
+    }
+
+    /// <summary>把玩家指令号最大的几条按从新到旧写进 <paramref name="into"/>，返回条数。</summary>
+    internal static int RecentOrders(CrowdSimSession session, int playerId, CrowdOrder?[] into)
+    {
+        int count = 0;
+        var list = session.Orders.List;
+        for (int i = 0; i < list.Count; i++)
+        {
+            CrowdOrder order = list[i];
+            if (order.Player != playerId) continue;
+            int at = count;
+            while (at > 0 && into[at - 1]!.Id < order.Id) at--;
+            if (at >= into.Length) continue;
+            int last = Math.Min(count, into.Length - 1);
+            for (int k = last; k > at; k--) into[k] = into[k - 1];
+            into[at] = order;
+            if (count < into.Length) count++;
+        }
+
+        return count;
     }
 
     internal CrowdPlayerViewLabels Labels => _config.Labels;
+
+    internal CrowdPlayerViewConfig ViewConfig => _config;
 
     /// <summary>读上一次 <see cref="Draw"/> 统计的计数。各玩家单位数按玩家号写入 <paramref name="unitsByPlayer"/>，下标 0 不用。</summary>
     internal void ReadPanel(ref CrowdPlayerHud hud, Span<int> unitsByPlayer)
@@ -655,6 +713,18 @@ internal sealed class CrowdPlayerViewHost
         hud.RadiusMax = _radiusMax;
         hud.Layer = _focus;
         hud.SceneKind = _sceneKind;
+        hud.ShapeIndex = ShapeIndex(Prefs.ShapeId);
+        int mask = 0;
+        for (int t = 0; t < _layers.Length && t < 31; t++)
+        {
+            if (_layers[t]) mask |= 1 << t;
+        }
+
+        hud.LayerMask = mask;
+        hud.NoticeCount = _noticeCount;
+        hud.Notice0 = _noticeCount > 0 ? _notices[0] : default;
+        hud.Notice1 = _noticeCount > 1 ? _notices[1] : default;
+        hud.Notice2 = _noticeCount > 2 ? _notices[2] : default;
         int n = Math.Min(unitsByPlayer.Length, _counts.Length);
         _counts.AsSpan(0, n).CopyTo(unitsByPlayer);
     }

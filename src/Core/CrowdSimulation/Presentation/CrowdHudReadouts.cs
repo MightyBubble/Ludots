@@ -165,6 +165,15 @@ public record struct CrowdInspectReadout
     public int BeliefGroup;
     public int DivergentCells;
     public int Ghosts;
+    public bool Funnel;
+    public bool Corridor;
+    public bool HpaGraph;
+    public bool NavPolygons;
+    public bool TileGrid;
+    public bool Flow;
+    public bool Density;
+    public bool Blocked;
+    public bool Links;
 
     public readonly bool Visible => NavOverlays || Belief || UnitColor != CrowdUnitColorMode.Off;
 }
@@ -194,6 +203,37 @@ public record struct CrowdPlayerHud
     public int RadiusMax;
     public int Layer;
     public int SceneKind;
+    /// <summary>当前阵型在 <see cref="CrowdHudCatalog.Formations"/> 里的下标；配置里找不到时为 -1。</summary>
+    public int ShapeIndex;
+    /// <summary>按兵种下标的启用位。</summary>
+    public int LayerMask;
+    /// <summary>本方最近的指令，按指令号从新到旧；只填前 <see cref="NoticeCount"/> 条。</summary>
+    public int NoticeCount;
+    public CrowdOrderNotice Notice0;
+    public CrowdOrderNotice Notice1;
+    public CrowdOrderNotice Notice2;
+
+    public const int MaxNotices = 3;
+
+    public readonly CrowdOrderNotice Notice(int index) => index switch
+    {
+        0 => Notice0,
+        1 => Notice1,
+        2 => Notice2,
+        _ => throw new ArgumentOutOfRangeException(nameof(index)),
+    };
+}
+
+/// <summary>一条指令按单位状态的计数。规划中的组里未到达的单位都算规划中。</summary>
+public record struct CrowdOrderNotice
+{
+    public int Id;
+    public CrowdOrderMode Mode;
+    public int Units;
+    public int Planning;
+    public int Moving;
+    public int Arrived;
+    public int Unreachable;
 }
 
 /// <summary>导航缓存与路径服务的一次读数。读不到的项为 NaN 或对应 Has* 为 false。</summary>
