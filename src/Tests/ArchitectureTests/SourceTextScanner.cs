@@ -471,5 +471,487 @@ namespace Ludots.Tests.Architecture
                 builder.Append(' ');
             }
         }
+
+        public static IEnumerable<(int LineNumber, string CommentText)> ReadCommentSegments(string file)
+        {
+            if (!string.Equals(Path.GetExtension(file), ".cs", StringComparison.OrdinalIgnoreCase))
+            {
+                yield break;
+            }
+
+            string text = File.ReadAllText(file);
+            int line = 1;
+            int index = 0;
+            bool inLineComment = false;
+            bool inBlockComment = false;
+            bool inVerbatimString = false;
+            int rawStringQuoteCount = 0;
+
+            while (index < text.Length)
+            {
+                if (inLineComment)
+                {
+                    int start = index;
+                    while (index < text.Length && text[index] != '\n')
+                    {
+                        index++;
+                    }
+
+                    yield return (line, text[start..index]);
+                    inLineComment = false;
+                    continue;
+                }
+
+                if (inBlockComment)
+                {
+                    int start = index;
+                    while (index < text.Length - 1 && text[index..(index + 2)] != "*/")
+                    {
+                        if (text[index] == '\n')
+                        {
+                            line++;
+                        }
+
+                        index++;
+                    }
+
+                    int end = index;
+                    if (index < text.Length - 1)
+                    {
+                        index += 2;
+                    }
+
+                    yield return (line, text[start..end]);
+                    inBlockComment = false;
+                    continue;
+                }
+
+                if (inVerbatimString)
+                {
+                    index = SkipVerbatimStringContent(text, index, ref line);
+                    inVerbatimString = false;
+                    continue;
+                }
+
+                if (rawStringQuoteCount > 0)
+                {
+                    index = SkipRawStringContent(text, index, rawStringQuoteCount, ref line);
+                    rawStringQuoteCount = 0;
+                    continue;
+                }
+
+                if (index + 1 < text.Length && text[index] == '/' && text[index + 1] == '/')
+                {
+                    inLineComment = true;
+                    index += 2;
+                    continue;
+                }
+
+                if (index + 1 < text.Length && text[index] == '/' && text[index + 1] == '*')
+                {
+                    inBlockComment = true;
+                    index += 2;
+                    continue;
+                }
+
+                if (text[index] == '"')
+                {
+                    int quoteCount = CountQuoteRunInText(text, index);
+                    if (quoteCount >= 3)
+                    {
+                        int sameLineEnd = FindQuoteRunInText(text, index + quoteCount, quoteCount);
+                        if (sameLineEnd < 0)
+                        {
+                            rawStringQuoteCount = quoteCount;
+                            index += quoteCount;
+                            continue;
+                        }
+
+                        index = sameLineEnd + quoteCount;
+                        continue;
+                    }
+
+                    if (IsInterpolatedStringStartInText(text, index))
+                    {
+                        index = IsVerbatimStringStartInText(text, index)
+                            ? SkipInterpolatedVerbatimStringContent(text, index + 1, ref line)
+                            : SkipInterpolatedRegularStringContent(text, index + 1, ref line);
+                        continue;
+                    }
+
+                    if (IsVerbatimStringStartInText(text, index))
+                    {
+                        int end = FindVerbatimStringEndInText(text, index + 1);
+                        if (end < 0)
+                        {
+                            inVerbatimString = true;
+                            index += 1;
+                            continue;
+                        }
+
+                        index = end + 1;
+                        continue;
+                    }
+
+                    int regularEnd = FindRegularStringEndInText(text, index + 1);
+                    index = regularEnd < 0 ? text.Length : regularEnd + 1;
+                    continue;
+                }
+
+                if (text[index] == '\'')
+                {
+                    int charEnd = FindCharLiteralEndInText(text, index + 1);
+                    index = charEnd < 0 ? text.Length : charEnd + 1;
+                    continue;
+                }
+
+                if (text[index] == '\n')
+                {
+                    line++;
+                }
+
+                index++;
+            }
+        }
+
+        private static int SkipVerbatimStringContent(string text, int start, ref int line)
+        {
+            for (int i = start; i < text.Length; i++)
+            {
+                if (text[i] == '\n')
+                {
+                    line++;
+                }
+
+                if (text[i] != '"')
+                {
+                    continue;
+                }
+
+                if (i + 1 < text.Length && text[i + 1] == '"')
+                {
+                    i++;
+                    continue;
+                }
+
+                return i + 1;
+            }
+
+            return text.Length;
+        }
+
+        private static int SkipRawStringContent(string text, int start, int quoteCount, ref int line)
+        {
+            int end = FindQuoteRunInText(text, start, quoteCount);
+            if (end < 0)
+            {
+                for (int i = start; i < text.Length; i++)
+                {
+                    if (text[i] == '\n')
+                    {
+                        line++;
+                    }
+                }
+
+                return text.Length;
+            }
+
+            for (int i = start; i < end; i++)
+            {
+                if (text[i] == '\n')
+                {
+                    line++;
+                }
+            }
+
+            return end + quoteCount;
+        }
+
+        private static int SkipInterpolatedRegularStringContent(string text, int start, ref int line)
+        {
+            int index = start;
+            bool escaped = false;
+            while (index < text.Length)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    index++;
+                    continue;
+                }
+
+                char ch = text[index];
+                if (ch == '\\')
+                {
+                    escaped = true;
+                    index++;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    return index + 1;
+                }
+
+                if (ch == '{')
+                {
+                    if (index + 1 < text.Length && text[index + 1] == '{')
+                    {
+                        index += 2;
+                        continue;
+                    }
+
+                    index = SkipInterpolatedExpression(text, index + 1, ref line);
+                    continue;
+                }
+
+                if (ch == '\n')
+                {
+                    line++;
+                }
+
+                index++;
+            }
+
+            return text.Length;
+        }
+
+        private static int SkipInterpolatedVerbatimStringContent(string text, int start, ref int line)
+        {
+            int index = start;
+            while (index < text.Length)
+            {
+                char ch = text[index];
+                if (ch == '"')
+                {
+                    if (index + 1 < text.Length && text[index + 1] == '"')
+                    {
+                        index += 2;
+                        continue;
+                    }
+
+                    return index + 1;
+                }
+
+                if (ch == '{')
+                {
+                    if (index + 1 < text.Length && text[index + 1] == '{')
+                    {
+                        index += 2;
+                        continue;
+                    }
+
+                    index = SkipInterpolatedExpression(text, index + 1, ref line);
+                    continue;
+                }
+
+                if (ch == '\n')
+                {
+                    line++;
+                }
+
+                index++;
+            }
+
+            return text.Length;
+        }
+
+        private static int SkipInterpolatedExpression(string text, int start, ref int line)
+        {
+            int depth = 0;
+            int index = start;
+            while (index < text.Length)
+            {
+                if (index + 1 < text.Length && text[index] == '/' && text[index + 1] == '/')
+                {
+                    while (index < text.Length && text[index] != '\n')
+                    {
+                        index++;
+                    }
+
+                    continue;
+                }
+
+                if (index + 1 < text.Length && text[index] == '/' && text[index + 1] == '*')
+                {
+                    index += 2;
+                    while (index < text.Length - 1 && text[index..(index + 2)] != "*/")
+                    {
+                        if (text[index] == '\n')
+                        {
+                            line++;
+                        }
+
+                        index++;
+                    }
+
+                    index += 2;
+                    continue;
+                }
+
+                if (text[index] == '"')
+                {
+                    int quoteCount = CountQuoteRunInText(text, index);
+                    if (quoteCount >= 3)
+                    {
+                        index = SkipRawStringContent(text, index + quoteCount, quoteCount, ref line);
+                        continue;
+                    }
+
+                    int end = IsVerbatimStringStartInText(text, index)
+                        ? FindVerbatimStringEndInText(text, index + 1)
+                        : FindRegularStringEndInText(text, index + 1);
+                    index = end < 0 ? text.Length : end + 1;
+                    continue;
+                }
+
+                if (text[index] == '\'')
+                {
+                    int charEnd = FindCharLiteralEndInText(text, index + 1);
+                    index = charEnd < 0 ? text.Length : charEnd + 1;
+                    continue;
+                }
+
+                if (text[index] == '{')
+                {
+                    depth++;
+                    index++;
+                    continue;
+                }
+
+                if (text[index] == '}')
+                {
+                    if (depth == 0)
+                    {
+                        return index + 1;
+                    }
+
+                    depth--;
+                    index++;
+                    continue;
+                }
+
+                if (text[index] == '\n')
+                {
+                    line++;
+                }
+
+                index++;
+            }
+
+            return text.Length;
+        }
+
+        private static bool IsInterpolatedStringStartInText(string text, int quoteIndex)
+        {
+            return quoteIndex > 0 &&
+                   (text[quoteIndex - 1] == '$' ||
+                    (quoteIndex > 1 && text[quoteIndex - 2] == '$' && text[quoteIndex - 1] == '@') ||
+                    (quoteIndex > 1 && text[quoteIndex - 2] == '@' && text[quoteIndex - 1] == '$'));
+        }
+
+        private static bool IsVerbatimStringStartInText(string text, int quoteIndex)
+        {
+            return quoteIndex > 0 &&
+                   (text[quoteIndex - 1] == '@' ||
+                    (quoteIndex > 1 && text[quoteIndex - 2] == '@' && text[quoteIndex - 1] == '$'));
+        }
+
+        private static int FindVerbatimStringEndInText(string text, int start)
+        {
+            for (int i = start; i < text.Length; i++)
+            {
+                if (text[i] != '"')
+                {
+                    continue;
+                }
+
+                if (i + 1 < text.Length && text[i + 1] == '"')
+                {
+                    i++;
+                    continue;
+                }
+
+                return i;
+            }
+
+            return -1;
+        }
+
+        private static int FindRegularStringEndInText(string text, int start)
+        {
+            bool escaped = false;
+            for (int i = start; i < text.Length; i++)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (text[i] == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (text[i] == '"')
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int FindCharLiteralEndInText(string text, int start)
+        {
+            bool escaped = false;
+            for (int i = start; i < text.Length; i++)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (text[i] == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (text[i] == '\'')
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int CountQuoteRunInText(string text, int start)
+        {
+            int count = 0;
+            while (start + count < text.Length && text[start + count] == '"')
+            {
+                count++;
+            }
+
+            return count;
+        }
+
+        private static int FindQuoteRunInText(string text, int start, int quoteCount)
+        {
+            for (int i = start; i <= text.Length - quoteCount; i++)
+            {
+                if (CountQuoteRunInText(text, i) >= quoteCount)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
     }
 }
