@@ -65,7 +65,7 @@ public sealed class CrowdSimUnits
     private readonly RuntimeEntitySpawnRequest[] _requestScratch;
     private readonly RuntimeEntitySpawnReceipt[] _receiptScratch;
     private readonly CrowdUnitSpawnInitializer _initializer;
-    private readonly List<Entity> _deferredDestroys = new(64);
+    private readonly List<Entity> _deferredDestroys;
 
     public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring presentation)
     {
@@ -73,6 +73,7 @@ public sealed class CrowdSimUnits
         _world = world ?? throw new ArgumentNullException(nameof(world));
         _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
         Capacity = capacity;
+        _deferredDestroys = new List<Entity>(capacity);
         _sparse = new int[capacity];
         _gen = new ushort[capacity];
         _freeSlots = new int[capacity];
