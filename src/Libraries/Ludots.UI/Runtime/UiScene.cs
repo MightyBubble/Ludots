@@ -32,6 +32,8 @@ public sealed class UiScene
 
 	private readonly List<UiNode> _changedTextNodes = new List<UiNode>();
 
+	private readonly List<UiNode> _vectorNodes = new List<UiNode>();
+
 	private bool _boundTextIndexDirty = true;
 
 	private UiNodeId? _hoveredNodeId;
@@ -139,6 +141,28 @@ public sealed class UiScene
 		}
 	}
 
+	/// <summary>有挂着的 <see cref="UiVectorDrawList"/> 在上次交给渲染后改写过；只要重画，不要重排。</summary>
+	public bool HasPendingVectorChanges
+	{
+		get
+		{
+			if (Root == null)
+			{
+				return false;
+			}
+			EnsureBoundTextIndex();
+			for (int i = 0; i < _vectorNodes.Count; i++)
+			{
+				UiNode node = _vectorNodes[i];
+				if (node.CanvasContent is UiVectorDrawList list && list.Version != node.PaintedVectorVersion)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
 	public UiReactiveUpdateMetrics LastReactiveUpdateMetrics { get; internal set; } = UiReactiveUpdateMetrics.None;
 
 	public UiScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiDispatcher? dispatcher = null)
@@ -209,6 +233,7 @@ public sealed class UiScene
 		if (!IsDirty && !sizeChanged)
 		{
 			LayoutChangedText(width, height);
+			AcceptVectorChanges();
 			return;
 		}
 		_layoutWidth = width;
@@ -219,7 +244,27 @@ public sealed class UiScene
 		}
 		_layoutEngine.Layout(Root, width, height);
 		MarkBoundTextMeasured();
+		AcceptVectorChanges();
 		IsDirty = false;
+	}
+
+	private void AcceptVectorChanges()
+	{
+		EnsureBoundTextIndex();
+		bool changed = false;
+		for (int i = 0; i < _vectorNodes.Count; i++)
+		{
+			UiNode node = _vectorNodes[i];
+			if (node.CanvasContent is UiVectorDrawList list && list.Version != node.PaintedVectorVersion)
+			{
+				node.PaintedVectorVersion = list.Version;
+				changed = true;
+			}
+		}
+		if (changed)
+		{
+			Version++;
+		}
 	}
 
 	private void LayoutChangedText(float width, float height)
@@ -268,6 +313,7 @@ public sealed class UiScene
 			return;
 		}
 		_boundTextNodes.Clear();
+		_vectorNodes.Clear();
 		if (Root != null)
 		{
 			CollectBoundTextNodes(Root);
@@ -280,6 +326,10 @@ public sealed class UiScene
 		if (node.TextBinding != null)
 		{
 			_boundTextNodes.Add(node);
+		}
+		if (node.CanvasContent is UiVectorDrawList)
+		{
+			_vectorNodes.Add(node);
 		}
 		for (int i = 0; i < node.Children.Count; i++)
 		{

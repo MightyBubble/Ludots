@@ -29,6 +29,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private readonly SKPath _clipPath = new SKPath();
 
+	private readonly SKPath _vectorPath = new SKPath();
+
+	private readonly SKPaint _vectorFillPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+
+	private readonly SKPaint _vectorStrokePaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round };
+
 	private readonly UiTextLines _textLines = new UiTextLines();
 
 	private readonly Dictionary<float, SKImageFilter> _blurFilters = new Dictionary<float, SKImageFilter>();
@@ -609,15 +615,78 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private void DrawCanvas(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
 	{
-		if (node.CanvasContent is ISkiaUiCanvasContent skiaCanvas)
+		bool isSkia = node.CanvasContent is ISkiaUiCanvasContent;
+		if (!isSkia && node.CanvasContent is not UiVectorDrawList)
 		{
-			SKRect rect2 = new SKRect(rect.Left + style.Padding.Left, rect.Top + style.Padding.Top, rect.Right - style.Padding.Right, rect.Bottom - style.Padding.Bottom);
-			if (!(rect2.Width <= 0.01f) && !(rect2.Height <= 0.01f))
+			return;
+		}
+		SKRect rect2 = new SKRect(rect.Left + style.Padding.Left, rect.Top + style.Padding.Top, rect.Right - style.Padding.Right, rect.Bottom - style.Padding.Bottom);
+		if (rect2.Width <= 0.01f || rect2.Height <= 0.01f)
+		{
+			return;
+		}
+		int count = canvas.Save();
+		ClipNodeBounds(canvas, rect2, style);
+		if (isSkia)
+		{
+			((ISkiaUiCanvasContent)node.CanvasContent!).Draw(canvas, rect2);
+		}
+		else
+		{
+			DrawVectorList((UiVectorDrawList)node.CanvasContent!, rect2, canvas);
+		}
+		canvas.RestoreToCount(count);
+	}
+
+	private void DrawVectorList(UiVectorDrawList list, SKRect content, SKCanvas canvas)
+	{
+		ReadOnlySpan<UiVectorCommand> commands = list.Commands;
+		ReadOnlySpan<float> points = list.Points;
+		float w = content.Width;
+		float h = content.Height;
+		for (int i = 0; i < commands.Length; i++)
+		{
+			ref readonly UiVectorCommand command = ref commands[i];
+			switch (command.Kind)
 			{
-				int count = canvas.Save();
-				ClipNodeBounds(canvas, rect2, style);
-				skiaCanvas.Draw(canvas, rect2);
-				canvas.RestoreToCount(count);
+			case UiVectorCommandKind.FillRect:
+				_vectorFillPaint.Color = command.Color.ToSKColor();
+				canvas.DrawRect(content.Left + command.X * w, content.Top + command.Y * h, command.Width * w, command.Height * h, _vectorFillPaint);
+				break;
+			case UiVectorCommandKind.StrokePolyline:
+			case UiVectorCommandKind.FillPolygon:
+				if (command.PointCount < 2)
+				{
+					break;
+				}
+				_vectorPath.Reset();
+				for (int p = 0; p < command.PointCount; p++)
+				{
+					int at = (command.PointStart + p) * 2;
+					float x = content.Left + points[at] * w;
+					float y = content.Top + points[at + 1] * h;
+					if (p == 0)
+					{
+						_vectorPath.MoveTo(x, y);
+					}
+					else
+					{
+						_vectorPath.LineTo(x, y);
+					}
+				}
+				if (command.Kind == UiVectorCommandKind.FillPolygon)
+				{
+					_vectorPath.Close();
+					_vectorFillPaint.Color = command.Color.ToSKColor();
+					canvas.DrawPath(_vectorPath, _vectorFillPaint);
+				}
+				else
+				{
+					_vectorStrokePaint.Color = command.Color.ToSKColor();
+					_vectorStrokePaint.StrokeWidth = command.StrokeWidth;
+					canvas.DrawPath(_vectorPath, _vectorStrokePaint);
+				}
+				break;
 			}
 		}
 	}
