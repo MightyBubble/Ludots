@@ -146,7 +146,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
     public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }
     public void EnqueueCycleThreads() { lock (_inputGate) _inputQueue.Enqueue(() => Service.SetWorkerCount(Service.WorkerCount == 1 ? 2 : Service.WorkerCount == 2 ? 4 : 1)); }
-    public void UseViewLabels(CrowdViewCatalog catalog)
+    internal void UseViewLabels(CrowdViewCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         if (catalog.Length == 0)

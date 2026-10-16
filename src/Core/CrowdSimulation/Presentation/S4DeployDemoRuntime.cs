@@ -113,7 +113,7 @@ public sealed class S4DeployDemoRuntime
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
 
-    public void UseViewLabels(CrowdViewCatalog catalog)
+    internal void UseViewLabels(CrowdViewCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         if (catalog.Length == 0)
