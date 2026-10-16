@@ -16,7 +16,6 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Platform.Abstractions;
-using CrowdSimulationUiMod.UI;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -47,6 +46,11 @@ public sealed class CrowdPlayerViewTests
         Assert.That(scene["behindFromCellWestCm"]!.GetValue<int>(), Is.EqualTo(4000));
         Assert.That(scene["behindLookXCm"]!.GetValue<int>(), Is.EqualTo(529000));
         Assert.That(scene["behindDistanceCm"]!.GetValue<int>(), Is.EqualTo(31000));
+        Assert.That(scene["template"]!.GetValue<string>(), Is.EqualTo(fixture["template"]!.GetValue<string>()));
+        scene["unitType"] = 0;
+        using var doc = System.Text.Json.JsonDocument.Parse(scene.ToJsonString());
+        var rejected = Assert.Throws<InvalidOperationException>(() => CrowdFogCheckScene.Load(doc.RootElement, "player-fog-check.json"));
+        Assert.That(rejected!.Message, Does.Contain("unitType"));
     }
 
     [Test]
@@ -162,42 +166,34 @@ public sealed class CrowdPlayerViewTests
         var range = (JsonObject)valid.DeepClone();
         range["colors"]!["plan"]!["red"] = 256;
         Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(range, "player-view"));
-        var missingLabel = (JsonObject)valid.DeepClone();
-        missingLabel["labels"]!.AsObject().Remove("countPlanning");
-        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(missingLabel, "player-view"));
-        var unknownLabel = (JsonObject)valid.DeepClone();
-        unknownLabel["labels"]!.AsObject()["extra"] = "x";
-        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(unknownLabel, "player-view"));
+        var emptyShape = (JsonObject)valid.DeepClone();
+        emptyShape["shapeLabels"]!["box"] = "";
+        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(emptyShape, "player-view"));
+        var badClick = (JsonObject)valid.DeepClone();
+        badClick["clickTemplate"] = "crowd_simulation.unit.missing";
+        Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(badClick, "player-view"));
     }
 
     [Test]
-    public void StatusCard_LabelsEveryCount()
+    public void ClickTemplate_UnknownKeyOutsideListAndMissingCatalog_AreRejected()
     {
-        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
-        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
-        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(ViewJson(), "player-view"));
-        host.Bind(session);
-        var routes = new RouteVisualBuffer();
-        host.Draw(session, routes, new ScreenOverlayBuffer());
-        var hud = default(CrowdPlayerHud);
-        var units = new int[9];
-        host.ReadPanel(ref hud, units);
-        var labels = host.Labels;
-        var texts = new System.Collections.Generic.List<string>
-        {
-            Write(b => CrowdHudFormat.TeamLine(b, in hud, units, labels)),
-            Write(b => CrowdHudFormat.CardLine(b, in hud, labels)),
-            Write(b => CrowdHudFormat.ModeLine(b, in hud, labels)),
-            Write(b => CrowdHudFormat.ClickLine(b, in hud, labels)),
-            Write(b => CrowdHudFormat.DeployLine(b, in hud, labels)),
-        };
+        var oldKey = ViewJson();
+        oldKey["clickUnitType"] = 0;
+        var key = Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(oldKey, "player-view"));
+        Assert.That(key!.Message, Does.Contain("clickUnitType"));
 
-        Assert.That(texts, Does.Contain("idle · countPlanning 0 · countMoving 0 · arrived 0 · countOther 0"));
-        Assert.That(texts, Does.Contain("clickSpawn unitType 0 · radius 0 · count 8"));
-        Assert.That(texts, Has.Some.StartsWith("deploy 24 · radius 0-"));
-        Assert.That(texts, Has.Some.Contains(" · layer 0"));
-        Assert.That(texts, Has.Some.Contains("self"));
-        Assert.That(string.Join("\n", texts), Does.Not.Contain("*"));
+        var outside = ViewJson();
+        outside["clickTemplate"] = "crowd_simulation.unit.navy.r100";
+        var list = Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(outside, "player-view"));
+        Assert.That(list!.Message, Does.Contain("clickTemplate"));
+
+        var missing = ViewJson();
+        missing["clickTemplate"] = "missing.unit";
+        missing["clickTemplates"] = new JsonArray("missing.unit");
+        var host = new CrowdPlayerViewHost(null, CrowdPlayerViewConfig.Load(missing, "player-view"));
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        var catalog = Assert.Throws<InvalidOperationException>(() => host.Bind(session));
+        Assert.That(catalog!.Message, Does.Contain("missing.unit"));
     }
 
     [Test]
@@ -247,13 +243,6 @@ public sealed class CrowdPlayerViewTests
         Assert.That(ReadAlpha(world), Is.EqualTo(1f).Within(0.0001f));
     }
 
-    private static string Write(Action<Ludots.UI.Runtime.UiTextBuffer> write)
-    {
-        var buffer = new Ludots.UI.Runtime.UiTextBuffer();
-        write(buffer);
-        return buffer.ToString();
-    }
-
     private static CrowdOrderMode Choose(
         int minX, int minY, int maxX, int maxY, int clickX, int clickY, Fix64 pad, Fix64 spread, bool drag, bool autoOff)
         => CrowdOrderModeChooser.Choose(
@@ -293,18 +282,6 @@ public sealed class CrowdPlayerViewTests
             actions[name] = name;
         }
 
-        var labels = new JsonObject();
-        foreach (var name in new[]
-        {
-            "planning", "moving", "arrived", "partial", "idle", "magicOn", "magicOff", "formation", "converge",
-            "preserve", "fogOn", "fogOff", "routeOn", "routeOff", "losOn", "losOff", "clickSpawn",
-            "sceneOutside", "sceneBehind", "countPlanning", "countMoving", "countOther",
-            "unitType", "radius", "count", "deploy", "layer", "self",
-        })
-        {
-            labels[name] = name;
-        }
-
         var colors = new JsonObject();
         foreach (var name in new[]
         {
@@ -316,11 +293,9 @@ public sealed class CrowdPlayerViewTests
 
         return new JsonObject
         {
-            ["version"] = 1,
             ["magicBox"] = true,
             ["fogHide"] = false,
             ["playerRoute"] = true,
-            ["lineOfSight"] = false,
             ["layersStartEnabled"] = true,
             ["deployCount"] = 24,
             ["deployCountStep"] = 4,
@@ -330,10 +305,10 @@ public sealed class CrowdPlayerViewTests
             ["clickCountStep"] = 1,
             ["clickCountMin"] = 1,
             ["clickCountMax"] = 64,
-            ["clickUnitType"] = 0,
-            ["clickRadiusClass"] = 0,
-            ["radiusMinIndex"] = 0,
-            ["radiusMaxIndex"] = -1,
+            ["clickTemplate"] = "crowd_simulation.unit.infantry.r100",
+            ["clickTemplates"] = new JsonArray(
+                "crowd_simulation.unit.infantry.r100",
+                "crowd_simulation.unit.infantry.r200"),
             ["rippleMs"] = 700,
             ["rippleRadiusCm"] = 6000,
             ["dashCm"] = 8000,
@@ -342,11 +317,8 @@ public sealed class CrowdPlayerViewTests
             ["routeThicknessCm"] = 300,
             ["markerRadiusCm"] = 2000,
             ["crossArmCm"] = 3000,
-            ["killRadiusCm"] = 1300000,
             ["killRingScale"] = 2,
             ["killImpulse"] = 0,
-            ["killXCm"] = 800000,
-            ["killYCm"] = 800000,
             ["enemyMarkRadiusCm"] = 2400,
             ["hillshadeStrength"] = 1.2,
             ["maxBeliefMarkers"] = 4096,
@@ -355,8 +327,14 @@ public sealed class CrowdPlayerViewTests
             ["boxingContextId"] = "boxing",
             ["fogSceneUri"] = "mod:asset",
             ["defaultShapeId"] = "box",
+            ["shapeLabels"] = new JsonObject
+            {
+                ["box"] = "方阵",
+                ["line"] = "横队",
+                ["wedge"] = "楔形",
+                ["loose"] = "松散",
+            },
             ["actions"] = actions,
-            ["labels"] = labels,
             ["colors"] = colors,
         };
     }

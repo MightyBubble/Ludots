@@ -38,15 +38,13 @@ namespace Ludots.Tool
             var templateOption = new Option<string>("--template", () => "empty", "Template: empty, gameplay, crowd-data");
             var initMapIdOption = new Option<string?>("--mapId", () => null, "Map id (crowd-data only)");
             var initTerrainTypesOption = new Option<string?>("--terrainTypes", () => null, "Comma-separated terrain type ids in .navsurface cell order (crowd-data only)");
-            var initNavProfileOption = new Option<string?>("--navProfile", () => null, "Traversal row id for the unit profile (crowd-data only)");
-            var initAgentTypeOption = new Option<string?>("--agentType", () => null, "Agent type id for the unit template (crowd-data only)");
+            var initNavProfileOption = new Option<string?>("--navProfile", () => null, "Traversal row id written as the unit profile navProfileId (crowd-data only)");
             initCommand.AddOption(modIdOption);
             initCommand.AddOption(dirOption);
             initCommand.AddOption(templateOption);
             initCommand.AddOption(initMapIdOption);
             initCommand.AddOption(initTerrainTypesOption);
             initCommand.AddOption(initNavProfileOption);
-            initCommand.AddOption(initAgentTypeOption);
             initCommand.SetHandler((InvocationContext ctx) =>
             {
                 var id = ctx.ParseResult.GetValueForOption(modIdOption);
@@ -55,16 +53,15 @@ namespace Ludots.Tool
                 var mapId = ctx.ParseResult.GetValueForOption(initMapIdOption);
                 var terrainTypes = ctx.ParseResult.GetValueForOption(initTerrainTypesOption);
                 var navProfile = ctx.ParseResult.GetValueForOption(initNavProfileOption);
-                var agentType = ctx.ParseResult.GetValueForOption(initAgentTypeOption);
                 if (string.Equals(template, "crowd-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    ctx.ExitCode = InitCrowdDataMod(id, dir, mapId, terrainTypes, navProfile, agentType);
+                    ctx.ExitCode = InitCrowdDataMod(id, dir, mapId, terrainTypes, navProfile);
                     return;
                 }
 
-                if (mapId != null || terrainTypes != null || navProfile != null || agentType != null)
+                if (mapId != null || terrainTypes != null || navProfile != null)
                 {
-                    Console.WriteLine("Error: --mapId / --terrainTypes / --navProfile / --agentType are only used by --template crowd-data.");
+                    Console.WriteLine("Error: --mapId / --terrainTypes / --navProfile are only used by --template crowd-data.");
                     ctx.ExitCode = 2;
                     return;
                 }
@@ -601,7 +598,7 @@ namespace Ludots.Tool
             return await rootCommand.InvokeAsync(args);
         }
 
-        static int InitCrowdDataMod(string modId, string dir, string? mapId, string? terrainTypes, string? navProfile, string? agentType)
+        static int InitCrowdDataMod(string modId, string dir, string? mapId, string? terrainTypes, string? navProfile)
         {
             try
             {
@@ -609,7 +606,7 @@ namespace Ludots.Tool
                     ? dir
                     : FindModsRoot() ?? throw new InvalidOperationException("Could not find 'mods' in hierarchy. Use --dir to specify a target directory.");
                 string modDir = Path.GetFullPath(Path.Combine(modsRoot, modId));
-                CrowdModScaffold.Write(modDir, modId, mapId!, CrowdModScaffoldIds.Parse(terrainTypes, navProfile, agentType));
+                CrowdModScaffold.Write(modDir, modId, mapId!, CrowdModScaffoldIds.Parse(terrainTypes, navProfile));
                 Console.WriteLine($"Mod '{modId}' initialized at {modDir}");
                 Console.WriteLine($"Next: nav init-crowd-terrain / init-crowd-heightmap / bake-crowd-navsurface --mapId {mapId} --modId {modId}");
                 return 0;

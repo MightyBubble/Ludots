@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Fog;
@@ -42,7 +43,7 @@ public readonly record struct CrowdSimCommand
     public int With { get; init; }
     /// <summary>spawn/spawnAt 的数量。</summary>
     public int Count { get; init; }
-    /// <summary>spawnAt 的兵种与半径级。</summary>
+    /// <summary>spawnAt 入队时由单位模板 id 解析出的单位行与半径级。执行按下标取表。</summary>
     public int UnitType { get; init; }
     public int RIdx { get; init; }
     /// <summary>spawnAt/order/placeStructure/removeStructureAt 的目标点。</summary>
@@ -89,7 +90,7 @@ public readonly record struct CrowdSimCommand
     /// 中途重新部署换掉的单位不会留在未执行的指令里。只有脚本行能这样写。
     /// </summary>
     public bool AllOwnMembers { get; init; }
-    /// <summary>placeStructure 的模板 id。</summary>
+    /// <summary>spawnAt 的单位模板 id，或 placeStructure 的结构模板 id。</summary>
     public string? TemplateId { get; init; }
     /// <summary>reveal/obscure/forget 的区域形状(Parse 经 CrowdFogShape 恰一校验)。</summary>
     public CrowdFogShape? Area { get; init; }
@@ -156,6 +157,7 @@ public readonly record struct CrowdSimCommand
             case "spawn":
                 return new CrowdSimCommand { Kind = CrowdSimCommandKind.Spawn, Count = RequireInt(cmd, type, "count") };
             case "spawnAt":
+                RequireExact(cmd, type, "type", "player", "xCm", "yCm", "count", "template");
                 return new CrowdSimCommand
                 {
                     Kind = CrowdSimCommandKind.SpawnAt,
@@ -163,8 +165,7 @@ public readonly record struct CrowdSimCommand
                     XCm = RequireInt(cmd, type, "xCm"),
                     YCm = RequireInt(cmd, type, "yCm"),
                     Count = RequireInt(cmd, type, "count"),
-                    UnitType = RequireInt(cmd, type, "unitType"),
-                    RIdx = RequireInt(cmd, type, "rIdx"),
+                    TemplateId = RequireText(cmd, type, "template"),
                 };
             case "order":
             {
@@ -319,6 +320,30 @@ public readonly record struct CrowdSimCommand
         }
 
         return members;
+    }
+
+    private static void RequireExact(JsonNode cmd, string type, params string[] keys)
+    {
+        if (cmd is not JsonObject obj)
+        {
+            throw new InvalidOperationException($"指令 {type} 需为对象。");
+        }
+
+        var allowed = new HashSet<string>(keys, StringComparer.Ordinal);
+        foreach (var entry in obj)
+        {
+            if (!allowed.Contains(entry.Key))
+            {
+                throw new InvalidOperationException($"指令 {type} 的字段 {entry.Key} 未知。");
+            }
+        }
+    }
+
+    private static string RequireText(JsonNode cmd, string type, string field)
+    {
+        return cmd[field] is JsonValue value && value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text)
+            ? text
+            : throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为非空字符串。");
     }
 
     /// <summary>必给整数字段:缺失或 JSON 值不是整数 token 即拒(GetValue 的转换异常不是合同)。</summary>

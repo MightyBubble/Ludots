@@ -23,7 +23,6 @@ export type UnitTemplatesView = {
   component: string;
   fields: UnitField[];
   profileFields: UnitField[];
-  agentTypes: string[];
   agentProfiles: AgentProfileOption[];
   items: UnitTemplateItem[];
   issues: Issue[];

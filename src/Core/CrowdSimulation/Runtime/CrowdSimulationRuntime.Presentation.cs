@@ -255,6 +255,11 @@ public sealed partial class CrowdSimulationRuntime
             sessionSource,
             () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null,
             () => ResolveLocalSeatVisionScope(engine));
+        feed.UseActions(new CrowdHudActions(
+            deploy.Actions,
+            choices.Select(c => c.SelectAction).ToArray(),
+            _debugView?.Actions,
+            _playerView?.Actions));
         var presented = new S4DeployDemoPresentationSystem(demo, routes, overlay, sessionSource, presentation, feed);
         if (debugView != null)
         {

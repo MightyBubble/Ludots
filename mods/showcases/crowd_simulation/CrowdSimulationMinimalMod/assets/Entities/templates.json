@@ -50,11 +50,9 @@
       },
       "CrowdSimulationAgent": {
         "profileId": "crowd_minimal_unit",
-        "agentTypeId": "foot",
-        "speedCmPerSecond": 1400,
-        "personalRadiusCm": 900,
+        "speedCmPerSec": 1400,
         "pushPriority": 2,
-        "special": false
+        "autoDeploy": true
       }
     }
   }

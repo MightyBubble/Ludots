@@ -64,12 +64,12 @@ public static class NavSurfaceContract
         if (asset.BakeInputsDigest != current)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: 烘焙输入和当前配置不一致，重烘（bakeInputsDigest 资产 0x{asset.BakeInputsDigest:X8}，按当前输入 0x{current:X8}）。");
+                $"{assetPath(config)}: 指纹不符，用 nav bake-crowd-navsurface 重烘。");
         }
     }
 
     /// <summary>
-    /// .navsurface 烘焙输入的 FNV-1a 32 指纹，整数一律小端。先写 i32 navCellSizeCm。
+    /// .navsurface 烘焙输入的 FNV-1a 32 指纹，整数一律小端。先写 <see cref="NavSurfaceAsset.Layout"/> 的 utf8 和结尾 0，再写 i32 navCellSizeCm。
     /// 没有链接种类时到此为止：格字节只来自地编网格，条带和高度不影响产物。
     /// 有链接种类时依次写：
     /// 每个种类按表序 utf8 id、0x00、i32 maxGapCm、i32 linkSpacingCm、endpointMaxSlopeDeg 的 IEEE 754 双精度位、
@@ -144,8 +144,9 @@ public static class NavSurfaceContract
         return hash;
     }
 
-    /// <summary>没有链接种类的地图的指纹：只含 i32 navCellSizeCm。</summary>
-    public static uint BakeInputsDigestWithoutLinks(int navCellSizeCm) => MixInt32(FnvOffset, navCellSizeCm);
+    /// <summary>没有链接种类的地图的指纹：布局描述，再加 i32 navCellSizeCm。</summary>
+    public static uint BakeInputsDigestWithoutLinks(int navCellSizeCm)
+        => MixInt32(MixString(FnvOffset, NavSurfaceAsset.Layout), navCellSizeCm);
 
     private const uint FnvOffset = 2166136261u;
     private const uint FnvPrime = 16777619u;

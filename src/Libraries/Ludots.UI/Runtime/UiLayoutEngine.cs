@@ -43,6 +43,11 @@ public sealed class UiLayoutEngine
 	/// <summary>最近一次文字重排里尺寸确实变了、被标脏的叶子数；为零时只需重绘。</summary>
 	public int LastTextRelayoutDirtyLeaves { get; private set; }
 
+	private List<UiPaintDamage>? _movedSink;
+
+	/// <summary>最近一次文字重排挪动的节点超出了改动表的容量，没记全。</summary>
+	internal bool LastTextRelayoutMovedOverflow { get; private set; }
+
 	public UiLayoutEngine(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
 	{
 		_textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
@@ -122,8 +127,9 @@ public sealed class UiLayoutEngine
 	/// 绑定文字变了的叶子在上次完整排版保留下来的 flex 树上重排：先按记下的约束重量，尺寸没变的不标脏；
 	/// 变了的只标脏它到根这一条链，兄弟子树走 flex 引擎的缓存。写回布局时跳过没动的子树。
 	/// 树里有网格、表格、行内格式化上下文或延后的 calc 长度时，这些后处理要整树重跑，返回 false 交给完整排版。
+	/// 框变了的节点（连同原框）和滚动量变了的滚动容器追加进 <paramref name="moved"/>，到它的容量为止，不扩容。
 	/// </summary>
-	internal bool TryRelayoutText(UiNode root, float width, float height, List<UiNode> changedLeaves)
+	internal bool TryRelayoutText(UiNode root, float width, float height, List<UiNode> changedLeaves, List<UiPaintDamage>? moved)
 	{
 		Node? flexRoot = _retainedFlexRoot;
 		if (flexRoot == null
@@ -150,6 +156,7 @@ public sealed class UiLayoutEngine
 			}
 		}
 
+		LastTextRelayoutMovedOverflow = false;
 		int dirty = 0;
 		for (int i = 0; i < changedLeaves.Count; i++)
 		{
@@ -171,7 +178,9 @@ public sealed class UiLayoutEngine
 		}
 
 		flexRoot.CalculateLayout(width, height, Direction.LTR);
+		_movedSink = moved;
 		ApplyChangedLayout(root, flexRoot, 0f, 0f, force: false);
+		_movedSink = null;
 		root.RecalculateStickyOffsetsForSubtree();
 		return true;
 	}
@@ -224,13 +233,39 @@ public sealed class UiLayoutEngine
 			return;
 		}
 		flexNode.hasNewLayout = false;
+		if (!rect.Equals(previous))
+		{
+			RecordMoved(uiNode, previous);
+		}
 		uiNode.SetLayout(rect);
 		int count = Math.Min(uiNode.Children.Count, flexNode.ChildrenCount);
 		for (int i = 0; i < count; i++)
 		{
 			ApplyChangedLayout(uiNode.Children[i], flexNode.GetChild(i), x, y, originMoved);
 		}
+		float scrollWidth = uiNode.ScrollContentWidth, scrollHeight = uiNode.ScrollContentHeight;
+		float scrollX = uiNode.ScrollOffsetX, scrollY = uiNode.ScrollOffsetY;
 		UpdateScrollMetrics(uiNode, flexNode, x, y, rect.Width, rect.Height, count);
+		if (!scrollWidth.Equals(uiNode.ScrollContentWidth) || !scrollHeight.Equals(uiNode.ScrollContentHeight)
+			|| !scrollX.Equals(uiNode.ScrollOffsetX) || !scrollY.Equals(uiNode.ScrollOffsetY))
+		{
+			RecordMoved(uiNode, uiNode.LayoutRect);
+		}
+	}
+
+	private void RecordMoved(UiNode node, UiRect previous)
+	{
+		List<UiPaintDamage>? sink = _movedSink;
+		if (sink == null)
+		{
+			return;
+		}
+		if (sink.Count == sink.Capacity)
+		{
+			LastTextRelayoutMovedOverflow = true;
+			return;
+		}
+		sink.Add(new UiPaintDamage(node, previous));
 	}
 
 	internal float MeasureContentWidth(UiNode node)

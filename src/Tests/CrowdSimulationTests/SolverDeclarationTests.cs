@@ -160,22 +160,22 @@ public sealed class SolverDeclarationTests
     }
 
     [Test]
-    public void PlanTimeoutMs_IsRetiredFromDebug()
+    public void Debug_UnknownRootKey_IsRejected()
     {
         var debug = JsonNode.Parse("""{ "worker": { "planTimeoutMs": 5000 } }""")!.AsObject();
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationDebugConfig.Load(debug))!;
-        Assert.That(ex.Message, Does.Contain("已删除 worker.planTimeoutMs"));
-        Assert.That(ex.Message, Does.Contain("CrowdSimulationConfig.json"));
+        Assert.That(ex.Message, Does.Contain("worker"));
+        Assert.That(ex.Message, Does.Contain("could not be mapped"));
     }
 
     [Test]
-    public void Autostart_IsARetiredKey()
+    public void DebugSession_UnknownKey_IsRejected()
     {
         var debug = JsonNode.Parse("""{ "session": { "autostart": false } }""")!.AsObject();
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationDebugConfig.Load(debug))!;
-        Assert.That(ex.Message, Does.Contain("已删除 session.autostart"));
-        Assert.That(ex.Message, Does.Contain("crowd-simulation"));
+        Assert.That(ex.Message, Does.Contain("autostart"));
+        Assert.That(ex.Message, Does.Contain("could not be mapped"));
     }
 }

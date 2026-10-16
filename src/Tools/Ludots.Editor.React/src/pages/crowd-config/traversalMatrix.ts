@@ -13,8 +13,6 @@ export type Traversal = {
   linkKinds: Record<string, { traversalSpeedRatio: number }>;
   agentTypes: Record<string, TraversalRow>;
 };
-export type CostMatrixView = { traversal?: Traversal; mapAreas?: string[] };
-
 export const LINK_FIELDS = ['upCm', 'downCm', 'rangeNavCells', 'costPerNavCell'] as const;
 export type LinkField = (typeof LINK_FIELDS)[number];
 

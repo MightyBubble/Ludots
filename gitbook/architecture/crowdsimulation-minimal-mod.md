@@ -2,7 +2,7 @@
 
 这页按实际执行顺序，记下 `CrowdSimulationMinimalMod` 是怎么从一个空目录做出来的：一种单位、一个表现、一张 256×256 导航格的小图，地形只有陆地和水面两种，中间一道方块墙。两名玩家各 200 个单位绕墙走到对岸。新建群体地图时照这页做：先用一条命令生成骨架，再按这张图改几处；每一步用到的文件和命令都列出来了，没有手写二进制，也没有复制别的 Mod。
 
-规则本身（配置键、合并规则、烘焙参数）以 [CrowdSimulation 与 NavSurface](crowdsimulation-and-navsurface.md) 为准，这页只写怎么用。
+配置键以 [配置合同参考](crowdsimulation-data-schema.md) 为准；架构与数据流见 [CrowdSimulation 与 NavSurface](crowdsimulation-and-navsurface.md)。这页只写怎么用。
 
 ## 做出来的东西
 
@@ -30,7 +30,7 @@ $T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_m
   --terrainTypes land,water --navProfile foot --agentType foot --dir mods/showcases/crowd_simulation
 ```
 
-`--template crowd-data` 只写数据文件，不生成工程文件和入口类；`--mapId` 必填，目录已存在就拒绝。`--terrainTypes`、`--navProfile`、`--agentType` 也必填：骨架里不写死任何地形、通行行或移动类型的 id，这三个值原样写进 `navmesh.json` 的 `terrainTypes`、体型的 `navProfileId` 和单位模板的 `agentTypeId`，必须是依赖的标准参数 Mod 里已有的 id。`--terrainTypes` 用逗号分隔，按 `.navsurface` 格值的顺序，不能有空项或重复。生成的文件：
+`--template crowd-data` 只写数据文件，不生成工程文件和入口类；`--mapId` 必填，目录已存在就拒绝。`--terrainTypes`、`--navProfile`、`--agentType` 也必填：骨架里不写死任何地形、通行行或移动类型的 id，这三个值原样写进 `navmesh.json` 的 `terrainTypes`、体型的 `navProfileId`（同时等于 `traversal.agentTypes` 的行 id），必须是依赖的标准参数 Mod 里已有的 id。`--terrainTypes` 用逗号分隔，按 `.navsurface` 格值的顺序，不能有空项或重复。生成的文件：
 
 | 文件 | 内容 |
 | --- | --- |
@@ -107,14 +107,14 @@ $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinima
 
 骨架写好的单位不用改。
 
-单位模板 `crowd_minimal.unit` 在 `assets/Entities/templates.json`，`CrowdSimulationAgent` 六个字段都必填：`profileId: crowd_minimal_unit`、`agentTypeId: foot`、`speedCmPerSecond: 1400`、`personalRadiusCm: 900`、`pushPriority: 2`、`special: false`。另有 `crowd_minimal.team` 和 `crowd_minimal.player` 两个只有 `Name` 的模板，给地图的队伍和玩家用。
+单位模板 `crowd_minimal.unit` 在 `assets/Entities/templates.json`，`CrowdSimulationAgent` 四个字段都必填：`profileId: crowd_minimal_unit`、`speedCmPerSec: 1400`、`pushPriority: 2`、`autoDeploy: true`。档案 `crowd_minimal_unit` 的 `navProfileId` 是 `foot`。另有 `crowd_minimal.team` 和 `crowd_minimal.player` 两个只有 `Name` 的模板，给地图的队伍和玩家用。
 
-群体运行时绑定所有带 `CrowdSimulationAgent` 的模板，并要求“每种移动类型 × 每个半径级”都有模板。这个 Mod 只装了能力 Mod 和标准参数，两者都不带单位模板，所以绑定集只有 `foot × r150` 一格，脚本里写 `unitType 0`、`rIdx 0`。S1、S3、S4 用的 20 个演示单位在 `CrowdSimulationDemoContentMod`，不依赖它就不会装进来。
+群体运行时绑定所有带 `CrowdSimulationAgent` 的模板；每种被引用的移动类型 × 每个半径级须有模板。这个 Mod 只有 `foot` 与半径 150 cm 一格。开场脚本用 `spawnAt` 的 `template: crowd_minimal.unit`，不用下标。S1、S3、S4 的 20 个演示单位在 `CrowdSimulationDemoContentMod`，不依赖它就不会装进来。
 
 表现在 `assets/Presentation/presenters.json` 和 `mesh_assets.json`：
 
 - `crowd_minimal.units.bootstrap`：`EntitySpawned` / `EntityDestroyed` 按模板 `crowd_minimal.unit` 建删表现。
-- 表现定义 `crowd_minimal.unit`：网格 `crowd_minimal.unit.body`（`mesh_assets.json` 里的立方体原语），缩放 [12, 8, 12]，偏移 [0, 4, 0]；颜色参数 `crowd_minimal.unit.color` 接 `entityColorVector`，单位按 `deploy.bases[].color` 上色；`Grounding` 用 `SnapToGround`。
+- 表现定义 `crowd_minimal.unit`：网格 `crowd_minimal.unit.body`（`mesh_assets.json` 里的立方体原语），缩放 [12, 8, 12]，偏移 [0, 4, 0]；颜色参数 `crowd_minimal.unit.color` 接 `entityColorVector` 与玩家调色板；`Grounding` 用 `SnapToGround`。
 - 选中圈由能力 Mod 提供，不用写。
 
 ## 第 7 步：群体配置和脚本
@@ -123,10 +123,10 @@ $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinima
 
 - `world.seed: 1`。
 - `deploy.initialUnits: 0`。开局不撒单位，单位由脚本生成。
-- `deploy.bases`：这张图改成玩家 1 在 (715625, 828125)，颜色 `#4DB2FF`；玩家 2 在 (715625, 765625)，颜色 `#FFC53D`。
+- `deploy.bases`：玩家 1 在 (715625, 828125)，玩家 2 在 (715625, 765625)（无 `color` 字段）。
 `initialUnits`、`bases` 没有标准值，地图不写就加载失败。桥能落在哪类区域写在结构模板的 `placement`（`endpointAreas`、`interiorAreas`），这张图不放桥，不用写。
 
-`assets/CrowdSimulationDebug.json` 的开场脚本 `session.script` 改成：tick 0 两条 `spawnAt`（各 200 个，`unitType 0`，`rIdx 0`），tick 1 两条 `order`，目标是 (890625, 828125) 和 (890625, 765625)。
+`assets/CrowdSimulationDebug.json` 的 `session.script`：tick 0 两条 `spawnAt`（各 200 个，`template: crowd_minimal.unit`），tick 1 两条 `order` 到 (890625, 828125) 与 (890625, 765625)。正本见该 Mod 的 JSON 文件。
 
 地形颜色和迷雾贴花颜色用标准参数里的 `Presentation/terrain_type_colors.json` 和 `Presentation/crowd_fog_decal.json`，这里不用写。
 

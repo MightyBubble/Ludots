@@ -1,5 +1,4 @@
 using System.Globalization;
-using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
@@ -10,18 +9,36 @@ using Ludots.UI.Runtime;
 namespace CrowdSimulationUiMod.UI;
 
 /// <summary>
-/// HUD 文案排版。只在采样且读数变化时调用；每个函数先清空目标缓冲再整行写入，数值直接格式化进缓冲，不产生中间字符串。
+/// HUD 文案排版。只在采样且读数变化时调用；每个函数先清空目标缓冲再整段写入，数值直接格式化进缓冲，不产生中间字符串。
+/// 数字格式照原型 format.js：缺值写 “—”，整数千分位，字节按 MB / KB。
 /// </summary>
 internal static class CrowdHudFormat
 {
     public const string NoSessionValidation = "校验:无会话";
-    public const string AlertLabel = "告警";
+    public const string Missing = "—";
 
-    private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+    public const string ResultIdle = "nf-result";
+    public const string ResultOk = "nf-result nf-result-ok";
+    public const string ResultBad = "nf-result nf-result-bad";
 
-    public static HudMs Ms(double value) => new(value);
+    private const string BoomHint = "左键点击地图：半径内单位全部移除，外圈被冲击波推开";
+    private const string DemolishHint = "左键点击地图实体：移除最上层的一个（含地图自带建筑 / 桥）→ dirty 重烘焙";
+    private const string SpanStartHint = "左键点击起点，再点击终点";
+    private const string SpanEndHint = "已选起点 — 左键点击终点完成放置";
 
-    public static HudRate HitRate(int hits, int misses) => new(hits, misses);
+    internal static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    public static HudF1 F1(double value) => new(value);
+
+    public static HudF2 F2(double value) => new(value);
+
+    public static HudInt Int(long value) => new(value, true);
+
+    public static HudInt Int(double value) => double.IsFinite(value) ? new HudInt((long)Math.Round(value), true) : new HudInt(0, false);
+
+    public static HudBytes Bytes(double value) => new(value);
+
+    public static HudRate Pct(int hits, int misses) => new(hits, misses);
 
     public static void PathDetail(UiTextBuffer b, in CrowdPathHud hud)
     {
@@ -47,59 +64,51 @@ internal static class CrowdHudFormat
         ExpandTemplate(b, text.KeysTemplate, [new TemplateArg("{view}", hud.ViewLabel)]);
     }
 
-    public static void Tools(UiTextBuffer b, in CrowdDeployHud hud)
+    /// <summary>玩家条下的鼠标操作说明，取演示配置的 hud.keys。</summary>
+    public static void MouseHint(UiTextBuffer b, CrowdHudText text, in CrowdDeployHud hud)
     {
         b.Clear();
-        b.Append(Inv, $"工具 {hud.ToolLabel} · 步进 ");
-        if (hud.SessionActive) b.Append(Inv, $"{hud.FixedHz}");
-        else b.Append('-');
-        b.Append(Inv, $" Hz（窗 {(string.IsNullOrEmpty(hud.TickHzWindow) ? "-" : hud.TickHzWindow)}）· 避让 ");
-        if (hud.SessionActive) b.Append(Inv, $"{hud.AvoidHz:0.###}");
-        else b.Append('-');
-        b.Append(" Hz · ");
-        if (hud.PlaybackHeld) b.Append("暂停");
-        else b.Append(Inv, $"×{hud.SpeedPermille / 1000d:0.###}");
-        b.Append(" · 切片 ");
-        if (hud.SessionActive) b.Append(Inv, $"{hud.RebakeSlices}");
-        else b.Append('-');
-        if (hud.HasSpanAnchor) b.Append(" · 连线起点已定");
+        ExpandTemplate(b, text.KeysTemplate, [new TemplateArg("{view}", hud.ViewLabel)]);
     }
 
-    public static void Status(UiTextBuffer b, in CrowdDeployHud hud)
+    /// <summary>
+    /// 点击工具页的说明行。关闭和建造取演示配置的 observeActivity / buildActivity，
+    /// 生成要报当前所选单位，没有玩家视图时退到 <paramref name="spawnUnit"/> 为空的写法。
+    /// </summary>
+    public static void ToolHint(UiTextBuffer b, CrowdHudText text, in CrowdDeployHud hud, int spawnCount, string? spawnUnit, int spawnRadiusCm)
     {
         b.Clear();
-        if (!hud.SessionActive)
+        switch (hud.Tool)
         {
-            b.Append("会话未激活");
-            return;
+            case CrowdClickTool.Off:
+                b.Append(text.ObserveActivity);
+                break;
+            case CrowdClickTool.Boom:
+                b.Append(BoomHint);
+                break;
+            case CrowdClickTool.Spawn:
+                if (spawnUnit == null) b.Append("左键点击地图：生成所选单位（在「部署」页选择单位）");
+                else b.Append(Inv, $"左键点击地图：生成 {spawnCount} 个 {spawnUnit} · {spawnRadiusCm} cm（在「部署」页选择单位）");
+                break;
+            case CrowdClickTool.Structure when hud.TemplateTwoPoint:
+                b.Append(hud.HasSpanAnchor ? SpanEndHint : SpanStartHint);
+                break;
+            case CrowdClickTool.Structure:
+                string placeHint = !hud.PreviewKnown
+                    ? ""
+                    : hud.PreviewShown
+                        ? PlaceHint(text, hud.PreviewReason)
+                        : text.PlaceOffMap;
+                ExpandTemplate(b, text.BuildActivity, [new TemplateArg("{label}", hud.TemplateLabel), new TemplateArg("{placeHint}", placeHint)]);
+                break;
+            case CrowdClickTool.Demolish:
+                b.Append(DemolishHint);
+                break;
+            default:
+                throw new InvalidOperationException($"未知点击工具 {hud.Tool}。");
         }
 
-        b.Append(Inv, $"tick {hud.Tick};单位 {hud.Units}(闲 {hud.Idle}/行 {hud.Moving}/达 {hud.Arrived}");
-        if (hud.Unreachable + hud.Traversing > 0) b.Append(Inv, $"/不可达 {hud.Unreachable}/穿越 {hud.Traversing}");
-        b.Append(");选中 ");
-        if (hud.Selected < 0) b.Append('-');
-        else b.Append(Inv, $"{hud.Selected}");
-    }
-
-    public static void Rebake(UiTextBuffer b, in CrowdDeployHud hud)
-    {
-        b.Clear();
-        if (!hud.SessionActive)
-        {
-            b.Append("最近重烘:-");
-            return;
-        }
-
-        if (!hud.HasRebake)
-        {
-            b.Append("最近重烘:无结构变更");
-            return;
-        }
-
-        b.Append(Inv, $"最近重烘:tick {hud.RebakeExecTick}→{hud.RebakeReportTick} {(hud.RebakeIsPlace ? "建造" : "拆除")}");
-        b.Append(Inv, $" · 脏 tile {hud.RebakeTiles} · 仅代价 {hud.RebakeCostOnly} · 可通行 {hud.RebakeContexts - hud.RebakeCostOnly}");
-        b.Append(Inv, $" · 缓存命中 {hud.RebakeHits}/{hud.RebakeHits + hud.RebakeMisses}");
-        b.Append(Inv, $" · 重规划 {hud.RebakeOrders} · 挤离 {hud.RebakeEvicted} · 无处安放 {hud.RebakeStuck} · 耗时 {hud.RebakeMs:0.##} ms");
+        if (hud.PendingNav) b.Append(text.PendingNav);
     }
 
     public static void Replay(UiTextBuffer b, in CrowdDeployHud hud)
@@ -161,26 +170,22 @@ internal static class CrowdHudFormat
         b.Append(hud.RuntimePresent ? hud.FuzzLine : CrowdSimulationRuntime.DebugFuzzNoSessionLine);
     }
 
-    public static string Tone(bool ran, bool failed) => failed ? "crowd-bad" : ran ? "crowd-ok" : "crowd-dim";
+    /// <summary>结果框的类名，取本类的字面量，调用方按引用比较。</summary>
+    public static string ResultClass(bool ran, bool failed) => failed ? ResultBad : ran ? ResultOk : ResultIdle;
 
-    public static void DeployKeys(UiTextBuffer b, CrowdHudText text, in CrowdDeployHud hud)
+    public static string ColorLabel(CrowdUnitColorMode mode) => mode switch
+    {
+        CrowdUnitColorMode.Team => "队伍",
+        CrowdUnitColorMode.Template => "兵种",
+        CrowdUnitColorMode.Priority => "推挤优先级",
+        _ => "关",
+    };
+
+    public static void Fault(UiTextBuffer b, string firstLine, double timeoutMs)
     {
         b.Clear();
-        string placeHint = !hud.PreviewKnown
-            ? ""
-            : hud.PreviewShown
-                ? PlaceHint(text, hud.PreviewReason)
-                : text.PlaceOffMap;
-        ExpandTemplate(b, text.KeysTemplate,
-        [
-            new TemplateArg("{view}", hud.ViewLabel),
-            new TemplateArg("{tool}", hud.ToolLabel),
-            new TemplateArg("{templateIndex}", hud.TemplateIndex + 1),
-            hud.BuildMode
-                ? new TemplateArg("{activity}", text.BuildActivity, hud.TemplateLabel, placeHint)
-                : new TemplateArg("{activity}", text.ObserveActivity),
-            new TemplateArg("{pending}", hud.PendingNav ? text.PendingNav : ""),
-        ]);
+        b.Append(firstLine.Length == 0 ? "路径服务故障(原因未记录)" : firstLine);
+        b.Append(Inv, $" · 超时 {F1(timeoutMs)} ms · 仿真停摆，不在主线程补算");
     }
 
     private static string PlaceHint(CrowdHudText text, CrowdPlacementReject reason) => reason switch
@@ -236,298 +241,85 @@ internal static class CrowdHudFormat
                 continue;
             }
 
-            args[matched].WriteValue(b);
+            b.Append(args[matched].Text);
             rest = rest[args[matched].Key.Length..];
         }
     }
 
-    /// <summary>模板参数：字符串、整数，或者带 {label}/{placeHint} 的二级模板。</summary>
-    private readonly struct TemplateArg
-    {
-        private readonly string? _text;
-        private readonly int _number;
-        private readonly bool _isNumber;
-        private readonly string? _label;
-        private readonly string? _placeHint;
-
-        public TemplateArg(string key, string? text)
-        {
-            Key = key;
-            _text = text;
-            _number = 0;
-            _isNumber = false;
-            _label = null;
-            _placeHint = null;
-        }
-
-        public TemplateArg(string key, int number)
-        {
-            Key = key;
-            _text = null;
-            _number = number;
-            _isNumber = true;
-            _label = null;
-            _placeHint = null;
-        }
-
-        public TemplateArg(string key, string activityTemplate, string? label, string placeHint)
-        {
-            Key = key;
-            _text = activityTemplate;
-            _number = 0;
-            _isNumber = false;
-            _label = label ?? "";
-            _placeHint = placeHint;
-        }
-
-        public string Key { get; }
-
-        public void WriteValue(UiTextBuffer b)
-        {
-            if (_isNumber)
-            {
-                b.Append(_number, default, Inv);
-                return;
-            }
-
-            if (_label == null)
-            {
-                b.Append(_text);
-                return;
-            }
-
-            ExpandTemplate(b, _text ?? "", [new TemplateArg("{label}", _label), new TemplateArg("{placeHint}", _placeHint)]);
-        }
-    }
-
-    /// <summary>只开信念层时没有检视行，缓冲留空。</summary>
-    public static void Inspect(UiTextBuffer b, in CrowdInspectReadout readout)
-    {
-        b.Clear();
-        if (!readout.NavOverlays && readout.UnitColor == CrowdUnitColorMode.Off) return;
-        b.Append(Inv, $"检视 移动 {readout.LayerIndex} 半径 {readout.RadiusIndex}");
-        if (readout.UnitColor != CrowdUnitColorMode.Off) b.Append(Inv, $" 着色 {ColorLabel(readout.UnitColor)}");
-        if (readout.TerrainTypes) b.Append(" 地形类型");
-    }
-
-    public static void Belief(UiTextBuffer b, in CrowdInspectReadout readout)
-    {
-        b.Clear();
-        if (!readout.Belief) return;
-        b.Append(Inv, $"视野组 {readout.BeliefGroup} 分歧 {readout.DivergentCells} 残影 {readout.Ghosts}");
-    }
-
-    private static string ColorLabel(CrowdUnitColorMode mode) => mode switch
-    {
-        CrowdUnitColorMode.Team => "队伍",
-        CrowdUnitColorMode.Template => "模板",
-        CrowdUnitColorMode.Priority => "优先级",
-        _ => "关",
-    };
-
-    public static void Fault(UiTextBuffer b, string firstLine, double timeoutMs)
-    {
-        b.Clear();
-        b.Append(firstLine.Length == 0 ? "路径服务故障(原因未记录)" : firstLine);
-        b.Append(Inv, $" · 超时 {Ms(timeoutMs)} ms · 仿真停摆，不在主线程补算");
-    }
-
-    public static void WriteNav(in CrowdNavReadout r, HudLine[] lines)
-    {
-        lines[0].Set("导航缓存 / 路径服务");
-
-        UiTextBuffer b = lines[1].Buffer;
-        b.Clear();
-        if (r.HasTileCache)
-            b.Append(Inv, $"tile 容量 {r.TileCapacity} 在册 {r.TileCount} · 命中率 {HitRate(r.TileHits, r.TileMisses)} · hit {r.TileHits} miss {r.TileMisses} evict {r.TileEvicts}");
-        else
-            b.Append("tile 容量 N/A 在册 N/A · 命中率 N/A · hit/miss/evict N/A");
-
-        b = lines[2].Buffer;
-        b.Clear();
-        if (r.HasFlowCache)
-            b.Append(Inv, $"流场容量 {r.FlowCapacity} 在册 {r.FlowCount} · 命中率 {HitRate(r.FlowHits, r.FlowMisses)} · hit {r.FlowHits} miss {r.FlowMisses} evict {r.FlowEvicts}");
-        else
-            b.Append(Inv, $"流场容量 {r.FlowCapacity} · 命中率 N/A · hit/miss/evict N/A · 无结果缓存");
-
-        b = lines[3].Buffer;
-        b.Clear();
-        b.Append(Inv, $"常驻导航 {r.ResidentNavs}");
-
-        b = lines[4].Buffer;
-        b.Clear();
-        if (r.HasPath)
-            b.Append(Inv, $"规划请求 {r.PlanRequests} 待回 {r.PendingReplies} · 超时 {Ms(r.PlanTimeoutMs)} ms");
-        else
-            b.Append("规划请求 N/A 待回 N/A · 超时 N/A");
-
-        b = lines[5].Buffer;
-        b.Clear();
-        b.Append(Inv, $"往返 {Ms(r.RoundTripLastMs)}/{Ms(r.RoundTripMeanMs)} ms · 工人 {Ms(r.WorkerLastMs)}/{Ms(r.WorkerMeanMs)} ms");
-
-        b = lines[6].Buffer;
-        b.Clear();
-        b.Append(Inv, $"等待 worker {r.WaitTicks} tick");
-
-        b = lines[7].Buffer;
-        b.Clear();
-        b.Append(Inv, $"tick {r.Tick} · 命令日志 {r.CommandLog}");
-    }
-
-    /// <summary>遥测行。<paramref name="host"/> 是呈现端自己量的帧率、UI 重绘、编排、堆增长、分辨率，不来自仿真。</summary>
-    public static void WriteTelemetry(in CrowdTelemetryReadout r, in CrowdHostReadout host, int sampleMs, int history, HudLine[] lines)
-    {
-        Begin(lines, 0).Append(Inv, $"遥测 采样 {sampleMs} ms · 曲线 {history} · 固定 {r.FixedHz} Hz");
-        Begin(lines, 1).Append(Inv, $"FPS {Ms(host.Fps)}");
-        Begin(lines, 2).Append(Inv, $"Sim {Ms(r.SimMs)} ms");
-        Begin(lines, 3).Append(Inv, $"避让 {Ms(r.AvoidMs)} ms");
-        Begin(lines, 4).Append(Inv, $"空间哈希 {Ms(r.HashMs)} ms");
-        Begin(lines, 5).Append(Inv, $"UI 重绘峰值 {Ms(host.UiRedrawPeakMs)} ms · 面板编排 {Ms(host.ComposeMs)} ms");
-
-        UiTextBuffer b = Begin(lines, 6);
-        if (double.IsNaN(host.HeapBytesPerSec)) b.Append("堆增长 N/A");
-        else b.Append(Inv, $"堆增长 {host.HeapBytesPerSec / (1024d * 1024d):0.00} MB/s");
-
-        b = Begin(lines, 7);
-        if (r.HasHeading) b.Append(Inv, $"航向 {Ms(r.HeadingDeg)}°");
-        else b.Append("航向 N/A");
-
-        b = Begin(lines, 8);
-        if (r.HasFlip) b.Append(Inv, $"反复 {r.FlipPct}%");
-        else b.Append("反复 N/A");
-
-        Begin(lines, 9).Append(Inv, $"NavMesh {Ms(r.NavMeshMs)} ms · HPA* {Ms(r.HpaMs)} ms · 流场 {Ms(r.FlowMs)} ms");
-
-        b = Begin(lines, 10);
-        if (r.HasExtend) b.Append(Inv, $"走廊扩展 {r.ExtendCount} 次 {Ms(r.ExtendMs)} ms");
-        else b.Append("走廊扩展 N/A · 端口未做走廊扩展");
-
-        Begin(lines, 11).Append(Inv, $"规划 {Ms(r.PlanMs)} ms · 烘焙 {Ms(r.NavBakeMs)} ms · 重烘 {Ms(r.RebakeMs)} ms");
-        Begin(lines, 12).Append(Inv, $"状态 闲 {r.Idle} 行 {r.Moving} 达 {r.Arrived} · 不可达 {r.Unreachable} 穿越 {r.Traversing}");
-
-        b = Begin(lines, 13);
-        b.Append("分辨率 ");
-        if (host.Width > 0 && host.Height > 0) b.Append(Inv, $"{host.Width}x{host.Height}");
-        else b.Append("N/A");
-        b.Append(Inv, $" · nav格 {r.NavCellCm} cm · tile {r.TileCount}");
-
-        b = Begin(lines, 14);
-        b.Append("世界生成 ");
-        if (r.WorldBakeRecorded) b.Append(Inv, $"{Ms(r.WorldBakeMs)} ms 缓存 {r.WorldCacheHits}/{r.WorldCacheHits + r.WorldCacheMisses}");
-        else b.Append("N/A");
-
-        Begin(lines, 15).Append("烘焙超时 N/A · 仿真Worker/宿主RPC N/A · 同进程，烘焙在激活线程");
-    }
-
-    private static UiTextBuffer Begin(HudLine[] lines, int index)
-    {
-        UiTextBuffer b = lines[index].Buffer;
-        b.Clear();
-        return b;
-    }
-
-    /// <summary>读数缺失（NaN 或没有样本）不告警。</summary>
-    public static void MarkAlerts(in CrowdTelemetryReadout r, double fps, CrowdHudAlerts alerts, bool[] hot)
-    {
-        Array.Clear(hot);
-        hot[CrowdHudState.FpsLine] = !double.IsNaN(fps) && fps < alerts.LowFps;
-        hot[CrowdHudState.SimLine] = !double.IsNaN(r.SimMs) && r.SimMs > alerts.SimMs;
-        hot[CrowdHudState.AvoidLine] = !double.IsNaN(r.AvoidMs) && r.AvoidMs > alerts.AvoidMs;
-        hot[CrowdHudState.HeadingLine] = r.HasHeading && r.HeadingDeg > alerts.HeadingDeg;
-        hot[CrowdHudState.FlipLine] = r.HasFlip && r.FlipPct > alerts.FlipPct;
-    }
-
-    public static void TeamLine(UiTextBuffer b, in CrowdPlayerHud hud, ReadOnlySpan<int> units, CrowdPlayerViewLabels labels)
-    {
-        b.Clear();
-        for (int p = 1; p <= hud.PlayerCount && p < units.Length; p++)
-        {
-            if (p > 1) b.Append(' ');
-            b.Append(Inv, $"P{p} {units[p]}");
-            if (p == hud.LocalPlayer) b.Append(Inv, $" {labels.Self}");
-        }
-    }
-
-    public static void CardLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
-    {
-        b.Clear();
-        string card = hud.Card switch
-        {
-            CrowdCommandCardState.Planning => labels.Planning,
-            CrowdCommandCardState.Moving => labels.Moving,
-            CrowdCommandCardState.Arrived => labels.Arrived,
-            CrowdCommandCardState.Partial => labels.Partial,
-            _ => labels.Idle,
-        };
-        b.Append(Inv, $"{card} · {labels.CountPlanning} {hud.Planning} · {labels.CountMoving} {hud.Moving} · {labels.Arrived} {hud.Arrived} · {labels.CountOther} {hud.Other}");
-    }
-
-    public static void ModeLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
-    {
-        b.Clear();
-        string mode = hud.Mode switch
-        {
-            CrowdOrderMode.Formation => labels.Formation,
-            CrowdOrderMode.Converge => labels.Converge,
-            CrowdOrderMode.Preserve => labels.Preserve,
-            _ => labels.Idle,
-        };
-        b.Append(Inv, $"{hud.ShapeLabel} {mode} {(hud.MagicBox ? labels.MagicOn : labels.MagicOff)} {(hud.FogHide ? labels.FogOn : labels.FogOff)} ");
-        b.Append(Inv, $"{(hud.Route ? labels.RouteOn : labels.RouteOff)} {(hud.LineOfSight ? labels.LosOn : labels.LosOff)}");
-    }
-
-    public static void ClickLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
-    {
-        b.Clear();
-        b.Append(Inv, $"{labels.ClickSpawn} {labels.UnitType} {hud.ClickUnitType} · {labels.Radius} {hud.ClickRadius} · {labels.Count} {hud.ClickCount}");
-    }
-
-    public static void DeployLine(UiTextBuffer b, in CrowdPlayerHud hud, CrowdPlayerViewLabels labels)
-    {
-        b.Clear();
-        b.Append(Inv, $"{labels.Deploy} {hud.DeployCount} · {labels.Radius} {hud.RadiusMin}-{hud.RadiusMax} · {labels.Layer} {hud.Layer}");
-        if (hud.SceneKind == 1) b.Append(Inv, $" · {labels.SceneOutside}");
-        else if (hud.SceneKind == 2) b.Append(Inv, $" · {labels.SceneBehind}");
-    }
+    private readonly record struct TemplateArg(string Key, string? Text);
 }
 
-/// <summary>毫秒读数：NaN 写 “N/A”，否则保留一位小数。</summary>
-internal readonly struct HudMs(double value) : ISpanFormattable
+/// <summary>一位小数；NaN、无穷写 “—”。</summary>
+internal readonly struct HudF1(double value) : ISpanFormattable
+{
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider) =>
+        HudNumber.Fixed(value, "0.0", destination, out charsWritten);
+
+    public string ToString(string? format, IFormatProvider? formatProvider) => ToString();
+
+    public override string ToString() => double.IsFinite(value) ? value.ToString("0.0", CultureInfo.InvariantCulture) : CrowdHudFormat.Missing;
+}
+
+/// <summary>两位小数；NaN、无穷写 “—”。</summary>
+internal readonly struct HudF2(double value) : ISpanFormattable
+{
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider) =>
+        HudNumber.Fixed(value, "0.00", destination, out charsWritten);
+
+    public string ToString(string? format, IFormatProvider? formatProvider) => ToString();
+
+    public override string ToString() => double.IsFinite(value) ? value.ToString("0.00", CultureInfo.InvariantCulture) : CrowdHudFormat.Missing;
+}
+
+/// <summary>整数千分位（en-US 写法 “12,345”）；没有值写 “—”。</summary>
+internal readonly struct HudInt(long value, bool present) : ISpanFormattable
 {
     public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
     {
-        if (!double.IsNaN(value)) return value.TryFormat(destination, out charsWritten, "0.0", CultureInfo.InvariantCulture);
+        if (!present) return HudNumber.Copy(CrowdHudFormat.Missing, destination, out charsWritten);
+        return value.TryFormat(destination, out charsWritten, "#,0", CultureInfo.InvariantCulture);
+    }
+
+    public string ToString(string? format, IFormatProvider? formatProvider) => ToString();
+
+    public override string ToString() => present ? value.ToString("#,0", CultureInfo.InvariantCulture) : CrowdHudFormat.Missing;
+}
+
+/// <summary>字节量：≥ 1e6 写 “x.x MB”，否则 “x KB”；NaN 写 “N/A”。</summary>
+internal readonly struct HudBytes(double value) : ISpanFormattable
+{
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+    {
         charsWritten = 0;
-        if (!"N/A".AsSpan().TryCopyTo(destination)) return false;
-        charsWritten = 3;
+        if (!double.IsFinite(value)) return HudNumber.Copy("N/A", destination, out charsWritten);
+        bool mega = Math.Abs(value) >= 1e6;
+        if (!(mega ? value / 1e6 : value / 1e3).TryFormat(destination, out int digits, mega ? "0.0" : "0", CultureInfo.InvariantCulture)) return false;
+        if (!HudNumber.Copy(mega ? " MB" : " KB", destination[digits..], out int unit)) return false;
+        charsWritten = digits + unit;
         return true;
     }
 
     public string ToString(string? format, IFormatProvider? formatProvider) => ToString();
 
-    public override string ToString() => double.IsNaN(value) ? "N/A" : value.ToString("0.0", CultureInfo.InvariantCulture);
+    public override string ToString()
+    {
+        if (!double.IsFinite(value)) return "N/A";
+        return Math.Abs(value) >= 1e6
+            ? (value / 1e6).ToString("0.0", CultureInfo.InvariantCulture) + " MB"
+            : (value / 1e3).ToString("0", CultureInfo.InvariantCulture) + " KB";
+    }
 }
 
-/// <summary>命中率百分比：没有样本写 “N/A”。</summary>
+/// <summary>命中率百分比：没有样本写 “—”。</summary>
 internal readonly struct HudRate(int hits, int misses) : ISpanFormattable
 {
     public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
     {
         int denom = hits + misses;
-        if (denom <= 0)
-        {
-            charsWritten = 0;
-            if (!"N/A".AsSpan().TryCopyTo(destination)) return false;
-            charsWritten = 3;
-            return true;
-        }
-
-        if (!(hits * 100 / denom).TryFormat(destination, out int digits, default, CultureInfo.InvariantCulture) || digits >= destination.Length)
-        {
-            charsWritten = 0;
+        if (denom <= 0) return HudNumber.Copy(CrowdHudFormat.Missing, destination, out charsWritten);
+        charsWritten = 0;
+        if (!((int)Math.Round(hits * 100d / denom)).TryFormat(destination, out int digits, default, CultureInfo.InvariantCulture) || digits >= destination.Length)
             return false;
-        }
-
         destination[digits] = '%';
         charsWritten = digits + 1;
         return true;
@@ -538,15 +330,23 @@ internal readonly struct HudRate(int hits, int misses) : ISpanFormattable
     public override string ToString()
     {
         int denom = hits + misses;
-        return denom <= 0 ? "N/A" : (hits * 100 / denom).ToString(CultureInfo.InvariantCulture) + "%";
+        return denom <= 0 ? CrowdHudFormat.Missing : ((int)Math.Round(hits * 100d / denom)).ToString(CultureInfo.InvariantCulture) + "%";
     }
 }
 
-/// <summary>呈现端自己量的读数，NaN 表示宿主没有提供。</summary>
-internal readonly record struct CrowdHostReadout(
-    double Fps,
-    double UiRedrawPeakMs,
-    double ComposeMs,
-    double HeapBytesPerSec,
-    int Width,
-    int Height);
+internal static class HudNumber
+{
+    public static bool Fixed(double value, string format, Span<char> destination, out int charsWritten)
+    {
+        if (!double.IsFinite(value)) return Copy(CrowdHudFormat.Missing, destination, out charsWritten);
+        return value.TryFormat(destination, out charsWritten, format, CultureInfo.InvariantCulture);
+    }
+
+    public static bool Copy(string text, Span<char> destination, out int charsWritten)
+    {
+        charsWritten = 0;
+        if (!text.AsSpan().TryCopyTo(destination)) return false;
+        charsWritten = text.Length;
+        return true;
+    }
+}

@@ -10,21 +10,20 @@ namespace Ludots.Tool;
 
 /// <summary>
 /// 纯数据群体地图 Mod 的起步文件：一张 1,600,000 cm 见方的图，两名玩家，一种单位。
-/// 地形类型、单位的通行行和代理体型都由调用方点名，必须是依赖的标准参数 Mod 里已有的 id。
+/// 地形类型和单位体型的移动类型都由调用方点名，必须是依赖的标准参数 Mod 里已有的 id。移动类型写在体型的 navProfileId。
 /// 不写逻辑地形、高度图和 .navsurface，这三份由 nav init-crowd-terrain / init-crowd-heightmap / bake-crowd-navsurface 生成。
 /// </summary>
 /// <summary>骨架引用的参数 Mod id：<paramref name="TerrainTypes"/> 按 .navsurface 格值顺序，第一个是初始地形的底色。</summary>
-public sealed record CrowdModScaffoldIds(IReadOnlyList<string> TerrainTypes, string NavProfile, string AgentType)
+public sealed record CrowdModScaffoldIds(IReadOnlyList<string> TerrainTypes, string NavProfile)
 {
-    public static CrowdModScaffoldIds Parse(string? terrainTypes, string? navProfile, string? agentType)
+    public static CrowdModScaffoldIds Parse(string? terrainTypes, string? navProfile)
     {
         if (string.IsNullOrWhiteSpace(terrainTypes)) throw new InvalidOperationException("--template crowd-data 需要 --terrainTypes（逗号分隔）。");
         if (string.IsNullOrWhiteSpace(navProfile)) throw new InvalidOperationException("--template crowd-data 需要 --navProfile。");
-        if (string.IsNullOrWhiteSpace(agentType)) throw new InvalidOperationException("--template crowd-data 需要 --agentType。");
         string[] types = terrainTypes.Split(',', StringSplitOptions.TrimEntries);
         if (Array.Exists(types, string.IsNullOrEmpty)) throw new InvalidOperationException($"--terrainTypes \"{terrainTypes}\" 里有空 id。");
         if (new HashSet<string>(types, StringComparer.Ordinal).Count != types.Length) throw new InvalidOperationException($"--terrainTypes \"{terrainTypes}\" 有重复 id。");
-        return new CrowdModScaffoldIds(types, navProfile.Trim(), agentType.Trim());
+        return new CrowdModScaffoldIds(types, navProfile.Trim());
     }
 }
 
@@ -183,11 +182,9 @@ public static class CrowdModScaffold
                     ["CrowdSimulationAgent"] = new JsonObject
                     {
                         ["profileId"] = mapId + "_unit",
-                        ["agentTypeId"] = ids.AgentType,
-                        ["speedCmPerSecond"] = 1400,
-                        ["personalRadiusCm"] = 900,
+                        ["speedCmPerSec"] = 1400,
                         ["pushPriority"] = 2,
-                        ["special"] = false,
+                        ["autoDeploy"] = true,
                     },
                 },
             }));
@@ -269,8 +266,8 @@ public static class CrowdModScaffold
             {
                 ["initialUnits"] = 0,
                 ["bases"] = new JsonArray(
-                    new JsonObject { ["playerId"] = 1, ["xCm"] = Player1BaseXCm, ["yCm"] = BaseYCm, ["color"] = "#4DB2FF" },
-                    new JsonObject { ["playerId"] = 2, ["xCm"] = Player2BaseXCm, ["yCm"] = BaseYCm, ["color"] = "#FFC53D" }),
+                    new JsonObject { ["playerId"] = 1, ["xCm"] = Player1BaseXCm, ["yCm"] = BaseYCm },
+                    new JsonObject { ["playerId"] = 2, ["xCm"] = Player2BaseXCm, ["yCm"] = BaseYCm }),
             },
         });
         WriteJson(assets, "CrowdSimulationDebug.json", new JsonObject
@@ -278,8 +275,8 @@ public static class CrowdModScaffold
             ["session"] = new JsonObject
             {
                 ["script"] = new JsonArray(
-                    Spawn(1, Player1BaseXCm),
-                    Spawn(2, Player2BaseXCm),
+                    Spawn(1, Player1BaseXCm, unit),
+                    Spawn(2, Player2BaseXCm, unit),
                     Order(1, Player2BaseXCm),
                     Order(2, Player1BaseXCm)),
             },
@@ -289,6 +286,11 @@ public static class CrowdModScaffold
             ["Path"] = "CrowdSimulationDebug.json",
             ["Policy"] = "DeepObject",
         }));
+        WriteJson(assets, "Presentation/crowd_player_colors.json", new JsonObject
+        {
+            ["1"] = "#4DB2FF",
+            ["2"] = "#FFC53D",
+        });
         WriteJson(assets, "Presentation/crowd_terrain_type_overlay.json", new JsonObject { ["enabled"] = true });
     }
 
@@ -316,7 +318,7 @@ public static class CrowdModScaffold
         ["components"] = new JsonObject { ["Name"] = new JsonObject { ["Value"] = id } },
     };
 
-    private static JsonObject Spawn(int player, int xCm) => new()
+    private static JsonObject Spawn(int player, int xCm, string templateId) => new()
     {
         ["tick"] = 0,
         ["cmd"] = new JsonObject
@@ -326,8 +328,7 @@ public static class CrowdModScaffold
             ["xCm"] = xCm,
             ["yCm"] = BaseYCm,
             ["count"] = UnitsPerPlayer,
-            ["unitType"] = 0,
-            ["rIdx"] = 0,
+            ["template"] = templateId,
         },
     };
 

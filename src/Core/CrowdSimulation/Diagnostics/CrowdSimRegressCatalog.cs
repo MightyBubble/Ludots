@@ -266,16 +266,9 @@ public sealed class CrowdSimRegressCatalog
         var list = new List<CrowdFuzzOp>(ops.Count);
         for (int i = 0; i < ops.Count; i++)
         {
-            var body = ops[i] as JsonObject
-                ?? throw new InvalidOperationException($"regress catalog: fuzz.ops[{i}] 需为对象。");
-            RequireExact(body, $"regress catalog fuzz.ops[{i}]", "id", "structure", "probeHandles", "reserved");
-            list.Add(new CrowdFuzzOp
-            {
-                Id = RequireString(body, "id"),
-                Structure = RequireBool(body, "structure"),
-                ProbeHandles = RequireBool(body, "probeHandles"),
-                Reserved = RequireBool(body, "reserved"),
-            });
+            string id = ops[i]?.GetValue<string>()
+                ?? throw new InvalidOperationException($"regress catalog: fuzz.ops[{i}] 需为字符串。");
+            list.Add(CrowdFuzzOpTraits.Resolve(id, $"regress catalog: fuzz.ops[{i}]"));
         }
 
         if (list.Count == 0) throw new InvalidOperationException("regress catalog: fuzz.ops 为空。");
