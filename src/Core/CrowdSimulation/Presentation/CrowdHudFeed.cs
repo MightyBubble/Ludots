@@ -228,6 +228,14 @@ public sealed class CrowdHudFeed
         return true;
     }
 
+    /// <summary>按兵种下标写入它所在移动层的单位数（玩家视图每帧刷层时顺带数出来）。</summary>
+    public bool ReadUnitTypeCounts(Span<int> unitsByType)
+    {
+        if (_playerView == null) return false;
+        _playerView.ReadUnitTypeCounts(unitsByType);
+        return true;
+    }
+
     public bool ReadInspect(ref CrowdInspectReadout readout)
     {
         if (_debugView == null) return false;

@@ -58,6 +58,7 @@ internal sealed class CrowdPlayerViewHost
     private CrowdSimSession? _boundSession;
     private bool[] _layers = Array.Empty<bool>();
     private int[] _agentIndex = Array.Empty<int>();
+    private int[] _agentCounts = Array.Empty<int>();
     private string[] _shapeIds = Array.Empty<string>();
     private string[] _shapeLabels = Array.Empty<string>();
     private uint[] _handles = Array.Empty<uint>();
@@ -211,6 +212,8 @@ internal sealed class CrowdPlayerViewHost
             _layers[i] = _config.LayersStartEnabled;
             _agentIndex[i] = session.Config.UnitTypes[i].AgentTypeIndex;
         }
+
+        _agentCounts = new int[session.Config.AgentTypes.Count];
 
         _handles = new uint[capacity];
         _entities = new Entity[capacity];
@@ -729,6 +732,17 @@ internal sealed class CrowdPlayerViewHost
         _counts.AsSpan(0, n).CopyTo(unitsByPlayer);
     }
 
+    /// <summary>按兵种下标写入它所在移动层的单位数；几个兵种共用一个移动层时各自都记这一层的总数。</summary>
+    internal void ReadUnitTypeCounts(Span<int> unitsByType)
+    {
+        int n = Math.Min(unitsByType.Length, _agentIndex.Length);
+        for (int t = 0; t < n; t++)
+        {
+            int layer = _agentIndex[t];
+            unitsByType[t] = (uint)layer < (uint)_agentCounts.Length ? _agentCounts[layer] : 0;
+        }
+    }
+
     private void ApplyLayers(CrowdSimSession session)
     {
         int tag = session.Presentation.HiddenTemplateTagId;
@@ -737,6 +751,7 @@ internal sealed class CrowdPlayerViewHost
             throw new InvalidOperationException("玩家视图需要隐藏模板标签。");
         }
 
+        Array.Clear(_agentCounts);
         int count = session.Units.Count;
         for (int i = 0; i < count; i++)
         {
@@ -745,6 +760,11 @@ internal sealed class CrowdPlayerViewHost
             if (!session.Groups.TryGet(state.GroupId, out CrowdNavGroupSet.Group group))
             {
                 continue;
+            }
+
+            if ((uint)group.LayerIdx < (uint)_agentCounts.Length)
+            {
+                _agentCounts[group.LayerIdx]++;
             }
 
             bool template = false;
