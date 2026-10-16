@@ -22,6 +22,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -380,6 +381,13 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             CoreServiceKeys.FogDecalPalette,
             CrowdFogDecalSettings.LoadMerged(engine.ConfigPipeline, catalog, engine.ConfigConflictReport));
 
+        bool needsPresentationPalette =
+            catalog.TryGet(CrowdSimulationDebugViewPath, out _)
+            || catalog.TryGet(CrowdSimulationPlayerViewPath, out _);
+        JsonObject? presentationPalette = needsPresentationPalette
+            ? CrowdPresentationPalette.LoadMerged(engine.ConfigPipeline, catalog, engine.ConfigConflictReport)
+            : null;
+
         if (!catalog.TryGet(CrowdSimulationDebugViewPath, out var viewEntry))
         {
             _debugView = null;
@@ -390,7 +398,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             {
                 var viewMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in viewEntry, tracked)
                     ?? throw new InvalidOperationException($"{CrowdSimulationDebugViewPath} 存在目录登记但合并为空。");
-                return CrowdSimulationDebugViewConfig.Load(viewMerged, CrowdSimulationDebugViewPath);
+                JsonObject viewRoot = CrowdPresentationPalette.MergeInto(
+                    (JsonObject)viewMerged.DeepClone(), presentationPalette!, CrowdSimulationDebugViewPath);
+                return CrowdSimulationDebugViewConfig.Load(viewRoot, CrowdSimulationDebugViewPath);
             });
         }
 
@@ -404,7 +414,9 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         {
             var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in playerViewEntry, tracked)
                 ?? throw new InvalidOperationException($"{CrowdSimulationPlayerViewPath} 存在目录登记但合并为空。");
-            return CrowdPlayerViewConfig.Load(merged, CrowdSimulationPlayerViewPath);
+            JsonObject playerRoot = CrowdPresentationPalette.MergeInto(
+                (JsonObject)merged.DeepClone(), presentationPalette!, CrowdSimulationPlayerViewPath);
+            return CrowdPlayerViewConfig.Load(playerRoot, CrowdSimulationPlayerViewPath);
         });
     }
 
@@ -574,8 +586,8 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
             new PresentationStableId { Value = stableIds.Allocate() },
             new Gameplay.Spawning.EntityTemplateKeyRef { TemplateKeyId = sessionTemplateKeyId });
 
-        // 单位模板映射:unitTypes[].templates 按(兵种 × 半径级)声明,模板自身声明 profile;
-        // 在此预解析成 id 表并做闭包校验(与无头装配共用 CrowdSimPresentationWiring 同一口径)。
+        // 单位模板映射：每个移动类型按半径级挂模板。模板的 CrowdSimulationAgent 声明 profileId，
+        // 移动类型取自档案的 navProfileId，档案半径必须对上这一格。这里预解析成 id 表，与无头装配共用 CrowdSimPresentationWiring。
         var templateRegistry = engine.MapLoader.TemplateRegistry;
         var unitTypeTemplates = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
             runtimeConfig, templateRegistry, templateKeys, agentProfiles, CrowdSimulationConfigPath);
@@ -663,18 +675,10 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
-        // 玩家调色板:deploy.bases[].color 要么全有要么全无。全有才注册；全无则不注册。
-        int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
-        var palette = new Vector4[maxPlayer + 1];
-        bool anyColor = false;
-        foreach (var b in runtimeConfig.Deploy.Bases)
-        {
-            if (string.IsNullOrWhiteSpace(b.Color)) continue;
-            palette[b.PlayerId] = TeamColorPalette.ParseHex(b.Color, $"deploy.bases player {b.PlayerId}");
-            anyColor = true;
-        }
-
-        if (anyColor) engine.SetService(CoreServiceKeys.TeamColorPalette, new TeamColorPalette(palette));
+        TeamColorPalette palette = CrowdPlayerColors.LoadMerged(
+            engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        CrowdPlayerColors.RequirePlayers(palette, runtimeConfig.PairRules.PlayerIds, runtimeConfig.MapId);
+        engine.SetService(CoreServiceKeys.TeamColorPalette, palette);
 
         // 脚本与自动回放都是指令流。开局人数取 deploy.initialUnits，排在调试脚本之前，成为 tick 0 的 spawn。
         // 对拍和回归自己带指令表，直接建 CrowdSimSession，不经过会话宿主。

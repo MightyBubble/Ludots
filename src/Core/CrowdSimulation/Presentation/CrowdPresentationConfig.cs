@@ -12,9 +12,11 @@ internal sealed class CrowdPresentationConfig
     public const string KindPath = "path";
     public const string KindDeploy = "deploy";
 
-    [JsonRequired] public string Kind { get; set; } = string.Empty;
+    [JsonIgnore] public string Kind => Path != null ? KindPath : KindDeploy;
     [JsonRequired] public string Title { get; set; } = string.Empty;
-    [JsonRequired] public string[] ViewLabels { get; set; } = Array.Empty<string>();
+    [JsonRequired]
+    [JsonConverter(typeof(CrowdViewCatalogConverter))]
+    public CrowdViewCatalog ViewLabels { get; set; } = null!;
     [JsonRequired] public CrowdHudConfig Hud { get; set; } = new();
     public CrowdPathPresentation? Path { get; set; }
     public CrowdDeployPresentation? Deploy { get; set; }
@@ -43,35 +45,30 @@ internal sealed class CrowdPresentationConfig
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.title 必填。");
         if (cfg.ViewLabels == null || cfg.ViewLabels.Length == 0)
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.viewLabels 至少一条。");
-        for (int i = 0; i < cfg.ViewLabels.Length; i++)
-        {
-            if (string.IsNullOrWhiteSpace(cfg.ViewLabels[i]))
-                throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.viewLabels[{i}] 必填。");
-        }
 
         if (cfg.Hud == null)
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.hud 必填。");
         if (string.IsNullOrWhiteSpace(cfg.Hud.Keys))
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.hud.keys 必填。");
 
-        if (cfg.Kind == KindPath)
+        bool hasPath = cfg.Path != null;
+        bool hasDeploy = cfg.Deploy != null;
+        if (hasPath == hasDeploy)
         {
-            if (cfg.Path == null)
-                throw new InvalidOperationException("CrowdSimulationDebug.json presentation.path 必填(kind=path)。");
-            if (cfg.Deploy != null)
-                throw new InvalidOperationException("CrowdSimulationDebug.json presentation.kind=path 不能带 deploy。");
-            if (string.IsNullOrWhiteSpace(cfg.Path.TruthAsset))
+            throw new InvalidOperationException(
+                "CrowdSimulationDebug.json presentation 须恰好带 deploy 或 path 之一。");
+        }
+
+        if (hasPath)
+        {
+            if (string.IsNullOrWhiteSpace(cfg.Path!.TruthAsset))
                 throw new InvalidOperationException("CrowdSimulationDebug.json presentation.path.truthAsset 必填。");
             RequireActions(cfg.Path.Actions);
         }
-        else if (cfg.Kind == KindDeploy)
+        else
         {
-            if (cfg.Deploy == null)
-                throw new InvalidOperationException("CrowdSimulationDebug.json presentation.deploy 必填(kind=deploy)。");
-            if (cfg.Path != null)
-                throw new InvalidOperationException("CrowdSimulationDebug.json presentation.kind=deploy 不能带 path。");
-            RequireDeployCopy(cfg.Deploy);
-            if (cfg.Deploy.Palette == null || cfg.Deploy.Palette.Length == 0)
+            RequireDeployCopy(cfg.Deploy!);
+            if (cfg.Deploy!.Palette == null || cfg.Deploy.Palette.Length == 0)
                 throw new InvalidOperationException("CrowdSimulationDebug.json presentation.deploy.palette 至少一条。");
             var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < cfg.Deploy.Palette.Length; i++)
@@ -86,11 +83,6 @@ internal sealed class CrowdPresentationConfig
                         $"CrowdSimulationDebug.json presentation.deploy.palette[{i}].selectAction 重复。");
                 }
             }
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                $"CrowdSimulationDebug.json presentation.kind \"{cfg.Kind}\" 需为 {KindPath} / {KindDeploy}。");
         }
     }
 
@@ -143,27 +135,23 @@ internal sealed class CrowdPresentationConfig
         RequireText(deploy.PlaceInteriorArea, "deploy.placeInteriorArea");
         RequireText(deploy.PlaceEndpointArea, "deploy.placeEndpointArea");
         RequireText(deploy.PendingNav, "deploy.pendingNav");
-        RequireColor(deploy.PlaceLegal, "deploy.placeLegal");
-        RequireColor(deploy.PlaceIllegal, "deploy.placeIllegal");
-        RequireColor(deploy.PlaceEndpoint, "deploy.placeEndpoint");
-        RequireColor(deploy.PlacePortal, "deploy.placePortal");
+        RequireRgba(deploy.PlaceLegal, "deploy.placeLegal");
+        RequireRgba(deploy.PlaceIllegal, "deploy.placeIllegal");
+        RequireRgba(deploy.PlaceEndpoint, "deploy.placeEndpoint");
+        RequireRgba(deploy.PlacePortal, "deploy.placePortal");
     }
 
-    internal static Vector4 Rgba(int[]? rgba, string path)
+    internal static Vector4 Rgba(CrowdDebugRgba rgba, string path)
     {
-        RequireColor(rgba, path);
-        return new Vector4(rgba![0] / 255f, rgba[1] / 255f, rgba[2] / 255f, rgba[3] / 255f);
+        RequireRgba(rgba, path);
+        return rgba.ToVector4();
     }
 
-    private static void RequireColor(int[]? rgba, string path)
+    private static void RequireRgba(CrowdDebugRgba? rgba, string path)
     {
-        if (rgba == null || rgba.Length != 4)
-            throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.{path} 需要 4 个 0..255 的整数。");
-        for (int i = 0; i < 4; i++)
-        {
-            if ((uint)rgba[i] > 255)
-                throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.{path}[{i}] 超出 0..255。");
-        }
+        if (rgba == null)
+            throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.{path} 必填。");
+        rgba.Validate($"CrowdSimulationDebug.json presentation.{path}", "rgba");
     }
 
     private static void RequireText(string? value, string path)
@@ -208,10 +196,10 @@ internal sealed class CrowdDeployPresentation
     [JsonRequired] public string PlaceOverlapsBlocked { get; set; } = string.Empty;
     [JsonRequired] public string PlaceInteriorArea { get; set; } = string.Empty;
     [JsonRequired] public string PlaceEndpointArea { get; set; } = string.Empty;
-    [JsonRequired] public int[] PlaceLegal { get; set; } = Array.Empty<int>();
-    [JsonRequired] public int[] PlaceIllegal { get; set; } = Array.Empty<int>();
-    [JsonRequired] public int[] PlaceEndpoint { get; set; } = Array.Empty<int>();
-    [JsonRequired] public int[] PlacePortal { get; set; } = Array.Empty<int>();
+    [JsonRequired] public CrowdDebugRgba PlaceLegal { get; set; } = null!;
+    [JsonRequired] public CrowdDebugRgba PlaceIllegal { get; set; } = null!;
+    [JsonRequired] public CrowdDebugRgba PlaceEndpoint { get; set; } = null!;
+    [JsonRequired] public CrowdDebugRgba PlacePortal { get; set; } = null!;
     [JsonRequired] public string PendingNav { get; set; } = string.Empty;
     [JsonRequired] public CrowdPaletteSlotDto[] Palette { get; set; } = Array.Empty<CrowdPaletteSlotDto>();
 }

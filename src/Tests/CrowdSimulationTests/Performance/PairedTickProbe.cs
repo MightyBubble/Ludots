@@ -45,7 +45,7 @@ public sealed class PairedTickProbe
         session.Commands.Schedule(session, new List<CrowdCommand>
         {
             new(0, CrowdSimCommand.Parse(JsonNode.Parse(
-                $"{{\"type\":\"spawnAt\",\"player\":1,\"xCm\":480000,\"yCm\":560000,\"count\":{units},\"unitType\":0,\"rIdx\":0}}")!)),
+                $"{{\"type\":\"spawnAt\",\"player\":1,\"xCm\":480000,\"yCm\":560000,\"count\":{units},\"template\":\"crowd_simulation.unit.infantry.r100\"}}")!)),
             new(2, CrowdSimCommand.Parse(JsonNode.Parse(
                 """{"type":"order","player":1,"xCm":1200000,"yCm":800000,"shape":"box"}""")!)),
         });

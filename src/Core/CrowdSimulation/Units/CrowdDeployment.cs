@@ -16,7 +16,7 @@ public static class CrowdDeployment
 {
     private const int SaltSpawnSeed = 31, SaltSpawn = 7919, SaltSpawnAt = 15485863;
 
-    /// <summary>批量部署(count 上限 = 容量;类型过滤 = 全部非 special 单位模板)。</summary>
+    /// <summary>批量部署(count 上限 = 容量;类型过滤 = 全部 autoDeploy 单位模板)。</summary>
     public static int Spawn(CrowdSimSession sim, int count)
     {
         var cfg = sim.Config;
@@ -41,13 +41,14 @@ public static class CrowdDeployment
         {
             var list = new List<CrowdNavGroupSet.Group>();
             var b = cfg.Deploy.Bases[p];
+            int player = TableIndex(cfg, b.PlayerId);
             int bx = (int)(b.XCm / cfg.NavCellSizeCm), by = (int)(b.YCm / cfg.NavCellSizeCm);
             for (int t = 0; t < cfg.UnitTypes.Count; t++)
             {
                 for (int r = 0; r < radiusClasses.Count; r++)
                 {
                     int l = cfg.UnitTypes[t].AgentTypeIndex;
-                    if (ProfileOf(cfg, l, r).Special)
+                    if (!ProfileOf(cfg, l, r).AutoDeploy)
                     {
                         continue;
                     }
@@ -63,7 +64,7 @@ public static class CrowdDeployment
                     }
 
                     if (centerCells.Count == 0) continue;
-                    var g = sim.Groups.Alloc(p, l, r, nav.Id);
+                    var g = sim.Groups.Alloc(player, l, r, nav.Id);
                     sim.AttachGroupNav(g); // 规划句柄挂玩家视野组当前槽(马达句柄恒真相)
                     centers[g.Id] = centerCells;
                     typeOf[g.Id] = t;
@@ -172,8 +173,9 @@ public static class CrowdDeployment
             x, y,
             t, g.RIdx,
             g.Id,
-            cfg.Deploy.Bases[g.Player].PlayerId,
+            PlayerIdOf(cfg, g.Player),
             profile.RadiusCm,
+            profile.PersonalRadiusCm,
             profileIndex,
             profile.AgentTypeIndex);
         int dense = sim.Units.Add(in unit);
@@ -211,8 +213,62 @@ public static class CrowdDeployment
         throw new InvalidOperationException($"代理体型缺失: 移动类型 {agentTypeIndex} × 半径级 {rIdx}。");
     }
 
+    private static int TableIndex(CrowdSimulationRuntimeConfig cfg, int playerId)
+    {
+        var indexBy = cfg.PairRules.IndexByPlayerId;
+        if (playerId < 1 || (uint)playerId >= (uint)indexBy.Length)
+            throw new InvalidOperationException($"出生点玩家 {playerId} 不在配对表里。");
+        int table = indexBy[playerId];
+        if ((uint)table >= (uint)cfg.PairRules.PlayerCount)
+            throw new InvalidOperationException($"出生点玩家 {playerId} 不在配对表里。");
+        return table;
+    }
+
+    private static int PlayerIdOf(CrowdSimulationRuntimeConfig cfg, int tableIndex)
+    {
+        var ids = cfg.PairRules.PlayerIds;
+        if ((uint)tableIndex >= (uint)ids.Length)
+            throw new InvalidOperationException($"玩家表序 {tableIndex} 没有玩家号。");
+        int playerId = ids[tableIndex];
+        var indexBy = cfg.PairRules.IndexByPlayerId;
+        if (playerId == 0 || (uint)playerId >= (uint)indexBy.Length || indexBy[playerId] != tableIndex)
+            throw new InvalidOperationException($"玩家表序 {tableIndex} 没有玩家号。");
+        return playerId;
+    }
+
     /// <summary>全体半径级，radiusCm 升序去重。</summary>
     public static IReadOnlyList<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg) => cfg.RadiusClasses;
+
+    /// <summary>单位模板 id → (单位行, 半径级)。表里没有这个 id 即报错。</summary>
+    public static (int UnitType, int RadiusIndex) LocateTemplate(CrowdSimulationRuntimeConfig cfg, string templateId)
+    {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            throw new InvalidOperationException("单位模板 id 为空。");
+        }
+
+        var radiusClasses = DistinctRadiusClasses(cfg);
+        for (int t = 0; t < cfg.UnitTypes.Count; t++)
+        {
+            var templates = cfg.UnitTypes[t].TemplatesByRadiusCm;
+            if (templates == null)
+            {
+                continue;
+            }
+
+            foreach (var pair in templates)
+            {
+                if (!string.Equals(pair.Value, templateId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return (t, IndexOfRadiusClass(radiusClasses, pair.Key));
+            }
+        }
+
+        throw new InvalidOperationException($"未知单位模板 \"{templateId}\"。");
+    }
 
     public static int IndexOfRadiusClass(IReadOnlyList<int> radiusClasses, int radiusCm)
     {

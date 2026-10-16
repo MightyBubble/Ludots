@@ -32,7 +32,7 @@ public class S7RebakeSmokeTests
         // 建筑挡路 → 拆除 → 寿命路障(s7barrier 4 秒,simDt=1/3s → +12 tick 到期)→ 道路(仅代价)
         (int Tick, string Json)[] entries =
         {
-            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"unitType":0,"rIdx":0}"""),
+            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"template":"crowd_simulation.unit.infantry.r100"}"""),
             (2, """{"type":"order","xCm":1200000,"yCm":800000,"player":1,"shape":"box"}"""),
             (30, """{"type":"placeStructure","template":"building","xCm":503125,"yCm":565625,"sizeCm":14000}"""),
             (60, """{"type":"removeStructureAt","xCm":503125,"yCm":565625}"""),

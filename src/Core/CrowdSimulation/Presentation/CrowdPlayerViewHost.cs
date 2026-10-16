@@ -58,6 +58,7 @@ internal sealed class CrowdPlayerViewHost
     private CrowdSimSession? _boundSession;
     private bool[] _layers = Array.Empty<bool>();
     private int[] _agentIndex = Array.Empty<int>();
+    private int[] _agentCounts = Array.Empty<int>();
     private string[] _shapeIds = Array.Empty<string>();
     private string[] _shapeLabels = Array.Empty<string>();
     private uint[] _handles = Array.Empty<uint>();
@@ -68,17 +69,23 @@ internal sealed class CrowdPlayerViewHost
     private readonly Vector2[] _crossH = new Vector2[2];
     private readonly Vector2[] _crossV = new Vector2[2];
     private readonly int[] _counts = new int[MaxPlayers + 1];
+    private readonly CrowdOrder?[] _recent = new CrowdOrder?[CrowdPlayerHud.MaxNotices];
+    private readonly CrowdOrderNotice[] _notices = new CrowdOrderNotice[CrowdPlayerHud.MaxNotices];
+    private int _noticeCount;
 
     private int _playerCount;
-    private int _radiusLast;
     private int _player = 1;
     private int _focus;
     private int _deployCount;
-    private int _radiusMin;
-    private int _radiusMax;
     private int _clickCount;
-    private int _clickUnitType;
-    private int _clickRadius;
+    private string[] _clickIds = Array.Empty<string>();
+    private int[] _clickUnit = Array.Empty<int>();
+    private int[] _clickRadiusOf = Array.Empty<int>();
+    private int _clickIndex;
+    private int _clickHome;
+    private int _windowMin;
+    private int _windowMax;
+    private string _layerId = "";
     private bool _fogHide;
     private bool _route;
     private bool _lineOfSight;
@@ -139,13 +146,8 @@ internal sealed class CrowdPlayerViewHost
         };
         _fogHide = config.FogHide;
         _route = config.PlayerRoute;
-        _lineOfSight = config.LineOfSight;
         _deployCount = config.DeployCount;
-        _radiusMin = config.RadiusMinIndex;
-        _radiusMax = config.RadiusMaxIndex;
         _clickCount = config.ClickCount;
-        _clickUnitType = config.ClickUnitType;
-        _clickRadius = config.ClickRadiusClass;
     }
 
     public CrowdPlayerOrderPrefs Prefs { get; }
@@ -155,6 +157,7 @@ internal sealed class CrowdPlayerViewHost
     public void Bind(CrowdSimSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
+        _lineOfSight = session.Config.Fog.LineOfSight;
         int players = session.Config.PairRules.PlayerCount;
         if (players < 1 || players > MaxPlayers)
         {
@@ -176,7 +179,12 @@ internal sealed class CrowdPlayerViewHost
         for (int i = 0; i < formations.Count; i++)
         {
             _shapeIds[i] = formations[i].Id;
-            _shapeLabels[i] = formations[i].Label;
+            if (!_config.ShapeLabels.TryGetValue(formations[i].Id, out string? shapeLabel) || string.IsNullOrWhiteSpace(shapeLabel))
+            {
+                throw new InvalidOperationException($"玩家视图 shapeLabels 缺少阵型 {formations[i].Id}。");
+            }
+
+            _shapeLabels[i] = shapeLabel;
             if (string.Equals(formations[i].Id, _config.DefaultShapeId, StringComparison.Ordinal))
             {
                 shape = i;
@@ -188,17 +196,50 @@ internal sealed class CrowdPlayerViewHost
             throw new InvalidOperationException($"玩家视图默认阵型 {_config.DefaultShapeId} 不在阵型表里。");
         }
 
-        if (_config.ClickUnitType >= types || _config.ClickRadiusClass >= radii || _config.RadiusMinIndex >= radii)
+        foreach (string id in _config.ShapeLabels.Keys)
         {
-            throw new InvalidOperationException("玩家视图的点选模板、点选半径或半径窗超出活表。");
+            bool known = false;
+            for (int i = 0; i < _shapeIds.Length; i++)
+            {
+                if (string.Equals(_shapeIds[i], id, StringComparison.Ordinal))
+                {
+                    known = true;
+                    break;
+                }
+            }
+
+            if (!known)
+            {
+                throw new InvalidOperationException($"玩家视图 shapeLabels.{id} 不在阵型表里。");
+            }
         }
 
-        _radiusLast = radii - 1;
-        _radiusMin = _config.RadiusMinIndex;
-        _radiusMax = _config.RadiusMaxIndex < 0 ? _radiusLast : _config.RadiusMaxIndex;
-        if (_radiusMax > _radiusLast || _radiusMax < _radiusMin)
+        int templates = _config.ClickTemplates.Length;
+        _clickIds = new string[templates];
+        _clickUnit = new int[templates];
+        _clickRadiusOf = new int[templates];
+        _clickHome = -1;
+        for (int i = 0; i < templates; i++)
         {
-            throw new InvalidOperationException("玩家视图半径窗超出活表。");
+            string id = _config.ClickTemplates[i];
+            var (unitType, radius) = CrowdDeployment.LocateTemplate(session.Config, id);
+            if ((uint)unitType >= (uint)types || (uint)radius >= (uint)radii)
+            {
+                throw new InvalidOperationException($"玩家视图模板 \"{id}\" 超出活表。");
+            }
+
+            _clickIds[i] = id;
+            _clickUnit[i] = unitType;
+            _clickRadiusOf[i] = radius;
+            if (string.Equals(id, _config.ClickTemplate, StringComparison.Ordinal))
+            {
+                _clickHome = i;
+            }
+        }
+
+        if (_clickHome < 0)
+        {
+            throw new InvalidOperationException($"玩家视图点选模板 {_config.ClickTemplate} 不在轮换表里。");
         }
 
         _layers = new bool[types];
@@ -208,6 +249,8 @@ internal sealed class CrowdPlayerViewHost
             _layers[i] = _config.LayersStartEnabled;
             _agentIndex[i] = session.Config.UnitTypes[i].AgentTypeIndex;
         }
+
+        _agentCounts = new int[session.Config.AgentTypes.Count];
 
         _handles = new uint[capacity];
         _entities = new Entity[capacity];
@@ -227,8 +270,10 @@ internal sealed class CrowdPlayerViewHost
         _focus = 0;
         _deployCount = _config.DeployCount;
         _clickCount = _config.ClickCount;
-        _clickUnitType = _config.ClickUnitType;
-        _clickRadius = _config.ClickRadiusClass;
+        _clickIndex = _clickHome;
+        _windowMin = 0;
+        _windowMax = _clickIds.Length - 1;
+        _layerId = session.Config.UnitTypes[_focus].Id;
         Prefs.ShapeId = _config.DefaultShapeId;
         Prefs.MagicBox = _config.MagicBox;
         _boundSession = session;
@@ -263,6 +308,7 @@ internal sealed class CrowdPlayerViewHost
         if (session != null && Pressed(actions, keys.CycleLayer) && _layers.Length > 0)
         {
             _focus = (_focus + 1) % _layers.Length;
+            _layerId = session.Config.UnitTypes[_focus].Id;
         }
 
         if (session != null && Pressed(actions, keys.ToggleLayer) && (uint)_focus < (uint)_layers.Length)
@@ -339,14 +385,14 @@ internal sealed class CrowdPlayerViewHost
             StepCount(ref _clickCount, 1, _config.ClickCountStep, _config.ClickCountMin, _config.ClickCountMax);
         }
 
-        if (Pressed(actions, keys.CycleClickTemplate) && _layers.Length > 0)
+        if (Pressed(actions, keys.CycleClickTemplate) && _clickIds.Length > 0)
         {
-            _clickUnitType = (_clickUnitType + 1) % _layers.Length;
+            _clickIndex = (_clickIndex + 1) % _clickIds.Length;
         }
 
-        if (Pressed(actions, keys.CycleClickRadius) && _radiusLast >= 0)
+        if (Pressed(actions, keys.CycleClickRadius) && _clickIds.Length > 0)
         {
-            _clickRadius = (_clickRadius + 1) % (_radiusLast + 1);
+            _clickIndex = NextSameUnit(_clickIndex);
         }
 
         if (Pressed(actions, keys.CycleRadiusRange))
@@ -366,8 +412,11 @@ internal sealed class CrowdPlayerViewHost
         }
 
         demo.ClickSpawnCount = _clickCount;
-        demo.ClickSpawnUnitType = _clickUnitType;
-        demo.ClickSpawnRadiusClass = _clickRadius;
+        if (_clickIds.Length > 0)
+        {
+            demo.ClickSpawnUnitType = _clickUnit[_clickIndex];
+            demo.ClickSpawnRadiusClass = _clickRadiusOf[_clickIndex];
+        }
 
         Vector2 pointer = actions.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
         bool boxing = actions.IsDown(keys.BoxSelectBegin);
@@ -435,30 +484,19 @@ internal sealed class CrowdPlayerViewHost
             Bind(session);
         }
 
-        bool full = _radiusMin == 0 && _radiusMax == _radiusLast;
-        for (int i = 0; full && i < _layers.Length; i++)
-        {
-            if (!_layers[i])
-            {
-                full = false;
-            }
-        }
-
-        if (full)
+        if (CoversCatalog(session))
         {
             submit(new CrowdSimCommand { Kind = CrowdSimCommandKind.Spawn, Count = _deployCount });
             return;
         }
 
         int pairs = 0;
-        for (int t = 0; t < _layers.Length; t++)
+        for (int i = _windowMin; i <= _windowMax; i++)
         {
-            if (!_layers[t])
+            if (_layers[_clickUnit[i]])
             {
-                continue;
+                pairs++;
             }
-
-            pairs += _radiusMax - _radiusMin + 1;
         }
 
         if (pairs < 1)
@@ -485,33 +523,31 @@ internal sealed class CrowdPlayerViewHost
         int each = _deployCount / pairs;
         int extra = _deployCount % pairs;
         int index = 0;
-        for (int t = 0; t < _layers.Length; t++)
+        for (int i = _windowMin; i <= _windowMax; i++)
         {
-            if (!_layers[t])
+            int unitType = _clickUnit[i];
+            if (!_layers[unitType])
             {
                 continue;
             }
 
-            for (int r = _radiusMin; r <= _radiusMax; r++)
+            int count = each + (index < extra ? 1 : 0);
+            index++;
+            if (count < 1)
             {
-                int count = each + (index < extra ? 1 : 0);
-                index++;
-                if (count < 1)
-                {
-                    continue;
-                }
-
-                submit(new CrowdSimCommand
-                {
-                    Kind = CrowdSimCommandKind.SpawnAt,
-                    Player = _player,
-                    XCm = home.XCm,
-                    YCm = home.YCm,
-                    Count = count,
-                    UnitType = t,
-                    RIdx = r,
-                });
+                continue;
             }
+
+            submit(new CrowdSimCommand
+            {
+                Kind = CrowdSimCommandKind.SpawnAt,
+                Player = _player,
+                XCm = home.XCm,
+                YCm = home.YCm,
+                Count = count,
+                UnitType = unitType,
+                RIdx = _clickRadiusOf[i],
+            });
         }
     }
 
@@ -526,7 +562,13 @@ internal sealed class CrowdPlayerViewHost
         }
 
         int viewer = ViewerGroup(session);
-        CrowdOrder? latest = LatestOrder(session, _player);
+        int recent = RecentOrders(session, _player, _recent);
+        CrowdOrder? latest = recent > 0 ? _recent[0] : null;
+        for (int n = 0; n < recent; n++)
+        {
+            _notices[n] = new CrowdOrderNotice { Id = _recent[n]!.Id, Mode = _recent[n]!.Mode };
+        }
+
         int planning = 0;
         int moving = 0;
         int arrived = 0;
@@ -564,12 +606,27 @@ internal sealed class CrowdPlayerViewHost
             }
 
             var state = session.World.Get<CrowdSimulationUnitState>(entity);
-            if (!session.Groups.TryGet(state.GroupId, out CrowdNavGroupSet.Group group) || group.OrderId != latest.Id)
+            if (!session.Groups.TryGet(state.GroupId, out CrowdNavGroupSet.Group group))
             {
                 continue;
             }
 
             byte unitState = state.State;
+            for (int n = 1; n < recent; n++)
+            {
+                if (group.OrderId == _notices[n].Id)
+                {
+                    CountNotice(ref _notices[n], group.Planning, unitState);
+                    break;
+                }
+            }
+
+            if (group.OrderId != latest.Id)
+            {
+                continue;
+            }
+
+            CountNotice(ref _notices[0], group.Planning, unitState);
             if (group.Planning && unitState != (byte)CrowdUnitState.Arrived)
             {
                 planning++;
@@ -626,9 +683,42 @@ internal sealed class CrowdPlayerViewHost
         _card = CrowdCommandStatusCard.Classify(planning, moving, arrived, other);
         _latestShapeId = latest?.ShapeId;
         _latestMode = latest?.Mode;
+        _noticeCount = recent;
+        Array.Clear(_recent);
     }
 
-    internal CrowdPlayerViewLabels Labels => _config.Labels;
+    private static void CountNotice(ref CrowdOrderNotice notice, bool planning, byte unitState)
+    {
+        notice.Units++;
+        if (planning && unitState != (byte)CrowdUnitState.Arrived) notice.Planning++;
+        else if (unitState == (byte)CrowdUnitState.Moving || unitState == (byte)CrowdUnitState.Traversing) notice.Moving++;
+        else if (unitState == (byte)CrowdUnitState.Arrived) notice.Arrived++;
+        else if (unitState == (byte)CrowdUnitState.Unreachable) notice.Unreachable++;
+    }
+
+    /// <summary>把玩家指令号最大的几条按从新到旧写进 <paramref name="into"/>，返回条数。</summary>
+    internal static int RecentOrders(CrowdSimSession session, int playerId, CrowdOrder?[] into)
+    {
+        int count = 0;
+        var list = session.Orders.List;
+        for (int i = 0; i < list.Count; i++)
+        {
+            CrowdOrder order = list[i];
+            if (order.Player != playerId) continue;
+            int at = count;
+            while (at > 0 && into[at - 1]!.Id < order.Id) at--;
+            if (at >= into.Length) continue;
+            int last = Math.Min(count, into.Length - 1);
+            for (int k = last; k > at; k--) into[k] = into[k - 1];
+            into[at] = order;
+            if (count < into.Length) count++;
+        }
+
+        return count;
+    }
+
+
+    internal CrowdPlayerViewConfig ViewConfig => _config;
 
     /// <summary>读上一次 <see cref="Draw"/> 统计的计数。各玩家单位数按玩家号写入 <paramref name="unitsByPlayer"/>，下标 0 不用。</summary>
     internal void ReadPanel(ref CrowdPlayerHud hud, Span<int> unitsByPlayer)
@@ -647,16 +737,38 @@ internal sealed class CrowdPlayerViewHost
         hud.FogHide = _fogHide;
         hud.Route = _route;
         hud.LineOfSight = _lineOfSight;
-        hud.ClickUnitType = _clickUnitType;
-        hud.ClickRadius = _clickRadius;
+        hud.ClickTemplate = _clickIds.Length == 0 ? "" : _clickIds[_clickIndex];
         hud.ClickCount = _clickCount;
         hud.DeployCount = _deployCount;
-        hud.RadiusMin = _radiusMin;
-        hud.RadiusMax = _radiusMax;
-        hud.Layer = _focus;
+        hud.WindowFrom = _clickIds.Length == 0 ? "" : _clickIds[_windowMin];
+        hud.WindowTo = _clickIds.Length == 0 ? "" : _clickIds[_windowMax];
+        hud.LayerId = _layerId;
         hud.SceneKind = _sceneKind;
+        hud.ShapeIndex = ShapeIndex(Prefs.ShapeId);
+        int mask = 0;
+        for (int t = 0; t < _layers.Length && t < 31; t++)
+        {
+            if (_layers[t]) mask |= 1 << t;
+        }
+
+        hud.LayerMask = mask;
+        hud.NoticeCount = _noticeCount;
+        hud.Notice0 = _noticeCount > 0 ? _notices[0] : default;
+        hud.Notice1 = _noticeCount > 1 ? _notices[1] : default;
+        hud.Notice2 = _noticeCount > 2 ? _notices[2] : default;
         int n = Math.Min(unitsByPlayer.Length, _counts.Length);
         _counts.AsSpan(0, n).CopyTo(unitsByPlayer);
+    }
+
+    /// <summary>按兵种下标写入它所在移动层的单位数；几个兵种共用一个移动层时各自都记这一层的总数。</summary>
+    internal void ReadUnitTypeCounts(Span<int> unitsByType)
+    {
+        int n = Math.Min(unitsByType.Length, _agentIndex.Length);
+        for (int t = 0; t < n; t++)
+        {
+            int layer = _agentIndex[t];
+            unitsByType[t] = (uint)layer < (uint)_agentCounts.Length ? _agentCounts[layer] : 0;
+        }
     }
 
     private void ApplyLayers(CrowdSimSession session)
@@ -667,6 +779,7 @@ internal sealed class CrowdPlayerViewHost
             throw new InvalidOperationException("玩家视图需要隐藏模板标签。");
         }
 
+        Array.Clear(_agentCounts);
         int count = session.Units.Count;
         for (int i = 0; i < count; i++)
         {
@@ -675,6 +788,11 @@ internal sealed class CrowdPlayerViewHost
             if (!session.Groups.TryGet(state.GroupId, out CrowdNavGroupSet.Group group))
             {
                 continue;
+            }
+
+            if ((uint)group.LayerIdx < (uint)_agentCounts.Length)
+            {
+                _agentCounts[group.LayerIdx]++;
             }
 
             bool template = false;
@@ -687,8 +805,8 @@ internal sealed class CrowdPlayerViewHost
                 }
             }
 
-            bool radius = group.RIdx >= _radiusMin && group.RIdx <= _radiusMax;
-            CrowdPlayerLayerScope.Apply(session.World, entity, tag, CrowdPlayerLayerScope.Included(template, radius));
+            // 点选表只裁部署窗。层开关按单位行隐藏，半径级没有单独的窗，整表都算在范围内。
+            CrowdPlayerLayerScope.Apply(session.World, entity, tag, CrowdPlayerLayerScope.Included(template, true));
         }
     }
 
@@ -784,9 +902,9 @@ internal sealed class CrowdPlayerViewHost
     private void LaunchOutside(CrowdSimSession session, S4DeployDemoRuntime demo)
     {
         CrowdFogCheckScene scene = RequireScene();
-        EnqueueKill(demo);
-        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
-        EnqueueCluster(demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
+        EnqueueKill(session, demo);
+        EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
+        EnqueueCluster(session, demo, scene, scene.EnemyPlayer, scene.EnemyXCm, scene.EnemyYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -835,8 +953,8 @@ internal sealed class CrowdPlayerViewHost
             throw new InvalidOperationException("墙后敌方收进导航格心后离开了遮挡东侧那一格迷雾。");
         }
 
-        EnqueueKill(demo);
-        EnqueueCluster(demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
+        EnqueueKill(session, demo);
+        EnqueueCluster(session, demo, scene, scene.ViewerPlayer, scene.ViewerXCm, scene.ViewerYCm, scene.ClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -845,7 +963,7 @@ internal sealed class CrowdPlayerViewHost
             YCm = wallY,
             SizeCm = scene.WallSizeCm,
         });
-        EnqueueCluster(demo, scene, scene.EnemyPlayer, behindX, clusterY, scene.BehindClusterSpacingCm);
+        EnqueueCluster(session, demo, scene, scene.EnemyPlayer, behindX, clusterY, scene.BehindClusterSpacingCm);
         demo.EnqueueCommand(new CrowdSimCommand { Kind = CrowdSimCommandKind.FogSight, On = _lineOfSight });
         Occupy(session, scene.ViewerPlayer);
         Frame(scene.BehindLookXCm, scene.BehindLookYCm, scene.BehindDistanceCm, scene.BehindYaw, scene.BehindPitch);
@@ -938,26 +1056,43 @@ internal sealed class CrowdPlayerViewHost
             _enemyMark);
     }
 
-    private void EnqueueKill(S4DeployDemoRuntime demo)
+    internal static void BoardDisc(CrowdSimSession session, out int xCm, out int yCm, out int radiusCm)
     {
+        ArgumentNullException.ThrowIfNull(session);
+        int side = checked(session.Config.NavCellsPerSide * session.Config.NavCellSizeCm);
+        if (side < 2)
+            throw new InvalidOperationException("击杀圈需要导航板边长至少 2 厘米。");
+        int center = side / 2;
+        int far = side - center;
+        xCm = center;
+        yCm = center;
+        double reach = Math.Sqrt(((double)far * far) + ((double)far * far));
+        int whole = (int)reach;
+        radiusCm = (double)whole < reach ? whole + 1 : whole;
+    }
+
+    private void EnqueueKill(CrowdSimSession session, S4DeployDemoRuntime demo)
+    {
+        BoardDisc(session, out int xCm, out int yCm, out int radiusCm);
         demo.EnqueueCommand(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.Kill,
-            XCm = _config.KillXCm,
-            YCm = _config.KillYCm,
-            RadiusCm = _config.KillRadiusCm,
+            XCm = xCm,
+            YCm = yCm,
+            RadiusCm = radiusCm,
             RingScale = Fix64.FromDouble(_config.KillRingScale),
             Impulse = Fix64.FromDouble(_config.KillImpulse),
         });
     }
 
-    private static void EnqueueCluster(S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm, int spacingCm)
+    private static void EnqueueCluster(CrowdSimSession session, S4DeployDemoRuntime demo, CrowdFogCheckScene scene, int player, int xCm, int yCm, int spacingCm)
     {
+        var (unitType, rIdx) = CrowdDeployment.LocateTemplate(session.Config, scene.Template);
         int count = scene.SpawnCount;
         int origin = -((count - 1) * spacingCm) / 2;
         for (int i = 0; i < count; i++)
         {
-            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacingCm), 1, scene.UnitType, scene.RIdx);
+            EnqueueSpawn(demo, player, xCm, yCm + origin + (i * spacingCm), 1, unitType, rIdx);
         }
     }
 
@@ -1290,26 +1425,74 @@ internal sealed class CrowdPlayerViewHost
 
     private void CycleRadius()
     {
-        if (_radiusLast < 0)
+        int last = _clickIds.Length - 1;
+        if (last < 0)
         {
             return;
         }
 
-        if (_radiusMax < _radiusLast)
+        if (_windowMax < last)
         {
-            _radiusMax++;
+            _windowMax++;
             return;
         }
 
-        if (_radiusMin < _radiusLast)
+        if (_windowMin < last)
         {
-            _radiusMin++;
-            _radiusMax = _radiusMin;
+            _windowMin++;
+            _windowMax = _windowMin;
             return;
         }
 
-        _radiusMin = 0;
-        _radiusMax = _radiusLast;
+        _windowMin = 0;
+        _windowMax = last;
+    }
+
+    private int NextSameUnit(int from)
+    {
+        int unit = _clickUnit[from];
+        for (int step = 1; step <= _clickIds.Length; step++)
+        {
+            int index = (from + step) % _clickIds.Length;
+            if (_clickUnit[index] == unit)
+            {
+                return index;
+            }
+        }
+
+        return from;
+    }
+
+    private bool CoversCatalog(CrowdSimSession session)
+    {
+        if (_clickIds.Length == 0 || _windowMin != 0 || _windowMax != _clickIds.Length - 1)
+        {
+            return false;
+        }
+
+        for (int t = 0; t < _layers.Length; t++)
+        {
+            if (!_layers[t])
+            {
+                return false;
+            }
+
+            var templates = session.Config.UnitTypes[t].TemplatesByRadiusCm;
+            if (templates == null)
+            {
+                continue;
+            }
+
+            foreach (string id in templates.Values)
+            {
+                if (Array.IndexOf(_clickIds, id) < 0)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private static void StepCount(ref int value, int direction, int step, int min, int max)

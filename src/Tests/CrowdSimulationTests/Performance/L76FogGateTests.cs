@@ -99,8 +99,8 @@ public sealed class L76FogGateTests
         int side = fog.FogCellsPerSide;
         int cellSize = fog.FogCellSizeCm;
 
-        Schedule(session, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":8,"unitType":0,"rIdx":0}""");
-        Schedule(session, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":8,"unitType":0,"rIdx":0}""");
+        Schedule(session, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":8,"template":"crowd_simulation.unit.infantry.r100"}""");
+        Schedule(session, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":8,"template":"crowd_simulation.unit.infantry.r100"}""");
         Step(session);
         for (int i = 0; i < period * 2; i++) Step(session);
 

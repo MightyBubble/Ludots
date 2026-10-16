@@ -164,8 +164,7 @@ public sealed class FormationShowcaseTests
             Assert.That(spawn["xCm"]!.GetValue<int>(), Is.EqualTo(x.ToInt()), "方块中心 x 不是地图中心最近的可走格");
             Assert.That(spawn["yCm"]!.GetValue<int>(), Is.EqualTo(y.ToInt()), "方块中心 y 不是地图中心最近的可走格");
             Assert.That(spawn["count"]!.GetValue<int>(), Is.EqualTo(count));
-            Assert.That(spawn["unitType"]!.GetValue<int>(), Is.Zero);
-            Assert.That(spawn["rIdx"]!.GetValue<int>(), Is.Zero);
+            Assert.That(spawn["template"]!.GetValue<string>(), Is.EqualTo("crowd_simulation.unit.infantry.r100"));
         });
     }
 

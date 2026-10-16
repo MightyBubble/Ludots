@@ -537,7 +537,7 @@ public static class CrowdFuzzRunner
             int layer = cfg.UnitTypes[t].AgentTypeIndex;
             for (int r = 0; r < radii.Count; r++)
             {
-                if (CrowdDeployment.ProfileOf(cfg, layer, r).Special) continue;
+                if (!CrowdDeployment.ProfileOf(cfg, layer, r).AutoDeploy) continue;
                 if (!session.NavByLayerRadius.ContainsKey((layer, r))) continue;
                 list.Add((t, r));
             }

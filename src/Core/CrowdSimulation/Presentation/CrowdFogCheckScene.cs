@@ -14,8 +14,7 @@ internal sealed class CrowdFogCheckScene
     [JsonRequired] public int ViewerPlayer { get; init; }
     [JsonRequired] public int AllyPlayer { get; init; }
     [JsonRequired] public int EnemyPlayer { get; init; }
-    [JsonRequired] public int UnitType { get; init; }
-    [JsonRequired] public int RIdx { get; init; }
+    [JsonRequired] public string Template { get; init; } = "";
     [JsonRequired] public int SpawnCount { get; init; }
     [JsonRequired] public int ViewerXCm { get; init; }
     [JsonRequired] public int ViewerYCm { get; init; }
@@ -77,6 +76,8 @@ internal sealed class CrowdFogCheckScene
             throw new InvalidOperationException($"{path}: clusterSpacingCm 与 behindClusterSpacingCm 必须 > 0。");
         RequireCamera(path, "outside", scene.OutsideDistanceCm, scene.OutsideYaw, scene.OutsidePitch);
         RequireCamera(path, "behind", scene.BehindDistanceCm, scene.BehindYaw, scene.BehindPitch);
+        if (string.IsNullOrWhiteSpace(scene.Template))
+            throw new InvalidOperationException($"{path}: template 不能为空。");
         if (string.IsNullOrWhiteSpace(scene.WallTemplate) || string.IsNullOrWhiteSpace(scene.UnseenTemplate))
             throw new InvalidOperationException($"{path}: 结构模板不能为空。");
         return scene;

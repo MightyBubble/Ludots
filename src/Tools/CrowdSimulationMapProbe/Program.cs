@@ -399,7 +399,7 @@ public static class Program
                 for (int r = 0; r < radiusClasses.Count; r++)
                 {
                     int l = runtime.UnitTypes[t].AgentTypeIndex;
-                    if (CrowdDeployment.ProfileOf(runtime, l, r).Special) continue;
+                    if (!CrowdDeployment.ProfileOf(runtime, l, r).AutoDeploy) continue;
                     var nav = session.NavFor(l, r);
                     if (nav.Cells.Length == 0) continue;
                     var cs = new List<int>();

@@ -40,19 +40,23 @@ public class CrowdTraversalConfigTests
     }
 
     [Test]
-    public void RetiredKeys_AreRejectedWithTheirReplacement()
+    public void UnknownKeys_AreRejected()
     {
         JsonObject slope = TestDefaults.DefaultTraversalJson();
         slope["areas"]!["open"]!["slopeFree"] = false;
-        AssertRejected(slope, "areas.open.slopeFree 已改名为 ignoresSlope");
+        AssertRejected(slope, "areas.open.slopeFree 是未知键");
 
         JsonObject passable = TestDefaults.DefaultTraversalJson();
         passable["agentTypes"]!["foot"]!["cells"]!["open"]!["passable"] = true;
-        AssertRejected(passable, "agentTypes.foot.cells.open.passable 已删除");
+        AssertRejected(passable, "agentTypes.foot.cells.open.passable 是未知键");
 
         JsonObject areaId = TestDefaults.DefaultTraversalJson();
         areaId["areas"]!["open"]!["areaId"] = 0;
-        AssertRejected(areaId, "areas.open.areaId 已删除");
+        AssertRejected(areaId, "areas.open.areaId 是未知键");
+
+        JsonObject root = TestDefaults.DefaultTraversalJson();
+        root["extra"] = 1;
+        AssertRejected(root, "extra 是未知键");
     }
 
     [TestCase(0d)]

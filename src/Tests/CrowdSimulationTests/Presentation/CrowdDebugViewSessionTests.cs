@@ -12,6 +12,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Utils;
 using NUnit.Framework;
 using CrowdSimulationTests.Parity;
 
@@ -34,6 +35,14 @@ public class CrowdDebugViewSessionTests
         frameOn.Funnel = frameOn.Corridor = frameOn.HpaGraph = frameOn.NavPolygons = frameOn.TileGrid = true;
         frameOn.Flow = frameOn.Density = frameOn.Blocked = frameOn.Links = frameOn.Belief = true;
         frameOn.UnitColorMode = CrowdSimulationDebugViewConfig.ColorTeam;
+        frameOn.UsePalette(new TeamColorPalette(new[]
+        {
+            default,
+            TeamColorPalette.ParseHex("#4DB2FF", "test"),
+            TeamColorPalette.ParseHex("#7ED957", "test"),
+            TeamColorPalette.ParseHex("#FFC53D", "test"),
+            TeamColorPalette.ParseHex("#C792FF", "test"),
+        }, new[] { 1, 2, 3, 4 }));
         frameOn.SetViewport(480000f, 540000f, 560000f, 620000f, 20f);
         frameOn.ControllingPlayer = 0;
         var frameOff = new CrowdDebugViewFrame(LoadView());
@@ -116,13 +125,58 @@ public class CrowdDebugViewSessionTests
         return list;
     }
 
-    private static CrowdSimulationDebugViewConfig LoadView()
+    [Test]
+    public void InspectIds_UnknownAgentProfileAndPlayer_FailAtBind()
+    {
+        var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        string path = ViewPath();
+        var root = CrowdPresentationPaletteTestMerge.MergedDebugView(
+            JsonNode.Parse(File.ReadAllText(path))!.AsObject());
+
+        var oldKey = (JsonObject)root.DeepClone();
+        oldKey["inspect"]!["layerIndex"] = 0;
+        var key = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(oldKey, path));
+        Assert.That(key!.Message, Does.Contain("layerIndex"));
+
+        var oldBelief = (JsonObject)root.DeepClone();
+        oldBelief["beliefGroup"] = 0;
+        var beliefKey = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugViewConfig.Load(oldBelief, path));
+        Assert.That(beliefKey!.Message, Does.Contain("beliefGroup"));
+
+        var agent = (JsonObject)root.DeepClone();
+        agent["inspect"]!["agentType"] = "missing-move";
+        var frame = new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(agent, path));
+        var missingAgent = Assert.Throws<InvalidOperationException>(() => frame.BindCatalog(session));
+        Assert.That(missingAgent!.Message, Does.Contain("missing-move"));
+
+        var body = (JsonObject)root.DeepClone();
+        body["inspect"]!["profile"] = "missing-body";
+        frame = new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(body, path));
+        var missingBody = Assert.Throws<InvalidOperationException>(() => frame.BindCatalog(session));
+        Assert.That(missingBody!.Message, Does.Contain("missing-body"));
+
+        var player = (JsonObject)root.DeepClone();
+        player["beliefPlayer"] = 99;
+        frame = new CrowdDebugViewFrame(CrowdSimulationDebugViewConfig.Load(player, path));
+        var missingPlayer = Assert.Throws<InvalidOperationException>(() => frame.BindCatalog(session));
+        Assert.That(missingPlayer!.Message, Does.Contain("99"));
+    }
+
+    private static string ViewPath()
     {
         var dir = AppContext.BaseDirectory;
         while (dir != null && !Directory.Exists(Path.Combine(dir, "mods")))
             dir = Path.GetDirectoryName(dir);
         if (dir == null) throw new InvalidOperationException("找不到仓库根(向上查找 mods 目录失败)");
-        string path = Path.Combine(dir, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulationDebugView.json");
-        return CrowdSimulationDebugViewConfig.Load(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), path);
+        return Path.Combine(dir, "mods", "capabilities", "navigation", "CrowdSimulationUiMod", "assets", "CrowdSimulationDebugView.json");
+    }
+
+    private static CrowdSimulationDebugViewConfig LoadView()
+    {
+        string path = ViewPath();
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        return CrowdSimulationDebugViewConfig.Load(CrowdPresentationPaletteTestMerge.MergedDebugView(root), path);
     }
 }

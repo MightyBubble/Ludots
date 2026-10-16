@@ -348,8 +348,8 @@ public static partial class CrowdSimulationEditorApi
             };
         }
 
-        /// <summary>traversal 是合并后的全文，列是全部区域。mapAreas 是这张图的地形经 terrainAreas 落到的区域，只用来高亮。</summary>
-        private static JsonObject CostMatrix(JsonObject traversal, JsonObject navmesh, string mapId)
+        /// <summary>这张图的地形经 terrainAreas 落到的区域，只用来高亮。</summary>
+        private static JsonArray MapAreas(JsonObject traversal, JsonObject navmesh, string mapId)
         {
             var mapAreas = new JsonArray();
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -371,11 +371,7 @@ public static partial class CrowdSimulationEditorApi
                 }
             }
 
-            return new JsonObject
-            {
-                ["traversal"] = traversal.DeepClone(),
-                ["mapAreas"] = mapAreas,
-            };
+            return mapAreas;
         }
 
         private static JsonArray Help()
@@ -383,7 +379,7 @@ public static partial class CrowdSimulationEditorApi
             return new JsonArray
             {
                 HelpItem("规模", "sim.maxUnits 是单位上限。Navigation/navmesh.json 的 maps.<地图 id>.navCellSizeCm 和地图板宽决定格子数。deploy.initialUnits 是开局人数。"),
-                HelpItem("手感", "单位速度在模板的 speedCmPerSecond。formation.leaderSpeed、catchUp、settleTimeSec 管队形。movement.unitTurnRateRadPerSec 管转向。"),
+                HelpItem("手感", "单位速度在模板的 speedCmPerSec。formation.leaderSpeedRatio、catchUpSpeedRatio、settleTimeSec 管队形。movement.unitTurnRateRadPerSec 管转向。"),
                 HelpItem("拥挤", "推挤优先级在模板的 pushPriority。半径在 Navigation/agent_profiles.json。push、avoidance、agents.avoidanceRadiusScale 管挤开。"),
                 HelpItem("地图", "地图文件是 Maps/<startupMapId>.json。导航事实在 Navigation/navmesh.json 的 maps.<地图 id>。地形生成器不进运行时。"),
                 HelpItem("通行", "区域、地形到区域、链接种类和移动类型 × 区域的通行矩阵都在 CrowdSimulation/traversal.json。不可通行的格写 false。"),

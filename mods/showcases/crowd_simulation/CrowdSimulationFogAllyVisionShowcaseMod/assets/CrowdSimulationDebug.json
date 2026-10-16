@@ -9,8 +9,7 @@
           "xCm": 487500,
           "yCm": 562500,
           "count": 12,
-          "unitType": 0,
-          "rIdx": 0
+          "template": "crowd_simulation.unit.infantry.r100"
         }
       },
       {
@@ -21,8 +20,7 @@
           "xCm": 487500,
           "yCm": 562500,
           "count": 12,
-          "unitType": 0,
-          "rIdx": 0
+          "template": "crowd_simulation.unit.infantry.r100"
         }
       },
       {
@@ -33,8 +31,7 @@
           "xCm": 387500,
           "yCm": 562500,
           "count": 1,
-          "unitType": 0,
-          "rIdx": 0
+          "template": "crowd_simulation.unit.infantry.r100"
         }
       },
       {

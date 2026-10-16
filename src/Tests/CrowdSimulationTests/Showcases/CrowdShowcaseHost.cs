@@ -117,6 +117,24 @@ internal sealed class CrowdShowcaseHost : IDisposable
         return sb.ToString();
     }
 
+    public UiNode HudNode(string elementId)
+    {
+        if (Ui.IsDirty) Ui.Render();
+        return UiHost.Scene?.FindByElementId(elementId)
+            ?? throw new InvalidOperationException($"UI 文档里没有 #{elementId}。");
+    }
+
+    /// <summary>节点及祖先都没有 nf-hidden。</summary>
+    public bool HudVisible(string elementId)
+    {
+        for (UiNode? node = HudNode(elementId); node != null; node = node.Parent)
+        {
+            if (node.HasClass("nf-hidden")) return false;
+        }
+
+        return true;
+    }
+
     private static void AppendText(UiNode node, StringBuilder sb)
     {
         if (!string.IsNullOrEmpty(node.TextContent))
@@ -132,8 +150,16 @@ internal sealed class CrowdShowcaseHost : IDisposable
     public static JsonObject MergedConfig(GameEngine engine, string path)
     {
         var entry = ConfigPipeline.RequireEntry(engine.ConfigCatalog, path, ConfigMergePolicy.DeepObject);
-        return engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
+        JsonObject merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{path} 合并为空。");
+        if (path is "CrowdSimulationDebugView.json" or "CrowdSimulationPlayerView.json")
+        {
+            JsonObject palette = CrowdPresentationPalette.LoadMerged(
+                engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+            merged = CrowdPresentationPalette.MergeInto(merged, palette, path);
+        }
+
+        return merged;
     }
 
     /// <summary>脚本里 <paramref name="type"/> 行（可选按玩家）的 tick，按脚本顺序。</summary>

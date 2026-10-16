@@ -8,13 +8,13 @@ using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
-using Ludots.UI.Runtime;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Performance;
 
 /// <summary>
-/// 50k 压力场景下全部 HUD 面板打开（状态、玩家卡、检视、导航、遥测），走 UIRoot + Skia + UiSurfaceHost 真实链路。
+/// 50k 压力场景下 HUD 全部区块可见（左栏指令单与调试视图、玩家条、通知、指令坞、遥测右栏），走 UIRoot + Skia + UiSurfaceHost 真实链路。
+/// 调试视图的页签互斥，按“缓存”和“检视”两页各跑一遍，两页的采样都要量到。
 /// 第一段每个仿真 tick 之后跑一帧 HUD，比较 HUD 开关两种情况下的 tick 中位数。
 /// 第二段模拟 30 s：HUD 按 16 ms 一帧推进，仿真按固定频率在帧间步进。
 /// 断言：预热后采样帧和非采样帧都零分配，窗口内零 GC，HUD 重画帧的折算 CPU 时间 p95 不超过 1.5 ms，tick 中位数打开与不开在噪声内。
@@ -34,8 +34,9 @@ public sealed class CrowdHud50KUiPathTests
     /// <summary>参照光栅在定 1.5 ms 预算的那台机器上、空闲时的 CPU 时间中位数，把比值换回毫秒。</summary>
     private const double ReferenceRasterNominalMs = 0.87d;
 
-    [Test]
-    public void AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise()
+    [TestCase("cache")]
+    [TestCase("inspect")]
+    public void AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(string debugTab)
     {
         var scenario = CrowdKernel50KBenchmarkTests.LoadScenario();
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
@@ -49,7 +50,7 @@ public sealed class CrowdHud50KUiPathTests
 
         var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
         var debug = CrowdHudSamplingTests.ShippedDebugView();
-        debug.NavPanel = true;
+        debug.NavPanel = debugTab == "cache";
         debug.TelemetryPanel = true;
         debug.UnitColorMode = CrowdSimulationDebugViewConfig.ColorTeam;
         var player = CrowdHudSamplingTests.ShippedPlayerView(session);
@@ -58,16 +59,17 @@ public sealed class CrowdHud50KUiPathTests
         feed.UsePlayerView(player);
         using var ui = new CrowdHudTestHost();
 
+        ui.Frame(feed, FrameMs);
+        if (debugTab == "inspect") Assert.That(ui.Click("crowd-dv-tab-inspect"), Is.True);
         for (int i = 0; i < 64; i++)
         {
             Tick(session, reference, watch);
             ui.Frame(feed, FrameMs);
         }
 
-        foreach (string id in new[] { "crowd-left", "crowd-right", "crowd-dock", "crowd-toolbar", "crowd-player", "crowd-playerbar", "crowd-order", "crowd-inspect", "crowd-nav", "crowd-telemetry", "crowd-status", "crowd-legend" })
-            Assert.That(ui.Has(id), Is.True, $"#{id} 应在 UI 文档里");
-        Assert.That(ui.Text("crowd-status-line"), Does.Contain(scenario.Units.ToString(CultureInfo.InvariantCulture)));
-        WarmSparkGlyphs(ui);
+        foreach (string id in new[] { "crowd-left", "crowd-right", "crowd-pr", "crowd-dv", $"crowd-dv-{debugTab}", "crowd-playerbar", "crowd-hint", "crowd-notice-row", "crowd-dock", "crowd-dock-body", "crowd-telemetry" })
+            Assert.That(ui.Visible(id), Is.True, $"#{id} 应可见");
+        Assert.That(ui.Text("crowd-m-units"), Is.EqualTo(scenario.Units.ToString("#,0", CultureInfo.InvariantCulture)));
 
         var hidden = new List<double>();
         var visible = new List<double>();
@@ -111,7 +113,7 @@ public sealed class CrowdHud50KUiPathTests
         double hiddenSpread = Percentile(hidden, 0.75) - Percentile(hidden, 0.25);
         double noise = Math.Max(0.5, Math.Max(hiddenSpread, hiddenMedian * 0.10));
         string line =
-            $"50k HUD ui-path: tickMedian hidden={hiddenMedian:F3}ms visible={visibleMedian:F3}ms noise={noise:F3}ms " +
+            $"50k HUD ui-path [{debugTab}]: tickMedian hidden={hiddenMedian:F3}ms visible={visibleMedian:F3}ms noise={noise:F3}ms " +
             $"hudFrame median={Median(hudFrameMs):F3}ms p95={Percentile(hudFrameMs, 0.95):F3}ms max={hudFrameMs.Max():F3}ms " +
             $"nonSampleFrames={nonSampleFrames} nonSampleAlloc={nonSampleAlloc} sampleFrames={sampleFrames} sampleAllocAvg={(sampleFrames > 0 ? sampleAlloc / sampleFrames : 0)} " +
             $"composes={ui.Controller.ComposeCount - composes0} renders={ui.Renders - renders0} lastComposeMs={ui.Controller.LastComposeMs:F3} " +
@@ -131,7 +133,7 @@ public sealed class CrowdHud50KUiPathTests
 
         Assert.That(nonSampleFrames, Is.GreaterThan(0), "没量到非采样帧");
         Assert.That(sampleFrames, Is.GreaterThan(0), "没量到采样帧");
-        Assert.That(feed.NavReads, Is.GreaterThan(0));
+        Assert.That(debugTab == "cache" ? feed.NavReads : feed.InspectReads, Is.GreaterThan(0));
         Assert.That(feed.TelemetryReads, Is.GreaterThan(0));
         Assert.That(feed.PlayerReads, Is.GreaterThan(0));
         Assert.That(nonSampleAlloc, Is.EqualTo(0L), $"非采样帧分配了 {nonSampleAlloc} 字节");
@@ -248,28 +250,6 @@ public sealed class CrowdHud50KUiPathTests
         stats.Gc2 = GC.CollectionCount(2) - gc2;
         stats.Composes = ui.Controller.ComposeCount - composes0;
         return stats;
-    }
-
-    /// <summary>
-    /// 火花线的八级方块字不在首选字体里，走回退字体；回退查找第一次见到某个字会分配一次（填字体缓存）。
-    /// 预热时火花线历史还短，八级不一定都出现过，所以按火花线节点的样式把整套字量一遍，之后才算稳态。
-    /// </summary>
-    private static void WarmSparkGlyphs(CrowdHudTestHost ui)
-    {
-        UiNode spark = FindByClass(ui.Find(CrowdHudView.RootId)!, "crowd-spark")
-            ?? throw new AssertionException("预热后遥测面板里应已有火花线");
-        ui.TextMeasurer.MeasureWidth(CrowdHudController.SparkBlocks, spark.Style);
-    }
-
-    private static UiNode? FindByClass(UiNode node, string className)
-    {
-        if (node.HasClass(className)) return node;
-        for (int i = 0; i < node.Children.Count; i++)
-        {
-            if (FindByClass(node.Children[i], className) is { } found) return found;
-        }
-
-        return null;
     }
 
     private static double Tick(CrowdSimSession session, CrowdReferenceScript reference, Stopwatch watch)

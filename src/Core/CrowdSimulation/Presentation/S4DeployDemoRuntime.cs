@@ -72,25 +72,14 @@ public sealed class S4DeployDemoRuntime
     public bool Active { get; set; } = true;
     public int ViewMode { get; private set; }
     public CrowdClickTool Tool { get; private set; }
-    public bool BuildMode => Tool == CrowdClickTool.Structure;
     public int TemplateIndex { get; private set; }
     public bool PlaybackHeld { get; private set; }
     public int SpeedPermille { get; private set; } = TimeFlowService.DefaultScalePermille;
     public int BoomRadiusCm { get; private set; }
     public Fix64 BlastRingScale { get; private set; }
-    public string TickHzWindow { get; private set; } = string.Empty;
     public bool HasSpanAnchor { get; private set; }
     public int SpanAnchorX { get; private set; }
     public int SpanAnchorY { get; private set; }
-    public string ToolLabel => Tool switch
-    {
-        CrowdClickTool.Off => "关闭",
-        CrowdClickTool.Boom => "爆炸",
-        CrowdClickTool.Spawn => "生成",
-        CrowdClickTool.Structure => "结构",
-        CrowdClickTool.Demolish => "拆除",
-        _ => throw new InvalidOperationException($"未知点击工具 {Tool}。"),
-    };
     /// <summary>现场指令已进入本次会话(自动回放停用;会话重激活时随运行时一起复位)。</summary>
     public bool InteractiveMode { get; private set; }
 
@@ -110,15 +99,18 @@ public sealed class S4DeployDemoRuntime
     private int _viewModeCount = 3;
     public PaletteChoice Choice => _choices[TemplateIndex];
     public int StructureCount => _choices.Length;
+    internal IReadOnlyList<PaletteChoice> Choices => _choices;
+    internal CrowdDebugRates? Rates => _rates;
     public string SelectActionAt(int index) => _choices[index].SelectAction;
     public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
 
-    public void UseViewLabels(string[] labels)
+    internal void UseViewLabels(CrowdViewCatalog catalog)
     {
-        if (labels == null || labels.Length == 0)
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (catalog.Length == 0)
             throw new InvalidOperationException("部署演示视图名至少一条。");
-        _viewLabels = labels;
-        _viewModeCount = labels.Length;
+        _viewLabels = catalog.Labels;
+        _viewModeCount = catalog.Length;
     }
 
     public void UsePalette(PaletteChoice[] choices)
@@ -141,7 +133,6 @@ public sealed class S4DeployDemoRuntime
         _avoidMin = Fix64.FromDouble(rates.AvoidHzMin);
         _avoidMax = Fix64.FromDouble(rates.AvoidHzMax);
         _avoidStep = Fix64.FromDouble(rates.AvoidStep);
-        TickHzWindow = rates.TickWindowText;
         _speedIndex = IndexOfSpeed(tools.SpeedStepsPermille, TimeFlowService.DefaultScalePermille);
         SpeedPermille = tools.SpeedStepsPermille[_speedIndex];
         ApplyPlaceEntry();
@@ -157,6 +148,7 @@ public sealed class S4DeployDemoRuntime
             ClearSpan();
         }
 
+        _tools?.ResolveSpawn(session.Config);
         session.PlaybackHeld = PlaybackHeld;
     }
 
@@ -295,6 +287,22 @@ public sealed class S4DeployDemoRuntime
     private void SubmitSpawnAt(int xCm, int yCm)
     {
         CrowdDebugTools tools = RequireTools();
+        int unitType;
+        int radius;
+        if (ClickSpawnUnitType is int clickUnit && ClickSpawnRadiusClass is int clickRadius)
+        {
+            unitType = clickUnit;
+            radius = clickRadius;
+        }
+        else
+        {
+            if (!TrySession(out CrowdSimSession session))
+                throw new InvalidOperationException("部署演示还没有会话，不能解析生成模板。");
+            tools.ResolveSpawn(session.Config);
+            unitType = tools.ResolvedUnitType;
+            radius = tools.ResolvedRadiusClass;
+        }
+
         SubmitInteractive(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.SpawnAt,
@@ -302,8 +310,8 @@ public sealed class S4DeployDemoRuntime
             XCm = xCm,
             YCm = yCm,
             Count = ClickSpawnCount ?? tools.SpawnCount,
-            UnitType = ClickSpawnUnitType ?? tools.SpawnUnitType,
-            RIdx = ClickSpawnRadiusClass ?? tools.SpawnRadiusClass,
+            UnitType = unitType,
+            RIdx = radius,
         });
     }
 

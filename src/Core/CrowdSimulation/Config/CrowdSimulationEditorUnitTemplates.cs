@@ -120,8 +120,7 @@ public static partial class CrowdSimulationEditorApi
             Opened full,
             string modId,
             JsonArray mergedTemplates,
-            JsonArray mergedProfiles,
-            JsonObject traversal)
+            JsonArray mergedProfiles)
         {
             var schema = new JsonArray();
             foreach (CrowdUnitTemplateField field in CrowdUnitTemplateFacts.AuthoredFields)
@@ -138,15 +137,6 @@ public static partial class CrowdSimulationEditorApi
             foreach (string name in AgentProfileBodyFields)
             {
                 profileSchema.Add(new JsonObject { ["name"] = name, ["kind"] = "number" });
-            }
-
-            var agentTypes = new JsonArray();
-            if (traversal["agentTypes"] is JsonObject agents)
-            {
-                foreach (KeyValuePair<string, JsonNode?> agent in agents)
-                {
-                    agentTypes.Add(agent.Key);
-                }
             }
 
             FieldStamps profileStamps = FieldStamps.Collect(full, AgentProfilesFile);
@@ -170,7 +160,6 @@ public static partial class CrowdSimulationEditorApi
                 ["component"] = CrowdUnitTemplateFacts.ComponentName,
                 ["fields"] = schema,
                 ["profileFields"] = profileSchema,
-                [CrowdUnitTemplateFacts.AgentTypesReference] = agentTypes,
                 [CrowdUnitTemplateFacts.AgentProfilesReference] = profileList,
                 ["items"] = new JsonArray(),
                 ["issues"] = new JsonArray(),

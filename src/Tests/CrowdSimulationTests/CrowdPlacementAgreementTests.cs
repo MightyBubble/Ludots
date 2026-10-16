@@ -50,7 +50,7 @@ public sealed class CrowdPlacementAgreementTests
         int hoverX = free.X * cell + cell / 2;
         int hoverY = free.Y * cell + cell / 2;
         var demo = new S4DeployDemoRuntime(null);
-        demo.UseViewLabels(new[] { "路线" });
+        demo.UseViewLabels(CrowdViewCatalog.Named(("route", "路线")));
         demo.UsePalette(new[]
         {
             new S4DeployDemoRuntime.PaletteChoice("building", "building", "建筑", CrowdPlacementGesture.Point, cell, 0, 0, "CrowdSimulation.S4.Template1"),
@@ -74,7 +74,7 @@ public sealed class CrowdPlacementAgreementTests
         Assert.That(reason, Is.EqualTo(CrowdPlacementReject.None));
         Assert.That(count, Is.GreaterThan(0));
         Assert.That(routes.Polylines.Count, Is.EqualTo(count));
-        var legal = CrowdPresentationConfig.Rgba(new[] { 89, 230, 115, 242 }, "deploy.placeLegal");
+        var legal = CrowdPresentationConfig.Rgba(TestRgba(89, 230, 115, 242), "deploy.placeLegal");
         for (int i = 0; i < count; i++)
         {
             Assert.That(routes.Polylines[i].PointsMeters.Length, Is.EqualTo(5));
@@ -85,7 +85,7 @@ public sealed class CrowdPlacementAgreementTests
         system.Update(0f);
         reason = CrowdStructurePlacement.Judge(store, template, footprint, ref cells, ref flags, out count);
         Assert.That(reason, Is.EqualTo(CrowdPlacementReject.OverlapsBlocked));
-        var illegal = CrowdPresentationConfig.Rgba(new[] { 255, 77, 64, 242 }, "deploy.placeIllegal");
+        var illegal = CrowdPresentationConfig.Rgba(TestRgba(255, 77, 64, 242), "deploy.placeIllegal");
         int illegalCells = 0;
         for (int i = 0; i < routes.Polylines.Count; i++)
         {
@@ -101,7 +101,7 @@ public sealed class CrowdPlacementAgreementTests
         using (var ui = new CrowdHudTestHost())
         {
             ui.Frame(feed);
-            Assert.That(ui.Text("crowd-keys"), Does.Contain("(压到阻挡格)"));
+            Assert.That(ui.Text("crowd-tool-hint"), Does.Contain("(压到阻挡格)"));
         }
 
         for (int i = 0; i < 4; i++)
@@ -210,9 +210,8 @@ public sealed class CrowdPlacementAgreementTests
 
     private static CrowdPresentationConfig Presentation() => new()
     {
-        Kind = CrowdPresentationConfig.KindDeploy,
         Title = "放置",
-        ViewLabels = new[] { "路线" },
+        ViewLabels = CrowdViewCatalog.Named(("route", "路线")),
         Hud = new CrowdHudConfig
         {
             Keys = "{activity}",
@@ -236,11 +235,14 @@ public sealed class CrowdPlacementAgreementTests
             PlaceOverlapsBlocked = "(压到阻挡格)",
             PlaceInteriorArea = "(跨越段地形不可放)",
             PlaceEndpointArea = "(桥端不可锚)",
-            PlaceLegal = new[] { 89, 230, 115, 242 },
-            PlaceIllegal = new[] { 255, 77, 64, 242 },
-            PlaceEndpoint = new[] { 255, 214, 64, 242 },
-            PlacePortal = new[] { 64, 196, 255, 242 },
+            PlaceLegal = TestRgba(89, 230, 115, 242),
+            PlaceIllegal = TestRgba(255, 77, 64, 242),
+            PlaceEndpoint = TestRgba(255, 214, 64, 242),
+            PlacePortal = TestRgba(64, 196, 255, 242),
             PendingNav = "",
         },
     };
+
+    private static CrowdDebugRgba TestRgba(int r, int g, int b, int a) =>
+        new() { Red = r, Green = g, Blue = b, Alpha = a };
 }

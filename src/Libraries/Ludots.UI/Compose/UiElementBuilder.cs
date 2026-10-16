@@ -863,9 +863,21 @@ public sealed class UiElementBuilder
 				builder.Attribute(attribute.Key, attribute.Value);
 			}
 		}
-		if (!string.IsNullOrWhiteSpace(element.TextContent))
+		if (element.TextBinding != null)
+		{
+			builder.Text(element.TextBinding);
+		}
+		else if (!string.IsNullOrWhiteSpace(element.TextContent))
 		{
 			builder.Text(element.TextContent);
+		}
+		if (element.CanvasContent != null)
+		{
+			builder.CanvasContent(element.CanvasContent);
+		}
+		if (element.ClickHandler != null)
+		{
+			builder.OnClick(element.ClickHandler);
 		}
 		if (element.InlineStyle.Count > 0)
 		{

@@ -36,8 +36,7 @@ public static class CrowdFogAcceptance
             throw new InvalidOperationException("UAT-FOG: 敌方和观察方在同一个视野组。");
 
         int count = Int(scene, "spawnCount");
-        int unitType = Int(scene, "unitType");
-        int rIdx = Int(scene, "rIdx");
+        var (unitType, rIdx) = Unit(session, scene);
         string shape = Text(scene, "orderShape");
         int visionTicks = Int(scene, "visionTicks");
         int travelTicks = Int(scene, "travelTicks");
@@ -146,8 +145,7 @@ public static class CrowdFogAcceptance
         var fog = session.Fog ?? throw new InvalidOperationException("UAT-FOG-03: 会话没有迷雾。");
         session.BlockOnDueReplies = true;
         int viewer = Int(scene, "viewerPlayer");
-        int unitType = Int(scene, "unitType");
-        int rIdx = Int(scene, "rIdx");
+        var (unitType, rIdx) = Unit(session, scene);
         Spawn(session, viewer, Int(scene, "viewerXCm"), Int(scene, "viewerYCm"), Int(scene, "spawnCount"), unitType, rIdx);
         Step(session, Int(scene, "visionTicks"));
         int layer = session.Config.UnitTypes[unitType].AgentTypeIndex;
@@ -338,6 +336,9 @@ public static class CrowdFogAcceptance
             if (session.Step(out _)) ran++;
         }
     }
+
+    private static (int UnitType, int RadiusIndex) Unit(CrowdSimSession session, JsonObject scene)
+        => CrowdDeployment.LocateTemplate(session.Config, Text(scene, "template"));
 
     private static int Int(JsonObject scene, string key)
     {

@@ -33,7 +33,7 @@ public sealed class CrowdCommandQueueGateTests
             var bad = new JsonObject
             {
                 ["type"] = "spawnAt", ["player"] = badPlayer, ["xCm"] = 0, ["yCm"] = 0,
-                ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0,
+                ["count"] = 1, ["template"] = "crowd_simulation.unit.infantry.r100",
             };
             Assert.Throws<InvalidOperationException>(
                 () => session.Commands.Submit<object?>(session, bad, CrowdSimCommands.Exec),
@@ -152,11 +152,11 @@ public sealed class CrowdCommandQueueGateTests
         var (_, session) = S4DeployTruthTests.BuildSession("s1337");
         var bad = new JsonNode[]
         {
-            new JsonObject { ["type"] = "spawnAt", ["player"] = "1", ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
-            new JsonObject { ["type"] = "spawnAt", ["player"] = 1.5, ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
-            new JsonObject { ["type"] = "spawnAt", ["player"] = new JsonArray(1), ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
-            new JsonObject { ["type"] = "spawnAt", ["player"] = true, ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["unitType"] = 0, ["rIdx"] = 0 },
-            JsonNode.Parse("""{"type":"spawnAt","player":"1","xCm":0,"yCm":0,"count":1,"unitType":0,"rIdx":0}""")!,
+            new JsonObject { ["type"] = "spawnAt", ["player"] = "1", ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["template"] = "crowd_simulation.unit.infantry.r100" },
+            new JsonObject { ["type"] = "spawnAt", ["player"] = 1.5, ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["template"] = "crowd_simulation.unit.infantry.r100" },
+            new JsonObject { ["type"] = "spawnAt", ["player"] = new JsonArray(1), ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["template"] = "crowd_simulation.unit.infantry.r100" },
+            new JsonObject { ["type"] = "spawnAt", ["player"] = true, ["xCm"] = 0, ["yCm"] = 0, ["count"] = 1, ["template"] = "crowd_simulation.unit.infantry.r100" },
+            JsonNode.Parse("""{"type":"spawnAt","player":"1","xCm":0,"yCm":0,"count":1,"template":"crowd_simulation.unit.infantry.r100"}""")!,
             JsonNode.Parse("""{"type":"order","player":1,"xCm":0,"yCm":0,"members":[1.5]}""")!,
         };
 
@@ -190,5 +190,23 @@ public sealed class CrowdCommandQueueGateTests
                 CrowdSimCommands.Exec);
             Assert.That(fogSession.Commands.Log, Has.Count.EqualTo(1), "整数字段的好指令照常记日志");
         });
+    }
+
+    [Test]
+    public void SpawnAt_UnknownTemplate_RejectedAtEnqueue()
+    {
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        var missing = JsonNode.Parse(
+            """{"type":"spawnAt","player":1,"xCm":0,"yCm":0,"count":1,"template":"missing.unit"}""")!;
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => session.Commands.Submit<object?>(session, missing, CrowdSimCommands.Exec));
+        Assert.That(ex!.Message, Does.Contain("missing.unit"));
+        Assert.That(session.Commands.Log, Is.Empty);
+        Assert.That(session.Commands.PendingCount, Is.EqualTo(0));
+
+        var unknownField = JsonNode.Parse(
+            """{"type":"spawnAt","player":1,"xCm":0,"yCm":0,"count":1,"template":"crowd_simulation.unit.infantry.r100","unitType":0}""")!;
+        var field = Assert.Throws<InvalidOperationException>(() => CrowdSimCommand.Parse(unknownField));
+        Assert.That(field!.Message, Does.Contain("unitType"));
     }
 }

@@ -146,12 +146,13 @@ public sealed class S3PathDemoRuntime : IDisposable
     public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
     public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }
     public void EnqueueCycleThreads() { lock (_inputGate) _inputQueue.Enqueue(() => Service.SetWorkerCount(Service.WorkerCount == 1 ? 2 : Service.WorkerCount == 2 ? 4 : 1)); }
-    public void UseViewLabels(string[] labels)
+    internal void UseViewLabels(CrowdViewCatalog catalog)
     {
-        if (labels == null || labels.Length == 0)
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (catalog.Length == 0)
             throw new InvalidOperationException("路径演示视图名至少一条。");
-        _viewLabels = labels;
-        _viewModeCount = labels.Length;
+        _viewLabels = catalog.Labels;
+        _viewModeCount = catalog.Length;
     }
 
     public void EnqueueCycleView() { lock (_inputGate) _inputQueue.Enqueue(() => ViewMode = (ViewMode + 1) % _viewModeCount); }

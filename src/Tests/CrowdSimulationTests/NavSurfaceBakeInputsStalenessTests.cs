@@ -16,7 +16,7 @@ namespace CrowdSimulationTests;
 public class NavSurfaceBakeInputsStalenessTests
 {
     private const string Seed = "s1337";
-    private const string StaleMessage = "烘焙输入和当前配置不一致，重烘";
+    private const string StaleMessage = "指纹不符，用 nav bake-crowd-navsurface 重烘";
 
     [Test]
     public void UnchangedInputs_Activate()

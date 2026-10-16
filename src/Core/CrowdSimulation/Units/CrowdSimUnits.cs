@@ -19,7 +19,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
-/// <summary>一次单位生成的实例输入。带单位类型、半径级、组、玩家、档案下标、代理类型下标和出生位置。速度等档案不在这条请求上。</summary>
+/// <summary>一次单位生成的实例输入。带单位类型、半径级、组、玩家、档案下标、代理类型下标、出生位置和算出的个人半径。速度仍在模板上。</summary>
 public readonly record struct CrowdUnitSpawnRequest(
     Fix64 XCm,
     Fix64 YCm,
@@ -28,6 +28,7 @@ public readonly record struct CrowdUnitSpawnRequest(
     int GroupId,
     int PlayerId,
     Fix64 RadiusCm,
+    Fix64 PersonalRadiusCm,
     int ProfileIndex,
     int AgentTypeIndex);
 
@@ -211,6 +212,7 @@ public sealed class CrowdSimUnits
             ProfileIndex = unit.ProfileIndex,
             AgentTypeIndex = unit.AgentTypeIndex,
             RadiusCm = unit.RadiusCm,
+            PersonalRadiusCm = unit.PersonalRadiusCm,
             TemplateKeyId = templateKeyId,
             TemplateId = templateId,
             XCm = unit.XCm,
@@ -702,6 +704,7 @@ public sealed class CrowdSimUnits
         public int ProfileIndex;
         public int AgentTypeIndex;
         public Fix64 RadiusCm;
+        public Fix64 PersonalRadiusCm;
         public int TemplateKeyId;
         public string TemplateId;
         public Fix64 XCm;
@@ -758,6 +761,7 @@ public sealed class CrowdSimUnits
                     ref readonly PendingUnit pending = ref _units._pending[dense];
                     agents[componentIndex].ProfileIndex = pending.ProfileIndex;
                     agents[componentIndex].AgentTypeIndex = pending.AgentTypeIndex;
+                    agents[componentIndex].PersonalRadiusCm = pending.PersonalRadiusCm;
                     states[componentIndex] = new CrowdSimulationUnitState
                     {
                         Slot = pending.Slot,
@@ -789,6 +793,7 @@ public sealed class CrowdSimUnits
             ref CrowdSimulationAgent agent = ref world.Get<CrowdSimulationAgent>(entity);
             agent.ProfileIndex = pending.ProfileIndex;
             agent.AgentTypeIndex = pending.AgentTypeIndex;
+            agent.PersonalRadiusCm = pending.PersonalRadiusCm;
             SetOrAdd(world, entity, new CrowdSimulationUnitState
             {
                 Slot = pending.Slot,

@@ -90,16 +90,6 @@ public sealed class CrowdTraversalConfig
         {
             string path = $"areas.{id}";
             JsonObject area = RequireEntryObject(node, path);
-            if (area.ContainsKey("slopeFree"))
-            {
-                throw Error($"{path}.slopeFree 已改名为 ignoresSlope。");
-            }
-
-            if (area.ContainsKey("areaId"))
-            {
-                throw Error($"{path}.areaId 已删除。区域下标就是 areas 合并后的属性顺序。");
-            }
-
             RequireOnly(area, path, "ignoresSlope");
             areaIndex.Add(id, areas.Count);
             areas.Add(new TraversalArea(id, RequireBool(area, "ignoresSlope", path)));
@@ -222,11 +212,6 @@ public sealed class CrowdTraversalConfig
             if (node is not JsonObject cell)
             {
                 throw Error($"{cellPath} 只能是 false 或对象。");
-            }
-
-            if (cell.ContainsKey("passable"))
-            {
-                throw Error($"{cellPath}.passable 已删除。不可通行整格写 false。");
             }
 
             RequireOnly(cell, cellPath, "cost", "speedDivisor", "depart", "arrive");
