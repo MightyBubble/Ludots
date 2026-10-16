@@ -8,7 +8,6 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Scripting;
-using Ludots.UI.Runtime;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -44,7 +43,7 @@ public sealed class CrowdHudAllocTests
         host.Frame(feed);
         host.FrameAfterAllPeriods(feed);
         host.FrameAfterAllPeriods(feed);
-        Assert.That(host.Text("crowd-status-line"), Does.Contain("tick"));
+        Assert.That(host.Text("crowd-hint-text"), Does.StartWith("左键框选"));
         int composes = host.Controller.ComposeCount;
         int renders = host.Renders;
         int reads = feed.DeployReads;
@@ -103,7 +102,7 @@ public sealed class CrowdHudAllocTests
     }
 
     [Test]
-    public void UiHud_TelemetryAlertFlip_RewritesBadgeWithoutComposeOrAllocation()
+    public void UiHud_TelemetryAlertFlip_MovesValueToAlertSpanWithoutComposeOrAllocation()
     {
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         var feed = DeployFeed(new S4DeployDemoRuntime(null), () => session);
@@ -114,41 +113,29 @@ public sealed class CrowdHudAllocTests
         session.PublishTelemetryFrame(stalled: false, tickMs: 1);
         host.Frame(feed);
         for (int i = 0; i < 3; i++) host.FrameAfterAllPeriods(feed);
-        string simRow = "crowd-tel-" + CrowdHudState.SimLine;
-        Assert.That(host.Text(simRow), Does.StartWith("Sim 1.0 ms").And.Not.Contain(CrowdHudFormat.AlertLabel));
+        Assert.That(host.Text("crowd-m-sim"), Is.EqualTo("1.00"));
+        Assert.That(host.Text("crowd-m-sim-alert"), Is.Empty);
+        Assert.That(host.Find("crowd-m-sim-alert")!.HasClass("nf-bad"), Is.True, "告警格固定是红色，换色靠换格子而不是改 class");
         int composes = host.Controller.ComposeCount;
 
         session.PublishTelemetryFrame(stalled: false, tickMs: 40);
         long first = AllocatedBy(() => host.FrameAfterAllPeriods(feed));
-        Assert.That(host.Text(simRow), Does.Contain("Sim 40.0 ms").And.Contain(CrowdHudFormat.AlertLabel));
-        Assert.That(host.Controller.ComposeCount, Is.EqualTo(composes), "越线只改角标绑定，不该重组页面");
-        UiRect row = host.Rect(simRow);
-        UiRect badge = AlertBadge(host, simRow).LayoutRect;
-        Assert.That(badge.Width, Is.GreaterThan(0f));
-        Assert.That(badge.Right, Is.EqualTo(row.Right).Within(0.5f), "角标贴本行右上角");
-        Assert.That(badge.Y, Is.InRange(row.Y, row.Y + 2f), "角标贴本行右上角");
+        Assert.That(host.Text("crowd-m-sim"), Is.Empty);
+        Assert.That(host.Text("crowd-m-sim-alert"), Is.EqualTo("40.00"));
+        Assert.That(host.Controller.ComposeCount, Is.EqualTo(composes), "越线只换写入的格子，不该重组页面");
+        Assert.That(host.Rect("crowd-m-sim-alert").Width, Is.GreaterThan(0f));
+        Assert.That(host.Rect("crowd-m-sim").Width, Is.EqualTo(0f).Within(0.01f), "空的常规格不占宽");
 
         session.PublishTelemetryFrame(stalled: false, tickMs: 1);
         long clear = AllocatedBy(() => host.FrameAfterAllPeriods(feed));
-        Assert.That(host.Text(simRow), Does.Not.Contain(CrowdHudFormat.AlertLabel));
+        Assert.That(host.Text("crowd-m-sim-alert"), Is.Empty);
         Assert.That(host.Controller.ComposeCount, Is.EqualTo(composes));
 
         session.PublishTelemetryFrame(stalled: false, tickMs: 40);
         long again = AllocatedBy(() => host.FrameAfterAllPeriods(feed));
-        Assert.That(host.Text(simRow), Does.Contain(CrowdHudFormat.AlertLabel));
+        Assert.That(host.Text("crowd-m-sim-alert"), Is.EqualTo("40.00"));
         Assert.That(host.Controller.ComposeCount, Is.EqualTo(composes));
         Assert.That(clear + again, Is.EqualTo(0L), $"告警来回翻转分配了 清除 {clear} / 再越线 {again} 字节（首次越线 {first} 字节）");
-    }
-
-    private static UiNode AlertBadge(CrowdHudTestHost host, string rowId)
-    {
-        UiNode row = host.Find(rowId)!;
-        for (int i = 0; i < row.Children.Count; i++)
-        {
-            if (row.Children[i].HasClass("crowd-alert")) return row.Children[i];
-        }
-
-        throw new AssertionException($"#{rowId} 里没有告警角标");
     }
 
     private static long AllocatedBy(Action body)
@@ -189,7 +176,7 @@ public sealed class CrowdHudAllocTests
         ViewLabels = new[] { "路线", "可走", "线框" },
         Hud = new CrowdHudConfig
         {
-            Keys = "V 视图 {view} · 模板[{templateIndex}] · {activity}{pending}",
+            Keys = "左键框选 · 右键移动 · 视图 {view}",
         },
         Deploy = new CrowdDeployPresentation
         {
@@ -200,8 +187,8 @@ public sealed class CrowdHudAllocTests
                 Remove = "CrowdSimulation.S4.RemoveStructure",
                 Place = "CrowdSimulation.S4.Place",
             },
-            BuildActivity = "建造模式 · {label}{placeHint}",
-            ObserveActivity = "观察模式",
+            BuildActivity = "左键点击地图：放置{label}{placeHint}",
+            ObserveActivity = "左键点击 = 清除选择",
             PlaceOk = "(此处可放)",
             PlaceBlocked = "(此处不可放)",
             PlaceOffMap = "(光标不在地图上)",

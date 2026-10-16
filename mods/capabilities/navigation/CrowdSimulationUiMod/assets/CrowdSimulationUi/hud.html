@@ -17,7 +17,7 @@
             <span class="nf-section-title">阵型</span>
             <span id="crowd-order-mode" class="nf-primary-text" ui-text="OrderMode"></span>
           </div>
-          <div id="crowd-formations" class="nf-seg nf-seg-4"></div>
+          <div id="crowd-formations" class="nf-seg"></div>
           <div id="crowd-magic" class="nf-switch-row nf-switch-row-tight" ui-click="ToggleMagicBox">
             <span class="nf-switch-label">Magic Box</span>
             <div id="crowd-magic-switch" class="nf-switch"><div class="nf-thumb"></div></div>
@@ -89,8 +89,8 @@
         <div id="crowd-dv-inspect" class="nf-section">
           <div class="nf-section-head"><span class="nf-section-title">DB-09 · 导航上下文检视</span></div>
           <div class="nf-stack-15">
-            <div id="crowd-inspect-layers" class="nf-seg nf-seg-3"></div>
-            <div id="crowd-inspect-radii" class="nf-seg nf-seg-4"></div>
+            <div id="crowd-inspect-layers" class="nf-seg"></div>
+            <div id="crowd-inspect-radii" class="nf-seg"></div>
           </div>
           <div class="nf-kv-list nf-mt-3">
             <div class="nf-kv"><span class="nf-label">着色</span><span class="nf-value" ui-text="InspectColor"></span></div>
@@ -341,10 +341,12 @@
           </div>
           <div class="nf-section">
             <div class="nf-section-head"><span class="nf-section-title">重烘焙分帧</span></div>
-            <div class="nf-seg nf-seg-3">
-              <button id="crowd-slice-1" class="nf-chip" ui-click="PickSlice1">关闭</button>
-              <button id="crowd-slice-2" class="nf-chip" ui-click="PickSlice2">2 帧</button>
-              <button id="crowd-slice-3" class="nf-chip" ui-click="PickSlice3">3 帧</button>
+            <div class="nf-seg">
+              <div class="nf-seg-row">
+                <button id="crowd-slice-1" class="nf-chip" ui-click="PickSlice1">关闭</button>
+                <button id="crowd-slice-2" class="nf-chip" ui-click="PickSlice2">2 帧</button>
+                <button id="crowd-slice-3" class="nf-chip" ui-click="PickSlice3">3 帧</button>
+              </div>
             </div>
             <span class="nf-label nf-para nf-mt-2">放置 / 移除实体时：第 1 帧重烘焙真实导航并同步认知，之后的帧依次做受影响单位的反应与重新规划。关闭 = 全部在同一帧完成。</span>
           </div>
@@ -476,10 +478,14 @@
           <div class="nf-section-head"><span class="nf-section-title">Agents</span></div>
           <canvas class="nf-bar-15" ui-canvas="AgentsBar"></canvas>
           <div class="nf-legend nf-mt-3">
-            <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-primary"></div><span class="nf-label">移动中</span></div><span class="nf-value" ui-text="AgentsMoving"></span></div>
-            <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-success"></div><span class="nf-label">已抵达</span></div><span class="nf-value" ui-text="AgentsArrived"></span></div>
-            <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-destructive"></div><span class="nf-label">不可达</span></div><span class="nf-value" ui-text="AgentsUnreachable"></span></div>
-            <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-muted"></div><span class="nf-label">待命</span></div><span class="nf-value" ui-text="AgentsIdle"></span></div>
+            <div class="nf-legend-row">
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-primary"></div><span class="nf-label">移动中</span></div><span class="nf-value" ui-text="AgentsMoving"></span></div>
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-success"></div><span class="nf-label">已抵达</span></div><span class="nf-value" ui-text="AgentsArrived"></span></div>
+            </div>
+            <div class="nf-legend-row">
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-destructive"></div><span class="nf-label">不可达</span></div><span class="nf-value" ui-text="AgentsUnreachable"></span></div>
+              <div class="nf-legend-item"><div class="nf-legend-key"><div class="nf-dot nf-dot-muted"></div><span class="nf-label">待命</span></div><span class="nf-value" ui-text="AgentsIdle"></span></div>
+            </div>
           </div>
         </div>
 

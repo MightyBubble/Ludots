@@ -289,16 +289,20 @@
 
 /* 分段选择与选项片 */
 .nf-seg {
-  display: grid;
   gap: 4px;
 }
 
-.nf-seg-3 {
-  grid-template-columns: repeat(3, 1fr);
+.nf-seg-row {
+  flex-direction: row;
+  gap: 4px;
 }
 
-.nf-seg-4 {
-  grid-template-columns: repeat(4, 1fr);
+.nf-seg-row > .nf-chip,
+.nf-seg-pad {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0px;
+  min-width: 0px;
 }
 
 .nf-chip {
@@ -487,7 +491,8 @@
   gap: 8px;
 }
 
-.nf-kv .nf-label {
+.nf-kv .nf-label,
+.nf-kv .nf-text {
   flex-shrink: 1;
   min-width: 0px;
 }
@@ -752,8 +757,21 @@
 }
 
 #crowd-hud.wide .nf-grid2 {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
+  flex-direction: row;
+}
+
+#crowd-hud.wide .nf-grid2 > .nf-section:first-child {
+  flex-grow: 3;
+  flex-shrink: 1;
+  flex-basis: 0px;
+  min-width: 0px;
+}
+
+#crowd-hud.wide .nf-grid2 > .nf-section:last-child {
+  flex-grow: 2;
+  flex-shrink: 1;
+  flex-basis: 0px;
+  min-width: 0px;
 }
 
 #crowd-hud.wide .nf-grid2.nf-hidden {
@@ -967,16 +985,22 @@
 }
 
 .nf-legend {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: 12px;
-  row-gap: 6px;
+  gap: 6px;
+}
+
+.nf-legend-row {
+  flex-direction: row;
+  gap: 12px;
 }
 
 .nf-legend-item {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0px;
+  min-width: 0px;
 }
 
 .nf-legend-key {

@@ -687,7 +687,6 @@ internal sealed class CrowdPlayerViewHost
         return count;
     }
 
-    internal CrowdPlayerViewLabels Labels => _config.Labels;
 
     internal CrowdPlayerViewConfig ViewConfig => _config;
 

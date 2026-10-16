@@ -117,6 +117,24 @@ internal sealed class CrowdShowcaseHost : IDisposable
         return sb.ToString();
     }
 
+    public UiNode HudNode(string elementId)
+    {
+        if (Ui.IsDirty) Ui.Render();
+        return UiHost.Scene?.FindByElementId(elementId)
+            ?? throw new InvalidOperationException($"UI 文档里没有 #{elementId}。");
+    }
+
+    /// <summary>节点及祖先都没有 nf-hidden。</summary>
+    public bool HudVisible(string elementId)
+    {
+        for (UiNode? node = HudNode(elementId); node != null; node = node.Parent)
+        {
+            if (node.HasClass("nf-hidden")) return false;
+        }
+
+        return true;
+    }
+
     private static void AppendText(UiNode node, StringBuilder sb)
     {
         if (!string.IsNullOrEmpty(node.TextContent))

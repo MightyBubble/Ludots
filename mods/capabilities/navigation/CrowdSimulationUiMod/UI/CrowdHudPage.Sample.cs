@@ -338,7 +338,7 @@ internal sealed partial class CrowdHudPage
         Mark(_overlaySwitches[11].Set(r.Links));
     }
 
-    private void WriteNav(in CrowdNavReadout r)
+    internal void WriteNav(in CrowdNavReadout r)
     {
         if (r.HasTileCache)
         {
@@ -389,7 +389,7 @@ internal sealed partial class CrowdHudPage
 
     private static double HitRatio(int hits, int misses) => hits + misses > 0 ? hits / (double)(hits + misses) : 0d;
 
-    private void WriteTelemetry(in CrowdTelemetryReadout r, double fps, double frameMs, double renderMs, double uiPeak, double composeMs, double heapPerSec)
+    internal void WriteTelemetry(in CrowdTelemetryReadout r, double fps, double frameMs, double renderMs, double uiPeak, double composeMs, double heapPerSec)
     {
         CrowdHudAlerts a = _settings.Alerts;
         bool lowFps = !double.IsNaN(fps) && fps < a.LowFps;

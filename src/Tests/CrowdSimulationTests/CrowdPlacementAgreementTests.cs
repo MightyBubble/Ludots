@@ -101,7 +101,7 @@ public sealed class CrowdPlacementAgreementTests
         using (var ui = new CrowdHudTestHost())
         {
             ui.Frame(feed);
-            Assert.That(ui.Text("crowd-keys"), Does.Contain("(压到阻挡格)"));
+            Assert.That(ui.Text("crowd-tool-hint"), Does.Contain("(压到阻挡格)"));
         }
 
         for (int i = 0; i < 4; i++)

@@ -55,7 +55,6 @@ public sealed class CrowdHudFeed
 
     public CrowdHudKind Kind { get; }
     public CrowdHudText Text { get; }
-    public CrowdPlayerViewLabels? PlayerLabels => _playerView?.Labels;
     public bool HasDebugView => _debugView != null;
     public bool HasPlayerView => _playerView != null;
     public bool NavPanelOpen => _debugView is { NavPanel: true };
@@ -131,16 +130,14 @@ public sealed class CrowdHudFeed
         CrowdSimSession? session = _session();
         CrowdSimulationRuntime? runtime = _runtime();
         hud.Tool = demo.Tool;
-        hud.ToolLabel = demo.ToolLabel;
-        hud.BuildMode = demo.BuildMode;
         hud.PlaybackHeld = demo.PlaybackHeld;
         hud.SpeedPermille = demo.SpeedPermille;
         hud.HasSpanAnchor = demo.HasSpanAnchor;
-        hud.TickHzWindow = demo.TickHzWindow;
         hud.ViewMode = demo.ViewMode;
         hud.ViewLabel = demo.ViewLabel;
         hud.TemplateIndex = demo.TemplateIndex;
         hud.TemplateLabel = demo.Choice.Label;
+        hud.TemplateTwoPoint = demo.Choice.Gesture == CrowdPlacementGesture.TwoPoint;
         hud.Interactive = demo.InteractiveMode;
         hud.PreviewKnown = session != null && _previewKnown;
         hud.PreviewShown = hud.PreviewKnown && _previewShown;
@@ -286,17 +283,12 @@ public sealed class CrowdHudFeed
         hud.HasRebake = report != null;
         if (report == null)
         {
-            hud.RebakeExecTick = hud.RebakeReportTick = 0;
-            hud.RebakeIsPlace = false;
             hud.RebakeTiles = hud.RebakeCostOnly = hud.RebakeContexts = 0;
             hud.RebakeHits = hud.RebakeMisses = hud.RebakeOrders = hud.RebakeEvicted = hud.RebakeStuck = 0;
             hud.RebakeMs = 0;
             return;
         }
 
-        hud.RebakeExecTick = report.ExecTick;
-        hud.RebakeReportTick = report.ReportTick;
-        hud.RebakeIsPlace = report.Kind == CrowdRebakeReport.KindPlace;
         hud.RebakeTiles = report.Tiles;
         hud.RebakeCostOnly = report.CostOnly;
         hud.RebakeContexts = report.Contexts;

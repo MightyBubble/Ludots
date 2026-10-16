@@ -12,6 +12,9 @@ namespace CrowdSimulationUiMod.UI;
 internal sealed partial class CrowdHudPage
 {
     private const string IconFill = "#3c3934";
+    private const int FormationColumns = 4;
+    private const int InspectLayerColumns = 3;
+    private const int InspectRadiusColumns = 4;
 
     private static readonly string[] ShapePaths =
     [
@@ -81,8 +84,10 @@ internal sealed partial class CrowdHudPage
         for (int i = 0; i < c.Formations.Count; i++)
         {
             int index = i;
-            _formationChips.Add(Chip(formations, $"""<button class="nf-chip">{Html(c.Formations[i])}</button>""", "nf-chip-on", () => PickFormation(index)));
+            _formationChips.Add(Chip(SegRow(formations, i, FormationColumns), $"""<button class="nf-chip">{Html(c.Formations[i])}</button>""", "nf-chip-on", () => PickFormation(index)));
         }
+
+        PadSeg(formations, c.Formations.Count, FormationColumns);
 
         int types = Math.Min(c.UnitTypes.Count, MaxUnitTypes);
         for (int t = 0; t < types; t++)
@@ -105,17 +110,21 @@ internal sealed partial class CrowdHudPage
         for (int i = 0; i < c.AgentTypes.Count; i++)
         {
             int index = i;
-            _inspectLayerChips.Add(Chip(inspectLayers, $"""<button class="nf-chip">{Html(c.AgentTypes[i])}</button>""", "nf-chip-on", () => PickInspectLayer(index)));
+            _inspectLayerChips.Add(Chip(SegRow(inspectLayers, i, InspectLayerColumns), $"""<button class="nf-chip">{Html(c.AgentTypes[i])}</button>""", "nf-chip-on", () => PickInspectLayer(index)));
         }
+
+        PadSeg(inspectLayers, c.AgentTypes.Count, InspectLayerColumns);
 
         for (int r = 0; r < c.RadiusCm.Count; r++)
         {
             int index = r;
             string cm = c.RadiusCm[r].ToString(CrowdHudFormat.Inv);
-            _inspectRadiusChips.Add(Chip(inspectRadii, $"""<button class="nf-chip">{cm}</button>""", "nf-chip-on", () => PickInspectRadius(index)));
+            _inspectRadiusChips.Add(Chip(SegRow(inspectRadii, r, InspectRadiusColumns), $"""<button class="nf-chip">{cm}</button>""", "nf-chip-on", () => PickInspectRadius(index)));
             _deployRadiusChips.Add(Chip(deployRadii, $"""<button class="nf-chip nf-chip-sm nf-chip-num">{cm}</button>""", "nf-chip-on", () => PickDeployRadius(index)));
             _spawnRadiusChips.Add(Chip(spawnRadii, $"""<button class="nf-chip nf-chip-sm nf-chip-num">{cm}</button>""", "nf-chip-on", () => PickSpawnRadius(index)));
         }
+
+        PadSeg(inspectRadii, c.RadiusCm.Count, InspectRadiusColumns);
 
         for (int i = 0; i < c.Templates.Count; i++)
         {
@@ -130,6 +139,21 @@ internal sealed partial class CrowdHudPage
         host.ClearChildren();
         switches.Clear();
         return host;
+    }
+
+    /// <summary>
+    /// 原型的等宽分段格（grid-cols-N）按行拆成 flex 行：表面的文字重排只在没有网格的树上走增量，
+    /// 网格会让每次读数变化都整树重排。末行用占位格补齐，格宽和网格一致。
+    /// </summary>
+    private UiElement SegRow(UiElement seg, int index, int columns)
+    {
+        if (index % columns == 0) seg.AddChild(Fragment("""<div class="nf-seg-row"></div>"""));
+        return seg.Children[^1];
+    }
+
+    private void PadSeg(UiElement seg, int count, int columns)
+    {
+        for (int i = count; i % columns != 0; i++) seg.Children[^1].AddChild(Fragment("""<div class="nf-seg-pad"></div>"""));
     }
 
     private CrowdHudClassSwitch Chip(UiElement host, string html, string onToken, Action click)

@@ -3,6 +3,6 @@
     "scriptAsset": "assets/CrowdSimulation/regress/stress-50k.json"
   },
   "presentation": {
-    "title": "CrowdSimulation 演示 · 5 万单位压力场景（与 50k 门禁同一场景，F10 遥测面板）"
+    "title": "CrowdSimulation 演示 · 5 万单位压力场景（与 50k 门禁同一场景，遥测面板默认打开）"
   }
 }

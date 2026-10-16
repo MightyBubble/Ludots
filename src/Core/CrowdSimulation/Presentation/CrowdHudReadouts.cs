@@ -92,12 +92,11 @@ public record struct CrowdDeployHud
     public int RebakeSlices;
 
     public CrowdClickTool Tool;
-    public string ToolLabel;
-    public bool BuildMode;
     public bool PlaybackHeld;
     public int SpeedPermille;
+    /// <summary>当前模板要点两下（起点、终点）。</summary>
+    public bool TemplateTwoPoint;
     public bool HasSpanAnchor;
-    public string TickHzWindow;
     public int ViewMode;
     public string ViewLabel;
     public int TemplateIndex;
@@ -111,9 +110,6 @@ public record struct CrowdDeployHud
     public CrowdPlacementReject PreviewReason;
 
     public bool HasRebake;
-    public int RebakeExecTick;
-    public int RebakeReportTick;
-    public bool RebakeIsPlace;
     public int RebakeTiles;
     public int RebakeCostOnly;
     public int RebakeContexts;
@@ -256,9 +252,7 @@ public record struct CrowdNavReadout
     public long PlanRequests;
     public int PendingReplies;
     public double RoundTripLastMs;
-    public double RoundTripMeanMs;
     public double WorkerLastMs;
-    public double WorkerMeanMs;
     public long WaitTicks;
     public int Tick;
     public int CommandLog;
@@ -293,9 +287,7 @@ public record struct CrowdNavReadout
             PlanRequests = hasPath ? stats.Requests : 0,
             PendingReplies = hasPath ? stats.Pending : 0,
             RoundTripLastMs = hasPath ? stats.RoundTripLastMs : double.NaN,
-            RoundTripMeanMs = hasPath ? stats.RoundTripMeanMs : double.NaN,
             WorkerLastMs = hasPath ? stats.WorkerLastMs : double.NaN,
-            WorkerMeanMs = hasPath ? stats.WorkerMeanMs : double.NaN,
             WaitTicks = session.Telemetry.StallTicks,
             Tick = session.TickCount,
             CommandLog = session.Commands.Log.Count,
@@ -337,7 +329,6 @@ public record struct CrowdTelemetryReadout
     public int WorldCacheMisses;
     public bool HasExtend;
     public int ExtendCount;
-    public double ExtendMs;
 
     internal static CrowdTelemetryReadout From(CrowdSimSession session, CrowdSimulationRuntime? runtime)
     {
@@ -384,7 +375,6 @@ public record struct CrowdTelemetryReadout
             WorldCacheMisses = baked ? runtime!.WorldBakeCacheMisses : 0,
             HasExtend = session.Planner != null,
             ExtendCount = session.Planner?.ExtendSubmits ?? 0,
-            ExtendMs = hasPath ? stats.ExtendMs : 0,
         };
     }
 }

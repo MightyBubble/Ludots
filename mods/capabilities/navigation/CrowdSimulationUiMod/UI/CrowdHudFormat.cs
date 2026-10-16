@@ -23,6 +23,8 @@ internal static class CrowdHudFormat
 
     private const string BoomHint = "左键点击地图：半径内单位全部移除，外圈被冲击波推开";
     private const string DemolishHint = "左键点击地图实体：移除最上层的一个（含地图自带建筑 / 桥）→ dirty 重烘焙";
+    private const string SpanStartHint = "左键点击起点，再点击终点";
+    private const string SpanEndHint = "已选起点 — 左键点击终点完成放置";
 
     internal static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -87,6 +89,9 @@ internal static class CrowdHudFormat
             case CrowdClickTool.Spawn:
                 if (spawnUnit == null) b.Append("左键点击地图：生成所选单位（在「部署」页选择单位）");
                 else b.Append(Inv, $"左键点击地图：生成 {spawnCount} 个 {spawnUnit} · {spawnRadiusCm} cm（在「部署」页选择单位）");
+                break;
+            case CrowdClickTool.Structure when hud.TemplateTwoPoint:
+                b.Append(hud.HasSpanAnchor ? SpanEndHint : SpanStartHint);
                 break;
             case CrowdClickTool.Structure:
                 string placeHint = !hud.PreviewKnown

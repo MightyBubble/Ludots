@@ -75,6 +75,10 @@ public class UIRoot
 			return;
 		}
 		RefreshReactiveSceneRuntime();
+		if (_isDirty)
+		{
+			Scene.InvalidatePaint();
+		}
 		_renderer.Render(Scene, Width, Height);
 		_renderedSceneVersion = Scene.Version;
 		IsDirty = false;

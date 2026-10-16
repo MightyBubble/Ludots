@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -309,9 +308,6 @@ internal sealed class CrowdDebugRates
     [JsonRequired] public double AvoidHzMin { get; init; }
     [JsonRequired] public double AvoidHzMax { get; init; }
     [JsonRequired] public double AvoidStep { get; init; }
-
-    public string TickWindowText =>
-        string.Create(CultureInfo.InvariantCulture, $"{TickHzMin}–{TickHzMax}");
 }
 
 internal sealed class CrowdDebugSession

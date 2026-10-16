@@ -36,6 +36,15 @@ public sealed class UiScene
 
 	private bool _boundTextIndexDirty = true;
 
+	private const int MaxPaintDamage = 512;
+
+	/// <summary>容量固定：写满就改成整张重画，不扩容。</summary>
+	private readonly List<UiPaintDamage> _paintDamage = new List<UiPaintDamage>(MaxPaintDamage);
+
+	private bool _paintDamageFull = true;
+
+	private long _paintBaseVersion = -1;
+
 	private UiNodeId? _hoveredNodeId;
 
 	/// <summary>
@@ -163,6 +172,45 @@ public sealed class UiScene
 		}
 	}
 
+	/// <summary>
+	/// 上次 <see cref="AcceptPaint"/> 之后，只靠绑定文字和矢量绘制表的增量路径以外的任何改动（结构、样式、尺寸、交互、过渡）都要整张重画。
+	/// 为 false 时 <see cref="GetPaintDamage"/> 列出的节点就是全部改动。
+	/// </summary>
+	public bool IsPaintDamageFull => _paintDamageFull || Version != _paintBaseVersion;
+
+	public int PaintDamageCount => _paintDamage.Count;
+
+	public UiPaintDamage GetPaintDamage(int index) => _paintDamage[index];
+
+	/// <summary>宿主改了场景之外的东西（尺寸、画布、显式置脏），下次必须整张重画。</summary>
+	public void InvalidatePaint()
+	{
+		_paintDamageFull = true;
+		_paintDamage.Clear();
+	}
+
+	/// <summary>渲染器把当前状态完整画进它保留的画布后调用；之后的改动重新累计。</summary>
+	public void AcceptPaint()
+	{
+		_paintDamage.Clear();
+		_paintDamageFull = false;
+		_paintBaseVersion = Version;
+	}
+
+	private void AddPaintDamage(UiNode node, UiRect previousRect)
+	{
+		if (_paintDamageFull)
+		{
+			return;
+		}
+		if (_paintDamage.Count == _paintDamage.Capacity)
+		{
+			InvalidatePaint();
+			return;
+		}
+		_paintDamage.Add(new UiPaintDamage(node, previousRect));
+	}
+
 	public UiReactiveUpdateMetrics LastReactiveUpdateMetrics { get; internal set; } = UiReactiveUpdateMetrics.None;
 
 	public UiScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiDispatcher? dispatcher = null)
@@ -232,10 +280,16 @@ public sealed class UiScene
 		bool sizeChanged = Math.Abs(_layoutWidth - width) >= 0.01f || Math.Abs(_layoutHeight - height) >= 0.01f;
 		if (!IsDirty && !sizeChanged)
 		{
+			if (Version != _paintBaseVersion)
+			{
+				InvalidatePaint();
+			}
 			LayoutChangedText(width, height);
 			AcceptVectorChanges();
+			_paintBaseVersion = Version;
 			return;
 		}
+		InvalidatePaint();
 		_layoutWidth = width;
 		_layoutHeight = height;
 		if (IsDirty)
@@ -258,6 +312,7 @@ public sealed class UiScene
 			if (node.CanvasContent is UiVectorDrawList list && list.Version != node.PaintedVectorVersion)
 			{
 				node.PaintedVectorVersion = list.Version;
+				AddPaintDamage(node, node.LayoutRect);
 				changed = true;
 			}
 		}
@@ -283,8 +338,21 @@ public sealed class UiScene
 		{
 			return;
 		}
-		if (!_layoutEngine.TryRelayoutText(Root!, width, height, _changedTextNodes))
+		for (int i = 0; i < _changedTextNodes.Count; i++)
 		{
+			UiNode node = _changedTextNodes[i];
+			AddPaintDamage(node, node.LayoutRect);
+		}
+		if (_layoutEngine.TryRelayoutText(Root!, width, height, _changedTextNodes, _paintDamageFull ? null : _paintDamage))
+		{
+			if (_layoutEngine.LastTextRelayoutMovedOverflow)
+			{
+				InvalidatePaint();
+			}
+		}
+		else
+		{
+			InvalidatePaint();
 			_layoutEngine.Layout(Root!, width, height);
 		}
 		for (int i = 0; i < _changedTextNodes.Count; i++)
