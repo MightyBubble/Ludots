@@ -276,6 +276,7 @@ public sealed class RuntimePushSection
 /// 玩家对功能位。ResponseByPair[a * P + b] 是表序 a 碰到表序 b 时的推挤响应。
 /// SharesVisionByPair 同下标；两个方向都为真才并视野组。
 /// IndexByPlayerId 把玩家号换成表序：玩家号必须恰为 1..P 的排列，数组按下标直查，长度 = P + 1。
+/// PlayerIds 是反过来的那张表：下标是表序，值是地图 Players 声明的玩家号。
 /// </summary>
 public sealed class CrowdPairRules
 {
@@ -283,6 +284,7 @@ public sealed class CrowdPairRules
     public required CrowdPushResponse[] ResponseByPair { get; init; }
     public required bool[] SharesVisionByPair { get; init; }
     public required int[] IndexByPlayerId { get; init; }
+    public required int[] PlayerIds { get; init; }
 
     public static CrowdPairRules Matrices(int playerCount, CrowdPushResponse[] responseByPair, bool[] sharesVisionByPair)
     {
@@ -304,6 +306,7 @@ public sealed class CrowdPairRules
             ResponseByPair = responseByPair,
             SharesVisionByPair = sharesVisionByPair,
             IndexByPlayerId = new int[playerCount + 1],
+            PlayerIds = new int[playerCount],
         };
     }
 
@@ -345,10 +348,18 @@ public sealed class CrowdPairRules
                 $"Maps/{map.Id}.json: 玩家下标表长度 {IndexByPlayerId.Length}，需为 {count + 1}。");
         }
 
+        if (PlayerIds.Length != count)
+        {
+            throw new InvalidOperationException(
+                $"Maps/{map.Id}.json: 玩家号表长度 {PlayerIds.Length}，需为 {count}。");
+        }
+
         Array.Clear(IndexByPlayerId);
         for (int i = 0; i < count; i++)
         {
-            IndexByPlayerId[map.Players[i].PlayerId] = i;
+            int id = map.Players[i].PlayerId;
+            IndexByPlayerId[id] = i;
+            PlayerIds[i] = id;
         }
     }
 }
