@@ -34,6 +34,36 @@ namespace CrowdSimulationTests;
 public class CrowdDynamicDeckTests
 {
     [Test]
+    public void SteadyTick_WithBeliefVariants_DoesNotEnterNavExclusive()
+    {
+        using var world = RiverWorld.Open();
+        var session = world.Session;
+        int player = session.Config.Deploy.Bases[0].PlayerId;
+        Submit(session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.SpawnAt,
+            Player = player,
+            Count = 8,
+            UnitType = world.UnitType,
+            RIdx = world.RadiusIndex,
+            XCm = Center(2, world.Cell),
+            YCm = Center(8, world.Cell),
+        });
+        for (int i = 0; i < 40; i++)
+        {
+            session.Step(out _);
+        }
+
+        long before = world.PathService.NavExclusiveEnterCount;
+        for (int i = 0; i < 30; i++)
+        {
+            session.Step(out _);
+        }
+
+        Assert.That(world.PathService.NavExclusiveEnterCount - before, Is.EqualTo(0));
+    }
+
+    [Test]
     public void PlaceWalkRemoveExpire_MatchesFullBake_AndReplays()
     {
         using var first = RiverWorld.Open();
@@ -275,6 +305,8 @@ public class CrowdDynamicDeckTests
         public required int Layer { get; init; }
         public required int RadiusIndex { get; init; }
         private readonly PathQueryService _service;
+
+        internal PathQueryService PathService => _service;
 
         private RiverWorld(PathQueryService service) => _service = service;
 

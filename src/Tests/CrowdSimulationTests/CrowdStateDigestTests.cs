@@ -338,7 +338,7 @@ public sealed class CrowdStateDigestTests
         });
         script.ValidateStructure(session);
         script.Schedule(session);
-        var notices = new List<string>();
+        var notices = new List<CrowdSimNotice>();
         session.Notified += notices.Add;
         var host = new CrowdSimulationRuntime();
         Bind(host, session);
@@ -348,7 +348,8 @@ public sealed class CrowdStateDigestTests
         Assert.That(session.TickCount, Is.EqualTo(6));
         Assert.That(session.Commands.Log.Count(e => e.Cmd.Kind == CrowdSimCommandKind.Order), Is.EqualTo(1));
         Assert.That(session.EmptyOrderSelectionTotal, Is.EqualTo(1));
-        Assert.That(notices, Has.Some.Contains("玩家 2 没有单位"));
+        Assert.That(notices, Has.Some.Matches<CrowdSimNotice>(n =>
+            n.Kind == CrowdSimNoticeKind.EmptyOrderSelection && n.Player == 2 && n.Tick == 3));
         Assert.That(session.Orders.List, Is.Empty);
         host.RunReplay();
         Assert.That(host.ReplayStatus, Is.EqualTo(1));

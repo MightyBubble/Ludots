@@ -57,7 +57,7 @@ public class S3GraphTruthTests
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
 
-                var mesh = NavMeshAssembler.Assemble(nav.Tiles!, nav.Cost, nav.NavCellsPerSide, runtime.Hpa.NavCellsPerTile);
+                var mesh = NavMeshAssembler.Assemble(nav, nav.Tiles!, nav.Cost, nav.NavCellsPerSide, runtime.Hpa.NavCellsPerTile);
                 var hpa = HpaGraph.Build(nav, runtime);
                 var flat = hpa.Flatten();
 

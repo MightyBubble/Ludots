@@ -120,6 +120,10 @@ public sealed class PathQueryService : IDisposable
 
     public int Waits { get; private set; }
 
+    /// <summary>测试钩:导航互斥锁进入次数(结构重烘与变体物化)。</summary>
+    internal long NavExclusiveEnterCount => Interlocked.Read(ref _navExclusiveEnterCount);
+    private long _navExclusiveEnterCount;
+
     /// <summary>还没取走的请求数。组消失或状态序对不上时也要取走，否则这里会涨。</summary>
     public int OutstandingReplyCount
     {
@@ -494,11 +498,13 @@ public sealed class PathQueryService : IDisposable
     /// <summary>导航态互斥执行(结构变更重烘在锁内应用,见 _navGate)。</summary>
     public void RunExclusive(Action action)
     {
+        Interlocked.Increment(ref _navExclusiveEnterCount);
         lock (_navGate) action();
     }
 
     public T RunExclusive<T>(Func<T> action)
     {
+        Interlocked.Increment(ref _navExclusiveEnterCount);
         lock (_navGate) return action();
     }
 
@@ -507,6 +513,7 @@ public sealed class PathQueryService : IDisposable
     /// </summary>
     public T RunExclusive<TState, T>(TState state, Func<TState, T> action)
     {
+        Interlocked.Increment(ref _navExclusiveEnterCount);
         lock (_navGate) return action(state);
     }
 

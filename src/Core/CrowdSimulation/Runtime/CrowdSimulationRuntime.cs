@@ -830,7 +830,8 @@ public sealed partial class CrowdSimulationRuntime : IPresentationAlphaHold
                     : $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection} diag differs: {diag} @tick {ReplayDiagnosticTick}.");
         }
 
-        if (session.TickCount % session.Config.FixedHz == 0)
+        if (session.TickCount % session.Config.FixedHz == 0
+            && Ludots.Core.Diagnostics.Log.IsEnabled(in Ludots.Core.Diagnostics.LogChannels.Engine, Ludots.Core.Diagnostics.LogLevel.Debug))
         {
             Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
                 $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={FormatLocalSeatSelected(session)}, hash={session.LastDigest.Total}");

@@ -1,4 +1,9 @@
+using System.Linq;
+using System.Runtime;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
+using System.Threading;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -76,6 +81,28 @@ public sealed class OpeningDeployTests
         Assert.That(session.IsAlive, Is.False, "引擎销毁后群体会话仍被引用（路径服务工作线程没有停）。");
     }
 
+    // System.Text.Json 的反射发射访问器缓存是进程级的，条目闲置 1 秒后才会在下一次元数据访问时淘汰。
+    private static readonly TimeSpan JsonAccessorCacheIdle = TimeSpan.FromMilliseconds(1500);
+
+    [Test]
+    public void RepeatedEngines_DoNotAccumulateModLoadContexts()
+    {
+        Assert.That(RunAndDisposeEngine(), Is.Not.Null);
+        List<(string Name, WeakReference Context)> loadContexts = RunAndDisposeEngineLoadContexts();
+        Assert.That(loadContexts, Is.Not.Empty, "S4 引擎没有加载任何 collectible Mod 上下文。");
+        Thread.Sleep(JsonAccessorCacheIdle);
+        Assert.That(RunAndDisposeEngine(), Is.Not.Null);
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        for (int i = 0; i < 24 && loadContexts.Any(c => c.Context.IsAlive); i++)
+        {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+        }
+
+        string[] alive = loadContexts.Where(c => c.Context.IsAlive).Select(c => c.Name).ToArray();
+        Assert.That(alive, Is.Empty, "下一个引擎起来后，上一个引擎这些 Mod 的 collectible ALC 仍被强引用。");
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference RunAndDisposeEngine()
     {
@@ -87,6 +114,33 @@ public sealed class OpeningDeployTests
                 ?? throw new InvalidOperationException("没有群体会话。");
             TickUntilFirstStep(engine, session);
             return new WeakReference(session);
+        }
+        finally
+        {
+            Directory.Delete(probe, recursive: true);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static List<(string Name, WeakReference Context)> RunAndDisposeEngineLoadContexts()
+    {
+        string probe = CreateProbeMod(4);
+        try
+        {
+            using var engine = StartS4Engine(probe);
+            CrowdSimSession session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
+                ?? throw new InvalidOperationException("没有群体会话。");
+            TickUntilFirstStep(engine, session);
+            var seen = new HashSet<AssemblyLoadContext>();
+            var contexts = new List<(string Name, WeakReference Context)>();
+            foreach (Assembly assembly in engine.ModLoader.LoadedAssemblies)
+            {
+                var alc = AssemblyLoadContext.GetLoadContext(assembly);
+                if (alc == null || !alc.IsCollectible || !seen.Add(alc)) continue;
+                contexts.Add((assembly.GetName().Name ?? assembly.FullName ?? "?", new WeakReference(alc)));
+            }
+
+            return contexts;
         }
         finally
         {
