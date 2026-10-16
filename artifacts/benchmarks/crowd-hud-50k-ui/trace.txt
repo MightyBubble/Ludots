@@ -1,3 +1,3 @@
-50k HUD ui-path [inspect]: tickMedian hidden=25.883ms visible=25.875ms noise=2.588ms hudFrame median=0.005ms p95=0.576ms max=1.243ms nonSampleFrames=105 nonSampleAlloc=0 sampleFrames=15 sampleAllocAvg=0 composes=0 renders=124 lastComposeMs=0.000 reads status=129 player=130 inspect=129 nav=0 telemetry=129
-window 30s: frames=1875 ticks=899 gc0=0 gc1=0 gc2=0 processAllocated=41648 hudAlloc sample=0 nonSample=0 sampleFrames=234 redraws=117 redrawCost median=0.441ms p95=0.794ms max=1.296ms redrawCpu median=0.728ms p95=1.141ms referenceCpu median=1.708ms p95=2.147ms redrawWall median=0.721ms p95=1.139ms max=2.015ms composes=0
-load 1.93 2.31 2.83 2/785 2054490
+50k HUD ui-path [inspect]: tickMedian hidden=26.517ms visible=26.488ms noise=2.652ms hudFrame median=0.006ms p95=0.661ms max=1.933ms nonSampleFrames=105 nonSampleAlloc=0 sampleFrames=15 sampleAllocAvg=0 composes=0 renders=124 lastComposeMs=0.000 reads status=129 player=130 inspect=129 nav=0 telemetry=129
+window 30s: frames=1875 ticks=899 gc0=0 gc1=0 gc2=0 processAllocated=44840 hudAlloc sample=0 nonSample=0 sampleFrames=234 redraws=117 redrawCost median=0.560ms p95=0.804ms max=1.048ms redrawCpu median=0.766ms p95=1.250ms referenceCpu median=1.049ms p95=1.982ms redrawWall median=0.765ms p95=1.248ms max=2.274ms composes=0
+load 3.45 3.62 5.56 2/839 2128932
