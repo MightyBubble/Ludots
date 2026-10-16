@@ -32,7 +32,7 @@ public sealed class PanelEffectListShowcaseAcceptanceTests
     {
         string repoRoot = FindRepoRoot();
         AssertResourceOnlyComposition(repoRoot);
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_effect_list");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "panel_effect_list");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

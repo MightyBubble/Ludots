@@ -52,7 +52,7 @@ namespace Ludots.Tests.GAS.Production
             string repoRoot = FindRepoRoot();
             RelationshipShowcaseTestConfig showcaseConfig = LoadShowcaseConfig(repoRoot);
             RelationshipShowcaseTestFrontendConfig frontendConfig = LoadFrontendConfig(repoRoot);
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "relationship-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "relationship-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

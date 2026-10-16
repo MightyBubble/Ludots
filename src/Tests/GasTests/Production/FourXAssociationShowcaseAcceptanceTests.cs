@@ -44,7 +44,7 @@ public sealed class FourXAssociationShowcaseAcceptanceTests
     public void FourXAssociationShowcase_ChainsFogDiplomacyTradeResearchAndOwnership()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "fourx-association-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "fourx-association-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

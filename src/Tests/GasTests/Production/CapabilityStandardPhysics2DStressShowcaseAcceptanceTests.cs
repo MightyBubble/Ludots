@@ -192,7 +192,7 @@ public sealed class CapabilityStandardPhysics2DStressShowcaseAcceptanceTests
         long allocatedBytes,
         in Physics2DPerfStats finalStats)
     {
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "showcases", "capability-standard-physics2d-stress");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "showcases", "capability-standard-physics2d-stress");
         Directory.CreateDirectory(artifactDir);
         string jsonlPath = Path.Combine(artifactDir, "keyframes.jsonl");
         string mdPath = Path.Combine(artifactDir, "acceptance.md");

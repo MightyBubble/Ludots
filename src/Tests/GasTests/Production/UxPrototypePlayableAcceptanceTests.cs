@@ -88,7 +88,7 @@ namespace Ludots.Tests.GAS.Production
         public void UxPrototype_PlayableAcceptance_WritesArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "ux-prototype");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "ux-prototype");
             Directory.CreateDirectory(artifactDir);
 
             var trace = new List<object>();

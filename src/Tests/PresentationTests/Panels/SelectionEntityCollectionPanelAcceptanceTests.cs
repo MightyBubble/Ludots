@@ -52,7 +52,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     public void InteractionShowcase_CommandSourceEntityCollectionPanel_VirtualizesAndWritesScreenshotArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactRoot = Path.Combine(repoRoot, "artifacts", "acceptance", "command-source-entity-collection-panel");
+        string artifactRoot = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "command-source-entity-collection-panel");
         string screenRoot = Path.Combine(artifactRoot, "screens");
         Directory.CreateDirectory(screenRoot);
 

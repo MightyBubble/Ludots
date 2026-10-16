@@ -23,25 +23,10 @@ namespace Ludots.Tests.Gas.AI
         private const double CiFrameEnvelopeMs = 25.0;
         private const double CiNarrowEnvelopeMs = 10.0;
 
-        private static string ArtifactDir
-        {
-            get
-            {
-                var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
-                while (dir != null &&
-                       !File.Exists(Path.Combine(dir.FullName, "showcase.registry.json")))
-                {
-                    dir = dir.Parent;
-                }
-
-                if (dir == null)
-                {
-                    throw new InvalidOperationException("Could not locate repo root from test directory.");
-                }
-
-                return Path.Combine(dir.FullName, "docs", "benchmarks", "graph-behavior-pressure");
-            }
-        }
+        private static string ArtifactDir =>
+            Path.Combine(
+                TestContext.CurrentContext.WorkDirectory,
+                "graph-behavior-pressure");
 
         [Test]
         public void WritePressureMatrices_M1_M2_M3_M4_M6()

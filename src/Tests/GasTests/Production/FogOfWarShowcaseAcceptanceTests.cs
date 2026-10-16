@@ -20,7 +20,7 @@ public sealed class FogOfWarShowcaseAcceptanceTests
     public void FogOfWarShowcase_CoreScenarioCoversWarFogEpic()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "fog-of-war-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "fog-of-war-showcase");
         Directory.CreateDirectory(artifactDir);
         foreach (string file in Directory.GetFiles(artifactDir))
         {

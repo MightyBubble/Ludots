@@ -35,7 +35,7 @@ public sealed class AssociationStressShowcaseAcceptanceTests
     public void AssociationStressShowcase_ScalesAssociationsAndMaintainsZeroAllocAfterWarmup()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "association-stress-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "association-stress-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

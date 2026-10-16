@@ -36,7 +36,7 @@ public sealed class DiplomacyTradeGateShowcaseAcceptanceTests
     public void DiplomacyTradeGateShowcase_RelationshipControlsExchangeSettlement()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "diplomacy-trade-gate-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "diplomacy-trade-gate-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

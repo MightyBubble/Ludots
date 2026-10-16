@@ -363,7 +363,7 @@ namespace Ludots.Tests.GAS.Production
             List<double> frameTimesMs,
             in Physics2DPerfStats stats)
         {
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "benchmarks", "static-obstacle-physics-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "benchmarks", "static-obstacle-physics-showcase");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
 

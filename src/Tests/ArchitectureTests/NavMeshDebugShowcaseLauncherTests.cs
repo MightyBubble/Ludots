@@ -13,7 +13,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesNavMeshDirtyUpdateShowcases_AsMapSpecificEntrypoints()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-navmesh-debug-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-navmesh-debug-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try

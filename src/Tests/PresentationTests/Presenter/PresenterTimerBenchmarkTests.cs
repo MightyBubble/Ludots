@@ -120,9 +120,7 @@ namespace Ludots.Tests.Presentation
 
         private static void WriteReport(in TimerBenchmarkResult single, in TimerBenchmarkResult triple)
         {
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts",
                 "benchmarks",
                 "presenter-timer");
             Directory.CreateDirectory(artifactDir);

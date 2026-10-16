@@ -106,7 +106,7 @@ public sealed class CapabilityStandardPhysics2DAcceptanceTests
 
     private static void WriteReceipt(string repoRoot, int framesToSpawn)
     {
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "showcases", "capability-standard-physics2d");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "showcases", "capability-standard-physics2d");
         Directory.CreateDirectory(artifactDir);
         File.WriteAllText(
             Path.Combine(artifactDir, "acceptance.txt"),

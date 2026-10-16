@@ -31,7 +31,7 @@ public sealed class CaseESelectionScalePressureTests
     private const string SelectableKey = "case_e.selectable";
     private const string SelectionPreviewKey = "case_e.selection_preview";
     private const string SelectedKey = "selected";
-    private const string BenchDir = "docs/benchmarks/case-e-query-completeness";
+    private const string BenchDir = "case-e-query-completeness";
     private readonly MapId _mapId = new(MapIdValue);
 
     [Test]
@@ -274,7 +274,7 @@ public sealed class CaseESelectionScalePressureTests
         int hoverFull,
         int hoverHalf)
     {
-        string dir = Path.Combine(repoRoot, BenchDir);
+        string dir = Path.Combine(TestContext.CurrentContext.WorkDirectory, BenchDir);
         Directory.CreateDirectory(dir);
         string csv = Path.Combine(dir, "case-e-selection-scale.csv");
         bool exists = File.Exists(csv);

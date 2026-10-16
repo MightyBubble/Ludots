@@ -223,7 +223,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(heroControllerId, Is.GreaterThan(0));
 
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "presentation-skinned-runtime-contract");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "presentation-skinned-runtime-contract");
             Directory.CreateDirectory(artifactDir);
 
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");

@@ -33,7 +33,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string reportPath = Path.Combine(repoRoot, "artifacts", "GasProductionReport.md");
+            string reportPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "GasProductionReport.md");
 
             var scenarios = new List<ScenarioResult>();
             try

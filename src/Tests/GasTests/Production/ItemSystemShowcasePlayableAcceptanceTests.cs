@@ -80,7 +80,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
     public void ItemSystemShowcase_PlayableFlow_WritesAcceptanceArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "item-system-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "item-system-showcase");
         Directory.CreateDirectory(artifactDir);
         RaylibEvidenceStatus raylibEvidence = ResolveRaylibEvidenceStatus(artifactDir);
 

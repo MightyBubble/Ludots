@@ -245,7 +245,7 @@ namespace Ludots.Tests.GAS.Production
         public void RtsStrategicShowcase_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", ArtifactFolderName);
             Directory.CreateDirectory(artifactDir);
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(screensDir);

@@ -49,7 +49,7 @@ public sealed class GraphFormalTextSubtitleShowcaseAcceptanceTests
     private static void WriteOverlayEvidence(ScreenOverlayBuffer overlay)
     {
         string repoRoot = FindRepoRoot();
-        string dir = Path.Combine(repoRoot, "artifacts", "evidence", "capability_standard_graph_formal_text");
+        string dir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "evidence", "capability_standard_graph_formal_text");
         Directory.CreateDirectory(dir);
         var lines = new List<string>
         {

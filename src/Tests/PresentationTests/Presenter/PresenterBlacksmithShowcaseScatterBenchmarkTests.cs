@@ -52,9 +52,7 @@ namespace Ludots.Tests.Presentation
                 results[i] = RunScenario(scenarios[i]);
             }
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts",
                 "benchmarks",
                 "presenter-blacksmith-showcase-scatter");
             Directory.CreateDirectory(artifactDir);

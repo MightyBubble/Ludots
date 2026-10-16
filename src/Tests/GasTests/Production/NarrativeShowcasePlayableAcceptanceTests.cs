@@ -73,7 +73,7 @@ namespace Ludots.Tests.GAS.Production
         public void NarrativeShowcase_PlayableFlow_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "narrative-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "narrative-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
             AssertThemeAssetsHaveTransparentBackgrounds(repoRoot);

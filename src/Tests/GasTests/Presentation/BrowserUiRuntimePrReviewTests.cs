@@ -348,8 +348,8 @@ namespace GasTests
             }
 
             string repoRoot = FindRepoRoot();
-            string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"browser-provider-registry-{Guid.NewGuid():N}");
-            string graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            string tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"browser-provider-registry-{Guid.NewGuid():N}");
+            string graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             byte[]? originalGraph = File.Exists(graphPath) ? File.ReadAllBytes(graphPath) : null;
             Directory.CreateDirectory(tempDirectory);
 

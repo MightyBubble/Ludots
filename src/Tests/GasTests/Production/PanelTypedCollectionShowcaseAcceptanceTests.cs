@@ -73,7 +73,7 @@ public sealed class PanelTypedCollectionShowcaseAcceptanceTests
     public void TypedCollectionBag_ShowsSinglePanelMembers(Case testCase)
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", $"panel_{testCase.ArtifactSlug}");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", $"panel_{testCase.ArtifactSlug}");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

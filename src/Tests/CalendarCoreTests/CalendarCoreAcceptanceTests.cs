@@ -15,7 +15,7 @@ public sealed class CalendarCoreAcceptanceTests
     public void CalendarCore_MultiCalendarFestivalsAndSubscribedDispatch_WritesAcceptanceArtifacts()
     {
         string repoRoot = CalendarFixtures.FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "calendar-core");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "calendar-core");
         Directory.CreateDirectory(artifactDir);
 
         var rows = new List<PhaseRow>();

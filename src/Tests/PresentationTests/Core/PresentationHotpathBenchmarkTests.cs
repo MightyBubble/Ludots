@@ -94,7 +94,7 @@ namespace Ludots.Tests.Presentation
                 frameIndex => CreateFrameConfig(positionOffsetX: frameIndex * 1.25f, positionOffsetY: (frameIndex & 7) * 0.25f, valueOffset: 0, pulseFill: false, emitBars: false, emitText: true));
 
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "benchmarks", "presentation-skia-hotpath");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "benchmarks", "presentation-skia-hotpath");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");

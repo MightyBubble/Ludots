@@ -35,7 +35,7 @@ public sealed class ScopeSwitchShowcaseAcceptanceTests
     public void ScopeSwitchShowcase_SwitchesVisibleAndSelectableSetsAcrossScopes()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "scope-switch-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "scope-switch-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

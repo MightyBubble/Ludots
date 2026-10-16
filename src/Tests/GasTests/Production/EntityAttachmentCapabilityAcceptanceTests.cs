@@ -276,7 +276,7 @@ namespace Ludots.Tests.GAS.Production
 
         private void WriteArtifacts(string repoRoot)
         {
-            string directory = Path.Combine(repoRoot, "artifacts", "acceptance", "entity-attachment");
+            string directory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "entity-attachment");
             Directory.CreateDirectory(directory);
             File.WriteAllLines(Path.Combine(directory, "battle-report.md"), _battleLog, Encoding.UTF8);
             File.WriteAllLines(Path.Combine(directory, "trace.jsonl"), _trace, Encoding.UTF8);

@@ -42,9 +42,7 @@ namespace Ludots.Tests.Presentation
             BenchmarkResult result = RunMeasured(world, entities, screenHud, builder, scene, healthAttributeId, ref randomState);
             HudSyncValidation validation = ValidateFinalHud(world, entities, screenHud, healthAttributeId);
 
-            string artifactDir = Path.Combine(
-                FindRepoRoot(),
-                "artifacts",
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts",
                 "benchmarks",
                 "presentation-entity-health-hud-50k");
             Directory.CreateDirectory(artifactDir);

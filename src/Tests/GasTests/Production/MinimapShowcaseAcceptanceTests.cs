@@ -73,7 +73,7 @@ public sealed class MinimapShowcaseAcceptanceTests
     public void MinimapShowcase_WritesMarkerOnlyAcceptanceArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "minimap-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "minimap-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         Directory.CreateDirectory(artifactDir);
         Directory.CreateDirectory(screensDir);

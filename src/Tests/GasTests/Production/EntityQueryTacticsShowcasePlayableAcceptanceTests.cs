@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS.Production
         public void EntityQueryTactics_PlayableAcceptance_WritesArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "entity-query-tactics-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "entity-query-tactics-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
@@ -254,7 +254,7 @@ namespace Ludots.Tests.GAS.Production
         public void EntityQueryTactics_ProductionBenchmark_WritesReport()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "benchmarks", "entity-query-tactics-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "benchmarks", "entity-query-tactics-showcase");
             Directory.CreateDirectory(artifactDir);
 
             using var engine = CreateEngineWithPlan(out LauncherLaunchPlan launchPlan);

@@ -31,7 +31,7 @@ public sealed class PanelAuthorLayoutKitAcceptanceTests
     {
         string repoRoot = FindRepoRoot();
         AssertResourceOnlyComposition(repoRoot);
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_author_layout_kit");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "panel_author_layout_kit");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

@@ -17,7 +17,7 @@ public sealed class TimeFlowCoreAcceptanceTests
     public void TimeFlowCore_MinimalScenario_WritesAcceptanceArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "timeflow-core");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "timeflow-core");
         Directory.CreateDirectory(artifactDir);
 
         var service = new TimeFlowService();

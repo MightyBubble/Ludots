@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             AssertLauncherBinding(repoRoot);
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "superweapon-context-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "superweapon-context-showcase");
             Directory.CreateDirectory(artifactDir);
 
             var backend = new TestInputBackend();

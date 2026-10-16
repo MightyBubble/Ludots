@@ -136,7 +136,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         public void CameraAcceptanceMod_ProjectionMap_RaylibEvidence_ValidatesTypedCueMarkerVisuals()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "camera-acceptance");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "camera-acceptance");
             Directory.CreateDirectory(artifactDir);
 
             RaylibTypedVisualEvidenceStatus evidence = ResolveTypedCueMarkerRaylibEvidenceStatus(artifactDir);
@@ -368,7 +368,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         public void CameraAcceptanceMod_HotpathHarness_TogglesPresentationLanes_AndWritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "presentation-hotpath-harness");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "presentation-hotpath-harness");
             Directory.CreateDirectory(artifactDir);
 
             using var engine = CreateEngine(AcceptanceMods);

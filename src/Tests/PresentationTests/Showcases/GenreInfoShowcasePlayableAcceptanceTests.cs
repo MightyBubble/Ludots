@@ -49,7 +49,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
     public void GenreInfoShowcase_PlayableAcceptance_WritesLocalizedScreensAndArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactRoot = Path.Combine(repoRoot, "artifacts", "acceptance", "genre-info-showcase");
+        string artifactRoot = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "genre-info-showcase");
         string screenRoot = Path.Combine(artifactRoot, "screens");
         Directory.CreateDirectory(screenRoot);
 

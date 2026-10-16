@@ -47,7 +47,7 @@ namespace GasTests.Physics2D
                 warmupFixedTicks,
                 measuredFixedTicks);
 
-            string artifactRoot = Path.Combine(FindRepoRoot(), "artifacts", "benchmarks", "physics2d-scale");
+            string artifactRoot = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "benchmarks", "physics2d-scale");
             Directory.CreateDirectory(artifactRoot);
             string timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
             string reportPath = Path.Combine(artifactRoot, $"physics2d-scale-{timestamp}.md");

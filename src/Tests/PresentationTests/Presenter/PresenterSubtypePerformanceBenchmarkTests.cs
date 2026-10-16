@@ -216,9 +216,7 @@ namespace Ludots.Tests.Presentation
 
         private static void WriteReport(in SubtypeBenchmarkResult result)
         {
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts",
                 "benchmarks",
                 "presenter-subtype-retained-static-lanes");
             Directory.CreateDirectory(artifactDir);

@@ -53,7 +53,7 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
         AssertNoPresentationEntitySum(repoRoot);
         AssertConfigHygieneArtifacts(repoRoot);
 
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "ui-player-aggregate-graph-mvp");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "ui-player-aggregate-graph-mvp");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

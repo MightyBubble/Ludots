@@ -170,7 +170,7 @@ namespace Ludots.Tests.Presentation
             }
 
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animation-layered-prototypes");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "animation-layered-prototypes");
             Directory.CreateDirectory(artifactDir);
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), string.Join(Environment.NewLine, traceLines));

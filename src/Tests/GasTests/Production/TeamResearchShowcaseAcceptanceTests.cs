@@ -42,7 +42,7 @@ public sealed class TeamResearchShowcaseAcceptanceTests
     public void TeamResearchShowcase_UsesCollectionBackedScopeMembersForSharedUnlock()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "team-research-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "team-research-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

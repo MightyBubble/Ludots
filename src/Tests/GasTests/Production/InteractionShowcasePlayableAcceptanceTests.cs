@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS.Production
         public void InteractionShowcase_PlayableFlow_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "interaction-showcase");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "interaction-showcase");
             Directory.CreateDirectory(artifactDir);
 
             var snapshots = new List<AcceptanceSnapshot>();

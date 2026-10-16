@@ -85,7 +85,7 @@ namespace Ludots.Tests.GAS.Production
         private static void RunTrainingScenario(TrainingScenarioSpec scenario)
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", scenario.ArtifactFolderName);
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", scenario.ArtifactFolderName);
             Directory.CreateDirectory(artifactDir);
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(screensDir);

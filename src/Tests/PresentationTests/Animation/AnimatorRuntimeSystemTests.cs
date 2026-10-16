@@ -143,7 +143,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(animatorStates.GetFeedbackBuffer(presenter).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionStarted));
 
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animator-runtime-mvp");
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "animator-runtime-mvp");
             Directory.CreateDirectory(artifactDir);
 
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");

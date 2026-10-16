@@ -565,7 +565,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCommandPanelToolbarButtonView[] initialButtons,
             params ProfileSnapshot[] snapshots)
         {
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", ArtifactFolderName);
             Directory.CreateDirectory(artifactDir);
             File.WriteAllText(Path.Combine(artifactDir, "aggregation-profile-report.md"), BuildReport(snapshots), Encoding.UTF8);
             File.WriteAllText(

@@ -36,7 +36,7 @@ public sealed class OwnershipCascadeShowcaseAcceptanceTests
     public void OwnershipCascadeShowcase_CapturesAndReclaimsOwnsChain()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "ownership-cascade-showcase");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "ownership-cascade-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

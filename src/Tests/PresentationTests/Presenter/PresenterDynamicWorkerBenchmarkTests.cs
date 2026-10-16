@@ -54,9 +54,7 @@ namespace Ludots.Tests.Presentation
                 results[i] = RunScenario(Counts[i]);
             }
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts",
                 "benchmarks",
                 "presenter-dynamic-worker-production-path");
             Directory.CreateDirectory(artifactDir);
@@ -569,9 +567,7 @@ namespace Ludots.Tests.Presentation
                 droppedScreenMarkerCounts,
                 allocatedBytes);
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
+            string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts",
                 "benchmarks",
                 "minimap-marker-large-world-hotpath");
             Directory.CreateDirectory(artifactDir);

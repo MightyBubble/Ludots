@@ -16,7 +16,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesFormalRtsShowcase_AsStrictThreeProcessGroup()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-process-group-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-rts-process-group-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -86,7 +86,7 @@ namespace Ludots.Tests.Architecture
         public void NetworkRoleArtifactGenerator_WritesOneStrictBootstrapPerResolvedRole()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-role-artifacts-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-rts-role-artifacts-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -136,7 +136,7 @@ namespace Ludots.Tests.Architecture
         public void ProcessGroupResolver_RejectsDuplicateClientIdentityBeforeWritingArtifacts()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-duplicate-client-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-rts-duplicate-client-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -238,7 +238,7 @@ namespace Ludots.Tests.Architecture
         public void LauncherPresetLoader_RejectsUnknownProcessGroupFields()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-unknown-field-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-rts-unknown-field-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
             string presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
 
@@ -296,7 +296,7 @@ namespace Ludots.Tests.Architecture
         public void NetworkRoleArtifactGenerator_RejectsEscapingRoleDirectoryBeforeDeletion()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-role-path-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-rts-role-path-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -330,7 +330,7 @@ namespace Ludots.Tests.Architecture
         public void Given_LocalAuthoritativeMatchHasStaleCredentials_When_PreparingLaunch_Then_AllClientCredentialsAreDeleted()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-local-credentials-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-local-credentials-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -379,7 +379,7 @@ namespace Ludots.Tests.Architecture
         public void Given_ExternalJoinHasReconnectCredential_When_PreparingLaunch_Then_CredentialIsPreserved()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-external-credential-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-external-credential-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -415,7 +415,7 @@ namespace Ludots.Tests.Architecture
         public void Given_LocalAuthoritativeCredentialCannotBeDeleted_When_PreparingLaunch_Then_LaunchIsRejected()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-credential-delete-failure-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-credential-delete-failure-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -462,7 +462,7 @@ namespace Ludots.Tests.Architecture
         public void Given_LocalAuthoritativeCredentialEscapesArtifactDirectory_When_PreparingLaunch_Then_PathIsRejectedBeforeDeletion()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-credential-owned-path-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-credential-owned-path-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -503,7 +503,7 @@ namespace Ludots.Tests.Architecture
         public void ActiveLaunchRecordPath_UsesRepositoryScopedCollisionResistantKey()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-active-key-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-active-key-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -536,7 +536,7 @@ namespace Ludots.Tests.Architecture
         public void ProcessGroupReadiness_RequiresServerSeatsAndRenderableClientMirrors()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-readiness-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-readiness-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -740,7 +740,7 @@ namespace Ludots.Tests.Architecture
             }
 
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-output-drain-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-output-drain-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
             var scriptPath = Path.Combine(tempDirectory, "leave-output-open.cmd");
 
@@ -807,7 +807,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_PrefersLaunchGraphMetadata_WhenPresent()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-graph-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-graph-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
@@ -864,7 +864,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_AcceptsFullLauncherGraphMetadata()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-full-graph-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-full-graph-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
@@ -968,7 +968,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsOfficialGraph_WhenBootstrapOmitsFreshnessMetadata()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-missing-freshness-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-missing-freshness-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
@@ -1061,10 +1061,10 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_ReadsGraphEmittedByOfficialLauncherBackend()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-official-graph-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-official-graph-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             var bootstrapPath = Path.Combine(
                 repoRoot,
                 "src",
@@ -1178,10 +1178,10 @@ namespace Ludots.Tests.Architecture
         public void Resolve_RewritesRuntimeBootstrap_SoFingerprintMatchesGraph()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-resolve-rewrite-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-resolve-rewrite-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             var bootstrapPath = Path.Combine(
                 repoRoot,
                 "src",
@@ -1229,7 +1229,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsStaleGraph_WhenBootstrapPlanDiffers()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-stale-plan-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-stale-plan-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
@@ -1379,10 +1379,10 @@ namespace Ludots.Tests.Architecture
         public void Launcher_BrowserProviderOverride_SwitchesCefPresetToUltralight()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-ul-override-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-ul-override-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             var originalGraph = CaptureFile(graphPath);
 
             try
@@ -1432,7 +1432,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-capability-standard-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-capability-standard-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1530,7 +1530,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesProgressionScopeShowcase_AsSingleFeatureRoot()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-progression-scope-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-progression-scope-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1583,7 +1583,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesAiShowcases_AsSingleFeatureRoots()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-ai-showcases-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-ai-showcases-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1643,7 +1643,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsUnknownLauncherMetadataFields()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-unknown-metadata-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-unknown-metadata-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
@@ -1737,7 +1737,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsLaunchGraph_WhenDependencyOrderIsInvalid()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-graph-invalid-order-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-graph-invalid-order-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
@@ -1798,7 +1798,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_UsesGraphPlanOrder_AsRuntimeLoadOrder()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-order-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-order-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1851,7 +1851,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsBootstrapWithoutLaunchGraphMetadata()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-missing-graph-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-missing-graph-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1883,7 +1883,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsGraphDependencyOrderViolations()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-invalid-order-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-invalid-order-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1943,7 +1943,7 @@ namespace Ludots.Tests.Architecture
         public void GameBootstrapper_RejectsLaunchGraphModIdCaseAliases()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-case-alias-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"bootstrap-case-alias-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -1985,7 +1985,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesRaylibClientParity_AsPresenterEraContract()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-raylib-client-parity-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-raylib-client-parity-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -2054,9 +2054,9 @@ namespace Ludots.Tests.Architecture
         public void Launcher_ResolvesEngineGallery_AsExecutableTargetWithoutModClosure()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-engine-gallery-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-engine-gallery-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             var originalGraph = CaptureFile(graphPath);
 
             try
@@ -2108,9 +2108,9 @@ namespace Ludots.Tests.Architecture
         public void Launcher_PresetArgs_ReplaceBindingArgs_OnExecutableTarget()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-executable-args-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-executable-args-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             var originalGraph = CaptureFile(graphPath);
 
             try
@@ -2185,7 +2185,7 @@ namespace Ludots.Tests.Architecture
         public void Launcher_FailsLoud_WhenProjectBindingPointsToMissingCsproj()
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-executable-missing-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"launcher-executable-missing-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
             try
@@ -2371,10 +2371,10 @@ namespace Ludots.Tests.Architecture
         private static void WithCefReactFlowPresetLauncher(string tempDirectoryPrefix, Action<string, LauncherService> body)
         {
             var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"{tempDirectoryPrefix}-{Guid.NewGuid():N}");
+            var tempDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "tests", $"{tempDirectoryPrefix}-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var graphPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "launcher", "raylib.launch.graph.json");
             var originalGraph = CaptureFile(graphPath);
 
             try

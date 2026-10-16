@@ -30,7 +30,7 @@ public sealed class PanelEntityListShowcaseAcceptanceTests
     public void PanelEntityList_FiltersSortsAndShowsStunBadge()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_entity_list");
+        string artifactDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts", "acceptance", "panel_entity_list");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
