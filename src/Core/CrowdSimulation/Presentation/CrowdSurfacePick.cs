@@ -21,6 +21,11 @@ internal static class CrowdSurfacePick
     {
         xCm = 0;
         yCm = 0;
+        if (engine.GetService(CoreServiceKeys.UiCaptured))
+        {
+            return false;
+        }
+
         Vector3 pointer = actions.ReadAction<Vector3>(ReservedInputActionIds.PointerPos);
 
         if (!engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? heightmap) ||
