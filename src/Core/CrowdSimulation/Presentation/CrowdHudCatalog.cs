@@ -15,6 +15,8 @@ public sealed class CrowdHudCatalog
         UnitTypes = config.UnitTypes.Select(t => t.Id).ToArray();
         AgentTypes = config.AgentTypes.Select(t => t.Id).ToArray();
         RadiusCm = config.RadiusClasses.ToArray();
+        ProfileIds = config.Profiles.Select(p => p.Id).ToArray();
+        ProfileRadiusCm = config.Profiles.Select(p => (int)p.RadiusCm.ToInt()).ToArray();
         if (playerView != null)
         {
             var formationLabels = new string[config.Formations.Count];
@@ -34,22 +36,24 @@ public sealed class CrowdHudCatalog
             ClickCount = new CrowdHudRange(playerView.ClickCountMin, playerView.ClickCountMax, playerView.ClickCountStep);
             string[] templates = playerView.ClickTemplates;
             ClickTemplates = templates;
-            var unitType = new int[templates.Length];
-            var radiusClass = new int[templates.Length];
+            var unitTypeIds = new string[templates.Length];
+            var templateRadiusCm = new int[templates.Length];
             for (int i = 0; i < templates.Length; i++)
             {
-                (unitType[i], radiusClass[i]) = CrowdDeployment.LocateTemplate(config, templates[i]);
+                var (unitType, radiusIndex) = CrowdDeployment.LocateTemplate(config, templates[i]);
+                unitTypeIds[i] = config.UnitTypes[unitType].Id;
+                templateRadiusCm[i] = config.RadiusClasses[radiusIndex];
             }
 
-            ClickUnitType = unitType;
-            ClickRadiusClass = radiusClass;
+            ClickTemplateUnitTypeIds = unitTypeIds;
+            ClickTemplateRadiusCm = templateRadiusCm;
         }
         else
         {
             Formations = config.Formations.Select(f => f.Id).ToArray();
             ClickTemplates = Array.Empty<string>();
-            ClickUnitType = Array.Empty<int>();
-            ClickRadiusClass = Array.Empty<int>();
+            ClickTemplateUnitTypeIds = Array.Empty<string>();
+            ClickTemplateRadiusCm = Array.Empty<int>();
         }
 
         Templates = palette.Select(p => p.Label).ToArray();
@@ -66,10 +70,12 @@ public sealed class CrowdHudCatalog
     public IReadOnlyList<string> UnitTypes { get; }
     public IReadOnlyList<string> AgentTypes { get; }
     public IReadOnlyList<int> RadiusCm { get; }
+    public IReadOnlyList<string> ProfileIds { get; }
+    public IReadOnlyList<int> ProfileRadiusCm { get; }
     public IReadOnlyList<string> Formations { get; }
     public IReadOnlyList<string> ClickTemplates { get; }
-    public IReadOnlyList<int> ClickUnitType { get; }
-    public IReadOnlyList<int> ClickRadiusClass { get; }
+    public IReadOnlyList<string> ClickTemplateUnitTypeIds { get; }
+    public IReadOnlyList<int> ClickTemplateRadiusCm { get; }
     public IReadOnlyList<string> Templates { get; }
     public int UnitCapacity { get; }
     public CrowdHudRange DeployCount { get; }

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Presentation;
@@ -128,6 +129,38 @@ public sealed class CrowdHudSamplingTests
         int reads = feed.TelemetryReads;
         for (int i = 0; i < 20; i++) ui.FrameAfterAllPeriods(feed);
         Assert.That(feed.TelemetryReads, Is.EqualTo(reads));
+    }
+
+    /// <summary>
+    /// 取代旧 Reactive HUD 的 <c>StatusCard_LabelsEveryCount</c>：原先断言 TeamLine/CardLine/ClickLine/DeployLine 带齐标签、
+    /// 点选模板末段、部署数、移动类型 id，且不含占位星号。Markup HUD 上对应玩家条计数、生成区模板 id、部署参数与图层行文案。
+    /// </summary>
+    [Test]
+    public void StatusCard_LabelsEveryCount()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 4, 1, 0, 0), Is.EqualTo(4));
+        var feed = CrowdHudAllocTests.DeployFeed(new S4DeployDemoRuntime(null), () => session);
+        var player = ShippedPlayerView(session);
+        feed.UsePlayerView(player);
+        using var ui = new CrowdHudTestHost();
+        for (int i = 0; i < 6; i++) ui.FrameAfterAllPeriods(feed);
+
+        string players = ui.Text("crowd-players");
+        Assert.That(players, Does.Contain("P1"));
+        Assert.That(players, Does.Contain("4"), "本方单位数应带在玩家芯片上");
+
+        string spawnHead = ui.Text("crowd-spawn-section");
+        Assert.That(spawnHead, Does.Contain("crowd_simulation.unit.infantry.r100"), "点选模板应显示完整 id");
+
+        string deploy = ui.Text("crowd-deploy-params");
+        Assert.That(deploy, Does.Contain("24"), "部署数量");
+
+        string layers = ui.Text("crowd-layer-rows");
+        Assert.That(layers, Does.Contain("crowd_simulation.unit.infantry"), "图层行显示移动类型 id");
+
+        string hint = ui.Text("crowd-hint");
+        Assert.That(hint, Does.Not.Contain("*"));
     }
 
     [Test]

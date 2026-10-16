@@ -36,7 +36,7 @@ internal sealed partial class CrowdHudPage
         _observeClickCount = () => _player.ClickCount;
         _observeUnitColor = () => (int)_inspect.UnitColor;
         _observeInspectLayer = InspectAgentIndex;
-        _observeInspectRadius = InspectRadiusIndex;
+        _observeInspectRadius = InspectProfileIndex;
         _observeSlices = () => _deploy.RebakeSlices;
         _observeAvoid = () => AvoidIndex(_deploy.AvoidHz);
     }
@@ -166,18 +166,20 @@ internal sealed partial class CrowdHudPage
     private void PickFormation(int index) => Cycle(PlayerKeys.CycleShape, _observeShape, index, Math.Max(1, Catalog.Formations.Count));
 
     /// <summary>先把焦点层循环到 <paramref name="type"/>，再按一次开关。</summary>
-    private void ToggleUnitType(int type)
+    private void ToggleUnitType(string unitTypeId)
     {
+        int type = UnitTypeIndex(unitTypeId);
+        if (type < 0) return;
         CrowdHudActions.PlayerViewGroup keys = PlayerKeys;
         Cycle(keys.CycleLayer, _observeLayer, type, Math.Max(1, Catalog.UnitTypes.Count), keys.ToggleLayer);
     }
 
-    private void PickSpawnType(int unitTypeIndex)
+    private void PickSpawnType(string unitTypeId)
     {
         CrowdHudCatalog c = Catalog;
         for (int i = 0; i < c.ClickTemplates.Count; i++)
         {
-            if (c.ClickUnitType[i] == unitTypeIndex)
+            if (string.Equals(c.ClickTemplateUnitTypeIds[i], unitTypeId, StringComparison.Ordinal))
             {
                 Cycle(PlayerKeys.CycleClickTemplate, _observeClickType, i, Math.Max(1, c.ClickTemplates.Count));
                 return;
@@ -185,12 +187,12 @@ internal sealed partial class CrowdHudPage
         }
     }
 
-    private void PickSpawnRadius(int radiusClass)
+    private void PickSpawnRadius(int radiusCm)
     {
         CrowdHudCatalog c = Catalog;
         for (int i = 0; i < c.ClickTemplates.Count; i++)
         {
-            if (c.ClickRadiusClass[i] == radiusClass)
+            if (c.ClickTemplateRadiusCm[i] == radiusCm)
             {
                 Cycle(PlayerKeys.CycleClickRadius, _observeClickRadius, i, Math.Max(1, c.ClickTemplates.Count));
                 return;
@@ -200,13 +202,13 @@ internal sealed partial class CrowdHudPage
 
     private void PickInspectLayer(int index) => Cycle(DebugKeys.CycleInspectLayer, _observeInspectLayer, index, Math.Max(1, Catalog.AgentTypes.Count));
 
-    private void PickInspectRadius(int index) => Cycle(DebugKeys.CycleInspectRadius, _observeInspectRadius, index, Math.Max(1, Catalog.RadiusCm.Count));
+    private void PickInspectProfile(int index) => Cycle(DebugKeys.CycleInspectRadius, _observeInspectRadius, index, Math.Max(1, Catalog.ProfileIds.Count));
 
     /// <summary>
     /// 原型 RadiusControl：点区间外的档扩到它，点区间端点收掉它，中间档不响应。
     /// 演示的半径窗键只会走 (0,末) → (1,1) → (1,2) … → (末,末) → (0,末) 这一圈，所以 (0, k&lt;末) 到不了，点了不动。
     /// </summary>
-    private void PickDeployRadius(int radiusClass)
+    private void PickDeployRadius(int radiusCm)
     {
         CrowdHudCatalog c = Catalog;
         int lo = WindowLo(), hi = WindowHi();
@@ -216,7 +218,7 @@ internal sealed partial class CrowdHudPage
         int template = -1;
         for (int i = 0; i < c.ClickTemplates.Count; i++)
         {
-            if (c.ClickRadiusClass[i] == radiusClass)
+            if (c.ClickTemplateRadiusCm[i] == radiusCm)
             {
                 template = i;
                 break;

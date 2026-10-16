@@ -92,19 +92,19 @@ internal sealed partial class CrowdHudPage
         int types = Math.Min(c.UnitTypes.Count, MaxUnitTypes);
         for (int t = 0; t < types; t++)
         {
-            int type = t;
+            string unitTypeId = c.UnitTypes[t];
             string icon = ShapeIcon(t);
             UiElement row = Fragment(
-                $"""<button class="nf-layer-row">{icon}<div class="nf-layer-name"><span class="nf-text">{Html(c.UnitTypes[t])}</span></div><span class="nf-value nf-muted"></span>{EyeSvg}{EyeOffSvg}</button>""");
+                $"""<button class="nf-layer-row">{icon}<div class="nf-layer-name"><span class="nf-text">{Html(unitTypeId)}</span></div><span class="nf-value nf-muted"></span>{EyeSvg}{EyeOffSvg}</button>""");
             row.Children[2].TextBinding = _typeCounts[t];
-            row.ClickHandler = _ => ToggleUnitType(type);
+            row.ClickHandler = _ => ToggleUnitType(unitTypeId);
             layers.AddChild(row);
             _layerRows.Add(CrowdHudClassSwitch.Toggle(row, "nf-layer-off"));
             _layerEyes.Add(CrowdHudClassSwitch.Visibility(row.Children[3]));
             _layerEyesOff.Add(CrowdHudClassSwitch.Visibility(row.Children[4]));
 
-            _deployTypeChips.Add(OptionChip(deployTypes, $"""<button class="nf-chip nf-chip-sm nf-chip-icon">{icon}</button>""", () => ToggleUnitType(type)));
-            _spawnTypeChips.Add(Chip(spawnTypes, $"""<button class="nf-chip nf-chip-sm nf-chip-icon">{icon}</button>""", "nf-chip-on", () => PickSpawnType(type)));
+            _deployTypeChips.Add(OptionChip(deployTypes, $"""<button class="nf-chip nf-chip-sm nf-chip-icon">{icon}</button>""", () => ToggleUnitType(unitTypeId)));
+            _spawnTypeChips.Add(Chip(spawnTypes, $"""<button class="nf-chip nf-chip-sm nf-chip-icon">{icon}</button>""", "nf-chip-on", () => PickSpawnType(unitTypeId)));
         }
 
         for (int i = 0; i < c.AgentTypes.Count; i++)
@@ -115,16 +115,22 @@ internal sealed partial class CrowdHudPage
 
         PadSeg(inspectLayers, c.AgentTypes.Count, InspectLayerColumns);
 
-        for (int r = 0; r < c.RadiusCm.Count; r++)
+        for (int p = 0; p < c.ProfileIds.Count; p++)
         {
-            int index = r;
-            string cm = c.RadiusCm[r].ToString(CrowdHudFormat.Inv);
-            _inspectRadiusChips.Add(Chip(SegRow(inspectRadii, r, InspectRadiusColumns), $"""<button class="nf-chip">{cm}</button>""", "nf-chip-on", () => PickInspectRadius(index)));
-            _deployRadiusChips.Add(Chip(deployRadii, $"""<button class="nf-chip nf-chip-sm nf-chip-num">{cm}</button>""", "nf-chip-on", () => PickDeployRadius(index)));
-            _spawnRadiusChips.Add(Chip(spawnRadii, $"""<button class="nf-chip nf-chip-sm nf-chip-num">{cm}</button>""", "nf-chip-on", () => PickSpawnRadius(index)));
+            int index = p;
+            string cm = c.ProfileRadiusCm[p].ToString(CrowdHudFormat.Inv);
+            _inspectRadiusChips.Add(Chip(SegRow(inspectRadii, p, InspectRadiusColumns), $"""<button class="nf-chip">{cm}</button>""", "nf-chip-on", () => PickInspectProfile(index)));
         }
 
-        PadSeg(inspectRadii, c.RadiusCm.Count, InspectRadiusColumns);
+        PadSeg(inspectRadii, c.ProfileIds.Count, InspectRadiusColumns);
+
+        for (int r = 0; r < c.RadiusCm.Count; r++)
+        {
+            int radiusCm = c.RadiusCm[r];
+            string cm = radiusCm.ToString(CrowdHudFormat.Inv);
+            _deployRadiusChips.Add(Chip(deployRadii, $"""<button class="nf-chip nf-chip-sm nf-chip-num">{cm}</button>""", "nf-chip-on", () => PickDeployRadius(radiusCm)));
+            _spawnRadiusChips.Add(Chip(spawnRadii, $"""<button class="nf-chip nf-chip-sm nf-chip-num">{cm}</button>""", "nf-chip-on", () => PickSpawnRadius(radiusCm)));
+        }
 
         for (int i = 0; i < c.Templates.Count; i++)
         {
