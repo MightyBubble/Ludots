@@ -24,7 +24,8 @@
     "density": false,
     "links": false,
     "belief": false,
-    "blocked": false
+    "blocked": false,
+    "formationSlots": false
   },
   "colors": {
     "nav": {
@@ -92,6 +93,18 @@
       "green": 60,
       "blue": 90,
       "alpha": 240
+    },
+    "formationSlot": {
+      "red": 120,
+      "green": 220,
+      "blue": 160,
+      "alpha": 240
+    },
+    "formationLink": {
+      "red": 90,
+      "green": 180,
+      "blue": 255,
+      "alpha": 200
     },
     "templates": [
       {
@@ -369,7 +382,8 @@
     "cycleInspectRadius": "CrowdSimulation.S4.CycleInspectRadius",
     "toggleNavPanel": "CrowdSimulation.S4.ToggleNavPanel",
     "toggleTelemetryPanel": "CrowdSimulation.S4.ToggleTelemetryPanel",
-    "probePathFault": "CrowdSimulation.S4.ProbePathFault"
+    "probePathFault": "CrowdSimulation.S4.ProbePathFault",
+    "toggleFormationSlots": "CrowdSimulation.S4.ToggleFormationSlots"
   },
   "panels": {
     "nav": false,

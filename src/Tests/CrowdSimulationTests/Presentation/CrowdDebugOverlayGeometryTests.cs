@@ -9,6 +9,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
+using CrowdSimulationTests.Parity;
 
 namespace CrowdSimulationTests.Presentation;
 
@@ -318,6 +319,35 @@ public class CrowdDebugOverlayGeometryTests
         int bh = (200 + step - 1) / step;
         Assert.That(step, Is.GreaterThan(1));
         Assert.That(bw * bh, Is.LessThanOrEqualTo(100));
+    }
+
+    [Test]
+    public void FormationSlots_DrawLinkAndSlotCrossAtOffset()
+    {
+        var nav = MinimalNav();
+        var leader = new CrowdLeader(8);
+        leader.Reset(
+            [new Fix64Vec2(0, 0), new Fix64Vec2(1000, 0)],
+            0, nav, false, null, Fix64.FromInt(10), Fix64.OneValue);
+        var group = Group(0, 0, 0, null, leader);
+        group.OrderId = 1;
+        CrowdNavGroupSet.Group?[] groups = { group };
+
+        var (_, session) = S4DeployTruthTests.BuildSession("s7");
+        var movement = CrowdMovementKernel.Create(session);
+        movement.States = [new CrowdSimulationUnitState { GroupId = 0 }];
+        movement.Kins = [new CrowdSimulationKinematics { SlotOffsetCm = new Fix64Vec2(Fix64.FromInt(200), Fix64.Zero) }];
+        movement.Positions = [new Fix64Vec2(Fix64.FromInt(50), Fix64.FromInt(50))];
+        movement.Radii = [Fix64.FromInt(100)];
+
+        var dest = new CrowdDebugSegment[8];
+        int count = CrowdDebugOverlayGeometry.AppendFormationSlots(movement, 1, groups, player: 0, dest, 0);
+        Assert.That(count, Is.EqualTo(3));
+        Assert.That(dest[0].Kind, Is.EqualTo(CrowdDebugSegmentKind.FormationLink));
+        Assert.That(dest[0].X0, Is.EqualTo(50f));
+        Assert.That(dest[0].Y0, Is.EqualTo(50f));
+        Assert.That(dest[1].Kind, Is.EqualTo(CrowdDebugSegmentKind.FormationSlot));
+        Assert.That(dest[2].Kind, Is.EqualTo(CrowdDebugSegmentKind.FormationSlot));
     }
 
     private static FlowField Flow(byte[] mask) => new()

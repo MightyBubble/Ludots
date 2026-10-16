@@ -25,6 +25,8 @@ internal static class CrowdDebugSegmentKind
     public const byte OneWay = 4;
     public const byte Leader = 5;
     public const byte Funnel = 6;
+    public const byte FormationSlot = 7;
+    public const byte FormationLink = 8;
 }
 
 internal static class CrowdDebugOverlayGeometry
@@ -201,6 +203,62 @@ internal static class CrowdDebugOverlayGeometry
                 int ty = tile / tilesPerSide;
                 written += AppendEntry(pair.Value.Entry, tx * navCellsPerTile, ty * navCellsPerTile, cellCm, dest, offset + written);
             }
+        }
+
+        return written;
+    }
+
+    public static int AppendFormationSlots(
+        CrowdMovementKernel movement,
+        int unitCount,
+        IReadOnlyList<CrowdNavGroupSet.Group?> groups,
+        int player,
+        CrowdDebugSegment[] dest,
+        int offset)
+    {
+        int written = 0;
+        for (int i = 0; i < unitCount; i++)
+        {
+            int groupId = movement.States[i].GroupId;
+            if (groupId < 0 || groupId >= groups.Count) continue;
+            var group = groups[groupId];
+            if (group == null || group.Player != player || group.OrderId == 0) continue;
+            var leader = group.Leader;
+            if (leader == null || leader.Done) continue;
+            var kin = movement.Kins[i];
+            Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
+            float tx = leader.XCm.ToFloat() - leader.Hy.ToFloat() * lat.ToFloat() - leader.Hx.ToFloat() * back.ToFloat();
+            float ty = leader.YCm.ToFloat() + leader.Hx.ToFloat() * lat.ToFloat() - leader.Hy.ToFloat() * back.ToFloat();
+            float px = movement.Positions[i].X.ToFloat();
+            float py = movement.Positions[i].Y.ToFloat();
+            if (offset + written + 3 > dest.Length)
+                throw new InvalidOperationException("CrowdSimulationDebugView.json: maxWorldSegments 装不下阵型槽位。");
+            dest[offset + written++] = new CrowdDebugSegment
+            {
+                X0 = px,
+                Y0 = py,
+                X1 = tx,
+                Y1 = ty,
+                Kind = CrowdDebugSegmentKind.FormationLink,
+            };
+            float mark = movement.Radii[i].ToFloat() * 0.35f;
+            if (mark < 20f) mark = 20f;
+            dest[offset + written++] = new CrowdDebugSegment
+            {
+                X0 = tx - mark,
+                Y0 = ty,
+                X1 = tx + mark,
+                Y1 = ty,
+                Kind = CrowdDebugSegmentKind.FormationSlot,
+            };
+            dest[offset + written++] = new CrowdDebugSegment
+            {
+                X0 = tx,
+                Y0 = ty - mark,
+                X1 = tx,
+                Y1 = ty + mark,
+                Kind = CrowdDebugSegmentKind.FormationSlot,
+            };
         }
 
         return written;
