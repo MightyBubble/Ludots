@@ -626,13 +626,7 @@ public sealed class CrowdSimulationConfigLoader
                         $"Entities/templates.json: 移动类型 \"{row.Id}\" 的半径 {radiusKey} 有多份模板。");
                 }
 
-                var expectedPersonal = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidance);
-                if (member.PersonalRadiusCm != expectedPersonal)
-                {
-                    throw new InvalidOperationException(
-                        $"Entities/templates.json: 模板 \"{member.TemplateId}\" 的 personalRadiusCm 与半径 × agents.avoidanceRadiusScale 不一致。");
-                }
-
+                var personalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidance);
                 int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidance, navCellSizeCm);
                 if (clearance > 255)
                 {
@@ -644,7 +638,7 @@ public sealed class CrowdSimulationConfigLoader
                 {
                     Id = body.Id,
                     RadiusCm = radiusCm,
-                    PersonalRadiusCm = member.PersonalRadiusCm,
+                    PersonalRadiusCm = personalRadiusCm,
                     PushPriority = member.PushPriority,
                     SpeedCmPerSec = member.SpeedCmPerSec,
                     AutoDeploy = member.AutoDeploy,

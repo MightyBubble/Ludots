@@ -174,6 +174,7 @@ public static class CrowdDeployment
             g.Id,
             cfg.Deploy.Bases[g.Player].PlayerId,
             profile.RadiusCm,
+            profile.PersonalRadiusCm,
             profileIndex,
             profile.AgentTypeIndex);
         int dense = sim.Units.Add(in unit);

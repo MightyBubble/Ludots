@@ -183,7 +183,6 @@ public static class CrowdModScaffold
                     {
                         ["profileId"] = mapId + "_unit",
                         ["speedCmPerSec"] = 1400,
-                        ["personalRadiusCm"] = 900,
                         ["pushPriority"] = 2,
                         ["autoDeploy"] = true,
                     },

@@ -413,7 +413,7 @@ public class CrowdSimulationEditorApiTests
     }
 
     [Test]
-    public void UnitTemplates_RadiusWithoutMatchingPersonalRadius_IsRejected()
+    public void UnitTemplates_PersonalRadiusCm_IsRejected()
     {
         string copy = CopyMod(Minimal);
         string profilesPath = Path.Combine(copy, "assets", "Navigation", "agent_profiles.json");
@@ -421,10 +421,10 @@ public class CrowdSimulationEditorApiTests
         try
         {
             JsonObject draft = TemplatesDraft(Minimal, copy);
-            Profile(draft, "crowd_minimal_unit")["radiusCm"] = 200;
+            Agent(draft, MinimalUnit)["personalRadiusCm"] = 1200;
             JsonObject result = CrowdSimulationEditorApi.Apply(FindRepoRoot(), Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.False, result.ToJsonString());
-            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("personalRadiusCm"));
+            Assert.That(result["issues"]!.ToJsonString(), Does.Contain("unsupported property 'personalRadiusCm'"));
             Assert.That(File.ReadAllText(profilesPath), Is.EqualTo(before));
         }
         finally
@@ -442,7 +442,6 @@ public class CrowdSimulationEditorApiTests
         {
             JsonObject draft = TemplatesDraft(Minimal, copy);
             Agent(draft, MinimalUnit)["speedCmPerSec"] = 1650;
-            Agent(draft, MinimalUnit)["personalRadiusCm"] = 1200;
             Profile(draft, "crowd_minimal_unit")["radiusCm"] = 200;
             JsonObject result = CrowdSimulationEditorApi.Apply(repo, Minimal, "templates", draft, copy);
             Assert.That(Flag(result, "ok"), Is.True, result.ToJsonString());
@@ -461,7 +460,7 @@ public class CrowdSimulationEditorApiTests
 
             JsonObject unit = Item(UnitTemplates(CrowdSimulationEditorApi.Load(repo, Minimal, copy)), MinimalUnit);
             Assert.That(unit["agent"]!["speedCmPerSec"]!.GetValue<int>(), Is.EqualTo(1650));
-            Assert.That(unit["agent"]!["personalRadiusCm"]!.GetValue<int>(), Is.EqualTo(1200));
+            Assert.That(unit["agent"]!["personalRadiusCm"], Is.Null);
             Assert.That(unit["profile"]!["values"]!["radiusCm"]!.GetValue<int>(), Is.EqualTo(200));
         }
         finally

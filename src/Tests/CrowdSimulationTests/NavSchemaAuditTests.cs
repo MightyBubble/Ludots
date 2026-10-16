@@ -237,7 +237,7 @@ public class NavSchemaAuditTests
     [Test]
     public void Template_MissingEachRequiredField_Fails()
     {
-        string[] fields = { "profileId", "speedCmPerSec", "personalRadiusCm", "pushPriority", "autoDeploy" };
+        string[] fields = { "profileId", "speedCmPerSec", "pushPriority", "autoDeploy" };
         foreach (string field in fields)
         {
             JsonObject template = FullTemplate();
@@ -309,12 +309,10 @@ public class NavSchemaAuditTests
         InvalidOperationException radiusClass = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "radiusClassCm": 100 }""")!))!;
         Assert.That(radiusClass.Message, Does.Contain("profileId"));
-        Assert.That(radiusClass.Message, Does.Contain("personalRadiusCm"));
 
         InvalidOperationException radius = Assert.Throws<InvalidOperationException>(() =>
             Ludots.Core.Config.ComponentRegistry.Apply(entity, "CrowdSimulationAgent", JsonNode.Parse("""{ "radiusCm": 100 }""")!))!;
         Assert.That(radius.Message, Does.Contain("profileId"));
-        Assert.That(radius.Message, Does.Contain("personalRadiusCm"));
     }
 
     [Test]
@@ -367,7 +365,6 @@ public class NavSchemaAuditTests
             {
               "profileId": "foot_r100",
               "speedCmPerSec": 1400,
-              "personalRadiusCm": 600,
               "pushPriority": 2,
               "autoDeploy": true
             }

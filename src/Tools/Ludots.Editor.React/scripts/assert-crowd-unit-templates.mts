@@ -77,8 +77,10 @@ const issues: Issue[] = [
     sourceFile: 'CrowdSimulationMinimalMod:Entities/templates.json',
   },
   {
-    path: 'agents.avoidanceRadiusScale',
-    message: 'Entities/templates.json: 模板 "crowd_minimal.unit" 的 personalRadiusCm 与半径 × agents.avoidanceRadiusScale 不一致。',
+    path: 'CrowdSimulationAgent.pushPriority',
+    message: 'Entities/templates.json: 模板 "crowd_minimal.unit" 的 CrowdSimulationAgent.pushPriority 需为 ≥ 0 的数值。',
+    sourceMod: 'CrowdSimulationMinimalMod',
+    sourceFile: 'CrowdSimulationMinimalMod:Entities/templates.json',
   },
   { path: '', message: "AgentProfile 'crowd_minimal_unit' requires RadiusCm > 0." },
   { path: 'unitTypes.other.components.CrowdSimulationAgent.pushPriority', message: '下层已经给出这个键。当前 Mod 的覆盖删不掉它。' },
@@ -89,7 +91,7 @@ const mine = issuesFor(issues, 'crowd_minimal.unit', 'crowd_minimal_unit');
 assert(mine.length === 3, `issues naming the template or its profile belong to it, got ${mine.length}`);
 assert(issuesFor(issues, 'other').length === 1, 'omission issues are matched by their unitTypes path');
 assert(issueForField(mine, 'speedCmPerSec') === issues[0], 'speed issue is attached to the speed field');
-assert(issueForField(mine, 'personalRadiusCm') === issues[1], 'mismatch issue is attached to personalRadiusCm');
+assert(issueForField(mine, 'pushPriority') === issues[1], 'priority issue is attached to pushPriority');
 assert(issueForField(mine, 'radiusCm') === issues[2], 'profile radius issue is attached to radiusCm');
 assert(issueForField(mine, 'profileId') === undefined, 'fields without an issue get no hint');
 

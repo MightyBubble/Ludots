@@ -73,7 +73,7 @@ internal static class CrowdUatKit
         return new CrowdUatScene(runtime, session, service, session.NavFor(runtime.UnitTypes[0].AgentTypeIndex, 0));
     }
 
-    /// <summary>演示体型表按半径级（升序）逐级换半径，单位模板的个人半径随之按避让倍数重算。</summary>
+    /// <summary>演示体型表按半径级（升序）逐级换半径。个人半径由装载按避让倍数重算。</summary>
     public static CrowdTestBodies DemoBodiesWithRadii(params int[] radiusCmByClass)
         => DemoBodies(radiusCmByClass, speedCmPerSec: null, tuneTraversal: null);
 
@@ -86,22 +86,16 @@ internal static class CrowdUatKit
         var classes = profiles.Select(p => (int)p.RadiusCm).Distinct().OrderBy(r => r).ToArray();
         if (radiusCmByClass != null && classes.Length != radiusCmByClass.Length)
             throw new ArgumentException($"演示体型有 {classes.Length} 个半径级，给了 {radiusCmByClass.Length} 个半径。");
-        var radiusOf = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var p in profiles)
         {
             if (radiusCmByClass != null) p.RadiusCm = radiusCmByClass[Array.IndexOf(classes, (int)p.RadiusCm)];
-            radiusOf[p.Id] = (int)p.RadiusCm;
         }
 
-        Fix64 scale = Fix64.FromDouble(TestDefaults.DefaultConfigJson()["agents"]!["avoidanceRadiusScale"]!.GetValue<double>());
         var templates = TestDefaults.DemoTemplates().Select(t => new CrowdUnitTemplateFacts
         {
             TemplateId = t.TemplateId,
             ProfileId = t.ProfileId,
             SpeedCmPerSec = speedCmPerSec ?? t.SpeedCmPerSec,
-            PersonalRadiusCm = radiusCmByClass == null
-                ? t.PersonalRadiusCm
-                : CrowdSimulationSpace.PersonalRadiusCm(Fix64.FromInt(radiusOf[t.ProfileId]), scale),
             PushPriority = t.PushPriority,
             AutoDeploy = t.AutoDeploy,
         }).ToList();

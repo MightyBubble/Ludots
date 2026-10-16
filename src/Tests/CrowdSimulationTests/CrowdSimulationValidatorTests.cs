@@ -217,7 +217,7 @@ public sealed class CrowdSimulationValidatorTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         var group = session.Groups.Alloc(1, 0, 0, FirstNav(session).Id);
         session.Units.Add(new CrowdUnitSpawnRequest(
-            Fix64.FromInt(480000), Fix64.FromInt(560000), 0, 0, group.Id, 1, Fix64.FromInt(40), 0, 0));
+            Fix64.FromInt(480000), Fix64.FromInt(560000), 0, 0, group.Id, 1, Fix64.FromInt(40), Fix64.Zero, 0, 0));
         var ex = Assert.Throws<CrowdSimulationInvariantException>(() => CrowdSimulationValidator.ValidateSim(session));
         Assert.That(ex!.Message, Does.Contain("还没绑定实体"));
     }

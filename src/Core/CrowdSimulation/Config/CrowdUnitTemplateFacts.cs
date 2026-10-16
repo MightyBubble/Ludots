@@ -10,14 +10,14 @@ namespace Ludots.Core.CrowdSimulation.Config;
 public readonly record struct CrowdUnitTemplateField(string Name, string Kind, string? Reference);
 
 /// <summary>
-/// 单位模板上 CrowdSimulationAgent 的装载事实。速度、个人半径、推挤优先级以模板为准。
+/// 单位模板上 CrowdSimulationAgent 的装载事实。速度、推挤优先级以模板为准。
+/// 个人半径不在模板上，装载时由体型半径乘 avoidanceRadiusScale 算出。
 /// </summary>
 public sealed class CrowdUnitTemplateFacts
 {
     public const string ComponentName = "CrowdSimulationAgent";
     public const string ProfileIdField = "profileId";
     public const string SpeedField = "speedCmPerSec";
-    public const string PersonalRadiusField = "personalRadiusCm";
     public const string PushPriorityField = "pushPriority";
     public const string AutoDeployField = "autoDeploy";
     public const string AgentProfilesReference = "agentProfiles";
@@ -26,7 +26,6 @@ public sealed class CrowdUnitTemplateFacts
     [
         new(ProfileIdField, "string", AgentProfilesReference),
         new(SpeedField, "number", null),
-        new(PersonalRadiusField, "number", null),
         new(PushPriorityField, "number", null),
         new(AutoDeployField, "bool", null),
     ];
@@ -34,7 +33,6 @@ public sealed class CrowdUnitTemplateFacts
     public required string TemplateId { get; init; }
     public required string ProfileId { get; init; }
     public required Fix64 SpeedCmPerSec { get; init; }
-    public required Fix64 PersonalRadiusCm { get; init; }
     public required Fix64 PushPriority { get; init; }
     public required bool AutoDeploy { get; init; }
 
@@ -71,7 +69,6 @@ public sealed class CrowdUnitTemplateFacts
             TemplateId = templateId,
             ProfileId = RequireString(obj, ProfileIdField, Prefix(ProfileIdField)),
             SpeedCmPerSec = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
-            PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
             PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
             AutoDeploy = RequireBool(obj, AutoDeployField, Prefix(AutoDeployField)),
         };
@@ -82,7 +79,7 @@ public sealed class CrowdUnitTemplateFacts
         if (obj.ContainsKey("radiusClassCm") || obj.ContainsKey("radiusCm"))
         {
             throw new InvalidOperationException(
-                "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId；个人半径写 personalRadiusCm。");
+                "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId。");
         }
 
     }

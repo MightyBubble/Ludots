@@ -195,7 +195,7 @@ public sealed class DefenseUatTests
         if (radiusWhy == null) accepted.Add("agent_profiles[0].radiusCm=null");
 
         var agent = (JsonObject)JsonNode.Parse(
-            """{"profileId":"foot_r100","speedCmPerSec":1400,"personalRadiusCm":600,"pushPriority":2,"autoDeploy":true}""")!;
+            """{"profileId":"foot_r100","speedCmPerSec":1400,"pushPriority":2,"autoDeploy":true}""")!;
         Assert.DoesNotThrow(() => CrowdUnitTemplateFacts.Parse("template", (JsonObject)agent.DeepClone()), "默认单位模板被拒");
         agent["pushPriority"] = "1";
         string? pushWhy = Rejection(() => CrowdUnitTemplateFacts.Parse("template", agent));

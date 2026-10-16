@@ -83,8 +83,8 @@ public class TemplatePipelineIntegrationTests
                 $"单位 {handle:x} 档案下标应在生成时从模板 profileId 解析");
             Assert.That(agent.AgentTypeIndex, Is.EqualTo(expectedAgent),
                 $"单位 {handle:x} 移动类型下标应在生成时从体型 navProfileId 解析");
-            Assert.That(agent.PersonalRadiusCm, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["personalRadiusCm"]!.GetValue<int>())),
-                $"单位 {handle:x} 个人半径应来自模板写真");
+            Assert.That(agent.PersonalRadiusCm, Is.EqualTo(runtime.Profiles[expectedProfile].PersonalRadiusCm),
+                $"单位 {handle:x} 个人半径应等于体型半径 × avoidanceRadiusScale");
             Assert.That(agent.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["pushPriority"]!.GetValue<int>())),
                 $"单位 {handle:x} 推挤优先级应来自模板写真");
             Assert.That(agent.SpeedCmPerSec, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSec"]!.GetValue<int>())),

@@ -88,7 +88,6 @@ public sealed class TemplateBatchAdmissionContractTests
                     {
                       "profileId": "foot_r100",
                       "speedCmPerSec": 1400,
-                      "personalRadiusCm": 600,
                       "pushPriority": 2,
                       "autoDeploy": true
                     }
