@@ -1,0 +1,272 @@
+{
+  "paritySchema": "crowd-fuzz-parity-v1",
+  "seed": 11111,
+  "opCount": 40,
+  "plan": {
+    "stepsPerOp": 2,
+    "probeHandleCount": 32,
+    "spawnCount": 8,
+    "placeTemplate": "building",
+    "placeSizeCm": 14000,
+    "orderShape": "box",
+    "orderMemberCap": 8,
+    "stallGuard": 64,
+    "boomRadiusCm": 12500,
+    "ringScale": 2,
+    "impulse": 4,
+    "pathTemplate": "bridge",
+    "pathWidthCm": 6250,
+    "pathLengthCm": 62500,
+    "ops": [
+      "spawn",
+      "order",
+      "place",
+      "remove",
+      "placePath",
+      "removePath",
+      "kill"
+    ]
+  },
+  "steps": [
+    {
+      "opId": "order",
+      "units": 0,
+      "stateDigest": "0x000000005d7b8c9f",
+      "positionDigest": "0x000000005d7b8c9f"
+    },
+    {
+      "opId": "place",
+      "units": 0,
+      "stateDigest": "0x00000000796cae29",
+      "positionDigest": "0x00000000796cae29"
+    },
+    {
+      "opId": "removePath",
+      "units": 0,
+      "stateDigest": "0x00000000c571a2fb",
+      "positionDigest": "0x00000000c571a2fb"
+    },
+    {
+      "opId": "spawn",
+      "units": 8,
+      "stateDigest": "0x00000000819f1590",
+      "positionDigest": "0x0000000095c0a1a0"
+    },
+    {
+      "opId": "removePath",
+      "units": 8,
+      "stateDigest": "0x000000005fd8c03e",
+      "positionDigest": "0x00000000ca8b4dbb"
+    },
+    {
+      "opId": "spawn",
+      "units": 16,
+      "stateDigest": "0x00000000a6d38689",
+      "positionDigest": "0x00000000e6eed2a1"
+    },
+    {
+      "opId": "place",
+      "units": 16,
+      "stateDigest": "0x00000000a51ddd65",
+      "positionDigest": "0x00000000bea0428c"
+    },
+    {
+      "opId": "removePath",
+      "units": 16,
+      "stateDigest": "0x000000008cbd310a",
+      "positionDigest": "0x000000009ae0053c"
+    },
+    {
+      "opId": "order",
+      "units": 16,
+      "stateDigest": "0x000000000e94348e",
+      "positionDigest": "0x00000000e617e929"
+    },
+    {
+      "opId": "order",
+      "units": 16,
+      "stateDigest": "0x000000009a75c385",
+      "positionDigest": "0x00000000135f2d8e"
+    },
+    {
+      "opId": "removePath",
+      "units": 16,
+      "stateDigest": "0x00000000ed2e54f7",
+      "positionDigest": "0x000000002f042e74"
+    },
+    {
+      "opId": "removePath",
+      "units": 16,
+      "stateDigest": "0x00000000e225fd5f",
+      "positionDigest": "0x000000007caaa895"
+    },
+    {
+      "opId": "order",
+      "units": 16,
+      "stateDigest": "0x00000000915c31a3",
+      "positionDigest": "0x00000000590a4e25"
+    },
+    {
+      "opId": "kill",
+      "units": 13,
+      "stateDigest": "0x000000006999feb8",
+      "positionDigest": "0x00000000b8b6b33d"
+    },
+    {
+      "opId": "kill",
+      "units": 7,
+      "stateDigest": "0x00000000b1f6b0bb",
+      "positionDigest": "0x0000000081d2151e"
+    },
+    {
+      "opId": "placePath",
+      "units": 7,
+      "stateDigest": "0x0000000021bc79b7",
+      "positionDigest": "0x00000000c9da2e21"
+    },
+    {
+      "opId": "place",
+      "units": 7,
+      "stateDigest": "0x00000000ab7da863",
+      "positionDigest": "0x0000000032ec7797"
+    },
+    {
+      "opId": "remove",
+      "units": 7,
+      "stateDigest": "0x0000000079980e85",
+      "positionDigest": "0x000000005a9378b8"
+    },
+    {
+      "opId": "remove",
+      "units": 7,
+      "stateDigest": "0x000000007c110f44",
+      "positionDigest": "0x000000000c439eec"
+    },
+    {
+      "opId": "removePath",
+      "units": 7,
+      "stateDigest": "0x0000000016f20421",
+      "positionDigest": "0x000000004746441f"
+    },
+    {
+      "opId": "order",
+      "units": 7,
+      "stateDigest": "0x00000000216023f9",
+      "positionDigest": "0x00000000508eda79"
+    },
+    {
+      "opId": "placePath",
+      "units": 7,
+      "stateDigest": "0x0000000065626071",
+      "positionDigest": "0x000000006f393e29"
+    },
+    {
+      "opId": "removePath",
+      "units": 7,
+      "stateDigest": "0x00000000a0012af2",
+      "positionDigest": "0x000000000cb7d565"
+    },
+    {
+      "opId": "order",
+      "units": 7,
+      "stateDigest": "0x00000000ed5c5412",
+      "positionDigest": "0x000000001e99a622"
+    },
+    {
+      "opId": "order",
+      "units": 7,
+      "stateDigest": "0x00000000fedd55fa",
+      "positionDigest": "0x0000000077f1c6c9"
+    },
+    {
+      "opId": "spawn",
+      "units": 15,
+      "stateDigest": "0x000000001a3a8567",
+      "positionDigest": "0x00000000d572cacf"
+    },
+    {
+      "opId": "remove",
+      "units": 15,
+      "stateDigest": "0x000000002e4a7236",
+      "positionDigest": "0x0000000060305bcd"
+    },
+    {
+      "opId": "spawn",
+      "units": 23,
+      "stateDigest": "0x00000000875cf1ad",
+      "positionDigest": "0x000000000ecd9e87"
+    },
+    {
+      "opId": "order",
+      "units": 23,
+      "stateDigest": "0x0000000055a84056",
+      "positionDigest": "0x0000000058ce1fee"
+    },
+    {
+      "opId": "remove",
+      "units": 23,
+      "stateDigest": "0x0000000064046565",
+      "positionDigest": "0x00000000e83fd2bb"
+    },
+    {
+      "opId": "remove",
+      "units": 23,
+      "stateDigest": "0x0000000025bb394e",
+      "positionDigest": "0x00000000a33caec9"
+    },
+    {
+      "opId": "removePath",
+      "units": 23,
+      "stateDigest": "0x00000000fa767539",
+      "positionDigest": "0x000000004e998eea"
+    },
+    {
+      "opId": "kill",
+      "units": 16,
+      "stateDigest": "0x000000003d34217f",
+      "positionDigest": "0x00000000a4469618"
+    },
+    {
+      "opId": "remove",
+      "units": 16,
+      "stateDigest": "0x00000000e7b01976",
+      "positionDigest": "0x00000000f7c18419"
+    },
+    {
+      "opId": "remove",
+      "units": 16,
+      "stateDigest": "0x00000000df7ebdaf",
+      "positionDigest": "0x0000000060413016"
+    },
+    {
+      "opId": "removePath",
+      "units": 16,
+      "stateDigest": "0x00000000446cdbdb",
+      "positionDigest": "0x00000000d6c568b3"
+    },
+    {
+      "opId": "place",
+      "units": 16,
+      "stateDigest": "0x00000000ab0d4a58",
+      "positionDigest": "0x000000001e5078ba"
+    },
+    {
+      "opId": "kill",
+      "units": 8,
+      "stateDigest": "0x00000000774ee90c",
+      "positionDigest": "0x00000000a0e33fe4"
+    },
+    {
+      "opId": "place",
+      "units": 8,
+      "stateDigest": "0x0000000085a76d97",
+      "positionDigest": "0x0000000081108584"
+    },
+    {
+      "opId": "remove",
+      "units": 8,
+      "stateDigest": "0x000000004db0f0c6",
+      "positionDigest": "0x00000000572f0f88"
+    }
+  ]
+}
