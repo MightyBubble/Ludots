@@ -157,12 +157,12 @@ public record struct CrowdDeployHud
 public record struct CrowdInspectReadout
 {
     public bool NavOverlays;
-    public int LayerIndex;
-    public int RadiusIndex;
+    public string AgentTypeId = "";
+    public string ProfileId = "";
     public CrowdUnitColorMode UnitColor;
     public bool TerrainTypes;
     public bool Belief;
-    public int BeliefGroup;
+    public int BeliefPlayer;
     public int DivergentCells;
     public int Ghosts;
 

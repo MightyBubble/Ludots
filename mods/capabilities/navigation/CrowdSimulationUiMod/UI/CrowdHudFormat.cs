@@ -305,7 +305,7 @@ internal static class CrowdHudFormat
     {
         b.Clear();
         if (!readout.NavOverlays && readout.UnitColor == CrowdUnitColorMode.Off) return;
-        b.Append(Inv, $"检视 移动 {readout.LayerIndex} 半径 {readout.RadiusIndex}");
+        b.Append(Inv, $"检视 移动 {readout.AgentTypeId} 体型 {readout.ProfileId}");
         if (readout.UnitColor != CrowdUnitColorMode.Off) b.Append(Inv, $" 着色 {ColorLabel(readout.UnitColor)}");
         if (readout.TerrainTypes) b.Append(" 地形类型");
     }
@@ -314,7 +314,7 @@ internal static class CrowdHudFormat
     {
         b.Clear();
         if (!readout.Belief) return;
-        b.Append(Inv, $"视野组 {readout.BeliefGroup} 分歧 {readout.DivergentCells} 残影 {readout.Ghosts}");
+        b.Append(Inv, $"玩家 {readout.BeliefPlayer} 分歧 {readout.DivergentCells} 残影 {readout.Ghosts}");
     }
 
     private static string ColorLabel(CrowdUnitColorMode mode) => mode switch
