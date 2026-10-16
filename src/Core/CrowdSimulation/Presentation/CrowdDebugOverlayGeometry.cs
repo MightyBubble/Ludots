@@ -225,10 +225,9 @@ internal static class CrowdDebugOverlayGeometry
             if (group == null || group.Player != player || group.OrderId == 0) continue;
             var leader = group.Leader;
             if (leader == null || leader.Done) continue;
-            var kin = movement.Kins[i];
-            Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
-            float tx = leader.XCm.ToFloat() - leader.Hy.ToFloat() * lat.ToFloat() - leader.Hx.ToFloat() * back.ToFloat();
-            float ty = leader.YCm.ToFloat() + leader.Hx.ToFloat() * lat.ToFloat() - leader.Hy.ToFloat() * back.ToFloat();
+            var slot = leader.SlotWorldCm(movement.Kins[i].SlotOffsetCm);
+            float tx = slot.X.ToFloat();
+            float ty = slot.Y.ToFloat();
             float px = movement.Positions[i].X.ToFloat();
             float py = movement.Positions[i].Y.ToFloat();
             if (offset + written + 3 > dest.Length)
