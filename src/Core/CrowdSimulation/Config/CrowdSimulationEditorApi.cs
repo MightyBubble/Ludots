@@ -285,7 +285,7 @@ public static partial class CrowdSimulationEditorApi
                 DebugView = debugView,
                 BaselineDebugView = baselineDebugView,
                 Owners = full.Owners(report),
-                UnitTemplates = UnitTemplatesView(full, modId, templates, profiles, traversal),
+                UnitTemplates = UnitTemplatesView(full, modId, templates, profiles),
                 DisplayDefaults = new JsonObject(),
             };
         }

@@ -379,7 +379,7 @@ public static partial class CrowdSimulationEditorApi
             return new JsonArray
             {
                 HelpItem("规模", "sim.maxUnits 是单位上限。Navigation/navmesh.json 的 maps.<地图 id>.navCellSizeCm 和地图板宽决定格子数。deploy.initialUnits 是开局人数。"),
-                HelpItem("手感", "单位速度在模板的 speedCmPerSecond。formation.leaderSpeed、catchUp、settleTimeSec 管队形。movement.unitTurnRateRadPerSec 管转向。"),
+                HelpItem("手感", "单位速度在模板的 speedCmPerSec。formation.leaderSpeedRatio、catchUpSpeedRatio、settleTimeSec 管队形。movement.unitTurnRateRadPerSec 管转向。"),
                 HelpItem("拥挤", "推挤优先级在模板的 pushPriority。半径在 Navigation/agent_profiles.json。push、avoidance、agents.avoidanceRadiusScale 管挤开。"),
                 HelpItem("地图", "地图文件是 Maps/<startupMapId>.json。导航事实在 Navigation/navmesh.json 的 maps.<地图 id>。地形生成器不进运行时。"),
                 HelpItem("通行", "区域、地形到区域、链接种类和移动类型 × 区域的通行矩阵都在 CrowdSimulation/traversal.json。不可通行的格写 false。"),

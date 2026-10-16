@@ -237,7 +237,7 @@ public class NavSchemaAuditTests
     [Test]
     public void Template_MissingEachRequiredField_Fails()
     {
-        string[] fields = { "profileId", "agentTypeId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "special" };
+        string[] fields = { "profileId", "speedCmPerSec", "pushPriority", "autoDeploy" };
         foreach (string field in fields)
         {
             JsonObject template = FullTemplate();
@@ -323,16 +323,14 @@ public class NavSchemaAuditTests
         JsonObject obj = JsonNode.Parse("""
             {
               "profileId": "Small",
-              "agentTypeId": "foot",
-              "speedCmPerSecond": 100,
-              "personalRadiusCm": 40,
+              "speedCmPerSec": 100,
               "pushPriority": 1,
-              "special": false,
+              "autoDeploy": true,
               "agentType": "foot"
             }
             """)!.AsObject();
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => CrowdUnitTemplateFacts.Parse("scout", obj))!;
-        Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.agentType 是未知字段"));
+        Assert.That(ex.Message, Does.Contain("unsupported property 'agentType'"));
     }
 
     [Test]
@@ -369,7 +367,7 @@ public class NavSchemaAuditTests
                 new AgentProfileConfigLoader(pipeline).Load(catalog))!;
             Assert.That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
             Assert.That(ex.Message, Does.Contain("templateId"));
-            Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.speedCmPerSecond"));
+            Assert.That(ex.Message, Does.Contain("CrowdSimulationAgent.speedCmPerSec"));
         }
         finally
         {
@@ -384,11 +382,9 @@ public class NavSchemaAuditTests
         => JsonNode.Parse("""
             {
               "profileId": "foot_r100",
-              "agentTypeId": "foot",
-              "speedCmPerSecond": 1400,
-              "personalRadiusCm": 600,
+              "speedCmPerSec": 1400,
               "pushPriority": 2,
-              "special": false
+              "autoDeploy": true
             }
             """)!.AsObject();
 

@@ -288,10 +288,10 @@ public sealed class CrowdSimulationConfigLoader
             Formation = new RuntimeFormationSection
             {
                 SpacingScale = Fix64.FromDouble(config.Formation.SpacingScale),
-                LeaderSpeed = Fix64.FromDouble(config.Formation.LeaderSpeed),
+                LeaderSpeedRatio = Fix64.FromDouble(config.Formation.LeaderSpeedRatio),
                 LeaderTurnRatePerSec = Fix64.FromDouble(config.Formation.LeaderTurnRatePerSec),
                 FaceTurnScale = Fix64.FromDouble(config.Formation.FaceTurnScale),
-                CatchUp = Fix64.FromDouble(config.Formation.CatchUp),
+                CatchUpSpeedRatio = Fix64.FromDouble(config.Formation.CatchUpSpeedRatio),
                 SlotSightNavCells = NavCellsFromCm(config.Formation.SlotSightCm),
                 SettleTimeSec = Fix64.FromDouble(config.Formation.SettleTimeSec),
                 LeaderLookAheadNavCells = NavCellsFromCm(config.Formation.LeaderLookAheadCm),
@@ -300,7 +300,7 @@ public sealed class CrowdSimulationConfigLoader
                 SlotArriveNavCells = NavCellsFromCm(config.Formation.SlotArriveCm),
                 GoalArriveNavCells = NavCellsFromCm(config.Formation.GoalArriveCm),
                 SettleRadiusNavCells = NavCellsFromCm(config.Formation.SettleRadiusCm),
-                ClumpSlack = Fix64.FromDouble(config.Formation.ClumpSlack),
+                ClumpSlackScale = Fix64.FromDouble(config.Formation.ClumpSlackScale),
                 MinClumpNavCells = NavCellsFromCm(config.Formation.MinClumpCm),
                 HeadingInheritDot = Fix64.FromDouble(config.Formation.HeadingInheritDot),
                 MirrorFlipDot = Fix64.FromDouble(config.Formation.MirrorFlipDot),
@@ -319,9 +319,9 @@ public sealed class CrowdSimulationConfigLoader
                 MaxSubSteps = config.Movement.MaxSubSteps,
                 SlotTimeConstantSec = Fix64.FromDouble(config.Movement.SlotTimeConstantSec),
                 BlendRatePerSec = Fix64.FromDouble(config.Movement.BlendRatePerSec),
-                BlendCommit = Fix64.FromDouble(config.Movement.BlendCommit),
+                BlendCommitRatio = Fix64.FromDouble(config.Movement.BlendCommitRatio),
                 SlotCheckIntervalSubSteps = config.Movement.SlotCheckIntervalSubSteps,
-                SightHysteresis = Fix64.FromDouble(config.Movement.SightHysteresis),
+                SightHysteresisScale = Fix64.FromDouble(config.Movement.SightHysteresisScale),
                 LaneSpreadSpeedRatio = Fix64.FromDouble(config.Movement.LaneSpreadSpeedRatio),
                 WakeDistanceNavCells = NavCellsFromCm(config.Movement.WakeDistanceCm),
                 StallSpeedRatio = Fix64.FromDouble(config.Movement.StallSpeedRatio),
@@ -342,11 +342,11 @@ public sealed class CrowdSimulationConfigLoader
                 AccelerationPerSec = Fix64.FromDouble(config.Avoidance.AccelerationPerSec),
                 RestDeadband = Fix64.FromDouble(config.Avoidance.RestDeadband),
                 MaxPush = Fix64.FromDouble(config.Avoidance.MaxPush),
-                Smoothing = Fix64.FromDouble(config.Avoidance.Smoothing),
+                SmoothingRatio = Fix64.FromDouble(config.Avoidance.SmoothingRatio),
             },
             Push = new RuntimePushSection
             {
-                MovingBonus = Fix64.FromDouble(config.Push.MovingBonus),
+                MovingPriorityBonus = Fix64.FromDouble(config.Push.MovingPriorityBonus),
                 DominantShare = Fix64.FromDouble(config.Push.DominantShare),
             },
             PairRules = pairRules,
@@ -361,7 +361,6 @@ public sealed class CrowdSimulationConfigLoader
             {
                 PlacementTries = config.Spawn.PlacementTries,
                 GroupSpacingScale = Fix64.FromDouble(config.Spawn.GroupSpacingScale),
-                TargetSearchTries = config.Spawn.TargetSearchTries,
                 NavCellInsetFraction = Fix64.FromDouble(config.Spawn.NavCellInsetFraction),
             },
             Structures = new RuntimeStructuresSection
@@ -568,25 +567,19 @@ public sealed class CrowdSimulationConfigLoader
                 throw new InvalidOperationException($"Entities/templates.json: 模板 \"{template.TemplateId}\" 重复。");
             }
 
-            if (!traversal.TryGetRow(template.AgentTypeId, out _))
-            {
-                throw new InvalidOperationException(
-                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的 agentTypeId \"{template.AgentTypeId}\" 不在 {CrowdTraversalConfig.RelativePath} 的 agentTypes 里。");
-            }
-
             if (!profileById.TryGetValue(template.ProfileId, out var body))
             {
                 throw new InvalidOperationException(
                     $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的 profileId \"{template.ProfileId}\" 不在 Navigation/agent_profiles.json。");
             }
 
-            if (!string.Equals(body.NavProfileId, template.AgentTypeId, StringComparison.Ordinal))
+            if (!traversal.TryGetRow(body.NavProfileId, out _))
             {
                 throw new InvalidOperationException(
-                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的档案 \"{body.Id}\" 的 navProfileId 是 \"{body.NavProfileId}\"，群体要求它等于移动类型 \"{template.AgentTypeId}\"。");
+                    $"Entities/templates.json: 模板 \"{template.TemplateId}\" 的档案 \"{body.Id}\" 的 navProfileId \"{body.NavProfileId}\" 不在 {CrowdTraversalConfig.RelativePath} 的 agentTypes 里。");
             }
 
-            referencedAgentIds.Add(template.AgentTypeId);
+            referencedAgentIds.Add(body.NavProfileId);
         }
 
         var selectedRows = new List<TraversalRow>();
@@ -606,7 +599,7 @@ public sealed class CrowdSimulationConfigLoader
 
         foreach (var template in templates)
         {
-            membersByAgent[agentIndexById[template.AgentTypeId]].Add(template);
+            membersByAgent[agentIndexById[profileById[template.ProfileId].NavProfileId]].Add(template);
         }
 
         var avoidance = Fix64.FromDouble(config.Agents.AvoidanceRadiusScale);
@@ -633,13 +626,7 @@ public sealed class CrowdSimulationConfigLoader
                         $"Entities/templates.json: 移动类型 \"{row.Id}\" 的半径 {radiusKey} 有多份模板。");
                 }
 
-                var expectedPersonal = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidance);
-                if (member.PersonalRadiusCm != expectedPersonal)
-                {
-                    throw new InvalidOperationException(
-                        $"Entities/templates.json: 模板 \"{member.TemplateId}\" 的 personalRadiusCm 与半径 × agents.avoidanceRadiusScale 不一致。");
-                }
-
+                var personalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidance);
                 int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidance, navCellSizeCm);
                 if (clearance > 255)
                 {
@@ -651,10 +638,10 @@ public sealed class CrowdSimulationConfigLoader
                 {
                     Id = body.Id,
                     RadiusCm = radiusCm,
-                    PersonalRadiusCm = member.PersonalRadiusCm,
+                    PersonalRadiusCm = personalRadiusCm,
                     PushPriority = member.PushPriority,
-                    SpeedCmPerSecond = member.SpeedCmPerSecond,
-                    Special = member.Special,
+                    SpeedCmPerSec = member.SpeedCmPerSec,
+                    AutoDeploy = member.AutoDeploy,
                     AgentTypeIndex = agentIndex,
                     ClearanceNavCells = clearance,
                     NavContextId = CrowdSimulationSpace.NavContextId(agentIndex, clearance),

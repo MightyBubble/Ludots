@@ -25,7 +25,8 @@ public sealed class P3UatTests
         var cfg = session.Config;
         int types = cfg.UnitTypes.Count;
         Assert.That(types, Is.GreaterThan(1), "场景无效：只有一个单位模板");
-        Assert.That(bodies.Templates[0].AgentTypeId, Is.Not.EqualTo(cfg.AgentTypes[0].Id),
+        string navProfileId = bodies.Profiles.Require(bodies.Templates[0].ProfileId, bodies.Templates[0].TemplateId).NavProfileId;
+        Assert.That(navProfileId, Is.Not.EqualTo(cfg.AgentTypes[0].Id),
             "场景无效：反序后第一个模板仍属于第一个移动类型");
         for (int t = 0; t < types; t++)
         {

@@ -16,6 +16,26 @@ namespace CrowdSimulationTests;
 public class CrowdSimulationConfigTests
 {
     [Test]
+    public void World_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json.Remove("world");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("world"));
+    }
+
+    [Test]
+    public void WorldSeed_Absent_FailsLoad()
+    {
+        JsonObject json = TestDefaults.DefaultConfigJson();
+        json["world"]!.AsObject().Remove("seed");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfig.Load(json))!;
+        Assert.That(ex.Message, Does.Contain("seed"));
+    }
+
+    [Test]
     public void PlanTimeoutMs_Absent_FailsLoad()
     {
         JsonObject json = TestDefaults.DefaultConfigJson();
@@ -58,7 +78,7 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
 
         var foot = runtime.AgentTypes[0];
-        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSecond),
+        Assert.That(runtime.Profiles.Where(p => p.AgentTypeIndex == foot.AgentTypeIndex).Select(p => p.SpeedCmPerSec),
             Is.All.EqualTo(Fix64.FromInt(1400)));
         // road 是合并后第 5 个区域；foot 对 road 代价 0.7。
         Assert.That(foot.CostByArea[5], Is.EqualTo(Fix64.FromDouble(0.7)));
@@ -195,22 +215,23 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void TemplateAgentType_NotInPathing_IsRejected()
+    public void TemplateNavProfile_NotInTraversal_IsRejected()
     {
         var templates = TestDefaults.DemoTemplates();
         var first = templates[0];
-        templates[0] = new CrowdUnitTemplateFacts
+        var profiles = TestDefaults.DemoProfiles();
+        var list = new List<Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig>(profiles.Count);
+        for (int i = 0; i < profiles.Count; i++)
         {
-            TemplateId = first.TemplateId,
-            ProfileId = first.ProfileId,
-            AgentTypeId = "ghost",
-            SpeedCmPerSecond = first.SpeedCmPerSecond,
-            PersonalRadiusCm = first.PersonalRadiusCm,
-            PushPriority = first.PushPriority,
-            Special = first.Special,
-        };
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
-        Assert.That(ex!.Message, Does.Contain("ghost"));
+            list.Add(profiles[i]);
+        }
+
+        list.Single(profile => profile.Id == first.ProfileId).NavProfileId = "ghost";
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(
+            profiles: new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(list),
+            templates: templates));
+        Assert.That(ex!.Message, Does.Contain("navProfileId"));
+        Assert.That(ex.Message, Does.Contain("ghost"));
         Assert.That(ex.Message, Does.Contain(first.TemplateId));
     }
 
@@ -218,7 +239,8 @@ public class CrowdSimulationConfigTests
     public void PathingAgentType_WithoutTemplate_IsNotBound()
     {
         var templates = TestDefaults.DemoTemplates();
-        templates.RemoveAll(item => item.AgentTypeId == "foot");
+        var profiles = TestDefaults.DemoProfiles();
+        templates.RemoveAll(item => profiles.Require(item.ProfileId, item.TemplateId).NavProfileId == "foot");
         var runtime = TestDefaults.Assemble(templates: templates);
         Assert.That(runtime.AgentTypes.Any(agent => agent.Id == "foot"), Is.False);
         Assert.That(runtime.AgentTypes[0].Id, Is.EqualTo("hull"));
@@ -331,12 +353,12 @@ public class CrowdSimulationConfigTests
     public void PartialOverride_MergesOverDefaults()
     {
         var merged = TestDefaults.DefaultConfigJson();
-        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formation": { "leaderSpeed": 0.6 } }""")!.AsObject());
+        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formation": { "leaderSpeedRatio": 0.6 } }""")!.AsObject());
 
         var config = CrowdSimulationConfig.Load(merged);
         var runtime = TestDefaults.Assemble(config);
 
-        Assert.That(runtime.Formation.LeaderSpeed, Is.EqualTo(Fix64.FromDouble(0.6)));
+        Assert.That(runtime.Formation.LeaderSpeedRatio, Is.EqualTo(Fix64.FromDouble(0.6)));
         Assert.That(runtime.Formation.SpacingScale, Is.EqualTo(Fix64.FromDouble(1.1)));
         Assert.That(runtime.NavCellSizeCm, Is.EqualTo(6250));
     }

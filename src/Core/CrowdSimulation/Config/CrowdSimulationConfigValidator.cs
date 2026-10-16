@@ -35,13 +35,12 @@ public static class CrowdSimulationConfigValidator
         Rule("planning.refreshLatencyTicks", config.Planning.RefreshLatencyTicks, intRequired: true, min: 1);
         Rule("planning.maxRefreshesPerTick", config.Planning.MaxRefreshesPerTick, intRequired: true, min: 1);
         Rule("push.dominantShare", config.Push.DominantShare, min: 0, max: 0.5);
-        Rule("push.movingBonus", config.Push.MovingBonus, min: 0);
+        Rule("push.movingPriorityBonus", config.Push.MovingPriorityBonus, min: 0);
         Rule("agents.avoidanceRadiusScale", config.Agents.AvoidanceRadiusScale, gt: 0);
         Rule("spawn.groupSpacingScale", config.Spawn.GroupSpacingScale, gt: 0);
         Rule("spawn.placementTries", config.Spawn.PlacementTries, intRequired: true, min: 1);
-        Rule("spawn.targetSearchTries", config.Spawn.TargetSearchTries, intRequired: true, min: 1);
         Rule("spawn.navCellInsetFraction", config.Spawn.NavCellInsetFraction, min: 0, lt: 0.5);
-        Rule("movement.sightHysteresis", config.Movement.SightHysteresis, min: 1);
+        Rule("movement.sightHysteresisScale", config.Movement.SightHysteresisScale, min: 1);
         Rule("movement.wakeDistanceCm", config.Movement.WakeDistanceCm, min: 0);
         Rule("movement.stallDecayPerSec", config.Movement.StallDecayPerSec, min: 0);
         Rule("movement.maxSubSteps", config.Movement.MaxSubSteps, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxSubSteps);
@@ -57,8 +56,8 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.stallSpeedRatio", config.Movement.StallSpeedRatio, gt: 0);
         Rule("movement.slotCheckIntervalSubSteps", config.Movement.SlotCheckIntervalSubSteps, intRequired: true, min: 1);
         Rule("movement.laneSpreadSpeedRatio", config.Movement.LaneSpreadSpeedRatio, min: 0, max: 1);
-        Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
-        Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
+        Rule("movement.blendCommitRatio", config.Movement.BlendCommitRatio, gt: 0, lt: 1);
+        Rule("avoidance.smoothingRatio", config.Avoidance.SmoothingRatio, min: 0, lt: 1);
         RequireRelationId("pairRules.yieldsTo.relation", config.PairRules.YieldsTo.Relation);
         RequireRelationId("pairRules.sharesVisionWith.relation", config.PairRules.SharesVisionWith.Relation);
 
@@ -71,14 +70,14 @@ public static class CrowdSimulationConfigValidator
         Rule("avoidance.maxNeighbors", config.Avoidance.MaxNeighbors, intRequired: true, min: 1);
         Rule("avoidance.maxScan", config.Avoidance.MaxScan, intRequired: true, min: 1);
         Rule("formation.spacingScale", config.Formation.SpacingScale, gt: 0);
-        Rule("formation.catchUp", config.Formation.CatchUp, gt: 0);
+        Rule("formation.catchUpSpeedRatio", config.Formation.CatchUpSpeedRatio, gt: 0);
         Rule("formation.slotSightCm", config.Formation.SlotSightCm, gt: 0);
         Rule("formation.magicBoxMaxSpreadCm", config.Formation.MagicBoxMaxSpreadCm, gt: 0);
-        Rule("formation.clumpSlack", config.Formation.ClumpSlack, gt: 0);
+        Rule("formation.clumpSlackScale", config.Formation.ClumpSlackScale, gt: 0);
         Rule("formation.minClumpCm", config.Formation.MinClumpCm, gt: 0);
         Rule("formation.settleTimeSec", config.Formation.SettleTimeSec, min: 0);
         Rule("formation.magicBoxPadCm", config.Formation.MagicBoxPadCm, min: 0);
-        Rule("formation.leaderSpeed", config.Formation.LeaderSpeed, gt: 0);
+        Rule("formation.leaderSpeedRatio", config.Formation.LeaderSpeedRatio, gt: 0);
         Rule("formation.leaderTurnRatePerSec", config.Formation.LeaderTurnRatePerSec, gt: 0);
         Rule("formation.faceTurnScale", config.Formation.FaceTurnScale, gt: 0);
         Rule("formation.slotArriveCm", config.Formation.SlotArriveCm, gt: 0);

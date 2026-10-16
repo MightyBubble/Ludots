@@ -10,37 +10,31 @@ namespace Ludots.Core.CrowdSimulation.Config;
 public readonly record struct CrowdUnitTemplateField(string Name, string Kind, string? Reference);
 
 /// <summary>
-/// 单位模板上 CrowdSimulationAgent 的装载事实。速度、个人半径、推挤优先级以模板为准。
+/// 单位模板上 CrowdSimulationAgent 的装载事实。速度、推挤优先级以模板为准。
+/// 个人半径不在模板上，装载时由体型半径乘 avoidanceRadiusScale 算出。
 /// </summary>
 public sealed class CrowdUnitTemplateFacts
 {
     public const string ComponentName = "CrowdSimulationAgent";
     public const string ProfileIdField = "profileId";
-    public const string AgentTypeIdField = "agentTypeId";
-    public const string SpeedField = "speedCmPerSecond";
-    public const string PersonalRadiusField = "personalRadiusCm";
+    public const string SpeedField = "speedCmPerSec";
     public const string PushPriorityField = "pushPriority";
-    public const string SpecialField = "special";
+    public const string AutoDeployField = "autoDeploy";
     public const string AgentProfilesReference = "agentProfiles";
-    public const string AgentTypesReference = "agentTypes";
 
     public static readonly IReadOnlyList<CrowdUnitTemplateField> AuthoredFields =
     [
         new(ProfileIdField, "string", AgentProfilesReference),
-        new(AgentTypeIdField, "string", AgentTypesReference),
         new(SpeedField, "number", null),
-        new(PersonalRadiusField, "number", null),
         new(PushPriorityField, "number", null),
-        new(SpecialField, "bool", null),
+        new(AutoDeployField, "bool", null),
     ];
 
     public required string TemplateId { get; init; }
     public required string ProfileId { get; init; }
-    public required string AgentTypeId { get; init; }
-    public required Fix64 SpeedCmPerSecond { get; init; }
-    public required Fix64 PersonalRadiusCm { get; init; }
+    public required Fix64 SpeedCmPerSec { get; init; }
     public required Fix64 PushPriority { get; init; }
-    public required bool Special { get; init; }
+    public required bool AutoDeploy { get; init; }
 
     public static List<CrowdUnitTemplateFacts> FromTemplates(IEnumerable<EntityTemplate> templates)
     {
@@ -73,11 +67,9 @@ public sealed class CrowdUnitTemplateFacts
         {
             TemplateId = templateId,
             ProfileId = RequireString(obj, ProfileIdField, Prefix(ProfileIdField)),
-            AgentTypeId = RequireString(obj, AgentTypeIdField, Prefix(AgentTypeIdField)),
-            SpeedCmPerSecond = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
-            PersonalRadiusCm = RequirePositive(obj, PersonalRadiusField, Prefix(PersonalRadiusField)),
+            SpeedCmPerSec = RequirePositive(obj, SpeedField, Prefix(SpeedField)),
             PushPriority = RequirePriority(obj, PushPriorityField, Prefix(PushPriorityField)),
-            Special = RequireBool(obj, SpecialField, Prefix(SpecialField)),
+            AutoDeploy = RequireBool(obj, AutoDeployField, Prefix(AutoDeployField)),
         };
     }
 
@@ -98,7 +90,7 @@ public sealed class CrowdUnitTemplateFacts
 
             if (!known)
             {
-                throw new InvalidOperationException($"{ComponentName}.{key} 是未知字段。");
+                throw new InvalidOperationException($"{ComponentName} contains unsupported property '{key}'.");
             }
         }
     }

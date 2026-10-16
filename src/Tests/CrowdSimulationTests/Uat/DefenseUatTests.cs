@@ -167,8 +167,8 @@ public sealed class DefenseUatTests
         ("planning.refreshLatencyTicks=1.5", c => c["planning"]!["refreshLatencyTicks"] = Num("1.5")),
         ("movement.maxStepNavCells=1.2", c => c["movement"]!["maxStepNavCells"] = Num("1.2")),
         ("movement.maxSubSteps=0", c => c["movement"]!["maxSubSteps"] = Num("0")),
-        ("push.movingBonus=-1", c => c["push"]!["movingBonus"] = Num("-1")),
-        ("movement.sightHysteresis=0.5", c => c["movement"]!["sightHysteresis"] = Num("0.5")),
+        ("push.movingPriorityBonus=-1", c => c["push"]!["movingPriorityBonus"] = Num("-1")),
+        ("movement.sightHysteresisScale=0.5", c => c["movement"]!["sightHysteresisScale"] = Num("0.5")),
         ("agents.avoidanceRadiusScale=0", c => c["agents"]!["avoidanceRadiusScale"] = Num("0")),
         ("spawn.groupSpacingScale=NaN", c => c["spawn"]!["groupSpacingScale"] = JsonValue.Create(double.NaN)),
         ("formations.box.spacingDiameterScale=0", c => c["formations"]!["box"]!["spacingDiameterScale"] = Num("0")),
@@ -195,7 +195,7 @@ public sealed class DefenseUatTests
         if (radiusWhy == null) accepted.Add("agent_profiles[0].radiusCm=null");
 
         var agent = (JsonObject)JsonNode.Parse(
-            """{"profileId":"foot_r100","agentTypeId":"foot","speedCmPerSecond":1400,"personalRadiusCm":600,"pushPriority":2,"special":false}""")!;
+            """{"profileId":"foot_r100","speedCmPerSec":1400,"pushPriority":2,"autoDeploy":true}""")!;
         Assert.DoesNotThrow(() => CrowdUnitTemplateFacts.Parse("template", (JsonObject)agent.DeepClone()), "默认单位模板被拒");
         agent["pushPriority"] = "1";
         string? pushWhy = Rejection(() => CrowdUnitTemplateFacts.Parse("template", agent));

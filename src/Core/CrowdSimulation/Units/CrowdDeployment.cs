@@ -16,7 +16,7 @@ public static class CrowdDeployment
 {
     private const int SaltSpawnSeed = 31, SaltSpawn = 7919, SaltSpawnAt = 15485863;
 
-    /// <summary>批量部署(count 上限 = 容量;类型过滤 = 全部非 special 单位模板)。</summary>
+    /// <summary>批量部署(count 上限 = 容量;类型过滤 = 全部 autoDeploy 单位模板)。</summary>
     public static int Spawn(CrowdSimSession sim, int count)
     {
         var cfg = sim.Config;
@@ -48,7 +48,7 @@ public static class CrowdDeployment
                 for (int r = 0; r < radiusClasses.Count; r++)
                 {
                     int l = cfg.UnitTypes[t].AgentTypeIndex;
-                    if (ProfileOf(cfg, l, r).Special)
+                    if (!ProfileOf(cfg, l, r).AutoDeploy)
                     {
                         continue;
                     }
@@ -175,6 +175,7 @@ public static class CrowdDeployment
             g.Id,
             PlayerIdOf(cfg, g.Player),
             profile.RadiusCm,
+            profile.PersonalRadiusCm,
             profileIndex,
             profile.AgentTypeIndex);
         int dense = sim.Units.Add(in unit);

@@ -85,7 +85,7 @@ public sealed class CrowdMovementKernel
 
     // 参数来自 formation、movement 与 avoidance。slotGain = 1/slotTimeConstantSec。
     public required Fix64 BlendRate { get; init; }
-    public required Fix64 BlendCommit { get; init; }
+    public required Fix64 BlendCommitRatio { get; init; }
     public required int SlotCheckInterval { get; init; }
     public required Fix64 WakeDistanceNavCells { get; init; }
     public required Fix64 SlotArriveNavCells { get; init; }
@@ -94,11 +94,11 @@ public sealed class CrowdMovementKernel
     public required Fix64 StallDecay { get; init; }
     public required Fix64 SettleTimeSeconds { get; init; }
     public required Fix64 SlotSightNavCells { get; init; }
-    public required Fix64 SightHysteresis { get; init; }
+    public required Fix64 SightHysteresisScale { get; init; }
     public required Fix64 LaneSpreadSpeedRatio { get; init; }
     public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SlotGain { get; init; }
-    public required Fix64 CatchUp { get; init; }
+    public required Fix64 CatchUpSpeedRatio { get; init; }
     public required Fix64 Accel { get; init; }
     public required Fix64 RestAccelScale { get; init; }
     public required Fix64 RestSeparationScale { get; init; }
@@ -108,14 +108,14 @@ public sealed class CrowdMovementKernel
     public required int MaxNeighbors { get; init; }
     /// <summary>单单位单次求解的推力上限(无量纲)。</summary>
     public required Fix64 MaxPush { get; init; }
-    public required Fix64 Smoothing { get; init; }
-    public required Fix64 MovingBonus { get; init; }
+    public required Fix64 SmoothingRatio { get; init; }
+    public required Fix64 MovingPriorityBonus { get; init; }
     public required Fix64 DominantShare { get; init; }
     public required Fix64 UnitTurnRate { get; init; }
     public required Fix64 StopSpeedRatio { get; init; }
     public required Fix64 SpeedCapRatio { get; init; }
     public required Fix64 LinkSpeedRatio { get; init; }
-    public required Fix64 LeaderSpeed { get; init; }
+    public required Fix64 LeaderSpeedRatio { get; init; }
     public required Fix64 LeaderTurnRate { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 TurnEpsRad { get; init; }
@@ -237,7 +237,7 @@ public sealed class CrowdMovementKernel
                 kins[dense] = kinSpan[index];
                 positions[dense] = posSpan[index].Value;
                 var agent = agentSpan[index];
-                speeds[dense] = agent.SpeedCmPerSecond;
+                speeds[dense] = agent.SpeedCmPerSec;
                 radii[dense] = agent.PersonalRadiusCm;
                 push[dense] = agent.PushPriority;
                 playerIdx[dense] = playerIndex[ownerSpan[index].PlayerId];
@@ -614,7 +614,7 @@ public sealed class CrowdMovementKernel
             {
                 leaders[li].Step(
                     leaders[li].PaceCmPerSecond,
-                    LeaderSpeed, turnK, faceStep, dt,
+                    LeaderSpeedRatio, turnK, faceStep, dt,
                     Session.Config.NavCellSizeCm, Session.Config.NavCellsPerSide);
             }
         }
@@ -678,7 +678,7 @@ public sealed class CrowdMovementKernel
             Stride = stride,
             OpenCache = openCache ?? new CrowdWalls.OpenCellCache(),
             BlendRate = mv.BlendRatePerSec,
-            BlendCommit = mv.BlendCommit,
+            BlendCommitRatio = mv.BlendCommitRatio,
             SlotCheckInterval = mv.SlotCheckIntervalSubSteps,
             WakeDistanceNavCells = mv.WakeDistanceNavCells,
             SlotArriveNavCells = fc.SlotArriveNavCells,
@@ -687,11 +687,11 @@ public sealed class CrowdMovementKernel
             StallDecay = mv.StallDecayPerSec,
             SettleTimeSeconds = fc.SettleTimeSec,
             SlotSightNavCells = fc.SlotSightNavCells,
-            SightHysteresis = mv.SightHysteresis,
+            SightHysteresisScale = mv.SightHysteresisScale,
             LaneSpreadSpeedRatio = mv.LaneSpreadSpeedRatio,
             GoalArriveNavCells = fc.GoalArriveNavCells,
             SlotGain = Fix64.OneValue / mv.SlotTimeConstantSec,
-            CatchUp = fc.CatchUp,
+            CatchUpSpeedRatio = fc.CatchUpSpeedRatio,
             Accel = av.AccelerationPerSec,
             RestAccelScale = mv.RestAccelScale,
             RestSeparationScale = mv.RestSeparationScale,
@@ -700,15 +700,15 @@ public sealed class CrowdMovementKernel
             MaxScan = av.MaxScan,
             MaxNeighbors = av.MaxNeighbors,
             MaxPush = av.MaxPush,
-            Smoothing = av.Smoothing,
-            MovingBonus = cfg.Push.MovingBonus,
+            SmoothingRatio = av.SmoothingRatio,
+            MovingPriorityBonus = cfg.Push.MovingPriorityBonus,
             DominantShare = cfg.Push.DominantShare,
             UnitTurnRate = mv.UnitTurnRateRadPerSec,
             StopSpeedRatio = mv.StopSpeedRatio,
             SpeedCapRatio = mv.SpeedCapRatio,
             // 没有链接种类时没有单位会进入 Traversing 状态，这个倍率不会被读。
             LinkSpeedRatio = cfg.LinkKinds.Count > 0 ? cfg.LinkKinds[0].TraversalSpeedRatio : Fix64.Zero,
-            LeaderSpeed = fc.LeaderSpeed,
+            LeaderSpeedRatio = fc.LeaderSpeedRatio,
             LeaderTurnRate = fc.LeaderTurnRatePerSec,
             FaceTurnScale = fc.FaceTurnScale,
             TurnEpsRad = cfg.Telemetry.TurnEpsRad,

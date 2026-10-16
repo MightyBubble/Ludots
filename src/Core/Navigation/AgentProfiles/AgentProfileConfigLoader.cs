@@ -68,7 +68,7 @@ namespace Ludots.Core.Navigation.AgentProfiles
                     if (string.Equals(property.Key, "templateId", StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
-                            $"{path} 已删除 templateId。模板 id 是实体模板自己的 id；群体速度写在 CrowdSimulationAgent.speedCmPerSecond。");
+                            $"{path} 已删除 templateId。模板 id 是实体模板自己的 id；群体速度写在 CrowdSimulationAgent.speedCmPerSec。");
                     }
 
                     throw new InvalidOperationException($"{path} contains unknown property '{property.Key}'.");
