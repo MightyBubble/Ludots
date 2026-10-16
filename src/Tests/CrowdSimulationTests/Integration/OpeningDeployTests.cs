@@ -81,17 +81,20 @@ public sealed class OpeningDeployTests
     }
 
     [Test]
-    public void EngineDispose_ReleasesModLoadContexts()
+    public void EngineDispose_ReleasesModLoadContexts_OfSecondEngineInProcess()
     {
-        WeakReference loadContext = RunAndDisposeEngineLoadContext();
+        Assert.That(RunAndDisposeEngine(), Is.Not.Null);
+        List<(string Name, WeakReference Context)> loadContexts = RunAndDisposeEngineLoadContexts();
+        Assert.That(loadContexts, Is.Not.Empty, "S4 引擎没有加载任何 collectible Mod 上下文。");
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-        for (int i = 0; i < 24 && loadContext.IsAlive; i++)
+        for (int i = 0; i < 24 && loadContexts.Any(c => c.Context.IsAlive); i++)
         {
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
             GC.WaitForPendingFinalizers();
         }
 
-        Assert.That(loadContext.IsAlive, Is.False, "引擎销毁后 Mod 的 collectible ALC 仍被强引用。");
+        string[] alive = loadContexts.Where(c => c.Context.IsAlive).Select(c => c.Name).ToArray();
+        Assert.That(alive, Is.Empty, "同一进程第二个引擎销毁后，这些 Mod 的 collectible ALC 仍被强引用。");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -113,7 +116,7 @@ public sealed class OpeningDeployTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static WeakReference RunAndDisposeEngineLoadContext()
+    private static List<(string Name, WeakReference Context)> RunAndDisposeEngineLoadContexts()
     {
         string probe = CreateProbeMod(4);
         try
@@ -122,25 +125,16 @@ public sealed class OpeningDeployTests
             CrowdSimSession session = engine.GetService(CoreServiceKeys.CrowdSimulationSession)
                 ?? throw new InvalidOperationException("没有群体会话。");
             TickUntilFirstStep(engine, session);
-            AssemblyLoadContext? loadContext = null;
+            var seen = new HashSet<AssemblyLoadContext>();
+            var contexts = new List<(string Name, WeakReference Context)>();
             foreach (Assembly assembly in engine.ModLoader.LoadedAssemblies)
             {
                 var alc = AssemblyLoadContext.GetLoadContext(assembly);
-                if (alc == null || !alc.IsCollectible) continue;
-                string? name = assembly.GetName().Name;
-                if (name != null && name.StartsWith("CrowdSimulation", StringComparison.Ordinal))
-                {
-                    loadContext = alc;
-                    break;
-                }
+                if (alc == null || !alc.IsCollectible || !seen.Add(alc)) continue;
+                contexts.Add((assembly.GetName().Name ?? assembly.FullName ?? "?", new WeakReference(alc)));
             }
 
-            if (loadContext == null)
-            {
-                throw new InvalidOperationException("未找到 CrowdSimulation collectible ALC。");
-            }
-
-            return new WeakReference(loadContext);
+            return contexts;
         }
         finally
         {
