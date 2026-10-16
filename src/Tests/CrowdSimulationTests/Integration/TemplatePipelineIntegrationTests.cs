@@ -87,16 +87,21 @@ public class TemplatePipelineIntegrationTests
         Assert.That(seenProfiles.Count, Is.GreaterThan(1), "64 单位应覆盖多种体型档案(部署按类型×体型散布)");
         TestContext.Out.WriteLine($"{session.Units.Count} 单位全部经模板管线,{seenProfiles.Count} 种档案,模板写真值逐位一致");
 
+        var radiusClasses = CrowdDeployment.DistinctRadiusClasses(runtime);
+        Assert.That(wiring.TemplatesByUnitTypeRadius.Count, Is.EqualTo(runtime.UnitTypes.Count), "映射表行数 = 配置 unitTypes 数");
         for (int t = 0; t < runtime.UnitTypes.Count; t++)
         {
+            var unitType = runtime.UnitTypes[t];
             var row = wiring.TemplatesByUnitTypeRadius[t];
+            Assert.That(row.Count, Is.EqualTo(radiusClasses.Count), $"unitType={unitType.Id} 映射列数 = 半径级数");
             for (int r = 0; r < row.Count; r++)
             {
                 var (mappedId, keyId) = row[r];
-                Assert.That(wiring.TemplateRegistry.Get(mappedId), Is.Not.Null,
-                    $"unitType={runtime.UnitTypes[t].Id} radiusClass={r} 映射到未知模板 {mappedId}");
-                Assert.That(keyToTemplate[keyId], Is.EqualTo(mappedId),
-                    $"unitType={runtime.UnitTypes[t].Id} radiusClass={r} 模板键与表不一致");
+                string declared = unitType.TemplatesByRadiusCm![radiusClasses[r]];
+                Assert.That(mappedId, Is.EqualTo(declared),
+                    $"unitType={unitType.Id} 半径 {radiusClasses[r]} 映射到 {mappedId}，配置声明的是 {declared}");
+                Assert.That(keyId, Is.EqualTo(wiring.TemplateKeys.GetId(declared)),
+                    $"unitType={unitType.Id} 半径 {radiusClasses[r]} 的模板键不是声明模板的键");
             }
         }
     }
