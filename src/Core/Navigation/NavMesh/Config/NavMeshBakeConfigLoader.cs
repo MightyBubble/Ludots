@@ -51,7 +51,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         {
             ArgumentNullException.ThrowIfNull(mergedObject);
             ArgumentNullException.ThrowIfNull(agentProfiles);
-            ValidateRaw(mergedObject, relativePath);
+            bool requiresDotRecastBakeRoot = NavSolverDeclaration.RequiresDotRecastBakeRoot(mergedObject);
+            ValidateRaw(mergedObject, relativePath, requiresDotRecastBakeRoot);
             var options = StrictJsonOptions.CreateCamelCase();
 
             var config = mergedObject.Deserialize<NavMeshBakeConfig>(options);
@@ -60,10 +61,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException($"Failed to deserialize NavMeshBakeConfig from '{relativePath}'.");
             }
 
+            ValidatePerMapTileGranularity(config);
+
+            if (!requiresDotRecastBakeRoot && !NavSolverDeclaration.ContainsAnyDotRecastBakeRootKey(mergedObject))
+            {
+                return config;
+            }
+
             _ = config.ParsedMode;
             _ = config.ParsedAlgorithm;
-
-            ValidatePerMapTileGranularity(config);
 
             if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
                 config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt &&
@@ -291,21 +297,27 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
 
-        private static void ValidateRaw(JsonObject root, string relativePath)
+        private static void ValidateRaw(JsonObject root, string relativePath, bool requiresDotRecastBakeRoot)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps" });
-            string mode = RequireString(root, "mode", "NavMeshBakeConfig");
-            string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
-            _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
-            _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
-            if (root.TryGetPropertyValue("terrainFeed", out var terrainFeedNode))
+            if (requiresDotRecastBakeRoot)
             {
-                if (terrainFeedNode is null)
+                RequireOnlyProperties(
+                    root,
+                    "NavMeshBakeConfig",
+                    NavSolverDeclaration.DotRecastBakeRootRequiredKeys,
+                    NavSolverDeclaration.DotRecastBakeRootOptionalKeys);
+            }
+            else
+            {
+                string[] optionalWhenCrowdOnly =
                 {
-                    throw new InvalidOperationException("NavMeshBakeConfig.terrainFeed must be 'triangles' or 'direct', not null.");
-                }
-
-                _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
+                    "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental", "terrainFeed",
+                };
+                RequireOnlyProperties(
+                    root,
+                    "NavMeshBakeConfig",
+                    NavSolverDeclaration.CrowdSimulationOnlyRootRequiredKeys,
+                    optionalWhenCrowdOnly);
             }
 
             if (root.TryGetPropertyValue("maps", out var mapsNode))
@@ -408,6 +420,34 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         }
                     }
                 }
+            }
+
+            if (!requiresDotRecastBakeRoot)
+            {
+                if (!NavSolverDeclaration.ContainsAnyDotRecastBakeRootKey(root))
+                {
+                    return;
+                }
+
+                RequireOnlyProperties(
+                    root,
+                    "NavMeshBakeConfig",
+                    NavSolverDeclaration.DotRecastBakeRootRequiredKeys,
+                    NavSolverDeclaration.DotRecastBakeRootOptionalKeys);
+            }
+
+            string mode = RequireString(root, "mode", "NavMeshBakeConfig");
+            string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
+            _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
+            _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
+            if (root.TryGetPropertyValue("terrainFeed", out var terrainFeedNode))
+            {
+                if (terrainFeedNode is null)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.terrainFeed must be 'triangles' or 'direct', not null.");
+                }
+
+                _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
             }
 
             if (root["profiles"] is JsonArray)
