@@ -18,7 +18,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// 指令簿(领队/阵型)、规划器与固定帧率推进。
 /// 引擎只有一个时钟(Engine/clock.json 的 FixedHz),会话的 tick 就是 FixedHz 的一步:
 /// 每步先冲刷到点指令，再落到点的路径答复，再推进运动内核。
-/// 未冻结时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync。TruthNavFrozen 跳过这两步。
+/// 未冻结时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync。
+/// <see cref="CrowdSimPresentationWiring.TruthNavFrozen"/> 为真时跳过这两步(对拍/回归专用)。
 /// 答复未按生效帧返回时本 tick 停摆(固定生效帧语义,结果不降级)。
 /// </summary>
 public sealed class CrowdSimSession
@@ -143,6 +144,7 @@ public sealed class CrowdSimSession
     {
         Commands.Flush(this, ExecCommand);
         Units.MaterializePending();
+        Units.PlaybackStructuralChanges();
         SyncKernelMirror();
     }
 
@@ -198,9 +200,7 @@ public sealed class CrowdSimSession
     public CrowdFog? Fog { get; private set; }
     public CrowdBeliefNavs? Beliefs { get; private set; }
     public CrowdBeliefState? Belief { get; private set; }
-    /// <summary>truth 冻结:跳过迷雾更新与认知同步,组停在真相槽。
-    /// 旧真值(S5/S7)在迷雾内核落地后仍要逐位相同;新场景不置。</summary>
-    public bool TruthNavFrozen { get; set; }
+    internal readonly CrowdDeploymentBuffers DeploymentBuffers = new();
 
     private readonly struct BeliefNavLookup
     {
@@ -254,7 +254,7 @@ public sealed class CrowdSimSession
     public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
     {
         int truth = NavByLayerRadius[(layerIdx, rIdx)].Id;
-        if (Fog == null || Belief == null || TruthNavFrozen) return truth;
+        if (Fog == null || Belief == null || Presentation.TruthNavFrozen) return truth;
         int slot = Belief.Slot[Fog.GroupOf[playerIndex]];
         return slot == 0 ? truth : slot * CrowdBeliefNavs.BeliefStride + truth;
     }
@@ -385,7 +385,7 @@ public sealed class CrowdSimSession
     /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
-    /// → tickCount+1 → 流场刷新排队 → 校验码。TruthNavFrozen 跳过迷雾和认知同步。
+    /// → tickCount+1 → 流场刷新排队 → 校验码。接线 TruthNavFrozen 时跳过迷雾和认知同步。
     /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
     /// checksum 与 <see cref="LastDigest"/> 仅在 true 时有效。
     /// </summary>
@@ -398,6 +398,7 @@ public sealed class CrowdSimSession
         {
             Commands.Flush(this, ExecCommand);
             Units.MaterializePending();
+            Units.PlaybackStructuralChanges();
 
             telemetry.AddCommandTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
             if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
@@ -441,7 +442,7 @@ public sealed class CrowdSimSession
             }
 
             // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
-            if (Fog != null && !TruthNavFrozen)
+            if (Fog != null && !Presentation.TruthNavFrozen)
             {
                 Fog.Update(TickCount, this);
                 telemetry.AddFogTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
