@@ -30,7 +30,7 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
                                      CrowdSimulationConfigValidator（数值 + 结构规则）
                                      CrowdSimulationConfigLoader（组装入口）
                                      CrowdSimulationAuthoringContract（模板级契约,进图激活时执行）
-  World/                             NavSurfaceAsset（.navsurface v2 读写与格式门禁）
+  World/                             NavSurfaceAsset（.navsurface 读写与格式门禁）
                                      NavSurfaceContract（资产 ↔ 配置一致性）
                                      CrowdSimulationSpace（格几何原语）
                                      SurfaceGrid（地表栅格:地形 / 区域 / 阻挡）
@@ -40,18 +40,16 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
                                      UpperLayerBake（桥面层栅格化与烘焙、portal 合并）
                                      GridBake（2D 格网 tile：距离场、分水岭、格角点轮廓、凸多边形）
                                      NavContext / NavLinkSet（上下文产物）
-  CrowdSimulationAgent.cs            单位组件：profileId、agentTypeId、speedCmPerSecond、personalRadiusCm、pushPriority、special
+  CrowdSimulationAgent.cs            单位组件：生成时写入档案/移动类型下标、速度、个人半径、推挤优先级、autoDeploy
 mods/capabilities/navigation/CrowdSimulationMod/
   assets/config_catalog.json         登记正式配置。调试文件由提供它的 Mod 自己登记
   assets/Entities/templates.json     只有会话模板 crowd_simulation.session
   assets/Presentation/presenters.json
                                      选中圈：selected 集合进出时建删 crowd_simulation.selection_ring
 mods/capabilities/navigation/CrowdSimulationStandardMod/
-  assets/CrowdSimulationConfig.json  标准参数（对拍同一份）。不含地图事实，不写时钟
-  assets/Navigation/agent_profiles.json
-                                     20 个体型档案。layer 是 NavTile 层，navProfileId 指向能力档
-  assets/Navigation/navmesh.json     能力档、区域、坡度。群体地图的地形事实在 maps.<mapId>
-  assets/Navigation/pathing.json     移动类型和区域代价。selection / nodeGraph 可省略
+  assets/CrowdSimulation/traversal.json  区域、地形到区域、链接种类、通行矩阵
+  assets/CrowdSimulationConfig.json      标准仿真参数。不含地图事实，不写时钟
+  assets/Navigation/agent_profiles.json  体型档案；navProfileId 指向 traversal 里的移动类型行
 mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod/
   assets/Entities/templates.json     演示单位：5 种移动类型 × 4 个半径级，CrowdSimulationAgent 写速度、个人半径、推挤优先级
   assets/Presentation/               演示单位的 presenter、网格（含 unit_triangle.gltf）
@@ -117,30 +115,34 @@ src/Tests/CrowdSimulationTests/      S0 配置门禁到 S7 对拍都在这个目
 CrowdSimulationConfig.json: navtile.sizeCm（12500）/ maps.<mapId>.navCellSizeCm（6250）= 2，需为 ≥ 4、≤ 128 的整数
 ```
 
-覆盖的规则：声明式数值范围、id 唯一性与容量上限（区域 id 0..255；移动类型 × 半径级组合 ≤ 255；没有单独的移动类型个数或单位模板个数上限；玩家 1~16）、引用闭包（pathing 的 areaId、档案、模板的 agentTypeId、deploy.bases.playerId）、地图正方形与格数整除、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。配置文件不再带 `version`。作者再写这个键，加载直接报错。formation.headingInheritDot / formation.mirrorFlipDot 是配置化补充，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
+覆盖的规则：声明式数值范围、id 唯一性与容量上限（区域 ≤ 256；移动类型 × 半径级组合 ≤ 255；玩家 1~16）、引用闭包（`traversal` 区域 id、档案 `navProfileId`、模板 `profileId`、`deploy.bases.playerId`）、地图正方形与格数整除、双求解器互斥、阻挡物只能是正方形 Box。未知键与缺键拒绝。各键约束见 [配置合同参考](crowdsimulation-data-schema.md)。
 
 ## 作者怎么配
 
 参数、地图事实、时钟分三处写。从空目录做一张新群体地图的完整步骤见 [CrowdSimulation 最小样板](crowdsimulation-minimal-mod.md)。
 
-通行矩阵、结构模板和 `.navsurface` v2 的新数据结构见 [CrowdSimulation 数据结构](crowdsimulation-data-schema.md)。那一页是设计稿；本节描述的仍是现在仓库里的格式，实现按那页第 10 节逐步切换。
+各文件的键、类型与装载时机见 [配置合同参考](crowdsimulation-data-schema.md)。本节只写职责怎么分。
 
-`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`，部署散布参数 `deploy.spreadCm` / `baseJitterCm` / `centersPerGroup`，以及运行时按 id 认的结构模板 `building`（地图阻挡物用它）。导航格边长、能力档、区域、移动类型和 20 个体型档案写在同目录的 `Navigation/navmesh.json`、`Navigation/pathing.json` 和 `Navigation/agent_profiles.json`；能力档的 `agentProfileId` 和移动类型的 `profileId` 都指向这些档案，所以档案和它们放在一起。地形颜色和迷雾贴花四色也在这里。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的地表、开局人数、出生点和桥锚点地形。
+`CrowdSimulationStandardMod`（`mods/capabilities/navigation/CrowdSimulationStandardMod`）依赖 `CrowdSimulationMod`。它提供标准 `CrowdSimulationConfig.json`、`CrowdSimulation/traversal.json`、演示用体型档案，以及地图阻挡用的结构模板 `building`。地形颜色与迷雾贴花在同 Mod 的 `Presentation/`。不写 `Engine/clock.json`，也不写单张地图的地表与部署事实。
 
-`CrowdSimulationMod` 只放能力本身：`config_catalog.json`、会话模板、选中圈 presenter、指令类型、地形类型叠层开关和键位。它不带单位。S1 三张种子图、S3、S4 共用的演示单位放在 `mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod`：5 种移动类型 × 4 个半径级的单位模板、对应的 presenter 和网格，以及只有 S1 地形才有意义的桥锚点地形和桥、限时桥、道路、洪水、火灾结构模板。新地图不依赖它，自己写单位，见 [最小样板](crowdsimulation-minimal-mod.md)。单位模板上的 `CrowdSimulationAgent` 必写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。这些字符串留在模板和配置里。生成时把档案下标、移动类型下标，以及模板上已经写成定点数的速度、个人半径、推挤优先级，写进实体上的 `CrowdSimulationAgent`。组件没有字符串字段，tick 里不再解析 id。速度按模板各写各的。领队步速取本组已生成成员的模板速度最小值；子步数取本图绑定模板里的最大速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 不写时等于 `cost`，两者都必须大于 0。本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` 里的每一个区域；排除写 `passable: false`，不能省略行，缺行也不当成代价 1 或不可通行。`areas` 为 null 直接报错。绑定集是体型 `navProfileId` 落在这张图 `navProfiles` 里的 pathing 类型，加上本图群体单位模板点名的 `agentTypeId`。没进绑定集的类型不校验，也不建网格查询。核心 `Humanoid` 保持 `PreferMesh`，Mod 的 pathing 不要再写它。`passable` 为 false 时群体代价记 0，Detour 过滤掉这一区域。`special` 为 true 的模板不参与批量部署。群体运行时只绑定被单位模板引用的 agent type，pathing 里没有模板的类型不进运行时表。只加载能力 Mod、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
+`CrowdSimulationMod` 登记能力目录、会话模板、选中圈 presenter、地形叠层开关与键位，不带单位。
 
-地图 Mod 写 `world.seed`、`deploy.initialUnits`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。这几项没有标准值，缺了加载报错。群体的 AgentTypeIndex 是被单位模板引用的 pathing agent type，按合并后的属性顺序编号。`maps.<mapId>.terrainTypes` 是有序的地形 id 数组，数组下标就是 `.navsurface` 的地形编号；`maps.<mapId>.navCellSizeCm` 是导航格边长。地形到区域的对应不在地图上，写在 `CrowdSimulation/traversal.json` 的 `terrainAreas`，每张图的地形 id 都要在里面。同级的 `logicTerrainAsset` 指向地编 React 网格，只给编辑器打开和烘焙；运行时不把它装成 LogicTerrain。`.navsurface` 从地图的 `ContinuousHeightmap.asset` 推导：去掉 `assets/` 前缀，把 `.height` 换成 `.navsurface`。带导航标签的地图用 `maps.<mapId>.navProfiles` 列出要烘焙和装载瓦片库的能力档 id，数组顺序就是烘焙顺序。绑定了移动类型的大规模导航地图写 `maps.<mapId>.navAreas`（区域 id 数组）。群体地图不写 `navAreas`，区域表是 `traversal.json` 的 `areas`，结构模板会铺上的区域（演示内容 Mod 的 `deck`、`road`、`flooded`、`burning`）也在那里声明。没有 nav 标签，或没有 `navProfiles`，启动时不建网格查询。查询只给 PreferMesh / AutoCheapest、且体型 `navProfileId` 在这张图 `navProfiles` 里的类型。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，地图把模板绑进会话就失败，报文带模板 id 和 agent id。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）；用演示单位的再加 `CrowdSimulationDemoContentMod`。
+`CrowdSimulationDemoContentMod` 追加通行区域与矩阵列、演示结构模板、摆放手势条目、20 个演示单位（5 种移动类型 × 4 个半径级）。新地图可不依赖它，见 [最小样板](crowdsimulation-minimal-mod.md)。
 
-覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是合并后的属性顺序，不按键名重排。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.navProfiles` 是能力档 id 数组，按下标烘焙和装载，列出的档没有瓦片就是装载错误。`maps.<mapId>.navAreas` 写在 navmesh.json。登记进 `maps` 的地图必须写 `solver`，取值只能是 `navmesh`、`mass-navigation`、`crowd-simulation`。求解器板写在 `maps.<mapId>.boards`，有这个键时只能有一块，空对象会拒绝。不写 `boards` 时，群体会话和大规模导航用 `MapManager.ResolveRootBoard` 决定仿真哪一块板：写了 `RootBoard` 就按名字找（大小写不敏感），没写就用第一块板。带 `Feature.NavMesh:On` 的地图仍要写 `maps.<mapId>.boards`，瓦片尺寸在这块声明里，`LoadNavForMap` 找不到就失败。`solver` 为 `crowd-simulation` 的地图在聚焦时建群体会话，并按 `CrowdSimulationConfig.json` 的 `worker.planTimeoutMs` 建路径服务、调用 `EnableMovement`。这个值是必填的正整数毫秒。调试文件再写 `worker.planTimeoutMs` 会报错，并指向这份配置。`terrainTypes` 只列地形类型，不决定跑哪种求解器。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。`CrowdSimulationDebug.json` 再写 `session.autostart` 会报错。`MassNavigationConfig.json` 再写 `mapId` 会报错：哪张图跑大规模导航只看 `solver`。
+单位模板写 `CrowdSimulationAgent`：`profileId`、`speedCmPerSec`、`pushPriority`、`autoDeploy`。移动类型由档案的 `navProfileId` 指向 `traversal.agentTypes`；个人半径在生成时由 `radiusCm × agents.avoidanceRadiusScale` 算出。运行时只绑定被模板引用的移动类型行；`autoDeploy: false` 不参与批量部署。
+
+地图 Mod 写 `Navigation/navmesh.json` 里本图的 `solver`、`terrainTypes`、`navCellSizeCm`、`logicTerrainAsset`、可选 `linkCandidateBake`，以及 `CrowdSimulationConfig.json` 的 `world.seed`、`deploy`、`structures.templates` 中本地模板。群体地图不写 Recast 的 `navProfiles` / `navAreas`。一张图只声明一种求解器；`CrowdSimulation` 与 `MassNavigation` 不能共用同一 `mapId`。
+
+DeepObject 合并：`formations`、`structures.templates`、`traversal.json` 的四个根表、`crowd_structure_palette.json` 等以 id 为键的对象按 Mod 顺序合并；`null` 与数组形态拒绝。`maps.<mapId>` 必须写 `solver`。`crowd-simulation` 地图聚焦时按 `worker.planTimeoutMs` 建路径服务。`mapId`、`agents.profilesUri` 等不属于 `CrowdSimulationConfig.json` 的键写进该文件会报错并指向正确路径。
 
 时钟由各地图 Mod 的 `assets/Engine/clock.json` 写 `FixedHz`。引擎要求这个值 ≥ 1。群体配置不再另设 10 到 240 的范围。全局变速走 TimeFlow，不走群体配置。
 
 时间有三种写法：
 
 - 步进频率是 `FixedHz`。`fog.rateHz` 相对它，`avoidance.rateHz` 相对 `FixedHz × 子步`。两者都必须 > 0，并且不能超过对应的步进频率。周期是 `max(1, round(步进频率 / rateHz))`。实际频率打在引擎日志里。超过步进频率直接报错。
-- `sim.simSecondsPerTickSecond` 是每个 tick 秒推进多少仿真秒。旧键 `sim.timeScale` 已删除。
+- `sim.simSecondsPerTickSecond` 是每个引擎 tick 推进多少仿真秒。
 - 玩法时长带 `Sec`：`formation.settleTimeSec`、`movement.slotTimeConstantSec`、结构模板的 `lifetimeSec`。调度延迟和每 tick 预算仍用 `Ticks` / `PerTick`，例如 `planning.latencyTicks`、`fog.revealTicks`、`flowfield.maxRebuildsPerTick`。寿命到期 tick 是 `ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)`。
-- 速率同样带单位后缀。`movement.blendRatePerSec`、`movement.stallDecayPerSec`、`formation.leaderTurnRatePerSec`、`avoidance.accelerationPerSec` 是 1/仿真秒。`movement.unitTurnRateRadPerSec` 是弧度/仿真秒。`movement.slotCheckIntervalSubSteps` 是子步间隔。旧键出现即失败。
+- 速率带单位后缀：`movement.blendRatePerSec`、`movement.stallDecayPerSec`、`formation.leaderTurnRatePerSec`、`avoidance.accelerationPerSec` 为 1/仿真秒；`movement.unitTurnRateRadPerSec` 为弧度/仿真秒；`movement.slotCheckIntervalSubSteps` 为子步间隔。
 
 ### 关系功能位
 
@@ -148,7 +150,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ maps.<mapId>.navCellSizeC
 
 | 功能位 | 方向 | 有这条边 | 没有这条边 |
 |---|---|---|---|
-| `yieldsTo` | a → b，a 的单位碰到 b 的单位 | 按推挤优先级让路。有效优先级是兵种推挤优先级，移动中再加 `push.movingBonus`。相等对半；低的一方让出 `1 - push.dominantShare`；高的一方只让 `push.dominantShare` | 静止的一方不被推开。自己在动、对方静止时全让。双方同状态对半 |
+| `yieldsTo` | a → b，a 的单位碰到 b 的单位 | 按推挤优先级让路。有效优先级是兵种推挤优先级，移动中再加 `push.movingPriorityBonus`。相等对半；低的一方让出 `1 - push.dominantShare`；高的一方只让 `push.dominantShare` | 静止的一方不被推开。自己在动、对方静止时全让。双方同状态对半 |
 | `sharesVisionWith` | a → b | 这一方向共享视野 | 这一方向不共享视野 |
 
 `sharesVisionWith` 要两个方向都有才并进同一视野组，并且传递：a 与 b 共享、b 与 c 共享，a 与 c 也在同一组。只写一个方向不合组。
@@ -162,7 +164,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ maps.<mapId>.navCellSizeC
 }
 ```
 
-`push.movingBonus` 和 `push.dominantShare` 留在标准参数 Mod，只在让路那一支生效。旧的 `relations`（kinds / self / sameTeam / default / overrides）和 `push.modes` 已删除，再写会在加载时报错，并指出改用 `pairRules`。
+`push.movingPriorityBonus` 和 `push.dominantShare` 留在标准参数 Mod，只在让路那一支生效。
 
 地图上的边写在队伍代表实体的 `Relations` 里。边有方向。同队要让路、要共享视野，就在队伍代表上写一条 `To` 指向自己的 `Friendly`：
 
@@ -180,7 +182,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ maps.<mapId>.navCellSizeC
 
 `Team` 是这一步读的组件。`MemberOf`（玩家代表 → 队伍代表）是主干的队伍真相。改这条边会抬修订号，`RelationshipRuntime` 随即 `SyncTeam`，把队伍号写进 `Team`。只改 `Team`、不改边，修订号不动，所以每个 tick 都读组件。
 
-调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，聚焦仍建会话和路径服务。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。`tools` 和 `rates` 可以不写；写了就必须字段齐全、不能有未知键、范围必须合法，代码不补默认。`presentation.kind=deploy` 时这两段都要有，`presentation.deploy.palette` 至少一格，每格写 `entry` 和 `selectAction`，`selectAction` 不能重复；`tools.placeEntry` 必须是其中一格的 `entry`。格里的 `entry` 指向 `Presentation/crowd_structure_palette.json` 的条目。这份文件按 DeepObject 合并，内容演示 Mod 写通用的几条，S4 补自己的 `s7barrier`。每条写 `template`（结构模板 id）、`label`、`sizeCm` 和 `gesture`。`gesture.kind` 只有三种：`point` 在光标处放；`fixedPath` 从光标到光标加 `toOffsetCm`，两轴不能都是 0；`twoPoint` 先点起点再点终点。只有 `fixedPath` 能写 `toOffsetCm`。部署演示装面板时逐格查模板：模板不存在报错；path 足迹的模板只能配 `fixedPath` 或 `twoPoint`，其他足迹只能配 `point`。内核不读这份文件，同一个模板可以有几条手势不同的条目。
+调试文件 `CrowdSimulationDebug.json` 由登记该文件的 Mod 在 `config_catalog.json` 提供：`CrowdSimulationUiMod` 带默认 `tools` / `rates` / `fuzz`，各演示 Mod 用 DeepObject 覆盖 `presentation`、`session` 等（如 S3、S4）。能力 Mod 不登记。字段合同见 [配置合同参考](crowdsimulation-data-schema.md)。带 `presentation.deploy` 时须同时有 `tools`、`rates`、`fuzz`；`tools.placeEntry` 须落在 `presentation.deploy.palette[].entry` 上；`entry` 指向 `Presentation/crowd_structure_palette.json` 的条目 id。
 
 `kill`、`scatter`、`rates`、`rebakeSlices`、`clearCaches` 和已有的 `spawn` / `spawnAt` / `placeStructure` / `removeStructureAt` 走同一条指令日志。`kill` 从稠密表尾部 `ReleaseDense` 删掉半径内的单位，外圈沿离心方向加上该单位移动类型速度乘 `impulse`。`scatter` 用会话的加盐 `CrowdSimRng` 给每个有单位的出生玩家一条带成员句柄的 box 指令。`clearCaches` 丢掉流场结果缓存，再把已有流场的组重新排队刷新。`rebakeSlices` 改会话当前切片数，范围是 1 到配置上限，`Reset` 回到配置值。`rates` 的 `tickHz` 必须等于 `FixedHz`，否则拒收且不进日志；`avoidHz` 大于 0 且不超过步进频率时重算 stride 并把相位归零。`FixedHz`、`SimDt`、子步数不变。满容量压测复用 `spawn`，数量是 `sim.maxUnits`。播放暂停是会话的 `PlaybackHeld`：到点指令照常执行，tick 不推进。倍速是 `TimeFlowService` 在 Simulation 域的缩放令牌，不改 `SimDt`。
 
@@ -192,21 +194,13 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ maps.<mapId>.navCellSizeC
 
 会话激活时 `CrowdPairRulesProjection.Project` 用 `PlayerEntityLookup` 取每个玩家的代表实体。功能位矩阵，以及 tick 里核对队伍号和关系修订号，见上文「关系功能位」。
 
-## .navsurface v2 格式要点
+## `.navsurface` 格式要点
 
-小端二进制。32 字节头：`magic "LNSF"`、版本 2、头长 32、格数 X/Y、格边长厘米、地形类型数、链接种类数（不超过 255）、候选数、`bakeInputsDigest`。头后依次是地形类型表、链接种类表（都是 id 字符串，格值和候选里的种类编号就是表下标）、逐格 u8 地形编号、每条 16 字节的链接候选。候选记录是种类编号、标志（位 0 = 斜向）、步数、起点格、终点格、落差厘米。直向候选长度就是步数，斜向是 `(float)(步数 × √2)`，文件里不存浮点长度。候选按种类编号升序分组。
-
-读取侧做精确长度校验，多一字节少一字节都拒绝。编号越界、端点越界、端点位移和步数或斜向标志对不上、种类不升序、落差为负，都拒绝。版本 1 的文件直接拒绝，报文要求重烘。
-
-进图时核对三件事。`NavSurfaceContract.Validate` 查前两件：地形类型表必须和 `maps.<mapId>.terrainTypes` 逐字同序，因为格值是表下标，顺序错一位全图错位；链接种类表必须和这张图 `linkCandidateBake` 的种类同序。第三件在 `CrowdSimulationWorldIngest.Build` 里，那里才同时有配置、地图实体和高度场：`bakeInputsDigest` 必须等于按当前烘焙输入算出的值，不等就报“烘焙输入和当前配置不一致，重烘”。字段的完整说明见 [CrowdSimulation 数据结构](crowdsimulation-data-schema.md) 第 6 节。
-
-## 阶段路线（来自 Web 规格第三部分）
-
-S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成障碍）→ S2 逐移动类型可走区域与烘焙 → S3 后台路线与流场 → S4 部署与命令回放 → S5 移动与阵型 → S6 避让推挤 → S7 动态地图与迷雾认知 → S8 正式下令链与 5 万单位。上一阶段对拍通过后才进入下一阶段。
+小端二进制；magic `LNSF`，头长 30 字节，字段顺序与 `bakeInputsDigest` 算法见 [配置合同参考](crowdsimulation-data-schema.md) 的「`.navsurface`」一节。进图时 `NavSurfaceContract` 对照 `terrainTypes` 与链接种类表；`ValidateBakeInputs` 对照指纹，不符则提示 `nav bake-crowd-navsurface` 重烘。
 
 ## S1 交付：地形与障碍物（本次）
 
-- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（工具只写过 v1，现行 v2 由 Ludots 烘焙）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。`.navsurface` 只有最初一版来自这个工具，现在由 Ludots 烘焙，导出工具只再用来产出对拍真值。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
+- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下）按种子写出 `.height`（CHTM v2，uint16 缩放）、`Maps/<id>.json`（队伍代表 `Relations`、阻挡物与桥实体）与 S1 对拍摘要；`.navsurface` 用 `nav bake-crowd-navsurface` 从地编网格烘焙。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标：Web 米 × 100 = Ludots 地图局部厘米，轴向与 Web 一致。
 - **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用 `maps.<mapId>.navCellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 由 `nav bake-crowd-navsurface` 从地编网格烤出。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥清单与 Web 导出做 FNV-1a 逐格对拍，全相等，摘要里跳跃候选那一段用 Web 快照 `parity/s1-jump-truth.json` 填；Ludots 烤的跳跃候选和这份快照按行为对拍；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
@@ -250,20 +244,20 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S4-a 交付：部署单位与指令回放内核（本次）
 
-- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（速度、个人半径、推挤优先级、special，以及生成时写入的档案下标和移动类型下标；profileId / agentTypeId 留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
-- **单位创建走运行时生成系统**：`CrowdDeployment` 的 spawn / spawnAt 在指令里占槽，把模板、位置、朝向、`PlayerOwnerIdOverride` 和回执号（等于稠密下标）收成 `RuntimeEntitySpawnRequest`，按模板键分组后调用 `RuntimeEntitySpawnSystem.Materialize`。这次调用不读不写 EffectProcessing 的阶段队列。`Materialize` 把调用方的 span 当成同一批：批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导规则。没有直接引导、但模板上有不能编进直接引导的 EntitySpawned 规则时，调用直接抛错，不生成实体。阶段队列的 `Update` 仍是多于一条才走批车道；单独一条留在单车道，不预挂 `PresentationLifecycleState`，出生事件仍由 `PresentationEntityLifecycleSystem` 发布。无头会话和回放各自持有绑在本世界上的系统实例；引擎会话用引擎注册的那一个。测试装配把 CrowdSimulationDemoContentMod 的模板挂进 VFS，无头对拍与回放没有单独的组件集。物化在运动、迷雾和校验码之前，也在同一条 Flush 里更后面的指令之前，单位仍在指令 tick 内就位。阶段队列仍由 EffectProcessing 的 `Update` 排空，给地图装载、MassNavigation、图节点这一拍稍后入队的请求。同模板超过一条时走 `World.Create(span)`，单批上限是生成器暂存 32768。仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。点名生成的组下标用 `PairRules.IndexByPlayerId`。出生算法（盐流/环形搜索/编组/散布）留在内核。
+- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（生成时写入档案/移动类型下标、速度、个人半径、推挤优先级、`autoDeploy`；字符串 id 只留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
+- **单位创建走运行时生成系统**：`CrowdDeployment` 的 spawn / spawnAt 在指令里占槽，把模板、位置、朝向、`PlayerOwnerIdOverride` 和回执号（等于稠密下标）收成 `RuntimeEntitySpawnRequest`，按模板键分组后调用 `RuntimeEntitySpawnSystem.Materialize`。这次调用不读不写 EffectProcessing 的阶段队列。`Materialize` 把调用方的 span 当成同一批：批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导规则。没有直接引导、但模板上有不能编进直接引导的 EntitySpawned 规则时，调用直接抛错，不生成实体。阶段队列的 `Update` 仍是多于一条才走批车道；单独一条留在单车道，不预挂 `PresentationLifecycleState`，出生事件仍由 `PresentationEntityLifecycleSystem` 发布。无头会话和回放各自持有绑在本世界上的系统实例；引擎会话用引擎注册的那一个。测试装配把 CrowdSimulationDemoContentMod 的模板挂进 VFS，无头对拍与回放没有单独的组件集。物化在运动、迷雾和校验码之前，也在同一条 Flush 里更后面的指令之前，单位仍在指令 tick 内就位。阶段队列仍由 EffectProcessing 的 `Update` 排空，给地图装载、MassNavigation、图节点这一拍稍后入队的请求。同模板超过一条时走 `World.Create(span)`，单批上限是生成器暂存 32768。仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。模板写 `profileId`；移动类型由档案 `navProfileId` 解析。激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。点名生成的组下标用 `PairRules.IndexByPlayerId`。出生算法（盐流/环形搜索/编组/散布）留在内核。
 - **部署算法**：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数，失败不留半生成状态。
 - **规范校验码（FNV-1a 32，按 Ludots Fix64 原始值计算）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。同一条 Mix 在 `position`、`motion`、`state`、`avoidance` 四处留下断面，合计等于最后的 `avoidance` 断面。诊断断面另起 Mix，不进合计。分区怎么对，见下方「校验码分区」。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位）。
 - **指令队列与回放**：指令是数据，tick 边界执行。回放输入是指令日志，回放是新会话加上同一份日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
 - **对拍（`S4DeployTruthTests`,3 种子）**：同一份脚本（spawn 12000 → 框选 → 点名生成 20 → 全选 → 清空）逐帧校验码与沙盒一致（150 帧 × 3）;12020 个单位逐条（玩家 / 模板 / 半径级 / 组 / 位置原始值）一致;同一份记录回放两次校验码相同。
 - **玩家号**：参考端玩家 0 与 Ludots 玩家号 1..P 的换算只在 `PlayerOwner` 与脚本数据边界做一次,内部编号序不受影响。镜像侧若把位置乘法也取整,奇数半档比 Ludots 少 50 个原始单位。
-- **配置增量**：`world.seed`（生成盐,进覆盖配置）。`CrowdSimulationAgent.special` 为 true 的模板不参与批量部署。
+- **配置增量**：`world.seed`（生成盐,进覆盖配置）。`autoDeploy: false` 的模板不参与批量部署（见单位模板合同）。
 
 ## S4-b 交付：部署演示纯数据化——单位进 presenter 管线（本次）
 
-- **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`,MassNavigationRuntime 同款形态）在地图聚焦时按配置目录合并出的 CrowdSimulationConfig + CrowdSimulationDebug 建会话——会话跑在**引擎世界**上（此前演示 mod 在侧世界 `ArchWorld.Create()` 起会话,呈现管线根本看不见单位,这是 S4 演示最初看不到单位的根因）,tick 由系统组的 FixedHz 驱动,会话与运行时注册成服务。S1/S3 演示 mod 的同款 Load 样板后续都往这里收。
+- **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`）在地图聚焦时按配置目录合并 `CrowdSimulationConfig` 与 `CrowdSimulationDebug` 建会话，跑在**引擎世界**上,tick 由系统组 FixedHz 驱动,会话与运行时注册成服务。
 - **单位接入呈现投影**：稳定 id、模板键、`PreviousWorldPositionCm`、`VisualTransform`、`CullState`、`ContinuousHeightmapSampleState` 和半径黑板由生成系统在物化时写上。批车道带 `PresentationLifecycleState`，生命周期的出生查询不会再给这些单位建 presenter；单条车道由 `TryBootstrapPresenter` 标 `PresenterRootBootstrapHandled`。人群代码不调用 `CreateHierarchy`。无头接线没有 presenter 运行时，不建 presenter。校验码不读这些呈现字段。
-- **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + 新增的 `TeamColorPalette` 服务（`deploy.bases[].color` 是配置数据;`PresenterBehaviorSystem` 优先读调色板,未注册回退原双色解析,旧场景零影响）;选中环 = 玩家代表实体上的 `selected` 集合。框选经 `CollectionApplier` 写入，presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中。
+- **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + `TeamColorPalette`（地图表现配置注册玩家色;`PresenterBehaviorSystem` 优先读调色板）;选中环 = 玩家代表实体上的 `selected` 集合。框选经 `CollectionApplier` 写入，presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中。
 - **演示 = 数据脚本**：S4 演示 mod 是纯数据（无 main）。地图聚焦后会话建立。开局人数只认 `deploy.initialUnits`：会话宿主把它排成 tick 0 的 spawn，S4 写 12000，S1 地形 Mod 写 0（S1、S3 进图不带单位）。对拍和回归直接建 `CrowdSimSession`，用自己指令表里的 spawn，不经过会话宿主。`CrowdSimulationDebug.json` 的 `session.script` 写开局之后的指令（四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **接线约束**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——会话只物化单位模板点名的档案，不把注册表里其余体型当成半径级;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
 - **相机**：S4 mod 用同 id 片段把演示相机的 `edgePanMarginPx` 关成 0（无头跑证据时指针静置在窗口边缘会把镜头慢慢拖走,抓屏全都对不上）。
@@ -279,7 +273,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **真机演示**：S4Deploy 演示相机补 `targetSource: Fixed` + `fixedTargetCm`——此前 `VirtualCameraRequest` 只带相机 id,轨道目标沿用地图默认相机位姿（世界中心、19.2 km 视距）,12000 单位全程在画幅外;Fixed 位姿是 `VirtualCameraBrain` 的现成激活语义,零代码。视距定在 400 m：r400 单位（8 m 方块）约 7 px,阵型间距与玩家色可读,`allowUserInput` 保持,可自由缩放平移跟随行军。验收图 `raylib-s1337-s5move{4,5,6}.png`（1.5 km 行军带 / 800 m 阵型散布 / 400 m 单位特写）。
 - **审计**：交叉对抗审计 A 链 8 片（leader / intents / motor / formations / orders / planner 两片 / support）+ B 链 3 片（会话停摆 / 导出契约 / 运行时指令）全绿,托管 deepseek-v4-pro;spark 抽查 s5-intents 空响应（已知不稳,未计入）。两片附注确认审计真实读码：motor 片的 metrics / calm 裁剪与 support 片的定点等价表达均被识别为声明过的口径,不计缺陷。
 - **S5 剩余**：拖线摆阵演示（走 S3-c 路线视觉缓冲同一条路）;最小避让已随 S5-b 交付,态度模式推挤与阻挡盒推挤仍归 S6。
-- **多起点规划**：一个组的成员散在好几块 tile 上时，规划不再只从一个代表格出发。规划按成员顺序看每个成员所在的 tile 和层，每个 (tile, 层) 记一个起点，用第一个碰到的成员的格；跳跃中的成员用落点格。起点数不设上限，最多是 tile 数的两倍。路径服务从每个起点各推一条到目标的走廊，再加上本组领队起点的走廊（只有桶里净空最严的那个组带领队起点），全部标进同一张掩码，垫一圈。同一条指令里先建好的同导航、同目标的场盖住这张掩码，就共用那张场；没有先建的场、这一组也不用给领队描路时，规划时钉住的同导航、同目标缓存场盖住就沿用缓存场；都不行，就按 垫过的掩码 ∪ 那张场的掩码 新建，新场进缓存，替掉旧条目。钉住的缓存场到整份规划应用完才放开。组总能拿到流场；成员能不能到，规划时已经按连通域逐个判过，不可达的成员不进起点表。领队起点在流场里描不到、目标又可达时，把它所在的 tile 并进掩码重建一次。领队起点照旧取联合质心；质心不可达时取第一个地面层起点，没有地面层起点才取第一个起点。起点表放在预先备好的数组里，答复取走后回池，去重用带代号的标记数组，稳态规划不分配。起点不进校验码。效果：雾里的混编线阵（3000 单位，300 tick）原先每次重规划后掩码只盖住单一起点的走廊，成员一路走出掩码，扩展 122 次、路径任务共 128 个；现在扩展 0 次、共 15 个（规划 3 个、刷新 12 个；Web 同场景 19 个）。S4 脚本 260 tick 里，规划沿用缓存场 9 组、共用同指令的场 19 组。
+- **多起点规划**：一个组的成员散在好几块 tile 上时，规划不再只从一个代表格出发。规划按成员顺序看每个成员所在的 tile 和层，每个 (tile, 层) 记一个起点，用第一个碰到的成员的格；跳跃中的成员用落点格。起点数不设上限，最多是 tile 数的两倍。路径服务从每个起点各推一条到目标的走廊，再加上本组领队起点的走廊（只有桶里净空最严的那个组带领队起点），全部标进同一张掩码，垫一圈。同一条指令里先建好的同导航、同目标的场盖住这张掩码，就共用那张场；没有先建的场、这一组也不用给领队描路时，规划时钉住的同导航、同目标缓存场盖住就沿用缓存场；都不行，就按 垫过的掩码 ∪ 那张场的掩码 新建，新场进缓存，替掉旧条目。钉住的缓存场到整份规划应用完才放开。组总能拿到流场；成员能不能到，规划时已经按连通域逐个判过，不可达的成员不进起点表。领队起点在流场里描不到、目标又可达时，把它所在的 tile 并进掩码重建一次。领队起点照旧取联合质心；质心不可达时取第一个地面层起点，没有地面层起点才取第一个起点。起点表放在预先备好的数组里，答复取走后回池，去重用带代号的标记数组，稳态规划不分配。起点不进校验码。混编线阵等大编队场景下，多起点掩码减少走廊扩展与路径任务次数（`S5TrajectoryTruthTests` / Web 同脚本可比）。
 - **流场刷新、走廊扩展与流场结果缓存**：`ProcessRefreshes` 先消化刷新队列，每 tick 最多 `planning.maxRefreshesPerTick` 次。队里同导航、同目标、手上有场、不在规划也不在刷新的组搭同一次刷新，走廊取并集，`refreshLatencyTicks` 后生效。单位采样落到本组流场掩码外、目标又可达时，意图提交把这一格记进本组的走失记录：每个 tile 只记第一次碰到的格，记录跨 tick 攒着，直到下一次扩展把它整份带走。刷新之后提交扩展，每 tick 最多 `flowfield.maxRebuildsPerTick` 次，从上一次提交过的组的下一组开始轮。有走失记录、手上有场、没有刷新或扩展在途的组才提交；在途的组记录留着，答复落帧后再提。扩展 `latencyTicks` 后生效，记录里每个走失格所在的 tile 和它到目标的 HPA tile 都并进掩码。走失 tile 已经在掩码里、掩码已经铺满，都照样提交，由路径服务按下面的缓存规则答复。重规划、领队无路可走放弃目标、重烘反应和认知重定向、组被释放，都丢掉这一组的走失记录。记录从构造时备好的池里取，扩展答复取走后和走廊副本一起回池。两种请求都先钉住同导航、同目标的缓存场，把它的掩码交给路径服务：垫一圈后的掩码被它盖住，就答复沿用缓存；否则按 垫过的掩码 ∪ 缓存场掩码 新建。答复落帧时，组已重规划或被反应取代就跳过这一组；请求后导航变了，这一组清标记、重新排刷新。至少有一组导航没变，新场才进缓存，否则回池。重烘反应和认知重定向取代受影响组的在途请求，请求本身照常落帧。掩码碰到脏 tile 的缓存条目离开缓存。认知槽删除时，该槽变体上的流场离开缓存，算在这些变体上的在途请求作废。`clearCaches` 丢掉整个结果缓存。场外单位在新场落地前仍朝领队走。组切换流场只走 `SetFlow`。引用和缓存标记都放开才回池。缓存键是导航号 × N² + 目标格，只按键取，条目数不超过 `flowfield.cacheCapacity`。规划分区摘要按从旧到新记下这些键。S4 脚本 260 tick 里，刷新 49 次，另有 128 组搭车；拆建筑会把碰到的缓存场逐出，刷新没有沿用缓存的答复。拆建筑后旧场等刷新落地的那几 tick，成员会采到场外，这些记录在刷新落帧后提交了 7 次扩展，每次带 1 个 tile，都在旧走廊一圈垫层以内。
 
 ## S5-b 交付：最小避让（本次）
@@ -365,7 +359,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **增量 vs 全量一致性检查**:`CrowdNavRebake.VerifyAgainstFullBake`(调试开关,`CrowdSimSession.VerifyIncrementalNav`,runtime 由 CrowdSimulationDebug.json 的 `session.incrementalNavVerify` 驱动):每次结构变更后与同栅格全量烘焙逐字段比对(代价/可走/可通行/连通域划分规范重标/格表/链接表/HPA 扁平视图),不一致即抛。对拍免谈(全量重烘即基准),S7 真值测试开启随路跑。
 - **队伍反应**（`CrowdSimPlanner.ReactRebake`）:目标被挡 → 重规划;行进中且变更落在剩余路线上(走廊掩码触脏 tile 且脏 tile 内有 ≤ 成员剩余路线长的格——只看掩码会把身后的变更算进来)→ 领队线四角探边被切断(`leaderPathBlocked`,upPass 托桥)或成员连通域失达 → 重规划,否则**同走廊流场刷新**(规则见上面“流场刷新、走廊扩展与流场结果缓存”);在途规划撞上重烘 → 落帧按现行导航裁决(afterStalePlan)。唤醒 `wakeNear`(各自上下文腐蚀半径 + 自身 + 最大个人半径,量到矩形)与挤离 `evictBlocked`(变更矩形外扩 2×最大腐蚀半径,格心落位,跳跃单位改落点不挤脚下,无处可放计 stuck)在重烘阶段 1 执行。
 - **重烘切片**:阶段 0(指令内:仓变更 + 真相重烘)→ 阶段 1(队伍反应 + 唤醒 + 挤离)→ 阶段 2(重规划 + 报告发布),按 `planning.rebakeSlices`(=3)摊到后续 tick;每逻辑 tick 至多一步,任何新指令先收尾未完 job。**导航锁**:路径 worker 与结构变更共用同一份导航态,经 `PathQueryService` 的导航互斥锁串行(op 应用与在途 Compute 互斥)——任何计算恰好看见其请求前生效的全部 op,时序不进结果;参考端用 worker 私有镜像 + 消息序达到同一契约,C# 单份状态省镜像内存(与参考的生命周期差异,按参考语义为准调整。同脚本回放校验码逐位一致)。
-- **对拍(导出器 S7 块 + `S7RebakeTruthTests`,360 tick × 120 单位,种子 1337,crowd 全量 84/84)**:脚本 = 部署 → 行军 → 建筑挡路(140m,格心位)→ 拆除 → 寿命路障(4s,12 tick 到期)→ 道路(仅代价);**每次 op 的重烘焙报告逐字段硬门**(执行 tick / 类别 / 报告 tick / tiles / contexts / costOnly / 缓存 hits/misses / 重规划指令数 / 刷新队列长 / 挤离数 / stuck / 受影响 tile 并集升序),5 笔全字段一致——命中率、脏 tile 集与反应判定全程同构。逐 tick 门:state/level/order **逐位**(结构字段零容忍);mode 双容忍 0.15%(实测 13/43200 = 0.030%,全部单字段翻——重规划落帧时槽位从漂移位置重排,槽位视线判定的骑线翻转,与 S5 首分歧同源);contacts 硬门在位置对齐样本（|Δ| ≤ 1 cm）上。`S7RebakeTruthTests` 断言不一致 ≤ 0.05% 且幅度 ≤ 2。位置分叉后邻居集合本就不同，接触计数没有逐位合同；位置带维持结构性兜底档(实测 max 2407cm / 末 30 tick 1259cm,带值 15000/3000 不收紧;整组卡墙类结构分歧在数百米量级仍击穿)。**补行为门**(位置带 150m 拦不住"绕错路"级分歧,降为结构性兜底):每单位终态(state/level/order)逐位、首达 tick 分布直方图(含从未到达桶)两侧相同、阻挡格停留数为零(逐 tick 查两侧位置;放置 op 当帧末态豁免——挤离在重烘阶段 1 = 放置后下一 tick 落地,evicted/stuck 已被 ops 报告钉住;跳跃中单位离网直线可越阻挡、桥面层不查地面阻挡格)、不可达集合(终态 Unreachable)逐位、重规划次数(ops 报告 orders 字段)。**p50 分层门** ≤ 0.5cm(与 S5 同带;实测 0.069)。原 25cm 临时带的成因已定性并修复:放置当帧马达的亚格墙触推离依赖开放格缓存,缓存只按 walk 数组引用失效,而重烘对 walk 是原地腐蚀——放置帧读到旧开放表,推离与参考端不同值,p50 被抬到 8cm 档;补上版本失效(与参考端 openCells 同款)后回到固有误差档。contacts 幅度上限维持 ±2——实测唯一不一致样本(1/36989)幅度 ≤2,判为同 tick 两邻居各翻一次的骑线叠合,收紧到 S5 的 ±1 无实测支撑。
+- **对拍**：`S7RebakeTruthTests`（360 tick × 120 单位，种子 1337，crowd 全量 84/84）。脚本覆盖部署、行军、建筑挡路、拆除、寿命路障、仅代价道路。每笔结构 op 的重烘报告字段与 Web 参考逐字段硬门。逐 tick：`state` / `level` / `order` 零容忍；`mode` 双容忍 0.15%；contacts 在 |Δpos| ≤ 1 cm 样本上不一致 ≤ 0.05%、幅度 ≤ 2。补行为门：终态逐位、首达 tick 直方图一致、阻挡格停留为零（放置当帧挤离豁免见测试）、`Unreachable` 集合逐位、重规划次数与 ops 报告一致；p50 位置 ≤ 0.5 cm。大分歧位置带 15000 / 3000 cm 作结构性兜底。
 - **真值口径**:参考端以 `__S7_TRUTH_NAV__` 镜像补丁冻结迷雾(fog.update / syncBeliefs 短路,`__S4_FIX64_SPAWN__` 同款门,仅真值导出置位)——S7-a 当时的内核不建迷雾,组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;不做此冻结,op 后组掉进 belief 变体槽,反应经 retarget 走 belief 路径,报告 orders/refresh 与无雾内核结构性不可对齐。足迹尺寸取静态图同档(35–140m)、中心落在格心,覆盖份额 0/1 无骑线。
 - **约束**:① 碰撞索引必须跟随仓的活 CSR——放置重建出**新实例**,会话持旧实例则墙内单位永推不出(首个真分歧,tick 31 单位 92 差 43m,`Blockers` 已改为派生属性);② worker 复用的 tile 多边形代价备忘键须钉**条目引用**((navId, tile) 键在重烘换条目后越界,worker 故障);③ 寿命 tick 整数契约走参考端 f64 公式(见上);④ 刷新队列长在阶段 1 末快照(阶段 2 读实时值已被每 tick 预算排空,参考端同点)。
 - **真机**：S4Deploy 冒烟脚本追加建造/拆除/寿命/道路四 op(12000 单位):5 笔重烘报告全字段落日志(含到期拆除与 costOnly=4 的仅代价重烘,缓存命中计数与挤离计数在案);**autoReplay 回放无分歧(status=1, divergenceTick=-1)**——回放会话用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存(共享活会话已被 op 改写的导航上下文必然分歧,首个分歧恰在首个规划落地 tick 43);截图 `raylib-s1337-s7rebake-kernel.png`。
@@ -492,17 +486,17 @@ HUD 的可见数、已探索数读本机座位所在视野组的 `FogField`。�
 
 ## 现在的范围
 
-原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，迷雾和动态建造已经在内核里，高度笔刷也有。CrowdSimulation 地图可以在 React 编辑器里把地形类型画进逻辑地形，再烘焙成 `.navsurface`。正方形阻挡仍然在。
+群体地图可在 React 编辑器里画地形类型并烘焙 `.navsurface`；动态建造与迷雾在内核里；地图阻挡物仍限于正方形 Box（见下）。部署仍以 `deploy` 出生点与散布为主，并配合 `spawnAt` 与调试工具。
 
 阻挡物仍然只能是正方形。`CrowdSimulationAuthoringContract` 要求地图上 `sinkNavigationObstacle` 的实体 `shape` 为 `Box`，并且 `halfWidthCm` 等于 `halfHeightCm`。圆形非阻挡区域实体不走这条拒绝。结构模板的 `blocker` 只接受 `footprint` 为 `rect`；`CrowdStructureFootprint.Make` 把 rect 写成 `Hx = Hy = sizeCm / 2`。`disc` 和 `path` 可以当结构，不能当阻挡。
 
-部署配置 `deploy` 仍是出生点加散布：`initialUnits`、`spreadCm`、`baseJitterCm`、`centersPerGroup`、`bases[]`（`playerId`、`xCm`、`yCm`）。指令里另有 `spawnAt`，按点、玩家、兵种和半径级生成。原句「仅出生点加散布」只覆盖配置节，指令集里还有 `spawnAt`。
+部署配置 `deploy`：`initialUnits`、`spreadCm`、`baseJitterCm`、`centersPerGroup`、`bases[]`（`playerId`、`xCm`、`yCm`）。指令里另有 `spawnAt`，按点、玩家、兵种和半径级生成。
 
 动态建造已经有。`placeStructure` 和 `removeStructureAt` 在指令 tick 执行，结构带寿命，变更走脏 tile 重烘。分层模板（桥）同样可以放、拆、到期：两端和跨越段落在哪些区域，看模板的 `placement.endpointAreas` 和 `placement.interiorAreas`。放桥、拆桥和到期会增量更新桥面格、桥头和桥面 tile。地图上的桥在会话激活时由 `UpperLayerBake.RasterizeLayeredPaths` 生成，之后和动态桥共用这一份桥面层。拆桥后，桥上单位先落到地面；地面不可走时，按既有挤离挪到最近可走格。
 
-迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
+迷雾：`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`（视野组、认知变体、`reveal` / `obscure` / `forget` / `fogShare`）。纯部署会话不调用 `EnableMovement` 时不建迷雾。
 
-CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是 `maps.<mapId>.logicTerrainAsset` 指向的 React 网格，每格 `AreaId` 就是 `terrainTypes` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。板不设 `DataFile`，`Grid.CellSizeCm` 保持地图原来的值；S1 是 100。导航格由地图边长除以 `maps.<mapId>.navCellSizeCm` 得到，S1 是 256×256、格边 6250 cm。编辑器合并地图时保留 `DefaultCamera`，后到的片段覆盖先到的，和运行时 `MapManager` 同一条规则。打开后相机用这份位姿。拾取平面的宽高就是地图的米制宽高。大图远景一格只有一两个像素，两次鼠标事件之间会跨过好几格；拖动刷地形时从上一格逐格走到当前格，每步只走一行或一列，方格和六边形都不漏格。油漆桶和放实体、放阻挡物仍只在鼠标落点生效。打开 `solver` 为 `crowd-simulation` 的地图并选中 Area 工具时，调色板和地面叠层用 `Presentation/terrain_type_colors.json` 里按 `terrainId` 的颜色。文件在 `CrowdSimulationStandardMod`，目录项在 `CrowdSimulationMod`。颜色表是多张地图共用的合并结果：这张图 `terrainTypes` 里的每个地形 id 都必须有颜色，缺一个就在进图时报错；别的地图才用到的颜色可以留在表里。编辑器经 `GET /api/mods/{modId}/maps/{mapId}/crowd-terrain-colors` 读合并结果，前端不写死色值。游戏内叠层是 `CrowdTerrainTypeOverlay`。会话激活时按导航格铺一张 RGBA，每格一个像素，格值是 `terrainTypes` 下标，颜色查这份表。结构仓活阻挡栅格上不为 0 的格用 `Presentation/crowd_terrain_type_overlay.json` 的 `blocked`。文件在 `CrowdSimulationMod`，`config_catalog.json` 里按 DeepObject 登记。`enabled` 默认 false。动作 `CrowdSimulation.ToggleTerrainTypes` 和键位 `<Keyboard>/leftBracket`（`[`）写在同一 Mod 的 `Input/default_input.json`，只这一处。根目录 `config_catalog.json` 已经按 `ArrayAppendFields` 合并 `Input/default_input.json` 的 `actions` 和 `contexts`，这份片段不再单独登记。三张 S1 种子和 S4 进图都装 `CrowdTerrainOverlayInputSystem`，按 `[` 切换。S4 的 `CrowdSimulationDebug.json` 按键说明仍写 `[ 地形类型`。调试视图帧只读叠层是否打开，打开时占贴花槽，检视行末尾加上「 地形类型」。文件或必填键缺失时，群体地图激活直接报错。Raylib 在高度图绘制前调用 `SetNavWalkabilityOverlayExternal`，混合强度 1，透明度只由颜色的 alpha 决定。经 `SetNavWalkabilityOverlayExternal` 绑定的纹理（这层叠层、迷雾、流场）按格行写，首行是最小 Y；经 URI 装载的图片首行是最大 Y。渲染器把行序作为 `uNavWalkabilityTopRowIsMaxY` 交给 `terrain.fs`，只有图片才翻转 V。这一层占着唯一贴花槽时，流场和迷雾不改绑，也不清这张外部纹理。放置、拆除、重烘之后，各真导航的 `Version` 增加 1 时只重写该次 `ChangedTiles`；同一帧里同一导航重烘超过一次，整张重画，避免只看见最后一次的 tile 列表。缓冲在激活时建好。稳态同步不分配。打开这一层时，50k 门仍看优化构建 P95 < 33 ms；那一窗计的是 `session.Step` 加上这次同步，同步本身的分配单独计。`CrowdSimulationMapProbe` 的地形类型底色改读这份表，晕渲仍压在底色上。三维网格本身仍按高度和生物群落上色。出生点颜色仍在 `deploy.bases[].color`。别的地图仍用原来的 Default / Road / Forest 调色板，也不显示烘焙动作。
+CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是 `maps.<mapId>.logicTerrainAsset` 指向的 React 网格，每格 `AreaId` 就是 `terrainTypes` 的下标，烘焙时原样写成 `.navsurface` 格值，类型表按同一顺序写 `terrainId`。板不设 `DataFile`，`Grid.CellSizeCm` 保持地图原来的值；S1 是 100。导航格由地图边长除以 `maps.<mapId>.navCellSizeCm` 得到，S1 是 256×256、格边 6250 cm。编辑器合并地图时保留 `DefaultCamera`，后到的片段覆盖先到的，和运行时 `MapManager` 同一条规则。打开后相机用这份位姿。拾取平面的宽高就是地图的米制宽高。大图远景一格只有一两个像素，两次鼠标事件之间会跨过好几格；拖动刷地形时从上一格逐格走到当前格，每步只走一行或一列，方格和六边形都不漏格。油漆桶和放实体、放阻挡物仍只在鼠标落点生效。打开 `solver` 为 `crowd-simulation` 的地图并选中 Area 工具时，调色板和地面叠层用 `Presentation/terrain_type_colors.json` 里按 `terrainId` 的颜色。文件在 `CrowdSimulationStandardMod`，目录项在 `CrowdSimulationMod`。颜色表是多张地图共用的合并结果：这张图 `terrainTypes` 里的每个地形 id 都必须有颜色，缺一个就在进图时报错；别的地图才用到的颜色可以留在表里。编辑器经 `GET /api/mods/{modId}/maps/{mapId}/crowd-terrain-colors` 读合并结果，前端不写死色值。游戏内叠层是 `CrowdTerrainTypeOverlay`。会话激活时按导航格铺一张 RGBA，每格一个像素，格值是 `terrainTypes` 下标，颜色查这份表。结构仓活阻挡栅格上不为 0 的格用 `Presentation/crowd_terrain_type_overlay.json` 的 `blocked`。文件在 `CrowdSimulationMod`，`config_catalog.json` 里按 DeepObject 登记。`enabled` 默认 false。动作 `CrowdSimulation.ToggleTerrainTypes` 和键位 `<Keyboard>/leftBracket`（`[`）写在同一 Mod 的 `Input/default_input.json`，只这一处。根目录 `config_catalog.json` 已经按 `ArrayAppendFields` 合并 `Input/default_input.json` 的 `actions` 和 `contexts`，这份片段不再单独登记。三张 S1 种子和 S4 进图都装 `CrowdTerrainOverlayInputSystem`，按 `[` 切换。S4 的 `CrowdSimulationDebug.json` 按键说明仍写 `[ 地形类型`。调试视图帧只读叠层是否打开，打开时占贴花槽，检视行末尾加上「 地形类型」。文件或必填键缺失时，群体地图激活直接报错。Raylib 在高度图绘制前调用 `SetNavWalkabilityOverlayExternal`，混合强度 1，透明度只由颜色的 alpha 决定。经 `SetNavWalkabilityOverlayExternal` 绑定的纹理（这层叠层、迷雾、流场）按格行写，首行是最小 Y；经 URI 装载的图片首行是最大 Y。渲染器把行序作为 `uNavWalkabilityTopRowIsMaxY` 交给 `terrain.fs`，只有图片才翻转 V。这一层占着唯一贴花槽时，流场和迷雾不改绑，也不清这张外部纹理。放置、拆除、重烘之后，各真导航的 `Version` 增加 1 时只重写该次 `ChangedTiles`；同一帧里同一导航重烘超过一次，整张重画，避免只看见最后一次的 tile 列表。缓冲在激活时建好。稳态同步不分配。打开这一层时，50k 门仍看优化构建 P95 < 33 ms；那一窗计的是 `session.Step` 加上这次同步，同步本身的分配单独计。`CrowdSimulationMapProbe` 的地形类型底色改读这份表，晕渲仍压在底色上。三维网格本身仍按高度和生物群落上色。玩家调色板由地图表现配置注册，不在 `deploy.bases` 里写颜色。
 
 工具栏「烘焙 CrowdSimulation 地表」把当前逻辑地形交给编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface`。输出路径没有默认值，空着时按钮不可用。运行时仍从 `ContinuousHeightmap.asset` 把 `.height` 换成 `.navsurface` 来读。烘焙结果直接覆盖目标文件；命令行要加 `--overwrite` 才覆盖已有文件。失败报文带格坐标和字段，编辑器原样显示。命令行是同一份函数：`nav bake-crowd-navsurface --mapId <地图 id> --modId <Mod 名> --out <路径>`。已有 `.navsurface` 转成地编资产用 `nav import-navsurface-react --in <.navsurface> --out <map_data.bin>`。
 
@@ -510,7 +504,7 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 烘焙函数是 `Ludots.Tool` 的 `CrowdNavSurfaceAuthoring.Bake`。它核对地图边长、`.height` 的包围盒和采样、这张图的 `navCellSizeCm`。不读板的 `Grid.CellSizeCm`。地编网格按群体格边长读入，步长和格数必须和由此推出的导航格一致。对不上就报错。格上的 `HeightLevel`、`WaterHeightLevel`、`Water`、`Ramp`、`Blocked` 对这块地表没有含义，出现非零值就报哪一格、哪个字段，不丢掉。高度只认 `.height`。阻挡物仍是地图实体。群体运行时不读逻辑地形，也不读 `logicTerrainAsset`。
 
-链接候选由 `CrowdNavSurfaceAuthoring.Bake` 生成。几何参数在 `Navigation/navmesh.json` 的 `maps.<mapId>.linkCandidateBake.<种类>`，和 `terrainTypes` 同一层，种类名要在 `CrowdSimulation/traversal.json` 的 `linkKinds` 里。地图没写这一节，烘焙结果里的种类表和候选都是空的。写了这一节，命令 `nav bake-crowd-navsurface` 和编辑器桥 `POST /api/mods/{modId}/maps/{mapId}/crowd-navsurface` 都按它生成。旧键 `jumpLinkBake` 在装载时直接报错，提示改用 `linkCandidateBake`。
+链接候选由 `CrowdNavSurfaceAuthoring.Bake` 生成。几何参数在 `maps.<mapId>.linkCandidateBake.<种类>`（合同见 [配置合同参考](crowdsimulation-data-schema.md)）。
 
 每个种类三个字段，都必填。`maxGapCm` 是间隙最长多少厘米，`linkSpacingCm` 是去重桶的边长，都要是正整数，并且是本图 `navCellSizeCm` 的整数倍，否则报错，报文带地图 id 和字段名。S1 格边长 6250 cm，`maxGapCm` 37500 是 6 格，`linkSpacingCm` 31250 是 5 格。`endpointMaxSlopeDeg` 是落脚点坡度上限（度），取 (0, 90)，正切用机动档案坡度的同一式子 `Fix64Math.Tan(deg * Fix64.Deg2Rad)`。
 
@@ -530,9 +524,7 @@ CrowdSimulation 地图的地形类型在 React 编辑器里画。地编资产是
 
 ### 单位模板检视器
 
-React 编辑器的群体配置页有一块「单位模板」。数据来自 `GET /api/mods/{modId}/crowd-config` 返回的 `unitTemplates`，由 Core 的 `EditorSession.UnitTemplatesView` 生成。列出的是打开的 Mod 和它整条依赖链合并、展开 `extends` 之后带 `CrowdSimulationAgent` 的模板。字段表就是 `CrowdUnitTemplateFacts.AuthoredFields`：`profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`、`special`。半径不在模板上，在模板引用的体型档案里，所以检视器同时列出 `Navigation/agent_profiles.json` 里这份档案的 `radiusCm` 和 `heightCm`，并写出还有哪些模板用这份档案。每个字段旁边写最后一次写它的 Mod 和文件。字段继承自父模板时，写的是父模板那一份的来源。
-
-改字段只是改 `templates` 层草稿，停手 600 ms 后调 `POST /api/mods/{modId}/crowd-config/validate`。校验在 Core 里跑和装载时一样的检查：`CrowdSimulationAuthoringContract.Validate`、`CrowdUnitTemplateFacts.FromTemplates`、`CrowdSimulationConfigLoader.Load`。前端没有自己的规则。报错原文显示在对应字段下，后面带赢家 Mod 和文件。例如速度写 -5，报的是 `模板 "crowd_minimal.unit" 的 CrowdSimulationAgent.speedCmPerSecond 需为 > 0 的数值。`；半径改了而 `personalRadiusCm` 没跟着改成 `radiusCm × agents.avoidanceRadiusScale`，报不一致。
+React 编辑器的群体配置页有一块「单位模板」。数据来自 `GET /api/mods/{modId}/crowd-config` 的 `unitTemplates`（`EditorSession.UnitTemplatesView`）。可编辑字段与 `CrowdUnitTemplateFacts.AuthoredFields` 一致：`profileId`、`speedCmPerSec`、`pushPriority`、`autoDeploy`；半径在 `agent_profiles.json` 的 `radiusCm`，检视器一并展示。改字段走草稿 + `POST …/crowd-config/validate`，规则与装载相同（`CrowdSimulationAuthoringContract`、`CrowdUnitTemplateFacts`、`CrowdSimulationConfigLoader.Load`）。
 
 「应用并重建世界」走 `POST /api/mods/{modId}/crowd-config/apply`。校验不过就不写文件。通过时只写打开的 Mod 自己的 `Entities/templates.json` 和 `Navigation/agent_profiles.json`。模板来自依赖 Mod 时，写进去的是覆盖项，只有 id 和改了的键，依赖 Mod 的文件不动。改回原值后覆盖项删掉。草稿不能删掉依赖给出的键，否则拒绝。数字按值比较：`30.0` 和 `30` 算同一个值，不会因为浏览器把数字写回成 `30` 就把依赖里的条目抄进当前 Mod。
 
