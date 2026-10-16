@@ -5,6 +5,8 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests.Authoring;
 
+[Category("ci-gate")]
+[Category("crowd-authoring")]
 [TestFixture]
 public sealed class CrowdAuthoringStartTests
 {

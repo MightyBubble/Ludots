@@ -118,6 +118,7 @@ internal sealed class CrowdDebugViewOverlays
     [JsonRequired] public bool Blocked { get; init; }
     [JsonRequired] public bool Links { get; init; }
     [JsonRequired] public bool Belief { get; init; }
+    [JsonRequired] public bool FormationSlots { get; init; }
 }
 
 internal sealed class CrowdDebugRgba
@@ -160,6 +161,8 @@ internal sealed class CrowdDebugViewColors
     [JsonRequired] public CrowdDebugRgba BeliefGhost { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Leader { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba Funnel { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba FormationSlot { get; init; } = null!;
+    [JsonRequired] public CrowdDebugRgba FormationLink { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Templates { get; init; } = null!;
     [JsonRequired] public CrowdDebugRgba[] Priorities { get; init; } = null!;
 
@@ -179,6 +182,8 @@ internal sealed class CrowdDebugViewColors
         BeliefGhost.Validate(path, "colors.beliefGhost");
         Leader.Validate(path, "colors.leader");
         Funnel.Validate(path, "colors.funnel");
+        FormationSlot.Validate(path, "colors.formationSlot");
+        FormationLink.Validate(path, "colors.formationLink");
         Palette(path, "colors.templates", Templates);
         Palette(path, "colors.priorities", Priorities);
     }
@@ -244,6 +249,7 @@ internal sealed class CrowdDebugViewActions
     [JsonRequired] public string ToggleNavPanel { get; init; } = "";
     [JsonRequired] public string ToggleTelemetryPanel { get; init; } = "";
     [JsonRequired] public string ProbePathFault { get; init; } = "";
+    [JsonRequired] public string ToggleFormationSlots { get; init; } = "";
 
     public void Validate(string path)
     {
@@ -264,6 +270,7 @@ internal sealed class CrowdDebugViewActions
         Require(path, "actions.toggleNavPanel", ToggleNavPanel);
         Require(path, "actions.toggleTelemetryPanel", ToggleTelemetryPanel);
         Require(path, "actions.probePathFault", ProbePathFault);
+        Require(path, "actions.toggleFormationSlots", ToggleFormationSlots);
     }
 
     private static void Require(string path, string field, string value)

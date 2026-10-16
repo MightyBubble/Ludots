@@ -87,6 +87,13 @@ public sealed class CrowdLeader
     public bool Done { get; private set; }
     /// <summary>反转后原地掉头:行序镜像,旧前排不必穿过队伍再到前面。</summary>
     public bool Mirror { get; private set; }
+    /// <summary>槽位世界坐标 = 领队位置 + 槽位偏移(横向, 向后)旋进领队朝向系。</summary>
+    public Fix64Vec2 SlotWorldCm(Fix64Vec2 slotOffsetCm)
+    {
+        Fix64 lat = slotOffsetCm.X, back = slotOffsetCm.Y;
+        return new Fix64Vec2(XCm - Hy * lat - Hx * back, YCm + Hx * lat - Hy * back);
+    }
+
     internal int PathCount => _count;
     internal Fix64Vec2 PathAt(int index) => _path[index];
     internal bool IsWall(int cell) => _wall.Contains(cell);

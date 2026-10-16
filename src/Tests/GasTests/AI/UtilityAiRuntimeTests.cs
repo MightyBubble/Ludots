@@ -381,13 +381,13 @@ namespace Ludots.Tests.GAS
             }
 
             var decision = fixture.CreateDecisionSystem(runtime);
-            decision.Update(1f / 60f);
-            fixture.Orders.Clear();
-            ref var actorState = ref fixture.World.Get<UtilityAiState>(fixture.Actor);
-            actorState.LastSubmittedOrderId = 0;
-            actorState.NextThinkStep = 0;
-            ref var actorBuffer = ref fixture.World.Get<OrderBuffer>(fixture.Actor);
-            actorBuffer.Clear();
+            // The second decision after a reset still pays one-time growth on the
+            // resubmission path; measure the third, which is the steady state.
+            for (int warmup = 0; warmup < 2; warmup++)
+            {
+                decision.Update(1f / 60f);
+                ResetActorForNextDecision(fixture);
+            }
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -404,6 +404,15 @@ namespace Ludots.Tests.GAS
             Console.WriteLine($"[UtilityAI] 10k target filtering elapsed={elapsedMs:F3}ms allocated={allocated}");
             Assert.That(allocated, Is.LessThanOrEqualTo(64));
             Assert.That(fixture.Orders.Count, Is.EqualTo(1));
+        }
+
+        private static void ResetActorForNextDecision(RuntimeFixture fixture)
+        {
+            fixture.Orders.Clear();
+            ref var actorState = ref fixture.World.Get<UtilityAiState>(fixture.Actor);
+            actorState.LastSubmittedOrderId = 0;
+            actorState.NextThinkStep = 0;
+            fixture.World.Get<OrderBuffer>(fixture.Actor).Clear();
         }
 
         private sealed class RuntimeFixture : IDisposable

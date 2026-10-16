@@ -67,6 +67,7 @@ internal sealed class CrowdDebugViewFrame
     internal bool Blocked;
     internal bool Links;
     internal bool Belief;
+    internal bool FormationSlots;
     internal int UnitColorMode;
     internal int LayerIndex;
     internal int RadiusIndex;
@@ -94,6 +95,7 @@ internal sealed class CrowdDebugViewFrame
         Blocked = config.Overlays.Blocked;
         Links = config.Overlays.Links;
         Belief = config.Overlays.Belief;
+        FormationSlots = config.Overlays.FormationSlots;
         UnitColorMode = config.UnitColorMode;
         LayerIndex = -1;
         RadiusIndex = -1;
@@ -108,7 +110,7 @@ internal sealed class CrowdDebugViewFrame
     }
 
     internal bool Visible =>
-        Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || Links || Belief
+        Funnel || Corridor || HpaGraph || NavPolygons || TileGrid || Flow || Density || Blocked || Links || Belief || FormationSlots
         || TerrainTypes
         || UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff;
 
@@ -163,6 +165,7 @@ internal sealed class CrowdDebugViewFrame
         if (actions.PressedThisTick(bindings.ToggleObstacles)) Blocked = !Blocked;
         if (actions.PressedThisTick(bindings.ToggleLinks)) Links = !Links;
         if (actions.PressedThisTick(bindings.ToggleBelief)) Belief = !Belief;
+        if (actions.PressedThisTick(bindings.ToggleFormationSlots)) FormationSlots = !FormationSlots;
         if (actions.PressedThisTick(bindings.ToggleNavPanel)) NavPanel = !NavPanel;
         if (actions.PressedThisTick(bindings.ToggleTelemetryPanel)) TelemetryPanel = !TelemetryPanel;
         if (actions.PressedThisTick(bindings.ProbePathFault)
@@ -325,6 +328,8 @@ internal sealed class CrowdDebugViewFrame
 
         if (Funnel)
             EmitFunnel(session, overlay, projector, height, ref used, budget);
+        if (FormationSlots)
+            EmitFormationSlots(session, overlay, projector, height, ref used, budget);
         if (HpaGraph)
             EmitNodes(session, overlay, projector, height, ref used, budget);
         if (UnitColorMode != CrowdSimulationDebugViewConfig.ColorOff)
@@ -346,6 +351,7 @@ internal sealed class CrowdDebugViewFrame
         readout.DivergentCells = Belief ? _diffCount : 0;
         readout.Ghosts = Belief ? _ghostStat : 0;
         readout.Funnel = Funnel;
+        readout.FormationSlots = FormationSlots;
         readout.Corridor = Corridor;
         readout.HpaGraph = HpaGraph;
         readout.NavPolygons = NavPolygons;
@@ -619,6 +625,16 @@ internal sealed class CrowdDebugViewFrame
         int seenCount = 0;
         int count = CrowdDebugOverlayGeometry.AppendFunnel(session.Groups.Groups, ControllingPlayer, seen, ref seenCount, scratch, 0);
         for (int i = 0; i < seenCount; i++) seen[i] = null;
+        EmitScratch(count, overlay, projector, height, ref used, budget, perKind: true, default, 1f);
+    }
+
+    private void EmitFormationSlots(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget)
+    {
+        var movement = session.Movement;
+        if (movement == null) return;
+        var scratch = Scratch();
+        int count = CrowdDebugOverlayGeometry.AppendFormationSlots(
+            movement, session.Units.Count, session.Groups.Groups, ControllingPlayer, scratch, 0);
         EmitScratch(count, overlay, projector, height, ref used, budget, perKind: true, default, 1f);
     }
 
@@ -1037,6 +1053,8 @@ internal sealed class CrowdDebugViewFrame
             CrowdDebugSegmentKind.OneWay => _config.Colors.OneWay.ToVector4(),
             CrowdDebugSegmentKind.Leader => _config.Colors.Leader.ToVector4(),
             CrowdDebugSegmentKind.Funnel => _config.Colors.Funnel.ToVector4(),
+            CrowdDebugSegmentKind.FormationSlot => _config.Colors.FormationSlot.ToVector4(),
+            CrowdDebugSegmentKind.FormationLink => _config.Colors.FormationLink.ToVector4(),
             _ => throw new InvalidOperationException($"{_config.SourcePath}: 未知线段种类 {kind}。"),
         };
         if (alphaScale != 1f) color.W *= alphaScale;

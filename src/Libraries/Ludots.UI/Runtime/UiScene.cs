@@ -386,6 +386,7 @@ public sealed class UiScene
 		{
 			CollectBoundTextNodes(Root);
 		}
+		_changedTextNodes.EnsureCapacity(_boundTextNodes.Count);
 		_boundTextIndexDirty = false;
 	}
 
