@@ -256,7 +256,18 @@ public sealed class CrowdSimSession
     }
 
     /// <summary>组的规划句柄挂到其玩家视野组当前槽(生成时与槽切换时;马达句柄 BodyNavId 恒真相)。</summary>
-    public void AttachGroupNav(CrowdNavGroupSet.Group g) => g.NavId = NavIdFor(g.Player, g.LayerIdx, g.RIdx);
+    public void AttachGroupNav(CrowdNavGroupSet.Group g)
+    {
+        int navId = NavIdFor(g.Player, g.LayerIdx, g.RIdx);
+        g.NavId = navId;
+        g.Nav = PinNavContext(navId);
+    }
+
+    private NavContext PinNavContext(int navId)
+    {
+        if (navId < CrowdBeliefNavs.BeliefStride) return Navs[navId];
+        return ResolveNavContext(navId);
+    }
     public IReadOnlyDictionary<int, NavContext> Navs { get; private set; }
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
     public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; private set; }
@@ -322,7 +333,7 @@ public sealed class CrowdSimSession
     public int EmptyOrderSelectionTotal { get; private set; }
 
     /// <summary>会话事件(spawnSkip 等,演示层显示用;不进校验)。</summary>
-    public event Action<string>? Notified;
+    public event Action<CrowdSimNotice>? Notified;
 
     /// <summary>结构变更重烘报告发布(遥测日志:rebake 报告与缓存命中计数,真机冒烟的重量证据)。</summary>
     public event Action<CrowdRebakeReport>? RebakeReported;
@@ -566,13 +577,13 @@ public sealed class CrowdSimSession
     public void NotifySpawnSkip(int skipped, int requested)
     {
         SpawnSkippedTotal += skipped;
-        Notified?.Invoke($"spawnSkip: 请求 {requested} 个,该玩家没有可用的类型×半径组合,跳过 {skipped} 个");
+        Notified?.Invoke(new CrowdSimNotice(CrowdSimNoticeKind.SpawnSkip, TickCount, player: -1, skipped, requested));
     }
 
     internal void NotifyEmptyOrderSelection(int player)
     {
         EmptyOrderSelectionTotal++;
-        Notified?.Invoke($"order: tick {TickCount} 玩家 {player} 没有单位，全体己方下令不改任何组");
+        Notified?.Invoke(new CrowdSimNotice(CrowdSimNoticeKind.EmptyOrderSelection, TickCount, player, skipped: 0, requested: 0));
     }
     /// <summary>把本 tick 的接触读数交给遥测。停摆帧传 0,不把上一成功帧再写一遍。</summary>
     internal void PublishTelemetryFrame(bool stalled, double tickMs)
