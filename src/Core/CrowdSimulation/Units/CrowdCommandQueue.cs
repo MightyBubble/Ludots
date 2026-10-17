@@ -40,7 +40,7 @@ public sealed class CrowdCommandQueue
         if (cmd.Kind == CrowdSimCommandKind.Order)
         {
             if (cmd.AllOwnMembers) throw new InvalidOperationException("order: 现场下令要给成员句柄，全体己方选择只用于脚本。");
-            sim.BindMemberSet(cmd.Members!, cmd.Player);
+            if (cmd.Members is { Length: > 0 }) sim.BindMemberSet(cmd.Members, cmd.Player);
         }
         _log.Add((sim.TickCount, cmd));
         T result = exec(sim, cmd);

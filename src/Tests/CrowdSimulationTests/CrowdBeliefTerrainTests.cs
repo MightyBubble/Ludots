@@ -93,6 +93,37 @@ public class CrowdBeliefTerrainTests
         Assert.That(ex.Message, Does.Contain("链接数").Or.Contain("代价"));
     }
 
+    [Test]
+    public void EmptyOrder_WithFogTerrain_TogglesBeliefWithoutCreatingAnOrder()
+    {
+        var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s7");
+        using var service = new PathQueryService(session.Navs, runtime, 1, System.TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
+        Assert.That(session.Fog!.Terrain, Is.False);
+        Assert.That(session.Units.Count, Is.EqualTo(0));
+
+        session.Commands.Submit<object?>(session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.Order,
+            Player = 1,
+            XCm = 100000,
+            YCm = 100000,
+            ShapeId = "box",
+            HasAuto = true,
+            Auto = true,
+            HasFogTerrain = true,
+            FogTerrain = true,
+            Members = System.Array.Empty<uint>(),
+        }, CrowdSimCommands.Exec);
+
+        Assert.That(session.Fog.Terrain, Is.True);
+        Assert.That(session.Belief!.Seq, Is.EqualTo(1));
+        Assert.That(session.Belief.Slot, Is.All.EqualTo(1));
+        Assert.That(session.Orders.List, Is.Empty);
+        Assert.That(session.Commands.Log, Has.Count.EqualTo(1));
+    }
+
         internal sealed class LandWorld : System.IDisposable
     {
         public CrowdSimulationRuntimeConfig Config { get; }
