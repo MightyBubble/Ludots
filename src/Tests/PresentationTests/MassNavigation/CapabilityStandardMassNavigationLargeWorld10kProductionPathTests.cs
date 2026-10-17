@@ -136,6 +136,8 @@ namespace Ludots.Tests.Presentation
             string diagnostics = sample.Diagnostics;
 
             Assert.That(minimapRuntime.Visible, Is.True, diagnostics);
+            Assert.That(engine.MergedConfig.Presentation.Minimap.MaxMarkersPerFieldPixel, Is.EqualTo(1),
+                "10K crowd minimap must cap one marker per field pixel; the field is smaller than the agent set.");
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
             Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
