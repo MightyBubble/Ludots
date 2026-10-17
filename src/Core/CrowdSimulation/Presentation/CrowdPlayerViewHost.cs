@@ -276,6 +276,7 @@ internal sealed class CrowdPlayerViewHost
         _layerId = session.Config.UnitTypes[_focus].Id;
         Prefs.ShapeId = _config.DefaultShapeId;
         Prefs.MagicBox = _config.MagicBox;
+        Prefs.OptimisticTerrain = session.Config.Fog.OptimisticTerrain;
         _boundSession = session;
         _logArmed = false;
     }
@@ -403,6 +404,11 @@ internal sealed class CrowdPlayerViewHost
         if (Pressed(actions, keys.ToggleMagicBox))
         {
             Prefs.MagicBox = !Prefs.MagicBox;
+        }
+
+        if (Pressed(actions, keys.ToggleOptimisticTerrain))
+        {
+            Prefs.OptimisticTerrain = !Prefs.OptimisticTerrain;
         }
 
         if (Pressed(actions, keys.CycleShape) && _shapeIds.Length > 0)
@@ -734,6 +740,7 @@ internal sealed class CrowdPlayerViewHost
         hud.ShapeLabel = shape >= 0 ? _shapeLabels[shape] : Prefs.ShapeId;
         hud.Mode = _latestMode;
         hud.MagicBox = Prefs.MagicBox;
+        hud.OptimisticTerrain = Prefs.OptimisticTerrain;
         hud.FogHide = _fogHide;
         hud.Route = _route;
         hud.LineOfSight = _lineOfSight;
@@ -839,6 +846,8 @@ internal sealed class CrowdPlayerViewHost
             HasAuto = true,
             Auto = Prefs.MagicBox,
             ShapeId = Prefs.ShapeId,
+            HasFogTerrain = session.Fog != null,
+            FogTerrain = session.Fog != null && Prefs.OptimisticTerrain,
             Members = copy,
         });
     }
