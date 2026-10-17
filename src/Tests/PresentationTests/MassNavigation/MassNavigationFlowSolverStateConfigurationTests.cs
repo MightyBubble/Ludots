@@ -755,8 +755,10 @@ namespace Ludots.Tests.Presentation
             config.Solver.MaxObstacleCount = 8;
             // The authored showcase landmark sits on the large map. This fixture binds a board
             // exactly one solver window wide, so the only legal window center is the origin.
-            config.World.ActiveHotZoneId = "central";
-            config.World.HotZones =
+            MassNavigationWorldConfig worldConfig = config.World
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.");
+            worldConfig.ActiveHotZoneId = "central";
+            worldConfig.HotZones =
             [
                 new MassNavigationHotZoneConfig
                 {
