@@ -118,6 +118,9 @@ namespace Ludots.Core.Presentation.Minimap
         private int _reprojectedMarkerCountLastFrame = -1;
         private int _retainedMarkerCountLastFrame = -1;
         private int _fullRebuildFrameCounter;
+        private int[] _fieldPixelOccupancyStamps = Array.Empty<int>();
+        private int[] _fieldPixelOccupancyCounts = Array.Empty<int>();
+        private int _fieldPixelOccupancyStamp = 1;
         private float _seededCenterXcm;
         private float _seededCenterYcm;
         private float _seededHalfExtentCm;
@@ -793,7 +796,21 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            ProjectMarkersFullRebuild(engine, markers, screenMarkers, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+            KnowledgeProjectionResolver? knowledgeResolver = null;
+            int knowledgeTick = 0;
+            if (hasKnowledgeResolver)
+            {
+                KnowledgeProjectionConsumer.TryGetResolveContext(engine.GlobalContext, out knowledgeResolver, out knowledgeTick);
+            }
+
+            ProjectMarkersFullRebuild(
+                markers,
+                screenMarkers,
+                hasKnowledgeResolver && knowledgeResolver != null,
+                hasKnowledgeViewer,
+                knowledgeViewer,
+                knowledgeResolver,
+                knowledgeTick);
         }
 
         private bool ProjectionInputsUnchanged(int markerCount, bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
@@ -835,12 +852,13 @@ namespace Ludots.Core.Presentation.Minimap
         }
 
         private void ProjectMarkersFullRebuild(
-            GameEngine engine,
             MinimapMarkerBuffer markers,
             MinimapScreenMarkerBuffer screenMarkers,
             bool hasKnowledgeResolver,
             bool hasKnowledgeViewer,
-            Entity knowledgeViewer)
+            Entity knowledgeViewer,
+            KnowledgeProjectionResolver? knowledgeResolver,
+            int knowledgeTick)
         {
             _fullRebuildFrameCounter++;
             SeedProjectionInputs(markers.Count, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
@@ -876,6 +894,11 @@ namespace Ludots.Core.Presentation.Minimap
             Span<MinimapMarkerRenderBucketKey> cachedBucketKeys = stackalloc MinimapMarkerRenderBucketKey[MinimapScreenMarkerBuffer.OrientationBucketCount];
             Span<int> cachedBucketIndices = stackalloc int[MinimapScreenMarkerBuffer.OrientationBucketCount];
             cachedBucketIndices.Fill(-1);
+            int maxMarkersPerFieldPixel = _config.MaxMarkersPerFieldPixel;
+            if (maxMarkersPerFieldPixel > 0)
+            {
+                BeginFieldPixelOccupancy(_fieldSize);
+            }
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
             int reprojected = 0;
@@ -888,26 +911,6 @@ namespace Ludots.Core.Presentation.Minimap
                 float markerSizePx = sizesPx[i];
                 bool useAuthoredStyleBucket = true;
                 Entity owner = owners[i];
-                if (hasKnowledgeResolver && owner != Entity.Null)
-                {
-                    if (!hasKnowledgeViewer ||
-                        !KnowledgeProjectionConsumer.TryResolveForViewer(
-                            engine.World,
-                            engine.GlobalContext,
-                            knowledgeViewer,
-                            owner,
-                            out KnowledgeProjection projection) ||
-                        !projection.CanReadPosition(KnowledgePositionAccess.LastKnown))
-                    {
-                        continue;
-                    }
-
-                    knowledgeState = ResolveKnowledgeState(in projection);
-                    ApplyKnowledgeMarkerStyle(knowledgeState, ref markerColor, ref markerSizePx);
-                    useAuthoredStyleBucket = knowledgeState == MinimapKnowledgeState.LiveVisible ||
-                                             knowledgeState == MinimapKnowledgeState.Unfiltered;
-                }
-
                 bool projected = axisAligned
                     ? WorldPlane2D.TryProjectWorldCmToScreenAxisAligned(
                         worldXcm,
@@ -942,6 +945,38 @@ namespace Ludots.Core.Presentation.Minimap
                 if (!projected)
                 {
                     continue;
+                }
+
+                if (maxMarkersPerFieldPixel > 0 &&
+                    !TryClaimFieldPixel(screenX, screenY, fieldX, fieldY, _fieldSize, maxMarkersPerFieldPixel))
+                {
+                    continue;
+                }
+
+                if (hasKnowledgeResolver && owner != Entity.Null)
+                {
+                    if (!hasKnowledgeViewer ||
+                        knowledgeResolver == null ||
+                        !KnowledgeProjectionConsumer.TryResolveDisclosure(
+                            knowledgeResolver,
+                            knowledgeTick,
+                            knowledgeViewer,
+                            owner,
+                            out KnowledgeDisclosureRecord disclosure) ||
+                        disclosure.Position < KnowledgePositionAccess.LastKnown)
+                    {
+                        if (maxMarkersPerFieldPixel > 0)
+                        {
+                            ReleaseFieldPixel(screenX, screenY, fieldX, fieldY, _fieldSize);
+                        }
+
+                        continue;
+                    }
+
+                    knowledgeState = ResolveKnowledgeState(in disclosure, knowledgeViewer, owner);
+                    ApplyKnowledgeMarkerStyle(knowledgeState, ref markerColor, ref markerSizePx);
+                    useAuthoredStyleBucket = knowledgeState == MinimapKnowledgeState.LiveVisible ||
+                                             knowledgeState == MinimapKnowledgeState.Unfiltered;
                 }
 
                 uint flags = flagsValues[i];
@@ -1027,36 +1062,120 @@ namespace Ludots.Core.Presentation.Minimap
             _retainedMarkerCountLastFrame = 0;
         }
 
-        private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeProjection projection)
+        private void BeginFieldPixelOccupancy(int fieldSize)
         {
-            if (projection.Presence == KnowledgePresence.LiveVisible &&
-                projection.Position == KnowledgePositionAccess.Live)
+            int needed = checked(fieldSize * fieldSize);
+            if (_fieldPixelOccupancyStamps.Length < needed)
             {
-                return KnowledgePresenceSourceIsDisclosed(in projection)
+                _fieldPixelOccupancyStamps = new int[needed];
+                _fieldPixelOccupancyCounts = new int[needed];
+                _fieldPixelOccupancyStamp = 1;
+            }
+
+            _fieldPixelOccupancyStamp++;
+            if (_fieldPixelOccupancyStamp == int.MaxValue)
+            {
+                Array.Clear(_fieldPixelOccupancyStamps);
+                _fieldPixelOccupancyStamp = 1;
+            }
+        }
+
+        private bool TryClaimFieldPixel(
+            float screenX,
+            float screenY,
+            float fieldX,
+            float fieldY,
+            int fieldSize,
+            int maxMarkersPerFieldPixel)
+        {
+            int px = (int)MathF.Floor(screenX) - (int)fieldX;
+            int py = (int)MathF.Floor(screenY) - (int)fieldY;
+            if ((uint)px >= (uint)fieldSize || (uint)py >= (uint)fieldSize)
+            {
+                return false;
+            }
+
+            int slot = (py * fieldSize) + px;
+            int stamp = _fieldPixelOccupancyStamp;
+            if (_fieldPixelOccupancyStamps[slot] != stamp)
+            {
+                _fieldPixelOccupancyStamps[slot] = stamp;
+                _fieldPixelOccupancyCounts[slot] = 1;
+                return true;
+            }
+
+            int occupied = _fieldPixelOccupancyCounts[slot];
+            if (occupied >= maxMarkersPerFieldPixel)
+            {
+                return false;
+            }
+
+            _fieldPixelOccupancyCounts[slot] = occupied + 1;
+            return true;
+        }
+
+        private void ReleaseFieldPixel(
+            float screenX,
+            float screenY,
+            float fieldX,
+            float fieldY,
+            int fieldSize)
+        {
+            int px = (int)MathF.Floor(screenX) - (int)fieldX;
+            int py = (int)MathF.Floor(screenY) - (int)fieldY;
+            if ((uint)px >= (uint)fieldSize || (uint)py >= (uint)fieldSize)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(MinimapRuntime)} cannot release field pixel ({px},{py}) outside fieldSize={fieldSize}.");
+            }
+
+            int slot = (py * fieldSize) + px;
+            if (_fieldPixelOccupancyStamps[slot] != _fieldPixelOccupancyStamp)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(MinimapRuntime)} cannot release unclaimed field pixel ({px},{py}).");
+            }
+
+            int occupied = _fieldPixelOccupancyCounts[slot];
+            if (occupied <= 1)
+            {
+                _fieldPixelOccupancyStamps[slot] = 0;
+                _fieldPixelOccupancyCounts[slot] = 0;
+                return;
+            }
+
+            _fieldPixelOccupancyCounts[slot] = occupied - 1;
+        }
+
+        private static MinimapKnowledgeState ResolveKnowledgeState(
+            in KnowledgeDisclosureRecord disclosure,
+            Entity viewer,
+            Entity target)
+        {
+            bool disclosed = disclosure.Source != Entity.Null &&
+                             disclosure.Source != viewer &&
+                             disclosure.Source != target;
+            if (disclosure.Presence == KnowledgePresence.LiveVisible &&
+                disclosure.Position == KnowledgePositionAccess.Live)
+            {
+                return disclosed
                     ? MinimapKnowledgeState.Disclosed
                     : MinimapKnowledgeState.LiveVisible;
             }
 
-            if (KnowledgePresenceSourceIsDisclosed(in projection))
+            if (disclosed)
             {
                 return MinimapKnowledgeState.Disclosed;
             }
 
-            if (projection.Position == KnowledgePositionAccess.LastKnown)
+            if (disclosure.Position == KnowledgePositionAccess.LastKnown)
             {
                 return MinimapKnowledgeState.LastKnown;
             }
 
-            return projection.CanKnowEntity
+            return disclosure.Presence != KnowledgePresence.Unknown
                 ? MinimapKnowledgeState.Known
                 : MinimapKnowledgeState.Unknown;
-        }
-
-        private static bool KnowledgePresenceSourceIsDisclosed(in KnowledgeProjection projection)
-        {
-            return projection.Source != Entity.Null &&
-                   projection.Source != projection.Viewer &&
-                   projection.Source != projection.Target;
         }
 
         private static void ApplyKnowledgeMarkerStyle(

@@ -229,3 +229,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
+
+      # Graph-op gallery generation above already fails if it drifts. Test output
+      # stays in the NUnit work directory unless LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1,
+      # which this job does not set. A dirty tree here means a test wrote a tracked path.
+      - name: Reject dirty worktree after tests
+        shell: pwsh
+        run: |
+          $porcelain = git status --porcelain
+          if ($porcelain) {
+            Write-Host "Tests changed the worktree. Committed evidence is written only when LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1."
+            Write-Host $porcelain
+            exit 1
+          }

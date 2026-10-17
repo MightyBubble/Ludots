@@ -24,6 +24,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation;
 
@@ -243,7 +244,7 @@ public sealed class PresenterCollectionVisibilityTests
             Assert.That(fixture.VisualIds.Count, Is.EqualTo(visualKeys));
         }
 
-        string directory = Path.Combine(PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(), "artifacts", "acceptance", "presenter-collection-visibility");
+        string directory = CommittedTestArtifacts.Resolve("artifacts/acceptance/presenter-collection-visibility");
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, $"scale-{members}.csv"), csv.ToString());
         File.WriteAllLines(Path.Combine(directory, $"trace-{members}.jsonl"), rows.ConvertAll(row => JsonSerializer.Serialize(row)));

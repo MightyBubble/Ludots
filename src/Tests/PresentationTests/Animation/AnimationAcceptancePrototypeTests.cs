@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -169,8 +170,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(item.AnimationProfileId, Is.GreaterThan(0));
             }
 
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animation-layered-prototypes");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/animation-layered-prototypes");
             Directory.CreateDirectory(artifactDir);
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), string.Join(Environment.NewLine, traceLines));

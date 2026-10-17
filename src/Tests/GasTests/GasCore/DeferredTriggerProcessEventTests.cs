@@ -3,6 +3,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Registry;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -64,6 +65,34 @@ namespace Ludots.Tests.GAS
             bus.Update();
 
             That(bus.Events.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AttributeEventTagMapping_FollowsTheBoundRegistrySet()
+        {
+            ModRegistrySet previous = ModRegistryAmbient.Current;
+            var first = new ModRegistrySet();
+            var second = new ModRegistrySet();
+            try
+            {
+                ModRegistryAmbient.Bind(first);
+                int healthId = AttributeRegistry.Register("Health");
+                int evtTagId = TagRegistry.Register("Event.Attribute.Health.Changed");
+                AttributeEventTagRegistry.Register(healthId, evtTagId);
+                That(AttributeEventTagRegistry.GetEventTagId(healthId), Is.EqualTo(evtTagId));
+
+                ModRegistryAmbient.Bind(second);
+                int reboundHealthId = AttributeRegistry.Register("Health");
+                That(reboundHealthId, Is.EqualTo(healthId));
+                That(AttributeEventTagRegistry.GetEventTagId(reboundHealthId), Is.EqualTo(TagRegistry.InvalidId));
+
+                ModRegistryAmbient.Bind(first);
+                That(AttributeEventTagRegistry.GetEventTagId(healthId), Is.EqualTo(evtTagId));
+            }
+            finally
+            {
+                ModRegistryAmbient.Bind(previous);
+            }
         }
     }
 }

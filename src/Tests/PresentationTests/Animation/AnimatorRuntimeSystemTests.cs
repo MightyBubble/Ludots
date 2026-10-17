@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -142,8 +143,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(animatorStates.GetPackedState(presenter).GetPrimaryStateIndex(), Is.EqualTo(5));
             Assert.That(animatorStates.GetFeedbackBuffer(presenter).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionStarted));
 
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animator-runtime-mvp");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/animator-runtime-mvp");
             Directory.CreateDirectory(artifactDir);
 
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");
@@ -492,23 +492,6 @@ namespace Ludots.Tests.Presentation
                     E -->|yes| F[return to idle]
                     E -->|no| D
                 """;
-        }
-
-        private static string FindRepoRoot()
-        {
-            string current = TestContext.CurrentContext.WorkDirectory;
-            while (!string.IsNullOrEmpty(current))
-            {
-                if (Directory.Exists(Path.Combine(current, "mods")) &&
-                    File.Exists(Path.Combine(current, "AGENTS.md")))
-                {
-                    return current;
-                }
-
-                current = Path.GetDirectoryName(current)!;
-            }
-
-            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
     }
 }

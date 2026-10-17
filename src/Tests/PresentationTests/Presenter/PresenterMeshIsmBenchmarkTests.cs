@@ -22,6 +22,7 @@ using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -114,11 +115,7 @@ namespace Ludots.Tests.Presentation
                 results[i] = RunScenario(Counts[i]);
             }
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "presenter-mesh-ism-production-path");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-mesh-ism-production-path");
             Directory.CreateDirectory(artifactDir);
 
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");

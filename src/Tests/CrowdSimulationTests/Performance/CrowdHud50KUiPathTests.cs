@@ -8,6 +8,7 @@ using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Tests;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Performance;
@@ -127,7 +128,7 @@ public sealed class CrowdHud50KUiPathTests
             $"redrawWall median={Median(window.Redraws):F3}ms p95={Percentile(window.Redraws, 0.95):F3}ms max={window.Redraws.Max():F3}ms " +
             $"composes={window.Composes}";
         TestContext.Out.WriteLine(line);
-        string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-hud-50k-ui"));
+        string dir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/crowd-hud-50k-ui");
         Directory.CreateDirectory(dir);
         string load = OperatingSystem.IsLinux() ? $"load {File.ReadAllText("/proc/loadavg").Trim()}\n" : "";
         File.WriteAllText(Path.Combine(dir, "trace.txt"), line + "\n" + load);
