@@ -200,7 +200,7 @@ DeepObject 合并：`formations`、`structures.templates`、`traversal.json` 的
 
 ## S1 交付：地形与障碍物（本次）
 
-- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下）按种子写出 `.height`（CHTM v2，uint16 缩放）、`Maps/<id>.json`（队伍代表 `Relations`、阻挡物与桥实体）与 S1 对拍摘要；`.navsurface` 用 `nav bake-crowd-navsurface` 从地编网格烘焙。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标：Web 米 × 100 = Ludots 地图局部厘米，轴向与 Web 一致。
+- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下）按种子写出 `.height`（CHTM v2，uint16 缩放）、`Maps/<id>.json`（队伍代表 `Relations`、阻挡物与桥实体）与 S1 对拍摘要。建筑和桥按 Web `structures.footprint` 的插入序写：先全部建筑，再全部桥，两段内部不按坐标排序。`.navsurface` 用 `nav bake-crowd-navsurface` 从地编网格烘焙。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标：Web 米 × 100 = Ludots 地图局部厘米，轴向与 Web 一致。
 - **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用 `maps.<mapId>.navCellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 由 `nav bake-crowd-navsurface` 从地编网格烤出。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥清单与 Web 导出做 FNV-1a 逐格对拍，全相等，摘要里跳跃候选那一段用 Web 快照 `parity/s1-jump-truth.json` 填；Ludots 烤的跳跃候选和这份快照按行为对拍；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
