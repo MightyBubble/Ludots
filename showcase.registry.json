@@ -4712,6 +4712,27 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
+      "id": "fog_terrain_decal",
+      "path": "mods/showcases/fog_of_war/FogTerrainDecalShowcaseMod",
+      "projectPath": null,
+      "title": "迷雾三态贴地渲染演示",
+      "summary": "一个视野源沿既定路径移动，不可见 / 已探索 / 可见随地形起伏整张贴花，软边缘双线性过渡；数据由 Vision/scripted_fog_source.json 驱动。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "fog-of-war",
+        "vision"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "fog_vision_decay",
       "path": "mods/showcases/fog_vision_decay/FogVisionDecayShowcaseMod",
       "projectPath": "FogVisionDecayShowcaseMod.csproj",
@@ -11196,6 +11217,50 @@
         "navigation",
         "crowd-simulation",
         "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s3_path_1337",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS3PathMod",
+      "projectPath": null,
+      "title": "CrowdSimulation S3 两点路径（种子 1337）",
+      "summary": "S3-c 两点路径交互演示：左键设起点、右键设终点，走廊查询 / 流场 / 固定生效帧路径服务；画面显示折线、方向贴花与请求帧 / 生效帧 / 等待次数。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s3_path_1337",
+      "preset": "crowd_simulation_s3_path_1337_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Parity.S3RegressionTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/raylib-s1337-s3path-live.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "path"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s4_deploy_1337",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod",
+      "projectPath": null,
+      "title": "CrowdSimulation S4 部署演示（种子 1337）",
+      "summary": "S4 交互部署场景：进图按 deploy.initialUnits 部署开局单位并到点自动回放对拍；HUD 显示工具、遥测、重烘报告和回放结论，支持生成 / 爆炸 / 建造 / 拆除等工具。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s4_deploy_1337",
+      "preset": "crowd_simulation_s4_deploy_1337_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Parity.S4DeployTruthTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/raylib-s1337-s4deploy-live.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "deploy"
       ]
     },
     {

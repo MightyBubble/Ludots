@@ -56,7 +56,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(pathService.SolveCount, Is.EqualTo(1));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float routedX, out float routedY), Is.True);
             Assert.That(new Vector2(routedX, routedY), Is.EqualTo(new Vector2(5_300, 5_000)));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out _, out _), Is.False);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out float directX, out float directY), Is.True);
+            Assert.That(new Vector2(directX, directY), Is.EqualTo(runtime.GetAgentWorldPositionCm(1)),
+                "A profile omitted from pathing config keeps its idle hold and does not receive the route waypoint.");
         }
 
         [Test]
@@ -106,7 +108,10 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.PathStatus, Is.EqualTo(PathStatus.NoPath));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float heldX, out float heldY), Is.True);
+            Assert.That(new Vector2(heldX, heldY), Is.EqualTo(runtime.GetAgentWorldPositionCm(0)),
+                "A failed configured-profile solve must leave the idle hold, not steer at the requested destination.");
+            Assert.That(new Vector2(heldX, heldY), Is.Not.EqualTo(new Vector2(5_800, 5_000)));
         }
 
         [Test]
@@ -131,9 +136,12 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.AgentIndex, Is.EqualTo(1));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False,
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float firstX, out float firstY), Is.True);
+            Assert.That(new Vector2(firstX, firstY), Is.EqualTo(runtime.GetAgentWorldPositionCm(0)),
                 "Route execution must prepare the full OrderId batch before committing any member target.");
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out _, out _), Is.False);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out float secondX, out float secondY), Is.True);
+            Assert.That(new Vector2(secondX, secondY), Is.EqualTo(runtime.GetAgentWorldPositionCm(1)),
+                "A failed member must not receive the requested destination either.");
         }
 
         [Test]

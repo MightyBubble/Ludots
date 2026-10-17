@@ -24,6 +24,7 @@ using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -79,8 +80,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
     [Test]
     public void ItemSystemShowcase_PlayableFlow_WritesAcceptanceArtifacts()
     {
-        string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "item-system-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/item-system-showcase");
         Directory.CreateDirectory(artifactDir);
         RaylibEvidenceStatus raylibEvidence = ResolveRaylibEvidenceStatus(artifactDir);
 

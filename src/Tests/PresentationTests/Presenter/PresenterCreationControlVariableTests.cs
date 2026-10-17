@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -36,12 +37,7 @@ namespace Ludots.Tests.Presentation
             EntityOnlyResult entityOnlyBulkPayload = MeasureEntityOnlyCreation(CreateOwnersBulkWithPayload);
             EntityPlusPresenterResult entityPlusPresenter = MeasureEntityPlusPresenterCreation();
 
-            string repoRoot = PresenterBlacksmithShowcaseTestHarness.FindRepoRoot();
-            string artifactDir = Path.Combine(
-                repoRoot,
-                "artifacts",
-                "benchmarks",
-                "presenter-creation-control-variables");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-creation-control-variables");
             Directory.CreateDirectory(artifactDir);
 
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");

@@ -12,6 +12,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -192,7 +193,7 @@ public sealed class CapabilityStandardPhysics2DStressShowcaseAcceptanceTests
         long allocatedBytes,
         in Physics2DPerfStats finalStats)
     {
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "showcases", "capability-standard-physics2d-stress");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/showcases/capability-standard-physics2d-stress");
         Directory.CreateDirectory(artifactDir);
         string jsonlPath = Path.Combine(artifactDir, "keyframes.jsonl");
         string mdPath = Path.Combine(artifactDir, "acceptance.md");
