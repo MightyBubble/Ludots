@@ -26,14 +26,14 @@ public sealed class FogShowcaseTests
     private const int Ally = 3;
     private const int Squad = 30, NearCount = 5, NearOffsetCm = 20000;
     private const int ExploreMax = 4000, TravelMax = 1200;
-    // 种子 1337：陆地 (62,86) 向北到陆地 (62,110)，直线上 (62,102) 是岸、(62,103) 是水。水在开局视野外。
+    // 种子 1337：陆地 (60,57) 向北到岸 (60,105)。水域 (60,103) 落在开局视野够不到的导航 tile 上，整块 tile 仍按未探索处理。
     private const int OptimisticCellCm = 6250;
     private const int OptimisticSquad = 8;
-    private const int OptimisticStartX = 390625, OptimisticStartY = 540625;
-    private const int OptimisticGoalX = 390625, OptimisticGoalY = 690625;
-    private const int OptimisticBuildX = 390625, OptimisticBuildY = 640625;
+    private const int OptimisticStartX = 378125, OptimisticStartY = 359375;
+    private const int OptimisticGoalX = 378125, OptimisticGoalY = 659375;
+    private const int OptimisticBuildX = 378125, OptimisticBuildY = 640625;
     private const int OptimisticBuildSizeCm = 6250;
-    private const int OptimisticWaterCellX = 62, OptimisticWaterCellY = 103;
+    private const int OptimisticWaterCellX = 60, OptimisticWaterCellY = 103;
     private const int OptimisticPlaceTick = 8;
     private const int OptimisticArriveMax = 8000;
 
@@ -158,7 +158,7 @@ public sealed class FogShowcaseTests
         Assert.That(before!.NavId, Is.Not.EqualTo(before.BodyNavId), "乐观开局应走认知导航，而不是真相导航");
         var path0 = PathOf(before.Leader!);
         Assert.That(PathHitsCell(path0, OptimisticWaterCellX, OptimisticWaterCellY, OptimisticCellCm), Is.True,
-            "乐观路径应直穿未探索的水域");
+            "乐观路径应直穿未探索的水域 " + Describe(path0));
 
         host.AdvanceTo(OptimisticPlaceTick + 1);
         int id = s.Structures!.EntityIds.Max();
@@ -375,6 +375,20 @@ public sealed class FogShowcaseTests
     {
         Assert.That(cmd["player"]!.GetValue<int>(), Is.EqualTo(player), "下令的玩家");
         Assert.That((cmd["xCm"]!.GetValue<int>(), cmd["yCm"]!.GetValue<int>()), Is.EqualTo(at), $"玩家 {player} 指令目标");
+    }
+
+    private static string Describe(Fix64Vec2[] path)
+    {
+        static string At(Fix64Vec2 p)
+        {
+            int x = (int)(p.X.ToDouble() / OptimisticCellCm);
+            int y = (int)(p.Y.ToDouble() / OptimisticCellCm);
+            return $"({x},{y})";
+        }
+
+        if (path.Length == 0) return "空路径";
+        int last = path.Length - 1;
+        return $"共 {path.Length} 点，起 {At(path[0])} 终 {At(path[last])}";
     }
 
     private static bool AllArrived(CrowdSimSession session, int count)

@@ -6,8 +6,8 @@
         "cmd": {
           "type": "spawnAt",
           "player": 1,
-          "xCm": 390625,
-          "yCm": 540625,
+          "xCm": 378125,
+          "yCm": 359375,
           "count": 8,
           "template": "crowd_simulation.unit.infantry.r100"
         }
@@ -17,8 +17,8 @@
         "cmd": {
           "type": "order",
           "player": 1,
-          "xCm": 390625,
-          "yCm": 690625,
+          "xCm": 378125,
+          "yCm": 659375,
           "shape": "box",
           "auto": false,
           "fogTerrain": true
@@ -29,7 +29,7 @@
         "cmd": {
           "type": "placeStructure",
           "template": "building",
-          "xCm": 390625,
+          "xCm": 378125,
           "yCm": 640625,
           "sizeCm": 6250
         }
