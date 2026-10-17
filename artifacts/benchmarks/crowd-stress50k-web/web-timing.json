@@ -1,0 +1,80 @@
+{
+  "source": "web-headless",
+  "scenarioFile": "/tmp/wt/evidence/mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json",
+  "scenarioSha256": "d49b6d576a883ef2af748b838ee684c77ecfcbb09c8d9a0177a8f65a2815e778",
+  "scenarioId": "stress-50k.json",
+  "benchScenarios": false,
+  "units": 50000,
+  "ticks": 240,
+  "warmupTicks": 40,
+  "measuredTicks": 200,
+  "tickAvgMs": 24.700041729999967,
+  "tickP50Ms": 24.48757999999998,
+  "tickP95Ms": 25.544002000000546,
+  "tickMaxMs": 38.21289400000023,
+  "bakeMs": 857.436984,
+  "translatedScript": [
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "spawn",
+        "count": 50000
+      }
+    },
+    {
+      "tick": 2,
+      "cmd": {
+        "type": "order",
+        "player": 0,
+        "x": 12000,
+        "y": 8000,
+        "opts": {
+          "shape": "box"
+        }
+      }
+    },
+    {
+      "tick": 2,
+      "cmd": {
+        "type": "order",
+        "player": 1,
+        "x": 12000,
+        "y": 8000,
+        "opts": {
+          "shape": "box"
+        }
+      }
+    },
+    {
+      "tick": 2,
+      "cmd": {
+        "type": "order",
+        "player": 2,
+        "x": 12000,
+        "y": 8000,
+        "opts": {
+          "shape": "box"
+        }
+      }
+    },
+    {
+      "tick": 2,
+      "cmd": {
+        "type": "order",
+        "player": 3,
+        "x": 12000,
+        "y": 8000,
+        "opts": {
+          "shape": "box"
+        }
+      }
+    }
+  ],
+  "uname": "Linux 6.12.94+ x86_64",
+  "nproc": 4,
+  "loadBefore": "0.01 0.09 0.21 1/412 2260736",
+  "loadAtWindow": "0.17 0.12 0.22 1/412 2260774",
+  "loadAfter": "0.23 0.13 0.22 1/414 2260792",
+  "memAvailableKbBefore": 4317132,
+  "at": "2026-10-17T05:41:17.216Z"
+}
