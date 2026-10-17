@@ -64,7 +64,7 @@ dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedNa
 | 行军 | `march_leg1_a.png`（300）、`march_leg2_b.png`（472）、`march.png`（712，转向后） |
 | 连点 | `repeat_click_leg1_settling.png`（300）、`repeat_click_leg2_clicks.png`（480）、`repeat_click.png`（630） |
 | 迷雾探索 | `fog_explore_before.png`（60）、`fog_explore_enemy_in_view.png`（150）、`fog_explore_seen.png`（2760） |
-| 乐观迷雾 | `fog_reroute_optimistic.png`（开：直穿未探索水域）、`fog_reroute_known.png`（关：一开始就绕开已知水域） |
+| 乐观迷雾 | `fog_reroute_optimistic.png`（开，引擎 tick 230，开关开着，两人还在走）、`fog_reroute_known.png`（关，引擎 tick 3442，开关关掉，两人已到） |
 | 共享视野 | `fog_shared_vision_before.png`（20）、`fog_shared_vision_seen.png`（226）、`fog_shared_vision_enemy_shown.png`（642）、`fog_shared_vision_ghost_kept.png`（1032）、`fog_shared_vision_ghost_cleared.png`（1332） |
 | 5 万单位 | `stress_50k_hud_paused.png`（134，暂停步进）、`stress_50k_hud.png`（149，实时） |
 
