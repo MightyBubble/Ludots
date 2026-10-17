@@ -14,6 +14,7 @@ using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
 using Ludots.UI.Runtime;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -32,7 +33,7 @@ public sealed class PanelEffectListShowcaseAcceptanceTests
     {
         string repoRoot = FindRepoRoot();
         AssertResourceOnlyComposition(repoRoot);
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "panel_effect_list");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/panel_effect_list");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

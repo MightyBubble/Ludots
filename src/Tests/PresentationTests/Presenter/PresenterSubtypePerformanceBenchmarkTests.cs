@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -216,11 +217,7 @@ namespace Ludots.Tests.Presentation
 
         private static void WriteReport(in SubtypeBenchmarkResult result)
         {
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "presenter-subtype-retained-static-lanes");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-subtype-retained-static-lanes");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             var sb = new StringBuilder();

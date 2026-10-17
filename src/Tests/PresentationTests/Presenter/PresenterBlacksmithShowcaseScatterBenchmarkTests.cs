@@ -16,6 +16,7 @@ using Ludots.Core.Scripting;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -52,11 +53,7 @@ namespace Ludots.Tests.Presentation
                 results[i] = RunScenario(scenarios[i]);
             }
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "presenter-blacksmith-showcase-scatter");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-blacksmith-showcase-scatter");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");

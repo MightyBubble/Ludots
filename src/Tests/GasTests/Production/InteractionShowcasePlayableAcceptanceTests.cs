@@ -36,6 +36,7 @@ using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -92,8 +93,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void InteractionShowcase_PlayableFlow_WritesAcceptanceArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "interaction-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/interaction-showcase");
             Directory.CreateDirectory(artifactDir);
 
             var snapshots = new List<AcceptanceSnapshot>();

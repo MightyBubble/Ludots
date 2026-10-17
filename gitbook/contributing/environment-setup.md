@@ -45,6 +45,26 @@ dotnet test src/Tests/PresentationTests/PresentationTests.csproj
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 ```
 
+验收图、战报、基准 CSV 默认写到这次测试的工作目录（NUnit 的 `WorkDirectory`，一般在项目 `bin` 下）。仓库里已经提交的那一份保持不动。画廊和基准页读的是仓库里的文件：`showcase.registry.json` 引用的截图，`docs/benchmarks/` 的表，以及 `artifacts/acceptance/`、`artifacts/benchmarks/`、`artifacts/showcases/capability-standard-*` 下的战报。
+
+要更新这些入库证据，在仓库根把 `LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS` 设为 `1`，再跑原来的测试。开关只认 `1`。产物仍写到原来的仓库相对路径。跑完看 `git status`，提交要留下的文件。
+
+```bash
+LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1 dotnet test src/Tests/GasTests/GasTests.csproj --filter "FullyQualifiedName~GraphBehaviorPressureMatrixTests"
+```
+
+```powershell
+$env:LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS = "1"
+dotnet test src/Tests/GasTests/GasTests.csproj --filter "FullyQualifiedName~GraphBehaviorPressureMatrixTests"
+```
+
+两份基线另有自己的开关，决定这次写不写文件。文件进不进仓库，仍看 `LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS`：
+
+- 装载期容量：`LUDOTS_EMIT_CAPACITY_BASELINE=1`，路径 `docs/rfcs/gas-loadtime-capacity/benchmark-<phase>.json`
+- 迷雾采样：`L76_OVERWRITE_BASELINE=1`，路径 `src/Tests/CrowdSimulationTests/Baselines/l76-fog.json`。这条测试标了 Explicit，过滤名 `WriteL76FogBaseline`
+
+`solution-verify` 在测试跑完后执行 `git status --porcelain`。工作区有改动，这一步失败。CI 不设置上面的开关。图节点画廊生成器在测试之前单独跑，并自己核对生成结果没有漂移。
+
 ## 5 平台说明
 
 - Linux / Raylib 需要本机原生依赖。

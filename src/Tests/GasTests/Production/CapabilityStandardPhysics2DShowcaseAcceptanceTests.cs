@@ -21,6 +21,7 @@ using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -400,11 +401,7 @@ namespace Ludots.Tests.GAS.Production
             Physics2DTickPolicy tickPolicy,
             Physics2DBroadphasePolicy broadphasePolicy)
         {
-            string artifactDir = Path.Combine(
-                repoRoot,
-                "artifacts",
-                "showcases",
-                "capability-standard-physics2d-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/showcases/capability-standard-physics2d-showcase");
             Directory.CreateDirectory(artifactDir);
             File.WriteAllText(
                 Path.Combine(artifactDir, "acceptance.md"),

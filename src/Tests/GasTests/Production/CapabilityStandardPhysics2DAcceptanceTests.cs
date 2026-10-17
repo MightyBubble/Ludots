@@ -10,6 +10,7 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -106,7 +107,7 @@ public sealed class CapabilityStandardPhysics2DAcceptanceTests
 
     private static void WriteReceipt(string repoRoot, int framesToSpawn)
     {
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "showcases", "capability-standard-physics2d");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/showcases/capability-standard-physics2d");
         Directory.CreateDirectory(artifactDir);
         File.WriteAllText(
             Path.Combine(artifactDir, "acceptance.txt"),

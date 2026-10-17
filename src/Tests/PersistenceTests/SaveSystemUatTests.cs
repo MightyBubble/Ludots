@@ -21,7 +21,7 @@ public sealed class SaveSystemUatTests
     public void CrossLoadContextSaveShowcaseRestoresNamedActorAndContinues()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "save-system-cross-load-context");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/save-system-cross-load-context");
         Directory.CreateDirectory(artifactDir);
 
         var loadContext = new CrossLoadContextTypeTestHarness.DuplicateAssemblyLoadContext();
@@ -142,7 +142,7 @@ public sealed class SaveSystemUatTests
     public void RtsTrainingShowcaseSaveLoadFlowWritesAcceptanceArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "save-system");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/save-system");
         Directory.CreateDirectory(artifactDir);
 
         using GameEngine continuous = CreateRtsTrainingEngine(repoRoot);
