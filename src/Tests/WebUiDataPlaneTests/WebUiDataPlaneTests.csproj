@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\CommittedTestArtifacts.cs" Link="CommittedTestArtifacts.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI\Ludots.WebUI.csproj" />

@@ -8,6 +8,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Presentation.Skia;
 using NUnit.Framework;
 using SkiaSharp;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -93,8 +94,7 @@ namespace Ludots.Tests.Presentation
                 surface,
                 frameIndex => CreateFrameConfig(positionOffsetX: frameIndex * 1.25f, positionOffsetY: (frameIndex & 7) * 0.25f, valueOffset: 0, pulseFill: false, emitBars: false, emitText: true));
 
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "benchmarks", "presentation-skia-hotpath");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presentation-skia-hotpath");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");
@@ -406,24 +406,6 @@ namespace Ludots.Tests.Presentation
                 sb.AppendLine("}");
             }
         }
-
-        private static string FindRepoRoot()
-        {
-            string current = TestContext.CurrentContext.WorkDirectory;
-            while (!string.IsNullOrEmpty(current))
-            {
-                if (Directory.Exists(Path.Combine(current, "mods")) &&
-                    File.Exists(Path.Combine(current, "AGENTS.md")))
-                {
-                    return current;
-                }
-
-                current = Path.GetDirectoryName(current)!;
-            }
-
-            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
-        }
-
         private static double ElapsedMs(long startTimestamp)
         {
             return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;

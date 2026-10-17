@@ -520,7 +520,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         int proxiedProjectionCount,
         int proxiedProjectionAfterRevokeCount)
     {
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
+        string artifactDir = CommittedTestArtifacts.Resolve($"artifacts/acceptance/{ArtifactFolderName}");
         Directory.CreateDirectory(artifactDir);
 
         string traceJsonl = string.Join(
@@ -544,7 +544,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         int proxiedBeforeRevokeCount,
         int proxiedAfterRevokeCount)
     {
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", RefereeArtifactFolderName);
+        string artifactDir = CommittedTestArtifacts.Resolve($"artifacts/acceptance/{RefereeArtifactFolderName}");
         Directory.CreateDirectory(artifactDir);
 
         string traceJsonl = string.Join(

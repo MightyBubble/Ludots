@@ -563,6 +563,47 @@ public class CrowdSimulationEditorApiTests
         }
     }
 
+    [Test]
+    public void Mirror_CopyTree_WritingTheMirrorNeverTouchesTheSourceTree()
+    {
+        string source = Path.Combine(Path.GetTempPath(), "ludots-crowd-mirror-src-" + Guid.NewGuid().ToString("N"));
+        string mirror = Path.Combine(Path.GetTempPath(), "ludots-crowd-mirror-dst-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(source, "assets", "CrowdSimulation"));
+            string configPath = Path.Combine(source, "assets", "CrowdSimulation", "config.json");
+            File.WriteAllText(configPath, "{\"sim\":{\"maxUnits\":100}}");
+            byte[] heightmap = Enumerable.Range(0, 512).Select(i => (byte)(i % 256)).ToArray();
+            File.WriteAllBytes(Path.Combine(source, "assets", "terrain.bin"), heightmap);
+
+            CrowdSimulationEditorApi.EditorSession.CopyTree(source, mirror);
+
+            string mirrored = Path.Combine(mirror, "assets", "CrowdSimulation", "config.json");
+            Assert.That(File.ReadAllText(mirrored), Is.EqualTo("{\"sim\":{\"maxUnits\":100}}"));
+            Assert.That(File.ReadAllBytes(Path.Combine(mirror, "assets", "terrain.bin")), Is.EqualTo(heightmap));
+
+            // 和 PatchSet.WriteTo 同一条写纪律：先摘掉链接再写新文件。链接两侧是同一份内容时，
+            // 直接原地写会改穿到源树；这条用例把隔离合同钉在两种链接后端都成立。
+            File.Delete(mirrored);
+            File.WriteAllText(mirrored, "{\"sim\":{\"maxUnits\":999}}");
+            Assert.That(File.ReadAllText(configPath), Is.EqualTo("{\"sim\":{\"maxUnits\":100}}"));
+        }
+        finally
+        {
+            Directory.Delete(source, recursive: true);
+            Directory.Delete(mirror, recursive: true);
+        }
+    }
+
+    [Test]
+    public void Mirror_TryHardLink_MissingSourceIsRefused()
+    {
+        string missing = Path.Combine(Path.GetTempPath(), "ludots-crowd-mirror-missing-" + Guid.NewGuid().ToString("N"));
+        string target = Path.Combine(Path.GetTempPath(), "ludots-crowd-mirror-target-" + Guid.NewGuid().ToString("N"));
+        Assert.That(CrowdSimulationEditorApi.EditorSession.TryHardLink(missing, target), Is.False);
+        Assert.That(File.Exists(target), Is.False);
+    }
+
     private const string Minimal = "CrowdSimulationMinimalMod";
     private const string MinimalUnit = "crowd_minimal.unit";
     private const string MinimalBootstrap = "crowd_minimal.units.bootstrap";

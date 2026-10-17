@@ -18,6 +18,7 @@ using Ludots.UI;
 using NUnit.Framework;
 using TeamResearchShowcaseMod;
 using TeamResearchShowcaseMod.Runtime;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -42,7 +43,7 @@ public sealed class TeamResearchShowcaseAcceptanceTests
     public void TeamResearchShowcase_UsesCollectionBackedScopeMembersForSharedUnlock()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "team-research-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/team-research-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

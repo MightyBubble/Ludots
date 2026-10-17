@@ -277,6 +277,7 @@ namespace Ludots.Core.Presentation
         private MinimapZoomExtentMode? _maxZoomExtentMode;
         private float? _minZoomExplicitHalfExtentCm;
         private float? _maxZoomExplicitHalfExtentCm;
+        private int? _maxMarkersPerFieldPixel;
         private MinimapActionsConfig? _actions;
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
@@ -289,6 +290,9 @@ namespace Ludots.Core.Presentation
         public MinimapZoomExtentMode MaxZoomExtentMode { get => _maxZoomExtentMode ?? MinimapZoomExtentMode.FullMap; set => _maxZoomExtentMode = value; }
         public float MinZoomExplicitHalfExtentCm { get => _minZoomExplicitHalfExtentCm ?? 0f; set => _minZoomExplicitHalfExtentCm = value; }
         public float MaxZoomExplicitHalfExtentCm { get => _maxZoomExplicitHalfExtentCm ?? 0f; set => _maxZoomExplicitHalfExtentCm = value; }
+
+        /// <summary>每个 field 像素最多保留的标记数。0 表示不封顶。</summary>
+        public int MaxMarkersPerFieldPixel { get => _maxMarkersPerFieldPixel ?? 0; set => _maxMarkersPerFieldPixel = value; }
         public MinimapActionsConfig Actions
         {
             get => _actions ?? throw new InvalidOperationException("presentation.minimap.actions must be explicitly configured.");
@@ -362,6 +366,12 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.maxZoomExplicitHalfExtentCm must be > 0 when maxZoomExtentMode is ExplicitCm.");
+            }
+
+            if (_maxMarkersPerFieldPixel.HasValue && _maxMarkersPerFieldPixel.Value < 0)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.maxMarkersPerFieldPixel must be >= 0 (0 = unlimited).");
             }
         }
     }
