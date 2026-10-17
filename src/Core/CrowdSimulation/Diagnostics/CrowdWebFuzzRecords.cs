@@ -131,33 +131,60 @@ internal static class CrowdWebFuzzStepParse
         var draws = new List<uint>(rngNode.Count);
         for (int i = 0; i < rngNode.Count; i++)
         {
-            draws.Add(rngNode[i]?.GetValue<uint>()
-                ?? throw new InvalidOperationException($"{where} rngDraws[{i}] 需为无符号整数。"));
+            draws.Add(CrowdWebFuzzFixtureJson.RequireU32(rngNode, i, $"{where} rngDraws[{i}]"));
         }
 
         var opNode = row["op"] as JsonObject
             ?? throw new InvalidOperationException($"{where} 缺少 op。");
+        CrowdWebFuzzFixtureJson.RejectUnknownFields(opNode, new HashSet<string> { "kind", "params" }, $"{where} op");
         string kind = CrowdWebFuzzFixtureJson.RequireString(opNode, "kind");
-        JsonObject? @params = opNode["params"] as JsonObject;
+        JsonObject? @params = opNode["params"] as JsonObject
+            ?? throw new InvalidOperationException($"{where} op.params 需为对象（导出端每个 op 都带参数对象）。");
+        bool validateOk = CrowdWebFuzzFixtureJson.RequireBool(row, "validateOk");
         return new CrowdWebFuzzStepRecord
         {
             RngDraws = draws,
             Op = new CrowdWebFuzzOpRecord { Kind = kind, Params = @params },
             Units = CrowdWebFuzzFixtureJson.RequireInt(row, "units", 0, null),
-            ValidateOk = CrowdWebFuzzFixtureJson.RequireBool(row, "validateOk"),
-            ValidateErrors = ParseErrors(row, where),
+            ValidateOk = validateOk,
+            ValidateErrors = ParseErrors(row, where, validateOk),
             UnitChecksumHex = CrowdWebFuzzFixtureJson.RequireString(row, "unitChecksumHex"),
             PositionStatL1Cm = CrowdWebFuzzFixtureJson.RequireLong(row, "positionStatL1Cm"),
         };
     }
 
-    private static IReadOnlyList<string>? ParseErrors(JsonObject row, string where)
+    /// <summary>
+    /// 校验错误行的严格合同：导出端成功步省略 validateErrors、失败步必带非空错误串数组——
+    /// 缺键与结论矛盾、非数组、空数组、null/非字符串/空白串错误项都拒绝，不静默降级。
+    /// </summary>
+    private static IReadOnlyList<string>? ParseErrors(JsonObject row, string where, bool validateOk)
     {
-        if (row["validateErrors"] is not JsonArray arr || arr.Count == 0) return null;
+        if (!row.ContainsKey("validateErrors"))
+        {
+            return validateOk
+                ? null
+                : throw new InvalidOperationException($"{where} validateOk 为假时必须带 validateErrors。");
+        }
+
+        if (validateOk)
+        {
+            throw new InvalidOperationException($"{where} validateOk 为真时不得出现 validateErrors。");
+        }
+
+        if (row["validateErrors"] is not JsonArray arr || arr.Count == 0)
+        {
+            throw new InvalidOperationException($"{where} validateErrors 需为非空字符串数组。");
+        }
+
         var list = new List<string>(arr.Count);
         for (int i = 0; i < arr.Count; i++)
         {
-            list.Add(arr[i]?.GetValue<string>() ?? "");
+            if (arr[i] is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{where} validateErrors[{i}] 需为非空字符串。");
+            }
+
+            list.Add(text);
         }
 
         return list;

@@ -107,6 +107,77 @@ public sealed class CrowdFuzzParityTests
         }
     }
 
+    /// <summary>
+    /// 释放路径的异常注入：自建实例的释放动作抛错（真实停线程后抛）时，旧实例必须已恢复且仍可并行步进，
+    /// 重复 Dispose 幂等、不许把已恢复的全局抹回 null。测试体抛错时 using 的释放同样必须恢复旧实例。
+    /// </summary>
+    [Test]
+    public void SchedulerLease_DisposalThrows_PreviousInstanceStillRestoredAndReusable()
+    {
+        var saved = World.SharedJobScheduler;
+        World.SharedJobScheduler = null;
+        JobScheduler? ensureOwned = null;
+        try
+        {
+            CrowdTestScheduler.Ensure();
+            ensureOwned = World.SharedJobScheduler;
+            var lease = new ThrowingDisposalLease();
+            Assert.That(World.SharedJobScheduler, Is.SameAs(lease.Owned));
+
+            Assert.Throws<InvalidOperationException>(() => lease.Dispose());
+            Assert.That(World.SharedJobScheduler, Is.SameAs(ensureOwned), "释放动作抛错也必须先恢复旧实例。");
+
+            Assert.DoesNotThrow(() => lease.Dispose(), "重复 Dispose 幂等，不得动已恢复的全局。");
+            Assert.That(World.SharedJobScheduler, Is.SameAs(ensureOwned));
+            StepFreshSessionAFewTicks();
+        }
+        finally
+        {
+            World.SharedJobScheduler = saved;
+            ensureOwned?.Dispose();
+        }
+    }
+
+    [Test]
+    public void SchedulerLease_TestBodyThrows_UsingStillRestoresPrevious()
+    {
+        var saved = World.SharedJobScheduler;
+        World.SharedJobScheduler = null;
+        JobScheduler? ensureOwned = null;
+        try
+        {
+            CrowdTestScheduler.Ensure();
+            ensureOwned = World.SharedJobScheduler;
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                using var lease = new CrowdSchedulerLease("CrowdFuzzLeaseBodyThrow", 1);
+                StepFreshSessionAFewTicks();
+                throw new InvalidOperationException("模拟测试体失败");
+            });
+
+            Assert.That(World.SharedJobScheduler, Is.SameAs(ensureOwned), "测试体抛错时 using 的释放仍要恢复旧实例。");
+            StepFreshSessionAFewTicks();
+        }
+        finally
+        {
+            World.SharedJobScheduler = saved;
+            ensureOwned?.Dispose();
+        }
+    }
+
+    private sealed class ThrowingDisposalLease : CrowdSchedulerLease
+    {
+        public ThrowingDisposalLease() : base("CrowdFuzzLeaseFaultInjection", 1)
+        {
+        }
+
+        protected override void DisposeOwned(JobScheduler owned)
+        {
+            owned.Dispose();
+            throw new InvalidOperationException("注入的拆除异常");
+        }
+    }
+
     private static void StepFreshSessionAFewTicks()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s7");
@@ -140,6 +211,17 @@ public sealed class CrowdFuzzParityTests
             yield return new TestCaseData(c.Seed, c.File, c.StrictGreenOps)
                 .SetName($"Seed{c.Seed}_StrictTraceGreen_First{c.StrictGreenOps}Ops");
         }
+    }
+
+    /// <summary>种子的绿前缀 op 数；null = 该种子不在绿前缀表里（供棘轮交叉锚定）。</summary>
+    internal static int? TryStrictGreenOpsFor(long seed)
+    {
+        foreach (var f in Fixtures)
+        {
+            if (f.Seed == seed) return f.StrictGreenOps;
+        }
+
+        return null;
     }
 
     internal static CrowdWebFuzzTraceFixture LoadFixture(string fileName)

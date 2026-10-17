@@ -429,6 +429,26 @@ public sealed class CrowdFuzzTraceNegativeTests
         yield return Case(o => o["templateOrder"] = new JsonArray(), "非空 id 数组", "TemplateOrder_空");
         yield return Case(o => o["initialStructures"] = new JsonArray(new JsonArray(1.0)), "两个有限数值", "InitialStructures_一元点");
         yield return Case(o => o["steps"].AsArray()[0].AsObject().Remove("validateOk"), "需为布尔值", "Step_缺 validateOk");
+        yield return Case(
+            o => { var s = o["steps"].AsArray()[0].AsObject(); s["validateOk"] = false; s["validateErrors"] = new JsonArray("甲", null); },
+            "validateErrors[1] 需为非空字符串", "Step_null 错误项");
+        yield return Case(
+            o => { var s = o["steps"].AsArray()[0].AsObject(); s["validateOk"] = false; s["validateErrors"] = new JsonArray(42); },
+            "validateErrors[0] 需为非空字符串", "Step_错误项为数字");
+        yield return Case(
+            o => { var s = o["steps"].AsArray()[0].AsObject(); s["validateOk"] = false; s["validateErrors"] = "甲错误"; },
+            "需为非空字符串数组", "Step_错误项字段为字符串");
+        yield return Case(
+            o => { var s = o["steps"].AsArray()[0].AsObject(); s["validateOk"] = false; s["validateErrors"] = new JsonArray(); },
+            "需为非空字符串数组", "Step_空错误数组");
+        yield return Case(
+            o => o["steps"].AsArray()[0].AsObject()["validateErrors"] = new JsonArray("甲"),
+            "validateOk 为真时不得出现", "Step_成功步带错误");
+        yield return Case(
+            o => o["steps"].AsArray()[0].AsObject()["validateOk"] = false,
+            "validateOk 为假时必须带", "Step_失败步缺错误");
+        yield return Case(o => o["steps"].AsArray()[0].AsObject()["op"].AsObject()["extra"] = 1, "未知字段", "Op_未知字段");
+        yield return Case(o => o["steps"].AsArray()[0].AsObject()["op"].AsObject().Remove("params"), "op.params 需为对象", "Op_缺 params");
 
         static TestCaseData Case(Action<JsonObject> mutate, string fragment, string name)
             => new TestCaseData(mutate, fragment).SetName(name);
