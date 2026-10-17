@@ -4,9 +4,31 @@
 
 ## exportLudots.mjs
 
-把作者态场景导出为 Ludots Mod 资产与 `parity/*` 真值夹具。见文件头用法。
+把 Web 作者态场景导出成 Ludots 地形演示图能装载的资产，并写出 S1 及之后的对拍夹具。运行时把本文件放到 Web 沙盒的 `scripts/`（与 `src/engine/` 同级）。
 
-对拍口径（2026-10-09）：**行为对拍**，数值以 Ludots Fix64 为准；结构性字段逐位，派生量按带宽。
+```bash
+node scripts/exportLudots.mjs --seed 7 --map-id crowd_simulation_s7 --out exports/crowd_simulation_s7 --only map
+```
+
+`--only map` 只写这些文件，不跑 S2 及之后的导航对拍：
+
+- `terrain/<mapId>.height`（CHTM v2）
+- `Maps/<mapId>.json`
+- `Navigation/navmesh.json`（`solver` 为 `crowd-simulation`：`logicTerrainAsset`、`navCellSizeCm`、`terrainTypes`、`linkCandidateBake`）
+- `CrowdSimulationConfig.json`（`world.seed`、`deploy.initialUnits` 为 0、出生点、`s7barrier`）
+- `parity/s1-truth.json`
+
+地图里的建筑和桥按 Web `structures.footprint` 的插入序写。生成器先放完全部建筑，再放桥；C# 结构仓也是先给阻挡编号、再给条带续号，所以文件里建筑整段在前、桥整段在后，两段内部都不按坐标排序。桥的跨度是 `CrowdSimulationPathSpan`（`fromXCm`、`fromYCm`、`toXCm`、`toYCm`、`widthCm`）。
+
+`.navsurface` 不由本脚本写。加载器要头长 30 字节的链接候选布局，用地编网格重烘：
+
+```bash
+dotnet run --project src/Tools/Ludots.Tool -c Release -- nav bake-crowd-navsurface --mapId crowd_simulation_s7 --modId CrowdSimulationS1Terrain7Mod --out mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod/assets/terrain/crowd_simulation_s7.navsurface --overwrite
+```
+
+地编网格 `terrain/<mapId>.map_data.bin` 也不在本脚本里生成。
+
+对拍口径（2026-10-09）：行为对拍，数值以 Ludots Fix64 为准；结构性字段逐位，派生量按带宽。
 
 ## exportFuzzParity.mjs
 
