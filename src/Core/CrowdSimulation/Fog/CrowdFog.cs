@@ -99,7 +99,7 @@ public sealed class CrowdFog
         FogCellSizeCm = fc.FogCellSizeCm;
         Los = fc.LineOfSight;
         Terrain = fc.OptimisticTerrain;
-        EyeCm = fc.EyeCm
+        EyeCm = fc.EyeCm;
         _eyeM = CrowdReferenceMeters.CmToMPrecise(EyeCm);
         NavCellsPerTile = config.Hpa.NavCellsPerTile;
         NavTilesPerSide = NavCellsPerSide / NavCellsPerTile;
