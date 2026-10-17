@@ -4,7 +4,11 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Structures;
 
-/// <summary>放置被拒绝的原因。数值越大越优先；预览和指令执行用同一套。</summary>
+/// <summary>
+/// 放置被拒绝的原因。数值越大越优先；预览和指令执行用同一套。
+/// 越界与重叠不再产出（Web 参考接受它们，见 <see cref="CrowdStructurePlacement"/> 类注释），
+/// 枚举值保留给呈现合同的既有文案面。
+/// </summary>
 public enum CrowdPlacementReject : byte
 {
     None = 0,
@@ -16,9 +20,12 @@ public enum CrowdPlacementReject : byte
 }
 
 /// <summary>
-/// 放置合法性。输入是结构仓、模板和足迹，输出原因以及足迹实际盖住的导航格。
-/// spanEnds 模板的端点格的静态地形区域必须在 endpointAreas 里，其余盖住的格必须在 interiorAreas 里。
-/// 重叠只看同一层。越界按整段足迹的包围盒判定，不把界内仍合法的格标成非法。
+/// 放置合法性与足迹栅格化。输入是结构仓、模板和足迹，输出原因以及足迹实际盖住的导航格。
+/// 越界与重叠不拒绝：Web 参考的放置接受它们，栅格按 <see cref="CrowdStructureFootprint.CellRectOf"/> 夹回网格，
+/// 本仓库与其对齐（行为对拍三种子实锤：洪水盘越界、建筑压既有结构、桥跨非深水区，Web 均已放置）。
+/// spanEnds 模板声明了 endpointAreas/interiorAreas 时仍按区域拒：两个端点格的静态地形区域必须在
+/// endpointAreas 里，其余盖住的格必须在 interiorAreas 里，且两端锚格必须被条带实际覆盖；
+/// 未声明区域表的模板（演示桥）无地形限制，与 Web 一致。
 /// </summary>
 public static class CrowdStructurePlacement
 {
@@ -36,39 +43,31 @@ public static class CrowdStructurePlacement
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(template);
-        int side = store.NavCellsPerSide;
-        int cellCm = store.NavCellSizeCm;
-        var (minX, minY, maxX, maxY) = footprint.Bbox();
-        var sideCm = Fix64.FromInt(side * cellCm);
-        bool outside = minX < Fix64.Zero || minY < Fix64.Zero || maxX > sideCm || maxY > sideCm;
-        var reason = outside ? CrowdPlacementReject.OutOfBounds : CrowdPlacementReject.None;
-
         if (template.Placement == CrowdStructurePlacementKind.SpanEnds)
         {
-            reason = JudgeSpanEnds(store, template, footprint, ref cells, ref flags, out count, reason);
+            return JudgeSpanEnds(store, template, footprint, ref cells, ref flags, out count);
         }
-        else
+
+        int side = store.NavCellsPerSide;
+        int cellCm = store.NavCellSizeCm;
+        var rect = footprint.CellRectOf(cellCm, side);
+        int width = rect.X1 - rect.X0;
+        int height = rect.Y1 - rect.Y0;
+        int cap = width > 0 && height > 0 ? width * height : 0;
+        Ensure(ref cells, ref flags, cap);
+        count = 0;
+        for (int y = rect.Y0; y < rect.Y1; y++)
         {
-            var rect = footprint.CellRectOf(cellCm, side);
-            int width = rect.X1 - rect.X0;
-            int height = rect.Y1 - rect.Y0;
-            int cap = width > 0 && height > 0 ? width * height : 0;
-            Ensure(ref cells, ref flags, cap);
-            count = 0;
-            for (int y = rect.Y0; y < rect.Y1; y++)
+            for (int x = rect.X0; x < rect.X1; x++)
             {
-                for (int x = rect.X0; x < rect.X1; x++)
-                {
-                    if (!store.BaseLayerCellHit(template, footprint, x, y)) continue;
-                    byte flag = BaseLayerFlag(store, template.OnUpperLayer, x, y, ref reason);
-                    cells[count] = y * side + x;
-                    flags[count] = flag;
-                    count++;
-                }
+                if (!store.BaseLayerCellHit(template, footprint, x, y)) continue;
+                cells[count] = y * side + x;
+                flags[count] = 0;
+                count++;
             }
         }
 
-        return reason;
+        return CrowdPlacementReject.None;
     }
 
     private static CrowdPlacementReject JudgeSpanEnds(
@@ -77,8 +76,7 @@ public static class CrowdStructurePlacement
         CrowdStructureFootprint footprint,
         ref int[] cells,
         ref byte[] flags,
-        out int count,
-        CrowdPlacementReject reason)
+        out int count)
     {
         int side = store.NavCellsPerSide;
         int cellCm = store.NavCellSizeCm;
@@ -93,6 +91,8 @@ public static class CrowdStructurePlacement
         bool painted1 = false;
         var endpointAreas = template.EndpointAreas;
         var interiorAreas = template.InteriorAreas;
+        bool areaLimited = endpointAreas != null && interiorAreas != null;
+        var reason = CrowdPlacementReject.None;
         for (int y = geo.MinY; y <= geo.MaxY; y++)
         {
             for (int x = geo.MinX; x <= geo.MaxX; x++)
@@ -104,81 +104,29 @@ public static class CrowdStructurePlacement
                 byte flag = 0;
                 if (endpointCell) flag |= FlagEndpoint;
                 if (geo.IsPortal(endDist)) flag |= FlagPortal;
-                int area = store.StaticTerrainArea(y * side + x);
-                bool areaOk = endpointCell ? endpointAreas[area] : interiorAreas[area];
-                if (!areaOk)
+                if (areaLimited)
                 {
-                    flag |= FlagIllegal;
-                    reason = Worse(reason, endpointCell ? CrowdPlacementReject.EndpointArea : CrowdPlacementReject.InteriorArea);
+                    int area = store.StaticTerrainArea(y * side + x);
+                    bool areaOk = endpointCell ? endpointAreas![area] : interiorAreas![area];
+                    if (!areaOk)
+                    {
+                        flag |= FlagIllegal;
+                        reason = Worse(reason, endpointCell ? CrowdPlacementReject.EndpointArea : CrowdPlacementReject.InteriorArea);
+                    }
                 }
 
-                flag |= BaseLayerFlag(store, template.OnUpperLayer, x, y, ref reason);
                 cells[count] = y * side + x;
                 flags[count] = flag;
                 count++;
             }
         }
 
-        if (!painted0 || !painted1)
+        if (areaLimited && (!painted0 || !painted1))
         {
             reason = Worse(reason, CrowdPlacementReject.EndpointArea);
         }
 
         return reason;
-    }
-
-    private static byte BaseLayerFlag(
-        CrowdStructuresStore store,
-        bool layered,
-        int x,
-        int y,
-        ref CrowdPlacementReject reason)
-    {
-        byte flag = 0;
-        int cell = y * store.NavCellsPerSide + x;
-        if (store.Blocked[cell] != 0)
-        {
-            flag |= FlagIllegal;
-            reason = Worse(reason, CrowdPlacementReject.OverlapsBlocked);
-        }
-
-        if (OverlapsSameLayer(store, layered, x, y))
-        {
-            flag |= FlagIllegal;
-            reason = Worse(reason, CrowdPlacementReject.OverlapsStructure);
-        }
-
-        return flag;
-    }
-
-    private static bool OverlapsSameLayer(CrowdStructuresStore store, bool layered, int x, int y)
-    {
-        int n = store.LiveCount;
-        for (int i = 0; i < n; i++)
-        {
-            int id = store.LiveId(i);
-            var existing = store.LiveTemplate(id);
-            if (existing.OnUpperLayer != layered) continue;
-            var fp = store.FootprintOf(id);
-            if (layered)
-            {
-                if (UpperLayerPaints(store, existing, fp, x, y)) return true;
-            }
-            else if (store.BaseLayerCellHit(existing, fp, x, y))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool UpperLayerPaints(CrowdStructuresStore store, RuntimeStructureTemplate template, CrowdStructureFootprint footprint, int x, int y)
-    {
-        var geo = UpperLayerSpanGeometry.FromCentimeters(
-            footprint.X0.ToInt(), footprint.Y0.ToInt(), footprint.X1.ToInt(), footprint.Y1.ToInt(), footprint.WidthCm.ToInt(),
-            store.NavCellsPerSide, store.NavCellSizeCm, template.PortalReachNavCells);
-        return geo.Hit(x, y, out _);
     }
 
     private static CrowdPlacementReject Worse(CrowdPlacementReject current, CrowdPlacementReject next) =>

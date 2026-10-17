@@ -10,14 +10,7 @@
           "portalReachNavCells": 4
         },
         "placement": {
-          "kind": "spanEnds",
-          "endpointAreas": [
-            "shallow",
-            "open"
-          ],
-          "interiorAreas": [
-            "deep"
-          ]
+          "kind": "spanEnds"
         },
         "lifetimeSec": null
       },
@@ -30,14 +23,7 @@
           "portalReachNavCells": 4
         },
         "placement": {
-          "kind": "spanEnds",
-          "endpointAreas": [
-            "shallow",
-            "open"
-          ],
-          "interiorAreas": [
-            "deep"
-          ]
+          "kind": "spanEnds"
         },
         "lifetimeSec": 4
       },

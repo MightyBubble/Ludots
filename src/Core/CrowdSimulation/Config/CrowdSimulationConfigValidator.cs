@@ -227,7 +227,12 @@ public static class CrowdSimulationConfigValidator
 
     private static void ValidateAreaIds(string path, string[]? ids)
     {
-        if (ids == null || ids.Length == 0)
+        if (ids == null)
+        {
+            return;
+        }
+
+        if (ids.Length == 0)
         {
             throw Invalid(path, "需为非空的区域 id 数组");
         }

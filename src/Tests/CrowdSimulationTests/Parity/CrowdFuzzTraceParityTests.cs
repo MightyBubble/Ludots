@@ -40,7 +40,6 @@ public sealed class CrowdFuzzTraceParityTests
             new DivergenceKey(CrowdFuzzTraceGate.OpParams, 56, 28, null, null, "op.params.x"),
             new DivergenceKey(CrowdFuzzTraceGate.Identity, 55, 28, 670, null, "units.handle"),
             new DivergenceKey(CrowdFuzzTraceGate.Structural, 53, 27, 333, null, "units.mode"),
-            new DivergenceKey(CrowdFuzzTraceGate.NavVersion, 53, 27, null, null, "navs[0].version"),
             new DivergenceKey(CrowdFuzzTraceGate.LeaderPath, 61, 31, null, 2, "leader.x"),
             new DivergenceKey(CrowdFuzzTraceGate.PositionUnit, 51, 26, 331, null, "units.x"),
             new DivergenceKey(CrowdFuzzTraceGate.PositionMean, 53, 27, null, null, "units.x.mean"),
@@ -48,13 +47,12 @@ public sealed class CrowdFuzzTraceParityTests
         new(424242, new[]
         {
             new DivergenceKey(CrowdFuzzTraceGate.OpSequence, 60, 30, null, null, "units"),
-            new DivergenceKey(CrowdFuzzTraceGate.OpParams, 60, 30, null, null, "op.params.x"),
-            new DivergenceKey(CrowdFuzzTraceGate.Identity, 59, 30, 1293, null, "units.handle"),
-            new DivergenceKey(CrowdFuzzTraceGate.Structural, 34, 17, 1327, null, "units.mode"),
-            new DivergenceKey(CrowdFuzzTraceGate.NavVersion, 29, 15, null, null, "navs[0].version"),
+            new DivergenceKey(CrowdFuzzTraceGate.OpParams, 64, 32, null, null, "op.params.x"),
+            new DivergenceKey(CrowdFuzzTraceGate.Identity, 59, 30, 775, null, "units.handle"),
+            new DivergenceKey(CrowdFuzzTraceGate.Structural, 53, 27, 788, null, "units.mode"),
             new DivergenceKey(CrowdFuzzTraceGate.LeaderPath, 33, 17, null, 4, "leaders[4#0].path.count"),
             new DivergenceKey(CrowdFuzzTraceGate.PositionUnit, 22, 11, 439, null, "units.y"),
-            new DivergenceKey(CrowdFuzzTraceGate.PositionMean, 29, 15, null, null, "units.x.mean"),
+            new DivergenceKey(CrowdFuzzTraceGate.PositionMean, 34, 17, null, null, "units.x.mean"),
         }),
         new(9001, new[]
         {
@@ -62,7 +60,6 @@ public sealed class CrowdFuzzTraceParityTests
             new DivergenceKey(CrowdFuzzTraceGate.OpParams, 66, 33, null, null, "op.params.x"),
             new DivergenceKey(CrowdFuzzTraceGate.Identity, 63, 32, 262158, null, "units.handle"),
             new DivergenceKey(CrowdFuzzTraceGate.Structural, 55, 28, 262257, null, "units.state"),
-            new DivergenceKey(CrowdFuzzTraceGate.NavVersion, 45, 23, null, null, "navs[0].version"),
             new DivergenceKey(CrowdFuzzTraceGate.LeaderPath, 71, 36, null, 8, "leaders[8#0].path.count"),
             new DivergenceKey(CrowdFuzzTraceGate.PositionUnit, 37, 19, 262224, null, "units.x"),
             new DivergenceKey(CrowdFuzzTraceGate.PositionMean, 57, 29, null, null, "units.x.mean"),

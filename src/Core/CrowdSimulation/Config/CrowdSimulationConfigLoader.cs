@@ -418,14 +418,23 @@ public sealed class CrowdSimulationConfigLoader
                     throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: {path}.effect 类型未知。");
             }
 
-            bool[] endpointAreas = Array.Empty<bool>();
-            bool[] interiorAreas = Array.Empty<bool>();
+            bool[]? endpointAreas = null;
+            bool[]? interiorAreas = null;
             var placement = CrowdStructurePlacementKind.Unrestricted;
             if (t.Placement is StructureSpanEndsPlacement spanEnds)
             {
                 placement = CrowdStructurePlacementKind.SpanEnds;
-                endpointAreas = ResolveAreaMask(areaIndex, spanEnds.EndpointAreas, $"{path}.placement.endpointAreas");
-                interiorAreas = ResolveAreaMask(areaIndex, spanEnds.InteriorAreas, $"{path}.placement.interiorAreas");
+                if (spanEnds.EndpointAreas != null || spanEnds.InteriorAreas != null)
+                {
+                    if (spanEnds.EndpointAreas == null || spanEnds.InteriorAreas == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CrowdSimulationConfigValidator.FileName}: {path}.placement 的 endpointAreas 与 interiorAreas 要么都写要么都不写。");
+                    }
+
+                    endpointAreas = ResolveAreaMask(areaIndex, spanEnds.EndpointAreas, $"{path}.placement.endpointAreas");
+                    interiorAreas = ResolveAreaMask(areaIndex, spanEnds.InteriorAreas, $"{path}.placement.interiorAreas");
+                }
             }
 
             return new RuntimeStructureTemplate
@@ -756,8 +765,9 @@ public sealed class CrowdSimulationConfigLoader
         }
     }
 
-    private static void RejectUpperIn(HashSet<string> upper, string[] areaIds, string path)
+    private static void RejectUpperIn(HashSet<string> upper, string[]? areaIds, string path)
     {
+        if (areaIds == null) return;
         for (int i = 0; i < areaIds.Length; i++)
         {
             if (upper.Contains(areaIds[i]))

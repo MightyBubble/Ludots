@@ -462,10 +462,10 @@ public sealed class RuntimeStructureTemplate
     /// <summary>surface 的入口格数；其他效果为 0。</summary>
     public required int PortalReachNavCells { get; init; }
     public required CrowdStructurePlacementKind Placement { get; init; }
-    /// <summary>spanEnds 时按区域下标，真表示端点格的静态地形区域可以是它；unrestricted 时为空数组。</summary>
-    public required bool[] EndpointAreas { get; init; }
-    /// <summary>spanEnds 时按区域下标，真表示端点以外的盖住格的静态地形区域可以是它；unrestricted 时为空数组。</summary>
-    public required bool[] InteriorAreas { get; init; }
+    /// <summary>spanEnds 时按区域下标，真表示端点格的静态地形区域可以是它；未声明区域表或 unrestricted 时为 null。</summary>
+    public required bool[]? EndpointAreas { get; init; }
+    /// <summary>spanEnds 时按区域下标，真表示端点以外的盖住格的静态地形区域可以是它；未声明区域表或 unrestricted 时为 null。</summary>
+    public required bool[]? InteriorAreas { get; init; }
     /// <summary>寿命(仿真秒);null = 永久。到期 tick 用配置原始 double 做有理数 ceil，整数 tick 不容骑线。</summary>
     public required Fix64? LifetimeSec { get; init; }
     /// <summary>寿命的配置原始值。到期 tick = placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)。</summary>
