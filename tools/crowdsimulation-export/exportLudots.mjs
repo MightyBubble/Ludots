@@ -212,6 +212,7 @@ writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
   },
 }, null, 2));
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
+  fog: { optimisticTerrain: false },
   world: { seed },
   deploy: {
     bases: [

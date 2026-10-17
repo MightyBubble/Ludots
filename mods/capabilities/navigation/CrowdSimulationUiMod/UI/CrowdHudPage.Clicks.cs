@@ -74,6 +74,7 @@ internal sealed partial class CrowdHudPage
     }
 
     private void ToggleMagicBox() => Press(PlayerKeys.ToggleMagicBox);
+    private void ToggleOptimisticTerrain() => Press(PlayerKeys.ToggleOptimisticTerrain);
     private void ToggleLos() => Press(PlayerKeys.ToggleLos);
     private void ToggleRoute() => Press(PlayerKeys.ToggleRoute);
     private void ToggleFog() => Press(PlayerKeys.ToggleFog);

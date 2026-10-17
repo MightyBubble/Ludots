@@ -268,6 +268,7 @@ internal sealed partial class CrowdHudPage
         for (int i = 0; i < _formationChips.Count; i++) Mark(_formationChips[i].Set(i == p.ShapeIndex));
         Mark(_magicSwitch.Set(p.MagicBox));
         Mark(_losSwitch.Set(p.LineOfSight));
+        Mark(_optimisticSwitch.Set(p.OptimisticTerrain));
         Mark(_routeSwitch.Set(p.Route));
         Mark(_fogSwitch.Set(p.FogHide));
 

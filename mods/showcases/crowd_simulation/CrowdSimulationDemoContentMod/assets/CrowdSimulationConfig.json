@@ -1,4 +1,7 @@
 {
+  "fog": {
+    "optimisticTerrain": true
+  },
   "structures": {
     "templates": {
       "bridge": {

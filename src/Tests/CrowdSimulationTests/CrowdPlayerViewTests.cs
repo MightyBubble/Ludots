@@ -276,7 +276,7 @@ public sealed class CrowdPlayerViewTests
         {
             "nextTeam", "selectAll", "clearSelection", "toggleLayer", "cycleLayer", "toggleFog",
             "sceneOutside", "sceneBehind", "toggleLos", "toggleRoute", "deployCountDown", "deployCountUp",
-            "cycleClickTemplate", "cycleClickRadius", "toggleMagicBox", "cycleShape", "clickCountDown",
+            "cycleClickTemplate", "cycleClickRadius", "toggleMagicBox", "toggleOptimisticTerrain", "cycleShape", "clickCountDown",
             "clickCountUp", "cycleRadiusRange", "boxSelectBegin", "secondaryHold", "formationCommit", "primaryTap",
         })
         {

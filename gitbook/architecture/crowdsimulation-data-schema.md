@@ -106,7 +106,7 @@
 | `navtile` | `sizeCm`（须整除 `navCellSizeCm`）、`cacheCapacity` |
 | `flowfield` | `cacheCapacity`、`poolCapacity`、`corridorPaddingNavTiles`、`maxRebuildsPerTick` |
 | `planning` | `latencyTicks` 1–60、`refreshLatencyTicks`、`maxRefreshesPerTick`、`rebakeSlices` 1–3 |
-| `fog` | `rateHz`、`cellSizeCm`（≥ 100 cm 且整除导航格）、`visionCm`、`revealTicks`、`slotCacheCapacity`、`variantCapacity`、`lineOfSight`、`eyeCm` |
+| `fog` | `rateHz`、`cellSizeCm`（≥ 100 cm 且整除导航格）、`visionCm`、`revealTicks`、`slotCacheCapacity`、`variantCapacity`、`lineOfSight`、`eyeCm`、`optimisticTerrain` |
 | `formation` | 阵型尺度、领队、槽位、magic box、点积阈值等（见 `CrowdSimulationConfigValidator` 各 `Rule`） |
 | `formations.<id>` | `spacingDiameterScale`、`aspect`（均 > 0）、`wedge`；至少一条 |
 | `movement` | 子步、混合、转向、停滞等；`maxStepNavCells` ∈ (0, 1) |
@@ -218,6 +218,7 @@
 - **`fuzz.ops`**：字符串 id 数组，只列操作名（如 `spawn`、`order`、`place`、`remove`、`placePath`、`removePath`、`kill`）；字段含义见 `CrowdSimRegressCatalog`。
 - **颜色对象**：玩家视图、调试视图、`presentation.deploy` 里的预览色统一 `{ "red", "green", "blue", "alpha" }`（0–255）。共用色只写在 `CrowdSimulationPresentationPalette.json`，视图 `colors` 不得与 palette 键重复（装载时 `CrowdPresentationPalette.MergeInto`）。
 - **视线初始值**：群体迷雾是否做遮挡采样只认 `CrowdSimulationConfig.json` → `fog.lineOfSight`（bool）。HUD 的 `ToggleLos` 走运行时 `fogSight` 命令，不在 PlayerView / Debug JSON 里再写一份初始开关。
+- **乐观地形开局值**：未探索地形是否先按可通行，只认 `fog.optimisticTerrain`（bool，必填，缺了装载失败）。玩家偏好的初值在绑定会话时抄这一字段。HUD「乐观迷雾」和动作 `CrowdSimulation.Player.ToggleOptimisticTerrain`（`]`）只改偏好；下一次拖拽成阵或右键 `crowdSimulationMove` 把偏好写进指令的 `fogTerrain`。开局已经是乐观时，这一笔令在重组导航组之前先同步认知槽，第一笔就按未探索可走来规划。PlayerView JSON 不再写一份开局开关。
 - **散开（scatter）范围**：`scatter` 指令给每名有单位的出生玩家随机 box 目标；坐标均匀取自 `[0, NavCellsPerSide × navCellSizeCm)`，由当前地图求解器板与 `navmesh` 推导，不在调试 JSON 里配置。
 - **爆炸（kill）半径**：`CrowdSimulationDebug.json` → `tools.boomRadiusCm`（> 0）与 `ringScale`（> 1）；外圈冲量用 `impulse`。演示左键爆炸时把该半径写入 `kill` 指令。
 - **玩家视角清场范围**：迷雾检查场景开局清场用的 `kill` 指令，圆心取导航板中心，半径取能盖住整块板的外接圆（`CrowdPlayerViewHost.BoardDisc`，板边长 = `NavCellsPerSide × navCellSizeCm`）。`CrowdSimulationPlayerView.json` 只写 `killRingScale`（> 1）和 `killImpulse`（≥ 0），不写坐标和半径。

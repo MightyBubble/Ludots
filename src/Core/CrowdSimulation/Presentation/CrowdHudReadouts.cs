@@ -189,6 +189,7 @@ public record struct CrowdPlayerHud
     /// <summary>最新指令的模式；没有指令时为 null。</summary>
     public CrowdOrderMode? Mode;
     public bool MagicBox;
+    public bool OptimisticTerrain;
     public bool FogHide;
     public bool Route;
     public bool LineOfSight;

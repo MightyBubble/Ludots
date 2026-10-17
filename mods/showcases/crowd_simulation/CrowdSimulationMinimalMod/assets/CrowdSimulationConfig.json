@@ -1,4 +1,7 @@
 {
+  "fog": {
+    "optimisticTerrain": true
+  },
   "world": {
     "seed": 1
   },

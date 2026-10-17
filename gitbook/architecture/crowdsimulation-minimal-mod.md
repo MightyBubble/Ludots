@@ -124,6 +124,7 @@ $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinima
 - `world.seed: 1`。
 - `deploy.initialUnits: 0`。开局不撒单位，单位由脚本生成。
 - `deploy.bases`：玩家 1 在 (715625, 828125)，玩家 2 在 (715625, 765625)（无 `color` 字段）。
+- `fog.optimisticTerrain: true`。这张图给玩家用，开局把没探索过的地形当成能走。
 `initialUnits`、`bases` 没有标准值，地图不写就加载失败。桥能落在哪类区域写在结构模板的 `placement`（`endpointAreas`、`interiorAreas`），这张图不放桥，不用写。
 
 `assets/CrowdSimulationDebug.json` 的 `session.script`：tick 0 两条 `spawnAt`（各 200 个，`template: crowd_minimal.unit`），tick 1 两条 `order` 到 (890625, 828125) 与 (890625, 765625)。正本见该 Mod 的 JSON 文件。
