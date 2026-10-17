@@ -78,7 +78,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>
         /// Load-time semantic validation for emission contracts on entities that are
-        /// not region volumes — contact sensor emitters (#1469). Runtime-spawned
+        /// not region volumes — contact sensor emitters. Runtime-spawned
         /// emitters skip this and rely on fire-time ValidateFirePayload.
         /// </summary>
         private static void ValidateStandaloneEmissions(
@@ -107,7 +107,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Shared semantic validation for emission contracts (#1468): used by the
+        /// Shared semantic validation for emission contracts: used by the
         /// volume bake pass and by the field region emission loader alike.
         /// </summary>
         internal static RegionVolumeEmissionCm ValidateAndCanonicalizeEmission(

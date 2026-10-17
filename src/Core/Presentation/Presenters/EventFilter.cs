@@ -9,7 +9,6 @@ namespace Ludots.Core.Presentation.Presenters
     /// </summary>
     public struct EventFilter
     {
-        /// <summary>The event kind that must match exactly.</summary>
         public PresentationEventKind Kind;
 
         /// <summary>
@@ -19,9 +18,6 @@ namespace Ludots.Core.Presentation.Presenters
         /// </summary>
         public int KeyId;
 
-        /// <summary>
-        /// Returns true if the given event passes this filter.
-        /// </summary>
         public bool Matches(in PresentationEvent evt)
         {
             return evt.Kind == Kind && (KeyId < 0 || evt.KeyId == KeyId);

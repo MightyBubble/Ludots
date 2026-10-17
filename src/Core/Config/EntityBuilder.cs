@@ -13,7 +13,6 @@ namespace Ludots.Core.Config
         private readonly IReadOnlyDictionary<string, string> _templateSources;
         private readonly ComponentAuthoringContext _authoringContext;
         
-        // Temporary storage for components to apply
         private EntityTemplate _activeTemplate;
         private string _activeTemplateId;
         private string _activeEntityContext;
@@ -84,12 +83,10 @@ namespace Ludots.Core.Config
         {
             var entity = _world.Create();
 
-            // 1. Apply Template Components
             if (_activeTemplate != null)
             {
                 foreach (var kvp in _activeTemplate.Components)
                 {
-                    // Check if overridden
                     if (!_overrides.ContainsKey(kvp.Key))
                     {
                         ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: false);
@@ -97,7 +94,7 @@ namespace Ludots.Core.Config
                 }
             }
 
-            // 2. Apply Overrides — field-level deep merge over the template component
+            // Field-level deep merge over the template component
             // (unmentioned fields inherit template values; components absent from the
             // template are added as-is). A "__replace": true marker on the override
             // object opts back into whole-component replacement — variant-shaped

@@ -9,8 +9,7 @@ public static unsafe class GpuCrowdMeshFactory
 {
         /// <summary>非索引网格焊接索引化：位置+骨骼属性一致的顶点合并（法线/UV 差异不参与——
         /// 蒙皮人群着色只用 tint，焊接后按三角面烘平法线，远距离不可辨）。
-        /// 索引网格原样返回。焊容量按顶点数建字典，加载期一次性成本。</summary>
-        /// <summary>非索引网格焊接索引化（位置+骨骼合并，法线按面烘平）——sim 场景复用。</summary>
+        /// 索引网格原样返回。焊容量按顶点数建字典，加载期一次性成本；sim 场景复用。</summary>
         public static Mesh WeldToIndexed(Mesh mesh)
         {
             if (mesh.indices != null)

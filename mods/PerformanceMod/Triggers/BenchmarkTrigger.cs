@@ -13,7 +13,6 @@ namespace PerformanceMod.Triggers
         {
             EventKey = GameEvents.MapLoaded;
             
-            // Only run on BenchmarkMap
             AddCondition(ctx => ctx.IsMap<BenchmarkMap>());
         }
 
@@ -28,7 +27,6 @@ namespace PerformanceMod.Triggers
             }
             
             Console.WriteLine("[BenchmarkTrigger] Creating SpawnEntityCommand...");
-            // Old GameContext usage removed, ScriptContext is now used directly in Commands
             
             var cmd = new SpawnEntityCommand { Count = 20000 };
             await cmd.ExecuteAsync(context);

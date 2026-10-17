@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Ludots.Core.Gameplay.Relationships.Config
 {
     /// <summary>
-    /// Root payload of <c>Relationships/control_profiles.json</c> (RFC-0065 §5.4 / CTRL-4b).
+    /// Root payload of <c>Relationships/control_profiles.json</c>.
     /// The schema carries zero business vocabulary: tag and edge names are opaque strings
     /// resolved to ids at load time.
     /// </summary>

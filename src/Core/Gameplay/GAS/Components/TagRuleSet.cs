@@ -2,7 +2,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
 {
     /// <summary>
     /// Tag规则集（编译期生成，运行时只读）
-    /// 定义Tag的互斥/派生/禁用规则
     /// </summary>
     public unsafe struct TagRuleSet
     {
@@ -37,34 +36,16 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public fixed int RemoveIfTags[MAX_REMOVE_IF_TAGS];
         public int RemoveIfCount;
         
-        /// <summary>
-        /// 检查是否有Required tags规则
-        /// </summary>
         public bool HasRequiredTags => RequiredCount > 0;
         
-        /// <summary>
-        /// 检查是否有Blocked tags规则
-        /// </summary>
         public bool HasBlockedTags => BlockedCount > 0;
         
-        /// <summary>
-        /// 检查是否有Attached tags规则
-        /// </summary>
         public bool HasAttachedTags => AttachedCount > 0;
         
-        /// <summary>
-        /// 检查是否有Removed tags规则
-        /// </summary>
         public bool HasRemovedTags => RemovedCount > 0;
         
-        /// <summary>
-        /// 检查是否有Disabled if tags规则
-        /// </summary>
         public bool HasDisabledIfTags => DisabledIfCount > 0;
         
-        /// <summary>
-        /// 检查是否有Remove if tags规则
-        /// </summary>
         public bool HasRemoveIfTags => RemoveIfCount > 0;
     }
 }

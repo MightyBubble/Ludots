@@ -14,7 +14,7 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>RFC-0065 CTX-5: context-bound collection writes (raw capture + filter + domain routing).</summary>
+    /// <summary>Context-bound collection writes (raw capture + filter + domain routing).</summary>
     [TestFixture]
     [NonParallelizable]
     public sealed class ContextBoundCollectionWriteTests
@@ -146,8 +146,7 @@ namespace Ludots.Tests.GAS
             count = harness.Store.CopyEntities(commandHandle, 0, rows);
             Assert.That(rows[..count].ToArray(), Is.EqualTo(new[] { m01, m02 }), "command.source must stay untouched while the ability frame is active.");
 
-            // Exec reclaim restores the saved base context (no steady-state fallback exists);
-            // the unmount-then-bare-commit form retired with the Default profile.
+            // Exec reclaim restores the saved base context (no steady-state fallback exists).
             harness.UnmountContext(p1Rep);
             int restoredKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, restoredKey, stackalloc Entity[] { m01 }, EntityCollectionSourceKind.UiAcquisition);

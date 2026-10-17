@@ -5,8 +5,8 @@ using Ludots.Core.UI.PanelProjection;
 namespace Ludots.Core.UI.PanelActivation
 {
     /// <summary>
-    /// The only writer of <see cref="UiPanelActivationStore"/> (#1014 / constitution
-    /// contract five). Called by ShowPanel/HidePanel graph op handlers and by systems
+    /// The only writer of <see cref="UiPanelActivationStore"/>. Called by ShowPanel/HidePanel
+    /// graph op handlers and by systems
     /// that need to show/hide panels directly. Graphs decide WHEN; this API records
     /// the decision; the store never orchestrates. Audience overrides (hotseat
     /// rotation) take the same path via SetPanelAudience/ClearPanelAudience.

@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.UI
 {
     /// <summary>
-    /// ShowPanel/HidePanel graph ops (#1014 contract five): any graph — Script,
+    /// ShowPanel/HidePanel graph ops: any graph — Script,
     /// level blueprint, effect — fires these ops and the panel responds. The UI
     /// never decides when; it records the decision.
     /// </summary>
@@ -48,7 +48,6 @@ namespace Ludots.Tests.GasTests.UI
             return (world, caster, programs, store, api);
         }
 
-        /// <summary>Script graph: ShowPanel(entity_attributes) → HaltReturnInt(1).</summary>
         private static GraphInstruction[] ShowPanelProgram(int panelKeySymbolIndex) => new[]
         {
             new GraphInstruction { Op = (ushort)GraphNodeOp.ShowPanel, Imm = panelKeySymbolIndex },
@@ -78,7 +77,6 @@ namespace Ludots.Tests.GasTests.UI
                 var cursor = new GraphExecutionCursor();
                 GraphInstruction[] program = programs.RequireProgramArray(graphId, GraphKind.Script, "panel test");
 
-                // Patch the panel type symbol
                 GraphProgramSymbolPatcher.Patch(
                     new[] { PanelTypeKey },
                     program,

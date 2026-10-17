@@ -7,9 +7,6 @@ using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
-    /// <summary>
-    /// 冲量应用系统 — 全定点数域，将求解器结果写回实体速度。
-    /// </summary>
     public sealed class ApplyImpulsesSystem2D : BaseSystem<World, float>
     {
         private static readonly QueryDescription _pairsQuery =
@@ -47,7 +44,6 @@ namespace Ludots.Core.Physics2D.Systems
                 ref var velocityA = ref pair.EntityA.Get<Velocity2D>();
                 ref var velocityB = ref pair.EntityB.Get<Velocity2D>();
 
-                // 全定点数冲量计算
                 var normalImpulseVector = pair.Normal * pair.AccumulatedNormalImpulse0;
                 var tangent = new Fix64Vec2(-pair.Normal.Y, pair.Normal.X);
                 var tangentImpulseVector = tangent * pair.AccumulatedTangentImpulse0;

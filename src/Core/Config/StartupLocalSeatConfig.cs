@@ -4,7 +4,7 @@ using Ludots.Core.Client;
 namespace Ludots.Core.Config
 {
     /// <summary>
-    /// Cold-start seat recipe in <see cref="GameConfig"/> (Epic #896).
+    /// Cold-start seat recipe in <see cref="GameConfig"/>.
     /// Injected into <see cref="Map.MapLaunchContext.LocalSeats"/> on startup map load — not map identity.
     /// </summary>
     public sealed class StartupLocalSeatConfig

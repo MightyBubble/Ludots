@@ -11,11 +11,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// attachment 原子 op（Attach/Detach/RemoveParent）的事务化合同：
-    /// 提交语义（绑定/局部姿/派生位姿/写权）、回滚语义（含写权待办撤销）、
-    /// 环检测 fail-fast、容量硬顶、同事务 attach→detach 抵消。
-    /// </summary>
     [TestFixture]
     public sealed class EntityAttachmentTests
     {
@@ -58,7 +53,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(world.Get<AttachedLocalPose>(child).OffsetCm, Is.EqualTo(Fix64Vec2.FromInt(0, 140)));
                 // inherit facing: child facing = parent facing (π/2) + local (π/2) = π
                 Assert.That(world.Get<FacingDirection>(child).AngleRad, Is.EqualTo((float)Math.PI).Within(1e-4f));
-                // derived pose: parent (1000, 2000) + fixed offset (0, 140)
                 Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1000, 2140)));
                 Assert.That(world.Get<PreviousWorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1000, 2140)));
             });
@@ -100,7 +94,6 @@ namespace Ludots.Tests.GAS
             commitSystem.Update(1f / 60f);
             Assert.That(world.Get<PoseAuthority>(child).Value, Is.EqualTo(PoseAuthorityKind.Attached));
 
-            // 回滚路径：重新 stage 一次 attach 再回滚，待办必须被摘除，世界保持原状。
             transaction.Begin();
             Entity otherParent = world.Create(WorldPositionCm.FromCm(300, 300));
             transaction.StageAttach(child, otherParent, OffsetPose(10, 10));

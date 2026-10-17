@@ -161,7 +161,7 @@ namespace Ludots.Core.Physics2D.Ticking
                 AnyAwakeDynamicBodies = awakeDynamicBodiesJob.AnyAwakeDynamicBodies,
                 LastPhysicsStepTime = stepsToRun > 0 ? Time.FixedTotalTime : _world.Get<Physics2DRuntimeState>(_runtimeStateEntity).LastPhysicsStepTime,
                 PhysicsStepDuration = physicsDt,
-                InterpolationAlpha = InterpolationAlpha  // 从 DiscreteRateTickDistributor 获取的物理帧 alpha
+                InterpolationAlpha = InterpolationAlpha
             });
 
             int fixedHz = FixedHzFromDeltaTime(fixedDeltaTime);

@@ -91,7 +91,6 @@ namespace Ludots.Platform.Abstractions.Hosting
         }
     }
 
-    /// <summary>一个从 discovery 文件解析出的 App 进程。</summary>
     public readonly record struct DiscoveredProcess(
         int ProcessId,
         int BridgePort,

@@ -41,24 +41,12 @@ namespace Ludots.Core.Input.Orders
         PressReleaseAimCast = 5,
     }
 
-    /// <summary>
-    /// Trigger type for input-to-order mapping.
-    /// </summary>
     public enum InputTriggerType
     {
-        /// <summary>
-        /// Trigger when the action is pressed this frame.
-        /// </summary>
         PressedThisFrame = 0,
 
-        /// <summary>
-        /// Trigger when the action is released this frame.
-        /// </summary>
         ReleasedThisFrame = 1,
 
-        /// <summary>
-        /// Trigger while the action is held down.
-        /// </summary>
         Held = 2,
 
         /// <summary>
@@ -67,14 +55,8 @@ namespace Ludots.Core.Input.Orders
         DoubleTap = 3
     }
     
-    /// <summary>
-    /// Target data required for the order.
-    /// </summary>
     public enum OrderTargetType
     {
-        /// <summary>
-        /// No target data required.
-        /// </summary>
         None = 0,
         
         /// <summary>
@@ -82,14 +64,8 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         Position = 1,
         
-        /// <summary>
-        /// Single entity required.
-        /// </summary>
         Entity = 2,
         
-        /// <summary>
-        /// Multiple entities required.
-        /// </summary>
         Entities = 3,
         
         /// <summary>
@@ -110,15 +86,11 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         HoveredEntityOrPosition = 6,
         
-        /// <summary>
-        /// Obsolete alias for Position. Use Position instead.
-        /// </summary>
         [Obsolete("Use Position instead.")]
         Ground = Position
     }
     
     /// <summary>
-    /// Template for order arguments.
     /// Nullable fields are not applied to the order.
     /// </summary>
     public class OrderArgsTemplate
@@ -149,14 +121,8 @@ namespace Ludots.Core.Input.Orders
         }
     }
     
-    /// <summary>
-    /// Policy for how Held trigger type generates orders.
-    /// </summary>
     public enum HeldPolicy
     {
-        /// <summary>
-        /// Fire an order every frame while held (default).
-        /// </summary>
         EveryFrame = 0,
         
         /// <summary>
@@ -167,9 +133,6 @@ namespace Ludots.Core.Input.Orders
         StartEnd = 1
     }
     
-    /// <summary>
-    /// Policy for explicit automatic target acquisition.
-    /// </summary>
     public enum AutoTargetPolicy
     {
         /// <summary>
@@ -184,9 +147,6 @@ namespace Ludots.Core.Input.Orders
         NearestInRange = 1,
     }
 
-    /// <summary>
-    /// Submit mode behavior when modifier key is pressed.
-    /// </summary>
     public enum ModifierSubmitBehavior
     {
         /// <summary>
@@ -200,14 +160,8 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         QueueOnModifier = 1,
         
-        /// <summary>
-        /// Always use Immediate mode regardless of modifiers.
-        /// </summary>
         AlwaysImmediate = 2,
         
-        /// <summary>
-        /// Always use Queued mode regardless of modifiers.
-        /// </summary>
         AlwaysQueued = 3,
 
         /// <summary>
@@ -319,19 +273,10 @@ namespace Ludots.Core.Input.Orders
         }
     }
     
-    /// <summary>
-    /// A single input-to-order mapping.
-    /// </summary>
     public class InputOrderMapping
     {
-        /// <summary>
-        /// The InputAction ID to listen for.
-        /// </summary>
         public string ActionId { get; set; } = string.Empty;
         
-        /// <summary>
-        /// The trigger condition.
-        /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public InputTriggerType Trigger { get; set; } = InputTriggerType.PressedThisFrame;
 
@@ -352,14 +297,8 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         public ActorOrderRoutingSettings? ActorOrderRouting { get; set; }
 
-        /// <summary>
-        /// Template for order arguments.
-        /// </summary>
         public OrderArgsTemplate ArgsTemplate { get; set; } = new();
         
-        /// <summary>
-        /// Whether target data is required.
-        /// </summary>
         public bool RequireTarget { get; set; } = false;
 
         /// <summary>
@@ -374,16 +313,9 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         public string TargetCollectionKey { get; set; } = string.Empty;
         
-        /// <summary>
-        /// The type of target required.
-        /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderTargetType TargetType { get; set; } = OrderTargetType.None;
         
-        /// <summary>
-        /// How modifier keys affect the order submit mode.
-        /// Default is QueueOnModifier (modifier+action queues the order).
-        /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ModifierSubmitBehavior ModifierBehavior { get; set; } = ModifierSubmitBehavior.QueueOnModifier;
 
@@ -396,8 +328,6 @@ namespace Ludots.Core.Input.Orders
         public bool IsSkillMapping { get; set; } = false;
         
         /// <summary>
-        /// Policy for Held trigger: EveryFrame (fire every frame) or
-        /// StartEnd (emit a ".Start" order on press and a ".End" order on release).
         /// Only meaningful when Trigger == Held.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -479,25 +409,13 @@ namespace Ludots.Core.Input.Orders
         }
     }
     
-    /// <summary>
-    /// User override settings for input-order mappings.
-    /// </summary>
     public class UserOverrideSettings
     {
-        /// <summary>
-        /// Whether user overrides are enabled.
-        /// </summary>
         public bool Enabled { get; set; } = true;
         
-        /// <summary>
-        /// Path to persist user preferences.
-        /// </summary>
         public string PersistPath { get; set; } = "user://input_preferences.json";
     }
     
-    /// <summary>
-    /// Root configuration for input-order mappings.
-    /// </summary>
     public class InputOrderMappingConfig
     {
         /// <summary>
@@ -512,9 +430,6 @@ namespace Ludots.Core.Input.Orders
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CastModeType InteractionMode { get; set; } = CastModeType.TargetFirst;
 
-        /// <summary>
-        /// List of mappings.
-        /// </summary>
         public List<InputOrderMapping> Mappings { get; set; } = new();
 
         /// <summary>
@@ -522,9 +437,6 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         public GroupMoveTargetLayoutSettings GroupMoveTargetLayout { get; set; } = new();
         
-        /// <summary>
-        /// User override settings.
-        /// </summary>
         public UserOverrideSettings UserOverrides { get; set; } = new();
 
         /// <summary>

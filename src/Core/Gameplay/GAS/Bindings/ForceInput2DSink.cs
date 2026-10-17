@@ -7,7 +7,6 @@ using Ludots.Core.Physics;
 namespace Ludots.Core.Gameplay.GAS.Bindings
 {
     /// <summary>
-    /// GAS → Physics2D 力输入绑定。
     /// 属性值 (float) → Fix64Vec2 转换在此边界层完成。
     /// </summary>
     public sealed class ForceInput2DSink : IAttributeSink
@@ -67,7 +66,6 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
                 for (int i = 0; i < Count; i++)
                 {
                     var b = Entries[Start + i];
-                    // 属性值从 float 转换为 Fix64（GAS → Physics 边界）
                     Fix64 value = Fix64.FromFloat(attr.GetCurrent(b.AttributeId) * b.Scale);
                     switch (b.Channel)
                     {

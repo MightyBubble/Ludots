@@ -51,7 +51,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     }
 
     /// <summary>
-    /// #621: Bounded effect-chain timeline. Fail-closed overflow reports Dropped events (no silent loss).
+    /// Bounded effect-chain timeline. Fail-closed overflow reports Dropped events (no silent loss).
     /// </summary>
     public sealed class LiveEffectChainTracer
     {

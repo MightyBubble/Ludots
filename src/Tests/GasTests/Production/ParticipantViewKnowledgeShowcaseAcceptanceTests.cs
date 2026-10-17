@@ -125,7 +125,7 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
 
         // This GasTests harness installs ViewController but does not arm CameraCullingSystem
         // present-binding, so CullState stays default-hidden and PresenterCullState is never
-        // camera-synced. Under #999 OwnerCullVisible SSOT, frustum-hidden static retained
+        // camera-synced. Under OwnerCullVisible SSOT, frustum-hidden static retained
         // entries are Removed (they must not leak Visible draws via StableDrawCache).
         // Reveal authored world owners, sync PresenterCullState, then tick emit.
         PresenterEntityRuntime presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)

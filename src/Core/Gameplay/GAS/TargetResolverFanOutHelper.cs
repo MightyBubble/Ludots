@@ -97,8 +97,6 @@ namespace Ludots.Core.Gameplay.GAS
         public const string MissingTeamRelationsError = "GAS.FAN_OUT.ERR.MissingTeamRelations";
         public const string RootBudgetExceededError = "GAS.FAN_OUT.ERR.RootBudgetExceeded";
 
-        // ── OnResolve Phase: spatial query, returns raw candidates ──
-
         /// <summary>
         /// Execute the OnResolve phase: spatial query based on query descriptor.
         /// Returns the number of candidates written to <paramref name="buffer"/>.
@@ -184,8 +182,6 @@ namespace Ludots.Core.Gameplay.GAS
             return result.Count;
         }
 
-        // ── OnHit Phase: built-in filters applied per candidate ──
-
         /// <summary>
         /// Execute the OnHit phase: validate candidates with built-in filters.
         /// Returns the number of validated targets that produced FanOutCommands.
@@ -264,7 +260,6 @@ namespace Ludots.Core.Gameplay.GAS
 
                 if (filter.ExcludeSource && entity.Equals(ctx.Source)) continue;
 
-                // Ring: inner radius exclusion
                 if (spatial.Shape == SpatialShape.Ring && spatial.InnerRadiusCm > 0 && hasCenter && world.Has<WorldPositionCm>(entity))
                 {
                     var ePos = world.Get<WorldPositionCm>(entity).Value.ToWorldCmInt2();
@@ -275,14 +270,12 @@ namespace Ludots.Core.Gameplay.GAS
                     if (dist2 < inner2) continue;
                 }
 
-                // Layer filter
                 if (filter.LayerMask != 0 && world.Has<EntityLayer>(entity))
                 {
                     uint entityCategory = world.Get<EntityLayer>(entity).Value.Category;
                     if ((entityCategory & filter.LayerMask) == 0) continue;
                 }
 
-                // Relationship filter
                 if (!filter.RelationFilter.IsAll)
                 {
                     if (sourceTeamId == 0 || !world.Has<Team>(entity))
@@ -300,7 +293,6 @@ namespace Ludots.Core.Gameplay.GAS
                         $"{CommandCapacityExceededError}: capacity={commands.Capacity}, rootId={ctx.RootId}.");
                 }
 
-                // Budget check
                 if (!budget.TryConsume(ctx.RootId, GasConstants.MAX_CREATES_PER_ROOT))
                 {
                     throw new InvalidOperationException(
@@ -323,8 +315,6 @@ namespace Ludots.Core.Gameplay.GAS
             return added;
         }
 
-        // ── One-shot convenience method (calls both phases sequentially) ──
-
         /// <summary>
         /// Collect fan-out targets from a spatial query using the three-layer descriptors.
         /// Combines OnResolve + OnHit in a single call.
@@ -346,9 +336,6 @@ namespace Ludots.Core.Gameplay.GAS
             ValidateAndCollect(world, in ctx, in query, in filter, in dispatch, buffer, candidateCount, budget, commands, teamRelations);
         }
 
-        /// <summary>
-        /// Publish all collected fan-out commands as EffectRequests.
-        /// </summary>
         public static void PublishFanOutCommands(FanOutCommandBuffer commands, EffectRequestQueue queue)
         {
             if (queue == null || commands.Count == 0) return;
@@ -421,8 +408,6 @@ namespace Ludots.Core.Gameplay.GAS
                 _ => cmd.OriginalSource
             };
         }
-
-        // ── Shared helpers ──
 
         private static int ComputeDirection(World world, in EffectContext ctx)
         {

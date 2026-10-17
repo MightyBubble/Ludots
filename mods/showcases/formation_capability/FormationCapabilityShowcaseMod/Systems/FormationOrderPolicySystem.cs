@@ -14,7 +14,7 @@ using FormationCapabilityShowcaseMod.Runtime;
 namespace FormationCapabilityShowcaseMod.Systems;
 
 /// <summary>
-/// Formation order policy (migration slice 2): the local order mapping installs through the
+/// Formation order policy: the local order mapping installs through the
 /// CoreInputMod auto assembly; this policy system waits for that install and attaches the
 /// control-domain move-order gate (helper BeforeOrderSubmit) plus the formation command actor
 /// expander.

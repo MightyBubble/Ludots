@@ -15,7 +15,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1115 DispatchMapEvent: compile-time schema gating (event resolves, scope agrees,
+    /// DispatchMapEvent: compile-time schema gating (event resolves, scope agrees,
     /// payload ports align with EventParamType, String ports rejected), runtime assembly
     /// of the ScriptContext from the StoreArg* staging, map-scoped delivery through
     /// TriggerManager, and fail-closed fires (missing required param, staged type
@@ -55,8 +55,6 @@ namespace Ludots.Tests.Gas.Graph
             return registry;
         }
 
-        // ── Compile: schema gating ──
-
         [Test]
         public void Compile_ValidEvent_WiresPayloadPortsToStoreArgOps()
         {
@@ -79,7 +77,6 @@ namespace Ludots.Tests.Gas.Graph
         public void Compile_PortTypeMismatch_FailsClosed()
         {
             var doc = DispatchDocument(nodes => nodes, edges => edges);
-            // amount_const is a ConstFloat node; the schema declares 'amount' as Int.
             doc.Nodes.First(n => n.Id == "amount_const").Op = "ConstFloat";
 
             GraphControlFlowCompileResult result = GraphControlFlowCompiler.Compile(doc, BuildRegistry());
@@ -159,8 +156,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(result.Diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("scope")), Is.True,
                 "self dispatch requires an Entity-scope schema; the probe event declares Map scope");
         }
-
-        // ── Runtime: fire through TriggerManager ──
 
         [Test]
         public void DispatchMapEvent_StagedPayload_ReachesMapScopedListener()
@@ -372,8 +367,6 @@ namespace Ludots.Tests.Gas.Graph
             var ex = Assert.Throws<InvalidOperationException>(() => ExecuteGraph(programs, graphId, world, caster, api, mapScope: null));
             Assert.That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.DispatchMapEventNoMapScope"));
         }
-
-        // ── Helpers ──
 
         private static GraphControlFlowDocument DispatchDocument(
             Func<List<GraphControlFlowNode>, List<GraphControlFlowNode>> nodes,

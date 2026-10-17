@@ -64,7 +64,7 @@ namespace Ludots.Core.UI.PanelProjection
             Prefix = prefix;
         }
 
-        /// <summary>Only <c>totalCount</c> is supported this slice.</summary>
+        /// <summary>Only <c>totalCount</c> is supported.</summary>
         public string From { get; }
 
         /// <summary>Author-owned prefix; empty string allowed but field required.</summary>

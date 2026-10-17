@@ -1,7 +1,7 @@
 namespace Ludots.Core.Gameplay.Components
 {
     /// <summary>
-    /// Team id for this entity. Once a MemberOf edge reaches a team representative, the id is projected from that representative.
+    /// Once a MemberOf edge reaches a team representative, the id is projected from that representative.
     /// </summary>
     public struct Team
     {
@@ -9,7 +9,7 @@ namespace Ludots.Core.Gameplay.Components
     }
 
     /// <summary>
-    /// Player id for this entity. Once the Owns chain reaches a player representative, the id is projected from that representative.
+    /// Once the Owns chain reaches a player representative, the id is projected from that representative.
     /// </summary>
     public struct PlayerOwner
     {

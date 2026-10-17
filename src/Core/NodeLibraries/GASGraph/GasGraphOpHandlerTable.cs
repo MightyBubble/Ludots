@@ -1745,13 +1745,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleResolveTableRow(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key)
             s.I[ins.Dst] = s.Api.ResolveTableRow(ins.Imm, s.I[ins.A]);
         }
 
         private static void HandleTableReadInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle)
             s.I[ins.Dst] = s.Api.TableReadInt(ins.Imm, s.I[ins.A]);
         }
 
@@ -1931,7 +1929,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleReadMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // I[Dst] = map variable (Imm=varName keyId); map resolved from E[A] (0xFF → caster).
             Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.I[ins.Dst] = s.Api.ReadMapVarInt(
                 ins.Imm,
@@ -1948,7 +1945,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleWriteMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // store.Write(Imm=varName keyId, I[A]); map resolved from E[B] (0xFF → caster).
             Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
             s.Api.WriteMapVarInt(
                 ins.Imm,
@@ -1986,7 +1982,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle)
             s.F[ins.Dst] = s.Api.TableReadFloat(ins.Imm, s.I[ins.A]);
         }
 
@@ -2289,7 +2284,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleTargetListGet(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // E[Dst] = TargetList[I[A]]; B[Flags] = valid (0/1)
             int idx = s.I[ins.A];
             if (idx >= 0 && idx < s.TargetList.Count)
             {
@@ -2307,7 +2301,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleFanOutApplyEffect(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // Apply Effect(Imm=templateId) to ALL entities in TargetList
             var span = s.TargetList.Span;
             byte floatCount = ins.Flags;
             for (int i = 0; i < span.Length; i++)
@@ -2839,7 +2832,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleHasTag(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
             var entity = s.E[ins.A];
             s.B[ins.Dst] = (byte)(s.Api.HasTag(entity, ins.Imm) ? 1 : 0);
         }
@@ -3029,7 +3021,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleClampFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // F[dst] = clamp(F[A], min=F[B], max=F[C])
             float val = s.F[ins.A];
             float min = s.F[ins.B];
             float max = s.F[ins.C];
@@ -3052,7 +3043,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleReadBlackboardFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // F[dst] = E[A].BB_Float[Imm]
             var entity = s.E[ins.A];
             if (!s.Api.TryReadBlackboardFloat(entity, ins.Imm, out float value))
                 throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardFloat), entity, ins.Imm);
@@ -3065,7 +3055,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleReadBlackboardInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // I[dst] = E[A].BB_Int[Imm]
             var entity = s.E[ins.A];
             if (!s.Api.TryReadBlackboardInt(entity, ins.Imm, out int value))
                 throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardInt), entity, ins.Imm);
@@ -3075,7 +3064,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleReadBlackboardEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // E[dst] = E[A].BB_Entity[Imm]
             var entity = s.E[ins.A];
             if (!s.Api.TryReadBlackboardEntity(entity, ins.Imm, out Entity value))
                 throw MissingBlackboardRead(nameof(GraphNodeOp.ReadBlackboardEntity), entity, ins.Imm);
@@ -3085,7 +3073,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleWriteBlackboardFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // E[A].BB_Float[Imm] = F[B]   (immediate write)
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardFloat(entity, ins.Imm, s.F[ins.B]);
             s.DebugTrace?.RecordBlackboardFloat(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, s.F[ins.B], pc, s.TreeSteps);
@@ -3093,7 +3080,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleWriteBlackboardInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // E[A].BB_Int[Imm] = I[B]
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardInt(entity, ins.Imm, s.I[ins.B]);
             s.DebugTrace?.RecordBlackboardInt(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, s.I[ins.B], pc, s.TreeSteps);
@@ -3101,7 +3087,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleWriteBlackboardEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // E[A].BB_Entity[Imm] = E[B]
             var entity = s.E[ins.A];
             s.Api.WriteBlackboardEntity(entity, ins.Imm, s.E[ins.B]);
             s.DebugTrace?.RecordBlackboardEntity(s.CurrentGraphId, s.CurrentInstructionPc, ins.Imm, s.E[ins.B], pc, s.TreeSteps);
@@ -3161,7 +3146,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleApplyEffectDynamic(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // source=Caster, target=E[A], templateId=I[B]
             var target = s.E[ins.A];
             int templateId = s.I[ins.B];
             if (s.World.IsAlive(target) && templateId > 0)
@@ -3172,7 +3156,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleFanOutApplyEffectDynamic(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // source=Caster, TargetList ALL, templateId=I[A]
             int templateId = s.I[ins.A];
             if (templateId <= 0) return;
             var span = s.TargetList.Span;

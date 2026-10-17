@@ -209,15 +209,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// Resolves a patched PresentationTextCatalog token id to default-locale template characters.
-        /// Zero-arg tokens only; argCount&gt;0 fails closed until FormatTextKey lands.
+        /// Zero-arg tokens only; argCount&gt;0 fails closed.
         /// </summary>
         ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
         {
             throw new InvalidOperationException(
                 "GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
         }
-
-        // ── Map-scoped variables ──
 
         int ReadMapVarInt(int varKeyId, MapId mapId)
         {
@@ -436,7 +434,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        // ── Hex spatial queries ──
         SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer);
         SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer);
         SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer);
@@ -588,7 +585,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             return 0;
         }
-        /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
+        /// Behavior-side order submission: the acting unit enqueues an assigned
         /// order. Separate contract from the input-side command-intent buffer.
         void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
         {
@@ -609,8 +606,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
         void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
-
-        // ── TriggerManager bridge (map-scoped event firing) ──
 
         /// <summary>
         /// Fires a TriggerManager event resolved from a config-key id. Resolves the
@@ -775,7 +770,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
         }
 
-        // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
         {
             throw new InvalidOperationException("Graph lifecycle transaction runtime is not available.");

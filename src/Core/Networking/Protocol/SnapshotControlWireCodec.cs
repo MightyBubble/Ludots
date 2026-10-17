@@ -2,9 +2,6 @@ using System;
 
 namespace Ludots.Core.Networking.Protocol
 {
-    /// <summary>
-    /// Snapshot acknowledgement and explicit ResyncRequired message codecs.
-    /// </summary>
     public static class SnapshotControlWireCodec
     {
         public static NetworkWireCodecStatus TryEncodeAcknowledgement(

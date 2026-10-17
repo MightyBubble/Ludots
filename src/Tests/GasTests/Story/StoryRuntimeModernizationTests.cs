@@ -23,10 +23,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Story
 {
-    /// <summary>
-    /// Cucumber-style Story Runtime modernization coverage for fail-closed migration paths
-    /// and focused Sequencer section/signal behavior.
-    /// </summary>
     [TestFixture]
     public sealed class StoryRuntimeModernizationTests
     {

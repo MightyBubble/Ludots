@@ -217,7 +217,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public string ActionId => _entry.ActionId;
 
         /// <summary>
-        /// Which dispatch table this entry's subscription routes to (#1123): derived from
+        /// Which dispatch table this entry's subscription routes to: derived from
         /// the event schema scope at mount time — Global goes to the TriggerManager global
         /// table, everything else stays map-scoped.
         /// </summary>

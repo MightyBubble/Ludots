@@ -91,9 +91,6 @@ namespace Ludots.Core.Mathematics.FixedPoint
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public double ToDouble() => RawValue / (double)One;
 
-        /// <summary>
-        /// 四舍五入到最近整数
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int RoundToInt()
         {
@@ -101,15 +98,9 @@ namespace Ludots.Core.Mathematics.FixedPoint
             return (int)(rounded >> FractionalBits);
         }
 
-        /// <summary>
-        /// 向下取整
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int FloorToInt() => (int)(RawValue >> FractionalBits);
 
-        /// <summary>
-        /// 向上取整
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CeilToInt()
         {
@@ -131,18 +122,12 @@ namespace Ludots.Core.Mathematics.FixedPoint
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 operator -(Fix64 a) => new Fix64(-a.RawValue);
 
-        /// <summary>
-        /// 乘法 - 委托给 Fixed64 高精度实现
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 operator *(Fix64 a, Fix64 b)
         {
             return new Fix64(Fixed64.Mul(a.RawValue, b.RawValue));
         }
 
-        /// <summary>
-        /// 除法 - 委托给 Fixed64 高精度实现
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 operator /(Fix64 a, Fix64 b)
         {
@@ -244,27 +229,18 @@ namespace Ludots.Core.Mathematics.FixedPoint
             return 0;
         }
 
-        /// <summary>
-        /// 线性插值
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 Lerp(Fix64 a, Fix64 b, Fix64 t)
         {
             return a + (b - a) * t;
         }
 
-        /// <summary>
-        /// 向下取整
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 Floor(Fix64 value)
         {
             return new Fix64(value.RawValue & ~(One - 1));
         }
 
-        /// <summary>
-        /// 向上取整
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 Ceiling(Fix64 value)
         {
@@ -273,9 +249,6 @@ namespace Ludots.Core.Mathematics.FixedPoint
             return new Fix64((value.RawValue & ~mask) + One);
         }
 
-        /// <summary>
-        /// 四舍五入
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 Round(Fix64 value)
         {

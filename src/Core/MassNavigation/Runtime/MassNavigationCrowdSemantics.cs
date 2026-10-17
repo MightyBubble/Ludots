@@ -289,7 +289,7 @@ public sealed class MassNavigationSolverSemantics
     public int CoincidentPairHashPrimeA { get; set; }
     public int CoincidentPairHashPrimeB { get; set; }
 
-    /// <summary>每 agent 每 hard-resolve pass 最多执行的分离次数；0 = 不设上限。</summary>
+    /// <summary>0 = 不设上限。</summary>
     public int HardResolveMaxSeparatesPerAgentPass { get; set; }
 
     public void CopyFrom(MassNavigationSolverSemantics source)

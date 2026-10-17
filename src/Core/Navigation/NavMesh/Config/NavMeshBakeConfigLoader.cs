@@ -185,7 +185,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         }
 
         /// <summary>
-        /// One map carries one nav tile grid (#1346): runtime tile addressing and
+        /// One map carries one nav tile grid: runtime tile addressing and
         /// artifact paths share a single (width, height) granularity per map, so
         /// boards declaring different sizes would be silently misaddressed by the
         /// max-size grid.

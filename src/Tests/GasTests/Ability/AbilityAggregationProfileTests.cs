@@ -14,10 +14,9 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 PNL-1/2/3 (DEC-10) — AbilityAggregationProfileRegistry against the §6.1 M6 catalog
-    /// cases: two marines + one elite marine + two tanks, a shared stim ability in one cast family,
-    /// and two charge-cannon templates sharing another. All family/ability names are test data,
-    /// never Core concepts.
+    /// AbilityAggregationProfileRegistry against the §6.1 M6 catalog cases: two marines + one elite
+    /// marine + two tanks, a shared stim ability in one cast family, and two charge-cannon templates
+    /// sharing another. All family/ability names are test data, never Core concepts.
     /// </summary>
     [TestFixture]
     [NonParallelizable]

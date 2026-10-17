@@ -12,7 +12,7 @@ using Ludots.Platform.Abstractions;
 namespace GasTests
 {
     /// <summary>
-    /// Headless Stopwatch evidence for the SpatialPartitionUpdateSystem movement gate (#1506):
+    /// Headless Stopwatch evidence for the SpatialPartitionUpdateSystem movement gate:
     /// prints per-tick medians for 10K tracked entities in a fully static phase and an
     /// all-movers phase; asserts the static phase performs zero partition ops and zero allocations.
     /// </summary>

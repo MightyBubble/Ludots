@@ -22,7 +22,7 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.Tests.Presentation
 {
     /// <summary>
-    /// #1153：IBoneTransformProvider 的 raylib 实现契约——CPU 侧骨骼世界变换求值 + Attachment(Bone) 挂点打通。
+    /// IBoneTransformProvider 的 raylib 实现契约——CPU 侧骨骼世界变换求值 + Attachment(Bone) 挂点打通。
     /// 纯矩阵合成走无 native 单测；Knight.glb 走 LoadModelAnimations 直载（纯 CPU，无 GL 上下文）。
     /// </summary>
     [TestFixture]

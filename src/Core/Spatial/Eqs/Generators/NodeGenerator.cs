@@ -26,7 +26,6 @@ namespace Ludots.Core.Spatial.Eqs.Generators
 
         public int Generate(WorldCmInt2 origin, Span<EqsItem> buffer)
         {
-            // Borrow the item buffer's positions via a temporary span of positions.
             Span<WorldCmInt2> positions = buffer.Length <= 256
                 ? stackalloc WorldCmInt2[buffer.Length]
                 : new WorldCmInt2[buffer.Length];

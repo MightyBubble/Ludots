@@ -12,9 +12,6 @@ namespace Ludots.Core.Input.Config
         Axis3D
     }
 
-    /// <summary>
-    /// Definition of an Input Action (e.g., "Move", "Jump").
-    /// </summary>
     public class InputActionDef
     {
         public const string FiresOnPress = "press";
@@ -34,27 +31,18 @@ namespace Ludots.Core.Input.Config
         public string FiresOn { get; set; } = FiresOnPress;
     }
 
-    /// <summary>
-    /// Definition of a parameter for processors or interactions.
-    /// </summary>
     public class InputParameterDef
     {
         public string Name { get; set; }
         public float Value { get; set; }
     }
 
-    /// <summary>
-    /// Definition of a modifier (Processor or Interaction).
-    /// </summary>
     public class InputModifierDef
     {
         public string Type { get; set; } // e.g. "Deadzone", "Invert"
         public List<InputParameterDef> Parameters { get; set; } = new List<InputParameterDef>();
     }
 
-    /// <summary>
-    /// Definition of a binding between a physical path and an action.
-    /// </summary>
     public class InputBindingDef
     {
         public string ActionId { get; set; }
@@ -80,9 +68,6 @@ namespace Ludots.Core.Input.Config
         public List<InputBindingDef> Bindings { get; set; } = new List<InputBindingDef>();
     }
 
-    /// <summary>
-    /// Root configuration file structure.
-    /// </summary>
     public class InputConfigRoot
     {
         public List<InputActionDef> Actions { get; set; } = new List<InputActionDef>();

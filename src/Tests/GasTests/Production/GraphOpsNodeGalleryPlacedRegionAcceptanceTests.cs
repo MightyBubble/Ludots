@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// #1108 TriggerGraph-only LoadPlacedRegion / LoadPlacedAnchor per-op galleries.
+/// TriggerGraph-only LoadPlacedRegion / LoadPlacedAnchor per-op galleries.
 /// Region: direct ExecuteSlice reports authored yard=1 and intentional ghost=0.
 /// Anchor: reuses the placed-entity roll-call driver against InstanceId containing "anchor".
 /// </summary>

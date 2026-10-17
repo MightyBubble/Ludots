@@ -29,9 +29,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>Graph program ID when Formula == GraphProgram.</summary>
         public int GraphProgramId;
 
-        /// <summary>
-        /// Compute the tag count contribution for a given stack count.
-        /// </summary>
         public int Compute(int stackCount)
         {
             return Formula switch

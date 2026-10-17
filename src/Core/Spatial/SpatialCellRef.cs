@@ -1,8 +1,5 @@
 namespace Ludots.Core.Spatial
 {
-    /// <summary>
-    /// Formal spatial-partition membership lifecycle for an entity.
-    /// </summary>
     public enum SpatialMembershipState : byte
     {
         Uninitialized = 0,

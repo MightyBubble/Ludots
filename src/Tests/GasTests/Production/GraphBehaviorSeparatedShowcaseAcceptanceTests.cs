@@ -35,12 +35,6 @@ namespace Ludots.Tests.Gas.Production
 
 
 
-        /// <summary>Judge: L2 tree topology + leaf Scripts — not a whole-tree Script sugar shell.</summary>
-
-
-        /// <summary>Regression: L2 tree + leaf Scripts keep patrol → chase → attack intents.</summary>
-
-
         [Test]
         public void BehaviorTreeArena_PlayableControls_ChangeRuntimeState()
         {

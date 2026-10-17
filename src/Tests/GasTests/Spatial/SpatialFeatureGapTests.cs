@@ -10,17 +10,9 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Spatial and Map feature gap tests — covers Rectangle, Line, HexRange, HexRing queries,
-    /// VertexMap all-layer read/write, and coordinate conversion.
-    /// </summary>
     [TestFixture]
     public class SpatialFeatureGapTests
     {
-        // ════════════════════════════════════════════════════════════════════
-        //  1. SpatialQueryService — Rectangle query
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void QueryRectangle_FindsEntitiesInRectangularArea()
         {
@@ -36,7 +28,6 @@ namespace Ludots.Tests.GAS
                     return pos.Value.ToWorldCmInt2();
                 });
 
-                // Place entities at different positions
                 var e1 = world.Create(WorldPositionCm.FromCm(150, 100)); // inside
                 var e2 = world.Create(WorldPositionCm.FromCm(250, 100)); // inside
                 var e3 = world.Create(WorldPositionCm.FromCm(1500, 1500)); // outside
@@ -57,10 +48,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  2. SpatialQueryService — Line query
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void QueryLine_FindsEntitiesAlongLine()
         {
@@ -76,7 +63,6 @@ namespace Ludots.Tests.GAS
                     return pos.Value.ToWorldCmInt2();
                 });
 
-                // Place entities along X axis
                 var e1 = world.Create(WorldPositionCm.FromCm(150, 50));
                 var e2 = world.Create(WorldPositionCm.FromCm(350, 50));
                 var e3 = world.Create(WorldPositionCm.FromCm(50, 600)); // far from line
@@ -97,10 +83,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  3. SpatialQueryService — HexRange query
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void QueryHexRange_FindsEntitiesWithinHexRadius()
         {
@@ -112,7 +94,6 @@ namespace Ludots.Tests.GAS
                 var spatial = new SpatialQueryService(new GridSpatialPartitionBackend(grid, coords));
                 spatial.SetCoordinateConverter(coords);
 
-                // Place entity at hex origin
                 var eNear = world.Create();
                 var eFar = world.Create();
 
@@ -127,7 +108,6 @@ namespace Ludots.Tests.GAS
                 Span<Entity> buffer = stackalloc Entity[256];
                 var r = spatial.QueryHexRange(new HexCoordinates(0, 0), hexRadius: 2, buffer);
 
-                // At minimum the near entity should be found
                 That(r.Count, Is.GreaterThanOrEqualTo(1), "HexRange should find nearby entity");
             }
             finally
@@ -135,10 +115,6 @@ namespace Ludots.Tests.GAS
                 world.Dispose();
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  4. SpatialQueryService — HexRing query
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void QueryHexRing_FindsEntitiesOnRingOnly()
@@ -151,7 +127,7 @@ namespace Ludots.Tests.GAS
                 var spatial = new SpatialQueryService(new GridSpatialPartitionBackend(grid, coords));
                 spatial.SetCoordinateConverter(coords);
 
-                // Place entity on ring (hex distance = 2 from center)
+                // hex distance = 2 from center
                 var hexOnRing = new HexCoordinates(2, 0);
                 var worldPos = coords.HexToWorld(hexOnRing);
                 var eOnRing = world.Create();
@@ -161,7 +137,6 @@ namespace Ludots.Tests.GAS
                 Span<Entity> buffer = stackalloc Entity[256];
                 var r = spatial.QueryHexRing(new HexCoordinates(0, 0), hexRadius: 2, buffer);
 
-                // Ring query at radius 2 should find the entity
                 That(r.Count, Is.GreaterThanOrEqualTo(1), "HexRing should find entity on ring");
             }
             finally
@@ -169,10 +144,6 @@ namespace Ludots.Tests.GAS
                 world.Dispose();
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  5. SpatialQueryService — AABB query (basic)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void QueryAabb_EmptyWorld_ReturnsZero()
@@ -195,10 +166,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  6. VertexMap — All layers read/write
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void VertexMap_AllLayers_ReadWriteRoundTrip()
         {
@@ -207,7 +174,6 @@ namespace Ludots.Tests.GAS
 
             int q = 5, r = 3;
 
-            // Write all layers
             map.SetHeight(q, r, 12);
             map.SetBiome(q, r, 3);
             map.SetWaterHeight(q, r, 5);
@@ -216,7 +182,6 @@ namespace Ludots.Tests.GAS
             map.SetRamp(q, r, true);
             map.SetFaction(q, r, 2);
 
-            // Read all layers
             That(map.GetHeight(q, r), Is.EqualTo(12), "Height should round-trip");
             That(map.GetBiome(q, r), Is.EqualTo(3), "Biome should round-trip");
             That(map.GetWaterHeight(q, r), Is.EqualTo(5), "WaterHeight should round-trip");
@@ -232,7 +197,6 @@ namespace Ludots.Tests.GAS
             var map = new VertexMap();
             map.Initialize(widthInChunks: 2, heightInChunks: 2);
 
-            // Write different values at different hex positions
             map.SetHeight(0, 0, 1);
             map.SetHeight(1, 0, 5);
             map.SetHeight(0, 1, 10);
@@ -245,7 +209,6 @@ namespace Ludots.Tests.GAS
             map.SetFaction(1, 0, 2);
             map.SetFaction(0, 1, 3);
 
-            // Verify independence
             That(map.GetHeight(0, 0), Is.EqualTo(1));
             That(map.GetHeight(1, 0), Is.EqualTo(5));
             That(map.GetHeight(0, 1), Is.EqualTo(10));
@@ -263,33 +226,25 @@ namespace Ludots.Tests.GAS
             var map = new VertexMap();
             map.Initialize(widthInChunks: 1, heightInChunks: 1);
 
-            // Default: not blocked, not ramp
             That(map.IsBlocked(0, 0), Is.False, "Default should be unblocked");
             That(map.IsRamp(0, 0), Is.False, "Default should not be ramp");
 
-            // Set
             map.SetBlocked(0, 0, true);
             map.SetRamp(0, 0, true);
             That(map.IsBlocked(0, 0), Is.True);
             That(map.IsRamp(0, 0), Is.True);
 
-            // Unset
             map.SetBlocked(0, 0, false);
             map.SetRamp(0, 0, false);
             That(map.IsBlocked(0, 0), Is.False);
             That(map.IsRamp(0, 0), Is.False);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  7. Coordinate conversion — Grid ↔ World ↔ Hex
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void CoordinateConverter_GridToWorld_Roundtrips()
         {
             var coords = new SpatialCoordinateConverter(gridCellSizeCm: 100);
 
-            // Grid (5, 3) -> World -> Grid
             var gridPos = new IntVector2(5, 3);
             var worldPos = coords.GridToWorld(gridPos);
             var backGrid = coords.WorldToGrid(worldPos);
@@ -309,10 +264,6 @@ namespace Ludots.Tests.GAS
 
             That(backHex, Is.EqualTo(hex), "Hex coordinates should round-trip through world");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  8. HexMetrics — Distance calculation
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void HexCoordinates_Distance_Correct()

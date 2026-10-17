@@ -615,7 +615,6 @@ public sealed class NetworkWireCodecTests
             CommandBatchWireCodec.TryEncode(in header, invalidEnumEntries, commandBuffer, out _),
             Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
 
-        // Valid encode then truncate mid-entry ->MalformedLength.
         Assert.That(
             CommandBatchWireCodec.TryEncode(
                 new NetworkCommandBatchHeader(1, 1, 1, 1, 1, OrderSubmitMode.Immediate),

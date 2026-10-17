@@ -7,11 +7,6 @@ using Ludots.Core.Navigation.NavMesh.Config;
 
 namespace Ludots.Tests.Architecture
 {
-    /// <summary>
-    /// Shared temp navmesh.json fixture wiring (VFS mount → config catalog → loader) so bake
-    /// contract tests stop hand-rolling their own loader bootstrap — one fixture, per the
-    /// anti-wheel-reinvention clause.
-    /// </summary>
     internal static class NavBakeConfigLoaderTestHelpers
     {
         public static AgentProfileRegistry DefaultProfiles() => new(new[]

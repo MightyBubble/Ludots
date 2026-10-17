@@ -86,7 +86,6 @@ namespace Ludots.Tests.GAS
             That(q.Count, Is.EqualTo(1));
             var req = q[0];
             That(req.TemplateId, Is.EqualTo(123));
-            // Legacy EffectArgs floats are now bridged to CallerParams
             That(req.HasCallerParams, Is.True);
             req.CallerParams.TryGetFloat(Ludots.Core.Gameplay.GAS.EffectParamKeys.ForceXAttribute, out float f0);
             req.CallerParams.TryGetFloat(Ludots.Core.Gameplay.GAS.EffectParamKeys.ForceYAttribute, out float f1);

@@ -85,7 +85,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
         }
 
-        /// <summary>#1570：引擎装配期注入（tagOps 在 runtime 之后构造）；metric 写穿前必须已装。</summary>
+        /// <summary>引擎装配期注入（tagOps 在 runtime 之后构造）；metric 写穿前必须已装。</summary>
         public void InstallTagOps(Ludots.Core.Gameplay.GAS.TagOps tagOps)
         {
             _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
@@ -355,7 +355,7 @@ namespace Ludots.Core.Gameplay.Relationships
             BumpMaterializedRelationshipRevision(relationshipEntity);
             uint oldFlags = edge.Flags;
 
-            // #1570 单轨化第一步：真相写穿边实体的 AttributeBuffer（AttributeMutationOps 带
+            // 真相写穿边实体的 AttributeBuffer（AttributeMutationOps 带
             // 钳制/差分位/聚合/deferred trigger 全链）；RelationshipEdge 的 SoA 值降级为
             // 写后同步缓存，供热查询路径与既有图 op 读取。变更记录与事件面保持不变。
             if (_metrics.TryGetAttributeId(metricId, out int attributeId))
@@ -622,7 +622,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         /// <summary>
         /// Collects live incoming sources straight from the reverse index. No per-source edge re-verification:
-        /// <see cref="EnsureLink"/>/<see cref="RemoveLink"/> are the only edge mutation paths (M9 guardrail)
+        /// <see cref="EnsureLink"/>/<see cref="RemoveLink"/> are the only edge mutation paths
         /// and both notify the index, while entity death is covered by the index's lazy IsAlive reclamation.
         /// </summary>
         public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)
@@ -868,7 +868,7 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
 
-        /// <summary>#1570：SoA 默认值在首建边时播种进边实体 AttributeBuffer（base 侧，raw 写
+        /// <summary>SoA 默认值在首建边时播种进边实体 AttributeBuffer（base 侧，raw 写
         /// 不触发 GAS 管线——出生播种不是变更）；早退路径防御性同步，消除真相/缓存漂移面。</summary>
         private void SeedMetricDefaults(Entity relationshipEntity)
         {

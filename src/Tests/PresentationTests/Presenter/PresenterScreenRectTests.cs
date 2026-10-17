@@ -20,11 +20,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
 {
-    /// <summary>
-    /// ScreenRect presenter behavior: config loading (fail-fast on unknown fields, missing
-    /// corner param keys, kind-scoped fields) and the per-frame emit lane resolving the two
-    /// param-driven corners into ScreenOverlayBuffer rect items.
-    /// </summary>
     [TestFixture]
     public sealed class PresenterScreenRectTests
     {
@@ -175,7 +170,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(item.BackgroundColor, Is.EqualTo(new Vector4(0.3f, 0.6f, 1.0f, 0.2f)));
             Assert.That(item.Color, Is.EqualTo(new Vector4(0.3f, 0.6f, 1.0f, 1.0f)));
 
-            // 数据侧改角点 → 下一帧矩形跟随（presenter 只渲染）。
             ref PresenterFloatParams floats = ref world.Get<PresenterFloatParams>(presenter);
             floats.Set(KeyId("rect.pointerX"), 360f);
             floats.Set(KeyId("rect.pointerY"), 240f);

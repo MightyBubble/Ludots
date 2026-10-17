@@ -33,7 +33,6 @@ namespace GasTests
         [Test]
         public void ConflictReport_PrintSummary_NoConflicts()
         {
-            // No conflicts — PrintSummary should not throw, and report should be empty
             Assert.DoesNotThrow(() => _report.PrintSummary());
             Assert.That(_report.Count, Is.EqualTo(0));
         }
@@ -63,7 +62,6 @@ namespace GasTests
             fr.Register("myFunc", ctx => null, "ModA");
             fr.Register("myFunc", ctx => 42, "ModB");
 
-            // In DEBUG, conflict should be recorded
 #if DEBUG
             Assert.That(_report.Count, Is.EqualTo(1));
             Assert.That(_report.Conflicts[0].ExistingModId, Is.EqualTo("ModA"));

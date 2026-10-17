@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1106 named entry payload reads: compile-side key validation against
+    /// Named entry payload reads: compile-side key validation against
     /// MapTriggerEventPayloadKeys, the zero-allocation capture table, the entry filters
     /// evaluator's tag (TagId) and exact-instance matching, and fail-closed reads of keys
     /// the entry event did not carry.

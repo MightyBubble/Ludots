@@ -28,9 +28,6 @@ namespace Ludots.Core.Engine
             return tcs.Task;
         }
 
-        /// <summary>
-        /// Waits until the next frame update.
-        /// </summary>
         public static Task NextFrame()
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -53,7 +50,6 @@ namespace Ludots.Core.Engine
         /// </summary>
         internal static void Update(float dt)
         {
-            // 1. Update Timers
             for (int i = ActiveTimers.Count - 1; i >= 0; i--)
             {
                 var timer = ActiveTimers[i];
@@ -66,7 +62,6 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            // 2. Process Frame Waiters (All current waiters complete this frame)
             if (ActiveFrameWaiters.Count > 0)
             {
                 // Snapshot the list to allow new waiters to be added during execution of current ones
@@ -81,7 +76,6 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            // 3. Process Condition Waiters
             for (int i = ActiveConditionWaiters.Count - 1; i >= 0; i--)
             {
                 var waiter = ActiveConditionWaiters[i];

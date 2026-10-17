@@ -9,7 +9,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         /// <summary>Effect classification names (at most one). Not gameplay tags.</summary>
         public List<string>? Categories { get; set; }
 
-        // ── Top-level structural fields ──
         public string? PresetType { get; set; }
 
         /// <summary>Lifetime kind: "Instant" | "After" | "Infinite".</summary>
@@ -26,21 +25,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
         /// </summary>
         public ExpireConditionConfig? ExpireCondition { get; set; }
 
-        // ── Component blocks (new architecture) ──
-
-        /// <summary>Duration component: durationTicks, periodTicks, clockId.</summary>
         public DurationConfig? Duration { get; set; }
-        /// <summary>Attribute modifier list.</summary>
         public List<ModifierConfig>? Modifiers { get; set; }
-        /// <summary>Target query strategy.</summary>
         public TargetQueryConfig? TargetQuery { get; set; }
-        /// <summary>Target filter conditions.</summary>
         public TargetFilterConfig? TargetFilter { get; set; }
-        /// <summary>Target dispatch configuration.</summary>
         public TargetDispatchConfig? TargetDispatch { get; set; }
-        /// <summary>Projectile parameters.</summary>
         public ProjectileConfig? Projectile { get; set; }
-        /// <summary>Unit creation parameters.</summary>
         public UnitCreationConfig? UnitCreation { get; set; }
         /// <summary>Displacement parameters (dash / knockback / pull).</summary>
         public DisplacementConfig? Displacement { get; set; }
@@ -52,8 +42,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public SubmitOrderFromBlackboardConfig? SubmitOrderFromBlackboard { get; set; }
         /// <summary>Entity-scoped progression completion parameters.</summary>
         public ProgressionCompletionConfig? Progression { get; set; }
-
-        // ── Capability blocks ──
 
         /// <summary>Per-phase graph bindings. Main overrides preset-provided authoring sugar.</summary>
         public Dictionary<string, PhaseGraphConfig>? PhaseGraphs { get; set; }
@@ -94,9 +82,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? PayloadTargetContext { get; set; }
     }
 
-    /// <summary>
-    /// Per-phase graph binding configuration.
-    /// </summary>
     public sealed class PhaseGraphConfig
     {
         /// <summary>Pre-slot graph program name (runs before preset Main).</summary>
@@ -109,9 +94,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public bool SkipMain { get; set; }
     }
 
-    /// <summary>
-    /// Single config parameter entry.
-    /// </summary>
     public sealed class ConfigParamConfig
     {
         /// <summary>"float", "int", or "effectTemplate"</summary>
@@ -120,9 +102,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public object? Value { get; set; }
     }
 
-    /// <summary>
-    /// Per-listener configuration for effect-bound phase listeners.
-    /// </summary>
     public sealed class PhaseListenerConfig
     {
         /// <summary>Match firing effect <see cref="Ludots.Core.Gameplay.GAS.Registry.EffectCategoryRegistry"/> id; 0 / omit = wildcard.</summary>
@@ -137,9 +116,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? Priority { get; set; }
     }
 
-    // ── New component config blocks ──
-
-    /// <summary>Duration component configuration.</summary>
     public sealed class DurationConfig
     {
         public int? DurationTicks { get; set; }
@@ -180,7 +156,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public ContextMappingConfig? ContextMapping { get; set; }
     }
 
-    /// <summary>Projectile component configuration.</summary>
     public sealed class ProjectileConfig
     {
         public int? Speed { get; set; }
@@ -197,7 +172,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? MaxHitCount { get; set; }
     }
 
-    /// <summary>Unit creation component configuration.</summary>
     public sealed class UnitCreationConfig
     {
         public string? PlacementPattern { get; set; }
@@ -213,7 +187,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public bool? LinkSourceAsParent { get; set; }
     }
 
-    /// <summary>Displacement component configuration.</summary>
     public sealed class DisplacementConfig
     {
         public string? DirectionMode { get; set; }
@@ -223,7 +196,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public bool? OverrideNavigation { get; set; }
     }
 
-    /// <summary>Entity relation command configuration.</summary>
     public sealed class RelationConfig
     {
         public string? Operation { get; set; }
@@ -309,9 +281,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? OverflowPolicy { get; set; }
     }
 
-    /// <summary>
-    /// Configuration for a single granted tag contribution.
-    /// </summary>
     public sealed class GrantedTagConfig
     {
         /// <summary>Tag name (e.g., "Status.Slow").</summary>

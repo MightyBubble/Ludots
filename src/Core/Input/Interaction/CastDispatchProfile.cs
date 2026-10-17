@@ -132,7 +132,6 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>The selector's declared <c>n</c> (0 when the kind takes none).</summary>
         public int N { get; }
 
-        /// <summary>True when the profile declared a scorer.</summary>
         public bool HasScorer { get; }
 
         /// <summary>Score one actor with the profile's compiled scorer; higher is better.</summary>

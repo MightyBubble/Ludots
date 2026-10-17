@@ -1,9 +1,8 @@
 namespace Ludots.Core.Gameplay.GAS
 {
     /// <summary>
-    /// Core lifetime kinds for effects. Tag-driven expiration is handled
-    /// orthogonally via <see cref="GasConditionHandle"/> on the effect entity,
-    /// not as a lifetime kind.
+    /// Tag-driven expiration is handled orthogonally via <see cref="GasConditionHandle"/>
+    /// on the effect entity, not as a lifetime kind.
     /// </summary>
     public enum EffectLifetimeKind : byte
     {

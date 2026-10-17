@@ -26,9 +26,6 @@ namespace Ludots.Core.Gameplay
 
     public interface IInputSource
     {
-        /// <summary>
-        /// Get input data for the specified Tick.
-        /// </summary>
         PlayerInputFrame GetInput(int tick);
     }
 }

@@ -6,7 +6,7 @@ namespace Ludots.Adapter.Raylib
 {
     /// <summary>
     /// 运行时截图取证器：LUDOTS_TAKE_SCREENSHOT_PATH/FRAMES/FRAME 与 LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT 合同的持有者，
-    /// 含序列帧命名、落盘搬运与尺寸/平坦度校验。时序基准（frameIndex、runtime 毫秒）由宿主逐帧显式传入（#1325）。
+    /// 含序列帧命名、落盘搬运与尺寸/平坦度校验。时序基准（frameIndex、runtime 毫秒）由宿主逐帧显式传入。
     /// </summary>
     internal sealed class RaylibScreenshotEvidenceRecorder
     {

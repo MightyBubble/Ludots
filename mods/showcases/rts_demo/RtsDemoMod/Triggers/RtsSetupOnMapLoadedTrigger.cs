@@ -45,7 +45,6 @@ namespace RtsDemoMod.Triggers
             var q = new QueryDescription().WithAll<Name>();
             world.Query(in q, (Entity e, ref Name name) =>
             {
-                // Ensure all named entities have tag components for GAS interaction
                 TagStateInstaller.EnsureInstalled(world, e);
                 if (world.Has<CommandSourceSelectableTag>(e) && !world.Has<CommandSourceSelectableState>(e))
                 {

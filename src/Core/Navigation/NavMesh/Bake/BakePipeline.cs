@@ -8,9 +8,6 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
-    /// <summary>
-    /// Result of the CDT baking pipeline.
-    /// </summary>
     public readonly struct BakePipelineResult
     {
         public readonly bool Success;
@@ -25,9 +22,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
     }
 
-    /// <summary>
-    /// Intermediate data for debugging and artifact generation.
-    /// </summary>
     public sealed class BakePipelineContext
     {
         public TriWalkMask WalkMask;
@@ -43,21 +37,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
     }
 
-    /// <summary>
-    /// CDT NavMesh baking pipeline that orchestrates the entire bake process.
-    /// </summary>
     public static class BakePipeline
     {
-        /// <summary>
-        /// Executes the full CDT baking pipeline.
-        /// </summary>
-        /// <param name="map">Source vertex map.</param>
-        /// <param name="chunkX">Tile X coordinate.</param>
-        /// <param name="chunkY">Tile Y coordinate.</param>
-        /// <param name="tileVersion">Version number for the tile.</param>
-        /// <param name="config">Build configuration.</param>
-        /// <param name="context">Optional context for debugging.</param>
-        /// <returns>Pipeline result with tile and artifact.</returns>
         public static BakePipelineResult Execute(
             VertexMap map,
             int chunkX,
@@ -70,7 +51,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         {
             var tileId = new NavTileId(chunkX, chunkY, 0);
 
-            // Validate input
             if (map == null)
             {
                 var artifact = CreateErrorArtifact(tileId, tileVersion, NavBakeStage.None, NavBakeErrorCode.InvalidInput, "VertexMap is null.");
@@ -123,7 +103,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 return new BakePipelineResult(false, null, artifact);
             }
 
-            // Stage 1: Build walk mask
             context.CurrentStage = NavBakeStage.WalkMask;
             context.Log($"Building walk mask for chunk ({chunkX},{chunkY})...");
             context.WalkMask = WalkMaskBuilder.Build(terrain, chunkX, chunkY, config);
@@ -162,7 +141,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 return new BakePipelineResult(false, null, artifact);
             }
 
-            // Stage 5: Convert to NavTile format
             context.CurrentStage = NavBakeStage.Adjacency;
             context.Log("Building adjacency and converting to NavTile format...");
 
@@ -170,7 +148,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
             int originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
 
-            // Convert TriMesh to NavTile format with height sampling
             var result = ConvertTriMeshToNavTile(
                 terrain, mapWidth, mapHeight,
                 context.TriMesh,
@@ -182,15 +159,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         /// <summary>
-        /// Attempts the full CDT pipeline: Contour → Polygon → CDT.
-        /// Returns true if successful (context.TriMesh is set).
-        /// Returns true only when CDT produced a valid mesh.
+        /// Returns true only when the CDT pipeline produced a valid mesh; on success context.TriMesh is set.
         /// </summary>
         private static bool TryCdtPipeline(BakePipelineContext context, int startC, int startR, in NavBuildConfig config)
         {
             try
             {
-                // Stage 2: Extract contours
                 context.CurrentStage = NavBakeStage.Contour;
                 context.Log("Extracting contour rings...");
                 context.ContourRings = ContourExtractor.Extract(context.WalkMask, startC, startR);
@@ -202,7 +176,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     return false;
                 }
 
-                // Stage 3: Process polygons
                 context.CurrentStage = NavBakeStage.Polygon;
                 context.Log("Processing polygons (cleaning, hole assignment)...");
                 context.PolygonSet = PolygonProcessor.Process(context.ContourRings, config);
@@ -220,7 +193,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     return false;
                 }
 
-                // Stage 4: CDT triangulation
                 context.CurrentStage = NavBakeStage.Triangulate;
                 context.Log("Triangulating with CDT...");
                 var triangulator = TriangulatorFactory.CreateDefault();
@@ -247,9 +219,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        /// <summary>
-        /// Converts the 2D TriMesh to a full 3D NavTile with height, adjacency, and portals.
-        /// </summary>
         private static BakePipelineResult ConvertTriMeshToNavTile(
             LogicTerrainField terrain,
             int mapWidth,
@@ -268,12 +237,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int originZcm,
             BakePipelineContext context)
         {
-            // Convert 2D vertices to 3D with height sampling
             var vx = new int[triMesh.VertexCount];
             var vy = new int[triMesh.VertexCount];
             var vz = new int[triMesh.VertexCount];
 
-            // DEBUG: Log first few vertices
             context.Log($"Converting {triMesh.VertexCount} vertices. startC={startC}, startR={startR}, originXm={originXm:F2}, originZm={originZm:F2}");
 
             for (int i = 0; i < triMesh.VertexCount; i++)
@@ -288,21 +255,18 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 float worldX = absoluteX - originXm;
                 float worldZ = absoluteZ - originZm;
 
-                // Sample height from terrain
                 float height = SampleHeight(terrain, mapWidth, mapHeight, globalC, globalR, config.HeightScaleMeters);
 
                 vx[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(worldX));
                 vy[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(height));
                 vz[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(worldZ));
 
-                // DEBUG: Log first 10 vertices
                 if (i < 10)
                 {
                     context.Log($"  V[{i}]: v2d=({v2d.X:F1},{v2d.Y:F1}) -> global=({globalC},{globalR}) -> world=({worldX:F2},{worldZ:F2}) h={height:F2} -> cm=({vx[i]},{vy[i]},{vz[i]})");
                 }
             }
 
-            // Build triangle arrays
             int triCount = triMesh.TriangleCount;
             var triA = new int[triCount];
             var triB = new int[triCount];
@@ -315,7 +279,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 triC[i] = triMesh.Triangles[i * 3 + 2];
             }
 
-            // Build adjacency
             var n0 = new int[triCount];
             var n1 = new int[triCount];
             var n2 = new int[triCount];
@@ -326,7 +289,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             context.Log($"Built adjacency for {triCount} triangles.");
 
-            // Build clearance field
             context.CurrentStage = NavBakeStage.Clearance;
             context.Log("Computing clearance field...");
             var cellWalkable = new bool[tileWidth * tileHeight];
@@ -340,13 +302,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
             var clearanceCm = ComputeClearanceCmField(cellWalkable, tileWidth, tileHeight, terrain);
 
-            // Build portals
             context.CurrentStage = NavBakeStage.Portal;
             context.Log("Building border portals...");
             var portals = BuildPortals(terrain, mapWidth, mapHeight, startC, startR, tileWidth, tileHeight, originXm, originZm, clearanceCm, config);
             context.Log($"Built {portals.Length} portals.");
 
-            // Create tile
             context.CurrentStage = NavBakeStage.Serialize;
             ulong buildHash = config.ComputeHash();
             var tile = new NavTile(

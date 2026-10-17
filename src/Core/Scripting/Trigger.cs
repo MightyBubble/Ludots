@@ -7,7 +7,6 @@ namespace Ludots.Core.Scripting
 {
     public class Trigger
     {
-        // Use Type Name as ID by default, or Name if overridden
         public virtual string Name => GetType().Name;
         public EventKey EventKey { get; set; }
         public int Priority { get; set; }
@@ -15,22 +14,15 @@ namespace Ludots.Core.Scripting
         public List<GameCommand> Actions { get; } = new List<GameCommand>();
         public List<Func<ScriptContext, bool>> Conditions { get; } = new List<Func<ScriptContext, bool>>();
 
-        // Lifecycle Hooks
         public virtual void OnMapEnter(ScriptContext context) { }
         public virtual void OnMapExit(ScriptContext context) { }
 
-        // Execution Logic
         public virtual async Task ExecuteAsync(ScriptContext context)
         {
             if (!CheckConditions(context)) return;
 
-            // Execute Actions sequentially
-            // We use a for-loop to allow modification of the list during execution (e.g. appending), 
-            // though insertion at current index might be tricky. 
-            // Standard approach: snapshot or robust index. 
-            // For now, standard foreach is fine unless we modify the list *while* iterating.
-            // If we allow dynamic hooking at runtime (while running), we should be careful.
-            // Hooking usually happens at Load time.
+            // Plain foreach is safe because hooking happens at load time, not during
+            // execution; if runtime hooking is ever added, snapshot or robust-index this loop.
             
             foreach (var action in Actions)
             {
@@ -47,7 +39,6 @@ namespace Ludots.Core.Scripting
             return true;
         }
 
-        // Helper APIs
         public void AddCondition(Func<ScriptContext, bool> condition)
         {
             Conditions.Add(condition);
@@ -58,7 +49,6 @@ namespace Ludots.Core.Scripting
             Actions.Add(command);
         }
 
-        // Hook APIs
         public void InsertAfter<TCommand>(GameCommand command) where TCommand : GameCommand
         {
             int index = Actions.FindLastIndex(c => c is TCommand);
@@ -87,7 +77,6 @@ namespace Ludots.Core.Scripting
 
         public void OnAnchor(object key, GameCommand command)
         {
-            // Find AnchorCommand with matching Key
             int index = Actions.FindIndex(c => c is AnchorCommand anchor && (anchor.Key == key || (anchor.Key != null && anchor.Key.Equals(key))));
             
             if (index >= 0)

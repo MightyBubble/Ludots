@@ -7,7 +7,7 @@ using Ludots.Core.Scripting;
 namespace BrowserRtsProductionShowcaseMod;
 
 /// <summary>
-/// Browser RTS input-surface policy (migration slice 2): the local order mapping installs
+/// Browser RTS input-surface policy: the local order mapping installs
 /// through the CoreInputMod auto assembly; this policy keeps the browser surface's skill-bar
 /// state pinned (the view-mode switcher rewrites it on every mode change) and republishes the
 /// active mapping global for the browser data plane.

@@ -18,9 +18,9 @@ using ControlPlaneProjectionShowcaseMod.Runtime;
 namespace ControlPlaneProjectionShowcaseMod.Systems
 {
     /// <summary>
-    /// Bootstraps the showcase world once the map session is live (CTRL-2 slice: Owns/MemberOf/Ally
-    /// edges via RelationshipRuntime.EnsureLink), verifies the authored startup seat binding, and
-    /// services the ToggleProxy input action.
+    /// Bootstraps the showcase world once the map session is live (Owns/MemberOf/Ally edges via
+    /// RelationshipRuntime.EnsureLink), verifies the authored startup seat binding, and services
+    /// the ToggleProxy input action.
     /// </summary>
     internal sealed class ControlPlaneProjectionScenarioSystem : ISystem<float>
     {

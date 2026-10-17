@@ -227,7 +227,6 @@ namespace Ludots.Raylib.Render
             Gl43.UseProgram(0);
         }
 
-        /// <summary>模型深度：换装深度材质经 DrawModelEx 原生路径绘制后还原。</summary>
         public void DrawModelShadow(Model model, Vector3 position, float rotationAngleY, Vector3 scale)
         {
             DrawModelShadow(model, position, Vector3.UnitY, rotationAngleY, scale);

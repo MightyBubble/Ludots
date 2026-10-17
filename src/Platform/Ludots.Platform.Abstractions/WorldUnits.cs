@@ -30,7 +30,6 @@ namespace Ludots.Platform.Abstractions
             return new Vector3(CmToM(worldXCm), yMeters, CmToM(worldYCm));
         }
 
-        /// <summary>
 
 
         public static WorldCmInt2 VisualMetersToWorldCm(in Vector3 visualMeters)

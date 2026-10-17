@@ -11,7 +11,7 @@ using Ludots.Platform.Abstractions;
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
-/// Driver for the behavior-side order ops (issue #1536): the featured Script graph runs
+/// Driver for the behavior-side order ops: the featured Script graph runs
 /// on the gallery caster with the engine's order pipeline already bound, and the caption
 /// quotes the observable order-pipeline state — what SubmitAssignedOrder enqueued, or
 /// what CompleteActiveOrder settled.

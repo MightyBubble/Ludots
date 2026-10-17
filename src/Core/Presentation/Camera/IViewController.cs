@@ -18,9 +18,6 @@ namespace Ludots.Core.Presentation.Camera
         /// </summary>
         float Fov { get; }
 
-        /// <summary>
-        /// Aspect Ratio (Width / Height).
-        /// </summary>
         float AspectRatio { get; }
     }
 }

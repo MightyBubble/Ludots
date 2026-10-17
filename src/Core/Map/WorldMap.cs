@@ -7,7 +7,6 @@ namespace Ludots.Core.Map
 {
     public class WorldMap
     {
-        // Dimensions now configurable
         public int WidthInPages { get; private set; }
         public int HeightInPages { get; private set; }
         public const int TileSize = SpatialScaleDefaults.TerrainPageCells;
@@ -87,9 +86,6 @@ namespace Ludots.Core.Map
             return tile == null || tile.IsBlocked(localX, localY);
         }
 
-        /// <summary>
-        /// Converts Scaled World Position (IntVector2) to Grid Coordinates.
-        /// </summary>
         public static IntVector2 WorldToGrid(IntVector2 worldPos)
         {
             return new IntVector2(worldPos.X / WorldScale, worldPos.Y / WorldScale);

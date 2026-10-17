@@ -19,7 +19,6 @@ namespace Ludots.Core.Modding
             var modMap = new Dictionary<string, ModNode>();
             var versionMap = new Dictionary<string, SemVersion>();
 
-            // Initialize graph
             foreach (var mod in mods)
             {
                 if (mod.Manifest == null)
@@ -49,7 +48,6 @@ namespace Ludots.Core.Modding
                 indegree[name] = 0;
             }
 
-            // Build edges
             foreach (var mod in mods)
             {
                 var modName = mod.Manifest.Name;
@@ -83,7 +81,6 @@ namespace Ludots.Core.Modding
             var result = new List<ModManifest>();
             var queue = new List<ModNode>();
 
-            // Initial candidates
             foreach (var mod in mods)
             {
                 if (indegree[mod.Manifest.Name] == 0)
@@ -96,12 +93,10 @@ namespace Ludots.Core.Modding
 
             while (queue.Count > 0)
             {
-                // Pop the best candidate
                 var current = queue[0];
                 queue.RemoveAt(0);
                 result.Add(current.Manifest);
 
-                // Update neighbors
                 foreach (var neighborId in graph[current.Manifest.Name])
                 {
                     indegree[neighborId]--;
@@ -126,7 +121,6 @@ namespace Ludots.Core.Modding
 
         private void SortCandidates(List<ModNode> candidates)
         {
-            // Sort by Priority Descending, then CreationIndex Ascending
             candidates.Sort((a, b) =>
             {
                 int pComparison = b.Manifest.Priority.CompareTo(a.Manifest.Priority);

@@ -211,11 +211,8 @@ namespace Ludots.Tests.Gas.Graph
                 new() { Op = 65000, Dst = 0, Imm = 1 },
             ];
             var registry = new GraphProgramRegistry();
-            // Bypass EnsureProgramValid by attaching after a valid register then replacing? 
-            // Register will fail policy. Instead bind a valid id then force Attach path via binder on snapshot —
-            // use HandlerForward-ineligible undefined by constructing registration via Register of Halt only then
-            // manually replace program array is internal. Simpler: call binder on empty + verify interpret no-op,
-            // and call Emit fail path separately.
+            // Undefined opcodes cannot reach the binder through Register (policy validation rejects them, and the
+            // registered program array is internal-only afterwards), so the fail-closed contract is asserted on the Emit path directly.
             registry.Register(
                 2,
                 [

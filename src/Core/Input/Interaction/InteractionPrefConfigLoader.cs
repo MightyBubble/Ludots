@@ -28,7 +28,6 @@ namespace Ludots.Core.Input.Interaction
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        /// <summary>Load and validate the merged interaction preference seed config.</summary>
         public InteractionPrefsConfig Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null,

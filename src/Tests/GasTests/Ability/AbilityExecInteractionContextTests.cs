@@ -81,7 +81,6 @@ namespace Ludots.Tests.GAS
             Assert.That(mounted.ContextEntity, Is.EqualTo(actor), "Context ownership is the exec carrier entity.");
             Assert.That(mounted.Source, Is.EqualTo(InteractionContextInstanceSource.ExecLifecycle));
 
-            // M2: casts during the ability context land in the ability key; command.source is untouched.
             harness.Writer.CommitCast(p1Rep, harness.AbilityTargetsKeyId, stackalloc Entity[] { m05, m06 }, EntityCollectionSourceKind.UiAcquisition);
             Span<Entity> rows = stackalloc Entity[8];
             Assert.That(harness.Store.TryGet(p1Rep, harness.AbilityTargetsKeyId, out EntityCollectionHandle abilityHandle), Is.True);

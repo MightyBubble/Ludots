@@ -677,11 +677,11 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ApplyEffectTemplate), Is.False,
                 "effect-transactional ops stay out of the TriggerGraph dialect");
 
-            // #1106: entry payload reads are the TriggerGraph-only extension of the mirror;
+            // Entry payload reads are the TriggerGraph-only extension of the mirror;
             // they read the mount's entry capture, which no other kind hosts.
-            // #1116/#1115: subgraph invoke + StoreArg staging + structured dispatch are the
+            // Subgraph invoke + StoreArg staging + structured dispatch are the
             // second TriggerGraph-only family.
-            // #1108: placed-entity reads resolve against the mounting map's catalog, the
+            // Placed-entity reads resolve against the mounting map's catalog, the
             // third TriggerGraph-only family.
             GraphNodeOp[] triggerGraphOnlyOps =
             {

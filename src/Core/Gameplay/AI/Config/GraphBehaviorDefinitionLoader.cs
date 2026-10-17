@@ -184,7 +184,6 @@ namespace Ludots.Core.Gameplay.AI.Config
                 int graphId = 0;
                 if (src.Leaf == BehaviorTreeLeafBinding.ScriptSlice)
                 {
-                    // Condition nodes resolve from FuncLib (pure); Action nodes from ActionLib.
                     if (src.Kind == BehaviorTreeNodeKind.Condition)
                     {
                         graphId = ResolveOptionalCondition(
@@ -391,9 +390,9 @@ namespace Ludots.Core.Gameplay.AI.Config
                 }
 
                 int priority = 0;
-                if (tr.TryGetPropertyValue("priority", out JsonNode? pNode) && pNode is JsonValue pVal)
+                if (tr.TryGetPropertyValue("priority", out JsonNode? priorityNode) && priorityNode is JsonValue priorityValue)
                 {
-                    priority = pVal.GetValue<int>();
+                    priority = priorityValue.GetValue<int>();
                 }
 
                 transitions[i] = new HfsmTransition(

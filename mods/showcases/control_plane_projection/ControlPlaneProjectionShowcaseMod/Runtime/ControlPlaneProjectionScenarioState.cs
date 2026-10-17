@@ -6,7 +6,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 namespace ControlPlaneProjectionShowcaseMod.Runtime
 {
     /// <summary>
-    /// Resolved anchors, registry ids, and the proxy toggle for the control plane projection showcase.
     /// Shared by the mod systems and the WebUI dataplane so input action and browser command run the
     /// exact same code path.
     /// </summary>
@@ -69,8 +68,8 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
 
         /// <summary>
         /// Flips the trigger tag on P2Rep — nothing else. The Controls edge is granted/revoked by the
-        /// AssociationControlProfileRuntime on its next evaluation pass, proving the M3 chain is
-        /// trigger-agnostic: any writer of the tag drives the same control transfer.
+        /// AssociationControlProfileRuntime on its next evaluation pass; the design is trigger-agnostic:
+        /// any writer of the tag drives the same control transfer.
         /// </summary>
         public bool ToggleProxy()
         {

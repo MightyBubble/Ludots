@@ -6,7 +6,7 @@ using Ludots.Core.Config;
 namespace Ludots.Core.UI.EntityCommandPanels
 {
     /// <summary>
-    /// Loader for <c>UI/ability_aggregation_profiles.json</c> (RFC-0065 PNL-1/2): catalog-declared
+    /// Loader for <c>UI/ability_aggregation_profiles.json</c>: catalog-declared
     /// ArrayById merge through the shared <see cref="ConfigPipeline"/>, so mods add their own
     /// aggregation profiles as additive fragments without restating (or clobbering) the Core
     /// structural profiles. Structural validation fails fast here; <c>groupBy</c> prefix resolution
@@ -28,7 +28,6 @@ namespace Ludots.Core.UI.EntityCommandPanels
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        /// <summary>Load and validate the merged aggregation profile config from the pipeline.</summary>
         public AbilityAggregationProfilesConfig Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null,

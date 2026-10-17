@@ -14,11 +14,6 @@ using Arch.Core;
 
 namespace Ludots.Tests.Gas
 {
-    /// <summary>
-    /// NavGate showcase（refs #413 运行时更新可读演示）的引擎级合同：
-    /// 时间线落门 → 增量重烤推进 store revision → navmesh 路径真实绕开城门 →
-    /// 小队抵达 B 营；冻结队列（消融）→ revision 停滞且路径仍穿门。
-    /// </summary>
     [TestFixture]
     public sealed class NavGateShowcaseContractTests
     {

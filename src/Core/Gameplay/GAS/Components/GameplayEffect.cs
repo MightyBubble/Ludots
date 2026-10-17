@@ -3,17 +3,14 @@ using Ludots.Core.Gameplay.GAS;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
-    /// <summary>
-    /// Effect生命周期状态
-    /// </summary>
     public enum EffectState : byte
     {
-        Created = 0,    // 已创建
-        Pending = 1,    // 等待响应链
-        Trigger = 2,    // 响应链处理中
-        Calculate = 3,  // 计算最终值
-        Apply = 4,      // 应用中
-        Committed = 5   // 已提交
+        Created = 0,
+        Pending = 1,
+        Trigger = 2,
+        Calculate = 3,
+        Apply = 4,
+        Committed = 5
     }
 
     public struct GameplayEffect

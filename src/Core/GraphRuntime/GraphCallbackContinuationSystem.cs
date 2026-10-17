@@ -4,7 +4,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// #1126 deterministic Continuation phase: drains completed AwaitCallback handles in
+    /// Deterministic Continuation phase: drains completed AwaitCallback handles in
     /// registration order. Must run after DeferredTriggerCollection (heartbeat Yield resume)
     /// and before Cleanup.
     /// </summary>

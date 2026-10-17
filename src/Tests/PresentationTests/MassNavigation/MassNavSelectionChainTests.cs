@@ -69,7 +69,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(handler.HasContext("CaseE.Controls"), Is.True,
                 "possessed seat must project the entity's battle context input context");
 
-            // Candidate collection should already hold the commandable agents.
             int count = CollectionCount(engine, player, SelectableKey);
             Console.WriteLine($"selectable collection count: {count}");
             Assert.That(count, Is.GreaterThan(0), "roster graph must fill case_e.selectable");
@@ -274,7 +273,6 @@ namespace Ludots.Tests.Presentation
             var proj = engine.GetService(CoreServiceKeys.ScreenProjector)!;
             var heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
             Assert.That(heightmap, Is.Not.Null, "the mass navigation map declares a continuous heightmap");
-            // Pick a live agent and measure both projections.
             Entity sample = Entity.Null;
             var q = new QueryDescription().WithAll<Ludots.Core.Components.WorldPositionCm>();
             engine.World.Query(in q, (Entity e, ref Ludots.Core.Components.WorldPositionCm wp) =>
@@ -300,7 +298,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(error, Is.GreaterThan(64f),
                 "ignoring terrain height must move the projected point by a large screen distance");
 
-            // A marquee built around the RAISED point must select; the flat point must not.
             var raisedRect = new Ludots.Core.Spatial.ScreenRect(raisedScreen.X - 30, raisedScreen.Y - 30, raisedScreen.X + 30, raisedScreen.Y + 30);
             Assert.That(
                 Ludots.Core.Spatial.SpatialBoundsUtility.EntityIntersectsScreenRect(

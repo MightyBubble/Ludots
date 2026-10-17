@@ -257,7 +257,7 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (JsonElement entity in entities.EnumerateArray())
             {
-                // Region volume placements (#1461) are the only sanctioned non-actor
+                // Region volume placements are the only sanctioned non-actor
                 // entities on generated gallery maps; actors still map one-to-one.
                 if (entity.TryGetProperty("Template", out JsonElement template) &&
                     template.GetString() == "GraphOps.RegionVolumeAnchor")

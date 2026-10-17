@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1116 InvokeGraph: StoreArg* staging → subgraph LoadEntryPayload* reads →
+    /// InvokeGraph: StoreArg* staging → subgraph LoadEntryPayload* reads →
     /// HaltReturnInt return value; entry label selection (explicit / default [0] /
     /// unknown fail closed); registration guards (kind mismatch, A↔B cycle, unknown
     /// entry label); runtime guards (subgraph Yield, invoke depth, staging consumed
@@ -32,8 +32,6 @@ namespace Ludots.Tests.Gas.Graph
         {
             GraphIdRegistry.Clear();
         }
-
-        // ── Runtime: staging → subgraph read → return ──
 
         [Test]
         public void StoreArg_Int_ReachesSubgraph_AndHaltReturnIntFlowsBack()
@@ -127,8 +125,6 @@ namespace Ludots.Tests.Gas.Graph
                 "InvokeGraph must clear the staging table after the call; anonymous leftover payloads are forbidden");
         }
 
-        // ── Entry selection ──
-
         [Test]
         public void InvokeGraph_WithoutLabel_RunsEntryZero()
         {
@@ -181,8 +177,6 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.InvokeGraphEntryNotFound").Or.Contain("not an entry"));
         }
-
-        // ── Registration guards ──
 
         [Test]
         public void InvokeGraph_CycleAcrossGraphs_IsRejectedAtRegistration()
@@ -337,8 +331,6 @@ namespace Ludots.Tests.Gas.Graph
                 "a suspended subgraph cannot ride the synchronous InvokeGraph frame");
         }
 
-        // ── Compile side ──
-
         [Test]
         public void Compile_InvokeGraph_EncodesGraphIdAndLabelSymbol()
         {
@@ -422,8 +414,6 @@ namespace Ludots.Tests.Gas.Graph
                 () => "StoreArgInt without a value edge must fail compile: " +
                       string.Join("\n", result.Diagnostics.Select(d => d.Message)));
         }
-
-        // ── Helpers ──
 
         private static GraphInstruction Ins(GraphNodeOp op, byte dst = 0, byte a = 0, int imm = 0, byte flags = 0, float immF = 0f)
         {

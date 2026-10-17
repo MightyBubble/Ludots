@@ -46,8 +46,8 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
     private int _loyaltyKeyId;
     private float _accum;
     private int _castWave;
-    private float[] _tx = Array.Empty<float>();
-    private float[] _ty = Array.Empty<float>();
+    private float[] _targetX = Array.Empty<float>();
+    private float[] _targetY = Array.Empty<float>();
     private byte[] _flash = Array.Empty<byte>();
     private int _lastHit = -1;
     private int _nearbyCount;
@@ -57,10 +57,10 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
 
     public float CasterX => 0f;
     public float CasterY => 0f;
-    public float[] TargetX => _tx;
-    public float[] TargetY => _ty;
+    public float[] TargetX => _targetX;
+    public float[] TargetY => _targetY;
     public byte[] Flash => _flash;
-    public int TargetCount => _tx.Length;
+    public int TargetCount => _targetX.Length;
     public int LastHit => _lastHit;
     public int NearbyCount => _nearbyCount;
     public int EffectApplications => _effectApplications;
@@ -151,8 +151,8 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         casterBb.Set(_buffTemplateKeyId, _bundle.BuffTemplateId);
 
         int targets = Math.Min(_config.FeaturedAgentCount, 8);
-        _tx = new float[targets];
-        _ty = new float[targets];
+        _targetX = new float[targets];
+        _targetY = new float[targets];
         _flash = new byte[targets];
         _targets = new Entity[targets];
         for (int i = 0; i < targets; i++)
@@ -163,8 +163,8 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
             int yCm = (int)MathF.Round((4.5f + MathF.Cos(ang) * 0.8f) * 100f);
             bool inspired = (i & 1) == 0;
             _targets[i] = SpawnCombatant(xCm, yCm, TargetTeamId, TargetLayer, inspired);
-            _tx[i] = xCm * 0.01f;
-            _ty[i] = yCm * 0.01f;
+            _targetX[i] = xCm * 0.01f;
+            _targetY[i] = yCm * 0.01f;
         }
 
         Metrics.AgentCount = targets;
@@ -180,9 +180,9 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         }
 
         _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, 100f, 100f);
-        for (int i = 0; i < _tx.Length; i++)
+        for (int i = 0; i < _targetX.Length; i++)
         {
-            _stage.Spawn(GraphOpsVisualTemplates.Target, $"目标{i + 1}", _tx[i], _ty[i], 100f, 100f);
+            _stage.Spawn(GraphOpsVisualTemplates.Target, $"目标{i + 1}", _targetX[i], _targetY[i], 100f, 100f);
         }
 
         _visualsSpawned = true;

@@ -39,7 +39,6 @@ namespace Ludots.Tests.GAS
             ContextGroupIdRegistry.Clear();
         }
 
-        // ── Component contract: player default / ability override / mixed ──
 
         [Test]
         public void Resolve_PlayerDefaultOnly_AppliesToEveryAbilityScope()
@@ -105,7 +104,6 @@ namespace Ludots.Tests.GAS
             Assert.That((intent, dispatch), Is.EqualTo((0, 32)), "surviving entries stay readable after a clear");
         }
 
-        // ── Seed config contract ──
 
         [Test]
         public void SeedConfig_MissingOrBlankFields_FailFast()
@@ -161,7 +159,6 @@ namespace Ludots.Tests.GAS
                 Throws.InvalidOperationException.With.Message.Contains("dispatch.not_installed"));
         }
 
-        // ── Resolution chain: possessed rep, not the scheme ──
 
         [Test]
         public void CommandIntentRouting_DefaultFrame_RoutesThroughSeededPlayerPref()
@@ -233,7 +230,6 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Orders, Is.Empty);
         }
 
-        // ── World-save round trip ──
 
         [Test]
         public void WorldSave_RoundTripsPlayerDefaultAndAbilityOverrides()
@@ -266,7 +262,6 @@ namespace Ludots.Tests.GAS
             Assert.That((intent, dispatch), Is.EqualTo((4244, 0)));
         }
 
-        // ── Harness ──
 
         private static InteractionPref NewPref(int intent, int dispatch)
         {

@@ -19,10 +19,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.WebUiPanelKit;
 
-/// <summary>
-/// WPK-3 CommandDeck multi-display-mode contract tests: four modes, route profile selection,
-/// fail-fast missing refs, DataPlane payload shape, and no SelectionRuntime authority.
-/// </summary>
 [TestFixture]
 public sealed class CommandDeckDisplayModeTests
 {
@@ -253,7 +249,6 @@ public sealed class CommandDeckDisplayModeTests
 				"Train Infantry",
 				"2 owners | ready",
 				"category.train"));
-		// First member is farther; route profile must pick the nearer second member in Project payload.
 		source.SetAggregationMembers(0,
 			new EntityCommandPanelAggregationMember(far, 0),
 			new EntityCommandPanelAggregationMember(near, 1));

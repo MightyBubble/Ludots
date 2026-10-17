@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Architecture
 {
     /// <summary>
-    /// 非零 tile 坐标的运行时查询回归：Detour 基原点装配与查询注册表的地图 tile 尺寸传递（issue #1121）。
+    /// 非零 tile 坐标的运行时查询回归：Detour 基原点装配与查询注册表的地图 tile 尺寸传递。
     /// </summary>
     [TestFixture]
     public sealed class NavQueryRuntimeNonZeroTileTests

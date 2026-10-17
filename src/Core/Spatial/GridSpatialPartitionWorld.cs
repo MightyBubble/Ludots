@@ -23,9 +23,6 @@ namespace Ludots.Core.Spatial
             foreach (var list in _cells.Values) list.Clear();
         }
 
-        /// <summary>
-        /// ISpatialPartitionWorld: add entity at a single cell.
-        /// </summary>
         public void Add(Entity entity, int cellX, int cellY)
         {
             long key = GetKey(cellX, cellY);
@@ -37,9 +34,6 @@ namespace Ludots.Core.Spatial
             list.Add(entity);
         }
 
-        /// <summary>
-        /// ISpatialPartitionWorld: remove entity from a single cell.
-        /// </summary>
         public void Remove(Entity entity, int cellX, int cellY)
         {
             long key = GetKey(cellX, cellY);
@@ -49,9 +43,6 @@ namespace Ludots.Core.Spatial
             }
         }
 
-        /// <summary>
-        /// Add entity to all internal cells covered by the given bounds.
-        /// </summary>
         public void Add(Entity entity, in IntRect bounds)
         {
             int minX = MathUtil.FloorDiv(bounds.X, _cellSize);

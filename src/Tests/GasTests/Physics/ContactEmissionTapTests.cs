@@ -15,7 +15,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Physics
 {
     /// <summary>
-    /// Sensor-emission contract (#1469): contact begin/end edges whose party
+    /// Sensor-emission contract: contact begin/end edges whose party
     /// carries RegionVolumeEmissionCm fire through the unified region emission
     /// outlet — counterpart rides MapTrigger.SourceEntity, authored payload rides
     /// per schema, off-map emitters and non-emitters stay silent. Physics itself is

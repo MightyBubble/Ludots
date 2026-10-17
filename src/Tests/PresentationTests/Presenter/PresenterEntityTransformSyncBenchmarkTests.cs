@@ -14,7 +14,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Tests.Presentation
 {
     /// <summary>
-    /// Headless Stopwatch evidence for the chunk-batched PresenterEntityTransformSyncSystem anchored loop (#1501):
+    /// Headless Stopwatch evidence for the chunk-batched PresenterEntityTransformSyncSystem anchored loop:
     /// massnav production shape — 10K owners, each with 1 anchored root presenter plus 2 Parent-attached
     /// children (attachment fast path), every owner moving every frame; prints per-frame median/p95 and
     /// asserts steady-state zero allocation.

@@ -34,7 +34,6 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        /// <summary>Register a preset type definition.</summary>
         public void Register(in PresetTypeDefinition def)
         {
             if (_keys.IsFrozen)
@@ -116,7 +115,7 @@ namespace Ludots.Core.Gameplay.GAS
             return _keys.GetKey(typeId);
         }
 
-        /// <summary>Get the definition for a preset type. Returns ref for zero-copy read.</summary>
+        /// <summary>Returns ref for zero-copy read.</summary>
         public ref readonly PresetTypeDefinition Get(EffectPresetType type)
         {
             return ref _definitions[(byte)type];
@@ -127,7 +126,6 @@ namespace Ludots.Core.Gameplay.GAS
             return ref _definitions[typeId];
         }
 
-        /// <summary>Try to get a definition. Returns false if not registered.</summary>
         public bool TryGet(EffectPresetType type, out PresetTypeDefinition def)
         {
             int idx = (byte)type;
@@ -152,7 +150,6 @@ namespace Ludots.Core.Gameplay.GAS
             return false;
         }
 
-        /// <summary>Check if a preset type is registered.</summary>
         public bool IsRegistered(EffectPresetType type)
         {
             return _registered[(byte)type];
@@ -168,7 +165,6 @@ namespace Ludots.Core.Gameplay.GAS
             _keys.Freeze();
         }
 
-        /// <summary>Clear all registrations.</summary>
         public void Clear()
         {
             Array.Clear(_definitions, 0, MaxPresetTypes);

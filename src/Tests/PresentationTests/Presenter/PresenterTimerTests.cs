@@ -45,7 +45,6 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        // ── PresenterTimerTable 单元 ──
 
         [Test]
         public void Table_SetThenTickPastDuration_ExpiresWithPayload()
@@ -170,7 +169,6 @@ namespace Ludots.Tests.Presentation
             Assert.Throws<InvalidOperationException>(() => table.Set(7, presenter, owner, nameId, float.NaN, 0f));
         }
 
-        // ── 管线集成 ──
 
         [Test]
         public void Pipeline_TimerSetExpires_RuleCreatesNextPresenter()
@@ -327,7 +325,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(fixture.CreatedKeyIds, Does.Contain(spawnedDefId), "通配规则命中的到期应建出后续 presenter");
         }
 
-        // ── 配置加载 ──
 
         [Test]
         public void ConfigLoader_TimerSetCommand_ParsesNameAndDurations()
@@ -738,7 +735,6 @@ namespace Ludots.Tests.Presentation
             TestContext.Out.WriteLine(reportText);
         }
 
-        // ── 配置夹具辅助 ──
 
         private PresenterDefinitionRegistry LoadDefinitions()
         {

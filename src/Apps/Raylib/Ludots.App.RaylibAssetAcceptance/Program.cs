@@ -12,7 +12,7 @@ namespace Ludots.App.RaylibAssetAcceptance
     /// 在 GGX + split-sum IBL + 深度阴影的引擎光照栈下验收 PBR 材质与动画。
     /// 拖放与 --model 共用同一装载管线；加载失败在画面上给出可读错误，不静默降级。
     /// 输入合同：.glb/.gltf 走 native；.obj/.fbx/.dae 经引擎 Assimp 转换器转 GLB 装载
-    /// （native OBJ 分支对无 texcoord/normal 索引面片会 AccessViolation，issue #1050）；
+    /// （native OBJ 分支对无 texcoord/normal 索引面片会 AccessViolation）；
     /// zip/USD/blend 拒绝并给出可读理由。
     /// </summary>
     public static unsafe class Program
@@ -491,7 +491,7 @@ namespace Ludots.App.RaylibAssetAcceptance
                 UnloadAsset();
                 _error = "";
 
-                // 统一经引擎装载入口：glTF 原生，OBJ/FBX/DAE 先转 GLB（#1050：OBJ 直走
+                // 统一经引擎装载入口：glTF 原生，OBJ/FBX/DAE 先转 GLB（OBJ 直走
                 // native LoadModel 会 AccessViolation，转换失败在此 fail-loud 成错误面板）。
                 string loadablePath = RaylibModelFileLoader.PrepareNativeLoadable(path);
 
@@ -577,7 +577,7 @@ namespace Ludots.App.RaylibAssetAcceptance
             Vector3 modelCenter = new(0f, (_asset?.NormalizedHeight ?? TargetModelHeight) * 0.5f, 0f);
             float sceneRadius = MathF.Max(5f, (_asset?.NormalizedHeight ?? TargetModelHeight) * 1.4f);
 
-            // 阴影 pass：模型逐网格（保持与 lit 变换一致）+ 参考球。
+            // 阴影 pass 的模型变换须与 lit pass 一致。
             _shadowMap.BeginFrame(sun, modelCenter, sceneRadius);
             if (_asset != null)
             {

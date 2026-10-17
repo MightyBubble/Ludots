@@ -20,7 +20,6 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 CTRL-4b: generic predicate → Controls-edge rule engine (§5.4, M3 scenarios).
     /// The trigger tag string used here is pure test data; Core never interprets it.
     /// </summary>
     [TestFixture]

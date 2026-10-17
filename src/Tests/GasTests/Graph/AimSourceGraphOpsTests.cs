@@ -464,11 +464,6 @@ namespace Ludots.Tests.GasTests.Graph
         [Test]
         public void SeatRoutedKernel_TwoBindings_EachSeatAnswersUnderItsOwnCamera()
         {
-            // Split-screen routing at the aimsource kernel: two seats, two present
-            // bindings (left/right half of a 1600x900 host), each binding's LogicView
-            // camera aimed at its own world target. The same window point answered under
-            // different seats resolves different ground, and the region filter keeps only
-            // the entities that seat's camera actually sees — never a merged camera.
             using var world = World.Create();
             world.Create(new Ludots.Core.Presentation.Components.PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
                 new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
@@ -508,8 +503,6 @@ namespace Ludots.Tests.GasTests.Graph
             };
             var kernel = new GraphAimSourceRuntime(world, globals);
 
-            // Each seat's own half-center window point: under its own name it lands on
-            // that seat's camera target — same binding-local answer, different cameras.
             Assert.That(kernel.TryScreenPointToGround(400f, 450f, "seat.0", out IntVector2 groundZero), Is.True);
             Assert.That(MathF.Abs(groundZero.X - (-5000)) + MathF.Abs(groundZero.Y - 0), Is.LessThan(100f),
                 $"seat.0 半屏中心的窗口点落在 seat.0 相机目标附近（实测 {groundZero.X},{groundZero.Y}）");
@@ -524,8 +517,6 @@ namespace Ludots.Tests.GasTests.Graph
             Assert.That(MathF.Abs(crossGround.X - 5000), Is.GreaterThan(1000f),
                 $"seat.0 半屏中心在 seat.1 相机下不得落在 seat.1 目标上（实测 {crossGround.X}）");
 
-            // Region filter: a window rect over one seat's half keeps only the entity that
-            // seat's camera sees, under that seat's name for its own half.
             Entity nearZero = world.Create(WorldPositionCm.FromCm(-5000, 0));
             Entity nearOne = world.Create(WorldPositionCm.FromCm(5000, 0));
             var both = new[] { nearZero, nearOne };

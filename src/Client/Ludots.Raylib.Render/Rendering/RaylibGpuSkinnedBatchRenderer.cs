@@ -536,7 +536,7 @@ namespace Ludots.Raylib.Render
 
         /// <summary>
         /// GPU 姿势求值：行描述（关键帧/逆绑定姿势基址）与实例数据写入 SSBO staging 并上传，
-        /// 随后派发 compute 合成骨骼矩阵；CPU 不再逐行求值 UpdateModelAnimationBones。
+        /// 随后派发 compute 合成骨骼矩阵。
         /// 实例分组与 GlobalInstanceBase 合同由 PackInstancesByBatch 保证（阴影与主 pass 共用同一寻址）。
         /// </summary>
         private void EvaluatePosesOnGpu()
@@ -1129,7 +1129,6 @@ namespace Ludots.Raylib.Render
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] =
                 RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uBrdfLut", "skinning_instanced");
 
-            // SSBO skinning reads matrices and instance data from shader storage buffers.
             if (_locInstanceBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uInstanceBase' not found.");
             if (_locBoneBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uBoneBase' not found.");
             if (_locPoseStride < 0) throw new InvalidOperationException("Skinning shader uniform 'uPoseStride' not found.");

@@ -8,19 +8,10 @@ using Ludots.Core.Presentation.Components;
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// Sets up the presentation frame state at the start of each render frame.
-    /// This system MUST run before all visual sync systems.
-    /// 
-    /// Architecture:
-    /// - Runs once per render frame (not per FixedUpdate)
-    /// - Reads Pacemaker.InterpolationAlpha
-    /// - Writes to PresentationFrameState singleton
-    /// - All visual sync systems then read from PresentationFrameState
-    /// 
-    /// This is the single source of truth for interpolation, ensuring:
-    /// - All systems use the same alpha value
-    /// - No redundant calculations
-    /// - Easy to disable/debug interpolation globally
+    /// Sets up the presentation frame state at the start of each render frame
+    /// (not per FixedUpdate). This system MUST run before all visual sync systems:
+    /// it is the single source of truth for the interpolation alpha, and all
+    /// visual sync systems read it from the PresentationFrameState singleton.
     /// </summary>
     public sealed class PresentationFrameSetupSystem : ISystem<float>
     {
@@ -33,7 +24,6 @@ namespace Ludots.Core.Presentation.Systems
         public bool Enabled { get; set; } = true;
         
         /// <summary>
-        /// Whether interpolation is enabled.
         /// Set to false to disable interpolation (alpha = 1).
         /// </summary>
         public bool InterpolationEnabled { get; set; } = true;
@@ -50,7 +40,6 @@ namespace Ludots.Core.Presentation.Systems
         
         public void Initialize()
         {
-            // Create singleton entity with PresentationFrameState
             _stateEntity = _world.Create(
                 PresentationFrameState.Default,
                 new PresentationFrameStateTag()
@@ -64,7 +53,6 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (!Enabled || !_initialized) return;
             
-            // Calculate interpolation alpha
             float alpha = 1f;
             if (InterpolationEnabled)
             {
@@ -95,8 +83,7 @@ namespace Ludots.Core.Presentation.Systems
         public void Dispose() { }
         
         /// <summary>
-        /// Gets the current interpolation alpha.
-        /// Can be called by systems that don't want to query the component.
+        /// Current interpolation alpha, for systems that don't want to query the component.
         /// </summary>
         public float GetInterpolationAlpha()
         {

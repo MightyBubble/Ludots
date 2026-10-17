@@ -41,9 +41,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
     }
 
-    /// <summary>
-    /// Vertex data extracted from VertexMap for walkability evaluation.
-    /// </summary>
     internal readonly struct WalkVertex
     {
         public readonly int Col;
@@ -71,14 +68,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     /// </summary>
     public static class WalkMaskBuilder
     {
-        /// <summary>
-        /// Builds a TriWalkMask for the specified tile.
-        /// </summary>
-        /// <param name="map">The vertex map containing terrain data.</param>
-        /// <param name="chunkX">Tile X coordinate (chunk index).</param>
-        /// <param name="chunkY">Tile Y coordinate (chunk index).</param>
-        /// <param name="config">Build configuration with walkability thresholds.</param>
-        /// <returns>A TriWalkMask containing walkability for each triangle.</returns>
         public static TriWalkMask Build(VertexMap map, int chunkX, int chunkY, in NavBuildConfig config)
         {
             if (map == null)
@@ -117,7 +106,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     int cellIndex = localR * tileWidth + localC;
                     bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (globalR & 1) == 1;
 
-                    // Get vertices for this cell's triangles
                     var v00 = GetVertex(terrain, mapWidth, mapHeight, globalC, globalR);
                     var v10 = GetVertex(terrain, mapWidth, mapHeight, globalC + 1, globalR);
                     var v01 = GetVertex(terrain, mapWidth, mapHeight, globalC, globalR + 1);
@@ -193,12 +181,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     int cellIndex = localR * tileWidth + localC;
 
                     // Edge 0: horizontal right edge (c,r)↔(c+1,r).
-                    // A cliff along this edge runs north-south.
-                    // The cell's diagonal crosses this cliff, so the triangle
-                    // containing the diagonal on the cliff side should be unwalkable.
                     if (terrain.TryGetCliffStraightenEdge(globalC, globalR, 0, out bool edge0) && edge0)
                     {
-                        // Determine which side is high and which is low
                         byte hHere = GetHeightSafe(terrain, mapWidth, mapHeight, globalC, globalR);
                         byte hRight = GetHeightSafe(terrain, mapWidth, mapHeight, globalC + 1, globalR);
 
@@ -217,9 +201,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                             // The triangle on the non-walkable side is already unwalkable from Pass 1;
                             // we only need to catch the diagonal triangle that "leaks" into the wrong side.
 
-                            // Simple approach: if height differs across this edge and it's marked
-                            // for straightening, ensure the cell containing the cliff edge has
-                            // consistent walkability (both tris match the majority side).
                             ForceConsistentCliffWalkability(walkable, cellIndex, hHere > hRight);
                         }
                     }
@@ -258,9 +239,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// consistent walkability. If one is walkable and the other isn't (the jagged case),
         /// the triangle that protrudes across the cliff is forced unwalkable.
         /// </summary>
-        /// <param name="walkable">Walkability array.</param>
-        /// <param name="cellIndex">Cell index in tile.</param>
-        /// <param name="currentIsHighSide">True if this cell is the high side of the cliff.</param>
         private static void ForceConsistentCliffWalkability(bool[] walkable, int cellIndex, bool currentIsHighSide)
         {
             bool tri0 = walkable[cellIndex * 2 + 0];
@@ -289,7 +267,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             // Since one was already walkable, restore it only if it's on the high side.
             if (currentIsHighSide)
             {
-                // High side: keep the triangle that was walkable (it's on the plateau)
                 if (tri0) walkable[cellIndex * 2 + 0] = true;
                 if (tri1) walkable[cellIndex * 2 + 1] = true;
             }
@@ -322,16 +299,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return new WalkVertex(c, r, h, w, ramp, blocked);
         }
 
-        /// <summary>
-        /// Determines if a triangle is walkable based on vertex properties and config.
-        /// </summary>
         private static bool IsTriangleWalkable(in WalkVertex a, in WalkVertex b, in WalkVertex c, in NavBuildConfig config)
         {
-            // Blocked vertices make triangle unwalkable
             if (a.IsBlocked || b.IsBlocked || c.IsBlocked)
                 return false;
 
-            // Water covering any vertex makes triangle unwalkable
             // Note: WaterHeight > Height means submerged
             if (a.WaterHeight > a.Height || b.WaterHeight > b.Height || c.WaterHeight > c.Height)
                 return false;
@@ -340,7 +312,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (a.IsRamp || b.IsRamp || c.IsRamp)
                 return true;
 
-            // Check height difference against cliff threshold
             byte minH = Math.Min(a.Height, Math.Min(b.Height, c.Height));
             byte maxH = Math.Max(a.Height, Math.Max(b.Height, c.Height));
             return (maxH - minH) <= config.CliffHeightThreshold;

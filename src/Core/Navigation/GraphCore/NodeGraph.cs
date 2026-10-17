@@ -70,7 +70,7 @@ namespace Ludots.Core.Navigation.GraphCore
         }
 
         /// <summary>
-        /// Get outgoing edges for a node. Throws if nodeId is out of range.
+        /// Throws if nodeId is out of range.
         /// </summary>
         public EdgeRange GetOutgoingEdges(int nodeId)
         {
@@ -82,7 +82,7 @@ namespace Ludots.Core.Navigation.GraphCore
         }
 
         /// <summary>
-        /// Try to get outgoing edges for a node. Returns false if nodeId is out of range.
+        /// Returns false if nodeId is out of range.
         /// </summary>
         public bool TryGetOutgoingEdges(int nodeId, out EdgeRange range)
         {

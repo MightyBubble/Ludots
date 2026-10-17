@@ -4,7 +4,7 @@ using Ludots.Core.GraphRuntime;
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
     /// <summary>
-    /// DoOnce 作者面糖的编译展开（#1467）：UE DoOnce 的图体同构物。
+    /// DoOnce 作者面糖的编译展开：UE DoOnce 的图体同构物。
     /// 展开形状（7 条，状态存 map variable，Reset ≡ WriteMapVarInt(var, 0)）：
     /// body+0 ReadMapVarInt（Dst=节点输出寄存器，A=0xFF 走 graph.MapScope，Imm=var 符号）
     /// body+1 ConstInt 0（比较临时）

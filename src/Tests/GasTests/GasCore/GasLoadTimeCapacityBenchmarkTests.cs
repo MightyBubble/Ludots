@@ -60,7 +60,7 @@ namespace GasTests.GasCore
         private const int SampleCount = 5;
 
         /// <summary>min-of-N 采样：耗时取最小值（抗调度噪声），分配取最大值（保守口径）。
-        /// 单次采样同机抖动可达 ±20%，10% 阈值的门必须建立在 min 之上（RFC §3.4 同机同参复跑）。/  </summary>
+        /// 单次采样同机抖动可达 ±20%，10% 阈值的门必须建立在 min 之上（RFC §3.4 同机同参复跑）。</summary>
         private static (double elapsedMs, long allocatedBytes) Measure(Action action)
         {
             double minMs = double.MaxValue;

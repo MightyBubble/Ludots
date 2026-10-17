@@ -21,7 +21,6 @@ namespace Ludots.Tests.GasTests.Spatial
 
             // steps = 100/50 = 2 => (2*2+1)^2 = 25
             Assert.That(count, Is.EqualTo(25));
-            // Center candidate exists
             bool hasCenter = false;
             for (int i = 0; i < count; i++)
             {
@@ -87,7 +86,7 @@ namespace Ludots.Tests.GasTests.Spatial
         [Test]
         public void Generator_RespectsBufferCapacity()
         {
-            var gen = new GridGenerator(extentCm: 1000, cellSizeCm: 10); // would be huge
+            var gen = new GridGenerator(extentCm: 1000, cellSizeCm: 10);
             Span<EqsItem> buf = stackalloc EqsItem[16];
             int count = gen.Generate(Origin, buf);
             Assert.That(count, Is.LessThanOrEqualTo(16), "Generator must not overflow buffer");

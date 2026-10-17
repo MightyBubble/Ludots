@@ -35,7 +35,6 @@ namespace Ludots.Core.Input.Interaction
             _requiredPosition = requiredPosition;
         }
 
-        /// <summary>True when <paramref name="viewerRep"/> may command-target <paramref name="target"/>.</summary>
         public bool CanTarget(Entity viewerRep, Entity target)
         {
             return CommandSourceEligibility.CanTargetCommand(

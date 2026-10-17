@@ -40,7 +40,6 @@ namespace Ludots.Core.Gameplay.GAS
 
     public static class EffectPhaseConstants
     {
-        /// <summary>Total number of phases.</summary>
         public const int PhaseCount = 8;
     }
 }

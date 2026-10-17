@@ -269,7 +269,6 @@ namespace Ludots.Core.UI.PanelHosting
             return disposed;
         }
 
-        /// <summary>Live instance listing for surface adapters: handle, template, anchor, scope, revision.</summary>
         public IReadOnlyList<PanelHostInstanceInfo> SnapshotInstances()
         {
             var list = new List<PanelHostInstanceInfo>(Count);
@@ -379,12 +378,9 @@ namespace Ludots.Core.UI.PanelHosting
         /// <summary>
         /// Data-plane contract: graph execution failure logs and leaves previous/default
         /// values standing — the panel keeps rendering; structural failures were rejected
-        /// at load. No evaluator (lightweight hosts) means read-only against the store.
-        /// </summary>
-        /// <summary>
-        /// Returns false when this pass's evaluation FAILED — the realtime sweep then
-        /// skips re-reading pins so externally written store values cannot leak through
-        /// a failed evaluation. No evaluator (lightweight hosts) or an unregistered
+        /// at load. Returns false when this pass's evaluation FAILED — the realtime sweep
+        /// then skips re-reading pins so externally written store values cannot leak
+        /// through a failed evaluation. No evaluator (lightweight hosts) or an unregistered
         /// graph means "the store is the source": not a failure, returns true.
         /// </summary>
         private bool EvaluateGraph(Entry entry)

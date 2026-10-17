@@ -121,9 +121,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // Resolves the authored move speed. Returns false when the entity declares no positive MoveSpeed
-        // attribute: such an entity is not movable via this system and its moveTo orders are ignored.
-        // There is intentionally no default-speed fallback — speed must be explicit, data-driven (SSOT).
+        // Returns false when the entity declares no positive MoveSpeed attribute: such an entity is not
+        // movable via this system and its moveTo orders are ignored. There is intentionally no
+        // default-speed fallback — speed must be explicit, data-driven (SSOT).
         private bool TryResolveMoveSpeed(Entity entity, out Fix64 speedCmPerSec)
         {
             speedCmPerSec = Fix64.Zero;

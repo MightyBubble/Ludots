@@ -13,7 +13,6 @@ namespace Ludots.Core.Presentation.Presenters
         /// </summary>
         public int OwnerDefinitionId;
 
-        /// <summary>Which events this rule reacts to.</summary>
         public EventFilter Event;
 
         /// <summary>
@@ -22,7 +21,6 @@ namespace Ludots.Core.Presentation.Presenters
         /// </summary>
         public ConditionRef Condition;
 
-        /// <summary>The command to produce when event matches and condition passes.</summary>
         public PresenterCommand Command;
     }
 }

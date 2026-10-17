@@ -10,7 +10,6 @@ using Ludots.Core.Gameplay.GAS.Orders;
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
     /// <summary>
-    /// Ends an active exec when a matching castAbility.End order becomes active.
     /// This keeps channel-end semantics separate from global stop semantics.
     /// </summary>
     public sealed class AbilityEndOrderSystem : BaseSystem<World, float>

@@ -14,25 +14,19 @@ namespace Ludots.Core.Gameplay.GAS
         After           = 1 << 1,
         Infinite        = 1 << 2,
 
-        // ── Common combinations ──
-
-        /// <summary>Only instant effects.</summary>
         InstantOnly = Instant,
-        /// <summary>Duration-based effects (After or Infinite).</summary>
         Duration = After | Infinite,
-        /// <summary>All lifetime kinds.</summary>
         All = Instant | After | Infinite,
     }
 
     public static class LifetimeFlagsExtensions
     {
-        /// <summary>Check if a specific lifetime kind is allowed.</summary>
         public static bool Allows(this LifetimeFlags flags, EffectLifetimeKind kind)
         {
             return (flags & (LifetimeFlags)(1 << (int)kind)) != 0;
         }
 
-        /// <summary>Convert an EffectLifetimeKind to its corresponding flag bit.</summary>
+        /// <summary>Flag bit is 1 &lt;&lt; (int)kind; requires the kind's numeric value to be its bit position.</summary>
         public static LifetimeFlags ToFlag(this EffectLifetimeKind kind)
         {
             return (LifetimeFlags)(1 << (int)kind);

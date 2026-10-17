@@ -39,7 +39,7 @@ namespace Ludots.Core.Persistence
             return rows;
         }
 
-        /// <summary>Row-level diff: names the exact entity/component pairs that diverged.</summary>
+        /// <summary>Each returned row names the exact entity/component pair that diverged.</summary>
         public static System.Collections.Generic.IReadOnlyList<string> DiffRows(
             System.Collections.Generic.IReadOnlyList<string> recorded, System.Collections.Generic.IReadOnlyList<string> playback)
         {

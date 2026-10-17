@@ -71,7 +71,7 @@ namespace Ludots.Tests.Presentation
     public class PresenterEntityRuntimeTests
     {
         private World _world;
-        private PresenterEntityRuntime _buf;
+        private PresenterEntityRuntime _instances;
         private PresenterDefinitionRegistry _defs;
         private int _primaryDefId;
         private int _secondaryDefId;
@@ -81,12 +81,12 @@ namespace Ludots.Tests.Presentation
         public void Setup()
         {
             _world = World.Create();
-            _buf = new PresenterEntityRuntime(_world);
+            _instances = new PresenterEntityRuntime(_world);
             _defs = new PresenterDefinitionRegistry();
             _primaryDefId = _defs.Register("test.entity_runtime.primary", new PresenterDefinition());
             _secondaryDefId = _defs.Register("test.entity_runtime.secondary", new PresenterDefinition());
             _tertiaryDefId = _defs.Register("test.entity_runtime.tertiary", new PresenterDefinition());
-            _buf.BindDefinitions(_defs);
+            _instances.BindDefinitions(_defs);
         }
 
         [TearDown]
@@ -99,7 +99,7 @@ namespace Ludots.Tests.Presentation
         public void Create_ReturnsEntity_AndIsAlive()
         {
             var entity = _world.Create();
-            var presenter = _buf.Create(_primaryDefId, entity, 0);
+            var presenter = _instances.Create(_primaryDefId, entity, 0);
             Assert.That(_world.IsAlive(presenter), Is.True);
         }
 
@@ -108,7 +108,7 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var presenter = _buf.Create(_primaryDefId, entity, 7);
+            var presenter = _instances.Create(_primaryDefId, entity, 7);
 
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
             Assert.That(state.ScopeId, Is.EqualTo(7));
@@ -121,7 +121,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Create_WorldAnchor_InitializesWorldFixedTransformSource()
         {
-            var presenter = _buf.Create(_primaryDefId, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, Entity.Null, default);
+            var presenter = _instances.Create(_primaryDefId, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, Entity.Null, default);
 
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
             Assert.That(state.AnchorKind, Is.EqualTo(PresentationAnchorKind.WorldPosition));
@@ -135,8 +135,8 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var parentPresenter = _buf.Create(_primaryDefId, entity, 7);
-            var childPresenter = _buf.Create(_secondaryDefId, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPresenter, default);
+            var parentPresenter = _instances.Create(_primaryDefId, entity, 7);
+            var childPresenter = _instances.Create(_secondaryDefId, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPresenter, default);
 
             ref readonly PresenterChildren parentChildren = ref _world.Get<PresenterChildren>(parentPresenter);
             ref readonly PresenterParent childParent = ref _world.Get<PresenterParent>(childPresenter);
@@ -169,7 +169,7 @@ namespace Ludots.Tests.Presentation
                 }
             });
 
-            Entity root = _buf.CreateHierarchy(
+            Entity root = _instances.CreateHierarchy(
                 definitions,
                 rootId,
                 owner,
@@ -186,15 +186,15 @@ namespace Ludots.Tests.Presentation
             Assert.That(_world.IsAlive(child), Is.True);
             Assert.That(_world.Get<PresenterParent>(child).Parent, Is.EqualTo(root));
             Assert.That(_world.Get<PresenterState>(child).ScopeId, Is.EqualTo(42));
-            Assert.That(_buf.ResolveInt(child, 7, -1), Is.EqualTo(99));
+            Assert.That(_instances.ResolveInt(child, 7, -1), Is.EqualTo(99));
         }
 
         [Test]
         public void Destroy_MakesEntityDead()
         {
             var entity = _world.Create();
-            var presenter = _buf.Create(_primaryDefId, entity, 0);
-            _buf.Destroy(presenter);
+            var presenter = _instances.Create(_primaryDefId, entity, 0);
+            _instances.Destroy(presenter);
             Assert.That(_world.IsAlive(presenter), Is.False);
         }
 
@@ -203,11 +203,11 @@ namespace Ludots.Tests.Presentation
         {
             var e1 = _world.Create();
             var e2 = _world.Create();
-            var p1 = _buf.Create(_primaryDefId, e1, 42);
-            var p2 = _buf.Create(_secondaryDefId, e2, 42);
-            var p3 = _buf.Create(_tertiaryDefId, e1, 99); // different scope
+            var p1 = _instances.Create(_primaryDefId, e1, 42);
+            var p2 = _instances.Create(_secondaryDefId, e2, 42);
+            var p3 = _instances.Create(_tertiaryDefId, e1, 99);
 
-            _buf.DestroyScope(42);
+            _instances.DestroyScope(42);
             Assert.That(_world.IsAlive(p1), Is.False);
             Assert.That(_world.IsAlive(p2), Is.False);
             Assert.That(_world.IsAlive(p3), Is.True);
@@ -218,16 +218,16 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var parentPresenter = _buf.Create(_primaryDefId, entity, 5);
-            var childPresenter = _buf.Create(_secondaryDefId, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPresenter, default);
-            var grandChildPresenter = _buf.Create(_tertiaryDefId, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childPresenter, default);
+            var parentPresenter = _instances.Create(_primaryDefId, entity, 5);
+            var childPresenter = _instances.Create(_secondaryDefId, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPresenter, default);
+            var grandChildPresenter = _instances.Create(_tertiaryDefId, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childPresenter, default);
 
-            _buf.Destroy(parentPresenter);
+            _instances.Destroy(parentPresenter);
 
             Assert.That(_world.IsAlive(parentPresenter), Is.False);
             Assert.That(_world.IsAlive(childPresenter), Is.False);
             Assert.That(_world.IsAlive(grandChildPresenter), Is.False);
-            Assert.That(_buf.ActiveCount, Is.EqualTo(0));
+            Assert.That(_instances.ActiveCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -235,11 +235,11 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var rootPresenter = _buf.Create(_primaryDefId, entity, 42);
-            var childPresenter = _buf.Create(_secondaryDefId, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootPresenter, default);
-            var unrelatedPresenter = _buf.Create(_tertiaryDefId, entity, 77);
+            var rootPresenter = _instances.Create(_primaryDefId, entity, 42);
+            var childPresenter = _instances.Create(_secondaryDefId, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootPresenter, default);
+            var unrelatedPresenter = _instances.Create(_tertiaryDefId, entity, 77);
 
-            int destroyed = _buf.DestroyScope(42);
+            int destroyed = _instances.DestroyScope(42);
 
             Assert.That(destroyed, Is.GreaterThanOrEqualTo(1));
             Assert.That(_world.IsAlive(rootPresenter), Is.False);
@@ -251,9 +251,9 @@ namespace Ludots.Tests.Presentation
         public void SetParam_Float_IsResolvable()
         {
             var entity = _world.Create();
-            var presenter = _buf.Create(_primaryDefId, entity, 0);
-            _buf.SetParam(presenter, 5, ParamLane.Float, 3.14f, 0, default);
-            Assert.That(_buf.ResolveFloat(presenter, 5, -1f), Is.EqualTo(3.14f).Within(0.001f));
+            var presenter = _instances.Create(_primaryDefId, entity, 0);
+            _instances.SetParam(presenter, 5, ParamLane.Float, 3.14f, 0, default);
+            Assert.That(_instances.ResolveFloat(presenter, 5, -1f), Is.EqualTo(3.14f).Within(0.001f));
         }
 
         [Test]
@@ -261,11 +261,11 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var parentPresenter = _buf.Create(_primaryDefId, entity, 0);
-            var childPresenter = _buf.Create(_secondaryDefId, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPresenter, default);
-            _buf.SetParam(parentPresenter, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
+            var parentPresenter = _instances.Create(_primaryDefId, entity, 0);
+            var childPresenter = _instances.Create(_secondaryDefId, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPresenter, default);
+            _instances.SetParam(parentPresenter, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
 
-            Assert.That(_buf.ResolveFloat(childPresenter, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
+            Assert.That(_instances.ResolveFloat(childPresenter, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
         }
 
         [Test]
@@ -273,14 +273,14 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var presenter = _buf.Create(_primaryDefId, entity, 0);
-            _buf.SetParam(presenter, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
-            _buf.SetParam(presenter, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
-            _buf.SetParam(presenter, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
+            var presenter = _instances.Create(_primaryDefId, entity, 0);
+            _instances.SetParam(presenter, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
+            _instances.SetParam(presenter, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
+            _instances.SetParam(presenter, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
 
-            Assert.That(_buf.ResolveFloat(presenter, 1, -1f), Is.EqualTo(2.5f).Within(0.001f));
-            Assert.That(_buf.ResolveInt(presenter, 2, -1), Is.EqualTo(7));
-            Assert.That(_buf.ResolveVector(presenter, 3, Vector4.Zero), Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
+            Assert.That(_instances.ResolveFloat(presenter, 1, -1f), Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(_instances.ResolveInt(presenter, 2, -1), Is.EqualTo(7));
+            Assert.That(_instances.ResolveVector(presenter, 3, Vector4.Zero), Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
         }
     }
 
@@ -381,7 +381,7 @@ namespace Ludots.Tests.Presentation
 
             _events.TryAdd(new PresentationEvent
             {
-                Kind = PresentationEventKind.EffectApplied, // wrong kind
+                Kind = PresentationEventKind.EffectApplied,
                 KeyId = 5,
             });
 

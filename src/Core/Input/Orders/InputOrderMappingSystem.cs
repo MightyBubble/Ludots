@@ -11,31 +11,16 @@ using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Input.Orders
 {
-    /// <summary>
-    /// Delegate for resolving an order type key to an order type id.
-    /// </summary>
     public delegate int OrderTypeKeyResolver(string orderTypeKey);
 
-    /// <summary>
-    /// Delegate for getting the ground position for movement commands.
-    /// </summary>
     public delegate bool GroundPositionProvider(out Vector3 worldCm);
 
-    /// <summary>
-    /// Delegate for resolving the acting entity for an order.
-    /// </summary>
     public delegate bool ActorProvider(out Entity entity);
 
-    /// <summary>
-    /// Delegate for resolving an actor's authoritative world-centimeter position.
-    /// </summary>
     public delegate bool ActorWorldPositionProvider(Entity actor, out WorldCmInt2 worldCm);
 
     public delegate bool ActivationActorValidator(Entity actor, int playerId);
 
-    /// <summary>
-    /// Delegate for resolving the owner of the active actor collection.
-    /// </summary>
     public delegate bool ActiveActorCollectionOwnerProvider(out Entity owner);
 
     /// <summary>
@@ -55,28 +40,16 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate void OrderIdentityAssigner(ref Order order);
 
-    /// <summary>
-    /// Delegate for getting the primary entity from a caller-supplied entity collection.
-    /// </summary>
     public delegate bool CollectionPrimaryEntityProvider(string collectionKey, out Entity entity);
 
-    /// <summary>
-    /// Delegate for copying caller-supplied entity collection members into a bounded reusable list.
-    /// </summary>
     public delegate bool CollectionEntityListProvider(
         string collectionKey,
         List<Entity> entities,
         int capacity,
         out OrderSubmitResult rejection);
 
-    /// <summary>
-    /// Delegate for getting the entity currently under the cursor (for SmartCast).
-    /// </summary>
     public delegate bool HoveredEntityProvider(out Entity entity);
 
-    /// <summary>
-    /// Delegate for submitting an order.
-    /// </summary>
     public delegate OrderSubmitResult OrderSubmitHandler(in Order order);
 
     public readonly struct InputOrderActivationContext
@@ -151,18 +124,12 @@ namespace Ludots.Core.Input.Orders
 
     public delegate OrderSubmitResult OrderClusterBatchSubmitHandler(Span<Order> orders);
 
-    /// <summary>
-    /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
-    /// </summary>
     public delegate bool ActorOrderRoutingResolver(
         Entity actor,
         ActorOrderRoutingSettings routing,
         out ActorOrderRoutingCandidate matchedCandidate);
 
 
-    /// <summary>
-    /// Delegate for checking if a modifier key is held.
-    /// </summary>
     public delegate bool ModifierKeyProvider();
 
     /// <summary>
@@ -200,9 +167,6 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate bool CursorTargetProvider(Entity actor, AutoTargetPolicy policy, int rangeCm, string relation, Vector3 cursorWorldCm, out Entity target);
 
-    /// <summary>
-    /// Delegate for resolving a context-scored mapping into a concrete cast slot and target.
-    /// </summary>
     public delegate bool ContextScoredResolutionProvider(
         Entity actor,
         InputOrderMapping mapping,
@@ -230,7 +194,6 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public enum VectorAimInputSlot : byte
     {
-        /// <summary>Choosing the origin point.</summary>
         Origin = 0,
         /// <summary>Origin is locked; dragging to set direction/endpoint.</summary>
         Direction = 1,
@@ -291,7 +254,6 @@ namespace Ludots.Core.Input.Orders
         private string _cancelActionId = string.Empty;
         private string _commandActionId = string.Empty;
 
-        // Callbacks
         private OrderTypeKeyResolver? _orderTypeKeyResolver;
         private GroundPositionProvider? _groundPositionProvider;
         private ActorProvider? _actorProvider;
@@ -328,7 +290,6 @@ namespace Ludots.Core.Input.Orders
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
 
-        // Context
         private Entity _solePossessedRep;
         private int _playerId;
         private ActivationActorValidator? _activationActorValidator;
@@ -371,27 +332,22 @@ namespace Ludots.Core.Input.Orders
         private readonly Int128[] _groupMoveTargetSlotForwardScratch;
         private readonly Int128[] _groupMoveTargetSlotLateralScratch;
 
-        // Aiming state (AimCast mode)
         private bool _isAiming;
         private string _aimingActionId = string.Empty;
         private InputOrderMapping? _aimingMapping;
         private InputOrderActivationContext _aimingContext;
         public InputOrderActivationResult LastActivationResult { get; private set; }
 
-        // Held Start/End tracking
         private readonly Dictionary<string, HeldStartEndOrderTypeKeys> _heldStartEndOrderTypeKeys = new(StringComparer.Ordinal);
         private readonly Dictionary<string, HeldStartEndState> _activeHeldStartEndActions = new();
 
-        // SmartCastWithIndicator state
         private bool _smartCastWithIndicatorActive;
 
-        // PressReleaseAimCast state
         private bool _pressReleaseAimPending;
         private string _pressReleaseAimActionId = string.Empty;
         private InputOrderMapping? _pressReleaseAimMapping;
         private InputOrderActivationContext _pressReleaseAimContext;
 
-        // Vector aim state (two-point targeting)
         private VectorAimInputSlot _vectorAimSlot;
         private Vector3 _vectorAimOrigin;
         private bool _isVectorAiming;
@@ -408,14 +364,11 @@ namespace Ludots.Core.Input.Orders
             _config.InteractionMode = mode;
         }
 
-        /// <summary>The current global interaction mode.</summary>
         public CastModeType InteractionMode => _config.InteractionMode;
 
-        /// <summary>Whether the system is currently in aiming state (AimCast).</summary>
         public bool IsAiming => _isAiming;
         public int PlayerId => _playerId;
 
-        /// <summary>Whether the current aiming interaction is a two-phase vector aim.</summary>
         public bool IsVectorAiming => _isVectorAiming;
 
         /// <summary>The ActionId of the mapping being aimed (valid only when IsAiming).</summary>
@@ -430,14 +383,12 @@ namespace Ludots.Core.Input.Orders
         /// <summary>The locked origin for vector aiming. Valid only during direction phase.</summary>
         public Vector3 VectorAimOrigin => _vectorAimOrigin;
 
-        /// <summary>The confirm action ID used to fire the aimed ability.</summary>
         public string ConfirmActionId
         {
             get => _confirmActionId;
             set => _confirmActionId = RequireConfiguredActionId(value, nameof(ConfirmActionId));
         }
 
-        /// <summary>The cancel action ID.</summary>
         public string CancelActionId
         {
             get => _cancelActionId;
@@ -525,8 +476,6 @@ namespace Ludots.Core.Input.Orders
 
             Array.Sort(_orderedMappings, CompareMappingEntries);
         }
-
-        // Callback setters (unchanged API + new ones)
 
         public void SetOrderTypeKeyResolver(OrderTypeKeyResolver resolver)
         {
@@ -654,9 +603,6 @@ namespace Ludots.Core.Input.Orders
             _playerId = playerId;
         }
 
-        /// <summary>
-        /// Process input and generate orders.
-        /// </summary>
         public void Update(float dt)
         {
             if (_orderSubmitHandler == null) return;
@@ -671,30 +617,26 @@ namespace Ludots.Core.Input.Orders
             // 0. Process Held StartEnd releases (must run even during aiming)
             ProcessHeldStartEndReleases();
 
-            // 1. Handle active aiming state (AimCast only)
             if (_isAiming)
             {
                 HandleAimingState();
-                return; // While aiming, don't process other mappings
+                return;
             }
 
             ProcessPressReleaseAimPending();
 
-            // 2. Process all mappings
             foreach (var entry in _orderedMappings)
             {
                 string actionId = entry.ActionId;
                 InputOrderMapping mapping = entry.Mapping;
                 var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out var resolvedActor);
 
-                // Held+StartEnd is handled separately via press/release detection
                 if (effectiveMapping.Trigger == InputTriggerType.Held && effectiveMapping.HeldPolicy == HeldPolicy.StartEnd)
                 {
                     if (_input.PressedThisFrame(actionId) && !_activeHeldStartEndActions.ContainsKey(actionId))
                     {
                         Entity heldActor = resolvedActor != default ? resolvedActor : ResolvePrimaryActor(effectiveMapping);
                         HeldStartEndOrderTypeKeys heldKeys = ResolveHeldStartEndOrderTypeKeys(effectiveMapping);
-                        // Emit .Start order
                         if (TryBuildOrderWithOrderTypeKey(effectiveMapping, heldActor, heldKeys.Start, out var startOrder))
                         {
                             SubmitOrder(effectiveMapping, in startOrder);
@@ -734,7 +676,6 @@ namespace Ludots.Core.Input.Orders
                     }
                 }
 
-                // TargetFirst or non-skill: immediate build and submit
                 if (effectiveMapping.ActorOrderRouting != null && effectiveMapping.ActorOrderRouting.Candidates.Count > 0)
                 {
                     SubmitRoutedOrders(effectiveMapping);
@@ -802,8 +743,6 @@ namespace Ludots.Core.Input.Orders
             _lastPressedAtSecondsByActionId[actionId] = _elapsedSeconds;
             return triggered;
         }
-
-        // Interaction mode handling
 
         private void HandleSkillMappingWithMode(
             string actionId,
@@ -898,7 +837,6 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // If already aiming a different skill, cancel old first
             if (_isAiming && _aimingActionId != actionId)
             {
                 ExitAimingState();
@@ -909,7 +847,6 @@ namespace Ludots.Core.Input.Orders
             _aimingMapping = mapping;
             _aimingContext = context;
 
-            // Auto-detect vector aiming mode
             if (mapping.TargetType == OrderTargetType.Vector)
             {
                 _isVectorAiming = true;
@@ -990,10 +927,6 @@ namespace Ludots.Core.Input.Orders
             EnterAimingState(actionId, mapping, in context);
         }
 
-        /// <summary>
-        /// Called every frame while aiming. Handles confirm/cancel and signals update.
-        /// Routes to vector aiming state machine when applicable.
-        /// </summary>
         private void HandleAimingState()
         {
             if (_aimingMapping == null) { ExitAimingState(); return; }
@@ -1012,7 +945,6 @@ namespace Ludots.Core.Input.Orders
             string cancelActionId = RequireCancelActionId();
             string commandActionId = RequireCommandActionId();
 
-            // Vector aiming (two-point targeting)
             if (_isVectorAiming)
             {
                 HandleVectorAimingState(confirmActionId, cancelActionId, commandActionId);
@@ -1039,19 +971,16 @@ namespace Ludots.Core.Input.Orders
                     return;
                 }
 
-                // Cancel through the configured cancel or command action.
                 if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
                 {
                     ExitAimingState();
                     return;
                 }
 
-                // Signal aiming update for presentation refresh.
                 _aimingUpdateHandler?.Invoke(_aimingMapping);
                 return;
             }
 
-            // AimCast: confirm through the configured confirm action.
             if (_input.PressedThisFrame(confirmActionId))
             {
                 // Build order using current cursor input; pin the aiming actor for the whole confirm.
@@ -1070,7 +999,6 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // Cancel through the configured cancel or command action.
             if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ExitAimingState();
@@ -1104,7 +1032,6 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // Signal aiming update for presentation refresh.
             _aimingUpdateHandler?.Invoke(_aimingMapping);
         }
 
@@ -1115,27 +1042,23 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private void HandleVectorAimingState(string confirmActionId, string cancelActionId, string commandActionId)
         {
-            // Cancel through the configured cancel or command action at any phase.
             if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ExitAimingState();
                 return;
             }
 
-            // Get current cursor position
             Vector3 cursorPos = default;
             bool hasCursor = _groundPositionProvider != null && _groundPositionProvider(out cursorPos);
 
             switch (_vectorAimSlot)
             {
                 case VectorAimInputSlot.Origin:
-                    // Signal update for origin-slot preview.
                     if (hasCursor)
                     {
                         _vectorAimUpdateHandler?.Invoke(_aimingMapping!, cursorPos, cursorPos, VectorAimInputSlot.Origin);
                     }
 
-                    // Confirm origin through the configured confirm action.
                     if (_input.PressedThisFrame(confirmActionId) && hasCursor)
                     {
                         _vectorAimOrigin = cursorPos;
@@ -1144,13 +1067,11 @@ namespace Ludots.Core.Input.Orders
                     break;
 
                 case VectorAimInputSlot.Direction:
-                    // Signal update: show line from origin to cursor
                     if (hasCursor)
                     {
                         _vectorAimUpdateHandler?.Invoke(_aimingMapping!, _vectorAimOrigin, cursorPos, VectorAimInputSlot.Direction);
                     }
 
-                    // Confirm direction through the configured confirm action, then build and submit vector order.
                     if (_input.PressedThisFrame(confirmActionId) && hasCursor)
                     {
                         if (TryBuildVectorOrder(_aimingMapping!, _vectorAimOrigin, cursorPos, out var order))
@@ -1178,8 +1099,6 @@ namespace Ludots.Core.Input.Orders
 
             _aimingUpdateHandler?.Invoke(mapping);
         }
-
-        // Order building
 
         /// <summary>
         /// Build an order with an explicit order type key (the precomputed ".Start"/".End" variants
@@ -1437,7 +1356,6 @@ namespace Ludots.Core.Input.Orders
                     break;
 
                 case OrderTargetType.None:
-                    // Self-cast or no-target; nothing to fill
                     break;
             }
 
@@ -1468,7 +1386,7 @@ namespace Ludots.Core.Input.Orders
             // Store both points in List mode: point[0] = origin, point[1] = endpoint
             args.Spatial.Kind = OrderSpatialKind.WorldCm;
             args.Spatial.Mode = OrderCollectionMode.List;
-            args.Spatial.WorldCm = origin; // Primary point
+            args.Spatial.WorldCm = origin;
             args.Spatial.AddInlinePointWorldCm((int)origin.X, (int)origin.Y, (int)origin.Z);
             args.Spatial.AddInlinePointWorldCm((int)endpoint.X, (int)endpoint.Y, (int)endpoint.Z);
 
@@ -2909,8 +2827,6 @@ namespace Ludots.Core.Input.Orders
             if (template.F3.HasValue) args.F3 = template.F3.Value;
         }
 
-        // Public API (Remap, Save, Load - unchanged)
-
         public void Remap(string actionId, string orderTypeKey, OrderArgsTemplate? argsTemplate = null)
         {
             if (!_mappingsByActionId.TryGetValue(actionId, out var original))
@@ -3300,9 +3216,6 @@ namespace Ludots.Core.Input.Orders
             }
         }
 
-        /// <summary>
-        /// Programmatically cancel the current aiming state (if any).
-        /// </summary>
         public void CancelAiming()
         {
             ExitAimingState();

@@ -12,20 +12,9 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Unit tests for the Preset Type System introduced in the architecture overhaul:
-    ///   PhaseHandler, PhaseHandlerMap, BuiltinHandlerRegistry,
-    ///   ComponentFlags, PhaseFlags, LifetimeFlags,
-    ///   PresetTypeDefinition, PresetTypeRegistry, PresetTypeLoader,
-    ///   EffectParamKeys, ConfigParamsMerger, EffectConfigParams.MergeFrom.
-    /// </summary>
     [TestFixture]
     public class PresetTypeSystemTests
     {
-        // ════════════════════════════════════════════════════════════════════
-        //  PhaseHandler & PhaseHandlerMap
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void PhaseHandler_Builtin_CreatesCorrectKindAndId()
         {
@@ -98,10 +87,6 @@ namespace Ludots.Tests.GAS
                 That(h.HandlerId, Is.EqualTo(i + 1), $"Phase {(EffectPhaseId)i}");
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  BuiltinHandlerRegistry
-        // ════════════════════════════════════════════════════════════════════
 
         private static int _handlerCallCount;
 
@@ -187,10 +172,6 @@ namespace Ludots.Tests.GAS
             Assert.That(sameHandler.Message, Does.Contain("already registered"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  ComponentFlags
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ComponentFlags_BitwiseCombine_Works()
         {
@@ -213,14 +194,10 @@ namespace Ludots.Tests.GAS
             That((allParams & allCaps), Is.EqualTo(ComponentFlags.None), "No overlap between param and capability flags");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  PhaseFlags
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void PhaseFlags_Has_CorrectForAllPhases()
         {
-            var flags = PhaseFlags.InstantCore; // OnPropose | OnCalculate | OnHit | OnApply
+            var flags = PhaseFlags.InstantCore;
             That(flags.Has(EffectPhaseId.OnPropose), Is.True);
             That(flags.Has(EffectPhaseId.OnCalculate), Is.True);
             That(flags.Has(EffectPhaseId.OnHit), Is.True);
@@ -240,7 +217,6 @@ namespace Ludots.Tests.GAS
                 var flag = phase.ToFlag();
                 That(flag.Has(phase), Is.True, $"ToFlag({phase}).Has({phase}) should be true");
 
-                // no other phase should match
                 for (int j = 0; j < EffectPhaseConstants.PhaseCount; j++)
                 {
                     if (j == i) continue;
@@ -263,14 +239,10 @@ namespace Ludots.Tests.GAS
             That(f.Has(EffectPhaseId.OnResolve), Is.False);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  LifetimeFlags
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void LifetimeFlags_Allows_CorrectForAllKinds()
         {
-            var flags = LifetimeFlags.Duration; // After | Infinite
+            var flags = LifetimeFlags.Duration;
             That(flags.Allows(EffectLifetimeKind.After), Is.True);
             That(flags.Allows(EffectLifetimeKind.Infinite), Is.True);
             That(flags.Allows(EffectLifetimeKind.Instant), Is.False);
@@ -295,10 +267,6 @@ namespace Ludots.Tests.GAS
                 That(flag.Allows(kind), Is.True, $"ToFlag({kind}).Allows({kind})");
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PresetTypeDefinition
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PresetTypeDefinition_HasComponent_ChecksFlags()
@@ -340,10 +308,6 @@ namespace Ludots.Tests.GAS
             That(def.AllowsLifetime(EffectLifetimeKind.After), Is.False);
             That(def.AllowsLifetime(EffectLifetimeKind.Infinite), Is.False);
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PresetTypeRegistry
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PresetTypeRegistry_RegisterAndGet_RoundTrips()
@@ -407,10 +371,6 @@ namespace Ludots.Tests.GAS
             Assert.Throws<InvalidOperationException>(() =>
                 reg.Register(in def));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PresetTypeLoader (JSON �?Registry)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PresetTypeLoader_LoadsSearch_WithCorrectHandlers()
@@ -531,10 +491,6 @@ namespace Ludots.Tests.GAS
             That(def.HasComponent(ComponentFlags.ModifierParams), Is.True);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  EffectParamKeys
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void EffectPhaseExecutor_CustomPresetType_InvokesRegisteredBuiltinHandler()
         {
@@ -599,7 +555,7 @@ namespace Ludots.Tests.GAS
         {
             EffectParamKeys.Initialize();
 
-            // All IDs should be > 0 (ConfigKeyRegistry.InvalidId == 0)
+            // ConfigKeyRegistry.InvalidId == 0
             That(EffectParamKeys.DurationTicks, Is.GreaterThan(0));
             That(EffectParamKeys.PeriodTicks, Is.GreaterThan(0));
             That(EffectParamKeys.ForceXAttribute, Is.GreaterThan(0));
@@ -609,7 +565,6 @@ namespace Ludots.Tests.GAS
             That(EffectParamKeys.ProjectileSpeed, Is.GreaterThan(0));
             That(EffectParamKeys.UnitTypeId, Is.GreaterThan(0));
 
-            // ForceX and ForceY must be different
             That(EffectParamKeys.ForceXAttribute, Is.Not.EqualTo(EffectParamKeys.ForceYAttribute));
         }
 
@@ -625,10 +580,6 @@ namespace Ludots.Tests.GAS
             That(first, Is.EqualTo(second), "Repeated initialization should return same IDs");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  EffectConfigParams.MergeFrom
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public unsafe void ConfigParams_MergeFrom_CallerWinsOnConflict()
         {
@@ -638,19 +589,16 @@ namespace Ludots.Tests.GAS
             template.TryAddInt(keyId: 3, 100);
 
             var caller = new EffectConfigParams();
-            caller.TryAddFloat(keyId: 2, 99.0f);  // override key 2
+            caller.TryAddFloat(keyId: 2, 99.0f);
 
             template.MergeFrom(in caller);
 
-            // Key 1: unchanged
             That(template.TryGetFloat(1, out float v1), Is.True);
             That(v1, Is.EqualTo(10.0f));
 
-            // Key 2: caller override
             That(template.TryGetFloat(2, out float v2), Is.True);
             That(v2, Is.EqualTo(99.0f));
 
-            // Key 3: unchanged
             That(template.TryGetInt(3, out int v3), Is.True);
             That(v3, Is.EqualTo(100));
         }
@@ -662,7 +610,7 @@ namespace Ludots.Tests.GAS
             template.TryAddFloat(keyId: 1, 10.0f);
 
             var caller = new EffectConfigParams();
-            caller.TryAddFloat(keyId: 5, 50.0f); // new key
+            caller.TryAddFloat(keyId: 5, 50.0f);
 
             template.MergeFrom(in caller);
 
@@ -704,10 +652,6 @@ namespace Ludots.Tests.GAS
             That(v, Is.EqualTo(10.0f));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  ConfigParamsMerger
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ConfigParamsMerger_EntityBased_ReturnsPreMergedParams()
         {
@@ -717,7 +661,7 @@ namespace Ludots.Tests.GAS
             templateParams.TryAddFloat(keyId: 10, 1.0f);
             templateParams.TryAddFloat(keyId: 20, 2.0f);
 
-            // Simulate pre-merge at creation time (caller overrides key 20)
+            // Simulate pre-merge at creation time.
             var preMerged = templateParams;
             var callerOverrides = new EffectConfigParams();
             callerOverrides.TryAddFloat(keyId: 20, 99.0f);
@@ -742,7 +686,7 @@ namespace Ludots.Tests.GAS
             var templateParams = new EffectConfigParams();
             templateParams.TryAddFloat(keyId: 10, 1.0f);
 
-            var entity = world.Create(); // no EffectConfigParams component
+            var entity = world.Create();
 
             var merged = ConfigParamsMerger.BuildMergedConfig(world, entity, in templateParams);
 
@@ -761,7 +705,7 @@ namespace Ludots.Tests.GAS
             {
                 HasCallerParams = true,
             };
-            req.CallerParams.TryAddFloat(keyId: 10, 77.0f); // override
+            req.CallerParams.TryAddFloat(keyId: 10, 77.0f);
 
             var merged = ConfigParamsMerger.BuildMergedConfig(in templateParams, in req);
 
@@ -783,10 +727,6 @@ namespace Ludots.Tests.GAS
             That(v, Is.EqualTo(1.0f));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Pre-merged EffectConfigParams on Entity
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void PreMergedConfigParams_AttachAndRead_OnEntity()
         {
@@ -803,10 +743,6 @@ namespace Ludots.Tests.GAS
             That(v, Is.EqualTo(3.14f).Within(1e-6f));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Full preset_types.json Load Test
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void PresetTypeLoader_FullPresetTypesJson_LoadsAllConfiguredTypes()
         {
@@ -818,10 +754,9 @@ namespace Ludots.Tests.GAS
             var reg = new PresetTypeRegistry();
             PresetTypeLoader.LoadFromJson(reg, json, CreateBuiltinHandlers());
 
-            // None (0) is not a real preset type �?it should NOT be in the JSON
+            // None (0) is not a real preset type; it should NOT be in the JSON
             That(reg.IsRegistered(EffectPresetType.None), Is.False);
 
-            // All configured real preset types should be registered
             That(reg.IsRegistered(EffectPresetType.ApplyForce2D), Is.True);
             That(reg.IsRegistered(EffectPresetType.InstantDamage), Is.True);
             That(reg.IsRegistered(EffectPresetType.DoT), Is.True);
@@ -837,13 +772,12 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.Exchange), Is.True);
             That(reg.IsRegistered(EffectPresetType.DeployConsumeSource), Is.True);
 
-            // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
             var hApply = af.DefaultPhaseHandlers[EffectPhaseId.OnApply];
             That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
             That(hApply.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyForce));
 
-            // Spot-check PeriodicSearch �?JSON only defines OnPeriod handler
+            // Spot-check PeriodicSearch: JSON only defines OnPeriod handler
             ref readonly var ps = ref reg.Get(EffectPresetType.PeriodicSearch);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].IsValid, Is.True);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
@@ -863,10 +797,6 @@ namespace Ludots.Tests.GAS
             That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId, Is.EqualTo(lifecycleGraphId));
 
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Helper
-        // ════════════════════════════════════════════════════════════════════
 
         private static BuiltinHandlerRegistry CreateBuiltinHandlers()
         {

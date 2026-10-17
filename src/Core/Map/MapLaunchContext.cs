@@ -19,7 +19,6 @@ namespace Ludots.Core.Map
             !HasLocalSeats &&
             (Metadata == null || Metadata.Count == 0);
 
-        /// <summary>Build launch context from an explicit seat table (Epic #896).</summary>
         public static MapLaunchContext? Create(
             IReadOnlyList<LocalSeatLaunchBinding> localSeats,
             IReadOnlyDictionary<string, object>? metadata = null)

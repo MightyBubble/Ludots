@@ -7,10 +7,6 @@ namespace Ludots.Core.Gameplay.Teams
     /// <summary>
     /// Maps Team IDs to their ECS meta-entities.
     /// Populated during game setup; stored in GlobalContext.
-    ///
-    /// Usage:
-    ///   lookup.Register(1, blueTeamEntity);
-    ///   if (lookup.TryGet(teamId, out var teamEntity)) { ... }
     /// </summary>
     public sealed class TeamEntityLookup
     {

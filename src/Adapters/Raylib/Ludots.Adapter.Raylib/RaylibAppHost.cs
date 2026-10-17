@@ -7,10 +7,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Adapter.Raylib
 {
-    /// <summary>
-    /// <see cref="IAppHost"/> shell around the existing Raylib bootstrap + frame loop:
-    /// Initialize wraps <see cref="RaylibHostComposer.Compose"/>, Run wraps <see cref="RaylibHostLoop"/>.
-    /// </summary>
     public sealed class RaylibAppHost : IAppHost
     {
         public const string DefaultAppId = "raylib-main";

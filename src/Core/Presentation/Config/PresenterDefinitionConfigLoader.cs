@@ -16,10 +16,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Config
 {
-    /// <summary>
-    /// Loads <see cref="PresenterDefinition"/> entries from
-    /// <c>Presentation/presenters.json</c>.
-    /// </summary>
     public sealed class PresenterDefinitionConfigLoader
     {
         private readonly ConfigPipeline _configs;

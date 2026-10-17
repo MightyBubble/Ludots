@@ -9,9 +9,8 @@ namespace Ludots.Core.Input.Runtime
         Vector2 GetMousePosition();
         float GetMouseWheel();
         
-        // IME Support
         void EnableIME(bool enable);
         void SetIMECandidatePosition(int x, int y);
-        string GetCharBuffer(); // For text input
+        string GetCharBuffer();
     }
 }

@@ -15,7 +15,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.GraphBrains;
 
 /// <summary>
-/// Order-driven graph brain host (issue #1536): one resident Script-graph execution
+/// Order-driven graph brain host: one resident Script-graph execution
 /// frame per entity carrying a <see cref="GraphActionBrain"/>. Each think tick
 /// refreshes the <see cref="OrderGlueKeys"/> entity-blackboard values (active order
 /// type/spatial/target, player id, pending flag), sets the slice caster to the actor,

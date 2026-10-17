@@ -154,7 +154,6 @@ namespace Ludots.Tests.GAS.Production
                     "attach 授予 Attached 写权（边界结算后）");
             });
 
-            // 底盘再前进，骑乘者随车。
             foreach (int stopCm in new[] { 3000, 3500 })
             {
                 chassisPoseScript.Enqueue(Fix64Vec2.FromInt(stopCm, 0), 0f);

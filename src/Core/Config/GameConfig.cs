@@ -13,7 +13,6 @@ using Ludots.Core.Networking.Configuration;
 namespace Ludots.Core.Config
 {
     /// <summary>
-    /// Game configuration that is merged from multiple sources via ConfigPipeline.
     /// Core's game.json only provides engine defaults + defaultCoreMod.
     /// All game-specific configuration comes from Mods.
     /// </summary>
@@ -23,14 +22,11 @@ namespace Ludots.Core.Config
         public List<string> ModPaths { get; set; } = new List<string>();
 
         /// <summary>
-        /// Default CoreMod to load (specified in Core's game.json).
-        /// This CoreMod provides all game framework configuration.
+        /// Specified in Core's game.json. Provides all game framework configuration.
         /// </summary>
         public string DefaultCoreMod { get; set; }
 
-        /// <summary>
-        /// Startup map ID - provided by CoreMod, not Core.
-        /// </summary>
+        /// <summary>Provided by CoreMod, not Core.</summary>
         public string StartupMapId { get; set; }
 
         /// <summary>
@@ -51,7 +47,6 @@ namespace Ludots.Core.Config
         /// </summary>
         public string? StartupPresentLayout { get; set; }
 
-        /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
         public MapLaunchContext? CreateStartupLaunchContext(
             IReadOnlyDictionary<string, object>? metadata = null)
         {
@@ -85,8 +80,6 @@ namespace Ludots.Core.Config
         public int TriggerGraphExecutionCapacity { get; set; }
 
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
-
-        /// <summary>Host map binding (#1567): the startup map roots the boot world via its root board.</summary>
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
@@ -123,10 +116,6 @@ namespace Ludots.Core.Config
         /// </summary>
         public string? PanelWebApp { get; set; }
 
-        /// <summary>
-        /// Game constants table - merged from all Mods via ConfigPipeline.
-        /// Contains order type ids, response-chain order type ids, attributes, etc.
-        /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
 
         /// <summary>
@@ -326,25 +315,18 @@ namespace Ludots.Core.Config
     }
 
     /// <summary>
-    /// Game constants loaded from runtime configuration.
-    /// Now fully data-driven via game.json merge.
+    /// Fully data-driven via game.json merge.
     /// </summary>
     public class GameConstants
     {
-        /// <summary>
-        /// Order type ids loaded from the `orderTypeIds` constants table in game.json.
-        /// </summary>
         [JsonPropertyName("orderTypeIds")]
         public Dictionary<string, int> OrderTypeIds { get; set; } = new Dictionary<string, int>();
 
-        /// <summary>
-        /// Response-chain order type ids loaded from the `responseChainOrderTypeIds` constants table in game.json.
-        /// </summary>
         [JsonPropertyName("responseChainOrderTypeIds")]
         public Dictionary<string, int> ResponseChainOrderTypeIds { get; set; } = new Dictionary<string, int>();
 
         /// <summary>
-        /// Attribute names (previously in GameAttributes.cs): health, mana...
+        /// Attribute names: health, mana...
         /// </summary>
         public Dictionary<string, string> Attributes { get; set; } = new Dictionary<string, string>();
 

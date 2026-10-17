@@ -7,7 +7,7 @@ namespace Ludots.Tests.RaylibAdapter
     /// <summary>
     /// Absolute-elevation tinting must not silently flatten authored relief. The mass navigation
     /// large-world relief peaks at ~417 m; with the default 36 m peak span every real vertex lands
-    /// outside [0, span] and used to collapse to the sea plane, leaving grounded agents floating.
+    /// outside [0, span] and would collapse to the sea plane, leaving grounded agents floating.
     /// </summary>
     [TestFixture]
     public sealed class ContinuousHeightmapAbsoluteDisplayHeightTests
@@ -66,7 +66,6 @@ namespace Ludots.Tests.RaylibAdapter
         [Test]
         public void SentinelDetectionUsesAbsoluteOvershootNotRelativeSpan()
         {
-            // A tight span must not turn ordinary relief into a sentinel.
             float display = RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 MassNavigationOriginCm,
                 seaLevelCm: 0f,

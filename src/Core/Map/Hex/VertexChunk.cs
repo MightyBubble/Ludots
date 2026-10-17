@@ -26,7 +26,7 @@ namespace Ludots.Core.Map.Hex
         // Index = row * ChunkSize + col
         private readonly byte[] _packedData;
         
-        private readonly byte[] _layer2; // Water + Vegetation
+        private readonly byte[] _waterVegetation;
 
         // Storage: 512 Bytes for 1-bit flags (e.g., IsBlocked)
         // 64 ulongs * 64 bits = 4096 bits
@@ -45,8 +45,8 @@ namespace Ludots.Core.Map.Hex
 
         public VertexChunk()
         {
-            _packedData = new byte[TotalCells]; // Layer 1: Biome + Height
-            _layer2 = new byte[TotalCells];     // Layer 2: Veg + Water
+            _packedData = new byte[TotalCells];
+            _waterVegetation = new byte[TotalCells];
             _flags = new ulong[TotalCells / 64];
             _rampFlags = new ulong[TotalCells / 64];
             _factions = new byte[TotalCells];
@@ -63,8 +63,6 @@ namespace Ludots.Core.Map.Hex
             return (localY << ChunkSizeShift) | localX;
         }
 
-        // --- Layer 1: Height & Biome ---
-
         public byte GetHeight(int localX, int localY)
         {
             int index = GetIndex(localX, localY);
@@ -75,13 +73,9 @@ namespace Ludots.Core.Map.Hex
         {
             if (height > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) height = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
-            // Clear low nibble (height) and OR in new height
             _packedData[index] = (byte)((_packedData[index] & 0xF0) | (height & 0x0F));
         }
 
-        /// <summary>
-        /// Gets the Biome type.
-        /// </summary>
         public byte GetBiome(int localX, int localY)
         {
             int index = GetIndex(localX, localY);
@@ -92,44 +86,41 @@ namespace Ludots.Core.Map.Hex
         {
             if (biome > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) biome = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
-            // Clear high nibble (biome) and OR in new biome
             _packedData[index] = (byte)((_packedData[index] & 0x0F) | (biome << 4));
         }
-
-        // --- Layer 2: Water & Vegetation ---
 
         public byte GetWaterHeight(int localX, int localY)
         {
             int index = GetIndex(localX, localY);
-            return (byte)(_layer2[index] & 0x0F);
+            return (byte)(_waterVegetation[index] & 0x0F);
         }
 
         public void SetWaterHeight(int localX, int localY, byte height)
         {
             if (height > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) height = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
-            _layer2[index] = (byte)((_layer2[index] & 0xF0) | (height & 0x0F));
+            _waterVegetation[index] = (byte)((_waterVegetation[index] & 0xF0) | (height & 0x0F));
         }
 
         public byte GetVegetation(int localX, int localY)
         {
             int index = GetIndex(localX, localY);
-            return (byte)((_layer2[index] >> 4) & 0x0F);
+            return (byte)((_waterVegetation[index] >> 4) & 0x0F);
         }
 
         public void SetVegetation(int localX, int localY, byte veg)
         {
             if (veg > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) veg = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
-            _layer2[index] = (byte)((_layer2[index] & 0x0F) | (veg << 4));
+            _waterVegetation[index] = (byte)((_waterVegetation[index] & 0x0F) | (veg << 4));
         }
 
 
         public bool GetFlag(int localX, int localY)
         {
             int index = GetIndex(localX, localY);
-            int ulongIndex = index >> 6; // index / 64
-            int bitIndex = index & 0x3F; // index % 64
+            int ulongIndex = index >> 6;
+            int bitIndex = index & 0x3F;
             
             return (_flags[ulongIndex] & (1UL << bitIndex)) != 0;
         }
@@ -274,7 +265,7 @@ namespace Ludots.Core.Map.Hex
             if (cliffStraightenFlagsBytes.Length != DerivedCliffStraightenBytes) throw new ArgumentException(nameof(cliffStraightenFlagsBytes));
 
             packedData.CopyTo(_packedData);
-            layer2.CopyTo(_layer2);
+            layer2.CopyTo(_waterVegetation);
             factions.CopyTo(_factions);
             extraByteLayer0.CopyTo(_extraBytes[0]);
             flagsBytes.CopyTo(MemoryMarshal.AsBytes(_flags.AsSpan()));
@@ -311,7 +302,7 @@ namespace Ludots.Core.Map.Hex
             if (cliffStraightenFlagsBytes.Length != DerivedCliffStraightenBytes) throw new ArgumentException(nameof(cliffStraightenFlagsBytes));
 
             _packedData.AsSpan().CopyTo(packedData);
-            _layer2.AsSpan().CopyTo(layer2);
+            _waterVegetation.AsSpan().CopyTo(layer2);
             MemoryMarshal.AsBytes(_flags.AsSpan()).CopyTo(flagsBytes);
             MemoryMarshal.AsBytes(_rampFlags.AsSpan()).CopyTo(rampFlagsBytes);
             _factions.AsSpan().CopyTo(factions);

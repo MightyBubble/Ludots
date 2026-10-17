@@ -6,7 +6,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Raylib.Render;
 
 /// <summary>
-/// 资产句柄状态机（#1327）。CpuReady/UploadQueued 是 #1328 异步两阶段装载的状态；
+/// 资产句柄状态机。CpuReady/UploadQueued 是异步两阶段装载的状态；
 /// 同步装载路径为 Unrequested→Preparing→Resident / Failed。
 /// </summary>
 public enum RaylibAssetState
@@ -31,11 +31,11 @@ public enum RaylibAssetAcquireOutcome
 }
 
 /// <summary>
-/// 按 URI 去重的原生资源存储（#1327/#1328）：句柄租约 + 引用计数 + 帧末延迟销毁 + 负缓存版本探测重试 + 链式 fail-loud。
+/// 按 URI 去重的原生资源存储：句柄租约 + 引用计数 + 帧末延迟销毁 + 负缓存版本探测重试 + 链式 fail-loud。
 /// 同一 URI 只创建一份物理资源（跨渲染器共享）；引用计数归零后资源进入退役队列，FlushRetired 在帧末真正销毁——
 /// 本帧仍在绘制中的引用不会被立即释放。装载失败记录原因与重试次数；文件补齐或内容版本变化（mtime/长度）后
 /// 下一次 Acquire 自动重试，不须重启进程。
-/// 两阶段异步（#1328）：提供 cpuPrepare（worker 线程：文件 IO/Assimp 转换/图像解码）与 uploader（渲染线程：GL 创建）
+/// 两阶段异步：提供 cpuPrepare（worker 线程：文件 IO/Assimp 转换/图像解码）与 uploader（渲染线程：GL 创建）
 /// 后，TryAcquireOrBegin 在未命中时 kick worker 并返回 InFlight；PumpUploads 每帧把 CpuReady 条目上传为 Resident。
 /// 未提供两阶段委托时退化为纯同步装载（bootstrap/验收通道，LUDOTS_RAYLIB_SYNC_ASSET_LOAD=1 强制）。
 /// </summary>
@@ -187,8 +187,8 @@ public sealed class RaylibAssetStore<T> : IDisposable
         return Acquire(new[] { uri });
     }
 
-    /// <summary>单 URI 获取；失败返回 false 并带出原因（失败已记入负缓存，含重试计数）。装载在锁内同步执行（冷路径）。</summary>
-    /// <summary>同步获取：与 TryAcquireOrBegin 共用状态机；遇到 InFlight 条目时等待 worker 并在本线程完成上传
+    /// <summary>单 URI 同步获取：与 TryAcquireOrBegin 共用状态机；失败返回 false 并带出原因（失败已记入负缓存，含重试计数），
+    /// 装载在锁内执行（冷路径）；遇到 InFlight 条目时等待 worker 并在本线程完成上传
     /// （蒙皮/材质/VFX 等 sync 消费者的合同入口；bootstrap 语义），不与异步路径产生双装载。</summary>
     public bool TryAcquire(string uri, out Lease? lease, out string? failure)
     {
@@ -319,7 +319,7 @@ public sealed class RaylibAssetStore<T> : IDisposable
         }
     }
 
-    /// <summary>渲染线程每帧调用：把 CpuReady 条目上传为 Resident（GL 创建只在渲染线程，#1328 两阶段的第二相）。</summary>
+    /// <summary>渲染线程每帧调用：把 CpuReady 条目上传为 Resident（GL 创建只在渲染线程，两阶段装载的第二相）。</summary>
     public void PumpUploads()
     {
         lock (_gate)

@@ -11,16 +11,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
         None = 0,
 
-        // ── Clips (duration-based) ──
-
         /// <summary>Apply a duration effect with optional CallerParams override.</summary>
         EffectClip = 1,
         /// <summary>Add a tag at startTick and auto-remove at startTick + durationTicks.</summary>
         TagClip = 2,
         /// <summary>Like TagClip, but applied to the current Target entity instead of the actor.</summary>
         TagClipTarget = 3,
-
-        // ── Signals (instant) ──
 
         /// <summary>Apply an instant effect.</summary>
         EffectSignal = 10,
@@ -31,12 +27,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>Like TagSignal, but applied to the current Target entity instead of the actor.</summary>
         TagSignalTarget = 14,
 
-        // ── Gates (pause until condition) ──
-
         /// <summary>Wait for a specific GameplayEvent.</summary>
         EventGate = 21,
-
-        // ── Control ──
 
         /// <summary>Marks the end of execution.</summary>
         End = 255,
@@ -87,10 +79,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public GasClockId ClockId;
         /// <summary>Tags that interrupt this ability when present on the caster.</summary>
         public GameplayTagContainer InterruptAny;
-        /// <summary>Number of items in this spec.</summary>
         public int ItemCount;
-
-        // ── SoA item arrays ──
 
         public fixed byte ItemKinds[MAX_ITEMS];
         /// <summary>Tick at which the item fires (relative to execution start).</summary>
@@ -127,10 +116,10 @@ namespace Ludots.Core.Gameplay.GAS.Components
             if (index >= MAX_ITEMS) return;
             fixed (byte* kinds = ItemKinds) kinds[index] = (byte)kind;
             fixed (int* ticks = ItemTicks) ticks[index] = tick;
-            fixed (int* durs = ItemDurationTicks) durs[index] = durationTicks;
+            fixed (int* durations = ItemDurationTicks) durations[index] = durationTicks;
             fixed (byte* clocks = ItemClockIds) clocks[index] = (byte)clockId;
             fixed (int* tags = ItemTagIds) tags[index] = tagId;
-            fixed (int* tmpl = ItemTemplateIds) tmpl[index] = templateId;
+            fixed (int* templateIds = ItemTemplateIds) templateIds[index] = templateId;
             fixed (byte* cpIdx = ItemCallerParamsIdx) cpIdx[index] = callerParamsIdx;
             fixed (int* pa = ItemPayloadA) pa[index] = payloadA;
             if (index + 1 > ItemCount) ItemCount = index + 1;
@@ -147,7 +136,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public const int MAX_SETS = 4;
 
         // Inline storage: 4 EffectConfigParams. Each is ~420 bytes.
-        // We use a byte blob and cast on access to keep the struct blittable.
         private EffectConfigParams _p0, _p1, _p2, _p3;
         public int Count;
 
@@ -202,13 +190,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public int CurrentTick;
         /// <summary>The tick value at execution start (absolute clock value).</summary>
         public int StartAbsoluteTick;
-        /// <summary>Index of the next item to process.</summary>
         public int NextItemIndex;
         /// <summary>Gate timeout tick (0 = no timeout).</summary>
         public int GateDeadline;
         /// <summary>Tag ID the EventGate is waiting for.</summary>
         public int WaitTagId;
-        /// <summary>Active clock for this execution.</summary>
         public GasClockId ActiveClockId;
         /// <summary>True when this instance is executing a toggle ability's deactivate timeline.</summary>
         public bool IsToggleDeactivating;

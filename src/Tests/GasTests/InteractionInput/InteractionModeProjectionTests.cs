@@ -72,7 +72,6 @@ namespace Ludots.Tests.GAS
             _tempRoot = null;
         }
 
-        // ── InteractionModeMap install contract ──
 
         [Test]
         public void ModeMap_Install_RejectsMissingReservedNormalMode()
@@ -124,7 +123,6 @@ namespace Ludots.Tests.GAS
             Assert.That(fixture.Map.IsNormalMode(fixture.Map.ModeIdRegistry.GetId(ModeSiege)), Is.False);
         }
 
-        // ── Projection contract ──
 
         [Test]
         public void Projection_RepWithoutComponent_PushesNoModeContexts()
@@ -324,7 +322,6 @@ namespace Ludots.Tests.GAS
                 Throws.InvalidOperationException.With.Message.Contains("imc.test.undefined"));
         }
 
-        // ── SetInteractionMode graph op contract ──
 
         [Test]
         public void GraphApi_SetInteractionMode_WritesAndClearsSparseComponent()
@@ -388,7 +385,6 @@ namespace Ludots.Tests.GAS
             Assert.That(targetMode.ModeId, Is.EqualTo(fixture.Map.ModeIdRegistry.GetId(ModeTargeting)));
         }
 
-        // ── Save round trip ──
 
         [Test]
         public void WorldSave_RoundTripsInteractionMode_AndProjectionResultMatchesAfterRestore()
@@ -444,7 +440,6 @@ namespace Ludots.Tests.GAS
             return new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
         }
 
-        // ── Harness ──
 
         private static InteractionModeMap NewMap()
         {

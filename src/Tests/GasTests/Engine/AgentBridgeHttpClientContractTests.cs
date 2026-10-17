@@ -7,7 +7,7 @@ namespace Ludots.Tests.Gas
 {
     /// <summary>
     /// HTTP surface smoke: /health /tools /rpc stay aligned with BuiltinAgentTools
-    /// so CLI / MCP / Inspector share one live catalog (#1056 P0-1 / P2 skeleton).
+    /// so CLI / MCP / Inspector share one live catalog.
     /// </summary>
     public sealed class AgentBridgeHttpClientContractTests
     {
@@ -59,7 +59,7 @@ namespace Ludots.Tests.Gas
             }
             finally
             {
-                try { Directory.Delete(discovery, recursive: true); } catch { /* temp cleanup */ }
+                try { Directory.Delete(discovery, recursive: true); } catch { }
             }
         }
     }

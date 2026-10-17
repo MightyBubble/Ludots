@@ -7,8 +7,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// DoOnce compile-time sugar shape and fail-closed gates (#1467). The lowered
-    /// chain mirrors a handwritten ReadMapVarInt→ConstInt→CompareEqInt→BranchBool→
+    /// The lowered chain mirrors a handwritten ReadMapVarInt→ConstInt→CompareEqInt→BranchBool→
     /// WriteMapVarInt gate; runtime behavior is proven end-to-end by
     /// RegionVolumeTextbookAcceptanceTests, whose ambush graph authors this sugar.
     /// </summary>
@@ -30,7 +29,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(ops, Does.Contain(GraphNodeOp.JumpIfFalse));
             Assert.That(ops, Does.Contain(GraphNodeOp.Jump));
 
-            // Latch order: read and compare precede the branch; the write follows it.
             int read = Array.IndexOf(ops, GraphNodeOp.ReadMapVarInt);
             int compare = Array.IndexOf(ops, GraphNodeOp.CompareEqInt);
             int branch = Array.IndexOf(ops, GraphNodeOp.JumpIfFalse);

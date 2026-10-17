@@ -20,10 +20,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
-    /// <summary>
-    /// Generic ability execution system. Replaces AbilityTaskSystem.
-    /// Tick-driven with Clip/Signal/Gate processing, interruption, and CallerParams injection.
-    /// </summary>
     public sealed class AbilityExecSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
         public const string TimedTagCapacityExceededError = "GAS.ABILITY_EXEC.ERR.TimedTagCapacityExceeded";
@@ -48,7 +44,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private static readonly QueryDescription _execQuery = new QueryDescription()
             .WithAll<AbilityExecInstance, AbilityStateBuffer>();
 
-        // Query for entities with newly activated CastAbility orders (OrderBuffer + Blackboard driven)
         private static readonly QueryDescription _newOrderQuery = new QueryDescription()
             .WithAll<OrderBuffer, BlackboardIntBuffer, AbilityStateBuffer>()
             .WithNone<AbilityExecInstance>();
@@ -109,8 +104,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Maximum re-scan iterations to prevent infinite loops when abilities
-        /// complete and promote new ones repeatedly in the same frame.
+        /// Prevents infinite loops when abilities complete and promote new ones
+        /// repeatedly in the same frame.
         /// </summary>
         private const int MaxRescanIterations = 4;
 
@@ -165,7 +160,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     ref var actorTags = ref World.TryGetRef<GameplayTagContainer>(actor, out bool hasActorTags);
 
-                    // Read slotIndex from Blackboard (Cast_SlotIndex = 110)
                     ref var bbInts = ref World.Get<BlackboardIntBuffer>(actor);
                     if (!bbInts.TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slotIndex))
                     {
@@ -184,7 +178,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    // Read target from Blackboard (Cast_TargetEntity = 111)
                     Entity targetEntity = default;
                     if (World.Has<BlackboardEntityBuffer>(actor))
                     {
@@ -225,7 +218,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    // Block-tag check
                     AbilityActivationBlockTags blockTags = default;
                     bool hasBlockTags = false;
                     if (hasAbilityDef && abilityDef.HasActivationBlockTags)
@@ -334,7 +326,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     GasClockId defaultClockId = startSpec.ClockId != 0 ? startSpec.ClockId : GasClockId.Step;
 
-                    // Read OrderId from active OrderBuffer entry
                     int orderId = 0;
                     if (World.Has<OrderBuffer>(actor))
                     {
@@ -462,7 +453,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                // Toggle deactivate uses the DeactivateExecSpec instead of normal ExecSpec
                 if (hasDefinition && instance.IsToggleDeactivating && def.HasToggleSpec)
                 {
                     spec = def.ToggleSpec.DeactivateExecSpec;
@@ -489,7 +479,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                // Interrupt check
                 ref var actorTags = ref World.TryGetRef<GameplayTagContainer>(actor, out bool hasActorTags);
                 if (hasActorTags && !spec.InterruptAny.IsEmpty && actorTags.Intersects(in spec.InterruptAny))
                 {
@@ -498,7 +487,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     instance.TerminalFailureReason = OrderFailureReason.Interrupted;
                 }
 
-                // Tick advancement
                 if (instance.State == AbilityExecRunState.Running)
                 {
                     int now = ClockNow(instance.ActiveClockId, actor);
@@ -510,7 +498,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ProcessGate(actor, ref spec, ref instance);
                 }
 
-                // Cleanup terminal states
                 if (instance.State == AbilityExecRunState.Finished ||
                     instance.State == AbilityExecRunState.Interrupted ||
                     instance.State == AbilityExecRunState.Failed)
@@ -777,8 +764,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
 
-        // Item processing
-
         private void AdvanceItems(Entity actor, ref AbilityExecSpec spec,
             ref AbilityExecCallerParamsPool callerPool, bool hasCallerPool,
             ref AbilityExecInstance inst)
@@ -806,7 +791,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 var kind = spec.GetKind(idx);
                 int itemTick = spec.GetTick(idx);
 
-                // Not yet time for this item
                 if (itemTick > inst.CurrentTick) return;
 
 
@@ -817,7 +801,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.State = AbilityExecRunState.Finished;
                         return;
 
-                    // Clips
                     case ExecItemKind.EffectClip:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
                         if (!FireEffectItem(actor, ref spec, idx, ref callerPool, hasCallerPool, ref inst))
@@ -844,7 +827,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.NextItemIndex++;
                         continue;
 
-                    // Signals
                     case ExecItemKind.EffectSignal:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
                         if (!FireEffectItem(actor, ref spec, idx, ref callerPool, hasCallerPool, ref inst))
@@ -880,7 +862,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.NextItemIndex++;
                         continue;
 
-                    // Gates
                     case ExecItemKind.EventGate:
                         if (!EnterGate(actor, ref spec, idx, ref inst))
                         {
@@ -890,8 +871,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (inst.State == AbilityExecRunState.GateWaiting)
                             ProcessGate(actor, ref spec, ref inst);
                         if (inst.State == AbilityExecRunState.GateWaiting)
-                            return; // Still blocked
-                        continue; // Gate resolved, advance to next item
+                            return;
+                        continue;
 
                     default:
                         inst.NextItemIndex++;
@@ -950,8 +931,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        // Effect dispatch (shared for EffectClip & EffectSignal)
-
         private bool FireEffectItem(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecCallerParamsPool callerPool, bool hasCallerPool,
             ref AbilityExecInstance inst)
@@ -981,9 +960,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
                 return false;
             }
-            bool hasCp = hasCallerPool && cpIdx != 0xFF && cpIdx < callerPool.Count;
-            EffectConfigParams resolvedCallerParams = hasCp ? callerPool.Get(cpIdx) : default;
-            bool resolvedHasCallerParams = hasCp;
+            bool hasCallerParams = hasCallerPool && cpIdx != 0xFF && cpIdx < callerPool.Count;
+            EffectConfigParams resolvedCallerParams = hasCallerParams ? callerPool.Get(cpIdx) : default;
+            bool resolvedHasCallerParams = hasCallerParams;
             bool hasRequestClock = false;
             GasClockId requestClockId = default;
 
@@ -1165,8 +1144,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        // Tag Clip (add at start, auto-remove via TimedTag)
-
         private void FireTagClip(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
         {
@@ -1208,8 +1185,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // Tag Signal (instant add/remove)
-
         private void FireTagSignal(Entity actor, ref AbilityExecSpec spec, int idx)
         {
             int tagId = spec.GetTagId(idx);
@@ -1226,8 +1201,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _tagOps.AddTag(World, actor, tagId);
             }
         }
-
-        // Event Signal
 
         private bool FireEventSignal(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
@@ -1247,8 +1220,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
             return true;
         }
-
-        // Gate enter / process
 
         private bool EnterGate(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
@@ -1297,7 +1268,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 OrderFailureReason.SubmissionQueueFull);
                             return;
                         }
-                        // Timeout check
                         if (inst.GateDeadline > 0)
                         {
                             int now = ClockNow(inst.ActiveClockId, actor);
@@ -1325,8 +1295,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
             }
         }
-
-        // Toggle helpers
 
         /// <summary>
         /// Activate toggle: add toggle tag and apply infinite active effects.
@@ -1427,7 +1395,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // Remove active effects by tag (the effects are tagged with the toggle tag,
             // so removing the tag will cause EffectLifetimeSystem to clean them up via ExpireCondition)
 
-            // If there's a deactivate timeline, execute it
             if (toggleSpec.DeactivateExecSpec.ItemCount > 0)
             {
                 var exec = new AbilityExecInstance
@@ -1453,7 +1420,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             else
             {
-                // No deactivate timeline; instant deactivation, just complete the order.
                 _presentationEvents?.Publish(new GasPresentationEvent
                 {
                     Kind = GasPresentationEventKind.CastFinished,
@@ -1469,8 +1435,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
         }
-
-        // Helpers
 
         private bool IsExecutionOrderCurrent(Entity actor, int orderId)
         {

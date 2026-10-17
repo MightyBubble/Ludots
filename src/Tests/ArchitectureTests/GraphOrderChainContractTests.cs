@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Architecture
 {
     /// <summary>
-    /// Graph order chain migration guards (constitution §12, branch graph-order-migration):
+    /// Graph order chain migration guards (constitution §12):
     /// local order mapping installs through exactly one config-driven composition root, the
     /// graph order bridge (SubmitCommandIntent/SubmitCast → buffer → drain) references no
     /// engine-reserved business collection key, and migrated showcases declare their active
@@ -40,8 +40,7 @@ namespace Ludots.Tests.Architecture
 
                 // Declared-path installer (per-mod local_order_source.json) is still inside the
                 // migration window: interaction/champion ship it for skillbar labels, and the
-                // auto-install replacement does not read those labels yet. Retirement of this
-                // file is slice-8 work together with the CoreInputMod dependency removal.
+                // auto-install replacement does not read those labels yet.
                 if (normalized.EndsWith("CoreInputMod/Systems/LocalOrderSourceSystem.cs"))
                 {
                     continue;

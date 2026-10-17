@@ -309,9 +309,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _eventContextFactory = eventContextFactory ?? throw new ArgumentNullException(nameof(eventContextFactory));
         }
 
-        /// <summary>
-        /// Binds the AwaitCallback registration/completion service.
-        /// </summary>
         public void BindGraphCallbackService(Ludots.Core.GraphRuntime.GraphCallbackService callbacks)
         {
             _graphCallbacks = callbacks ?? throw new ArgumentNullException(nameof(callbacks));
@@ -366,10 +363,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _commandIntentSubmissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
         }
 
-        /// <summary>
-        /// Binds the custom event name registry so collection pass-through dispatches can
-        
-        /// </summary>
         public void BindCustomEvents(Gameplay.MapTriggers.CustomEventNameRegistry customEvents)
         {
             _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
@@ -1113,11 +1106,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             contextInstances.Deactivate(subject, contextKeyId);
         }
 
-        /// <summary>
-        /// Fires the collection pass-through event: schema-less map dispatch
-        /// so the Entity[] payload rides the reserved MapTrigger.Collection* keys; the event
-        /// key must be a declared custom event (fail closed) and a map scope is required.
-        /// </summary>
         /// <summary>
         /// Direct owned-collection write (graph bridge entry): the caller computed owner, op, and
         /// the entity set in-graph; the set semantics execute in the CollectionApplier — the
@@ -2515,7 +2503,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
             }
 
-            // Convert EffectArgs to CallerParams
             var req = new Ludots.Core.Gameplay.GAS.EffectRequest
             {
                 RootId = ResolveChildEffectRootId(),
@@ -2703,8 +2690,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _eventBus.Publish(gameplayEvent);
         }
 
-        // ── Hex spatial queries ──
-
         public SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
@@ -2723,11 +2708,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer)
         {
-            // Neighbors = Ring(1)
             return QueryHexRing(centerCm, 1, buffer);
         }
-
-        // ── Blackboard immediate read/write ──
 
         public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
         {
@@ -2803,8 +2785,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"{MissingBlackboardError}: entity={entity.Id}, component={typeof(T).Name}.");
             }
         }
-
-        // ── Config parameter reading ──
 
         public bool TryLoadConfigFloat(int keyId, out float value)
         {

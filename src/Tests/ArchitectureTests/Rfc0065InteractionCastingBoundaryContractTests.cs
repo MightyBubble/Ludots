@@ -27,7 +27,7 @@ namespace Ludots.Tests.Architecture
 
         // Asset-layer variant: Core default config files additionally must not carry scenario
         // relationship/tag vocabulary such as alliance ("ally") or death state ("dead") — those
-        // belong to mod fragments / test data (H-1/M-1/M-2 findings of the semantic-intrusion audit).
+        // belong to mod fragments / test data.
         private static readonly Regex ForbiddenAssetScenarioWord = new(
             @"\b(offline|mind_control|cinematic|hostile|enemy|garrison|attack|ally|dead)\b",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);

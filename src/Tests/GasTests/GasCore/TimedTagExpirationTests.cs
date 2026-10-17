@@ -8,13 +8,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Unit tests for TimedTagExpirationSystem:
-    /// - Tags expire at the correct tick
-    /// - Expired tags are removed from container
-    /// - Non-expired tags remain
-    /// - DirtyFlags are set on expiration
-    /// </summary>
     [TestFixture]
     public class TimedTagExpirationTests
     {
@@ -33,7 +26,6 @@ namespace Ludots.Tests.GAS
                 new DirtyFlags()
             );
 
-            // Add timed tag that expires at tick 5
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             ref var counts = ref world.Get<TagCountContainer>(entity);
             ref var timed = ref world.Get<TimedTagBuffer>(entity);
@@ -44,13 +36,11 @@ namespace Ludots.Tests.GAS
 
             var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
-            // Advance to tick 3 — tag should still exist
             clock.Advance(ClockDomainId.Step, 3);
             system.Update(0f);
             That(world.Get<GameplayTagContainer>(entity).HasTag(testTagId), Is.True,
                 "Tag should still exist at tick 3");
 
-            // Advance to tick 5 — tag should expire
             clock.Advance(ClockDomainId.Step, 2);
             system.Update(0f);
             That(world.Get<GameplayTagContainer>(entity).HasTag(testTagId), Is.False,
@@ -87,7 +77,6 @@ namespace Ludots.Tests.GAS
 
             var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
-            // Advance past earlyTag expiry
             clock.Advance(ClockDomainId.Step, 3);
             system.Update(0f);
 
@@ -122,10 +111,8 @@ namespace Ludots.Tests.GAS
 
             var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
-            // Clear dirty flags first
             world.Get<DirtyFlags>(entity) = default;
 
-            // Advance past expiry
             clock.Advance(ClockDomainId.Step, 2);
             system.Update(0f);
 

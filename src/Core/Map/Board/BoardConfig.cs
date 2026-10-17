@@ -43,9 +43,6 @@ namespace Ludots.Core.Map.Board
         public BoardHexAuthoring Clone() => new() { EdgeLengthCm = EdgeLengthCm };
     }
 
-    /// <summary>
-    /// Configuration for a single Board within a Map.
-    /// </summary>
     public class BoardConfig
     {
         public string Name { get; set; } = "default";

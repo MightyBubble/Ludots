@@ -76,7 +76,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly TagOps? _tagOps;
         private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
-        // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor? _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? _graphApiHost;
@@ -510,7 +509,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         });
                     }
 
-                    // Execute OnPropose Phase Graphs (before ResponseChain)
                     if (!ExecuteOnProposePhase(in root, in rootTpl))
                     {
                         root.Cancelled = true;
@@ -1106,7 +1104,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
-                        // Execute OnCalculate Phase Graphs (after ResponseChain resolves)
                         ExecuteOnCalculatePhase(in e, in tpl);
 
                         if (CanExecuteInstantInline(in tpl))
@@ -1655,7 +1652,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int durationTicks = ConfigParamsMerger.ResolveDurationTicks(in tpl, in mergedConfig);
             int periodTicks = ConfigParamsMerger.ResolvePeriodTicks(in tpl, in mergedConfig);
 
-            // Stack merge: if template has stack policy and an existing effect exists on target, merge.
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
             {
@@ -1667,7 +1663,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     EffectStack stackAfter = stackBefore;
                     if (stackAfter.TryAddStack())
                     {
-                        // Apply duration policy
                         GameplayEffect effectBefore = World.Get<GameplayEffect>(existing);
                         GameplayEffect effectAfter = effectBefore;
                         switch (tpl.StackPolicy)
@@ -1695,7 +1690,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         World.Get<EffectStack>(existing) = stackAfter;
                         World.Get<GameplayEffect>(existing) = effectAfter;
 
-                        // Update tag contributions for the committed stack delta.
                         try
                         {
                             if (World.Has<EffectGrantedTags>(existing))
@@ -1719,7 +1713,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             throw;
                         }
                         MarkAggregateDirtyIfNeeded(proposal.Target, existing);
-                        return; // Merged into existing stack, no new entity
+                        return;
                     }
                     // TryAddStack returned false = stack full + RejectNew policy
                     return;
@@ -1746,13 +1740,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 World.Add(newEffect, mergedConfig);
             }
 
-            // Attach EffectGrantedTags if template declares tag contributions
             if (tpl.GrantedTags.Count > 0)
             {
                 World.Add(newEffect, tpl.GrantedTags);
             }
 
-            // Attach EffectStack if template has stack policy (first application = count 1)
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant)
             {
                 World.Add(newEffect, new EffectStack
@@ -1766,7 +1758,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Find an existing active effect on the target with the given template ID.
         /// Returns Entity.Null if not found.
         /// </summary>
         private Entity FindExistingEffectByTemplate(in ActiveEffectContainer container, int templateId)
@@ -1799,7 +1790,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Execute OnPropose phase graphs for a proposal.
         /// Called after EffectProposal is created, before ResponseChain window.
         /// Returns false when a validating OnPropose graph leaves B[0]=0
         /// (fail-closed placement/validation rejection). Vacant OnPropose phases pass.
@@ -1831,7 +1821,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Execute OnCalculate phase graphs for a proposal.
         /// Called after ResponseChain resolves, before applying modifiers.
         /// </summary>
         private void ExecuteOnCalculatePhase(in EffectProposal proposal, in EffectTemplateData tpl)

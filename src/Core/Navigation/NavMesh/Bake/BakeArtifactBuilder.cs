@@ -5,9 +5,6 @@ using System.Text;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
-    /// <summary>
-    /// Extended bake artifact with full replay data for debugging.
-    /// </summary>
     public sealed class ExtendedBakeArtifact
     {
         public NavTileId TileId { get; }
@@ -17,7 +14,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public string ErrorMessage { get; }
         public DateTime Timestamp { get; }
 
-        // Pipeline statistics
         public int InputWalkableTriangles { get; set; }
         public int ExtractedRingCount { get; set; }
         public int ProcessedPolygonCount { get; set; }
@@ -25,7 +21,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public int OutputVertexCount { get; set; }
         public int OutputPortalCount { get; set; }
 
-        // Detailed data for replay/debugging
         public TriWalkMask? WalkMask { get; set; }
         public List<IntRing> ContourRings { get; set; }
         public ValidPolygonSet? PolygonSet { get; set; }
@@ -61,9 +56,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 Logs.ToArray());
         }
 
-        /// <summary>
-        /// Generates a human-readable report of the bake artifact.
-        /// </summary>
         public string GenerateReport()
         {
             var sb = new StringBuilder();
@@ -150,14 +142,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
     }
 
-    /// <summary>
-    /// Builds and manages extended bake artifacts.
-    /// </summary>
     public static class BakeArtifactBuilder
     {
-        /// <summary>
-        /// Creates an extended artifact from pipeline context.
-        /// </summary>
         public static ExtendedBakeArtifact CreateFromContext(
             BakePipelineContext context,
             NavTileId tileId,
@@ -169,10 +155,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         {
             var artifact = new ExtendedBakeArtifact(tileId, tileVersion, failedStage, errorCode, errorMessage);
 
-            // Copy logs
             artifact.Logs.AddRange(context.Logs);
 
-            // Statistics
             if (context.WalkMask.Walkable != null)
             {
                 artifact.InputWalkableTriangles = context.WalkMask.WalkableTriangleCount;
@@ -194,7 +178,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 artifact.OutputTriangleCount = context.TriMesh.TriangleCount;
             }
 
-            // Detailed data for debugging
             if (includeDetailedData)
             {
                 if (context.WalkMask.Walkable != null)
@@ -316,9 +299,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        /// <summary>
-        /// Writes a complete debug dump of the artifact to a directory.
-        /// </summary>
         public static void WriteDiagnosticDump(string directory, ExtendedBakeArtifact artifact)
         {
             if (!Directory.Exists(directory))
@@ -328,37 +308,29 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             string baseName = $"tile_{artifact.TileId.ChunkX}_{artifact.TileId.ChunkY}_{artifact.TileVersion}";
 
-            // Write report
             File.WriteAllText(Path.Combine(directory, $"{baseName}_report.txt"), artifact.GenerateReport());
 
-            // Write contour rings if available
             if (artifact.ContourRings != null && artifact.ContourRings.Count > 0)
             {
                 WriteContourRingsToFile(Path.Combine(directory, $"{baseName}_contours.txt"), artifact.ContourRings);
             }
 
-            // Write polygon set if available
             if (artifact.PolygonSet.HasValue && artifact.PolygonSet.Value.Polygons.Length > 0)
             {
                 WritePolygonSetToFile(Path.Combine(directory, $"{baseName}_polygons.txt"), artifact.PolygonSet.Value);
             }
 
-            // Write tri mesh if available
             if (artifact.TriMesh.HasValue && artifact.TriMesh.Value.VertexCount > 0)
             {
                 WriteTriMeshToObjFile(Path.Combine(directory, $"{baseName}_mesh.obj"), artifact.TriMesh.Value);
             }
 
-            // Write walk mask visualization if available
             if (artifact.WalkMask.HasValue)
             {
                 WriteWalkMaskVisualization(Path.Combine(directory, $"{baseName}_walkmask.txt"), artifact.WalkMask.Value);
             }
         }
 
-        /// <summary>
-        /// Writes a text visualization of the walk mask.
-        /// </summary>
         private static void WriteWalkMaskVisualization(string path, TriWalkMask mask)
         {
             using var writer = new StreamWriter(path, false, Encoding.UTF8);

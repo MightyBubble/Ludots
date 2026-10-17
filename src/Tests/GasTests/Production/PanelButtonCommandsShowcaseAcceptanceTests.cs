@@ -19,12 +19,8 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// Panel button commands showcase acceptance: one zero-C# panel strip where the caster's
-/// abilities are aggregated by graph rules into a clickable skill row, plus a spawn button.
-/// Clicks are semantic actions admitted by the mounted interaction context; the skill chip
-/// casts through the same intent pipeline the keyboard uses, the spawn button creates a
-/// real entity via an effect. Skills, entities and presentation all come from
-/// FireballSharedMod — this showcase adds zero wheels.
+/// Clicks are semantic actions admitted by the mounted interaction context; the skill
+/// chip casts through the same intent pipeline the keyboard uses.
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -54,11 +50,9 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
         UiScene? scene = root.Scene;
         Assert.That(scene, Is.Not.Null, "panel presentation must have mounted the surface scene");
 
-        // Two abilities on the caster aggregate into two clickable chips — nothing else.
         Assert.That(CountButtons(scene!.Root), Is.EqualTo(2),
             "the strip aggregates one chip per ability slot, zero hardcoded buttons");
 
-        // PROBE: dump interaction context instances on the hero rep
         {
             Entity hero = FindEntityByName(engine, "施法者");
             Assert.That(
@@ -68,7 +62,6 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
                 "hero rep carries no base interaction context — the profile never mounted");
         }
 
-        // ── hover the spawn chip: tooltip appears with the ability display name ──
         (float spawnX, float spawnY) = FindButtonPointByText(root, SpawnChipText)
             ?? throw new AssertionException("spawn chip not found in the mounted scene");
         Move(root, spawnX, spawnY);
@@ -108,11 +101,10 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
         Assert.That(ProjectileArrivedAtTarget(engine, target),
             "clicking the chip must cast for real — the fireball flies the full 600cm to the target (headless impact detonation is tracked by #1739)");
 
-        // NOTE(#1739): targetless-click guarding (no target ⇒ no order) is not authorable today —
+        // Targetless-click guarding (no target ⇒ no order) is not authorable today:
         // TargetListGet's valid flag has no authorable port and the drain accepts targetless
-        // cast intents by design (self-cast abilities). Follow-up options recorded in #1739.
+        // cast intents by design (self-cast abilities).
 
-        // ── tip leaves with the pointer ──
         Move(root, 40f, 40f);
         Move(root, 41f, 41f);
         Assert.That(FindNodeByClass(scene.Root, "ui-tip"), Is.Null, "leaving the control releases the tip");

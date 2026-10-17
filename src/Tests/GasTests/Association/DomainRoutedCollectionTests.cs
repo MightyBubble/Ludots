@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>RFC-0065 M3: domain-routed collection writes + composite control-plane view (CTRL-4c/4d).</summary>
+    /// <summary>Domain-routed collection writes + composite control-plane view.</summary>
     [TestFixture]
     public sealed class DomainRoutedCollectionTests
     {
@@ -132,7 +132,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ConcurrentControllers_SameDomainSameKey_IsSharedSingletonWithLastWriteWins()
         {
-            // DEC-4 附则 UAT: a domain collection row is the domain's command state, not a per-controller
+            // A domain collection row is the domain's command state, not a per-controller
             // private view. Two controllers of the same domain share one (domain, key) row — last write wins,
             // writerDomain records the last maintainer. Private parallel selection uses a different key.
             using var world = World.Create();

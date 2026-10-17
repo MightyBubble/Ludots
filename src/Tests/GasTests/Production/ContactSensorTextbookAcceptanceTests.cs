@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Contact sensor textbook acceptance (#1480): the pressure plate and the ball are
+/// Contact sensor textbook acceptance: the pressure plate and the ball are
 /// authored purely as entity template data (Position2D / Collider2D / Mass2D /
 /// static-state / emitter + the unified emission contract), the graph listens on
 /// the declared custom contact events, and engine truth proves the chain — the
@@ -66,7 +66,6 @@ public sealed class ContactSensorTextbookAcceptanceTests
             "Rolling onto the plate must fire demo.plate.pressed through the real physics pipeline.");
         Assert.That(variables.ReadInt("release.count"), Is.EqualTo(0), "No release while still on the plate.");
 
-        // Roll back off.
         for (int x = 500; x >= 0 && variables.ReadInt("release.count") == 0; x -= 50)
         {
             MoveBall(world, ball, x, 0);

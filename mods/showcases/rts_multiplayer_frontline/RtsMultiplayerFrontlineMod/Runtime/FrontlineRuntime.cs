@@ -564,8 +564,8 @@ public sealed class FrontlineRuntime : IGameplayAdvanceGate
         _tagBinder = new FrontlineTagBinder(Config, tagOps);
         // capabilityId: rts-frontline.tag-binding
         engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, _tagBinder), SystemGroup.RuntimeEntityBinding);
-        // capabilityId: rts-frontline.graph-brains (issue #1536): attack + transport
-        // behavior now live as HFSM definitions (hfsm.rts.attack / hfsm.rts.transport) whose
+        // capabilityId: rts-frontline.graph-brains: attack + transport
+        // behavior lives as HFSM definitions (hfsm.rts.attack / hfsm.rts.transport) whose
         // states/transitions bind ActionLib graphs, driven per entity by the generic
         // HfsmWorld + GraphProgramHfsmHost adapter.
         engine.RegisterSystem(

@@ -5,7 +5,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 namespace Ludots.Core.Gameplay.GAS
 {
     /// <summary>
-    /// 属性读路由（RFC-0067 P1）：槽位 [0,64) 读实体内嵌镜像，[64, Plan) 读世界列存。
+    /// 属性读路由：槽位 [0,64) 读实体内嵌镜像，[64, Plan) 读世界列存。
     /// 高槽位且列存未绑定时失败关闭——能登记出高 id 就必须有列存。
     /// </summary>
     public static class AttributeReads

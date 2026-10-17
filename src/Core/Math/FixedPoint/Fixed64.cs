@@ -74,7 +74,6 @@ namespace FixPointCS
         public const long FractionMask = ( 1L << Shift ) - 1; // Space before 1L needed because of hacky C++ code generator
         public const long IntegerMask = ~FractionMask;
 
-        // Constants
         public const long Zero = 0L;
         public const long Neg1 = -1L << Shift;
         public const long One = 1L << Shift;
@@ -90,86 +89,58 @@ namespace FixPointCS
         public const long MinValue = -9223372036854775808L;
         public const long MaxValue = 9223372036854775807L;
 
-        // Private constants
         private const long RCP_LN2      = 0x171547652L; // 1.0 / log(2.0) ~= 1.4426950408889634
         private const long RCP_LOG2_E   = 2977044471L;  // 1.0 / log2(e) ~= 0.6931471805599453
         private const int  RCP_HALF_PI  = 683565276; // 1.0 / (4.0 * 0.5 * Math.PI);  // the 4.0 factor converts directly to s2.30
 
-        /// <summary>
-        /// Converts an integer to a fixed-point value.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long FromInt(int v)
         {
             return (long)v << Shift;
         }
 
-        /// <summary>
-        /// Converts a double to a fixed-point value.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long FromDouble(double v)
         {
             return (long)(v * 4294967296.0);
         }
 
-        /// <summary>
-        /// Converts a float to a fixed-point value.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long FromFloat(float v)
         {
             return (long)(v * 4294967296.0f);
         }
 
-        /// <summary>
-        /// Converts a fixed-point value into an integer by rounding it up to nearest integer.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static int CeilToInt(long v)
         {
             return (int)((v + (One - 1)) >> Shift);
         }
 
-        /// <summary>
-        /// Converts a fixed-point value into an integer by rounding it down to nearest integer.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static int FloorToInt(long v)
         {
             return (int)(v >> Shift);
         }
 
-        /// <summary>
-        /// Converts a fixed-point value into an integer by rounding it to nearest integer.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static int RoundToInt(long v)
         {
             return (int)((v + Half) >> Shift);
         }
 
-        /// <summary>
-        /// Converts a fixed-point value into a double.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static double ToDouble(long v)
         {
             return (double)v * (1.0 / 4294967296.0);
         }
 
-        /// <summary>
-        /// Converts a FP value into a float.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static float ToFloat(long v)
         {
             return (float)v * (1.0f / 4294967296.0f);
         }
 
-        /// <summary>
-        /// Converts the value to a human readable string.
-        /// </summary>
 #if CPP
 #elif JAVA
         public static String ToString(long v)
@@ -183,9 +154,6 @@ namespace FixPointCS
         }
 #endif
 
-        /// <summary>
-        /// Returns the absolute (positive) value of x.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Abs(long x)
         {
@@ -194,36 +162,24 @@ namespace FixPointCS
             return (x + mask) ^ mask;
         }
 
-        /// <summary>
-        /// Negative absolute value (returns -abs(x)).
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Nabs(long x)
         {
             return -Abs(x);
         }
 
-        /// <summary>
-        /// Round up to nearest integer.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Ceil(long x)
         {
             return (x + FractionMask) & IntegerMask;
         }
 
-        /// <summary>
-        /// Round down to nearest integer.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Floor(long x)
         {
             return x & IntegerMask;
         }
 
-        /// <summary>
-        /// Round to nearest integer.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Round(long x)
         {
@@ -239,36 +195,24 @@ namespace FixPointCS
             return x & FractionMask;
         }
 
-        /// <summary>
-        /// Returns the minimum of the two values.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Min(long a, long b)
         {
             return (a < b) ? a : b;
         }
 
-        /// <summary>
-        /// Returns the maximum of the two values.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Max(long a, long b)
         {
             return (a > b) ? a : b;
         }
 
-        /// <summary>
-        /// Returns the value clamped between min and max.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Clamp(long a, long min, long max)
         {
             return (a > max) ? max : (a < min) ? min : a;
         }
 
-        /// <summary>
-        /// Returns the sign of the value (-1 if negative, 0 if zero, 1 if positive).
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static int Sign(long x)
         {
@@ -280,27 +224,18 @@ namespace FixPointCS
 #endif
         }
 
-        /// <summary>
-        /// Adds the two FP numbers together.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Add(long a, long b)
         {
             return a + b;
         }
 
-        /// <summary>
-        /// Subtracts the two FP numbers from each other.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Sub(long a, long b)
         {
             return a - b;
         }
 
-        /// <summary>
-        /// Multiplies two FP values together.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Mul(long a, long b)
         {
@@ -329,9 +264,6 @@ namespace FixPointCS
             return FixedUtil.LogicalShiftRight(a * bf, Shift) + a * bi;
         }
 
-        /// <summary>
-        /// Linearly interpolate from a to b by t.
-        /// </summary>
         [MethodImpl(FixedUtil.AggressiveInlining)]
         public static long Lerp(long a, long b, long t)
         {
@@ -363,9 +295,6 @@ namespace FixPointCS
         }
 #endif
 
-        /// <summary>
-        /// Divides two FP values.
-        /// </summary>
         public static long DivPrecise(long arg_a, long arg_b)
         {
             // From https://web.archive.org/web/20190109053731/http://www.hackersdelight.org/hdcodetxt/divlu.c.txt
@@ -584,9 +513,6 @@ namespace FixPointCS
             return FixedUtil.ShiftRight(sign * y, offset);
         }
 
-        /// <summary>
-        /// Divides two FP values and returns the modulus.
-        /// </summary>
         public static long Mod(long a, long b)
         {
             if (b == 0)
@@ -598,9 +524,6 @@ namespace FixPointCS
             return a % b;
         }
 
-        /// <summary>
-        /// Calculates the square root of the given number.
-        /// </summary>
         public static long SqrtPrecise(long a)
         {
             // Adapted from https://github.com/chmike/fpsqrt
@@ -735,9 +658,6 @@ namespace FixPointCS
             return (offset >= 0) ? (yr << offset) : (yr >> -offset);
         }
 
-        /// <summary>
-        /// Calculates the reciprocal square root.
-        /// </summary>
         public static long RSqrt(long x)
         {
             // Return 0 for invalid values
@@ -766,9 +686,6 @@ namespace FixPointCS
             return (offset >= 0) ? (yr >> offset) : (yr << -offset);
         }
 
-        /// <summary>
-        /// Calculates the reciprocal square root.
-        /// </summary>
         public static long RSqrtFast(long x)
         {
             // Return 0 for invalid values
@@ -797,9 +714,6 @@ namespace FixPointCS
             return (offset >= 0) ? (yr >> offset) : (yr << -offset);
         }
 
-        /// <summary>
-        /// Calculates the reciprocal square root.
-        /// </summary>
         public static long RSqrtFastest(long x)
         {
             // Return 0 for invalid values
@@ -905,7 +819,6 @@ namespace FixPointCS
             const int ONE = (1 << 30);
             int offset = 31 - Nlz((ulong)x);
             int n = (int)FixedUtil.ShiftRight(x, offset + 2);
-            //int n = (int)(((offset >= 0) ? (x >> offset) : (x << -offset)) >> 2);
 
             // Polynomial approximation.
             int res = FixedUtil.RcpPoly4(n - ONE);
@@ -915,9 +828,6 @@ namespace FixPointCS
             return FixedUtil.ShiftRight(y, offset);
         }
 
-        /// <summary>
-        /// Calculates the base 2 exponent.
-        /// </summary>
         public static long Exp2(long x)
         {
             // Handle values that would under or overflow.
@@ -933,9 +843,6 @@ namespace FixPointCS
             return (intPart >= 0) ? (y << intPart) : (y >> -intPart);
         }
 
-        /// <summary>
-        /// Calculates the base 2 exponent.
-        /// </summary>
         public static long Exp2Fast(long x)
         {
             // Handle values that would under or overflow.
@@ -951,9 +858,6 @@ namespace FixPointCS
             return (intPart >= 0) ? (y << intPart) : (y >> -intPart);
         }
 
-        /// <summary>
-        /// Calculates the base 2 exponent.
-        /// </summary>
         public static long Exp2Fastest(long x)
         {
             // Handle values that would under or overflow.
@@ -1114,12 +1018,8 @@ namespace FixPointCS
             return ((long)offset << Shift) + y;
         }
 
-        /// <summary>
-        /// Calculates x to the power of the exponent.
-        /// </summary>
         public static long Pow(long x, long exponent)
         {
-            // n^0 == 1
             if (exponent == 0)
                 return One;
 
@@ -1134,12 +1034,8 @@ namespace FixPointCS
             return Exp(Mul(exponent, Log(x)));
         }
 
-        /// <summary>
-        /// Calculates x to the power of the exponent.
-        /// </summary>
         public static long PowFast(long x, long exponent)
         {
-            // n^0 == 1
             if (exponent == 0)
                 return One;
 
@@ -1154,12 +1050,8 @@ namespace FixPointCS
             return ExpFast(Mul(exponent, LogFast(x)));
         }
 
-        /// <summary>
-        /// Calculates x to the power of the exponent.
-        /// </summary>
         public static long PowFastest(long x, long exponent)
         {
-            // n^0 == 1
             if (exponent == 0)
                 return One;
 

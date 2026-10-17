@@ -334,7 +334,7 @@ namespace Ludots.Raylib.Render
 
         private static Model LoadModelResource(string fullPath)
         {
-            // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
+            // OBJ 直走 native LoadModel 会 AccessViolation；统一经
             // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
             Model model = RaylibModelFileLoader.LoadModel(fullPath);
             if (model.meshCount <= 0)
@@ -346,7 +346,7 @@ namespace Ludots.Raylib.Render
             return model;
         }
 
-        /// <summary>帧末冲刷引用归零的退役资产；由唯一帧执行者在 pass 序列后调用（#1327 帧末延迟销毁）。</summary>
+        /// <summary>帧末冲刷引用归零的退役资产；由唯一帧执行者在 pass 序列后调用（帧末延迟销毁）。</summary>
         public void FlushRetiredAssets()
         {
             _textureStore.FlushRetired();
@@ -2201,7 +2201,7 @@ namespace Ludots.Raylib.Render
                 RaylibAssetAcquireOutcome outcome = _modelStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Model>.Lease? lease, out string? status);
                 if (outcome == RaylibAssetAcquireOutcome.InFlight)
                 {
-                    // 两阶段装载进行中：本帧不绘制、不记负缓存，下一帧重问（#1328）。
+                    // 两阶段装载进行中：本帧不绘制、不记负缓存，下一帧重问。
                     return false;
                 }
 
@@ -2620,8 +2620,6 @@ namespace Ludots.Raylib.Render
             angleDegrees = VisualMath.RadToDegValue(angleRad);
         }
 
-        // ── Instanced rendering (unchanged from original) ──
-
         public void DrawInstanced(IPrimitiveDrawSnapshot draw, IRenderMeshAssets meshes)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
@@ -2934,7 +2932,7 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// 帧级视锥侧平面（#1331）：System.Numerics 行向量约定下 clip = world*(view*proj)，
+        /// 帧级视锥侧平面：System.Numerics 行向量约定下 clip = world*(view*proj)，
         /// 平面取列组合 col1±col4 / col2±col4；只做四个侧平面的保守球筛选——近平面（near=0.05 收益可忽略）
         /// 与远平面不参与，深度约定差异（GL -w..w vs D3D 0..w）因此不构成风险。平面构建失败兜底为全可见（保守方向）。
         /// </summary>
@@ -2998,7 +2996,7 @@ namespace Ludots.Raylib.Render
             return true;
         }
 
-        /// <summary>主颜色 pass 提交点做逐实例压缩（#1331）：全可见时零拷贝直接用原批次；
+        /// <summary>主颜色 pass 提交点做逐实例压缩：全可见时零拷贝直接用原批次；
         /// 有剔除时压缩进复用 scratch。阴影 pass 不调用（光源视锥与主相机视锥不同，剔除语义不适用）。
         /// revision 矩阵缓存不受剔除结果影响（缓存存原始全量，压缩每帧独立）。</summary>
         private (RaylibMatrix[] Buffer, int Count) CompactVisibleInstances(ModelInstanceBatch batch, float localRadiusMeters)
@@ -3757,7 +3755,7 @@ namespace Ludots.Raylib.Render
             _initialized = false;
 
             // 存储销毁必须最晚：蒙皮缓存/材质库/VFX 的释放回调（DetachOwnedMaps 等）仍要触碰模型与贴图，
-            // 先销毁存储会产生悬空指针；模型先于贴图销毁保持与旧实现一致（模型内部纹理随模型释放）。
+            // 先销毁存储会产生悬空指针；模型先于贴图销毁（模型内部纹理随模型释放）。
             _modelStore.Dispose();
             _textureStore.Dispose();
         }

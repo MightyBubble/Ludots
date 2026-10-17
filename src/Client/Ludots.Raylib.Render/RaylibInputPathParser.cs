@@ -12,10 +12,8 @@ namespace Ludots.Raylib.Render
 
             string keyName = path.Substring(11).ToUpper();
             
-            // Map common keys
             if (keyName.Length == 1)
             {
-                // Single char keys (A-Z, 0-9)
                 char c = keyName[0];
                 if (c >= 'A' && c <= 'Z') return (KeyboardKey)((int)KeyboardKey.KEY_A + (c - 'A'));
                 if (c >= '0' && c <= '9') return (KeyboardKey)((int)KeyboardKey.KEY_ZERO + (c - '0'));
@@ -23,10 +21,10 @@ namespace Ludots.Raylib.Render
 
             if (keyName.Length >= 2 &&
                 keyName[0] == 'F' &&
-                int.TryParse(keyName.AsSpan(1), out int fNum) &&
-                fNum >= 1 && fNum <= 12)
+                int.TryParse(keyName.AsSpan(1), out int functionKeyNumber) &&
+                functionKeyNumber >= 1 && functionKeyNumber <= 12)
             {
-                return (KeyboardKey)((int)KeyboardKey.KEY_F1 + (fNum - 1));
+                return (KeyboardKey)((int)KeyboardKey.KEY_F1 + (functionKeyNumber - 1));
             }
 
             return keyName switch

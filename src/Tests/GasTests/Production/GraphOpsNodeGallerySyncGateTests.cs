@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Epic #990 Stage 0 sync gate: every vignette's title / beat / detailTemplate must stay
+/// Sync gate: every vignette's title / beat / detailTemplate must stay
 /// in lockstep with the generated wiki page and showcase.registry.json summary. Wiki pages
 /// are generated artifacts (scripts/generate-graph-op-node-wiki.py); drifting them silently
 /// breaks the "evidence equals current fact" gallery contract.

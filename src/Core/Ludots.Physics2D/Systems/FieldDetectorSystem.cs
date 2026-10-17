@@ -7,9 +7,6 @@ using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
-    /// <summary>
-    /// 场检测系统 — 全定点数域，检测实体是否在阻尼场内。
-    /// </summary>
     public sealed class FieldDetectorSystem : BaseSystem<World, float>
     {
         private readonly QueryDescription _dampingFieldQuery;

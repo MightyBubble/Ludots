@@ -33,8 +33,6 @@ namespace Ludots.Tests.Gas.Graph
             GraphIdRegistry.Clear();
         }
 
-        // ── Evaluator：payload 过滤语义 ──
-
         [Test]
         public void PayloadFilter_StringMatchesOnlyEqualValue()
         {
@@ -151,8 +149,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.DoesNotThrow(() =>
                 TriggerGraphMounting.BuildModMountTriggers(programs, manifest, customEvents, new EventSchemaRegistry()));
         }
-
-        // ── 编译：authored payload 过滤进 TriggerGraphEntry ──
 
         [Test]
         public void Compile_PayloadFilters_ReachCompiledEntries()
@@ -341,8 +337,6 @@ namespace Ludots.Tests.Gas.Graph
                 "float/entity params cannot be payload-filtered");
         }
 
-        // ── 端到端订阅：真实历法事件上下文 × 挂载触发器 CheckConditions ──
-
         [Test]
         public void CalendarSubscriptions_MatchOnlyTheirPhaseOrDay()
         {
@@ -367,7 +361,6 @@ namespace Ludots.Tests.Gas.Graph
                 "exactly one context is solar360's spring entry; lunisolar phase entries on the same day must not match");
             Assert.That(dayAdvanced.Count(c => onNewYearDay.CheckConditions(c)), Is.EqualTo(1));
 
-            // 同一批上下文对其他日期 / 相位的订阅一律不匹配。
             Assert.That(entered.Count(c => onWinterEnd.CheckConditions(c)), Is.EqualTo(0));
             Assert.That(exited.Count(c => onSpringBegin.CheckConditions(c)), Is.EqualTo(0));
             TriggerGraphMountTrigger onDay90 = MountEntry(
@@ -407,8 +400,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(schemas.TryGet(GameEvents.CalendarDayAdvanced.Value, out EventSchema dayAdvanced), Is.True);
             Assert.That(dayAdvanced.Params.Single(p => p.Name == "calendarId").Type, Is.EqualTo(EventParamType.Int));
         }
-
-        // ── helpers ──
 
         private static TriggerGraphEntryFilters PayloadFilters(params (string Key, object Value)[] pairs)
         {

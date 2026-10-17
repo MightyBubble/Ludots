@@ -15,7 +15,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Input.Systems
 {
     /// <summary>
-    /// WASD-style axis intent to throttled move order kernel (RFC-0065 INT-6, DEC-15). The single
+    /// WASD-style axis intent to throttled move order kernel. The single
     /// source of truth for enablement and parameters is the active control scheme's
     /// <c>axisMove</c> declaration (<see cref="ControlSchemeRuntime.TryGetActiveAxisMove"/>). A
     /// scheme without the declaration means zero work per tick, and a hot switch takes effect on the

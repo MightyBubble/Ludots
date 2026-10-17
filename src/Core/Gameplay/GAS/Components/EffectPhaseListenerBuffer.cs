@@ -25,9 +25,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
     }
 
-    /// <summary>
-    /// Observation perspective of a phase listener.
-    /// </summary>
     public enum PhaseListenerScope : byte
     {
         /// <summary>Triggers when the holder entity is the TARGET of an effect.</summary>
@@ -36,9 +33,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         Source = 1,
     }
 
-    /// <summary>
-    /// Action to perform when a phase listener fires.
-    /// </summary>
     [Flags]
     public enum PhaseListenerActionFlags : byte
     {
@@ -47,7 +41,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         ExecuteGraph = 1,
         /// <summary>Publish a GameplayEvent to the EventBus (deferred to next frame).</summary>
         PublishEvent = 2,
-        /// <summary>Both execute graph and publish event.</summary>
         Both = ExecuteGraph | PublishEvent,
     }
 
@@ -295,9 +288,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
 
-        /// <summary>
-        /// Remove all listeners registered by a given owner effect.
-        /// </summary>
         public void RemoveByOwner(int ownerEffectId)
         {
             EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
@@ -322,10 +312,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             Count = write;
         }
 
-        /// <summary>
-        /// Collect all matching entries into <paramref name="output"/> for dispatch.
-        /// Returns the number of collected actions.
-        /// </summary>
         public int Collect(int effectCategoryId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
                            Span<PhaseListenerCollectedAction> output)
         {

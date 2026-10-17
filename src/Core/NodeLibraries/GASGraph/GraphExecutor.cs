@@ -446,7 +446,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
             GraphKind kind,
-            GraphEntityPreset slot2,
+            GraphEntityPreset entityPreset,
             GasGraphOpHandlerTable? handlers = null,
             GraphProgramRegistry? programs = null)
         {
@@ -459,7 +459,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
-                slot2,
+                entityPreset,
                 world,
                 caster,
                 explicitTarget,
@@ -484,7 +484,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
             GraphKind kind,
-            GraphEntityPreset slot2,
+            GraphEntityPreset entityPreset,
             GasGraphOpHandlerTable? handlers = null,
             GraphProgramRegistry? programs = null)
         {
@@ -498,7 +498,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             b[0] = 0;
             GraphFrame frame = GraphFrame.Bind(
                 kind,
-                slot2,
+                entityPreset,
                 world,
                 caster,
                 explicitTarget,
@@ -524,7 +524,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
             GraphKind kind,
-            GraphEntityPreset slot2,
+            GraphEntityPreset entityPreset,
             GasGraphOpHandlerTable? handlers = null,
             GraphProgramRegistry? programs = null)
         {
@@ -537,7 +537,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             GraphFrame frame = GraphFrame.Bind(
                 kind,
-                slot2,
+                entityPreset,
                 world,
                 caster,
                 explicitTarget,

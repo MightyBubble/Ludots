@@ -37,7 +37,6 @@ namespace Ludots.Tests.GAS
         {
             _tagOps.ClearRuleRegistry();
 
-            // Arrange
             var entities = new Entity[ENTITY_COUNT];
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
@@ -54,7 +53,6 @@ namespace Ludots.Tests.GAS
             long initialAlloc = GC.GetAllocatedBytesForCurrentThread();
             var sw = Stopwatch.StartNew();
             
-            // Act
             for (int iter = 0; iter < ITERATIONS; iter++)
             {
                 for (int i = 0; i < ENTITY_COUNT; i++)
@@ -267,7 +265,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Benchmark_DeferredTriggerQueue_Enqueue()
         {
-            // Arrange
             var queue = new DeferredTriggerQueue();
             int fillCount = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
             var attributeTriggers = new AttributeChangedTrigger[fillCount];
@@ -370,7 +367,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Benchmark_TagCountContainer_AddRemove()
         {
-            // Arrange
             var entity = _world.Create();
             _world.Add(entity, new TagCountContainer());
             ref var container = ref _world.Get<TagCountContainer>(entity);

@@ -12,7 +12,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
         private const int ULONG_COUNT = 4;
         /// <summary>Maximum number of distinct tags this container can hold (256 = 4 * 64 bits).</summary>
-        public const int MAX_TAG_ID = ULONG_COUNT * 64 - 1; // 255
+        public const int MAX_TAG_ID = ULONG_COUNT * 64 - 1;
 
         public fixed ulong Bits[ULONG_COUNT];
 
@@ -99,9 +99,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return (Bits[tagId / 64] & (1UL << bit)) != 0;
         }
 
-        /// <summary>
-        /// Check if any tag in the range [startTagId, endTagId] is set.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAnyTagInRange(int startTagId, int endTagId)
         {
@@ -182,7 +179,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return 0;
         }
 
-        /// <summary>Number of bits set in both this container and <paramref name="other"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CountCommonTags(in GameplayTagContainer other)
         {

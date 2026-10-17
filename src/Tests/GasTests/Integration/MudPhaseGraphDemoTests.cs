@@ -15,19 +15,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// MUD-style scenario tests for the Phase Graph architecture.
-    /// Exercises the full Pre/Main/Post lifecycle, Blackboard read/write,
-    /// Config parameterization, and SkipMain override in a minimal game scenario.
-    ///
-    /// Scenario: "魔法对决"
-    ///   法师对目标释放一个可配置的「冲击」效果——
-    ///   ① OnPropose Pre: 验证「冲击」提案
-    ///   ② OnApply   Pre: 从 Config 读取伤害倍率，写 BB "实际伤害"
-    ///   ③ OnApply   Main: 预设行为——将 BB 实际伤害 应用到属性 HP
-    ///   ④ OnApply   Post: 读 BB 实际伤害，写 BB "累计伤害"
-    ///   ⑤ OnExpire  Pre: 读 BB 累计伤害，写 BB "伤害反弹值" (50% 反弹)
-    /// </summary>
     [TestFixture]
     public class MudPhaseGraphDemoTests
     {
@@ -39,13 +26,12 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.Clear();
         }
 
-        // Attribute & BB key constants
         private const string AttrHealthName = "tests.mud.phase.health";
-        private const int BbKeyActualDamage = 2;    // float: 实际伤害值
-        private const int BbKeyAccumDamage = 3;     // float: 累计伤害
-        private const int BbKeyReflectValue = 4;    // float: 伤害反弹值
-        private const int ConfigKeyDmgMultiplier = 100; // float: 伤害倍率
-        private const int ConfigKeyBaseDamage = 101;    // float: 基础伤害
+        private const int BbKeyActualDamage = 2;
+        private const int BbKeyAccumDamage = 3;
+        private const int BbKeyReflectValue = 4;
+        private const int ConfigKeyDmgMultiplier = 100;
+        private const int ConfigKeyBaseDamage = 101;
 
         [Test]
         public void MudPhaseGraph_ImpactSpell_FullLifecycle()
@@ -65,9 +51,6 @@ namespace Ludots.Tests.GAS
                 var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
-                // ── Register graph programs ──
-
-                // GP1: OnPropose Pre — accept the impact proposal.
                 int gpProposePre = 1;
                 programs.Register(gpProposePre, new[]
                 {
@@ -75,34 +58,28 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Validation);
 
-                // GP2: OnApply Pre — read Config(baseDamage, dmgMultiplier), compute actual damage,
-                //      write to BB(actualDamage)
                 int gpApplyPre = 2;
                 programs.Register(gpApplyPre, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigFloat, Dst = 0, Imm = ConfigKeyBaseDamage },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigFloat, Dst = 1, Imm = ConfigKeyDmgMultiplier },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
-                    // Write actual damage to target's BB
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyActualDamage, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
-                // GP3: OnApply Main (preset) — read BB(actualDamage), negate it, apply to HP
                 int gpApplyMain = 3;
                 programs.Register(gpApplyMain, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ReadBlackboardFloat, Dst = 0, A = 0, Imm = BbKeyActualDamage },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 1, A = 0 },
-                    // ModifyAttributeAdd(target, HP, -actualDamage)
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
-                // GP4: OnApply Post — read BB(actualDamage), accumulate into BB(accumDamage)
                 int gpApplyPost = 4;
                 programs.Register(gpApplyPost, new[]
                 {
@@ -115,7 +92,6 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
-                // GP5: OnExpire Pre — read BB(accumDamage), compute 50% reflect, write BB(reflectValue)
                 int gpExpirePre = 5;
                 programs.Register(gpExpirePre, new[]
                 {
@@ -128,24 +104,20 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
-                // ── Register preset: None has Main graph for OnApply ──
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(gpApplyMain);
                 presetTypes.Register(in ptDef);
 
-                // ── Build EffectPhaseGraphBindings ──
                 var behavior = new EffectPhaseGraphBindings();
                 behavior.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Pre, gpProposePre);
                 behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, gpApplyPre);
                 behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Post, gpApplyPost);
                 behavior.TryAddStep(EffectPhaseId.OnExpire, PhaseSlot.Pre, gpExpirePre);
 
-                // ── Build EffectConfigParams ──
                 var configParams = new EffectConfigParams();
                 configParams.TryAddFloat(ConfigKeyBaseDamage, 20f);
-                configParams.TryAddFloat(ConfigKeyDmgMultiplier, 1.5f); // actual = 20 * 1.5 = 30
+                configParams.TryAddFloat(ConfigKeyDmgMultiplier, 1.5f);
 
-                // ── Create entities ──
                 var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(caster).SetBase(attrHealth, 100f);
@@ -156,7 +128,6 @@ namespace Ludots.Tests.GAS
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
-                // ═══════ Phase 1: OnPropose ═══════
                 sb.AppendLine("[MUD][PHASE] ① OnPropose: 法师提案【冲击】效果。");
                 bool accepted = executor.ExecutePhaseWithValidationResult(
                     world, api, caster, target, default, default,
@@ -165,7 +136,6 @@ namespace Ludots.Tests.GAS
                 That(accepted, Is.True, "Impact proposal should be accepted");
                 sb.AppendLine("[MUD][PHASE]    提案通过 ✓");
 
-                // ═══════ Phase 2: OnApply (Pre → Main → Post) ═══════
                 sb.AppendLine("[MUD][PHASE] ② OnApply: Pre读取Config计算伤害, Main施加属性修改, Post累计记录。");
 
                 executor.ExecutePhase(world, api, caster, target, default, default,
@@ -185,7 +155,7 @@ namespace Ludots.Tests.GAS
                 sb.AppendLine($"[MUD][PHASE]    HP: 100 → {hpAfterApply:F1}");
                 sb.AppendLine($"[MUD][PHASE]    BB.AccumDamage={accumDmg:F1}");
 
-                // ═══════ Simulate second application (e.g. periodic tick reusing same behavior) ═══════
+                // Second application simulates a periodic tick reusing the same bindings.
                 sb.AppendLine("[MUD][PHASE] ③ OnApply (第2次): 再次施加，累计伤害叠加。");
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
@@ -201,7 +171,6 @@ namespace Ludots.Tests.GAS
                 sb.AppendLine($"[MUD][PHASE]    HP: {hpAfterApply:F1} → {hpAfterSecond:F1}");
                 sb.AppendLine($"[MUD][PHASE]    BB.AccumDamage={accumDmg2:F1}");
 
-                // ═══════ Phase 3: OnExpire ═══════
                 sb.AppendLine("[MUD][PHASE] ④ OnExpire: 效果到期，计算50%伤害反弹值。");
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnExpire, in behavior, EffectPresetType.None);
@@ -227,10 +196,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        /// <summary>
-        /// Scenario: SkipMain override — 用户完全覆盖预设的OnApply行为，
-        /// 使用自定义公式：damage = baseDamage * 2 (而非预设的 BB-driven)。
-        /// </summary>
         [Test]
         public void MudPhaseGraph_SkipMain_CustomDamageFormula()
         {
@@ -248,7 +213,6 @@ namespace Ludots.Tests.GAS
                 var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
-                // Preset Main: write BB key=99 = 999 (should NOT run)
                 int gpMainPreset = 10;
                 programs.Register(gpMainPreset, new[]
                 {
@@ -258,7 +222,6 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
-                // User Pre: load config baseDamage, multiply by 2, apply as HP damage
                 int gpCustomPre = 11;
                 programs.Register(gpCustomPre, new[]
                 {
@@ -277,10 +240,10 @@ namespace Ludots.Tests.GAS
 
                 var behavior = new EffectPhaseGraphBindings();
                 behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, gpCustomPre);
-                behavior.SetSkipMain(EffectPhaseId.OnApply); // Skip the preset!
+                behavior.SetSkipMain(EffectPhaseId.OnApply);
 
                 var configParams = new EffectConfigParams();
-                configParams.TryAddFloat(ConfigKeyBaseDamage, 25f); // damage = 25 * 2 = 50
+                configParams.TryAddFloat(ConfigKeyBaseDamage, 25f);
 
                 var caster = world.Create();
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
@@ -295,7 +258,6 @@ namespace Ludots.Tests.GAS
                 float hp = world.Get<AttributeBuffer>(target).GetCurrent(attrHealth);
                 That(hp, Is.EqualTo(50f).Within(1e-6f), "HP = 100 - (25*2) = 50");
 
-                // Main should NOT have run — BB key=99 should not exist
                 ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
                 That(bb.TryGet(99, out _), Is.False, "Main graph should not have run (SkipMain)");
 
@@ -312,11 +274,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        /// <summary>
-        /// Scenario: Config参数化复用 — 同一套Graph程序，不同的Config产生不同效果。
-        /// 火球: baseDamage=15, multiplier=2.0 → 30 damage
-        /// 冰矢: baseDamage=10, multiplier=1.0 → 10 damage
-        /// </summary>
         [Test]
         public void MudPhaseGraph_ConfigReuse_DifferentParamsProduceDifferentResults()
         {
@@ -334,7 +291,6 @@ namespace Ludots.Tests.GAS
                 var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
-                // Shared graph: read config(baseDamage) * config(multiplier), negate, apply to HP
                 int gpShared = 1;
                 programs.Register(gpShared, new[]
                 {
@@ -351,14 +307,12 @@ namespace Ludots.Tests.GAS
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(gpShared);
                 presetTypes.Register(in ptDef);
 
-                var behavior = new EffectPhaseGraphBindings(); // empty — just use Main
+                var behavior = new EffectPhaseGraphBindings(); // Empty bindings — the preset Main graph runs as-is.
 
-                // Config 1: 火球 (baseDamage=15, mul=2.0 → 30 damage)
                 var fireConfig = new EffectConfigParams();
                 fireConfig.TryAddFloat(ConfigKeyBaseDamage, 15f);
                 fireConfig.TryAddFloat(ConfigKeyDmgMultiplier, 2.0f);
 
-                // Config 2: 冰矢 (baseDamage=10, mul=1.0 → 10 damage)
                 var iceConfig = new EffectConfigParams();
                 iceConfig.TryAddFloat(ConfigKeyBaseDamage, 10f);
                 iceConfig.TryAddFloat(ConfigKeyDmgMultiplier, 1.0f);
@@ -371,12 +325,10 @@ namespace Ludots.Tests.GAS
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
-                // Fire → targetA
                 executor.ExecutePhase(world, api, caster, targetA, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
                     0, 0, in fireConfig);
 
-                // Ice → targetB
                 executor.ExecutePhase(world, api, caster, targetB, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
                     0, 0, in iceConfig);

@@ -249,8 +249,9 @@ namespace Ludots.Tests.Presentation
         public void Sample_WhenSamplerCapacityMatchesBufferCapacity_ThrowsAtConfiguredBoundary()
         {
             using var world = World.Create();
-            // capacity 8 sits below MaxSamplesPerTrail * 2 (64): the old floor would
-            // silently admit 64 samplers; the contract is sampler capacity == buffer.Capacity.
+            // capacity 8 sits below MaxSamplesPerTrail * 2 (64): the contract is sampler
+            // capacity == buffer.Capacity, so the boundary under test is the configured
+            // capacity rather than the sample-count ceiling.
             var buffer = new TrailMeshBuffer(capacity: 8);
             var runtime = new TrailMeshRuntime(buffer);
             TrailMeshConfig config = DefaultConfig;

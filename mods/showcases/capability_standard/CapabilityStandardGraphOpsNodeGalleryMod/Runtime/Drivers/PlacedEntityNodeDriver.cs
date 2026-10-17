@@ -8,7 +8,7 @@ using Ludots.Platform.Abstractions;
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
-/// Hosts the TriggerGraph-only LoadPlacedEntity vignette (#1108). The entry re-fires
+/// Hosts the TriggerGraph-only LoadPlacedEntity vignette. The entry re-fires
 /// every think wave against the real map's placed-instance index: wave one resolves the
 /// placed boss (hit); the driver then destroys it so later waves read Entity.Null through
 /// the same graph — the stale catalog handle is exactly what World.IsAlive insurance
@@ -57,7 +57,6 @@ public sealed class PlacedEntityNodeDriver : IGraphOpsNodeDriver
 
             ApplyBeat(ctx);
             GraphOpsNodeActorBinding.SyncHud(ctx);
-            // KillOneTeamEntity手法：真实销毁放置实体，让下一波读到陈旧目录句柄 → Entity.Null。
             ctx.SimWorld.Destroy(_boss);
             _killed = true;
         }

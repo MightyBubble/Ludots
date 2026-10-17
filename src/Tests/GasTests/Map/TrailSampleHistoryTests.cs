@@ -8,7 +8,7 @@ namespace Ludots.Tests.GAS
     /// <summary>
     /// TrailSampleHistory 是含可变状态的 struct（_count、_samples、_times 均被 PushHead/
     /// EvictOlderThan/AgeTo 修改）。调用方必须以可写字段持有它——readonly 字段会让所有
-    /// 修改落在防御性副本上，Count 永远为 0（SlashTrailScene 曾因此画不出任何东西）。
+    /// 修改落在防御性副本上，Count 永远为 0。
     /// 这些测试直接锁定“PushHead 真的改变 Count”这一契约。
     /// </summary>
     [TestFixture]

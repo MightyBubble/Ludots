@@ -43,9 +43,6 @@ namespace Ludots.Core.Spatial.Eqs
             return count;
         }
 
-        /// <summary>
-        /// Run and return the single best (highest-score, non-filtered) candidate.
-        /// </summary>
         public bool RunBest(in EqsContext ctx, Span<EqsItem> buffer, out EqsItem best)
         {
             int count = Run(in ctx, buffer);

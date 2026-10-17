@@ -13,7 +13,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     }
 
     /// <summary>
-    /// Blackboard key constants for Order-related data.
     /// Order execution systems read/write these keys to get/set parameters.
     /// </summary>
     public static class OrderBlackboardKeys
@@ -27,7 +26,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         
         /// <summary>
         /// Target entity for the ability (BlackboardEntityBuffer).
-        /// The primary target of the ability.
         /// </summary>
         public const int Cast_TargetEntity = 111;
         

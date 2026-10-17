@@ -3,8 +3,8 @@ using NUnit.Framework;
 namespace Ludots.Adapter.Raylib.Tests;
 
 /// <summary>
-/// Adapter host-loop 多座位接线存在性守卫。RaylibHostLoop 的 present binding 接线曾被外部合并
-/// 静默删除（headless 测试与 CI 全绿，一天无人发现），因此用源码锚定合同测试锁住接线标记。
+/// Adapter host-loop 多座位接线存在性守卫：接线删除在 headless 测试与 CI 中不产生失败信号，
+/// 故用源码锚定合同测试锁住接线标记。
 /// </summary>
 [TestFixture]
 public sealed class AdapterHostLoopWiringGuardTests

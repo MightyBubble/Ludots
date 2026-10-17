@@ -10,13 +10,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
         public const int MAX_STEPS = GasConstants.EFFECT_PHASE_GRAPH_MAX_STEPS; // 8 phases x Pre/Main/Post
 
-        /// <summary>Number of configured steps.</summary>
         public int StepCount;
 
-        /// <summary>EffectPhaseId for each step.</summary>
         public fixed byte StepPhases[MAX_STEPS];
 
-        /// <summary>PhaseSlot (Pre/Main/Post) for each step. A template Main replaces the preset default.</summary>
+        /// <summary>Slot for each step; a template Main replaces the preset default.</summary>
         public fixed byte StepSlots[MAX_STEPS];
 
         /// <summary>GraphProgramId for each step (resolved at load time).</summary>
@@ -29,19 +27,16 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public byte SkipMainFlags;
 
-        /// <summary>Check whether Main should be skipped for a given phase.</summary>
         public readonly bool IsSkipMain(EffectPhaseId phase)
         {
             return (SkipMainFlags & (1 << (int)phase)) != 0;
         }
 
-        /// <summary>Set the SkipMain flag for a phase.</summary>
         public void SetSkipMain(EffectPhaseId phase)
         {
             SkipMainFlags |= (byte)(1 << (int)phase);
         }
 
-        /// <summary>Add a step. Returns false if capacity exceeded.</summary>
         public bool TryAddStep(EffectPhaseId phase, PhaseSlot slot, int graphProgramId)
         {
             if (StepCount >= MAX_STEPS) return false;
@@ -52,7 +47,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
-        /// <summary>Get the GraphProgramId for a specific (phase, slot). Returns 0 if not found.</summary>
+        /// <summary>Returns 0 if not found.</summary>
         public readonly int GetGraphId(EffectPhaseId phase, PhaseSlot slot)
         {
             byte p = (byte)phase;

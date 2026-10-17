@@ -51,7 +51,6 @@ namespace GasTests
         [Test]
         public void QueryRadius_ReturnsOnlyEntitiesWithinCircle()
         {
-            // Center at origin, radius 500cm (5m)
             var center = CreateEntityAt(0, 0);
             var inside = CreateEntityAt(300, 400); // dist = 500, at boundary
             var outside = CreateEntityAt(400, 400); // dist = 565, outside
@@ -59,28 +58,25 @@ namespace GasTests
             Span<Entity> buffer = stackalloc Entity[32];
             var result = _service.QueryRadius(new WorldCmInt2(0, 0), 500, buffer);
 
-            // Should include center and inside, exclude outside
             Assert.That(result.Count, Is.EqualTo(2));
         }
 
         [Test]
         public void QueryRadius_ExcludesCornerEntities_OutsideCircle()
         {
-            // Entity at corner of bounding square but outside circle
             // radius=100, entity at (90, 90) → dist = sqrt(16200) ≈ 127 > 100
             CreateEntityAt(90, 90);
-            CreateEntityAt(0, 0); // At center
+            CreateEntityAt(0, 0);
 
             Span<Entity> buffer = stackalloc Entity[32];
             var result = _service.QueryRadius(new WorldCmInt2(0, 0), 100, buffer);
 
-            Assert.That(result.Count, Is.EqualTo(1)); // Only center
+            Assert.That(result.Count, Is.EqualTo(1));
         }
 
         [Test]
         public void QueryRadius_AtExactBoundary_IsIncluded()
         {
-            // Entity at exactly the radius distance: (300, 400) with radius=500
             CreateEntityAt(300, 400); // dist = sqrt(90000+160000) = 500
 
             Span<Entity> buffer = stackalloc Entity[32];
@@ -93,7 +89,7 @@ namespace GasTests
         public void QueryRadius_ZeroRadius_ReturnsOnlyCenterEntity()
         {
             CreateEntityAt(0, 0);
-            CreateEntityAt(1, 0); // 1cm away
+            CreateEntityAt(1, 0);
 
             Span<Entity> buffer = stackalloc Entity[32];
             var result = _service.QueryRadius(new WorldCmInt2(0, 0), 0, buffer);

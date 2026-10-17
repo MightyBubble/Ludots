@@ -33,15 +33,12 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestAddTag_Basic()
         {
-            // Arrange
             int tagId = 1;
             
-            // Act
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             
-            // Assert
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(_entity);
             That(tags.HasTag(tagId), Is.True);
@@ -52,16 +49,13 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestRemoveTag_Basic()
         {
-            // Arrange
             int tagId = 1;
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             
-            // Act
             bool result = _tagOps.RemoveTag(ref tagsRef, ref countsRef, tagId);
             
-            // Assert
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(_entity);
             That(tags.HasTag(tagId), Is.False);
@@ -72,11 +66,9 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestTagRuleSet_BlockedTags()
         {
-            // Arrange
             int tagA = 1;
             int tagB = 2;
             
-            // 注册TagRuleSet：tagB blocked tagA
             var ruleSet = new TagRuleSet();
             unsafe
             {
@@ -85,15 +77,12 @@ namespace Ludots.Tests.GAS
             }
             _tagOps.RegisterTagRuleSet(tagB, ruleSet);
             
-            // 先添加tagA
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagA);
             
-            // Act: 尝试添加tagB（应该失败，因为tagA存在）
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagB);
             
-            // Assert
             That(result, Is.False);
             ref var tags = ref _world.Get<GameplayTagContainer>(_entity);
             That(tags.HasTag(tagA), Is.True);
@@ -105,11 +94,9 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestTagRuleSet_AttachedTags()
         {
-            // Arrange
             int tagA = 1;
             int tagB = 2;
             
-            // 注册TagRuleSet：tagA attached tagB
             var ruleSet = new TagRuleSet();
             unsafe
             {
@@ -118,12 +105,10 @@ namespace Ludots.Tests.GAS
             }
             _tagOps.RegisterTagRuleSet(tagA, ruleSet);
             
-            // Act: 添加tagA，应该自动添加tagB
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagA);
             
-            // Assert
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(_entity);
             That(tags.HasTag(tagA), Is.True);
@@ -135,11 +120,9 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestTagRuleSet_RemovedTags()
         {
-            // Arrange
             int tagA = 1;
             int tagB = 2;
             
-            // 注册TagRuleSet：tagA removed tagB
             var ruleSet = new TagRuleSet();
             unsafe
             {
@@ -148,15 +131,12 @@ namespace Ludots.Tests.GAS
             }
             _tagOps.RegisterTagRuleSet(tagA, ruleSet);
             
-            // 先添加tagB
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagB);
             
-            // Act: 添加tagA，应该自动移除tagB
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagA);
             
-            // Assert
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(_entity);
             That(tags.HasTag(tagA), Is.True);
@@ -168,17 +148,14 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestTagCount_AddCount()
         {
-            // Arrange
             int tagId = 1;
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             
-            // Act: 多次添加同一Tag
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             
-            // Assert
             ref var countContainer = ref _world.Get<TagCountContainer>(_entity);
             ushort count = countContainer.GetCount(tagId);
             That(count, Is.EqualTo(3));
@@ -189,7 +166,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestTagCount_RemoveCount()
         {
-            // Arrange
             int tagId = 1;
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
@@ -197,10 +173,8 @@ namespace Ludots.Tests.GAS
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagId);
             
-            // Act: 移除Tag
             _tagOps.RemoveTag(ref tagsRef, ref countsRef, tagId);
             
-            // Assert
             ref var countContainer = ref _world.Get<TagCountContainer>(_entity);
             ushort count = countContainer.GetCount(tagId);
             That(count, Is.EqualTo(2));
@@ -211,11 +185,9 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestTagRuleTransaction_CyclePrevention()
         {
-            // Arrange
             int tagA = 1;
             int tagB = 2;
             
-            // 注册循环规则：tagA attached tagB, tagB attached tagA
             var ruleSetA = new TagRuleSet();
             unsafe
             {
@@ -232,12 +204,10 @@ namespace Ludots.Tests.GAS
             }
             _tagOps.RegisterTagRuleSet(tagB, ruleSetB);
             
-            // Act: 添加tagA，应该触发循环，但ProcessedSet应该阻止
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(_entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(_entity);
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagA);
             
-            // Assert: 应该成功添加tagA和tagB，但不会无限循环
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(_entity);
             That(tags.HasTag(tagA), Is.True);

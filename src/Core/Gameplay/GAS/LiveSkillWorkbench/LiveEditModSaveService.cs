@@ -62,7 +62,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     }
 
     /// <summary>
-    /// #624: Promote validated session patches into Mod config files (no silent overwrite).
+    /// Promote validated session patches into Mod config files (no silent overwrite).
     /// Immediate attribute commands are excluded by default.
     /// </summary>
     public sealed class LiveEditModSaveService
@@ -158,7 +158,6 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                     targetModId));
             }
 
-            // Deduplicate file plans by path
             var unique = new Dictionary<string, LiveEditSaveFilePlan>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < files.Count; i++)
             {
@@ -187,7 +186,6 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             var written = new List<string>();
             var diags = new List<LiveEditDiagnostic>();
 
-            // Persist graphs via upsert into graphs.json array
             for (int i = 0; i < session.Patch.Count; i++)
             {
                 LiveDebugPatchOperation op = session.Patch.Operations[i];

@@ -193,7 +193,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     // 队头的模板请求虽 "batch-compatible"，但它是带父链接/attachment 的子件
                     // （Parent 或 HasAttachedLocalPose 已设置），进不了批（IsTemplateBatchMember 为 false），
                     // TryCopyTemplateBatch 于是返回 0。此时必须落到单实体 lane，否则 break 会让
-                    // 队列头永远卡死、并连带饿死排在其后的所有 spawn。S2-1 / S2-14 命中的正是这里。
+                    // 队列头永远卡死、并连带饿死排在其后的所有 spawn。
                 }
 
                 SpawnRelationshipPlan relationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
@@ -388,7 +388,7 @@ namespace Ludots.Core.Gameplay.Spawning
         /// 对可引用的模板 children 有向图做环检测。被引用子模板可再引用其它模板（含其祖先），
         /// 直接装配的 registry 不保证图无环；在此收到环就 fail-fast，消息指明循环路径。
         /// 判定只沿模板引用边走（child.Template → 目标模板自己的 children）；内联 children 的
-        /// 模板引用同样要查（S3-c），否则经由内联引用的环要到下一步 drain 才现形。
+        /// 模板引用同样要查，否则经由内联引用的环要到下一步 drain 才现形。
         /// </summary>
         private void EnsureRuntimeChildrenAcyclic(
             string rootTemplateId,
@@ -1183,7 +1183,7 @@ namespace Ludots.Core.Gameplay.Spawning
             ParticipantIdentityProjector.UpsertPlayerOwner(World, entity, owner.PlayerId);
         }
 
-        /// <summary>RFC-0065 CTRL-2: runtime spawns join the ownership topology exactly like map-load binding.</summary>
+        /// <summary>Runtime spawns join the ownership topology exactly like map-load binding.</summary>
         private void TryLinkOwnershipEdge(Entity entity)
         {
             if (_ownership == null || _playerLookup == null)

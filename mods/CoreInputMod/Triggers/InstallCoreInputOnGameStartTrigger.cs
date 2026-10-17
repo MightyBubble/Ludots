@@ -124,7 +124,7 @@ InstallDeclaredLocalOrderSources(engine);
         }
 
         /// <summary>
-        /// Slice-2 auto assembly: exactly one loaded mod may ship the local order mapping
+        /// Exactly one loaded mod may ship the local order mapping
         /// config; the shipping mod is resolved here (load-time, fail-fast on ambiguity) and
         /// the shared config-installed order source replaces every per-mod installer.
         /// </summary>

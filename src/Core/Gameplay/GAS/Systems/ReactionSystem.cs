@@ -12,8 +12,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private AbilitySystem _abilitySystem;
         private GameplayEventBus _eventBus;
         
-        // Increased initial capacity for high-throughput scenarios (Benchmark: 1000 events/frame)
-        // If 1 event -> 1 reaction, we need capacity >= event count.
+        // Initial capacity sized for high-throughput frames (benchmark: 1000 events/frame);
+        // 1 event -> 1 reaction, so capacity must be >= the event count.
         private readonly List<Activation> _activations = new(4096);
 
         public ReactionSystem(World world, AbilitySystem abilitySystem, GameplayEventBus eventBus) : base(world) 
@@ -27,18 +27,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var events = _eventBus.Events;
             _activations.Clear();
 
-            // Direct iteration is actually optimal for small N (N < 10000).
-            // Complexity is O(Events). Inner loop is O(Reactions per Entity), usually very small (< 5).
-            // The previous issue might be cache misses or repeated World.Has/Get calls.
-            // Optimization: Skip World.IsAlive check if we trust the EventBus source (or check it once).
-            // Optimization: Use `TryGet` to avoid double lookup (Has + Get).
+            // Direct iteration is optimal: O(events), with a small inner loop
+            // (reactions per entity, usually < 5).
 
             for (int i = 0; i < events.Count; i++)
             {
                 var evt = events[i];
                 
-                // Optimized: Use Has + Get to get ref instead of TryGet which returns a copy
-                // This avoids value type copying overhead for ReactionBuffer struct
+                // Has + Get (not TryGet): we need a ref; TryGet would return a copy of the ReactionBuffer struct.
                 if (World.IsAlive(evt.Target) && World.Has<ReactionBuffer>(evt.Target))
                 {
                     ref var reactions = ref World.Get<ReactionBuffer>(evt.Target);

@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// 切A 合前 S1 修复的第 2 轮对抗性审计（攻击性测试，只新增测试、不改核心代码）。
+    /// 对抗性攻击测试（只新增测试、不改核心代码）。
     /// 命名约定：方法名里 <c>Hit</c> = 我认为这是破绽（断言合同应有的行为，当前应失败）；
     /// <c>Control</c> / <c>Safe</c> = 对照或“此处安全”的证据（应通过）。
     /// </summary>
@@ -196,10 +196,6 @@ namespace Ludots.Tests.GAS
             Assert.That(ex.Message, Does.Contain("trimmed"), "装载侧由 MapLoadEntityIndex.Register 拒绝未 trim 的 InstanceId");
         }
 
-        // ------------------------------------------------------------------
-        // 攻击 3：attach:false 的判定覆盖面
-        // ------------------------------------------------------------------
-
         private static readonly string AttachFalseTemplates = """
         [
           {
@@ -275,10 +271,6 @@ namespace Ludots.Tests.GAS
             });
         }
 
-        // ------------------------------------------------------------------
-        // 攻击 1：中间层节点带可寻址内联 children、直接出生请求却没带 InstanceId
-        // ------------------------------------------------------------------
-
         [Test]
         public void S2_9_Safe_MidLevelNodeWithAddressableInlineChildren_WithoutInstanceId_FailsFast()
         {
@@ -304,10 +296,6 @@ namespace Ludots.Tests.GAS
 
             Assert.That(ex.Message, Does.Contain("SPAWN.RUNTIME.ERR.AddressableDescendantMissingInstanceId"));
         }
-
-        // ------------------------------------------------------------------
-        // 攻击 4：HasAddressableDescendant 的环 / null / 未知模板安全
-        // ------------------------------------------------------------------
 
         private static readonly string CycleTemplates = """
         [
@@ -360,10 +348,6 @@ namespace Ludots.Tests.GAS
             });
         }
 
-        // ------------------------------------------------------------------
-        // 攻击 4（延伸）：运行时的 children 环没有任何守卫
-        // ------------------------------------------------------------------
-
         private static readonly string BranchingCycleTemplates = """
         [
           { "id": "cyc2.a", "components": { "Name": { "Value": "A2" } }, "children": [
@@ -397,10 +381,6 @@ namespace Ludots.Tests.GAS
                 "无环校验收敛：运行时不得把模板 children 环表达成队列溢出（当前是 TemplateChildrenQueueFull，且已凭空造出若干实体）");
         }
 
-        // ------------------------------------------------------------------
-        // 攻击 1（延伸）：两 POI 共用同模板靠实例前缀隔离 —— 前缀本身唯一性由谁保证
-        // ------------------------------------------------------------------
-
         [Test]
         public void S2_13_Safe_TwoPlacementsSharingInstanceId_FailFastOnDuplicatePrefix()
         {
@@ -422,7 +402,6 @@ namespace Ludots.Tests.GAS
             using Harness harness = Harness.Create(BatchChildTemplates);
             SpawnRoot(harness, "s2.root", instanceId: "g1");
 
-            // 卡住的队列头后面，再排一个完全无关、名字里没有任何 batch/父链的普通 spawn。
             Assert.That(harness.Requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
@@ -484,10 +463,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(mapEx.Message, Does.Contain("addressable descendants"));
             }
         }
-
-        // ------------------------------------------------------------------
-        // Harness
-        // ------------------------------------------------------------------
 
         private static EntityTemplateLocalPose Pose() => new EntityTemplateLocalPose
         {

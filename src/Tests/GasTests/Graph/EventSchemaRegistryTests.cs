@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// Event parameter schema SSOT (#1114): built-in schemas derive from code and
+    /// Event parameter schema SSOT: built-in schemas derive from code and
     /// reference real MapTriggerEventPayloadKeys constants, mod schema parsing fails
     /// closed on unknown fields / reserved keys / out-of-whitelist types, and fire-time
     /// payload contract validation catches missing, mistyped, and undeclared keys.

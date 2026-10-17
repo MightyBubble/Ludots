@@ -103,7 +103,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct AbilityToggleSpec
     {
-        /// <summary>Tag ID used to track toggle state. If present on actor 鈫?ability is ON.</summary>
+        /// <summary>Tag ID used to track toggle state. If present on the actor, the ability is ON.</summary>
         public int ToggleTagId;
         
         /// <summary>
@@ -118,7 +118,6 @@ namespace Ludots.Core.Gameplay.GAS
         /// </summary>
         public unsafe fixed int ActiveEffectTemplateIds[4];
         
-        /// <summary>Number of active effect template IDs (0-4).</summary>
         public int ActiveEffectCount;
     }
 
@@ -126,7 +125,6 @@ namespace Ludots.Core.Gameplay.GAS
     {
         /// <summary>Ordered TriggerGraph names owned by this ability definition.</summary>
         public List<string> TriggerGraphs;
-        // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
@@ -138,11 +136,9 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityActivationPrecondition ActivationPrecondition;
         public bool HasActivationPrecondition;
 
-        // 鈹€鈹€ Toggle mode 鈹€鈹€
         public bool HasToggleSpec;
         public AbilityToggleSpec ToggleSpec;
 
-        // 鈹€鈹€ Presentation metadata 鈹€鈹€
         public bool HasTargeting;
         public AbilityTargetingConfig Targeting;
         public bool HasPresentation;
@@ -155,7 +151,6 @@ namespace Ludots.Core.Gameplay.GAS
         public int ShowProgressionRequirementId;
         public bool HasShowProgressionRequirement;
 
-        // ── Category classification (RFC-0065 DEC-14) ──
         /// <summary>
         /// Categories declared on the ability (abilities.json <c>categories</c>).
         /// Classification for semantic routing (CommandIntentProfile / aggregation);
@@ -164,7 +159,6 @@ namespace Ludots.Core.Gameplay.GAS
         public GameplayTagContainer Categories;
         public bool HasCategories;
 
-        // ── Interaction context binding (RFC-0065 CTX-6) ──
         /// <summary>
         /// Optional InteractionContextProfile id (abilities.json <c>interactionContextProfile</c>).
         /// While an exec instance of this ability runs, the client pushes the profile's context
@@ -252,7 +246,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        /// <summary>In-place category probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
+        /// <summary>In-place category probe (no definition copy); hot path for semantic routing.</summary>
         public bool HasCategory(int abilityId, int categoryId)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
@@ -266,7 +260,7 @@ namespace Ludots.Core.Gameplay.GAS
 
         /// <summary>
         /// In-place interaction context profile probe (no definition copy); hot path for the exec
-        /// lifecycle context system (RFC-0065 CTX-6). False when the ability is unknown or declares
+        /// lifecycle context system. False when the ability is unknown or declares
         /// no <see cref="AbilityDefinition.InteractionContextProfileId"/>.
         /// </summary>
         public bool TryGetInteractionContextProfileId(int abilityId, out string profileId)
@@ -291,7 +285,7 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>
         /// Lowest category id shared between the ability's <see cref="AbilityDefinition.Categories"/>
         /// and <paramref name="mask"/>; 0 when the ability is unknown, has no categories, or none match.
-        /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
+        /// In-place probe (no definition copy); hot path for panel aggregation.
         /// </summary>
         public int FirstCategoryIntersection(int abilityId, in GameplayTagContainer mask)
         {

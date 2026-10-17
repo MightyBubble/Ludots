@@ -9,18 +9,10 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Deep gap tests for GAS features NOT covered by GPT's existing mods or tests.
-    /// Each [Test] targets a specific feature gap identified in the complementary analysis.
-    /// </summary>
     [TestFixture]
     public class GasFeatureGapTests
     {
         private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-
-        // ════════════════════════════════════════════════════════════════════
-        //  1. GasClock Manual / TurnBased mode
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void GasClock_ManualMode_DoesNotAdvanceWithoutRequest()
@@ -30,7 +22,6 @@ namespace Ludots.Tests.GAS
             var system = new GasClockSystem(clock, policy);
             var view = new GasClocks(clock);
 
-            // Advance 10 fixed frames without manual request
             for (int i = 0; i < 10; i++)
                 system.Update(0.016f);
 
@@ -46,7 +37,6 @@ namespace Ludots.Tests.GAS
             var system = new GasClockSystem(clock, policy);
             var view = new GasClocks(clock);
 
-            // Request 3 steps, then advance fixed frames
             policy.RequestStep(3);
             for (int i = 0; i < 10; i++)
                 system.Update(0.016f);
@@ -62,7 +52,7 @@ namespace Ludots.Tests.GAS
             var system = new GasClockSystem(clock, policy);
             var view = new GasClocks(clock);
 
-            policy.RequestStep(5); // Even with pending requests
+            policy.RequestStep(5);
             for (int i = 0; i < 20; i++)
                 system.Update(0.016f);
 
@@ -77,28 +67,20 @@ namespace Ludots.Tests.GAS
             var system = new GasClockSystem(clock, policy);
             var view = new GasClocks(clock);
 
-            // Auto advance 4 fixed frames = 2 steps
             for (int i = 0; i < 4; i++)
                 system.Update(0.016f);
             That(view.StepNow, Is.EqualTo(2));
 
-            // Switch to Manual
             policy.SetMode(GasStepMode.Manual);
 
-            // More fixed frames should NOT produce steps
             for (int i = 0; i < 10; i++)
                 system.Update(0.016f);
             That(view.StepNow, Is.EqualTo(2), "After switching to Manual, no automatic step advancement");
 
-            // Manual request produces one step
             policy.RequestStep(1);
             system.Update(0.016f);
             That(view.StepNow, Is.EqualTo(3));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  2. Effect ExpireCondition (TagPresent / TagAbsent)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void ExpireCondition_TagPresent_EffectExpiresWhenTagRemoved()
@@ -107,7 +89,6 @@ namespace Ludots.Tests.GAS
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             int tagA = 10;
 
-            // Register condition: expires when TagPresent is no longer satisfied
             var conditions = new GasConditionRegistry();
             var condition = new GasCondition(GasConditionKind.TagPresent, tagA, TagSense.Present);
             var handle = conditions.Register(in condition);
@@ -117,7 +98,6 @@ namespace Ludots.Tests.GAS
             That(cond.Kind, Is.EqualTo(GasConditionKind.TagPresent));
             That(cond.TagId, Is.EqualTo(tagA));
 
-            // Create entity with tag present
             var entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             tags.AddTag(tagA);
@@ -125,7 +105,6 @@ namespace Ludots.Tests.GAS
             bool shouldExpire = GasConditionEvaluator.ShouldExpire(world, entity, in cond, tagOps);
             That(shouldExpire, Is.False, "Should NOT expire while tag is present");
 
-            // Remove tag
             tags.RemoveTag(tagA);
             shouldExpire = GasConditionEvaluator.ShouldExpire(world, entity, in cond, tagOps);
             That(shouldExpire, Is.True, "Should expire when tag is removed");
@@ -145,42 +124,33 @@ namespace Ludots.Tests.GAS
             ref readonly var cond = ref conditions.Get(in handle);
             That(cond.Kind, Is.EqualTo(GasConditionKind.TagAbsent));
 
-            // Create entity without tag
             var entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
 
             bool shouldExpire = GasConditionEvaluator.ShouldExpire(world, entity, in cond, tagOps);
             That(shouldExpire, Is.False, "Should NOT expire while tag is absent");
 
-            // Add tag
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             tags.AddTag(tagB);
             shouldExpire = GasConditionEvaluator.ShouldExpire(world, entity, in cond, tagOps);
             That(shouldExpire, Is.True, "Should expire when tag becomes present");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  3. DeferredTrigger integration (Collection → Queue)
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void DeferredTrigger_TagChanged_DirtyFlagMarksCorrectTag()
         {
             var dirty = default(DirtyFlags);
 
-            // Mark tag 5 as dirty
             dirty.MarkTagDirty(5);
 
             That(dirty.IsTagDirty(5), Is.True, "Tag 5 should be marked dirty");
             That(dirty.IsTagDirty(6), Is.False, "Tag 6 should NOT be dirty");
             That(dirty.IsTagDirty(0), Is.False, "Tag 0 should NOT be dirty");
 
-            // Mark multiple tags
             dirty.MarkTagDirty(100);
             dirty.MarkTagDirty(255);
             That(dirty.IsTagDirty(100), Is.True);
             That(dirty.IsTagDirty(255), Is.True);
 
-            // Clear specific
             dirty.ClearTagDirty(5);
             That(dirty.IsTagDirty(5), Is.False, "Tag 5 should be cleared");
             That(dirty.IsTagDirty(100), Is.True, "Tag 100 should still be dirty");
@@ -195,11 +165,11 @@ namespace Ludots.Tests.GAS
 
             var e = world.Create();
             var attrs = new AttributeBuffer();
-            attrs.SetCurrent(3, 75f); // attribute 3 = 75
+            attrs.SetCurrent(3, 75f);
             world.Add(e, attrs);
 
             var snap = default(AttributeLastSnapshot);
-            unsafe { snap.Values[3] = 50f; } // was 50
+            unsafe { snap.Values[3] = 50f; }
             world.Add(e, snap);
 
             var dirty = default(DirtyFlags);
@@ -215,10 +185,6 @@ namespace Ludots.Tests.GAS
             That(trigger.NewValue, Is.EqualTo(75f));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  4. Response Chain - Chain type (append new effect)
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ResponseChainListener_ChainType_StoresEffectTemplateId()
         {
@@ -231,7 +197,6 @@ namespace Ludots.Tests.GAS
             That(listener.Count, Is.EqualTo(1));
             That(listener.MatchesEffectCategory(spellTag), Is.True);
 
-            // Verify stored data
             unsafe
             {
                 That(listener.ResponseTypes[0], Is.EqualTo((byte)ResponseType.Chain));
@@ -266,15 +231,10 @@ namespace Ludots.Tests.GAS
                 bool ok = listener.Add(i + 1, ResponseType.Hook, priority: i);
                 That(ok, Is.True, $"Should accept item {i}");
             }
-            // One more should fail
             bool overflow = listener.Add(999, ResponseType.Hook, priority: 0);
             That(overflow, Is.False, "Should reject overflow beyond CAPACITY");
             That(listener.Count, Is.EqualTo(ResponseChainListener.CAPACITY));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  6. EffectStack component-level tests
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void EffectStack_AddDuration_Policy()
@@ -307,10 +267,6 @@ namespace Ludots.Tests.GAS
             That(stack.Count, Is.EqualTo(4));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  7. EffectGrantedTags component creation and retrieval
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void EffectGrantedTags_MultipleEntries_CorrectStorage()
         {
@@ -335,10 +291,6 @@ namespace Ludots.Tests.GAS
             That(t2.Base, Is.EqualTo(7));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  8. AbilityCost manual check + deduction patterns
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void AbilityCost_MultiResource_CheckBothBeforeDeducting()
         {
@@ -358,36 +310,26 @@ namespace Ludots.Tests.GAS
                              buf.GetCurrent(gas) >= gasCost;
             That(canAfford, Is.True);
 
-            // Deduct both
             buf.SetCurrent(minerals, buf.GetCurrent(minerals) - mineralCost);
             buf.SetCurrent(gas, buf.GetCurrent(gas) - gasCost);
 
             That(buf.GetCurrent(minerals), Is.EqualTo(50f));
             That(buf.GetCurrent(gas), Is.EqualTo(25f));
 
-            // Second attempt should fail
             canAfford = buf.GetCurrent(minerals) >= mineralCost;
             That(canAfford, Is.False, "Cannot afford second build");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  9. EffectModifiers multiple attributes
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void EffectModifiers_MultipleOps_AllApplied()
         {
             var mods = default(EffectModifiers);
-            mods.Add(0, ModifierOp.Add, -20f);      // Health -20
-            mods.Add(1, ModifierOp.Add, 50f);        // AttackSpeed +50
-            mods.Add(2, ModifierOp.Multiply, 1.5f);  // Armor * 1.5
+            mods.Add(0, ModifierOp.Add, -20f);
+            mods.Add(1, ModifierOp.Add, 50f);
+            mods.Add(2, ModifierOp.Multiply, 1.5f);
 
             That(mods.Count, Is.GreaterThanOrEqualTo(3));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  10. GasConditionRegistry roundtrip
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void GasConditionRegistry_RegisterAndLookup()
@@ -411,10 +353,6 @@ namespace Ludots.Tests.GAS
             That(r2.TagId, Is.EqualTo(99));
             That(r2.TagSense, Is.EqualTo(TagSense.Effective));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  11. TagOps rule enforcement (Attached + Removed + RemoveIf)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void TagOps_AttachedTag_AutomaticallyAdded()
@@ -452,11 +390,9 @@ namespace Ludots.Tests.GAS
             var tags = new GameplayTagContainer();
             var counts = new TagCountContainer();
 
-            // First add colonizing
             ops.AddTag(ref tags, ref counts, colonizingTag);
             That(tags.HasTag(colonizingTag), Is.True);
 
-            // Then add blocked -> should auto-remove colonizing
             ops.AddTag(ref tags, ref counts, blockedTag);
             That(tags.HasTag(blockedTag), Is.True);
             That(tags.HasTag(colonizingTag), Is.False, "Removed tag should be auto-removed");

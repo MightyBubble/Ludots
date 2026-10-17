@@ -6,7 +6,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 {
     /// <summary>
-    /// #620: ImmediateCommand path for selected-actor attribute set/add via AttributeMutationOps.
+    /// ImmediateCommand path for selected-actor attribute set/add via AttributeMutationOps.
     /// Fail-closed: missing selection, dead entity, missing buffer, unknown attribute → throw.
     /// </summary>
     public sealed class LiveAttributeCommandExecutor : ILiveAttributeCommandSink

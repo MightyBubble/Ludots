@@ -195,7 +195,7 @@ namespace Ludots.Tests.GAS.Production
         private static void RunTcgModifyScenario(GameEngine engine, List<StepResult> steps)
         {
             var world = engine.World;
-            var (hero, enemy) = FindByNames2(world, "TcgHero", "TcgEnemy");
+            var (hero, enemy) = FindNamedEntityPair(world, "TcgHero", "TcgEnemy");
             int healthId = AttributeRegistry.GetId("Health");
             float before = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
             CastAbility(engine, hero, enemy, slot: 0);
@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS.Production
         private static void RunTcgHookScenario(GameEngine engine, List<StepResult> steps)
         {
             var world = engine.World;
-            var (hero, enemy) = FindByNames2(world, "TcgHero", "TcgEnemy");
+            var (hero, enemy) = FindNamedEntityPair(world, "TcgHero", "TcgEnemy");
             int healthId = AttributeRegistry.GetId("Health");
             float before = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
             CastAbility(engine, hero, enemy, slot: 0);
@@ -219,7 +219,7 @@ namespace Ludots.Tests.GAS.Production
         private static void RunArpgScenario(GameEngine engine, List<StepResult> steps)
         {
             var world = engine.World;
-            var (hero, enemy) = FindByNames2(world, "ArpgHero", "ArpgEnemy");
+            var (hero, enemy) = FindNamedEntityPair(world, "ArpgHero", "ArpgEnemy");
             int healthId = AttributeRegistry.GetId("Health");
 
             var templates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
@@ -281,7 +281,7 @@ namespace Ludots.Tests.GAS.Production
         private static void RunFourXScenario(GameEngine engine, List<StepResult> steps)
         {
             var world = engine.World;
-            var (hero, site) = FindByNames2(world, "Governor", "OutpostSite");
+            var (hero, site) = FindNamedEntityPair(world, "Governor", "OutpostSite");
 
             var templates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
             int buildTplId = EffectTemplateIdRegistry.GetId("Effect.4X.BuildOutpost");
@@ -413,7 +413,7 @@ namespace Ludots.Tests.GAS.Production
                 $"Timed tag entry is missing: entity={entity.Id}, tagId={tagId}, count={timed.Count}.");
         }
 
-        private static (Entity a, Entity b) FindByNames2(World world, string aName, string bName)
+        private static (Entity a, Entity b) FindNamedEntityPair(World world, string aName, string bName)
         {
             Entity a = Entity.Null;
             Entity b = Entity.Null;

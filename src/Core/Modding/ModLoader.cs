@@ -383,7 +383,6 @@ namespace Ludots.Core.Modding
             if (!_modDirectories.TryGetValue(manifest.Name, out var modDir))
                 return;
 
-            // Look for DLL
             var hasDll = TryResolveMainAssemblyPath(manifest, modDir, out var dllPath);
 
             if (!hasDll)
@@ -455,7 +454,6 @@ namespace Ludots.Core.Modding
 
                     Log.Info(in LogChannels.ModLoader, $"Scanning {allTypes.Length} types in assembly...");
                     
-                    // Scan for IMod
                     var modType = allTypes.FirstOrDefault(t => typeof(IMod).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
                     if (modType != null)
                     {
@@ -472,15 +470,12 @@ namespace Ludots.Core.Modding
                         _loadedMods.Add(modInstance);
                         Log.Info(in LogChannels.ModLoader, $"Loaded {manifest.Name}");
                         
-                        // Fire ModLoaded event (will be implemented in future TriggerManager)
-                        // _triggerManager.FireEvent(GameEvents.ModLoaded, ...); 
                     }
                     else
                     {
                         Log.Info(in LogChannels.ModLoader, $"No IMod implementation found in {dllPath}");
                     }
                     
-                    // Scan for MapDefinition
                     if (MapManager != null)
                     {
                         var mapTypes = allTypes.Where(t => typeof(MapDefinition).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);

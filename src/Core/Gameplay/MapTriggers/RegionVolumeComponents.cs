@@ -177,7 +177,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Swept crossing (#1475): does the travel segment [from, to] (world coords)
+        /// Swept crossing: does the travel segment [from, to] (world coords)
         /// pass through the volume? Closes the think-wave sampling gap for fast
         /// movers and teleports; boundary-inclusive like containment.
         /// </summary>

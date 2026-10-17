@@ -11,7 +11,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// Pure-data enum catalog (#1125): Enums/enums.json loads through the strict parser,
+    /// Pure-data enum catalog: Enums/enums.json loads through the strict parser,
     /// member values are declaration-order indices frozen at first declaration, later
     /// mods may only append members, and every malformed shape fails closed. Event
     /// param enumType annotations validate against the same catalog.

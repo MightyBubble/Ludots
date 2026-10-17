@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// #1108 TriggerGraph-only LoadPlacedEntity per-op gallery: the roll-call entry resolves
+/// TriggerGraph-only LoadPlacedEntity per-op gallery: the roll-call entry resolves
 /// the real placed instance from the mounting map's catalog (hit), mirrors its health
 /// into a map variable, and — after the driver destroys the placed entity (the
 /// KillOneTeamEntity 手法) — reads Entity.Null through the same graph on the next wave.

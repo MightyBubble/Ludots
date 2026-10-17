@@ -19,7 +19,7 @@ namespace Ludots.Core.Fields.Config
     /// <summary>
     /// Config-pipeline loader for <c>Fields/region_emissions.json</c> (ArrayById,
     /// id = region key): attaches the RegionVolume emission contract to field region
-    /// entities at materialization (#1468). Structural parsing via the shared
+    /// entities at materialization. Structural parsing via the shared
     /// component authoring, semantic validation via the shared bake-pass validator —
     /// unknown events, schema-divergent payloads, and reserved keys fail closed at
     /// map load naming the region key.

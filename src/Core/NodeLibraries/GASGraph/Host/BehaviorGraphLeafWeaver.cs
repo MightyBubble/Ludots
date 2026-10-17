@@ -188,7 +188,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"BehaviorGraphLeafWeaver: function graph '{site.LeafGraphId}' must be Script (got '{leaf.Kind}').");
             }
 
-            // Nested portals inside the leaf expand first.
+            // Nested portals expand before fragment extraction; ExtractFragment requires a fully woven leaf.
             List<LeafSite> nested = CollectSites(site.LeafGraphId, leaf, site.Depth + 1);
             for (int i = 0; i < nested.Count; i++)
             {
@@ -383,7 +383,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < retargets.Count; i++)
             {
                 (string from, string fromPort, string to) = retargets[i];
-                // Replace the edge to Halt with edge to value producer.
                 fragment.ControlEdges.RemoveAll(e =>
                     string.Equals(e.From, from, StringComparison.Ordinal)
                     && string.Equals(e.FromPort, fromPort, StringComparison.Ordinal)
@@ -391,7 +390,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 fragment.ControlEdges.Add(new GraphControlFlowEdge(from, fromPort, to));
             }
 
-            // Drop value edges that only fed removed exits.
             fragment.ValueEdges.RemoveAll(e => fragment.DroppedExitNodes.Contains(e.To));
         }
 

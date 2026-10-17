@@ -10,7 +10,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Platform.Abstractions;
 
-// #1355 时间盒基准切片:东亚 .height 连续高度图 64km 板全板 nav 烘焙外推锚点。
+// 时间盒基准切片:东亚 .height 连续高度图 64km 板全板 nav 烘焙外推锚点。
 // 用法: NavBake64Bench <path-to-east_asia_continuous.height> [--repeats N] [--world-width-cm N]
 // 产出: 控制台表格 + artifacts/benchmarks/nav-bake-64km-slice.md
 
@@ -221,7 +221,6 @@ double voxelNsPerCol = BenchVoxelColumns(probes[0].U, probes[0].V, tileMeters: 6
 report.AppendLine($"- 体素列(64m 瓦片 @25cm = 65,536 列,双线性采样+span 物化): **{voxelNsPerCol:F2} ns/列**");
 report.AppendLine();
 
-// ---- 全板外推 ----
 report.AppendLine("## 全板外推(单 profile,无障碍)");
 report.AppendLine();
 

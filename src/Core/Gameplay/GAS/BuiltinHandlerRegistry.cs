@@ -194,7 +194,6 @@ namespace Ludots.Core.Gameplay.GAS
             _handlers[handlerId](world, effectEntity, ref context, in mergedParams, in templateData);
         }
 
-        /// <summary>Check if a handler is registered.</summary>
         public bool IsRegistered(BuiltinHandlerId id)
         {
             int idx = (int)id;

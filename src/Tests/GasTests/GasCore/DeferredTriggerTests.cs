@@ -60,7 +60,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestDeferredTriggerQueue_AttributeChanged()
         {
-            // Arrange
             var trigger = new AttributeChangedTrigger
             {
                 Target = _entity,
@@ -69,10 +68,8 @@ namespace Ludots.Tests.GAS
                 NewValue = 20f
             };
             
-            // Act
             _queue.EnqueueAttributeChanged(trigger);
             
-            // Assert
             Assert.That(_queue.AttributeTriggerCount, Is.EqualTo(1));
             var retrieved = _queue.GetAttributeTrigger(0);
             Assert.That(retrieved.Target.Id, Is.EqualTo(_entity.Id));
@@ -86,7 +83,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestDeferredTriggerQueue_TagChanged()
         {
-            // Arrange
             var trigger = new TagChangedTrigger
             {
                 Target = _entity,
@@ -95,10 +91,8 @@ namespace Ludots.Tests.GAS
                 IsPresent = true
             };
             
-            // Act
             _queue.EnqueueTagChanged(trigger);
             
-            // Assert
             Assert.That(_queue.TagTriggerCount, Is.EqualTo(1));
             var retrieved = _queue.GetTagTrigger(0);
             Assert.That(retrieved.Target.Id, Is.EqualTo(_entity.Id));
@@ -112,15 +106,12 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestDirtyFlags_MarkAttributeDirty()
         {
-            // Arrange
             _world.Add(_entity, new DirtyFlags());
             ref var dirtyFlags = ref _world.Get<DirtyFlags>(_entity);
             
-            // Act
             dirtyFlags.MarkAttributeDirty(10);
             dirtyFlags.MarkAttributeDirty(20);
             
-            // Assert
             Assert.That(dirtyFlags.IsAttributeDirty(10), Is.True);
             Assert.That(dirtyFlags.IsAttributeDirty(20), Is.True);
             Assert.That(dirtyFlags.IsAttributeDirty(30), Is.False);
@@ -132,15 +123,12 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestDirtyFlags_MarkTagDirty()
         {
-            // Arrange
             _world.Add(_entity, new DirtyFlags());
             ref var dirtyFlags = ref _world.Get<DirtyFlags>(_entity);
             
-            // Act
             dirtyFlags.MarkTagDirty(5);
             dirtyFlags.MarkTagDirty(100);
             
-            // Assert
             Assert.That(dirtyFlags.IsTagDirty(5), Is.True);
             Assert.That(dirtyFlags.IsTagDirty(100), Is.True);
             Assert.That(dirtyFlags.IsTagDirty(200), Is.False);
@@ -151,16 +139,13 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestDirtyFlags_Clear()
         {
-            // Arrange
             _world.Add(_entity, new DirtyFlags());
             ref var dirtyFlags = ref _world.Get<DirtyFlags>(_entity);
             dirtyFlags.MarkAttributeDirty(10);
             dirtyFlags.MarkTagDirty(5);
             
-            // Act
             dirtyFlags.Clear();
             
-            // Assert
             Assert.That(dirtyFlags.IsAttributeDirty(10), Is.False);
             Assert.That(dirtyFlags.IsTagDirty(5), Is.False);
             Assert.That(dirtyFlags.IsAnyAttributeDirty(), Is.False);

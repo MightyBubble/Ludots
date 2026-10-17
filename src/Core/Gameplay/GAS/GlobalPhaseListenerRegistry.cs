@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly int[] _priorities = new int[MAX_LISTENERS];
 
         /// <summary>
-        /// Register a global listener. Returns false if capacity is full.
+        /// Returns false if capacity is full.
         /// </summary>
         public bool Register(int listenCategoryId, int listenEffectId, EffectPhaseId phase,
                              PhaseListenerActionFlags flags, int graphProgramId, int eventTagId, int priority)
@@ -49,7 +49,7 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Unregister by matching tag + effect + phase. Removes first match.
+        /// Removes the first match.
         /// </summary>
         public bool Unregister(int listenCategoryId, int listenEffectId, EffectPhaseId phase)
         {
@@ -66,8 +66,7 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Collect all global listeners matching the given effect context.
-        /// Returns the number collected.
+        /// Returns the number written to <paramref name="output"/>, not the total match count.
         /// </summary>
         public int Collect(EffectPhaseId phase, int effectCategoryId, int effectTemplateId,
                            Span<PhaseListenerCollectedAction> output)

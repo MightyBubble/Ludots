@@ -34,7 +34,7 @@ namespace Ludots.Core.Gameplay.GAS
         public bool Cancelled;
         public EffectModifiers Modifiers;
 
-        /// <summary>Caller-supplied config param overrides, carried from EffectRequest.</summary>
+        /// <summary>Carried from EffectRequest.</summary>
         public EffectConfigParams CallerParams;
         public bool HasCallerParams;
     }

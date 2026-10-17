@@ -26,8 +26,8 @@ namespace Ludots.Core.Map.Board
         public int GridCellSizeCm { get; }
         public int ChunkSizeCells { get; }
 
-        // Satellite boards carry no consumers until BoardRef dispatch lands (#1567 slice 2):
-        // partition/streaming/query state stays unallocated until first access.
+        // Satellite boards carry no consumers: partition/streaming/query state stays
+        // unallocated until first access.
         public WorldGridLoadedChunks LoadedChunksSource => _loadedChunks ??= new WorldGridLoadedChunks(
             ChunkSizeCells * GridCellSizeCm, _loadedChunkCapacity);
         private ChunkedGridSpatialPartitionWorld? _partition;

@@ -21,9 +21,6 @@ namespace Ludots.Core.Presentation.Systems
     /// from registered <see cref="PresenterDefinition"/>s. When an event matches and
     /// the condition evaluates to true, a <see cref="PresenterCommand"/> is produced.
     ///
-    /// Replaces PresentationControlSystem's event-to-command mapping with a fully
-    /// declarative, configuration-driven rule engine.
-    ///
     /// Graph dependency is one-way: this system calls GraphExecutor, but Graph
     /// has no knowledge of the Presenter domain.
     /// </summary>
@@ -91,14 +88,12 @@ namespace Ludots.Core.Presentation.Systems
             var span = _events.GetSpan();
             if (span.Length == 0) return;
 
-            // Rebuild index if registry changed since last build
             if (_indexVersion != _definitions.Version)
                 RebuildRuleIndex();
 
             for (int ei = 0; ei < span.Length; ei++)
             {
                 ref readonly var evt = ref span[ei];
-                // 1. Check exact-match rules: (eventKind, keyId)
                 long exactKey = PackKey(evt.Kind, evt.KeyId);
                 if (_exactIndex.TryGetValue(exactKey, out var exactRules))
                 {
@@ -109,7 +104,6 @@ namespace Ludots.Core.Presentation.Systems
                     }
                 }
 
-                // 2. Check wildcard rules: (eventKind, any keyId)
                 if (_wildcardIndex.TryGetValue(evt.Kind, out var wildcardRules))
                 {
                     for (int ri = 0; ri < wildcardRules.Length; ri++)
@@ -122,8 +116,6 @@ namespace Ludots.Core.Presentation.Systems
 
             _events.Clear();
         }
-
-        // ── Inverted Index Construction ──
 
         private static long PackKey(PresentationEventKind kind, int keyId)
             => ((long)kind << 32) | (uint)keyId;
@@ -156,7 +148,6 @@ namespace Ludots.Core.Presentation.Systems
 
                     if (rule.Event.KeyId < 0)
                     {
-                        // Wildcard — matches any KeyId for this event kind
                         if (!wildcardBuild.TryGetValue(rule.Event.Kind, out var wlist))
                         {
                             wlist = new List<IndexedRule>();
@@ -166,7 +157,6 @@ namespace Ludots.Core.Presentation.Systems
                     }
                     else
                     {
-                        // Exact match
                         long key = PackKey(rule.Event.Kind, rule.Event.KeyId);
                         if (!exactBuild.TryGetValue(key, out var elist))
                         {
@@ -195,15 +185,12 @@ namespace Ludots.Core.Presentation.Systems
         private bool EvaluateCondition(in IndexedRule rule, in PresentationEvent evt)
         {
             ref readonly ConditionRef cond = ref rule.Condition;
-            // Inline fast path
             if (cond.Inline != InlineConditionKind.None)
                 return EvaluateInline(cond.Inline, in evt, in rule);
 
-            // Graph path
             if (cond.GraphProgramId > 0)
                 return EvaluateGraph(cond.GraphProgramId, in evt);
 
-            // Default: always true
             return true;
         }
 
@@ -397,8 +384,6 @@ namespace Ludots.Core.Presentation.Systems
                 });
             GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
         }
-
-        // ── Command Emission ──
 
         private void EmitRule(in IndexedRule rule, in PresentationEvent evt)
         {

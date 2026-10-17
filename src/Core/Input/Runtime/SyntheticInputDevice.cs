@@ -59,8 +59,6 @@ namespace Ludots.Core.Input.Runtime
 
         public int PendingEventCount => _pending.Count;
 
-        // ---- write side (agent tools) ----
-
         /// <summary>Move the virtual pointer; implicitly engages the pointer override.</summary>
         public void MovePointer(float x, float y) =>
             _pending.Add(new PendingEvent { Kind = EventKind.PointerMove, X = x, Y = y });
@@ -105,8 +103,6 @@ namespace Ludots.Core.Input.Runtime
 
         /// <summary>Release every held button/key and disengage the pointer override.</summary>
         public void ReleaseAll() => _pending.Add(new PendingEvent { Kind = EventKind.ReleaseAll });
-
-        // ---- frame boundary (host loop) ----
 
         public void AdvanceFrame()
         {
@@ -170,8 +166,6 @@ namespace Ludots.Core.Input.Runtime
 
             _pending.Clear();
         }
-
-        // ---- read side (host adapters) ----
 
         public bool IsButtonDown(SyntheticPointerButton button) => _buttonsDown.Contains(button);
         public bool WasButtonPressedThisFrame(SyntheticPointerButton button) => _pressedThisFrame.Contains(button);

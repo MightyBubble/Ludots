@@ -4,10 +4,6 @@ using Ludots.Core.Gameplay.Components;
 
 namespace Ludots.Core.Presentation.Utils
 {
-    /// <summary>
-    /// 通用的队伍/玩家颜色解析。
-    /// 优先读取 Team 组件，回退到 PlayerOwner。
-    /// </summary>
     public static class TeamColorResolver
     {
         public static readonly Vector4 Team1Color = new Vector4(0.2f, 0.9f, 0.2f, 1f);

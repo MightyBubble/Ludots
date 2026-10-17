@@ -37,8 +37,8 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
     private Entity _boundBody = Entity.Null;
     private bool _markWasSeeded;
 
-    public int PendingEffectRequests => ctxRequests?.Count ?? 0;
-    private EffectRequestQueue? ctxRequests;
+    public int PendingEffectRequests => _effectRequests?.Count ?? 0;
+    private EffectRequestQueue? _effectRequests;
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
@@ -64,7 +64,7 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 $"Attr gallery requires '{MarkEffectId}' loaded through EffectTemplateLoader.");
         }
 
-        ctxRequests = ctx.EffectRequests
+        _effectRequests = ctx.EffectRequests
             ?? throw new InvalidOperationException($"Attr gallery '{ctx.Vignette.Op}' requires EffectRequestQueue.");
         if (string.Equals(ctx.Vignette.Op, "RemoveEffectTemplate", StringComparison.Ordinal))
         {
@@ -158,7 +158,7 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 $"AttrNodeDriver requires EffectRequestQueue before Tick. Op={ctx.Vignette.Op}");
         }
 
-        ctxRequests = ctx.EffectRequests;
+        _effectRequests = ctx.EffectRequests;
         if (string.Equals(ctx.Vignette.Op, "RemoveEffectTemplate", StringComparison.Ordinal))
         {
             EnsureMarkOnTarget(ctx);
@@ -556,8 +556,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         });
     }
 
-    // ── 青色单据环（LoadContextTarget）──
-
     /// <summary>This strike's own ledger: a cyan ring at the stake's feet that the red line pulls along.</summary>
     private static void DrawLedgerRing(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
     {
@@ -570,8 +568,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawNumber(
             debugDraw, targetActor.X - 1.1f, targetActor.Y + 1.6f, -12, 0.5f, GraphShowcaseStagePresenter.EnemyColor);
     }
-
-    // ── 黄色虚线侦查线（LoadAttribute）──
 
     /// <summary>Recon line: yellow dashed from the caster's hand to the stake, a large readout floats over its head.</summary>
     private static void DrawReconLine(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
@@ -589,8 +585,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawNumber(
             debugDraw, targetActor.X, targetActor.Y + 2.8f, (int)ctx.ActorHealth[target], 0.7f, GraphShowcaseStagePresenter.CasterColor);
     }
-
-    // ── 铸数铭牌（ConstInt）──
 
     /// <summary>Cast plate at stage center: one bright slot with the locked 3; three hollow rings wait over the stake.</summary>
     private static void DrawCastPlate(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
@@ -624,8 +618,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 debugDraw, targetActor.X, targetActor.Y + 2.6f + i * 0.4f, 0.24f, GraphShowcaseStagePresenter.CasterColor);
         }
     }
-
-    // ── 对撞天平（CompareEqInt）──
 
     /// <summary>Three flame layers meet the full line on a balance; aligned, the thick white strike lands.</summary>
     private static void DrawScaleStrike(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
@@ -679,8 +671,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    // ── 证同章（CompareEqEntity）──
-
     /// <summary>Self ghost wears the identity seal; the real line leaves it for the stake.</summary>
     private static void DrawIdentitySeal(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
     {
@@ -694,8 +684,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawNumber(
             debugDraw, targetActor.X - 1.1f, targetActor.Y + 1.6f, -18, 0.5f, GraphShowcaseStagePresenter.EnemyColor);
     }
-
-    // ── 紫色标记卸除（RemoveEffectTemplate）──
 
     private void DrawMarkShatter(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int target)
     {
@@ -735,8 +723,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    // ── 岔路牌（SelectEntity）──
-
     /// <summary>Fork sign with two gate flags: the ghost branch fades on the left, the real branch locks the stake.</summary>
     private static void DrawForkGate(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
     {
@@ -763,8 +749,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             debugDraw, targetActor.X - 1.1f, targetActor.Y + 1.6f, -18, 0.5f, GraphShowcaseStagePresenter.EnemyColor);
     }
 
-    // ── 伤害浮标（ModifyAttributeAdd）──
-
     /// <summary>Red -25 rises over the stake; a white residual bar holds where the health was cut.</summary>
     private static void DrawDamageFloat(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int target)
     {
@@ -776,8 +760,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawGhostSegment(
             debugDraw, targetActor.X - 0.5f, targetActor.Y - 0.7f, targetActor.X + 0.5f, targetActor.Y - 0.7f, GraphShowcaseStagePresenter.GateColor);
     }
-
-    // ── 青色自查回环（LoadSelfAttribute）──
 
     /// <summary>Cyan loop starts and ends on the caster; the read number floats over their head.</summary>
     private static void DrawSelfLoop(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
@@ -796,8 +778,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawNumber(
             debugDraw, casterActor.X, casterActor.Y + 2.7f, (int)ctx.ActorHealth[caster], 0.7f, LedgerCyan);
     }
-
-    // ── 金色写入线（WriteSelfAttribute）──
 
     /// <summary>Gold write line drops onto the caster; green =90 floats; the gained band is picked out in gold.</summary>
     private static void DrawWriteLine(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
@@ -822,8 +802,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 debugDraw, casterActor.X - 0.55f, casterActor.Y - 0.8f, casterActor.X + 0.55f, casterActor.Y - 0.8f, Gold);
         }
     }
-
-    // ── 阈值标尺（CompareLtInt）──
 
     /// <summary>Ruler across the stake's bar with the red 80 line; below it the heavy white strike lands.</summary>
     private static void DrawThresholdRuler(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
@@ -863,8 +841,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    // ── 白色身份光柱（LoadCaster）──
-
     /// <summary>White beam on the caster with the gold striker seal; the red line lights from that end.</summary>
     private static void DrawIdentityBeam(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
     {
@@ -882,8 +858,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawAggroLine(
             debugDraw, casterActor.X, casterActor.Y, targetActor.X, targetActor.Y);
     }
-
-    // ── 算式台（AddInt）──
 
     /// <summary>Bench casting 2 + 1, flip card showing 3, and three combo sparks over the stake.</summary>
     private static void DrawComboBench(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)
@@ -904,8 +878,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 GraphShowcaseStagePresenter.BadgeKind.Flame, GraphShowcaseStagePresenter.CasterColor, scale: 0.8f);
         }
     }
-
-    // ── 红色准星（LoadExplicitTarget）──
 
     /// <summary>Red crosshair brackets close on the stake, then the red line hits along them.</summary>
     private static void DrawCrosshairLock(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, int target)

@@ -22,24 +22,15 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Tests covering critical gaps identified in the GAS Effect system architecture audit.
-    /// Each section targets a specific blind spot in the existing test suite.
-    /// </summary>
     [TestFixture]
     public class AuditCoverageTests
     {
-        // ════════════════════════════════════════════════════════════════════
-        //  Section 1: EffectPhaseExecutor �?Builtin Handler Path
-        //  (Previously zero coverage: all existing tests used empty PresetTypeRegistry)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PhaseExecutor_BuiltinPath_ApplyModifiers_AppliesViaPresetType()
         {
             using var world = World.Create();
 
-            // Set up registries with REAL PresetTypeRegistry (not empty)
             var presetTypes = new PresetTypeRegistry();
             var def = new PresetTypeDefinition
             {
@@ -74,7 +65,6 @@ namespace Ludots.Tests.GAS
                 "Test/AuditCoverageTests.BuiltinPath.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
-            // Use the NEW constructor that takes PresetTypeRegistry + BuiltinHandlerRegistry
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -119,7 +109,6 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
-            // Empty template registry �?template ID 999 does not exist
             var templates = new EffectTemplateRegistry();
             var programs = new GraphProgramRegistry();
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
@@ -158,10 +147,6 @@ namespace Ludots.Tests.GAS
             That(hp, Is.EqualTo(100f), "Exception prevented handler execution, HP unchanged");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Section 2: EffectProposalProcessingSystem �?ResetSlice
-        //  (Previously: only behavior test that happened to pass even with no-op)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void ProposalProcessing_ResetSlice_ClearsWindowPhaseToNone()
@@ -235,10 +220,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Section 3: Component Boundary Conditions
-        //  (Previously: no out-of-bounds / overflow tests)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public unsafe void EffectGrantedTags_Get_OutOfBounds_ReturnsDefault()
@@ -246,19 +227,15 @@ namespace Ludots.Tests.GAS
             var tags = new EffectGrantedTags();
             tags.Add(new TagContribution { TagId = 42, Formula = TagContributionFormula.Fixed, Amount = 1 });
 
-            // Valid index
             var valid = tags.Get(0);
             That(valid.TagId, Is.EqualTo(42));
 
-            // Out of bounds: Count = 1, so index 1 should return default
             var oob = tags.Get(1);
             That(oob.TagId, Is.EqualTo(0), "Out-of-bounds Get should return default (TagId=0)");
 
-            // Negative index
             var neg = tags.Get(-1);
             That(neg.TagId, Is.EqualTo(0), "Negative index Get should return default");
 
-            // Way out of bounds
             var far = tags.Get(EffectGrantedTags.MAX_GRANTS + 10);
             That(far.TagId, Is.EqualTo(0), "Far out-of-bounds Get should return default");
         }
@@ -290,7 +267,6 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var container = new ActiveEffectContainer();
 
-            // Fill to capacity
             for (int i = 0; i < ActiveEffectContainer.CAPACITY; i++)
             {
                 var entity = world.Create();
@@ -299,7 +275,6 @@ namespace Ludots.Tests.GAS
             }
             That(container.Count, Is.EqualTo(ActiveEffectContainer.CAPACITY));
 
-            // One more �?should return false
             var overflow = world.Create();
             bool overflowResult = container.Add(overflow);
             That(overflowResult, Is.False, "Overflow add must return false");
@@ -360,10 +335,6 @@ namespace Ludots.Tests.GAS
             That(p.Count, Is.EqualTo(EffectConfigParams.MAX_PARAMS));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Section 4: EffectPhaseExecutor �?PresetType integration
-        //  (Previously: all tests used the retired preset behavior registry constructor)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PhaseExecutor_BuiltinApplyForce_WritesAttributesViaPresetType()
@@ -438,10 +409,6 @@ namespace Ludots.Tests.GAS
             That(buf.GetCurrent(forceYAttrId), Is.EqualTo(-50f), "ForceY should be applied");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Section 5: MobaDemoMod Config Chain Smoke Test
-        //  (Previously: zero coverage for the entire mod)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void MobaDemoMod_EffectsJson_LoadsAllTemplatesViaVfs()
@@ -494,7 +461,6 @@ namespace Ludots.Tests.GAS
             Assert.DoesNotThrow(() => loader.Load(configCatalog, relativePath: "GAS/effects.json"),
                 "Loading MobaDemoMod effects.json via VFS + ConfigPipeline must not throw");
 
-            // Verify key MobaDemoMod templates are loaded
             int qDamageId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");
             int wHealId = EffectTemplateIdRegistry.GetId("Effect.Moba.Heal.W");
             int eDamageId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.E");
@@ -540,9 +506,6 @@ namespace Ludots.Tests.GAS
                 "Core effects.json must load without exceptions");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Helper
-        // ════════════════════════════════════════════════════════════════════
 
         private static string FindRepoRoot()
         {

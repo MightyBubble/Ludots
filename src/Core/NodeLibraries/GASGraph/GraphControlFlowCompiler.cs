@@ -103,7 +103,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             public string TargetNodeId { get; }
         }
 
-        /// <summary>One SelectByEnum candidate: the bound member's value plus the authored case port it wires from.</summary>
         private readonly struct SelectCandidateArm
         {
             public SelectCandidateArm(int memberValue, string authoredPort)
@@ -947,8 +946,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         continue;
                     }
 
-                    // 键闭集走事件 schema 基建：声明的参数载荷键才可过滤；无 schema 的
-                    // 裸编译退回引擎已知载荷键白名单。拼错的键编译期点名，不静默永不匹配。
+                    // 键闭集走事件 schema 基建：声明的参数载荷键才可过滤；拼错的键编译期点名，
+                    // 不静默永不匹配。
                     Ludots.Core.Scripting.EventParamType? declaredType = null;
                     if (entrySchema != null)
                     {

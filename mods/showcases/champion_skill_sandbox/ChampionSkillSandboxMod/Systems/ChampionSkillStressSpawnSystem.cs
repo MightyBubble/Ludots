@@ -181,11 +181,11 @@ namespace ChampionSkillSandboxMod.Systems
             EnqueueMissing(mapId, priests.Count, priestTarget, priestTemplateId, teamA, StressRole.Priest);
         }
 
-        private void TrimExcess(List<Entity> list, int desired)
+        private void TrimExcess(List<Entity> units, int desired)
         {
-            for (int i = list.Count - 1; i >= desired; i--)
+            for (int i = units.Count - 1; i >= desired; i--)
             {
-                Entity entity = list[i];
+                Entity entity = units[i];
                 if (_engine.World.IsAlive(entity))
                 {
                     _engine.World.Destroy(entity);

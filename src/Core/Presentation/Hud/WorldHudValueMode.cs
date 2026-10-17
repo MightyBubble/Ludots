@@ -2,7 +2,6 @@ namespace Ludots.Core.Presentation.Hud
 {
     /// <summary>
     /// Specifies how a WorldHudItem text value should be interpreted by platform renderers.
-    /// Originally part of WorldHudConfig; migrated here as it belongs to the HUD rendering protocol.
     /// </summary>
     public enum WorldHudValueMode : byte
     {

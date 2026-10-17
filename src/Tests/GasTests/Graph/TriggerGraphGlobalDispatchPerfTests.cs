@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// #1123 performance acceptance: "50 map × 200 trigger 只随订阅者数增长".
+    /// Performance acceptance: "50 map × 200 trigger 只随订阅者数增长".
     /// A world with 50 maps × 200 map-table triggers (10,000 total) but only 3
     /// global subscribers must make FireGlobalEvent cost the same as a 3-subscriber
     /// map fire in a tiny world: zero steady-state allocation and a bounded timing

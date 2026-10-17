@@ -10,31 +10,15 @@ namespace Ludots.Core.Spatial
     /// </summary>
     public interface ILoadedChunks
     {
-        /// <summary>
-        /// Currently active chunk keys.
-        /// </summary>
         IReadOnlyCollection<long> ActiveChunkKeys { get; }
 
-        /// <summary>
-        /// Check if a specific chunk is currently loaded.
-        /// </summary>
         bool IsLoaded(long chunkKey);
 
-        /// <summary>
-        /// Fired when a chunk becomes active/loaded.
-        /// </summary>
         event Action<long> ChunkLoaded;
 
-        /// <summary>
-        /// Fired when a chunk is deactivated/unloaded.
-        /// </summary>
         event Action<long> ChunkUnloaded;
     }
 
-    /// <summary>
-    /// Resolves the loaded-chunk key for a world-space point.
-    /// Implemented by loaded-chunk sources whose keys are derived from world centimeters.
-    /// </summary>
     public interface IWorldChunkKeyResolver
     {
         long GetChunkKeyForWorldCm(float worldXCm, float worldYCm);

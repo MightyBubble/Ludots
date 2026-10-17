@@ -6,7 +6,6 @@ using Ludots.Core.Engine;
 
 namespace Ludots.Tests.TestCommon
 {
-    /// <summary>Test alias for <see cref="ClientLocalSeatBindings"/>.</summary>
     public static class ClientLocalSeatTestBindings
     {
         public static readonly Vector2 DefaultPresentResolutionPx = new(1280f, 720f);

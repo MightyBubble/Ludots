@@ -61,7 +61,7 @@ namespace Ludots.Raylib.SceneKit
 
         public JsonNode Root => _root;
 
-        /// <summary>枚举 static_mesh 组件的全部实例（拾取目标）。M1 只覆盖 static_mesh 实例。</summary>
+        /// <summary>枚举 static_mesh 组件的全部实例（拾取目标）。</summary>
         public List<EngineEditableInstance> EnumerateStaticMeshInstances()
         {
             var result = new List<EngineEditableInstance>();

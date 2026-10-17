@@ -15,7 +15,7 @@ namespace EntityCommandPanelMod
         private const string InstalledKey = "EntityCommandPanelMod.Installed";
 
         /// <summary>
-        /// Default panel aggregation profile for collection selections (RFC-0065 PNL-4, DEC-10).
+        /// Default panel aggregation profile for collection selections.
         /// The profile itself is declared in this mod's own
         /// <c>assets/UI/ability_aggregation_profiles.json</c> fragment (ArrayById merge into
         /// the Core structural profiles); switchable at runtime via

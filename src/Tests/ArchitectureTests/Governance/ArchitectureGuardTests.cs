@@ -58,7 +58,7 @@ namespace Ludots.Tests.Architecture.Governance
         [Test]
         public void Core_MustNotContainConcreteGameplayActionLoops()
         {
-            // issue #1536: behavior loops live as mod graph data on the generic
+            // behavior loops live as mod graph data on the generic
             // GraphActionBrainHostSystem; a Core resurrection of a named behavior
             // loop (attack/transport/...) is an architecture regression.
             string coreRoot = Path.Combine(FindRepoRootForGuards(), "src", "Core", "Gameplay");
@@ -1821,7 +1821,6 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(showcaseInstaller, Does.Not.Contain("InstallGrants"));
                 Assert.That(showcaseInstaller, Does.Not.Contain("KnowledgeGrantSpec"));
                 Assert.That(showcaseMap, Does.Not.Contain("\"Grants\""));
-                // #1570 切6：knowledgeGrants/stance 从 catalog.json 拆至 projection.json
                 string showcaseProjectionPath = Path.Combine(
                     repoRoot,
                     "mods",

@@ -8,7 +8,7 @@ using Ludots.Core.UI.PanelActivation;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Validates and dispatches declared panel events (#1013). Path B/C fan-out:
+    /// Validates and dispatches declared panel events. Path B/C fan-out:
     /// the registered sink routes validated payloads (graph consumption via the event
     /// bus, signal bridge into orchestration blackboard — order admission downstream).
     /// The dispatcher never mutates gameplay itself.
@@ -129,7 +129,7 @@ namespace Ludots.Core.UI.PanelProjection
     }
 
     /// <summary>
-    /// Path-B-to-orchestration signal bridge (#1014/#1013): writes an int payload
+    /// Path-B-to-orchestration signal bridge: writes an int payload
     /// field onto the context entity's blackboard so the visibility orchestration
     /// graph can consume it — the only UI-side gameplay write, and only of signals.
     /// </summary>
@@ -171,7 +171,7 @@ namespace Ludots.Core.UI.PanelProjection
 
     /// <summary>
     /// Resolves intent-map entries against a validated payload plus seat/command-source
-    /// attribution context (#1013). Produces PanelIntent records for admission —
+    /// attribution context. Produces PanelIntent records for admission —
     /// this layer never submits orders itself.
     /// </summary>
     public sealed class PanelIntentResolver

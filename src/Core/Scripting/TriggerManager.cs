@@ -41,7 +41,6 @@ namespace Ludots.Core.Scripting
         // Type -> Singleton Trigger Instance
         private readonly Dictionary<Type, Trigger> _typeRegistry = new Dictionary<Type, Trigger>();
 
-        // Map-scoped trigger tracking
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
         // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
         // stay the single ledger; this index only answers "which mounts did owner X create"
@@ -53,7 +52,7 @@ namespace Ludots.Core.Scripting
         private readonly Dictionary<MapId, Dictionary<EventKey, List<Trigger>>> _mapEventTriggers
             = new Dictionary<MapId, Dictionary<EventKey, List<Trigger>>>();
 
-        // Global-scope event subscriptions owned by maps (#1123): Event -> priority-ordered
+        // Global-scope event subscriptions owned by maps: Event -> priority-ordered
         // triggers. Kept separate from _mapEventTriggers so FireGlobalEvent cost scales with
         // the global subscriber count alone, never with loaded map or map-trigger volume.
         private readonly Dictionary<EventKey, List<Trigger>> _globalEventTriggers
@@ -168,7 +167,6 @@ namespace Ludots.Core.Scripting
         {
             if (trigger == null) return;
 
-            // 1. Register Singleton by Type
             var type = trigger.GetType();
             if (!_typeRegistry.ContainsKey(type))
             {
@@ -182,7 +180,6 @@ namespace Ludots.Core.Scripting
                 }
             }
 
-            // 2. Register for Event
             if (string.IsNullOrEmpty(trigger.EventKey.Value))
             {
                  return;
@@ -539,7 +536,7 @@ namespace Ludots.Core.Scripting
         }
 
         // ────────────────────────────────────────────────────────────
-        // Global-scope subscriptions (#1123): map-owned triggers for
+        // Global-scope subscriptions: map-owned triggers for
         // schema.Scope==Global events, dispatched by FireGlobalEvent
         // independent of map focus. Only triggers whose event schema
         // declares Global scope may enter this table (mount-time gate).
@@ -756,11 +753,6 @@ namespace Ludots.Core.Scripting
         }
 
         /// <summary>
-        /// Fire an event only to triggers registered for the given map.
-        /// Triggers are sorted by Priority (lower values execute first).
-        /// Also invokes matching EventHandlers.
-        /// </summary>
-        /// <summary>
         /// 廉价判断某 eventKey 是否存在任何消费者（mod 回调/地图触发器/全局触发器）。
         /// 无消费者时调用方可完全跳过分发（不建 ScriptContext、不拼字符串）。
         /// </summary>
@@ -788,6 +780,11 @@ namespace Ludots.Core.Scripting
             return false;
         }
 
+        /// <summary>
+        /// Fire an event only to triggers registered for the given map.
+        /// Triggers are sorted by Priority (lower values execute first).
+        /// Also invokes matching EventHandlers.
+        /// </summary>
         public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
         {
             EventSchemas?.ValidateFirePayload(eventKey, context);
@@ -810,7 +807,7 @@ namespace Ludots.Core.Scripting
         /// Fire a Global-scope event to every live (non-suspended, loaded) global
         /// subscription, priority ascending, plus mod event handlers. Deliberately does
         /// NOT touch the legacy _triggers table (FireEvent) or any map table: dispatch
-        /// cost scales with the global subscriber count alone (#1123).
+        /// cost scales with the global subscriber count alone.
         /// </summary>
         public void FireGlobalEvent(EventKey eventKey, ScriptContext context)
         {
@@ -828,7 +825,7 @@ namespace Ludots.Core.Scripting
         }
 
         /// <summary>
-        /// Point-to-point cross-map fire (#1123): stamps MapTrigger.SourceMapId with the
+        /// Point-to-point cross-map fire: stamps MapTrigger.SourceMapId with the
         /// source map and dispatches through the target map's table only — no other map
         /// and no global subscription sees it. Fail closed when the target map has no
         /// loaded session; a loaded target with zero subscribers is a normal no-op.
@@ -887,14 +884,10 @@ namespace Ludots.Core.Scripting
                 triggers.Count > 0;
         }
 
-        /// <summary>
-        /// Async version of FireMapEvent.
-        /// </summary>
         public Task FireMapEventAsync(MapId mapId, EventKey eventKey, ScriptContext context)
         {
             EventSchemas?.ValidateFirePayload(eventKey, context);
 
-            // EventHandlers (mod callbacks)
             var handlerTask = FireEventHandlersAsync(eventKey, context);
 
             if (!_mapEventTriggers.TryGetValue(mapId, out var eventTriggers) ||
@@ -927,7 +920,6 @@ namespace Ludots.Core.Scripting
 
         // ────────────────────────────────────────────────────────────
         // Global event firing (for non-map events: GameStart, Tick, etc.)
-        // Now also sorted by Priority.
         // ────────────────────────────────────────────────────────────
 
         public void FireEvent(EventKey eventKey, ScriptContext context)
@@ -1086,10 +1078,6 @@ namespace Ludots.Core.Scripting
             }
         }
 
-        // ────────────────────────────────────────────────────────────
-        // Core
-        // ────────────────────────────────────────────────────────────
-
         public void ClearErrors()
         {
             lock (_errorsLock)
@@ -1213,7 +1201,6 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
                      trigger.OnMapEnter(context);
                 }
 
-                // Check condition
                 if (trigger.CheckConditions(context))
                 {
                     await trigger.ExecuteAsync(context);

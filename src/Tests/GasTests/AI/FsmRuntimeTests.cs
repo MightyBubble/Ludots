@@ -109,7 +109,7 @@ namespace Ludots.Tests.Gas.AI
             world.TickAll(host);
             Assert.That(world.GetLeafState(0), Is.EqualTo(2));
             Assert.That(host.Conditions, Does.Contain((0, 10)));
-            Assert.That(host.Actions, Does.Contain((0, 1))); // OnEnter Alert
+            Assert.That(host.Actions, Does.Contain((0, 1)));
             Assert.That(host.Actions, Does.Contain((0, 2))); // OnTick Alert (and maybe Root if set)
 
             host.Actions.Clear();
@@ -274,21 +274,16 @@ namespace Ludots.Tests.Gas.AI
             Assert.That(a0, Is.EqualTo(0));
             Assert.That(a1, Is.EqualTo(1));
 
-            // Releasing agent 1 must return a slot to the reuse pool.
             world.ReleaseAgent(a1);
 
-            // Acquiring again reuses the freed slot (index 1), it must NOT append a new one.
             int a2 = world.AcquireAgent();
             Assert.That(a2, Is.EqualTo(1), "released slot must be reused, not appended");
 
             // Tick with slot-reuse on must not touch/expand anything.
             world.TickAll();
 
-            // Releasing both still leaves capacity for re-acquire (no leak out of capacity).
             world.ReleaseAgent(a0);
             world.ReleaseAgent(a2);
-            // After releasing everything, an acquire must succeed within the fixed capacity
-            // (proves ReleaseAgent recycles rather than leaking towards infinity).
             int a3 = world.AcquireAgent();
             Assert.That(a3, Is.EqualTo(0) | Is.EqualTo(1), "freed slots are recycled within capacity");
         }

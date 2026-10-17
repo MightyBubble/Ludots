@@ -12,7 +12,7 @@ namespace Ludots.Raylib.Render
     /// <summary>
     /// 外部模型格式 → GLB 转换器（AssimpNet）。背景：native raylib 5.5 的 OBJ 装载分支
     /// 对无 texcoord/normal 索引的面片（`f v` 形态，mass_navigation 资产即此形态）原生
-    /// AccessViolation（issue #1050，裸 InitWindow+LoadModel 即可复现，与 Cubemap/IBL 无关）。
+    /// AccessViolation。
     /// 因此 OBJ/FBX/COLLADA 一律先转 GLB，再走 raylib 唯一稳定的 glTF 装载路径；
     /// 转换产物按（源路径 + 修改时间 + 大小）哈希缓存到临时目录，源不变不重转。
     /// </summary>
@@ -93,7 +93,7 @@ namespace Ludots.Raylib.Render
 
     /// <summary>
     /// 模型文件装载入口：glTF 走 native，其余声明式可转换集先经 GLB 转换——
-    /// 引擎内禁止直接对用户/资产文件 Rl.LoadModel（#1050 的 OBJ 原生崩溃路径）。
+    /// 引擎内禁止直接对用户/资产文件 Rl.LoadModel。
     /// </summary>
     public static class RaylibModelFileLoader
     {

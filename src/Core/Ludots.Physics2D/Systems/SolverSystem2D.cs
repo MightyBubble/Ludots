@@ -26,7 +26,6 @@ namespace Ludots.Core.Physics2D.Systems
 
         public override void Update(in float deltaTime)
         {
-            // Phase 1: 复制速度快照到 CollisionPair 并计算组合材质
             var prepareJob = new PrepareSolverPairsJob
             {
                 World = World,
@@ -35,7 +34,6 @@ namespace Ludots.Core.Physics2D.Systems
             };
             World.InlineQuery<PrepareSolverPairsJob, CollisionPair>(in _pairsQuery, ref prepareJob);
 
-            // Phase 2: 迭代求解
             for (int iteration = 0; iteration < _config.SolverIterations; iteration++)
             {
                 var solveJob = new SolvePairsJob

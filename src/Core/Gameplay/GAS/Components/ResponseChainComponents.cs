@@ -2,9 +2,6 @@ using Arch.Core;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
-    /// <summary>
-    /// Response Chain响应类型
-    /// </summary>
     public enum ResponseType : byte
     {
         Hook = 0,      // 拦截（取消Effect）
@@ -13,15 +10,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
         PromptInput = 3
     }
     
-    /// <summary>
-    /// Response Chain响应项
-    /// </summary>
     public struct ResponseChainItem
     {
-        public Entity EffectEntity;      // 被响应的Effect
+        public Entity EffectEntity;
         public Entity ResponseEntity;    // 响应者（Hook/Modify/Chain的创建者）
-        public ResponseType Type;        // Hook/Modify/Chain
-        public int Priority;             // 优先级（用于排序）
+        public ResponseType Type;
+        public int Priority;
 
         public int StableSequence;
         
@@ -39,7 +33,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
     }
     
     /// <summary>
-    /// Response Chain监听器组件
     /// 监听EffectPendingEvent并响应（Hook/Modify/Chain）
     /// </summary>
     public unsafe struct ResponseChainListener
@@ -51,9 +44,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public fixed int EffectCategoryIds[CAPACITY];
         
-        /// <summary>
-        /// Response类型（Hook/Modify/Chain）
-        /// </summary>
         public fixed byte ResponseTypes[CAPACITY];
         
         /// <summary>
@@ -84,14 +74,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public fixed int ResponseGraphIds[CAPACITY];
         
-        /// <summary>
-        /// 当前监听器数量
-        /// </summary>
         public int Count;
         
-        /// <summary>
-        /// 添加监听器
-        /// </summary>
         public bool Add(int effectCategoryId, ResponseType type, int priority, int effectTemplateId = -1, float modifyValue = 0f, ModifierOp modifyOp = ModifierOp.Add, int responseGraphId = 0)
         {
             if (Count >= CAPACITY) return false;

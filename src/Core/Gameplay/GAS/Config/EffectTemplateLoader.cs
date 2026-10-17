@@ -127,12 +127,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         private static void RejectForbiddenFields(JsonObject obj, string relativePath, string id)
         {
-            // Reject old scalar "duration"/"period" (seconds). New schema uses "duration" as an object block.
+            // Scalar "duration"/"period" are the legacy seconds-based schema; "period" has no object form and is always rejected.
             if (obj.ContainsKey("period"))
             {
                 throw new InvalidOperationException($"Effect template '{id}' in {relativePath} uses deprecated 'period' field. Use 'duration.periodTicks' instead.");
             }
-            // Only reject "duration" if it's a scalar (number/string), not an object block
+            // "duration" is rejected only when scalar (number/string); the object block is the valid form.
             if (obj.TryGetPropertyValue("duration", out var durNode))
             {
                 if (durNode != null && durNode is not System.Text.Json.Nodes.JsonObject)
@@ -156,7 +156,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         private EffectTemplateData Compile(EffectTemplateConfig cfg, string relativePath)
         {
-            // ── Lifetime + Duration resolution ──
             EffectLifetimeKind lifetimeKind;
             int durationTicks;
             int periodTicks;
@@ -277,21 +276,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            // ── Phase Graph bindings ──
             var behaviorTemplate = default(EffectPhaseGraphBindings);
             if (cfg.PhaseGraphs != null)
             {
                 CompilePhaseGraphs(cfg.PhaseGraphs, ref behaviorTemplate, cfg.Id, relativePath);
             }
 
-            // ── Config Params ──
             var configParams = default(EffectConfigParams);
             if (cfg.ConfigParams != null)
             {
                 CompileConfigParams(cfg.ConfigParams, ref configParams, cfg.Id, relativePath);
             }
 
-            // ── ApplyForce2D: resolve target attribute IDs from configParams ──
             if (presetType == EffectPresetType.ApplyForce2D)
             {
                 if (!configParams.TryGetAttributeId(EffectParamKeys.ForceXTargetAttrId, out int fxAttrId) ||
@@ -306,7 +302,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 presetAttr1 = fyAttrId;
             }
 
-            // ── Phase Listeners ──
             var listenerSetup = default(EffectPhaseListenerBuffer);
             if (cfg.PhaseListeners != null)
             {
@@ -318,7 +313,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Effect template '{cfg.Id}' in {relativePath}: lifetime Instant cannot declare phaseListeners because listener ownership requires cross-frame lifetime.");
             }
 
-            // ── Three-layer target resolution (new schema) ──
             var targetQuery = default(TargetQueryDescriptor);
             var targetFilter = default(TargetFilterDescriptor);
             var targetDispatch = default(TargetDispatchDescriptor);
@@ -1323,8 +1317,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return EffectPresetType.None;
         }
 
-        // ── Phase Graph compilation ──
-
         // Phase name map delegated to GasEnumParser.TryParsePhaseId (single source of truth)
 
         private static void CompilePhaseGraphs(
@@ -1401,8 +1393,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
             return id;
         }
-
-        // ── Config Params compilation ──
 
         private void CompileConfigParams(
             Dictionary<string, ConfigParamConfig> configParams,
@@ -1584,8 +1574,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        // ── Phase Listeners compilation ──
-
         private static void CompilePhaseListeners(
             List<PhaseListenerConfig> listeners,
             ref EffectPhaseListenerBuffer result,
@@ -1600,13 +1588,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] must be an object.");
                 }
 
-                // Phase
                 if (string.IsNullOrWhiteSpace(lc.Phase) || !GasEnumParser.TryParsePhaseId(lc.Phase, out var phaseId))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] has invalid phase '{lc.Phase}'.");
                 }
 
-                // Scope
                 PhaseListenerScope scope;
                 if (string.IsNullOrWhiteSpace(lc.Scope))
                 {
@@ -1619,7 +1605,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 else
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] has unknown scope '{lc.Scope}'. Supported: Source, Target.");
 
-                // Action
                 PhaseListenerActionFlags flags;
                 if (string.IsNullOrWhiteSpace(lc.Action))
                 {
@@ -1639,7 +1624,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (!string.IsNullOrWhiteSpace(lc.ListenCategory))
                     listenCategoryId = EffectCategoryRegistry.Register(lc.ListenCategory);
 
-                // Listen effect template id
                 int listenEffectId = 0;
                 if (!string.IsNullOrWhiteSpace(lc.ListenEffectId))
                 {
@@ -1648,12 +1632,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}].listenEffectId '{lc.ListenEffectId}' not found.");
                 }
 
-                // Graph program
                 int graphProgramId = 0;
                 if ((flags & PhaseListenerActionFlags.ExecuteGraph) != 0 && !string.IsNullOrWhiteSpace(lc.GraphProgram))
                     graphProgramId = ResolveGraphProgram(lc.GraphProgram, ownerId, $"phaseListeners[{i}].graphProgram", relativePath);
 
-                // Event tag (real gameplay / event tag)
                 int eventTagId = 0;
                 if ((flags & PhaseListenerActionFlags.PublishEvent) != 0 && !string.IsNullOrWhiteSpace(lc.EventTag))
                     eventTagId = TagRegistry.Register(lc.EventTag);
@@ -1678,8 +1660,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
         }
-
-        // ── New schema parse helpers ──
 
         private static EffectLifetimeKind ParseLifetimeKind(string? value, string effectId, string path)
         {

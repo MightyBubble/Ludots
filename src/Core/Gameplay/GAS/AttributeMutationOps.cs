@@ -319,7 +319,7 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>内嵌车道 settle 后把最终值（含钳制）镜像进列存；未建行（无种子来源）则跳过——
-        /// 列存在 P1 是 ≥64 槽位的运行真相与 <64 槽位的种子期镜像，不做无源镜像。</summary>
+        /// 列存是 ≥64 槽位的运行真相与 <64 槽位的种子期镜像，不做无源镜像。</summary>
         private static void MirrorToStore(World world, Entity target, int attributeId)
         {
             WorldAttributeStore store = WorldAttributeStoreAmbient.Current;

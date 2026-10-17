@@ -1,5 +1,5 @@
 using Arch.System;
-using Ludots.Core.Config; // For Time class if needed, or pass it in. Assuming Time is static global.
+using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Engine.Pacemaker

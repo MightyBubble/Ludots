@@ -17,12 +17,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>
-    /// #1108 placed-entity variable reads: compile-side instanceId shape validation,
-    /// mount-time fail-closed membership against the mounting map's catalog, the
-    /// Entity.Null (not throw) run-time miss contract with the World.IsAlive double
-    /// insurance.
-    /// </summary>
     [TestFixture]
     public sealed class TriggerGraphPlacedVariableTests
     {

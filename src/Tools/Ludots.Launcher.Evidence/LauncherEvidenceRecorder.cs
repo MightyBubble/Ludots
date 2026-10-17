@@ -3400,7 +3400,7 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
         AddAcceptanceCheck(afterOrder.CommandSourceCount > 0, "The formal command source contains no MassNavigation agents.", failures);
-        // Per-slot arrival (#1674) can finish a move order before the post-sequence snapshot,
+        // Per-slot arrival can finish a move order before the post-sequence snapshot,
         // so activation is proven by the in-sequence peak, not by the end-state sample.
         AddAcceptanceCheck(afterOrder.ActiveMoveOrderCount > 0 || firstOrderPeakActiveMoveOrderCount > 0, "massNavigationMove did not become active in any actor OrderBuffer during the command sequence.", failures);
         AddAcceptanceCheck(firstMoveSampleCount >= MassNavigationMinimumMovedSampleCount,

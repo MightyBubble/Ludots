@@ -3,7 +3,7 @@ using System;
 namespace Ludots.Core.Systems
 {
     /// <summary>
-    /// #1108 placed-variable kinds for authoring panels and mount validation.
+    /// Placed-variable kinds for authoring panels and mount validation.
     /// Anchors are concrete map InstanceIds whose id contains "anchor"; regions are
     /// map JSON Regions entries and never enter <see cref="MapLoadEntityIndex"/>.
     /// </summary>

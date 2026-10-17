@@ -3,9 +3,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Spatial.Eqs
 {
-    /// <summary>
-    /// EQS candidate item with position, score, and filter state.
-    /// </summary>
     public struct EqsItem
     {
         public WorldCmInt2 Position;

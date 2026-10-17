@@ -13,8 +13,8 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// Projects WorldHudBatchBuffer to screen space and culls off-screen items.
-    /// Outputs to ScreenHudBatchBuffer. Adapter draws without projection or culling.
+    /// Projects WorldHudBatchBuffer (with off-screen culling) into ScreenHudBatchBuffer;
+    /// the adapter draws it without further projection or culling.
     /// </summary>
     public sealed class WorldHudToScreenSystem : BaseSystem<World, float>
     {
@@ -590,7 +590,6 @@ namespace Ludots.Core.Presentation.Systems
                 _screenHud.Remove(removedStableIds[i]);
             }
 
-            // 内容值变化
             ReadOnlySpan<WorldHudItem> dirtyContent = _worldHud.GetDirtyContentSpan();
             for (int i = 0; i < dirtyContent.Length; i++)
             {
@@ -600,7 +599,6 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
-            // 位置变化
             ReadOnlySpan<int> positionDirtyStableIds = _worldHud.GetPositionDirtyStableIdSpan();
             for (int i = 0; i < positionDirtyStableIds.Length; i++)
             {

@@ -202,7 +202,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (string.Equals(text, "global", StringComparison.Ordinal))
             {
                 // route:global never drove FireMapEvent fan-out; cross-map dispatch is
-                // FireGlobalEvent / FireCrossMapEvent via event schema Scope (#1411).
+                // FireGlobalEvent / FireCrossMapEvent via event schema Scope.
                 throw new InvalidOperationException(
                     $"{context} field '{RouteField}' value 'global' is retired; " +
                     "cross-map dispatch uses FireGlobalEvent / FireCrossMapEvent (event schema Scope), not mount route. " +

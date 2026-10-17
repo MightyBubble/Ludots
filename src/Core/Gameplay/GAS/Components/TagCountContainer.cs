@@ -23,19 +23,16 @@ namespace Ludots.Core.Gameplay.GAS.Components
         {
             if (tagId <= 0) throw new ArgumentOutOfRangeException(nameof(tagId), tagId, "tagId must be > 0.");
             
-            // 查找现有条目
             for (int i = 0; i < Count; i++)
             {
                 if (TagIds[i] == tagId)
                 {
-                    // 累加层数，Clamp到[0, 65535]（见裁决AE）
                     int newCount = Counts[i] + amount;
                     Counts[i] = (ushort)Math.Min(65535, Math.Max(0, newCount));
                     return true;
                 }
             }
             
-            // 添加新条目
             if (Count >= CAPACITY) return false;
 
             TagIds[Count] = tagId;
@@ -44,9 +41,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
         
-        /// <summary>
-        /// 减少Tag层数
-        /// </summary>
         public void RemoveCount(int tagId, ushort amount = 1)
         {
             if (tagId <= 0) throw new ArgumentOutOfRangeException(nameof(tagId), tagId, "tagId must be > 0.");
@@ -57,14 +51,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 {
                     if (Counts[i] <= amount)
                     {
-                        // 移除条目（移动最后一个到当前位置）
                         TagIds[i] = TagIds[Count - 1];
                         Counts[i] = Counts[Count - 1];
                         Count--;
                     }
                     else
                     {
-                        // 减少层数，Clamp到[0, 65535]
                         int newCount = Counts[i] - amount;
                         Counts[i] = (ushort)Math.Max(0, newCount);
                     }
@@ -73,9 +65,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
         
-        /// <summary>
-        /// 获取Tag层数
-        /// </summary>
         public ushort GetCount(int tagId)
         {
             if (tagId <= 0) throw new ArgumentOutOfRangeException(nameof(tagId), tagId, "tagId must be > 0.");
@@ -105,17 +94,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return written;
         }
         
-        /// <summary>
-        /// 检查Tag是否有层数记录
-        /// </summary>
         public bool HasCount(int tagId)
         {
             return GetCount(tagId) > 0;
         }
         
-        /// <summary>
-        /// 清空所有层数记录
-        /// </summary>
         public void Clear()
         {
             Count = 0;

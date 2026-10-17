@@ -25,7 +25,7 @@ namespace Ludots.Core.Gameplay.Calendar
             }
 
             int year = YearCount(calendar, yearCycle, dayIndex);
-            int dayOfYear = DayOfYears(calendar, yearCycle, dayIndex);
+            int dayOfYear = DayOfYear(calendar, yearCycle, dayIndex);
             CalendarEraDefinition era = ResolveEra(calendar.Eras, dayIndex);
             // 均匀年：自纪年起点满 yearLengthDays 整年进位（周年制）。
             // 相位表年：纪年内年号按跨过的年相位计数（年界制），起点相位即元年。
@@ -79,7 +79,7 @@ namespace Ludots.Core.Gameplay.Calendar
             return checked((dayIndex / yearCycle.LengthDays) * yearCycle.Phases.Count + phase.PhaseIndex + 1);
         }
 
-        private static int DayOfYears(
+        private static int DayOfYear(
             CalendarDefinition calendar,
             CalendarCycleDefinition? yearCycle,
             int dayIndex)

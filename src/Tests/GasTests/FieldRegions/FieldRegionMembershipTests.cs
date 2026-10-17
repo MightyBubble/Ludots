@@ -47,7 +47,6 @@ namespace Ludots.Tests.GAS.FieldRegions
             _layer = _session.Fields.Get<DiscreteIdFieldLayerData>(_catalog.GetId("layerX"));
             _layer.Regions.Register("r1");
             _layer.Regions.Register("r2");
-            // cells (0..3, 0..3) = r1; cells (4..7, 0..3) = r2 (cellSize 100cm).
             for (int x = 0; x < 4; x++)
             {
                 _layer.Field.Set(new FieldCell2D(x, 0), 1);
@@ -76,8 +75,6 @@ namespace Ludots.Tests.GAS.FieldRegions
         [Test]
         public void AuthoredEmission_RedirectsCrossingsToCustomEventsWithPayload()
         {
-            // #1468: a field region carrying RegionVolumeEmissionCm fires the
-            // declared events with authored payload instead of the engine defaults.
             var customEvents = new Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry();
             customEvents.Register("field.zone.entered");
             var schemas = new EventSchemaRegistry();

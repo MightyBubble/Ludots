@@ -10,9 +10,8 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.Spawning.Systems
 {
     /// <summary>
-    /// Updates runtime manifestation facing from sweep velocity or parent execution
-    /// target data. Position following moved to the general AttachmentPositionSyncSystem:
-    /// manifestations with followParentPosition get an AttachedLocalPose at component
+    /// Position following is not handled here: the general AttachmentPositionSyncSystem owns
+    /// it — manifestations with followParentPosition get an AttachedLocalPose at component
     /// application time (forward offset rotated by own facing), so the sink anchors them.
     /// </summary>
     public sealed class ManifestationMotion2DSystem : BaseSystem<World, float>

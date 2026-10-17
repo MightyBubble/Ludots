@@ -5,7 +5,6 @@ using Ludots.Core.Components;
 
 namespace Ludots.Core.Gameplay.Camera.FollowTargets
 {
-    /// <summary>Follow the sole client-local possessed participant rep (Epic #896).</summary>
     public sealed class SolePossessedRepFollowTarget : ICameraFollowTarget
     {
         private readonly World _world;

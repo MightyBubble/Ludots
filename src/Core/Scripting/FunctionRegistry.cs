@@ -5,7 +5,6 @@ using Ludots.Core.Modding;
 
 namespace Ludots.Core.Scripting
 {
-    // Function returns a value (e.g. bool for condition, or int/string for data)
     public delegate object ScriptFunctionDelegate(ScriptContext context);
 
     public class FunctionRegistry

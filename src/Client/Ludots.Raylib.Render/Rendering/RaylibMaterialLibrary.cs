@@ -278,7 +278,7 @@ namespace Ludots.Raylib.Render
             }
             catch
             {
-                // 绑定未成立：回收本次已取得的租约，避免部分失败累积引用（#1327 复核修复）。
+                // 绑定未成立：回收本次已取得的租约，避免部分失败累积引用。
                 if (_bindingLeases.TryGetValue(materialAssetId, out List<RaylibAssetStore<Texture2D>.Lease>? partial))
                 {
                     foreach (RaylibAssetStore<Texture2D>.Lease lease in partial)
@@ -393,7 +393,7 @@ namespace Ludots.Raylib.Render
 
         private void UnloadOwned(Texture2D texture)
         {
-            // 贴图生命周期归 RaylibAssetStore：库只在 Dispose 释放租约，实际销毁延迟到存储冲刷（#1327）。
+            // 贴图生命周期归 RaylibAssetStore：库只在 Dispose 释放租约，实际销毁延迟到存储冲刷。
         }
 
         private void ThrowIfDisposed()

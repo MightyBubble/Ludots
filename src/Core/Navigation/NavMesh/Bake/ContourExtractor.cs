@@ -49,9 +49,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public long Area2 => Math.Abs(SignedArea2);
     }
 
-    /// <summary>
-    /// Directed edge segment for contour assembly.
-    /// </summary>
     internal readonly struct DirectedEdge : IEquatable<DirectedEdge>
     {
         public readonly IntPoint From;
@@ -68,35 +65,23 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public override int GetHashCode() => HashCode.Combine(From, To);
     }
 
-    /// <summary>
-    /// Extracts closed boundary rings from a triangle walkability mask.
-    /// Uses edge-segment collection and multi-adjacency ring assembly.
-    /// </summary>
     public static class ContourExtractor
     {
-        /// <summary>
-        /// Extracts all boundary rings from the walkability mask.
-        /// </summary>
-        /// <param name="mask">Triangle-level walkability mask.</param>
         /// <param name="originCol">Global column origin of the tile.</param>
         /// <param name="originRow">Global row origin of the tile.</param>
         /// <returns>List of closed rings (may include outer boundaries and holes).</returns>
         public static List<IntRing> Extract(TriWalkMask mask, int originCol, int originRow)
         {
-            // Step 1: Collect all boundary edges
             var boundaryEdges = CollectBoundaryEdges(mask, originCol, originRow);
             if (boundaryEdges.Count == 0)
                 return new List<IntRing>();
 
-            // Step 2: Build multi-adjacency map (from -> list of to)
             var adjacency = BuildAdjacency(boundaryEdges);
 
-            // Step 3: Assemble closed rings
             return AssembleRings(boundaryEdges, adjacency);
         }
 
         /// <summary>
-        /// Collects all directed boundary edges from walkable triangles.
         /// A boundary edge is where one side is walkable and the other is not (or out of bounds).
         /// </summary>
         private static List<DirectedEdge> CollectBoundaryEdges(TriWalkMask mask, int originCol, int originRow)
@@ -117,11 +102,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         if (!mask.IsWalkable(localC, localR, triIdx))
                             continue;
 
-                        // Get triangle vertex grid positions (relative to cell)
                         GetTriangleVertices(localC, localR, triIdx, isOddRow,
                             out var va, out var vb, out var vc);
 
-                        // Check each edge of this triangle
                         // Edge 0: va -> vb
                         if (IsBoundaryEdge(mask, localC, localR, triIdx, 0, originCol, originRow))
                         {
@@ -147,13 +130,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return edges;
         }
 
-        /// <summary>
-        /// Gets the grid coordinates of triangle vertices.
-        /// </summary>
         private static void GetTriangleVertices(int localC, int localR, int triIdx, bool isOddRow,
             out IntPoint va, out IntPoint vb, out IntPoint vc)
         {
-            // Grid vertex positions for cell at (localC, localR)
             var v00 = new IntPoint(localC, localR);
             var v10 = new IntPoint(localC + 1, localR);
             var v01 = new IntPoint(localC, localR + 1);
@@ -171,26 +150,19 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        /// <summary>
-        /// Checks if an edge of a triangle is a boundary edge.
-        /// </summary>
         private static bool IsBoundaryEdge(TriWalkMask mask, int localC, int localR, int triIdx, int edgeIdx,
             int originCol, int originRow)
         {
-            // Find the adjacent triangle across this edge
             if (!TryGetAdjacentTriangle(localC, localR, triIdx, edgeIdx, originCol, originRow, mask.TileWidth, mask.TileHeight,
                 out int adjC, out int adjR, out int adjTri))
             {
-                // Out of bounds = boundary
                 return true;
             }
 
-            // Check if adjacent triangle is walkable
             return !mask.IsWalkable(adjC, adjR, adjTri);
         }
 
         /// <summary>
-        /// Finds the adjacent triangle across a given edge.
         /// Returns false if the adjacent triangle is outside tile bounds.
         /// </summary>
         private static bool TryGetAdjacentTriangle(int localC, int localR, int triIdx, int edgeIdx,
@@ -201,7 +173,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int globalR = originRow + localR;
             bool isOddRow = (globalR & 1) == 1;
 
-            // Determine which edge we're checking and find the adjacent triangle
             // Triangle layout varies by row parity
             // Edge indices: 0 = va->vb, 1 = vb->vc, 2 = vc->va
 
@@ -214,14 +185,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 {
                     switch (edgeIdx)
                     {
-                        case 0: // v00->v10: shared with cell (c, r-1) if exists
+                        case 0:
                             if (localR == 0) return false;
                             adjC = localC; adjR = localR - 1; adjTri = 1;
                             break;
-                        case 1: // v10->v01: shared with Tri1 of same cell
+                        case 1:
                             adjC = localC; adjR = localR; adjTri = 1;
                             break;
-                        case 2: // v01->v00: shared with cell (c-1, r)
+                        case 2:
                             if (localC == 0) return false;
                             adjC = localC - 1; adjR = localR; adjTri = 1;
                             break;
@@ -231,15 +202,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 {
                     switch (edgeIdx)
                     {
-                        case 0: // v10->v11: shared with cell (c+1, r)
+                        case 0:
                             if (localC + 1 >= tileW) return false;
                             adjC = localC + 1; adjR = localR; adjTri = 0;
                             break;
-                        case 1: // v11->v01: shared with cell (c, r+1)
+                        case 1:
                             if (localR + 1 >= tileH) return false;
                             adjC = localC; adjR = localR + 1; adjTri = 0;
                             break;
-                        case 2: // v01->v10: shared with Tri0 of same cell
+                        case 2:
                             adjC = localC; adjR = localR; adjTri = 0;
                             break;
                     }
@@ -254,15 +225,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 {
                     switch (edgeIdx)
                     {
-                        case 0: // v00->v10: shared with cell (c, r-1)
+                        case 0:
                             if (localR == 0) return false;
                             adjC = localC; adjR = localR - 1; adjTri = 1;
                             break;
-                        case 1: // v10->v11: shared with cell (c+1, r)
+                        case 1:
                             if (localC + 1 >= tileW) return false;
                             adjC = localC + 1; adjR = localR; adjTri = 1;
                             break;
-                        case 2: // v11->v00: shared with Tri1 of same cell
+                        case 2:
                             adjC = localC; adjR = localR; adjTri = 1;
                             break;
                     }
@@ -271,14 +242,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 {
                     switch (edgeIdx)
                     {
-                        case 0: // v00->v11: shared with Tri0 of same cell
+                        case 0:
                             adjC = localC; adjR = localR; adjTri = 0;
                             break;
-                        case 1: // v11->v01: shared with cell (c, r+1)
+                        case 1:
                             if (localR + 1 >= tileH) return false;
                             adjC = localC; adjR = localR + 1; adjTri = 0;
                             break;
-                        case 2: // v01->v00: shared with cell (c-1, r)
+                        case 2:
                             if (localC == 0) return false;
                             adjC = localC - 1; adjR = localR; adjTri = 0;
                             break;
@@ -289,9 +260,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return true;
         }
 
-        /// <summary>
-        /// Builds multi-adjacency map from directed edges.
-        /// </summary>
         private static Dictionary<IntPoint, List<IntPoint>> BuildAdjacency(List<DirectedEdge> edges)
         {
             var adj = new Dictionary<IntPoint, List<IntPoint>>(edges.Count);
@@ -309,9 +277,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return adj;
         }
 
-        /// <summary>
-        /// Assembles closed rings from directed edges using adjacency traversal.
-        /// </summary>
         private static List<IntRing> AssembleRings(List<DirectedEdge> allEdges, Dictionary<IntPoint, List<IntPoint>> adjacency)
         {
             var usedEdges = new HashSet<DirectedEdge>();
@@ -335,9 +300,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return rings;
         }
 
-        /// <summary>
-        /// Traces a single ring starting from a given edge.
-        /// </summary>
         private static List<IntPoint> TraceRing(DirectedEdge startEdge, Dictionary<IntPoint, List<IntPoint>> adjacency, HashSet<DirectedEdge> usedEdges)
         {
             var ring = new List<IntPoint>(SpatialScaleDefaults.ContourRingInitialCapacity);
@@ -356,7 +318,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 if (!adjacency.TryGetValue(next, out var candidates) || candidates.Count == 0)
                 {
-                    // Dead end - incomplete ring
                     return null;
                 }
 
@@ -385,7 +346,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 if (best == null)
                 {
-                    // No valid continuation
                     return null;
                 }
 
@@ -401,7 +361,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         /// <summary>
-        /// Computes the turn angle from prev->current->next.
         /// Returns angle in [-PI, PI] where negative = left turn, positive = right turn.
         /// </summary>
         private static double ComputeTurnAngle(IntPoint prev, IntPoint current, IntPoint next)
@@ -424,7 +383,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         /// <summary>
-        /// Computes twice the signed area of a polygon using the shoelace formula.
         /// Positive = CCW, Negative = CW.
         /// </summary>
         public static long ComputeSignedArea2(IntPoint[] points)

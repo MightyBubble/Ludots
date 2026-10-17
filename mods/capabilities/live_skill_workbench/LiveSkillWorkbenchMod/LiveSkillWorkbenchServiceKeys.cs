@@ -6,7 +6,7 @@ namespace LiveSkillWorkbenchMod;
 
 /// <summary>
 /// Capability-local service keys for other Mods to inject/consume the workbench host.
-/// Formal extension point for #618+; do not add these to CoreServiceKeys.
+/// Formal extension point; do not add these to CoreServiceKeys.
 /// </summary>
 public static class LiveSkillWorkbenchServiceKeys
 {

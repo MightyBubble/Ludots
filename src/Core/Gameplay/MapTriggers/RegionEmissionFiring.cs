@@ -7,7 +7,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
-    /// Shared event outlet for region crossings (#1468): both the vector volume
+    /// Shared event outlet for region crossings: both the vector volume
     /// line (RegionVolumeTriggerSystem) and the field membership line
     /// (FieldRegionMembershipSystem) fire through this one implementation. The
     /// crossing entity always rides MapTrigger.SourceEntity (transport metadata);

@@ -5,10 +5,6 @@ using Ludots.Core.Config;
 
 namespace Ludots.Core.Gameplay.Camera
 {
-    /// <summary>
-    /// Loads virtual camera definitions from ConfigPipeline (Camera/virtual_cameras.json)
-    /// into VirtualCameraRegistry.
-    /// </summary>
     public sealed class VirtualCameraDefinitionLoader
     {
         private readonly ConfigPipeline _pipeline;

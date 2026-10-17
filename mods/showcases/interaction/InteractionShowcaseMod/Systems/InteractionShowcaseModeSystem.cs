@@ -8,10 +8,6 @@ using InteractionShowcaseMod.Runtime;
 
 namespace InteractionShowcaseMod.Systems
 {
-    /// <summary>
-    /// Polls the showcase-bound mode keys (F1-F5) and applies the corresponding cast mode via
-    /// the active input order mapping; the Action key also swaps the camera to the follow profile.
-    /// </summary>
     internal sealed class InteractionShowcaseModeSystem : ISystem<float>
     {
         private readonly Dictionary<string, object> _globals;

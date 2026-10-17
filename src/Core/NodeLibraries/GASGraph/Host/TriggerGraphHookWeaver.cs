@@ -10,7 +10,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
     /// <summary>
-    /// Route A compile-time hook weaver (#1124): after every graph is registered and
+    /// Route A compile-time hook weaver: after every graph is registered and
     /// before any map mounts, TriggerGraph entries carrying a hook target
     /// (<c>hookAnchor</c> / <c>hookNodeBefore</c> / <c>hookNodeAfter</c>) have their
     /// entry body spliced into the target graph at the anchor node. The splice is a
@@ -394,7 +394,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            // Pass 1: extract every fragment and compute chain entries/exits.
             var groupPlans = new List<(string ChainEntry, string[] FragmentEntries, string Continuation, Fragment[] Fragments, List<HookRecord> Chain, bool Before, string NodeId)>();
             for (int g = 0; g < groups.Count; g++)
             {
@@ -439,7 +438,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 groupPlans.Add((fragmentEntries[0], fragmentEntries, continuation, fragments, chain, before, nodeId));
             }
 
-            // Build the merged document from the untouched target shape.
             var merged = new GraphControlFlowDocument
             {
                 Id = target.Id,
@@ -489,8 +487,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            // Pass 2: append fragments; each fragment's dropped-halt terminals hand
-            // control to the next fragment entry, the last to the continuation.
+            // Each fragment's dropped-halt terminals hand control to the next fragment
+            // entry, the last to the continuation.
             for (int p = 0; p < groupPlans.Count; p++)
             {
                 var plan = groupPlans[p];

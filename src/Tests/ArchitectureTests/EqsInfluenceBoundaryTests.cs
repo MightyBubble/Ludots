@@ -31,13 +31,11 @@ namespace Ludots.Tests.Architecture
         public void Influence_OnlyReads_NeverWritesChunkedField()
         {
             // Contract test: InfluenceField wraps ChunkedField2D but never exposes mutating methods outside Stamp/Decay/Clear.
-            // This test verifies the API surface does not leak raw field write access.
             var repoRoot = FindRepoRoot();
             var influenceFieldCs = Path.Combine(repoRoot, "src", "Core", "Fields", "Influence", "InfluenceField.cs");
             var content = File.ReadAllText(influenceFieldCs);
 
-            // InfluenceField should not expose "_field.Set" or direct mutating ChunkedField2D methods as public.
-            // The only allowed mutations are Stamp/Decay/Clear. This is a simple heuristic check.
+            // This is a simple heuristic check.
             Assert.That(content, Does.Not.Contain("public void Set("), "InfluenceField should not expose raw Set");
             Assert.That(content, Does.Not.Contain("public ChunkedField2D"), "InfluenceField should not expose raw field");
         }

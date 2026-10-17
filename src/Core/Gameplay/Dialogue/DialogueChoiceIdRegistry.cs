@@ -4,7 +4,6 @@ using Ludots.Core.Registry;
 namespace Ludots.Core.Gameplay.Dialogue
 {
     /// <summary>
-    /// Stable int ids for authored dialogue choice identities.
     /// Key is <c>{dialogueId}/{choiceId}</c> so choice ids stay unique across dialogues.
     /// </summary>
     public static class DialogueChoiceIdRegistry

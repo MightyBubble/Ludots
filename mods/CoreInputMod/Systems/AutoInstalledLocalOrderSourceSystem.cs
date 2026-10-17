@@ -12,14 +12,14 @@ using Ludots.Core.Engine;
 namespace CoreInputMod.Systems
 {
     /// <summary>
-    /// The single config-installed local order source (migration slice 2): exactly one loaded
+    /// The single config-installed local order source: exactly one loaded
     /// mod may ship <c>assets/Input/input_order_mappings.json</c> — the CoreInputMod composition
     /// root resolves it at GameStart and registers this system in its place, so mods carry no
     /// per-mod mapping installer code. The mapping is built once through
     /// <see cref="LocalOrderSourceHelper.TryCreateMapping(IModContext, string?)"/> and re-bound to
     /// the sole seat's controlled actor each tick (the controlled-actor resolution follows the
     /// mounted interaction context carrier, which can change without a possession change); the
-    /// mapping only ticks while the binding resolves, matching the retired per-mod installers.
+    /// mapping only ticks while the binding resolves.
     /// </summary>
     public sealed class AutoInstalledLocalOrderSourceSystem : ISystem<float>
     {
@@ -87,9 +87,6 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            // Controlled-actor binding follows the mounted context carrier, so it is
-            // re-resolved per tick exactly like the retired per-mod installers did; the
-            // mapping only ticks while the binding resolves.
             Entity actor = _helper.GetControlledActor();
             if (!_world.IsAlive(actor))
             {

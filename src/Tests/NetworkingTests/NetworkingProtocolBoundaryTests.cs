@@ -32,8 +32,7 @@ public sealed class NetworkingProtocolBoundaryTests
             {
                 if (text.Contains(token, StringComparison.Ordinal))
                 {
-                    // Allow the word Socket only outside Networking Protocol/Transport contracts if ever needed;
-                    // currently any hit under Networking is a boundary violation for this epic.
+                    // The bare word "Socket" is deliberately absent from this list: only the Protocol-scoped scan bans it, because outside Protocol/Transport contracts the word stays allowed.
                     offenders.Add($"{Path.GetRelativePath(repoRoot, file)}:{token}");
                 }
             }

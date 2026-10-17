@@ -69,7 +69,6 @@ namespace Ludots.Graph.Codegen
 
             Add(GraphNodeOp.None, GraphCodegenFamily.Exempt, GraphCodegenEmitKind.Exempt);
 
-            // F0
             Add(GraphNodeOp.ConstInt, GraphCodegenFamily.F0, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.AddInt, GraphCodegenFamily.F0, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.CompareLtInt, GraphCodegenFamily.F0, GraphCodegenEmitKind.Specialize);
@@ -78,7 +77,6 @@ namespace Ludots.Graph.Codegen
             Add(GraphNodeOp.JumpIfFalse, GraphCodegenFamily.F0, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.HaltReturnInt, GraphCodegenFamily.F0, GraphCodegenEmitKind.Specialize);
 
-            // F1
             Add(GraphNodeOp.ConstBool, GraphCodegenFamily.F1, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.ConstFloat, GraphCodegenFamily.F1, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.MoveInt, GraphCodegenFamily.F1, GraphCodegenEmitKind.Specialize);
@@ -98,7 +96,6 @@ namespace Ludots.Graph.Codegen
             Add(GraphNodeOp.LoadCaster, GraphCodegenFamily.F1, GraphCodegenEmitKind.HandlerForward);
             Add(GraphNodeOp.LoadExplicitTarget, GraphCodegenFamily.F1, GraphCodegenEmitKind.HandlerForward);
 
-            // F2 / F3
             Add(GraphNodeOp.ConstText, GraphCodegenFamily.F2, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.ConcatText, GraphCodegenFamily.F2, GraphCodegenEmitKind.Specialize);
             Add(GraphNodeOp.IntToText, GraphCodegenFamily.F2, GraphCodegenEmitKind.Specialize);

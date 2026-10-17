@@ -57,14 +57,12 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
     /// <summary>Agents currently standing on the plate (Begin − End reconciliation).</summary>
     public long ActiveAgentContacts => AgentContactBeginCount - AgentContactEndCount;
 
-    /// <summary>Number of doors this system has opened.</summary>
     public int OpenedDoorCount { get; private set; }
 
     public void OnContactEvent(in ContactEvent2D contactEvent)
     {
         ResolveLayerBitsOnce();
 
-        // Identify the plate's contact partner; only squad agents count toward the door.
         bool aIsPlate = (contactEvent.LayerA.Category & _plateCategoryBit) != 0u;
         bool bIsPlate = (contactEvent.LayerB.Category & _plateCategoryBit) != 0u;
         if (!aIsPlate && !bIsPlate)

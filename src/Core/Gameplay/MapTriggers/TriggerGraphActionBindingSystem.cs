@@ -14,8 +14,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// Dispatches TriggerGraph mounts that bind a semantic input action directly:
     /// when the action's configured moment (press started / release completed) fires,
     /// stamps the shared InputAction payload (rep from the mount subject, pointer
-    /// window pixels, held modifiers) and executes the mount. Replaces the retired
-    /// retired input-action bridge.
+    /// window pixels, held modifiers) and executes the mount.
     /// </summary>
     public sealed class TriggerGraphActionBindingSystem : Arch.System.ISystem<float>
     {

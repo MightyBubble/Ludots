@@ -8,10 +8,9 @@ using NUnit.Framework;
 namespace Ludots.Tests.Persistence;
 
 /// <summary>
-/// Determinism measurement guard: world digests are only meaningful if a world that received no
-/// input yields identical digests on repeated captures. Wall-clock diagnostics fields (render
-/// interpolation alpha, frame timings, stopwatch-measured physics update time) must stay out of the
-/// serialized payload — this test exists so that mistake cannot land silently again (#1311).
+/// Determinism guard: a world that received no input must yield identical digests on repeated
+/// captures, which only holds if wall-clock diagnostics fields (render interpolation alpha, frame
+/// timings, stopwatch-measured physics update time) stay out of the serialized payload.
 /// </summary>
 public sealed class WorldDigestStabilityTests
 {

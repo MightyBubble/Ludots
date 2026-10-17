@@ -11,9 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Headless Stopwatch evidence for the #1567 slice-2 board configuration chain:
-    /// multi-board placement validation + board construction (grid cells, hex footprint,
-    /// anchored origins) + per-board coordinate round-trips. Fences are loose
+    /// Headless Stopwatch evidence for the board configuration chain. Fences are loose
     /// anti-catastrophe guards; the measured numbers go to the test log.
     /// </summary>
     [TestFixture]

@@ -9,7 +9,7 @@ using Ludots.Raylib.SceneKit;
 namespace Ludots.Content.EngineGallery.Scenes
 {
     /// <summary>
-    /// 真 GPU 蒙皮人群：4096 具 mannequin 环形行军——CPU 侧每帧只重算环位/朝向并打包
+    /// 真 GPU 蒙皮人群：10000 具 mannequin 环形行军——CPU 侧每帧只重算环位/朝向并打包
     /// AnimatorPackedState（locomotion 相位），骨骼蒙皮走 RaylibPrimitiveRenderer 的
     /// GpuSkinnedInstance 车道：bucket 按 (meshAsset, 环带色, clip, frame) 分桶，
     /// 每 bucket 一次 UpdateModelAnimationBones + skinning_instanced 实例化绘制，

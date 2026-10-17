@@ -3,8 +3,7 @@ using System;
 namespace Ludots.Adapter.Raylib
 {
     /// <summary>
-    /// 适配器公共工具：宿主环境变量读取与文本诊断追加的单一实现，
-    /// 供 RaylibHostLoop、RaylibHostInputRouter、RaylibFrameRenderer 共用（#1324 复核收敛）。
+    /// 适配器公共工具：宿主环境变量读取与文本诊断追加的单一实现，供各宿主与渲染类型共用。
     /// </summary>
     internal static class RaylibAdapterEnv
     {

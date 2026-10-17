@@ -19,11 +19,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// End-to-end tests for the unified config merge pipeline.
-    /// Simulates real mod development scenarios: Core + Mod overlay, delete semantics,
-    /// conflict reporting, DeepObject merging, and multi-mod layering.
-    /// </summary>
     [TestFixture]
     public class ConfigMergeE2ETests
     {
@@ -41,8 +36,6 @@ namespace Ludots.Tests.GAS
         {
             try { Directory.Delete(_root, recursive: true); } catch { }
         }
-
-        // ── Helpers ──
 
         private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog)
             BuildPipeline(string root, string[] modIds = null)
@@ -78,10 +71,6 @@ namespace Ludots.Tests.GAS
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 1: Mod overrides a single effect property (ArrayById merge)
-        // A mod developer wants to change the damage of a Core-defined effect.
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ModOverridesEffectProperty_MergedCorrectly()
         {
@@ -103,9 +92,6 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["presetType"]?.GetValue<string>(), Is.EqualTo("Damage"), "Core property should be preserved");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 2: Mod adds a new ability without touching Core abilities
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ModAddsNewAbility_BothExist()
         {
@@ -125,9 +111,6 @@ namespace Ludots.Tests.GAS
             That(merged[1].Id, Is.EqualTo("Fireball"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 3: Mod deletes a Core-defined tag rule via __delete
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ModDeletesTagRule_ViaDeleteField()
         {
@@ -147,9 +130,6 @@ namespace Ludots.Tests.GAS
             That(merged[0].Id, Is.EqualTo("Silence"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 4: Mod deletes via Disabled field
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ModDeletesEntry_ViaDisabled()
         {
@@ -168,9 +148,6 @@ namespace Ludots.Tests.GAS
             That(merged[0].Id, Is.EqualTo("Poison"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 5: DeepObject merge — mod adds a new clock field
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_DeepObjectMerge_ModAddsField()
         {
@@ -190,10 +167,6 @@ namespace Ludots.Tests.GAS
             That(merged["mode"]?.GetValue<string>(), Is.EqualTo("Auto"), "Core field preserved");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 6: Three-mod layering — priority ordering
-        // ModB overrides ModA which overrides Core.
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ThreeModLayering_LastModWins()
         {
@@ -216,9 +189,6 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["splash"]?.GetValue<bool>(), Is.True, "ModB field added");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 7: ConflictReport records all fragment sources and winners
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ConflictReport_RecordsFragmentsAndWinners()
         {
@@ -235,15 +205,11 @@ namespace Ludots.Tests.GAS
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             That(merged.Count, Is.EqualTo(3));
-            // Report should have recorded fragments
             var fragments = report.GetFragments("GAS/effects.json");
             That(fragments, Is.Not.Null);
             That(fragments.Count, Is.GreaterThanOrEqualTo(2), "Should record at least Core + ModA fragments");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 8: Single source — Core only, no mods
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_SingleSource_CoreOnly()
         {
@@ -261,9 +227,6 @@ namespace Ludots.Tests.GAS
             That(merged[1].Id, Is.EqualTo("Heal"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 9: missing catalog entry is a configuration error
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_RequireEntry_ThrowsWhenNotInCatalog()
         {
@@ -278,9 +241,6 @@ namespace Ludots.Tests.GAS
             That(ex.Message, Does.Contain("Custom/my_config.json"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 10: DeepObject — attribute constraints merge from multiple mods
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_DeepObject_AttributeConstraints_MultiMod()
         {
@@ -296,19 +256,14 @@ namespace Ludots.Tests.GAS
             var merged = pipeline.MergeDeepObjectFromCatalog(in entry);
 
             That(merged, Is.Not.Null);
-            // Health.max should be overridden by ModA
             var health = merged["Health"]?.AsObject();
             That(health, Is.Not.Null);
             That(health["max"]?.GetValue<int>(), Is.EqualTo(2000), "ModA overrides Health.max");
-            // Mana should be added by ModA
             var mana = merged["Mana"]?.AsObject();
             That(mana, Is.Not.Null);
             That(mana["max"]?.GetValue<int>(), Is.EqualTo(500));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 11: Mod re-adds a previously deleted entry
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_ModReAddsDeletedEntry()
         {
@@ -316,10 +271,8 @@ namespace Ludots.Tests.GAS
                 @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
                 @"[{ ""id"": ""Heal"", ""amount"": 50 }]");
-            // ModA deletes Heal
             WriteAssetFile("ModA", "GAS/effects.json",
                 @"[{ ""id"": ""Heal"", ""__delete"": true }]");
-            // ModB re-adds Heal with different values
             WriteAssetFile("ModB", "GAS/effects.json",
                 @"[{ ""id"": ""Heal"", ""amount"": 100, ""type"": ""holy"" }]");
 
@@ -333,9 +286,6 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["type"]?.GetValue<string>(), Is.EqualTo("holy"), "New field from ModB");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 12: PresetTypeLoader via ConfigPipeline (full integration)
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_PresetTypeLoader_LoadsViaPipeline()
         {
@@ -372,9 +322,6 @@ namespace Ludots.Tests.GAS
             That(def.HasComponent(ComponentFlags.PhaseGraphBindings), Is.True, "ModA component added");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 13: GasClockConfig DeepObject merge
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_GasClockConfig_LoadsViaPipeline()
         {
@@ -393,9 +340,6 @@ namespace Ludots.Tests.GAS
             That(config.Mode, Is.EqualTo(GasStepMode.Auto), "Core mode preserved");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 14: Empty mod fragment — no crash, Core preserved
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_EmptyModFragment_CorePreserved()
         {
@@ -413,9 +357,6 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["damage"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 15: No config file exists anywhere — empty result
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_NoConfigExists_EmptyResult()
         {
@@ -429,9 +370,6 @@ namespace Ludots.Tests.GAS
             That(merged.Count, Is.EqualTo(0));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 16: Presenter definition with numeric ID — ArrayById merge
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_PresenterDefinition_NumericId_MergesCorrectly()
         {
@@ -450,15 +388,10 @@ namespace Ludots.Tests.GAS
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(2));
-            // id=1 should have merged scale
             That(merged[0].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(1.5f).Within(0.01f));
-            // id=2 should be unchanged
             That(merged[1].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(2.0f).Within(0.01f));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 17: MergeArrayByIdToEntries preserves insertion order
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_InsertionOrder_Preserved()
         {
@@ -477,9 +410,6 @@ namespace Ludots.Tests.GAS
             That(merged[2].Id, Is.EqualTo("B"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Scenario 18: Case-sensitive ID matching
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void Scenario_CaseSensitiveId_KeepsDistinctEntries()
         {

@@ -119,14 +119,12 @@ namespace GasTests
         {
             foreach (var partition in CreateBothImplementations())
             {
-                // Add 5 entities at same cell
                 for (int i = 0; i < 5; i++)
                 {
                     var e = _world.Create();
                     partition.Add(e, 0, 0);
                 }
 
-                // Query with buffer of 3
                 Span<Entity> buffer = stackalloc Entity[3];
                 int count = partition.Query(new IntRect(0, 0, 1, 1), buffer, out int dropped);
 

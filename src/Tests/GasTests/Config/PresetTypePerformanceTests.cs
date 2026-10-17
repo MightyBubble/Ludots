@@ -10,17 +10,9 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Performance and stress tests for the new Preset Type System.
-    /// Verifies 0GC constraints and throughput of hot-path operations.
-    /// </summary>
     [TestFixture]
     public class PresetTypePerformanceTests
     {
-        // ════════════════════════════════════════════════════════════════════
-        //  ConfigParams MergeFrom — 0GC Verification
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ConfigParamsMerger_BuildMergedConfig_NoAllocation()
         {
@@ -30,7 +22,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < 8; i++)
                 templateParams.TryAddFloat(i + 1, i * 1.5f);
 
-            // Pre-merge caller overrides into template params (mimics creation-time merge)
+            // Mimics the creation-time merge.
             var preMerged = templateParams;
             var callerOverrides = new EffectConfigParams();
             callerOverrides.TryAddFloat(3, 999.0f);
@@ -58,10 +50,6 @@ namespace Ludots.Tests.GAS
             That(allocated, Is.LessThanOrEqualTo(1024),
                 $"ConfigParamsMerger should be 0GC on hot path, allocated {allocated} bytes in {iterations} iterations");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PresetTypeRegistry Lookup — Throughput
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PresetTypeRegistry_Lookup_HighThroughput()
@@ -99,10 +87,6 @@ namespace Ludots.Tests.GAS
             That(sw.ElapsedMilliseconds, Is.LessThan(500),
                 "1M lookups should complete in < 500ms");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  BuiltinHandlerRegistry Dispatch — Throughput
-        // ════════════════════════════════════════════════════════════════════
 
         private static int _perfCounter;
 
@@ -144,10 +128,6 @@ namespace Ludots.Tests.GAS
                 "1M dispatches should complete in < 1s");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  PhaseHandlerMap Access — 0GC Verification
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public unsafe void PhaseHandlerMap_Access_NoAllocation()
         {
@@ -179,10 +159,6 @@ namespace Ludots.Tests.GAS
                 $"PhaseHandlerMap should be 0GC, allocated {allocated} bytes");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  EffectConfigParams MergeFrom — Stress with Full Capacity
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public unsafe void ConfigParams_MergeFrom_StressFullCapacity()
         {
@@ -193,7 +169,6 @@ namespace Ludots.Tests.GAS
             }
             That(template.Count, Is.EqualTo(EffectConfigParams.MAX_PARAMS));
 
-            // Caller overrides every other key
             var caller = new EffectConfigParams();
             for (int i = 0; i < EffectConfigParams.MAX_PARAMS; i += 2)
             {
@@ -202,7 +177,6 @@ namespace Ludots.Tests.GAS
 
             template.MergeFrom(in caller);
 
-            // Verify overrides
             for (int i = 0; i < EffectConfigParams.MAX_PARAMS; i++)
             {
                 template.TryGetFloat(i + 1, out float v);
@@ -212,10 +186,6 @@ namespace Ludots.Tests.GAS
                     That(v, Is.EqualTo(i * 0.1f).Within(1e-5f), $"Key {i + 1} should keep original");
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  EffectRequest CallerParams — Batch Stress
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void EffectRequestQueue_CallerParams_BatchStress()
@@ -238,7 +208,6 @@ namespace Ludots.Tests.GAS
 
             That(queue.Count, Is.EqualTo(batchSize));
 
-            // Verify all preserved
             for (int i = 0; i < batchSize; i++)
             {
                 var req = queue[i];
@@ -251,10 +220,6 @@ namespace Ludots.Tests.GAS
                 That(fy, Is.EqualTo(i * -1.0f).Within(1e-5f));
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PresetTypeLoader — JSON Parse Performance
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PresetTypeLoader_ParsePerformance()
@@ -287,10 +252,6 @@ namespace Ludots.Tests.GAS
             That(sw.ElapsedMilliseconds, Is.LessThan(5000),
                 "1000 loads of preset_types.json should complete in < 5s");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Helpers
-        // ════════════════════════════════════════════════════════════════════
 
         private static string FindRepoRoot()
         {

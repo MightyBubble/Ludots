@@ -802,10 +802,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 $"RTS Frontline opening camera found {ownedCoreCount} owned core mirrors for player {localPlayerId}; expected one.");
         }
 
-        // Publish the opening focus request under the seat model: main removed the name-based
-        // EnsureDefaultCommandSource seeding, so focus the existing command source primary, or seed
-        // the own core mirror when no command source exists yet. CameraRuntimeSystem consumes and
-        // removes the request every frame, so capture must happen in the same frame that publishes.
+        // CameraRuntimeSystem consumes and removes the focus request every frame, so capture must
+        // happen in the same frame that publishes.
         if (_engine.GetService(CoreServiceKeys.CameraPoseRequest) == null)
         {
             Entity focusTarget = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity primary) &&

@@ -12,8 +12,7 @@ namespace Ludots.Core.Navigation.GraphWorld
         private bool _viewDirty;
 
         /// <summary>
-        /// Subscribe to an ILoadedChunks source. When chunks are unloaded,
-        /// the corresponding graph data is removed automatically.
+        /// Chunks unloaded by the source are removed from this store automatically (via ChunkUnloaded).
         /// </summary>
         public void SubscribeToLoadedChunks(ILoadedChunks source)
         {
@@ -27,8 +26,7 @@ namespace Ludots.Core.Navigation.GraphWorld
         }
 
         /// <summary>
-        /// Detach from the current ILoadedChunks source to prevent event subscription leaks.
-        /// Call this before the store is abandoned or replaced.
+        /// Call before the store is abandoned or replaced; otherwise the ChunkUnloaded subscription leaks.
         /// </summary>
         public void UnsubscribeFromLoadedChunks()
         {

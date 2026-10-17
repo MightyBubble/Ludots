@@ -11,9 +11,9 @@ using Ludots.Core.Registry;
 namespace Ludots.Core.UI.EntityCommandPanels
 {
     /// <summary>
-    /// AggregationProfile registry and evaluator (RFC-0065 PNL-2/3, DEC-10). Profiles are declared in
+    /// AggregationProfile registry and evaluator. Profiles are declared in
     /// <c>UI/ability_aggregation_profiles.json</c>; <c>groupBy</c> expressions compile at install time
-    /// through a prefix-keyed selector delegate table (DEC-11: extensible via
+    /// through a prefix-keyed selector delegate table (extensible via
     /// <see cref="RegisterKeySelectorPrefix"/>, never a closed enum). Built-in prefixes:
     /// <list type="bullet">
     /// <item><c>catalog.&lt;categoryPrefix&gt;</c> — group by the first (lowest-id) ability category whose
@@ -47,7 +47,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public StringIntRegistry ProfileIdRegistry => _profileIds;
 
         /// <summary>
-        /// Register an additional <c>groupBy</c> prefix (DEC-11 registry extension point). The factory
+        /// Register an additional <c>groupBy</c> prefix (registry extension point). The factory
         /// receives the expression remainder after <c>&lt;prefix&gt;.</c> and must fail fast on invalid
         /// arguments. Built-in prefixes cannot be re-registered.
         /// </summary>
@@ -85,13 +85,12 @@ namespace Ludots.Core.UI.EntityCommandPanels
             }
         }
 
-        /// <summary>True when the profile id has been compiled and can be evaluated.</summary>
         public bool IsInstalled(int profileId)
         {
             return profileId > 0 && profileId < _profiles.Length && _profiles[profileId] != null;
         }
 
-        /// <summary>Opaque overflow policy key of the profile for the panel router (PNL-3); empty when unset.</summary>
+        /// <summary>Opaque overflow policy key of the profile for the panel router; empty when unset.</summary>
         public string GetOverflow(int profileId)
         {
             return RequireInstalled(profileId).Overflow;

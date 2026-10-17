@@ -6,9 +6,6 @@ using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Orders
 {
-    /// <summary>
-    /// Loader for input-order mapping configurations.
-    /// </summary>
     public sealed class InputOrderMappingLoader
     {
         private readonly ConfigPipeline _pipeline;
@@ -20,9 +17,6 @@ namespace Ludots.Core.Input.Orders
             _pipeline = pipeline;
         }
 
-        /// <summary>
-        /// Load configuration from ConfigPipeline.
-        /// </summary>
         public InputOrderMappingConfig Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null,
@@ -69,9 +63,6 @@ namespace Ludots.Core.Input.Orders
             return config;
         }
 
-        /// <summary>
-        /// Save configuration to JSON.
-        /// </summary>
         public static string SaveToJson(InputOrderMappingConfig config)
         {
             var options = new JsonSerializerOptions
@@ -82,9 +73,6 @@ namespace Ludots.Core.Input.Orders
             return JsonSerializer.Serialize(config, options);
         }
 
-        /// <summary>
-        /// Save configuration to a file.
-        /// </summary>
         public static void SaveToFile(string filePath, InputOrderMappingConfig config)
         {
             var json = SaveToJson(config);

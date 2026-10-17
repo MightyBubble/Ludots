@@ -18,8 +18,8 @@ namespace Ludots.Core.Physics2D.Systems
     ///     ↓
     ///   WorldPositionCm (逻辑层 SSOT, Fix64Vec2 厘米)
     /// 
-    /// 注意：Position2D 和 WorldPositionCm 现在都使用 Fix64Vec2，
-    /// 消除了浮点到整数的舍入误差，实现完全确定性。
+    /// 注意：Position2D 和 WorldPositionCm 均为 Fix64Vec2，
+    /// 无浮点到整数的舍入误差，实现完全确定性。
     /// </summary>
     public sealed class Physics2DToWorldPositionSyncSystem : BaseSystem<World, float>
     {
@@ -41,7 +41,6 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(ref Position2D physics, ref WorldPositionCm world)
             {
-                // 定点数直接赋值，无舍入损失
                 world.Value = physics.Value;
             }
         }

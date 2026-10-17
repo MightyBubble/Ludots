@@ -20,13 +20,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation.Movement
 {
-    /// <summary>
-    /// Issue #643 增量 2 / #734：massnav→kinematic 桥的合同测试。
-    /// 覆盖：位姿喂送正确性（已提交 WorldPositionCm = kinematic body Position2D）、
-    /// 位移写权窗口中的单位仍被喂送、半径 SSOT 漂移 fail-fast、kinematicBodyCapacity
-    /// 不足 fail-fast、模板配对缺一半 fail-fast、稳态喂送零分配，
-    /// 以及碰撞事件路由（注册消费者分发、允许清单校验、丢弃计数、消费异常上抛）。
-    /// </summary>
     [TestFixture]
     public sealed class MassNavKinematicBridgeTests
     {

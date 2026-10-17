@@ -15,8 +15,8 @@ namespace Ludots.Core.Systems
         public IReadOnlyDictionary<string, Entity> ByInstanceId => _byInstanceId;
 
         /// <summary>
-        /// 可寻址路径节点数（实例根 + 有 localId 的后代）。切A 只登记形状；
-        /// 组件相对引用的解析与统一命名空间升格属切F/切D。
+        /// 可寻址路径节点数（实例根 + 有 localId 的后代）。本索引只登记形状；
+        /// 组件相对引用的解析与统一命名空间升格不在本索引内。
         /// </summary>
         public int LocalPathCount => _byLocalPath.Count;
 
@@ -97,7 +97,7 @@ namespace Ludots.Core.Systems
         }
 
         /// <summary>
-        /// 登记一个可寻址路径节点（切A：装载期构建"本地路径 → 实体"映射，每地图一张）。
+        /// 登记一个可寻址路径节点（装载期构建"本地路径 → 实体"映射，每地图一张）。
         /// 路径已由调用方按实例根实例化；重复路径 fail-fast。
         /// </summary>
         public void RegisterLocalPath(string mapId, string localPath, Entity entity)

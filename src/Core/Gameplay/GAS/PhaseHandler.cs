@@ -1,9 +1,6 @@
 namespace Ludots.Core.Gameplay.GAS
 {
-    /// <summary>
-    /// Handler type: C# builtin function or Graph program.
-    /// Builtin and Graph are interchangeable at the configuration level.
-    /// </summary>
+    /// <summary>Builtin and Graph are interchangeable at the configuration level.</summary>
     public enum PhaseHandlerKind : byte
     {
         None = 0,

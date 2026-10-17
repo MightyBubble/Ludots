@@ -487,8 +487,6 @@ namespace Ludots.Tests.GasTests.UI
                 Throws.Exception.With.Message.Contains("payload"));
         }
 
-        // ── helpers ──
-
         private static GraphInstruction[] CreatePanelProgram(byte scopeRegister) => new[]
         {
             new GraphInstruction { Op = (ushort)GraphNodeOp.CreatePanel, Imm = 0, Dst = 1, A = scopeRegister },
@@ -568,25 +566,3 @@ namespace Ludots.Tests.GasTests.UI
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FINDING — contract test that currently FAILS against src/Core/UI/PanelHosting/PanelHost.cs
-// (no product code was changed; per task instructions the finding is documented here instead).
-//
-// Test: EvaluatorThrows_PinsKeepPreviousValues
-// Contract: when the graph evaluator throws, pins must keep their previous values
-// (合同基准: “evaluator 抛异常保持旧值”). The test proves the thrower IS invoked on both
-// Instantiate and RefreshRealtime (Calls 1 → 2) and that Instantiate still reads the
-// pre-seeded store (hp=87), so the test setup is sound.
-//
-// Gap: PanelHost.RefreshRealtime calls EvaluateGraph(entry) (which swallows the thrower's
-// exception) and then unconditionally reads the store via _reader.Resolve(...) in the pin
-// loop. A store write that is independent of the failed evaluation therefore leaks through:
-// after _store.SetFloat(hp, 50f) the sweep reports touched=1 and the pin moves to 50,
-// instead of keeping the previous value 87.
-//
-// The “keep previous values” contract is only honored incidentally today — when the store
-// happens not to have moved. A failed evaluation must suppress the pin re-read for that
-// instance (e.g. EvaluateGraph returns success, and RefreshRealtime skips the pin loop on
-// failure) for this test to go green. No src/ change was made.
-// ─────────────────────────────────────────────────────────────────────────────

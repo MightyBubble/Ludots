@@ -42,10 +42,6 @@ namespace Ludots.Core.Presentation.Components
         /// </summary>
         public float FixedDeltaTime;
         
-        /// <summary>
-        /// Number of FixedUpdates that ran this render frame.
-        /// Useful for debugging timing issues.
-        /// </summary>
         public int FixedUpdatesThisFrame;
         
         /// <summary>
@@ -53,9 +49,6 @@ namespace Ludots.Core.Presentation.Components
         /// </summary>
         public int FrameId;
 
-        /// <summary>
-        /// Default state with interpolation enabled.
-        /// </summary>
         public static PresentationFrameState Default => new PresentationFrameState
         {
             InterpolationAlpha = 1f,

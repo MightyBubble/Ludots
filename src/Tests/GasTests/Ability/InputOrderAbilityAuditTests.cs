@@ -27,20 +27,9 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS.Features.InputRouting
 {
-    /// <summary>
-    /// Unit tests covering the features introduced by the Input/Order/Ability audit:
-    ///   - OrderBuffer PendingBuffer (SetPending, ClearPending, ExpirePending)
-    ///   - GrantedSlotBuffer + AbilitySlotResolver
-    ///   - AbilityToggleSpec registration
-    ///   - GraphExecutor.ExecuteValidation
-    /// </summary>
     [TestFixture]
     public class InputOrderAbilityAuditTests
     {
-        // ════════════════════════════════════════════════════════════════════
-        // Region: OrderBuffer / PendingBuffer
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void OrderSpatialPayloadBuffer_ReadsMaximumPath_AndRejectsStaleHandle()
         {
@@ -126,13 +115,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var buffer = OrderBuffer.CreateEmpty();
             var order = new Order { OrderTypeId = 7 };
             buffer.SetPending(in order, 5, expireStep: 50, insertStep: 10);
-
-            // Before expiration: should not expire.
             bool expired = buffer.ExpirePending(currentStep: 49);
             That(expired, Is.False);
             That(buffer.HasPending, Is.True);
-
-            // At expiration step: should expire.
             expired = buffer.ExpirePending(currentStep: 50);
             That(expired, Is.True);
             That(buffer.HasPending, Is.False);
@@ -153,8 +138,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var buffer = OrderBuffer.CreateEmpty();
             var order = new Order { OrderTypeId = 1 };
             buffer.SetPending(in order, 5, expireStep: -1, insertStep: 0);
-
-            // -1 = no expiration; should never expire
             bool expired = buffer.ExpirePending(currentStep: 999999);
             That(expired, Is.False);
             That(buffer.HasPending, Is.True);
@@ -188,10 +171,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(buffer.HasQueued, Is.False, "Clear() should reset queue");
             That(buffer.HasActive, Is.False, "Clear() should reset active");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        // Region: GrantedSlotBuffer + AbilitySlotResolver
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OrderTypeRegistry_GetUnknownType_Throws()
@@ -1705,10 +1684,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(slot.IsConfigured, Is.False);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // Region: AbilityToggleSpec
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void AbilityToggleSpec_RegisterAndRetrieve()
         {
@@ -1979,8 +1954,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(bbI.TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slotIndex), Is.True);
             That(slotIndex, Is.EqualTo(2));
 
-            That(bbE.TryGet(OrderBlackboardKeys.Cast_TargetEntity, out Entity bbTarget), Is.True);
-            That(bbTarget, Is.EqualTo(target));
+            That(bbE.TryGet(OrderBlackboardKeys.Cast_TargetEntity, out Entity blackboardTarget), Is.True);
+            That(blackboardTarget, Is.EqualTo(target));
         }
 
         [Test]
@@ -2016,7 +1991,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(buffer.GetQueued(0).ExpireStep, Is.EqualTo(9));
         }
 
-        // ════════════════════════════════════════════════════════════════════
         [Test]
         public void AbilityExecSystem_ActiveCastOrderFromOrderBuffer_DoesNotRequireGameplayTag()
         {
@@ -3043,9 +3017,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(effectRequests.Count, Is.EqualTo(0));
         }
 
-        // Region: GraphExecutor.ExecuteValidation
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ExecuteValidation_EmptyProgram_Throws()
         {
@@ -3070,13 +3041,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             using var world = World.Create();
             var caster = world.Create();
             var target = world.Create();
-
-            // Create a program with a single instruction: ConstBool B[0] = 0 (reject)
             var instruction = new GraphInstruction
             {
                 Op = (ushort)GraphNodeOp.ConstBool,
                 Dst = 0,  // register index B[0]
-                Imm = 0   // value = false
+                Imm = 0
             };
             ReadOnlySpan<GraphInstruction> program = new[]
             {
@@ -3086,10 +3055,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.False, "ConstBool B[0]=0 should cause validation to fail");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        // Region: OrderBuffer queue stress
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OrderBuffer_Enqueue_RespectsPriorityOrdering()
@@ -3460,9 +3425,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         public void MoveToWorldCmOrderSystem_ZeroMoveSpeed_IgnoresMoveToWithoutDefaultFallback()
         {
             using var world = World.Create();
-
-            // Entity declares an explicit MoveSpeed of 0 (intentionally immovable). With no implicit
-            // default-speed fallback, it must not move.
             int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
             var actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),

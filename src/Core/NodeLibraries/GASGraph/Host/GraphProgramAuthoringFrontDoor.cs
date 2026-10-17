@@ -250,7 +250,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
 
         /// <summary>
-        /// Strict shape of the #1124 hook blocks: hookAnchor needs string graphId /
+        /// Strict shape of the hook blocks: hookAnchor needs string graphId /
         /// anchor and position "before"|"after"; hookNodeBefore/After need string
         /// graphId / nodeId. At most one hook block per entry.
         /// </summary>

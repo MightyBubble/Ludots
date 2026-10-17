@@ -6,7 +6,7 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Spatial
 {
     /// <summary>
-    /// World extent authored in centimeters (#1567: the only world-size authority).
+    /// World extent authored in centimeters; the only world-size authority.
     /// Produces <see cref="WorldSizeSpec"/>; macro-tile counts are derived IO details.
     /// </summary>
     public readonly struct WorldExtentSpec : IEquatable<WorldExtentSpec>

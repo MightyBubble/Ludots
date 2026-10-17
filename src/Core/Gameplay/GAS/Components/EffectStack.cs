@@ -31,18 +31,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// </summary>
     public struct EffectStack
     {
-        /// <summary>Current number of stacks.</summary>
         public int Count;
         /// <summary>Maximum number of stacks allowed (0 = no limit).</summary>
         public int Limit;
-        /// <summary>What happens to duration when stacking.</summary>
         public StackPolicy Policy;
-        /// <summary>What happens when the limit is reached.</summary>
         public StackOverflowPolicy OverflowPolicy;
 
-        /// <summary>
-        /// Try to add a stack. Returns true if the stack was accepted.
-        /// </summary>
         public bool TryAddStack()
         {
             if (Limit > 0 && Count >= Limit)
@@ -52,7 +46,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                     // Count stays the same (remove oldest + add new)
                     return true;
                 }
-                return false; // RejectNew
+                return false;
             }
             Count++;
             return true;

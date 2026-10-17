@@ -6,7 +6,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Physics;
-using Ludots.Core.Gameplay.GAS; // Added for GameplayEventBus
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -26,15 +26,13 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             const int entityCount = 100_000;
             Console.WriteLine("Initializing GAS Benchmark (Abilities & Hooks)...");
 
-            // 1. Setup Registry
             int healthId = AttributeRegistry.Register("Health");
             int manaId = AttributeRegistry.Register("Mana");
             int damageEventId = TagRegistry.Register("Event.DamageTaken");
             
-            // 2. Setup World
             var world = World.Create();
             var physicsWorld = new PhysicsWorld();
-            var eventBus = new GameplayEventBus(); // Initialize EventBus
+            var eventBus = new GameplayEventBus();
 
             var effectTemplates = new EffectTemplateRegistry();
             var effectRequests = new EffectRequestQueue(initialCapacity: 65536);
@@ -63,7 +61,6 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 new BuiltinHandlerRegistry(),
                 new GraphProgramRegistry(),
                 new GasGraphOpHandlerTable());
-            // 3. Create Systems
             var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, clock, effectRequests, tagOps: tagOps);
             var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: 65536, effectRequests: effectRequests, tagOps: tagOps);
             var aggSystem = new AttributeAggregatorSystem(
@@ -81,7 +78,6 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
             
-            // 4. Create Global Ability Template (Flyweight)
             var abilityTemplateEntity = world.Create();
             world.Add(abilityTemplateEntity, new AbilityTemplate());
             world.Add(abilityTemplateEntity, new AbilityOnActivateEffects());
@@ -91,7 +87,6 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 onActivate.Add(1);
             }
 
-            // 5. Create Entities
             Console.WriteLine($"Creating {entityCount} entities with Abilities...");
             var entities = new Entity[entityCount];
             
@@ -130,7 +125,6 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             
             long initialMemory = GC.GetTotalMemory(true);
             
-            // 6. Run Loop
             Console.WriteLine("Running 100 frames with Event Spawning...");
             Stopwatch sw = Stopwatch.StartNew();
             long startAlloc = GC.GetAllocatedBytesForCurrentThread();
@@ -151,7 +145,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                     });
                 }
                 
-                eventBus.Update(); // Update Bus
+                eventBus.Update();
 
                 reactionSystem.Update(dt); // Drives AbilitySystem
                 abilitySystem.Update(dt);  // Process deferred structural changes

@@ -13,20 +13,10 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Stress tests for the Phase Graph architecture.
-    /// Validates throughput, allocation-free execution, and GC pressure
-    /// under high-volume graph dispatching.
-    /// </summary>
     [TestFixture]
     public class EffectPhaseStressTests
     {
         private static readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable ZeroAllocHandlers = new();
-        /// <summary>
-        /// Stress test: execute Phase graphs for N effects × all 8 phases.
-        /// Each phase runs a trivial 3-instruction graph (ConstFloat + AddFloat + WriteBlackboard).
-        /// Guards average phase cost under 50μs and keeps the measured window within the 64-byte alloc budget.
-        /// </summary>
         [Test]
         public void PhaseExecutor_HighVolume_ReportsThroughputAndGc()
         {
@@ -41,7 +31,6 @@ namespace Ludots.Tests.GAS
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
-                // Register a simple graph: F[0]=1.0, E[0]=target, WriteBBFloat(E[0], key=1, F[0])
                 int graphId = 1;
                 programs.Register(graphId, new[]
                 {
@@ -67,7 +56,6 @@ namespace Ludots.Tests.GAS
                 }
                 presetTypes.Register(in ptDef);
 
-                // Build behavior with Pre+Post for every phase
                 var behavior = new EffectPhaseGraphBindings();
                 for (int p = 0; p < EffectPhaseConstants.PhaseCount && behavior.StepCount < EffectPhaseGraphBindings.MAX_STEPS; p++)
                 {
@@ -155,7 +143,6 @@ namespace Ludots.Tests.GAS
                 Console.WriteLine($"[PHASE][STRESS] AllocBytes={allocDelta}");
                 Console.WriteLine($"[PHASE][STRESS] GC Δ: Gen0={gen0_1 - gen0_0} Gen1={gen1_1 - gen1_0} Gen2={gen2_1 - gen2_0}");
 
-                // Correctness: every target's BB key=1 should have been written to
                 for (int e = 0; e < entityCount; e++)
                 {
                     ref var bb = ref world.Get<BlackboardFloatBuffer>(targets[e]);
@@ -176,10 +163,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        /// <summary>
-        /// Stress test: Math ops chain (Sub, Div, Clamp, Abs, Neg) in a 10-instruction graph,
-        /// executed 10000 times with zero-allocation verification.
-        /// </summary>
         [Test]
         public void MathOpsChain_Stress_ZeroAllocation()
         {
@@ -259,7 +242,6 @@ namespace Ludots.Tests.GAS
                 sw.Stop();
                 long alloc1 = GC.GetAllocatedBytesForCurrentThread();
 
-                // Correctness: final F[9] should be 14
                 That(f[9], Is.EqualTo(14f).Within(1e-6f));
 
                 double perIterUs = sw.Elapsed.TotalMilliseconds * 1000.0 / iterations;
@@ -276,10 +258,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        /// <summary>
-        /// Stress test: Blackboard write+read roundtrip for 1000 entities × 100 iterations.
-        /// Verifies zero GC and correctness.
-        /// </summary>
         [Test]
         public void BlackboardOps_Stress_MassWriteRead_ZeroGc()
         {
@@ -288,8 +266,6 @@ namespace Ludots.Tests.GAS
             {
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
-                // Graph: F[0]=42.5, E[0]=target, WriteBBFloat(E[0], key=1, F[0]),
-                //        ReadBBFloat(F[1], E[0], key=1), F[2]=F[1]+F[0]
                 var program = new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 42.5f },

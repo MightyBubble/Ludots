@@ -15,13 +15,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>
-    /// Headless Stopwatch evidence for region-volume evaluation on a tens-of-km map:
-    /// 320 city rings and 10K units. Prints the partition-filtered tick against a
-    /// full precise pass over every unit, plus a small fight and an all-mover tick.
-    /// The all-mover tick pairs each trip with rings along that trip, and must stay
-    /// well under the full precise pass.
-    /// </summary>
     [TestFixture]
     [NonParallelizable]
     public sealed class RegionVolumeBroadphaseBenchmarkTests

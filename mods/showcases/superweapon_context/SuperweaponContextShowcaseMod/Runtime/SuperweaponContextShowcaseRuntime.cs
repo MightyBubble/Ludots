@@ -410,11 +410,6 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _markerDescriptorsReady = true;
         }
 
-        /// <summary>
-        /// The superweapon confirmation context's identity, read from the entity-mounted active
-        /// interaction state on the sole possessed rep; the profile registry supplies the context
-        /// id space the profile id resolves in.
-        /// </summary>
         private bool TryGetActiveSuperweaponContext(GameEngine engine)
         {
             var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)

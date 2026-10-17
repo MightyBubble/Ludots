@@ -253,11 +253,9 @@ namespace Ludots.Tool
                 byte hA = heightData[idxA];
                 byte hB = heightData[idxB];
 
-                // No cliff if same height or either side is a ramp
                 if (hA == hB) return false;
                 if (rampData[idxA] || rampData[idxB]) return false;
 
-                // Identify high and low sides
                 int highC, highR, lowC, lowR;
                 byte highH, lowH;
                 if (hA > hB)
@@ -271,15 +269,10 @@ namespace Ludots.Tool
                     lowC = cA; lowR = rA; lowH = hA;
                 }
 
-                // Check continuity PERPENDICULAR to the cliff edge direction.
-                // A cliff should only be straightened if both the high and low plateaus
-                // extend continuously along the cliff face.
                 bool highContinuous, lowContinuous;
 
                 if (edgeDir == 0)
                 {
-                    // Edge is horizontal (east-west): cliff face runs north-south.
-                    // Check vertical continuity (up and down of each cell).
                     highContinuous =
                         HeightAt(heightData, w, h, highC, highR - 1) == highH &&
                         HeightAt(heightData, w, h, highC, highR + 1) == highH;
@@ -370,7 +363,6 @@ namespace Ludots.Tool
 
                             bool isOdd = (globalR & 1) == 1;
 
-                            // Edge 0: horizontal right (c,r)↔(c+1,r)
                             int n0c = globalC + 1;
                             int n0r = globalR;
                             if (ShouldStraightenEdge(heights, ramp, mapWidth, mapHeight, globalC, globalR, n0c, n0r, edgeDir: 0))
@@ -379,7 +371,6 @@ namespace Ludots.Tool
                                 cliffStraighten[bit >> 3] |= (byte)(1 << (bit & 7));
                             }
 
-                            // Edge 1: diagonal bottom (c,r)↔(n1c, r+1)
                             int n1c = isOdd ? globalC + 1 : globalC;
                             int n1r = globalR + 1;
                             if (ShouldStraightenEdge(heights, ramp, mapWidth, mapHeight, globalC, globalR, n1c, n1r, edgeDir: 1))
@@ -388,7 +379,6 @@ namespace Ludots.Tool
                                 cliffStraighten[bit >> 3] |= (byte)(1 << (bit & 7));
                             }
 
-                            // Edge 2: diagonal bottom (c,r)↔(n2c, r+1)
                             int n2c = isOdd ? globalC : globalC - 1;
                             int n2r = globalR + 1;
                             if (ShouldStraightenEdge(heights, ramp, mapWidth, mapHeight, globalC, globalR, n2c, n2r, edgeDir: 2))

@@ -38,10 +38,8 @@ namespace Ludots.Core.Presentation.Presenters
         /// <summary>True when the event Source entity has a VisualTransform.</summary>
         SourceHasVisualTransform = 9,
 
-        /// <summary>True when the event Magnitude is greater than zero.</summary>
         EventMagnitudePositive = 10,
 
-        /// <summary>True when the event Magnitude is zero or below.</summary>
         EventMagnitudeNonPositive = 11,
     }
 }

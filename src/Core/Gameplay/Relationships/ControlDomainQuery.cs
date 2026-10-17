@@ -7,7 +7,7 @@ using Ludots.Core.Gameplay.Components;
 namespace Ludots.Core.Gameplay.Relationships
 {
     /// <summary>
-    /// Control-plane topology query (RFC-0065 DEC-1): <c>controls(rep) ≡ owns(rep) ∪ explicit grant edges</c>.
+    /// Control-plane topology query: <c>controls(rep) ≡ owns(rep) ∪ explicit grant edges</c>.
     /// The union is computed at query time; owned entities are never mirrored into Controls edges.
     /// </summary>
     public sealed class ControlDomainQuery
@@ -247,8 +247,8 @@ namespace Ludots.Core.Gameplay.Relationships
         /// <summary>
         /// Resolves the control domain rep for a target by walking the owns chain upward to the nearest entity
         /// carrying <see cref="PlayerIdentity"/> (a rep resolves to itself). Returns false when no domain exists.
-        /// Resolutions are cached per target and invalidated by <see cref="Revision"/> (DEC-2: routing must not
-        /// re-walk the graph per write on an unchanged topology).
+        /// Resolutions are cached per target and invalidated by <see cref="Revision"/>: routing must not
+        /// re-walk the graph per write on an unchanged topology.
         /// </summary>
         public bool TryResolveControlDomain(Entity target, out Entity domainRep)
         {

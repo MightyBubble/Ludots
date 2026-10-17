@@ -10,7 +10,7 @@ using Ludots.Core.Map;
 namespace Ludots.Core.Gameplay.Relationships
 {
     /// <summary>
-    /// Builds control-plane ownership topology (RFC-0065 CTRL-2): <c>Owns(playerRep → unit)</c> edges for
+    /// Builds control-plane ownership topology: <c>Owns(playerRep → unit)</c> edges for
     /// entities carrying <see cref="PlayerOwner"/>. Shared by map-load participant binding and runtime spawn.
     /// Single-direct-owner semantics follow <see cref="OwnershipResolver.EnsureOwnership"/>: re-linking an
     /// owned entity under a different rep removes the previous owns edge first (fail-fast against multi-owner

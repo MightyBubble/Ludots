@@ -6,10 +6,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
-    /// <summary>
-    /// 延迟触发器处理系统（Phase 5）
-    /// 处理DeferredTriggerQueue中的触发器，触发相应的Effect或事件
-    /// </summary>
     public class DeferredTriggerProcessSystem : BaseSystem<World, float>
     {
         private readonly DeferredTriggerQueue _triggerQueue;
@@ -23,21 +19,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         
         public override void Update(in float dt)
         {
-            // 处理属性变化触发器
             for (int i = 0; i < _triggerQueue.AttributeTriggerCount; i++)
             {
                 var trigger = _triggerQueue.GetAttributeTrigger(i);
                 ProcessAttributeChangedTrigger(trigger);
             }
             
-            // 处理Tag变化触发器
             for (int i = 0; i < _triggerQueue.TagTriggerCount; i++)
             {
                 var trigger = _triggerQueue.GetTagTrigger(i);
                 ProcessTagChangedTrigger(trigger);
             }
             
-            // 处理TagCount变化触发器
             for (int i = 0; i < _triggerQueue.TagCountTriggerCount; i++)
             {
                 var trigger = _triggerQueue.GetTagCountTrigger(i);
@@ -48,9 +41,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _triggerQueue.Clear();
         }
         
-        /// <summary>
-        /// 处理属性变化触发器
-        /// </summary>
         private void ProcessAttributeChangedTrigger(AttributeChangedTrigger trigger)
         {
             if (!World.IsAlive(trigger.Target))
@@ -70,9 +60,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
         
-        /// <summary>
-        /// 处理Tag变化触发器
-        /// </summary>
         private void ProcessTagChangedTrigger(TagChangedTrigger trigger)
         {
             if (!World.IsAlive(trigger.Target))
@@ -91,9 +78,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
         
-        /// <summary>
-        /// 处理TagCount变化触发器
-        /// </summary>
         private void ProcessTagCountChangedTrigger(TagCountChangedTrigger trigger)
         {
             if (!World.IsAlive(trigger.Target))

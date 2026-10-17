@@ -406,7 +406,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Entity marine3 = Resolve(engine, "case-e-marine-3");
         Entity marine4 = Resolve(engine, "case-e-marine-4");
 
-        // 候选集就位，按下拖到命中 marine1/marine2，预览集就绪
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, BoxingActive(engine, commander));
@@ -414,7 +413,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         TickUntil(engine, 10, () => CollectionCount(engine, commander, SelectionPreviewKey) == 2);
         AssertCollection(engine, commander, SelectionPreviewKey, "拖拽中 marine1/2 命中预览", marine1, marine2);
 
-        // 候选 marine2 在框内被击杀 → 候选集 EntityDied 收缩；预览集要等下一次指针移动重扫
         engine.World.Destroy(marine2);
         TickUntil(engine, 30, () => CollectionCount(engine, commander, SelectableKey) == 3);
         AssertCollection(engine, commander, SelectableKey, "死亡驱动 selectable 收缩（EntityDied）", marine1, marine3, marine4);
@@ -511,7 +509,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
         AssertNoTriggerErrors(engine);
 
-        // 按下 → 拖到命中 marine1/marine2（预览集就位）
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, BoxingActive(engine, commander));
         backend.SetMousePosition(new Vector2(-300f, 100f));
@@ -595,7 +592,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Entity marine1 = Resolve(engine, "case-e-marine-1");
         Entity marine2 = Resolve(engine, "case-e-marine-2");
 
-        // 候选集与 boxing 就位，拖到预览命中两支 marine
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, () =>
@@ -644,7 +640,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(presenterRuntime.GetActiveByDefinition(marineDefId).Count, Is.EqualTo(4),
             "marine root presenter 照常出生（body）");
 
-        // 按下 → 拖到命中 marine1/marine2 → 成员实体上出现预览环实例
         PressAt(engine, backend, new Vector2(-1200f, -100f));
         TickUntil(engine, 20, () =>
             engine.World.TryGet<InteractionContextInstances>(commander, out InteractionContextInstances boxingNow) &&
@@ -661,7 +656,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Assert.That(CountPresentersOwnedBy(presenterRuntime, selectionPreviewMarkerDefId, marine2, engine.World), Is.EqualTo(1));
         AssertPreviewOn(engine, presenterRuntime, selectionPreviewMarkerDefId, "仍在命中集者保留黄环", marine1);
 
-        // 抬起落定 → selected 集合落定（蓝环挂到成员），boxing 停用清空预览集
         ReleaseAt(engine, backend);
         TickUntil(engine, 30, BoxingCleared(engine, commander));
         Tick(engine, 2);
@@ -693,7 +687,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Entity marine4 = Resolve(engine, "case-e-marine-4");
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
 
-        // ── 选中 marine1/2（replace 语义）──
         DragBox(engine, backend, commander, new Vector2(-1200f, -100f), new Vector2(-300f, 100f));
         AssertCollection(engine, commander, SelectedKey, "右键前选中集就位", marine1, marine2);
 
@@ -725,7 +718,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             !engine.World.TryGet<OrderBuffer>(marine4, out OrderBuffer buffer4) || buffer4.IsEmpty,
             "未选中单位不得收到指令（同上）");
 
-        // ── 集合写入确定性：右键下单不改动选中集本身 ──
         AssertCollection(engine, commander, SelectedKey, "下单不改动选中集", marine1, marine2);
     }
 
@@ -745,7 +737,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         Entity marine2 = Resolve(engine, "case-e-marine-2");
         TickUntil(engine, 60, () => CollectionCount(engine, commander, SelectableKey) == 4);
 
-        // 框选两个单位作为活跃集
         DragBox(engine, backend, commander, new Vector2(-1200f, -100f), new Vector2(-300f, 100f));
         AssertCollection(engine, commander, SelectedKey, "施法前选中集就位", marine1, marine2);
 

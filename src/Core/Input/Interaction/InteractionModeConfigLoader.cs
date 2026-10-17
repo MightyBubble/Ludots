@@ -26,7 +26,6 @@ namespace Ludots.Core.Input.Interaction
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        /// <summary>Load the merged interaction mode config.</summary>
         public InteractionModesConfig Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null,

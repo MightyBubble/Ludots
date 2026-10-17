@@ -54,7 +54,7 @@ namespace Ludots.Core.Spatial.Eqs.Generators
 
                     if (distSq < innerSq || distSq > outerSq)
                     {
-                        continue; // outside annulus band
+                        continue;
                     }
 
                     WorldCmInt2 pos = new WorldCmInt2(

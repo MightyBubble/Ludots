@@ -54,7 +54,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
 
         Assert.That(variables.ReadInt("stage"), Is.EqualTo(1), "MapLoaded must write stage=1.");
 
-        // Phase gate: hero enters the raid circle -> stage 2.
         Entity hero = FindHero(world);
         world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(0, 0) });
         TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,
@@ -91,7 +90,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(variables.ReadInt("stage"), Is.EqualTo(3),
             "Reaching kill_threshold=5 must advance to the boss phase.");
 
-        // Boss phase: the graph spawns the boss at stage 3 — before that it must not exist.
         TickUntil(engine, () => CountBossEntities(world) == 1, HeartbeatIntervalTicks * 3,
             () => "Stage 3 must spawn the boss template via the SpawnTemplate graph op.");
         KillBoss(engine, world);
@@ -212,7 +210,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(variables.ReadInt("kill_count"), Is.LessThan(3),
             "The phase must flip via the overridden threshold, not the base one.");
 
-        // N3 regression: kills past the threshold restart the raider-death chain; the
+        // Kills past the threshold restart the raider-death chain; the
         // equality crossing guard must keep the boss population at exactly one.
         TickUntil(engine, () => CountBossEntities(world) == 1, HeartbeatIntervalTicks * 3,
             () => "Crossing the overridden threshold must spawn exactly one boss.");

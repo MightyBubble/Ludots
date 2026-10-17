@@ -81,8 +81,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 // TriggerGraph already carves ModifyAttributeSet; the blackboard float write
                 // must also stay GasTransactional for Effect-phase rollback while still
                 // authorable on Script/TriggerGraph (Case E box_begin stores press corners on
-                // the operator rep). WriteBlackboardInt joins the same carve-out for the D15
-                // modifier handoff (box_commit stores case_e.select.modifiers on the rep).
+                // the operator rep). WriteBlackboardInt joins the same carve-out
+                // (box_commit stores case_e.select.modifiers on the rep).
                 if (metadata.Kind == EffectOperationKind.GasTransactional &&
                     ((kind == GraphKind.TriggerGraph && op == GraphNodeOp.ModifyAttributeSet) ||
                      op == GraphNodeOp.WriteBlackboardFloat ||
@@ -105,7 +105,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             // Query / Score / Validation: Pure metadata alone is not enough — some world/UI
-            // ops stay Pure so Script policy can host them (#1410). Reject WorldSideEffect
+            // ops stay Pure so Script policy can host them. Reject WorldSideEffect
             // unless the op is explicitly authorable on this kind (Query may
             // itself).
             // Do not gate the Pure path on AuthorableKinds: compilers emit Jump etc.

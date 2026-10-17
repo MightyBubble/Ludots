@@ -71,12 +71,10 @@ namespace Ludots.Tests.GAS
             That(report.RequiresEngineRestart, Is.False);
             That(report.Items[0].Mode, Is.EqualTo(LiveApplyMode.NextCastLiveApply));
 
-            // Without safe frame → fail closed
             LiveApplyCommitResult denied = pipeline.CommitNextCastSafeFrame();
             That(denied.Succeeded, Is.False);
             That(denied.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.SafeFrameRequired));
 
-            // Live still original
             That(graphs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> before), Is.True);
             That(ExecuteReturn(before), Is.EqualTo(1));
 
@@ -96,7 +94,6 @@ namespace Ludots.Tests.GAS
         {
             int graphId = GraphIdRegistry.Register(GraphKey);
             var graphs = new GraphProgramRegistry();
-            // Live identity is Score; candidate below is Script → EngineRestartRequired.
             graphs.Register(graphId, new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, Imm = BitConverter.SingleToInt32Bits(1f) },
@@ -322,7 +319,6 @@ namespace Ludots.Tests.GAS
             int immuneId = TagRegistry.Register("State.SlowImmune");
             var rules = new TagRuleRegistry();
             var tagOps = new TagOps(new DirtyEntityQueue(8), rules);
-            // Initial rule: empty disabledIf
             tagOps.RegisterTagRuleSet(slowId, default);
             That(tagOps.HasTagRule(slowId), Is.True);
 
@@ -447,12 +443,9 @@ namespace Ludots.Tests.GAS
             var provenance = new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://atomic");
             That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
                 okEffect, "duration.durationTicks", 99d, provenance)).Succeeded, Is.True);
-            // Unknown field → Classify as MapReload, so force-stage a NextCast candidate then break at commit
-            // by classifying only the ok path, then manually... instead: second op is valid classify path
-            // but second template will fail replace via unsupported field after we use a staged path that
-            // Classify accepts: use EffectTemplateRef with bad field to get MapReload. For atomic commit,
-            // stage two duration ops then replace second template's field path by committing a mix where
-            // the second TryReplace fails: use modifiers.0.value on template with zero modifiers.
+            // Rollback needs a candidate Classify accepts but commit rejects: modifiers.0.value is a
+            // recognized field (NextCast) yet TryReplace fails on a template with zero modifiers. An
+            // unknown field would classify as MapReload and never reach the commit path.
             That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
                 badEffect, "modifiers.0.value", 1d, provenance)).Succeeded, Is.True);
 

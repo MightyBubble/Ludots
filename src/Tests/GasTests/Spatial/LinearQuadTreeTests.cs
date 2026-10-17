@@ -8,8 +8,6 @@ namespace GasTests
     [TestFixture]
     public class LinearQuadTreeTests
     {
-        // ── Rect.Intersects tests ──
-
         [Test]
         public void Rect_Intersects_Overlapping_ReturnsTrue()
         {
@@ -52,8 +50,6 @@ namespace GasTests
             var tall = new LinearQuadTree<int>.Rect { X = 4, Y = 0, W = 2, H = 20 };
             Assert.That(wide.Intersects(tall), Is.True);
         }
-
-        // ── Insert and Query tests ──
 
         [Test]
         public void Insert_And_Query_ReturnsItem()

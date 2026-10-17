@@ -11,22 +11,11 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Tests for ILoadedChunks event-driven lifecycle:
-    ///   - HexGridAOI fires ChunkLoaded/ChunkUnloaded correctly
-    ///   - ChunkedNodeGraphStore auto-removes graph data on ChunkUnloaded
-    ///   - VertexMap auto-releases vertex data on ChunkUnloaded
-    ///   - HexGridAOI.Reset() cascades ChunkUnloaded to all consumers
-    /// </summary>
     [TestFixture]
     public class LoadedChunksEventTests
     {
         #region Helpers
 
-        /// <summary>
-        /// Minimal ILoadedChunks stub for consumer-only tests.
-        /// Allows manually firing events.
-        /// </summary>
         private sealed class MockLoadedChunks : ILoadedChunks
         {
             private readonly HashSet<long> _active = new HashSet<long>();
@@ -50,9 +39,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        /// <summary>
-        /// Minimal IAOISource for driving HexGridAOI.Update().
-        /// </summary>
         private sealed class SimpleAOISource : IAOISource
         {
             public int CenterXcm { get; set; }
@@ -69,9 +55,6 @@ namespace Ludots.Tests.GAS
 
         #endregion
 
-        // =====================================================================
-        // 1. HexGridAOI fires ChunkLoaded when chunks become active
-        // =====================================================================
         [Test]
         public void HexGridAOI_Update_FiresChunkLoaded_ForNewChunks()
         {
@@ -79,7 +62,6 @@ namespace Ludots.Tests.GAS
             var loaded = new List<long>();
             aoi.ChunkLoaded += key => loaded.Add(key);
 
-            // Update with origin — should load a set of chunks around (0,0)
             aoi.Update(new SimpleAOISource { CenterXcm = 0, CenterZcm = 0, RadiusCm = 0 });
 
             That(loaded.Count, Is.GreaterThan(0), "Should fire ChunkLoaded for each activated chunk");
@@ -92,15 +74,11 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // =====================================================================
-        // 2. HexGridAOI fires ChunkUnloaded when chunks become inactive
-        // =====================================================================
         [Test]
         public void HexGridAOI_Update_FiresChunkUnloaded_WhenChunksLeaveRange()
         {
             var aoi = new HexGridAOI();
 
-            // Load chunks around origin
             aoi.Update(new SimpleAOISource { CenterXcm = 0, CenterZcm = 0, RadiusCm = 0 });
             var initialChunks = new HashSet<long>(aoi.ActiveChunkKeys);
             That(initialChunks.Count, Is.GreaterThan(0));
@@ -108,11 +86,9 @@ namespace Ludots.Tests.GAS
             var unloaded = new List<long>();
             aoi.ChunkUnloaded += key => unloaded.Add(key);
 
-            // Move far away so the original chunks fall out of range
             int farDistance = HexCoordinates.EdgeLengthCm * 64 * 20; // 20 chunk-widths away
             aoi.Update(new SimpleAOISource { CenterXcm = farDistance, CenterZcm = farDistance, RadiusCm = 0 });
 
-            // Some original chunks should have been unloaded
             That(unloaded.Count, Is.GreaterThan(0), "Should fire ChunkUnloaded for chunks that left range");
 
             foreach (long key in unloaded)
@@ -121,15 +97,11 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // =====================================================================
-        // 3. HexGridAOI.Reset() fires ChunkUnloaded for ALL active chunks
-        // =====================================================================
         [Test]
         public void HexGridAOI_Reset_FiresChunkUnloaded_ForAllActiveChunks()
         {
             var aoi = new HexGridAOI();
 
-            // Load some chunks
             aoi.Update(new SimpleAOISource { CenterXcm = 0, CenterZcm = 0, RadiusCm = 0 });
             var activeBeforeReset = new HashSet<long>(aoi.ActiveChunkKeys);
             That(activeBeforeReset.Count, Is.GreaterThan(0));
@@ -139,7 +111,6 @@ namespace Ludots.Tests.GAS
 
             aoi.Reset();
 
-            // Every previously-active chunk should have an unload event
             That(unloaded.Count, Is.EqualTo(activeBeforeReset.Count),
                 "Reset should fire ChunkUnloaded for every active chunk");
 
@@ -196,9 +167,6 @@ namespace Ludots.Tests.GAS
             That(loadedChunks.IsLoaded(key), Is.False);
         }
 
-        // =====================================================================
-        // 4. ChunkedNodeGraphStore removes graph data on ChunkUnloaded
-        // =====================================================================
         [Test]
         public void ChunkedNodeGraphStore_SubscribeToLoadedChunks_RemovesOnUnload()
         {
@@ -216,9 +184,6 @@ namespace Ludots.Tests.GAS
             That(store.IsViewDirty, Is.True, "View dirty flag should be set after chunk removal");
         }
 
-        // =====================================================================
-        // 5. VertexMap releases vertex data on ChunkUnloaded
-        // =====================================================================
         [Test]
         public void VertexMap_SubscribeToLoadedChunks_RemovesOnUnload()
         {
@@ -240,19 +205,14 @@ namespace Ludots.Tests.GAS
             That(vertexMap.GetHeight(0, 0), Is.EqualTo(0), "Height should revert to default after chunk removal");
         }
 
-        // =====================================================================
-        // 6. Integration: HexGridAOI.Reset() cascades to all consumers
-        // =====================================================================
         [Test]
         public void Reset_CascadesToAllConsumers()
         {
             var aoi = new HexGridAOI();
 
-            // Load chunks
             aoi.Update(new SimpleAOISource { CenterXcm = 0, CenterZcm = 0, RadiusCm = 0 });
             That(aoi.ActiveChunkKeys.Count, Is.GreaterThan(0));
 
-            // Pick one active chunk key and populate consumers with data for it
             long targetKey = 0;
             foreach (long k in aoi.ActiveChunkKeys)
             {
@@ -274,14 +234,11 @@ namespace Ludots.Tests.GAS
             vertexMap.SetHeight(0, 0, 13);
             vertexMap.SubscribeToLoadedChunks(aoi);
 
-            // Verify pre-conditions
             That(store.TryGetChunk(targetKey, out _), Is.True, "Graph chunk should exist");
             That(vertexMap.ChunkCount, Is.GreaterThan(0), "VertexMap should have data");
 
-            // Reset — should cascade ChunkUnloaded to all subscribers
             aoi.Reset();
 
-            // Graph store: the target chunk should be gone
             That(store.TryGetChunk(targetKey, out _), Is.False,
                 "Graph chunk data should be removed after Reset cascade");
 
@@ -295,9 +252,6 @@ namespace Ludots.Tests.GAS
             That(aoi.ActiveChunkKeys.Count, Is.EqualTo(0), "All chunks should be cleared");
         }
 
-        // =====================================================================
-        // 7. Resubscribe: old source unsubscribed, new source works
-        // =====================================================================
         [Test]
         public void ChunkedNodeGraphStore_Resubscribe_UnsubscribesOldSource()
         {
@@ -309,15 +263,12 @@ namespace Ludots.Tests.GAS
             store.AddOrReplace(key, MakeSimpleChunk());
             store.SubscribeToLoadedChunks(mockA);
 
-            // Switch to source B
             store.SubscribeToLoadedChunks(mockB);
 
-            // Old source A fires — should NOT affect the store
             mockA.SimulateUnload(key);
             That(store.TryGetChunk(key, out _), Is.True,
                 "Old source events should be ignored after resubscribe");
 
-            // New source B fires — SHOULD affect the store
             mockB.SimulateUnload(key);
             That(store.TryGetChunk(key, out _), Is.False,
                 "New source events should be processed");

@@ -17,7 +17,6 @@ namespace Ludots.Core.Diagnostics
         {
             _backend = backend ?? NullLogBackend.Instance;
             _globalLevel = globalLevel;
-            // Reset channel levels to global
             for (int i = 0; i < _channelLevels.Length; i++)
                 _channelLevels[i] = globalLevel;
         }
@@ -71,8 +70,6 @@ namespace Ludots.Core.Diagnostics
             return level >= _channelLevels[channel.Id];
         }
 
-        // --- Trace: compiled out unless LUDOTS_TRACE defined ---
-
         [Conditional("LUDOTS_TRACE")]
         public static void Trace(in LogChannel ch, string msg)
         {
@@ -87,8 +84,6 @@ namespace Ludots.Core.Diagnostics
             if (handler.IsEnabled)
                 _backend.Write(LogLevel.Trace, in ch, handler.ToStringAndClear());
         }
-
-        // --- Debug: compiled out unless LUDOTS_DEBUG defined ---
 
         [Conditional("LUDOTS_DEBUG")]
         public static void Dbg(in LogChannel ch, string msg)
@@ -105,8 +100,6 @@ namespace Ludots.Core.Diagnostics
                 _backend.Write(LogLevel.Debug, in ch, handler.ToStringAndClear());
         }
 
-        // --- Info ---
-
         public static void Info(in LogChannel ch, string msg)
         {
             if (IsEnabled(in ch, LogLevel.Info))
@@ -120,8 +113,6 @@ namespace Ludots.Core.Diagnostics
                 _backend.Write(LogLevel.Info, in ch, handler.ToStringAndClear());
         }
 
-        // --- Warning ---
-
         public static void Warn(in LogChannel ch, string msg)
         {
             if (IsEnabled(in ch, LogLevel.Warning))
@@ -134,8 +125,6 @@ namespace Ludots.Core.Diagnostics
             if (handler.IsEnabled)
                 _backend.Write(LogLevel.Warning, in ch, handler.ToStringAndClear());
         }
-
-        // --- Error ---
 
         public static void Error(in LogChannel ch, string msg)
         {
@@ -171,9 +160,7 @@ namespace Ludots.Core.Diagnostics
             _nextChannelId = 0;
         }
 
-        /// <summary>
-        /// Get current backend. For testing only.
-        /// </summary>
+        /// <summary>For testing only.</summary>
         public static ILogBackend Backend => _backend;
     }
 }

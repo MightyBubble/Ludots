@@ -413,7 +413,7 @@ namespace Ludots.Tests.RaylibAdapter
 
         private static EngineProject OpenEngineProjectForIds()
         {
-            // EngineProject 没有 IDisposable 语义时 using 会失效；这里返回实例由调用方按需持有。
+            // EngineProject 没有 IDisposable 语义，using 会失效；实例由调用方按需持有。
             return OpenEngineProject();
         }
 

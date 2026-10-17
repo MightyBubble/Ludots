@@ -15,7 +15,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1123 cross-map / global event dispatch: global fire reaches only global
+    /// Cross-map / global event dispatch: global fire reaches only global
     /// subscribers (map tables untouched), priority order holds across suspend /
     /// resume, cross-map fire touches only the target map and carries
     /// MapTrigger.SourceMapId, scope mismatches fail closed at compile and mount
@@ -86,8 +86,6 @@ namespace Ludots.Tests.Gas.Graph
             return registry;
         }
 
-        // ── TriggerManager: global table semantics ──
-
         [Test]
         public void GlobalFire_ReachesOnlyGlobalSubscribers()
         {
@@ -126,7 +124,6 @@ namespace Ludots.Tests.Gas.Graph
             var late = new OrderProbeTrigger(eventKey, 200);
             var early = new OrderProbeTrigger(eventKey, -50);
             var mid = new OrderProbeTrigger(eventKey, 0);
-            // Register out of order, across three owning maps.
             manager.RegisterGlobalTriggers(new MapId("priority_owner_late"), new Trigger[] { late });
             manager.RegisterGlobalTriggers(new MapId("priority_owner_early"), new Trigger[] { early });
             manager.RegisterGlobalTriggers(new MapId("priority_owner_mid"), new Trigger[] { mid });
@@ -171,8 +168,6 @@ namespace Ludots.Tests.Gas.Graph
             manager.FireGlobalEvent(eventKey, new ScriptContext());
             Assert.That(parked.Order, Is.Not.EqualTo(-1));
         }
-
-        // ── TriggerManager: cross-map point-to-point ──
 
         [Test]
         public void CrossMapFire_TargetsOnlyTargetMap_AndCarriesSourceMapId()
@@ -254,8 +249,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(listener.Seen, Is.Null, "map unload must detach its global subscriptions wholesale");
         }
 
-        // ── Schema parser: parameterless entries keep their scope ──
-
         [Test]
         public void Parse_ParameterlessEntry_KeepsAuthoredScope()
         {
@@ -268,8 +261,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(schema!.Scope, Is.EqualTo(EventScope.Global), "the authored scope must survive without params");
             Assert.That(schema.Params, Is.Empty);
         }
-
-        // ── Compile: scope self-consistency with global dispatch ──
 
         [Test]
         public void Compile_GlobalScopeDispatch_OnGlobalEvent_WiresGlobalFlag()
@@ -302,8 +293,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(result.Diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("declared scope")), Is.True,
                 "scope=global on a Map-scope event must fail compile");
         }
-
-        // ── Runtime: DispatchMapEvent Flags=2 walks FireGlobalEvent ──
 
         [Test]
         public void DispatchMapEvent_GlobalScopeRuntime_ReachesGlobalListenerOnly()
@@ -348,8 +337,6 @@ namespace Ludots.Tests.Gas.Graph
                 "the origin map rides MapTrigger.SourceMapId as transport metadata");
             Assert.That(mapListener.Seen, Is.Null, "map tables must not see a global dispatch");
         }
-
-        // ── Mount routing: schema scope decides the subscription table ──
 
         [Test]
         public void Mount_EntryOnGlobalScopeEvent_RoutesSubscriptionToGlobalTable()
@@ -419,8 +406,6 @@ namespace Ludots.Tests.Gas.Graph
                     entityIndex: null, eventSchemas: BuildRegistry()));
             Assert.That(ex!.Message, Does.Contain("entity-domain global subscriptions"));
         }
-
-        // ── Helpers ──
 
         private static GraphControlFlowDocument GlobalDispatchDocument(string scope)
         {

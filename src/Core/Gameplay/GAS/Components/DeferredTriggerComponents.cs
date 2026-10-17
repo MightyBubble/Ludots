@@ -48,9 +48,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public byte DeferredTriggerQueued;
         public fixed byte TagDirty[TAG_DIRTY_BYTES];
         
-        /// <summary>
-        /// 标记属性为脏（需要延迟触发）
-        /// </summary>
         public void MarkAttributeDirty(int attrId)
         {
             if (attrId >= 0 && attrId < MAX_ATTRS)
@@ -59,9 +56,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
         
-        /// <summary>
-        /// 标记Tag为脏（需要延迟触发）
-        /// </summary>
         public void MarkTagDirty(int tagId)
         {
             if (tagId >= 0 && tagId < 256)
@@ -72,9 +66,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
         
-        /// <summary>
-        /// 检查属性是否为脏
-        /// </summary>
         public bool IsAttributeDirty(int attrId)
         {
             if (attrId < 0 || attrId >= MAX_ATTRS)
@@ -84,9 +75,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return ((AttributeDirtyMask >> attrId) & 1UL) != 0;
         }
         
-        /// <summary>
-        /// 检查Tag是否为脏
-        /// </summary>
         public bool IsTagDirty(int tagId)
         {
             if (tagId < 0 || tagId >= 256)
@@ -98,9 +86,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return (TagDirty[byteIndex] & (1 << bitIndex)) != 0;
         }
         
-        /// <summary>
-        /// 清除所有脏标记
-        /// </summary>
         public void Clear()
         {
             AttributeDirtyMask = 0UL;
@@ -124,9 +109,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
         
-        /// <summary>
-        /// 清除属性脏标记
-        /// </summary>
         public void ClearAttributeDirty(int attrId)
         {
             if (attrId >= 0 && attrId < MAX_ATTRS)
@@ -135,9 +117,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
         
-        /// <summary>
-        /// 清除Tag脏标记
-        /// </summary>
         public void ClearTagDirty(int tagId)
         {
             if (tagId >= 0 && tagId < 256)

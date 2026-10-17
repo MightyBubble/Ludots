@@ -24,7 +24,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Equivalence suite for the frontline graph brains (issue #1536 migration): the mod's
+    /// Equivalence suite for the frontline graph brains: the mod's
     /// hfsm.rts.attack / hfsm.rts.transport HFSM definitions (states/transitions bound to
     /// ActionLib graphs), driven per entity by the generic HfsmWorld + GraphProgramHfsmHost
     /// adapter, reproduce the behavioral contracts the deleted Core ActionLoop systems carried
@@ -239,7 +239,6 @@ namespace Ludots.Tests.GAS
 
             host.Update(1f / 30f);
 
-            // order consumed: buffer released + terminal result published
             That(world.Get<OrderBuffer>(actor).ActiveIndex, Is.EqualTo(-1));
             That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
             That(host.TryGetLeafStateName(actor, out string routeState) && routeState == "pursuit", Is.True,
@@ -252,7 +251,6 @@ namespace Ludots.Tests.GAS
             That((int)move.Args.Spatial.WorldCm.X, Is.EqualTo(480));
             That((int)move.Args.Spatial.WorldCm.Z, Is.EqualTo(0));
 
-            // remembered target on the brain blackboard
         }
 
         [Test]

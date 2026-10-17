@@ -10,7 +10,6 @@ namespace Ludots.Core.Map.Generator
             var tile = map.GetOrCreateTile(tileX, tileY);
             if (tile == null) return;
 
-            // Generate 256x256 heightmap using noise
             float scale = 0.02f; // Noise frequency
             
             for (int y = 0; y < MapTile.Size; y++)

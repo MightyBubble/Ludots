@@ -8,7 +8,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 namespace Ludots.Core.UI.ProductionOverview
 {
     /// <summary>
-    /// Installs and looks up production overview profiles (WPK-4). Missing command panel source,
+    /// Installs and looks up production overview profiles. Missing command panel source,
     /// queue source kind, worker match refs, or profile ids fail fast at install.
     /// </summary>
     public sealed class ProductionOverviewProfileRegistry

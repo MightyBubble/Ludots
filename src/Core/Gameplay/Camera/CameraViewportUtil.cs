@@ -38,9 +38,6 @@ namespace Ludots.Core.Gameplay.Camera
             return (logicWidth, logicHeight);
         }
 
-        /// <summary>
-        /// Given desired vertical extent (cm), compute required DistanceCm.
-        /// </summary>
         public static float DistanceForVerticalExtent(
             float desiredHeightCm, float fovYDeg, float pitchDeg, float buffer = 1.5f)
         {
@@ -53,9 +50,6 @@ namespace Ludots.Core.Gameplay.Camera
             return distanceCm;
         }
 
-        /// <summary>
-        /// Given desired horizontal extent (cm), compute required DistanceCm.
-        /// </summary>
         public static float DistanceForHorizontalExtent(
             float desiredWidthCm, float fovYDeg, float pitchDeg, float aspectRatio, float buffer = 1.5f)
         {
@@ -115,9 +109,9 @@ namespace Ludots.Core.Gameplay.Camera
             float ndcX = (screenPosition.X / resolution.X) * 2f - 1f;
             float ndcY = 1f - (screenPosition.Y / resolution.Y) * 2f;
 
-            // Unproject in camera-relative space: the fix is keeping the world
-            // translation out of the inverted matrix, so far-minus-near no longer
-            // cancels large coordinates before the direction can be normalized.
+            // Unproject in camera-relative space: keeping the world translation
+            // out of the inverted matrix prevents far-minus-near from cancelling
+            // large coordinates before the direction can be normalized.
             var relativeForward = camera.Target - camera.Position;
             var view = Matrix4x4.CreateLookAt(Vector3.Zero, relativeForward, camera.Up);
             float fovYRad = WorldPlane2D.DegToRadValue(camera.FovYDeg);

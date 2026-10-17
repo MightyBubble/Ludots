@@ -364,7 +364,6 @@ namespace Ludots.Core.Movement
             return TryFindWindowIndex(entity, out _) || HasPendingTransition(entity);
         }
 
-        /// <summary>查询实体当前的写权窗口（谁持有、已持有多久、上限多少毫秒）。</summary>
         public bool TryGetWindow(Entity entity, out PoseAuthorityKind holder, out float heldSeconds, out int maxDurationMs)
         {
             if (TryFindWindowIndex(entity, out int index))

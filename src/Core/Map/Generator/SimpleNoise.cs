@@ -15,7 +15,6 @@ namespace Ludots.Core.Map.Generator
             var p = new int[256];
             for (int i = 0; i < 256; i++) p[i] = i;
 
-            // Shuffle
             var rnd = new Random(12345);
             for (int i = 0; i < 256; i++)
             {

@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// 全战四阶段端到端验收（#1398 owner 裁决的切片③验收样板）：战役大地图 → 战斗备置 →
+    /// 全战四阶段端到端验收：战役大地图 → 战斗备置 →
     /// RTS 战斗 → TPS 瞄准射击，单地图四上下文迁移。每个阶段的右键语义不同（集结/放置/
     /// 路由围城/瞄准开火），成员装载全走 v2 图自取；阶段迁移 = DeactivateContext+ActivateContext。
     /// </summary>
@@ -109,7 +109,6 @@ namespace Ludots.Tests.GAS
                 TestContext.Out.WriteLine($"[tw1-targets] A({taX:F0},{taY:F0}) B({tbX:F0},{tbY:F0}) groupA={simProbe.NavGroupRuntime.HasGroup(idxA)} groupB={simProbe.NavGroupRuntime.HasGroup(idxB)}");
             }
 
-            // ── 迁移：战役 → 备置 ──
             AdvanceStage(engine);
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.deployment");
 
@@ -127,7 +126,6 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw2] deployment marines {marinesBefore} -> {marinesAfter}");
             Assert.That(marinesAfter, Is.EqualTo(marinesBefore + 1), "deployment spawns one reinforcement");
 
-            // 无令不动：增援出生后不给指令，位置必须保持。
             var spawnedMarine = FindNewestMarine(engine, commander);
             Assert.That(engine.World.TryGet<Ludots.Core.Gameplay.Components.Team>(spawnedMarine, out var spawnedTeam) && spawnedTeam.Id == 1,
                 Is.True, "a reinforcement placed during deployment joins the player's team from its template");
@@ -144,7 +142,6 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw2] idle reinforcement drift {idleDriftCm:F1}cm");
             Assert.That(idleDriftCm, Is.LessThan(150f), "idle authored agents hold their spawn and do not march to an implicit target");
 
-            // ── 迁移：备置 → RTS ──
             AdvanceStage(engine);
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.rts");
 
@@ -187,7 +184,6 @@ namespace Ludots.Tests.GAS
 
             Assert.That(firstBoltHealth, Is.EqualTo(1980f).Within(0.01f), "first siege bolt lands (Q4 armor-300 -20)");
 
-            // ── 迁移：RTS → TPS ──
             AdvanceStage(engine);
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.tps");
 
@@ -268,8 +264,6 @@ namespace Ludots.Tests.GAS
             Assert.That(engine.World.IsAlive(wolf), Is.False, "death rule destroys the wolf at zero health");
             Assert.That(killCount, Is.GreaterThanOrEqualTo(1), "kill counter map variable increments on EntityDied");
         }
-
-        // ── harness ──
 
         private static void AdvanceStage(Ludots.Core.Engine.GameEngine engine)
         {

@@ -52,7 +52,6 @@ namespace Ludots.Core.Modding
 
             if (!File.Exists(fullPath))
             {
-                 // Console.WriteLine($"[VFS] File not found: {fullPath} (URI: {uri})");
                  throw new FileNotFoundException($"File not found: {fullPath}");
             }
 

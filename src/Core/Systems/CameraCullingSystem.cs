@@ -475,7 +475,7 @@ namespace Ludots.Core.Systems
             float ty = target.Y;
             float highSq = HighLODDistCm * HighLODDistCm;
             float medSq = MediumLODDistCm * MediumLODDistCm;
-            float lowSq2 = LowLODDistCm * LowLODDistCm;
+            float lowSq = LowLODDistCm * LowLODDistCm;
             bool hasStaticCullCameraState = _passHasStaticCameraState[passIndex];
             bool cameraChanged = hasStaticCullCameraState &&
                                  HasCameraStateChanged(passIndex, in cameraState, aspectRatio);
@@ -495,7 +495,7 @@ namespace Ludots.Core.Systems
                     ty,
                     highSq,
                     medSq,
-                    lowSq2,
+                    lowSq,
                     rebuildVisibleCount: !_unionPass,
                     staticVisibleCount: 0);
             }
@@ -509,7 +509,7 @@ namespace Ludots.Core.Systems
                     ty,
                     highSq,
                     medSq,
-                    lowSq2,
+                    lowSq,
                     rebuildVisibleCount: !_unionPass,
                     _unionPass ? 0 : _passLastStaticVisibleCount[passIndex]);
             }
@@ -528,16 +528,16 @@ namespace Ludots.Core.Systems
                 // candidates and viewport are known to still match the anchor's evaluation.
                 _dynamicHysteresisActive = singleBinding && _spatialCandidatesFresh && !spatialRefreshDue;
                 long dynamicProcessStart = Stopwatch.GetTimestamp();
-                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualBoundsLodQuery, useSpatialGate: true);
-                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualBoundsQuery, useSpatialGate: true);
-                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualLodQuery, useSpatialGate: true);
-                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualDefaultQuery, useSpatialGate: true);
-                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, NoVisualQuery, useSpatialGate: true);
-                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualBoundsLodQuery, useSpatialGate: false);
-                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualBoundsQuery, useSpatialGate: false);
-                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualLodQuery, useSpatialGate: false);
-                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualDefaultQuery, useSpatialGate: false);
-                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedNoVisualQuery, useSpatialGate: false);
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, VisualBoundsLodQuery, useSpatialGate: true);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, VisualBoundsQuery, useSpatialGate: true);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, VisualLodQuery, useSpatialGate: true);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, VisualDefaultQuery, useSpatialGate: true);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, NoVisualQuery, useSpatialGate: true);
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, SpatialExcludedVisualBoundsLodQuery, useSpatialGate: false);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, SpatialExcludedVisualBoundsQuery, useSpatialGate: false);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, SpatialExcludedVisualLodQuery, useSpatialGate: false);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, SpatialExcludedVisualDefaultQuery, useSpatialGate: false);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, ref unionVisibleCount, SpatialExcludedNoVisualQuery, useSpatialGate: false);
                 dynamicProcessMs += ElapsedMs(dynamicProcessStart);
                 _dynamicHysteresisActive = false;
             }
@@ -813,17 +813,17 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             int staticVisibleCount)
         {
             int updatedVisibleCount = staticVisibleCount;
             int cullEpoch = _staticCullEpoch;
-            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualBoundsLodQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualBoundsQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualLodQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingNoVisualQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualBoundsLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualBoundsQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingNoVisualQuery, cullEpoch, onlyUnprocessed: false);
             return updatedVisibleCount;
         }
 
@@ -869,17 +869,17 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             int staticVisibleCount)
         {
             int updatedVisibleCount = staticVisibleCount;
             int cullEpoch = _staticCullEpoch;
-            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualBoundsLodQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualBoundsQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualLodQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
-            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticNoVisualQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualBoundsLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualBoundsQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq, rebuildVisibleCount, ref updatedVisibleCount, StaticNoVisualQuery, cullEpoch, onlyUnprocessed: false);
             return updatedVisibleCount;
         }
 
@@ -891,7 +891,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             ref int visibleCount,
             in QueryDescription query,
@@ -936,7 +936,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate: false,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -956,7 +956,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             ref int visibleCount,
             in QueryDescription query,
@@ -1000,7 +1000,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate: false,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1020,7 +1020,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             ref int visibleCount,
             in QueryDescription query,
@@ -1064,7 +1064,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate: false,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1084,7 +1084,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             ref int visibleCount,
             in QueryDescription query,
@@ -1124,7 +1124,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate: false,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1144,7 +1144,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool rebuildVisibleCount,
             ref int visibleCount,
             in QueryDescription query,
@@ -1185,7 +1185,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate: false,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1258,7 +1258,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount,
             in QueryDescription query,
             bool useSpatialGate)
@@ -1293,7 +1293,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1310,7 +1310,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount,
             in QueryDescription query,
             bool useSpatialGate)
@@ -1344,7 +1344,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1361,7 +1361,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount,
             in QueryDescription query,
             bool useSpatialGate)
@@ -1395,7 +1395,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1412,7 +1412,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount,
             in QueryDescription query,
             bool useSpatialGate)
@@ -1442,7 +1442,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1459,7 +1459,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount,
             in QueryDescription query,
             bool useSpatialGate)
@@ -1494,7 +1494,7 @@ namespace Ludots.Core.Systems
                         ty,
                         highSq,
                         medSq,
-                        lowSq2,
+                        lowSq,
                         useSpatialGate,
                         hasPayloads,
                         hasPayloads ? payloads[index] : default,
@@ -1560,7 +1560,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount)
         {
             ProcessEntity(
@@ -1578,7 +1578,7 @@ namespace Ludots.Core.Systems
                 ty,
                 highSq,
                 medSq,
-                lowSq2,
+                lowSq,
                 useSpatialGate: true,
                 hasPayload: false,
                 default,
@@ -1601,7 +1601,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool useSpatialGate,
             bool hasPayload,
             in PresentationOwnerHasPresenterPayload payload,
@@ -1650,7 +1650,7 @@ namespace Ludots.Core.Systems
             float distSq = dx * dx + dy * dy;
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
-                : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
+                : ResolveLod(distSq, coverage01, highSq, medSq, lowSq);
             if (_unionPass && cull.IsVisible)
             {
                 if (resolvedLod < cull.LOD)
@@ -1713,7 +1713,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount)
         {
             ProcessEntityWithDefaultVisual(
@@ -1728,7 +1728,7 @@ namespace Ludots.Core.Systems
                 ty,
                 highSq,
                 medSq,
-                lowSq2,
+                lowSq,
                 useSpatialGate: true,
                 hasPayload: false,
                 default,
@@ -1748,7 +1748,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool useSpatialGate,
             bool hasPayload,
             in PresentationOwnerHasPresenterPayload payload,
@@ -1785,7 +1785,7 @@ namespace Ludots.Core.Systems
             float dx = px - tx;
             float dy = py - ty;
             float distSq = dx * dx + dy * dy;
-            LODLevel resolvedLod = ResolveLod(distSq, coverage01: 0f, highSq, medSq, lowSq2);
+            LODLevel resolvedLod = ResolveLod(distSq, coverage01: 0f, highSq, medSq, lowSq);
             if (_unionPass && cull.IsVisible)
             {
                 if (resolvedLod < cull.LOD)
@@ -1850,7 +1850,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             ref int visibleCount)
         {
             ProcessEntityWithoutVisual(
@@ -1867,7 +1867,7 @@ namespace Ludots.Core.Systems
                 ty,
                 highSq,
                 medSq,
-                lowSq2,
+                lowSq,
                 useSpatialGate: true,
                 hasPayload: false,
                 default,
@@ -1889,7 +1889,7 @@ namespace Ludots.Core.Systems
             float ty,
             float highSq,
             float medSq,
-            float lowSq2,
+            float lowSq,
             bool useSpatialGate,
             bool hasPayload,
             in PresentationOwnerHasPresenterPayload payload,
@@ -1941,7 +1941,7 @@ namespace Ludots.Core.Systems
 
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
-                : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
+                : ResolveLod(distSq, coverage01, highSq, medSq, lowSq);
             if (_unionPass && cull.IsVisible)
             {
                 if (resolvedLod < cull.LOD)
@@ -2201,7 +2201,7 @@ namespace Ludots.Core.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static LODLevel ResolveLod(float distSq, float coverage01, float highSq, float medSq, float lowSq2)
+        private static LODLevel ResolveLod(float distSq, float coverage01, float highSq, float medSq, float lowSq)
         {
             if (distSq < highSq)
             {
@@ -2213,7 +2213,7 @@ namespace Ludots.Core.Systems
                 return LODLevel.Medium;
             }
 
-            if (distSq < lowSq2)
+            if (distSq < lowSq)
             {
                 return LODLevel.Low;
             }

@@ -663,7 +663,6 @@ namespace Ludots.Tests.GAS
                 OrderSpatialPayloadOps.SetPath(world, target, ref pass, xs, ys, 3);
                 That(chainOrders.SubmitAssigned(ref pass), Is.EqualTo(OrderSubmitResult.Queued));
 
-                // Valid payload handle remains on the order, but the buffer is gone → Release throws after Commit.
                 world.Remove<OrderSpatialPayloadBuffer>(target);
 
                 Throws<InvalidOperationException>(() =>

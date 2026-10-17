@@ -12,9 +12,9 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
     /// Recomputes the viewer-relative marker projection whenever the composite control plane view
     /// changes: ControlPlaneView.CopyMembersWithDomain(P1Rep, CommandSource) rows are partitioned by
     /// row domain into two presentation projection collections (owned vs proxied, owner = P1Rep).
-    /// This is the mod-level projection layer that stands in until DEC-5's PROV-4b graph conditions
-    /// land; collection.ui.* projections never write back into domain collections. Scratch arrays are
-    /// reused so the steady state allocates nothing.
+    /// This is the mod-level projection layer that stands in until the graph-condition projection
+    /// lands; collection.ui.* projections never write back into domain collections. Scratch arrays
+    /// are reused so the steady state allocates nothing.
     /// </summary>
     internal sealed class ControlPlaneMarkerProjectionSystem : ISystem<float>
     {

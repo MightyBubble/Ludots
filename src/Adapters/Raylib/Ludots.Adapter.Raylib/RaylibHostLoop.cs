@@ -1151,7 +1151,6 @@ namespace Ludots.Adapter.Raylib
                                 presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
                             }
 
-                            // Draw ground overlays (range circles, cones, etc.)
                             if (!cleanPerformanceMode &&
                                 engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
                                 overlays.Count > 0)

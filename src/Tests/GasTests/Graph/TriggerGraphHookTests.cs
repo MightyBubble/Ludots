@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1124 data-driven mod hooks: entry priority feeds dispatch order (ascending,
+    /// data-driven mod hooks: entry priority feeds dispatch order (ascending,
     /// negative earlier, cross-graph), the Route A weaver splices hook fragments
     /// before/after anchors and node ids with register isolation, hook entries mount
     /// no dispatch triggers, and every authoring mistake (unknown anchor / node,
@@ -205,8 +205,6 @@ namespace Ludots.Tests.Gas.Graph
             return id;
         }
 
-        // ── Weaving: before / after / node-id hooks ──
-
         [TestCase("hookAnchor")]
         [TestCase("hookNodeBefore")]
         public void Weave_BeforeHook_RunsFragmentBeforeAnchor(string mode)
@@ -260,8 +258,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(probe.TargetAfterAmounts, Is.EqualTo(new[] { 12 }));
         }
 
-        // ── Fail-closed authoring mistakes ──
-
         [Test]
         public void Weave_UnknownAnchor_FailsClosed()
         {
@@ -311,7 +307,6 @@ namespace Ludots.Tests.Gas.Graph
             var schemas = BuildRegistry();
             var programs = new GraphProgramRegistry();
             GraphControlFlowDocument target = TargetDocument();
-            // Graph A hooks B's node; Graph B hooks A's node back — mutual inlining cycle.
             GraphControlFlowDocument a = HookCallerDocument(CallerGraphId, "hookNodeBefore");
             GraphControlFlowDocument b = HookCallerDocument(SecondCallerGraphId, "hookNodeBefore");
             a.Entries[0].HookNodeBefore!.GraphId = SecondCallerGraphId;
@@ -400,8 +395,6 @@ namespace Ludots.Tests.Gas.Graph
                 "an anchored node unreachable from any entry must fail closed before hooks are considered");
         }
 
-        // ── Entry priority: compile + mount + dispatch ──
-
         [Test]
         public void Compile_EntryPriority_FeedsTriggerPriorityAscending()
         {
@@ -453,8 +446,6 @@ namespace Ludots.Tests.Gas.Graph
             TriggerGraphMountTrigger main = triggers.OfType<TriggerGraphMountTrigger>().Single(t => t.EntryLabel == "main");
             Assert.That(main.Priority, Is.EqualTo(-10), "dispatch entries carry their authored priority into Trigger.Priority");
         }
-
-        // ── Helpers ──
 
         private static RunProbe WeaveAndRun(string mode, out TriggerManager manager)
         {

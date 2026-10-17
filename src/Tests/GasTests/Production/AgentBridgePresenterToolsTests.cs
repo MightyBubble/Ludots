@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.Production
 {
     /// <summary>
-    /// AgentBridge presenter observability tools (#1062): query exposes the four-hop
+    /// AgentBridge presenter observability tools: query exposes the four-hop
     /// chain per presenter, desync flags hop2 for a diverged PresenterWorldPosition,
     /// and screen resolves the seat viewer path without a live adapter.
     /// </summary>

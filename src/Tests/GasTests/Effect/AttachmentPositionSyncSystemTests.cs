@@ -93,10 +93,10 @@ namespace Ludots.Tests.GAS
         [Test]
         public void PostSinkWriterTiming_PositionDependentChild_StillFollows()
         {
-            // HIGH-1 回归：位姿写者在 sink 之后运行（PostMovement 后段 nav 求解器、
+            // 位姿写者在 sink 之后运行（PostMovement 后段 nav 求解器、
             // AbilityActivation 订单、EffectProcessing 位移）。引擎每步首 SavePrevious 把
             // Previous=Current 抹平后 sink 运行，父的 Current==Previous 是常态而非"未移动"。
-            // 旧 Previous 比对门在该时序下会让位置依赖子永久冻结在挂接位姿。
+            // Previous 比对门在该时序下会让位置依赖子永久冻结在挂接位姿。
             using World world = World.Create();
             Entity parent = world.Create(
                 WorldPositionCm.FromCm(1000, 0),
@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1200, 0)));
 
             // 步 2 模拟引擎时序：后置写者把父推到 1800，下一 步首 SavePrevious 抹平 Previous=1800，
-            // sink 运行时 Current==Previous——子必须仍跟随到 2000（旧门在此冻结）。
+            // sink 运行时 Current==Previous——子必须仍跟随到 2000。
             world.Get<WorldPositionCm>(parent) = WorldPositionCm.FromCm(1800, 0);
             world.Get<PreviousWorldPositionCm>(parent) = new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1800, 0) };
             sink.Update(1f / 60f);

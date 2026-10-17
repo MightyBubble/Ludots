@@ -100,7 +100,6 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        /// <summary>True when the registered mode id is the reserved sparse default.</summary>
         public bool IsNormalMode(int modeId)
         {
             return modeId == _normalModeId;

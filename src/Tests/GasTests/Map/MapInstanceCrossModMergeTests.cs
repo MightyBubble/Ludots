@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// #1554：跨 mod 地图实例合并（by-instanceId 深合并 + __delete 墓碑）与实例 relations
+    /// 跨 mod 地图实例合并（by-instanceId 深合并 + __delete 墓碑）与实例 relations
     /// 装载站物化（InstanceRelationMaterializer）的合同锁定。事件端（Relation* 键注册与
     /// 变更缓冲 Kind）一并断言；trigger 图执行端到端归 showcase 验收。
     /// </summary>
@@ -211,7 +211,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(worksFor.Metric!["Loyalty"], Is.EqualTo(95), "同 (to,type) 后写赢");
                 Assert.That(zhangsan.Relations.Any(r => r.Type == "SwornBrothers"), Is.True, "新 (to,type) 追加");
 
-                // 边墓碑
                 WriteMod(root, "ModD", """
                 {
                   "Id": "harbor",
@@ -260,10 +259,6 @@ namespace Ludots.Tests.GAS
                 Directory.Delete(root, recursive: true);
             }
         }
-
-        // ------------------------------------------------------------------
-        // 实例 relations 物化（InstanceRelationMaterializer）与事件配套
-        // ------------------------------------------------------------------
 
         private sealed class RelationHarness : IDisposable
         {
@@ -692,7 +687,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(merged.Variables[0].Name, Is.EqualTo("morale"));
                 Assert.That(manager.LastMergeReport.VariableDeletions.Count, Is.EqualTo(1));
 
-                // 复活：更晚片段重新声明
                 WriteMod(root, "ModE",
                 """
                 {
@@ -923,7 +917,7 @@ namespace Ludots.Tests.GAS
             int typeId = harness.Types.GetId("WorksFor");
             Assert.That(harness.Runtime.HasLink(a, b, typeId), Is.True);
 
-            // #1570 单轨化：SetMetric 写穿边实体 AttributeBuffer（唯一真相），SoA 是缓存
+            // 单轨化：SetMetric 写穿边实体 AttributeBuffer（唯一真相），SoA 是缓存
             harness.Runtime.SetMetric(a, b, typeId, harness.Metrics.GetId("Loyalty"), 42);
             Entity edgeEntity = harness.Runtime.MaterializeRelationshipEntity(a, b, typeId);
             Assert.That(world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(edgeEntity), Is.True, "边实体携带 AttributeBuffer");

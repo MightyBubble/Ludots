@@ -1,4 +1,4 @@
-// Ludots.ModCompiler：无 .NET SDK 的 mod 编译器（epic #1190 族E 根治项）。
+// Ludots.ModCompiler：无 .NET SDK 的 mod 编译器。
 // 用内嵌 Roslyn 进程内编译 BuildableSource mod，玩家/作者机不需要安装 dotnet SDK。
 // 引用解析顺序：
 //   1) external/ref/net9.0/*.dll   —— 框架引用程序集（随仓库分发）
@@ -38,7 +38,6 @@ var modName = manifest.GetProperty("name").GetString()!;
 var mainEntry = manifest.TryGetProperty("main", out var mainProp) ? mainProp.GetString() : null;
 var tfm = "net9.0";
 
-// 1) 源码（剔除 bin/obj）
 var sources = Directory.EnumerateFiles(modDir, "*.cs", SearchOption.AllDirectories)
     .Where(p => !IsUnderBuildDir(p))
     .ToList();
@@ -48,7 +47,6 @@ if (sources.Count == 0)
     return 2;
 }
 
-// 2) 引用集
 var repoRoot = FindRepoRoot(modDir);
 var referencePaths = new List<string>();
 if (repoRoot == null)
@@ -120,7 +118,7 @@ if (manifest.TryGetProperty("dependencies", out var deps) && deps.ValueKind == J
 
 referencePaths.AddRange(extraRefs);
 
-// 3) 编译（对齐 mods csproj 默认：ImplicitUsings + Nullable + AllowUnsafe）
+// 编译选项对齐 mods csproj 默认：ImplicitUsings + Nullable + AllowUnsafe
 var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest);
 var globalUsings = """
     global using System;

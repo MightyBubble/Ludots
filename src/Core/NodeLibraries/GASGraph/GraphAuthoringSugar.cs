@@ -61,7 +61,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public const string InlineGraph = "InlineGraph";
         /// <summary>
-        /// <summary>
         /// One-shot flow gate (UE DoOnce analogue): the int map variable named by
         /// <c>var</c> (0 = not yet fired) latches to 1 on the first pass. Control port
         /// <c>true</c> continues only on that first pass; <c>false</c> receives every

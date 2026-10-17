@@ -17,11 +17,11 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production
 {
     /// <summary>
-    /// End-to-end key-to-walk acceptance for the WASD sandbox (#1729): each WASD key must move the
+    /// End-to-end key-to-walk acceptance for the WASD sandbox: each WASD key must move the
     /// sole possessed rep along the ground-plane direction declared by the engine's Move composite
     /// (W/S = ±Y, A/D = ∓X), through the real order pipeline (AxisMoveOrderSystem → OrderQueue →
-    /// MoveToWorldCmOrderSystem). This is the seam the 2026-07-09 merge regression hid behind —
-    /// payload mirror tests stay green when both sides flip together.
+    /// MoveToWorldCmOrderSystem). Needed because payload mirror tests stay green when both sides
+    /// flip together.
     /// </summary>
     [NonParallelizable]
     [TestFixture]
@@ -136,8 +136,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ActiveCameraId(engine, current), Is.EqualTo("Camera.Profile.WasdSandboxTopdown"),
                 "李四's binding adopts the top-down profile after the possession switch.");
 
-            // The seam that bit us: camera-relative axis move resolves the seat's view camera, not
-            // a per-rep view — 李四 owns no LogicView, and movement must still work.
+            // Camera-relative axis move resolves the seat's view camera, not a per-rep view —
+            // 李四 owns no LogicView, and movement must still work.
             Vector2 beforeWalk = engine.World.Get<WorldPositionCm>(current).Value.ToVector2();
             backend.SetButton("<Keyboard>/d", true);
             Vector2 afterWalk = beforeWalk;

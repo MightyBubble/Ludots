@@ -16,23 +16,15 @@ namespace Ludots.Core.Presentation
         /// </summary>
         float ScaleFactor { get; }
 
-        /// <summary>
-        /// Converts a single logical position to visual space.
-        /// </summary>
         Vector3 LogicToVisual(IntVector2 logicPos, int heightLevel);
 
-        /// <summary>
-        /// Converts a visual position back to logical grid space.
-        /// </summary>
         IntVector2 VisualToLogic(Vector3 visualPos);
 
         /// <summary>
-        /// Batch converts logical positions to visual positions.
         /// Designed for 0GC (Zero Garbage Collection) high-performance scenarios using Spans.
         /// </summary>
-        /// <param name="logicPositions">Source logical positions.</param>
-        /// <param name="heights">Source height levels (optional, can be treated as 0 if empty/shorter).</param>
-        /// <param name="visualPositions">Destination buffer for visual positions. Must be at least as large as logicPositions.</param>
+        /// <param name="heights">Optional; treated as 0 when empty or shorter.</param>
+        /// <param name="visualPositions">Must be at least as large as logicPositions.</param>
         void BatchLogicToVisual(
             ReadOnlySpan<IntVector2> logicPositions, 
             ReadOnlySpan<int> heights, 

@@ -973,10 +973,6 @@ namespace InteractionShowcaseMod.UI
             return copied > 0;
         }
 
-        /// <summary>
-        /// Owner + collection key paired read for command group evidence (v2: the key is this
-        /// showcase's own declaration; contexts no longer route collections).
-        /// </summary>
         private static bool TryResolveActiveCommandRouting(GameEngine engine, out Entity owner, out int collectionKeyId)
         {
             owner = Entity.Null;

@@ -89,7 +89,6 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
                     continue;
                 }
 
-                // ThinkEveryNTicks: skip entities not scheduled to think this tick.
                 if ((_tick % Math.Max(1, brain.ThinkEveryNTicks)) != 0)
                 {
                     continue;
@@ -99,7 +98,6 @@ public sealed class HfsmBrainHostSystem : BaseSystem<World, float>
                 WriteOrderGlue(actor, in buffers[index]);
                 if (!state.Bound)
                 {
-                    // Bind on first sight: enter the definition's default leaf path.
                     WriteBirthState(actor, in brain);
                     state.LeafIndex = EnterDefaultPath(actor, brain.HfsmId);
                     ActiveCount++;
