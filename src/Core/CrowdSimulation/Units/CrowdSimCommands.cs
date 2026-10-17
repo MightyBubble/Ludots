@@ -115,7 +115,9 @@ public static class CrowdSimCommands
             }
             else if (cmd.Members == null || cmd.Members.Length == 0)
             {
-                throw new System.InvalidOperationException("order: 成员集为空。");
+                // 成员为空时移动指令不成立。带 fogTerrain 的空选择仍要切换乐观地形：开关先于成员检查。
+                if (!cmd.HasFogTerrain)
+                    throw new System.InvalidOperationException("order: 成员集为空。");
             }
         }
 
@@ -239,6 +241,8 @@ public static class CrowdSimCommands
                         Fog.CrowdBeliefSync.Sync(sim);
                     }
                 }
+
+                if (!cmd.AllOwnMembers && (cmd.Members == null || cmd.Members.Length == 0)) return null;
 
                 System.ReadOnlySpan<uint> members = cmd.Members;
                 if (cmd.AllOwnMembers)
