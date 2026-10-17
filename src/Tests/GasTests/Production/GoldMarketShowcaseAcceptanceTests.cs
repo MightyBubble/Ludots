@@ -13,6 +13,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -36,7 +37,7 @@ public sealed class GoldMarketShowcaseAcceptanceTests
     public void GoldMarketShowcase_SpendsAttributeBlocksInsufficientFundsAndRollsBackAtomicFailure()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "gold-market-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/gold-market-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

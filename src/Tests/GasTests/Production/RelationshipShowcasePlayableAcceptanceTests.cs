@@ -25,6 +25,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -52,7 +53,7 @@ namespace Ludots.Tests.GAS.Production
             string repoRoot = FindRepoRoot();
             RelationshipShowcaseTestConfig showcaseConfig = LoadShowcaseConfig(repoRoot);
             RelationshipShowcaseTestFrontendConfig frontendConfig = LoadFrontendConfig(repoRoot);
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "relationship-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/relationship-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
@@ -372,7 +373,7 @@ namespace Ludots.Tests.GAS.Production
             (string when, string who, string what, string where, string why, string how) = GetEvidenceMetadata(step);
             UiAcceptanceEvidenceFrame frame = AcceptanceUiEvidenceWriter.CaptureFrame(
                 uiRoot,
-                Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "relationship-showcase", "screens"),
+                CommittedTestArtifacts.Resolve("artifacts/acceptance/relationship-showcase/screens"),
                 snapshots.Count + 1,
                 step,
                 when,

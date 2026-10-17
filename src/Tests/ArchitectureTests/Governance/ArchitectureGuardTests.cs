@@ -1037,8 +1037,8 @@ namespace Ludots.Tests.Architecture.Governance
                     missing.Add($"{spec.Issue}: GasTests.csproj missing {spec.ModName}.csproj reference");
                 }
 
-                if (!acceptance.Contains("\"artifacts\"", StringComparison.Ordinal) ||
-                    !acceptance.Contains("\"showcases\"", StringComparison.Ordinal) ||
+                if ((!acceptance.Contains("CommittedTestArtifacts.Resolve(\"artifacts/showcases", StringComparison.Ordinal) &&
+                     !acceptance.Contains("CommittedTestArtifacts.Resolve($\"artifacts/showcases", StringComparison.Ordinal)) ||
                     !acceptance.Contains(spec.ArtifactFolder, StringComparison.Ordinal))
                 {
                     missing.Add($"{spec.Issue}: acceptance test missing artifacts/showcases/{spec.ArtifactFolder}");
@@ -2001,7 +2001,7 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 Assert.That(modJson, Does.Contain("FourXAssociationShowcaseMod"));
                 Assert.That(acceptance, Does.Contain("fourx-association-showcase"));
-                Assert.That(acceptance, Does.Contain("Path.Combine(repoRoot, \"artifacts\", \"acceptance\""));
+                Assert.That(acceptance, Does.Contain("CommittedTestArtifacts.Resolve(\"artifacts/acceptance/"));
                 for (int i = 0; i < requiredShowcaseReferences.Length; i++)
                 {
                     string reference = requiredShowcaseReferences[i];
@@ -2308,8 +2308,8 @@ namespace Ludots.Tests.Architecture.Governance
                     missing.Add($"{spec.Issue}: acceptance test has no NUnit [Test] method");
                 }
 
-                if (!acceptance.Contains("Path.Combine(repoRoot, \"artifacts\", \"acceptance\"", StringComparison.Ordinal) &&
-                    !acceptance.Contains("Path.Combine(FindRepoRoot(), \"artifacts\", \"acceptance\"", StringComparison.Ordinal))
+                if (!acceptance.Contains("CommittedTestArtifacts.Resolve(\"artifacts/acceptance", StringComparison.Ordinal) &&
+                    !acceptance.Contains("CommittedTestArtifacts.Resolve($\"artifacts/acceptance", StringComparison.Ordinal))
                 {
                     missing.Add($"{spec.Issue}: acceptance test does not write artifacts/acceptance evidence");
                 }

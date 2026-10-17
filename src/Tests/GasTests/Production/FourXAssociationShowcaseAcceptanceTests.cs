@@ -13,6 +13,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -44,7 +45,7 @@ public sealed class FourXAssociationShowcaseAcceptanceTests
     public void FourXAssociationShowcase_ChainsFogDiplomacyTradeResearchAndOwnership()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "fourx-association-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/fourx-association-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
