@@ -41,6 +41,9 @@ public static partial class CrowdSimulationEditorApi
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         WriteIndented = true,
+        // 仓库的 *.json 统一 eol=lf。缩进序列化的行尾默认跟 Environment.NewLine 走，
+        // Windows 上会写成 CRLF，这里钉成 LF，两个平台写出同一种字节。
+        NewLine = "\n",
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 

@@ -411,13 +411,26 @@ public static partial class CrowdSimulationEditorApi
         [DllImport("libc", SetLastError = true)]
         private static extern int link(string oldpath, string newpath);
 
-        private static void CopyTree(string source, string destination)
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CreateHardLink(string newPath, string existingPath, IntPtr securityAttributes);
+
+        /// <summary>
+        /// BCL 没有硬链接 API，Windows 与 Unix 各调各的正式接口。跨卷或文件系统不支持时
+        /// 返回 false，调用方退回 <see cref="File.Copy"/>——链接被拒是返回值，不是异常。
+        /// </summary>
+        internal static bool TryHardLink(string source, string target)
+            => OperatingSystem.IsWindows()
+                ? CreateHardLink(target, source, IntPtr.Zero)
+                : link(source, target) == 0;
+
+        internal static void CopyTree(string source, string destination)
         {
             Directory.CreateDirectory(destination);
             foreach (string file in Directory.EnumerateFiles(source))
             {
                 string target = Path.Combine(destination, Path.GetFileName(file));
-                if (link(file, target) != 0)
+                if (!TryHardLink(file, target))
                 {
                     File.Copy(file, target);
                 }
