@@ -1,17 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Text.Json.Nodes;
 using CrowdSimulationTests.Uat;
 using Ludots.Core.CrowdSimulation.Diagnostics;
 using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
+using Ludots.UI.Skia;
 using NUnit.Framework;
+using SkiaSharp;
 using static CrowdSimulationTests.Uat.CrowdFogUatTools;
 
 namespace CrowdSimulationTests.Showcases;
@@ -170,7 +183,9 @@ public sealed class FogShowcaseTests
             var now = ReadyGroup(s, Me);
             return now?.Leader != null && VisitsWall(PathOf(now.Leader));
         }, 40);
+        int crossedAt = s.TickCount;
         Assert.That(crossed, Is.True, "乐观路径应直穿正前方那排水域");
+        SaveHudSnapshot(host, "fog-script-optimistic-crossing.png");
 
         host.AdvanceTo(OptimisticPlaceTick);
         before = ReadyGroup(s, Me);
@@ -202,10 +217,13 @@ public sealed class FogShowcaseTests
         Assert.That(seen, Is.True,
             $"看见建筑后路径仍穿过正前方的水域，或没有改道。建筑进认知={fog.Belief[viewer].ContainsKey(id)} tick={s.TickCount}");
         Assert.That(fog.Belief[viewer].ContainsKey(id), Is.True, "改道时建筑还不在认知里");
+        int reroutedAt = s.TickCount;
 
         bool arrived = host.AdvanceUntil(() => AllArrived(s, OptimisticSquad), OptimisticArriveMax);
-        TestContext.Out.WriteLine($"optimistic: plannedNav {before.NavId} body {before.BodyNavId} leftWater {leftWater} arrived {arrived} tick {s.TickCount}");
+        TestContext.Out.WriteLine(
+            $"optimistic: plannedNav {before.NavId} body {before.BodyNavId}, crossed at {crossedAt}, building placed at {OptimisticPlaceTick}, rerouted at {reroutedAt}, leftWater {leftWater}, arrived {arrived} at {s.TickCount}");
         Assert.That(arrived, Is.True, $"{OptimisticArriveMax} tick 内没有全部到达 {Lagging(s)}");
+        SaveHudSnapshot(host, "fog-script-optimistic-arrived.png");
         CrowdSimulationValidator.ValidateSim(s);
     }
 
@@ -259,6 +277,265 @@ public sealed class FogShowcaseTests
         TestContext.Out.WriteLine($"known: nav {group.NavId} crossed {crossed} arrived {arrived} tick {s.TickCount}");
         Assert.That(crossed, Is.False, "已知路线中途改去穿过水域");
         Assert.That(arrived, Is.True, $"{OptimisticArriveMax} tick 内没有全部到达 {Lagging(s)}");
+    }
+
+    [Test]
+    public void OptimisticHotkeyAndHudSwitch_ChangeOnlyThePreference()
+    {
+        using var host = CrowdShowcaseHost.Start("CrowdSimulationFogRerouteShowcaseMod");
+        var s = host.Session;
+        var runtime = host.Engine.CrowdRuntime;
+        string toggle = PlayerViewAction(host, "toggleOptimisticTerrain");
+        Assert.Multiple(() =>
+        {
+            Assert.That(toggle, Is.EqualTo("CrowdSimulation.Player.ToggleOptimisticTerrain"), "玩家视图的乐观迷雾动作名");
+            Assert.That(BindingPath(toggle), Is.EqualTo("<Keyboard>/rightBracket"), "乐观迷雾快捷键应是 ]");
+            Assert.That(runtime.OrderPrefs!.OptimisticTerrain, Is.True, "进图时偏好应抄配置的开局值");
+        });
+
+        host.AdvanceTo(1);
+        Assert.That(s.Fog!.Terrain, Is.True, "脚本第一笔令后迷雾开关应是开");
+        Assert.That(HudSwitchOn(host), Is.True, "开局 HUD 开关应显示开");
+
+        PressAction(host, toggle);
+        host.Advance();
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.OrderPrefs!.OptimisticTerrain, Is.False, "按 ] 后偏好应翻成关");
+            Assert.That(s.Fog.Terrain, Is.True, "快捷键只改偏好，迷雾开关要等下一笔令");
+        });
+
+        Assert.That(AdvanceUntilHudReflects(host, () => !HudSwitchOn(host)), Is.True, "HUD 开关应采样成关");
+        SaveHudSnapshot(host, "fog-hotkey-preference-off.png");
+
+        PressAction(host, toggle);
+        host.Advance();
+        Assert.That(runtime.OrderPrefs!.OptimisticTerrain, Is.True, "再按 ] 偏好应翻回开");
+        Assert.That(s.Fog.Terrain, Is.True, "偏好来回切不影响迷雾开关");
+        Assert.That(AdvanceUntilHudReflects(host, () => HudSwitchOn(host)), Is.True, "HUD 开关应采样回开");
+    }
+
+    [Test]
+    public void DragLineOrders_CarryCurrentOptimisticState_BothTerrainStatesPlanDifferently()
+    {
+        using var host = CrowdShowcaseHost.Start("CrowdSimulationFogRerouteShowcaseMod");
+        var s = host.Session;
+        var fog = s.Fog!;
+        var runtime = host.Engine.CrowdRuntime;
+        string secondary = PlayerViewAction(host, "secondaryHold");
+        string commit = PlayerViewAction(host, "formationCommit");
+        string toggle = PlayerViewAction(host, "toggleOptimisticTerrain");
+        // 拖线的中点就是令的目标：线段两端放在目标南北各 12500cm，中点落在 OptimisticGoal 上。
+        (int X, int Y) dragFrom = (OptimisticGoalX, OptimisticGoalY - 12500), dragTo = (OptimisticGoalX, OptimisticGoalY + 12500);
+        var ray = new PickingRay();
+        host.Engine.SetService(CoreServiceKeys.ScreenRayProvider, ray);
+        host.AdvanceTo(1);
+        int viewer = Group(s, Me);
+        int logAtStart = s.Commands.Log.Count;
+        Assert.That(s.Units.Count, Is.EqualTo(OptimisticSquad), "场景无效：演示脚本应生成两人的小队");
+        Assert.That(fog.Terrain, Is.True, "脚本开局令后迷雾开关应是开");
+
+        // 开（偏好还是进图抄入的开）：拖线下令，这笔令应带开的迷雾状态，按未探索地形直穿水域。
+        DragLine(host, ray, secondary, commit, dragFrom, dragTo);
+        var opened = LastOrder(s, logAtStart);
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened.Cmd.Kind, Is.EqualTo(CrowdSimCommandKind.Order), "拖线应提交 order 指令");
+            Assert.That(opened.Cmd.Player, Is.EqualTo(Me), "拖线令的玩家");
+            Assert.That((opened.Cmd.XCm, opened.Cmd.YCm), Is.EqualTo((OptimisticGoalX, OptimisticGoalY)), "拖线令的目标应是线段中点");
+            Assert.That(opened.Cmd.HasFace, Is.True, "拖线令应带朝向");
+            Assert.That(opened.Cmd.WidthCm, Is.EqualTo(25000), "拖线令应带线段长度的阵型宽");
+            Assert.That(opened.Cmd.Members, Has.Length.EqualTo(OptimisticSquad), "无选择时拖线令应带上全体己方单位");
+            Assert.That(opened.Cmd.HasFogTerrain, Is.True, "拖线令应携带迷雾开关");
+            Assert.That(opened.Cmd.FogTerrain, Is.True, "第一笔拖线令应携带进图抄入的偏好（开）");
+        });
+
+        Assert.That(fog.Terrain, Is.True, "开的那笔令执行后迷雾开关保持开");
+        bool optimisticallyCrossed = host.AdvanceUntil(() =>
+        {
+            var now = ReadyGroup(s, Me);
+            return now?.Leader != null && VisitsWall(PathOf(now.Leader));
+        }, 200);
+        var optimisticGroup = ReadyGroup(s, Me);
+        Assert.That(optimisticGroup, Is.Not.Null, "乐观拖线令后没有规划完的领队");
+        Assert.That(optimisticGroup!.NavId, Is.Not.EqualTo(optimisticGroup.BodyNavId), "打开乐观后应走认知导航规划");
+        Assert.That(optimisticallyCrossed, Is.True, "乐观路径应直穿正前方那排水域");
+        SaveHudSnapshot(host, "fog-dragline-optimistic-terrain.png");
+        TestContext.Out.WriteLine($"optimistic(drag): order tick {opened.Tick}, crossed at {s.TickCount}");
+
+        // 关：热键翻偏好后再拖同一条线，这笔令应带关的迷雾状态，按已知真值绕开水域。
+        PressAction(host, toggle);
+        host.Advance();
+        Assert.That(runtime.OrderPrefs!.OptimisticTerrain, Is.False, "第二笔拖线前偏好应已是关");
+        logAtStart = s.Commands.Log.Count;
+        DragLine(host, ray, secondary, commit, dragFrom, dragTo);
+        var closed = LastOrder(s, logAtStart);
+        Assert.Multiple(() =>
+        {
+            Assert.That(closed.Cmd.HasFogTerrain, Is.True, "第二笔拖线令也应携带迷雾开关");
+            Assert.That(closed.Cmd.FogTerrain, Is.False, "切换后的令应携带新偏好（关）");
+        });
+
+        Assert.That(fog.Terrain, Is.False, "关的那笔令执行后内核迷雾开关应关上");
+        bool known = host.AdvanceUntil(() => ReadyGroup(s, Me) != null, 60);
+        var knownGroup = ReadyGroup(s, Me);
+        Assert.That(known && knownGroup != null, Is.True, "关掉乐观后没有规划完的领队");
+        Assert.That(knownGroup!.NavId, Is.EqualTo(knownGroup.BodyNavId), "关闭乐观后应按已知真值导航规划");
+        Assert.That(VisitsWall(PathOf(knownGroup.Leader!)), Is.False,
+            "已知地形的路径不应穿过正前方那排水域 " + Describe(PathOf(knownGroup.Leader!)));
+
+        // 脚本在 tick 60 放下岸上那栋谁都没见过的建筑；关着的态应仍按真值导航，不为未知改道穿水。
+        host.AdvanceTo(OptimisticPlaceTick + 1);
+        int placed = s.Structures!.EntityIds.Max();
+        Assert.That(s.Structures.FootprintOf(placed).Covers(Fix64.FromInt(OptimisticBuildX), Fix64.FromInt(OptimisticBuildY)), Is.True, "脚本应已放下岸上的建筑");
+        Assert.That(fog.Belief[viewer].ContainsKey(placed), Is.False, "放下的建筑还没被看见就进了认知");
+        bool knownCrossed = false, knownArrived = false;
+        int knownArriveTick = -1;
+        for (int t = 0; t < OptimisticArriveMax; t++)
+        {
+            var now = ReadyGroup(s, Me);
+            if (now?.Leader != null && VisitsWall(PathOf(now.Leader))) knownCrossed = true;
+            if (AllArrived(s, OptimisticSquad))
+            {
+                knownArrived = true;
+                knownArriveTick = s.TickCount;
+                break;
+            }
+
+            host.Advance();
+        }
+
+        SaveHudSnapshot(host, "fog-dragline-known-terrain.png");
+        TestContext.Out.WriteLine(
+            $"known(drag): order tick {closed.Tick}, building placed at {OptimisticPlaceTick}, seen={fog.Belief[viewer].ContainsKey(placed)}, crossed {knownCrossed}, arrived {knownArrived} at {knownArriveTick}");
+        Assert.That(knownCrossed, Is.False, "已知路线中途改去穿过水域");
+        Assert.That(knownArrived, Is.True, $"{OptimisticArriveMax} tick 内没有全部到达 {Lagging(s)}");
+        CrowdSimulationValidator.ValidateSim(s);
+    }
+
+    [Test]
+    public void MouseOrders_ThroughTheOrderBuffer_CarryTheSharedPreference()
+    {
+        using var host = CrowdShowcaseHost.Start("CrowdSimulationFogRerouteShowcaseMod");
+        var s = host.Session;
+        var fog = s.Fog!;
+        var runtime = host.Engine.CrowdRuntime;
+        var registry = host.Engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("引擎没有 OrderTypeRegistry。");
+        var queue = host.Engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("引擎没有 OrderQueue。");
+        Assert.That(registry.TryGetId(CrowdSimulationOrderAdapter.OrderTypeKey, out int typeId) && typeId > 0, Is.True,
+            "crowdSimulationMove 应已登记");
+        string toggle = PlayerViewAction(host, "toggleOptimisticTerrain");
+        host.AdvanceTo(1);
+        int logAtStart = s.Commands.Log.Count;
+
+        // 无选择：右键的 GAS 订单跟着被选演员走，一个演员都没有时不会产生批次，适配器收到空批次直接返回。
+        CrowdSimulationOrderAdapter.Accept(s, ReadOnlySpan<Order>.Empty, runtime.OrderPrefs);
+        host.Advance();
+        Assert.That(s.Commands.Log.Count, Is.EqualTo(logAtStart), "无选择的右键不应产生群体指令");
+        Assert.That(fog.Terrain, Is.True, "无选择的右键不应改迷雾开关");
+
+        // 有单位的右键令经引擎订单缓冲排空进适配器，携带共享偏好里的开。
+        var (first, orders) = MouseBatch(s, typeId, 1000000, 300000);
+        Assert.That(queue.TryEnqueueSharedBatch(orders), Is.EqualTo(OrderSubmitResult.Queued), "右键订单没进引擎订单队列");
+        Assert.That(host.AdvanceUntil(() => s.Commands.Log.Count > logAtStart, 60), Is.True, "订单没有经缓冲排空进会话");
+        var firstOrder = LastOrder(s, logAtStart);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstOrder.Cmd.Kind, Is.EqualTo(CrowdSimCommandKind.Order), "右键令应是 order 指令");
+            Assert.That((firstOrder.Cmd.XCm, firstOrder.Cmd.YCm), Is.EqualTo(first), "右键令的目标点");
+            Assert.That(firstOrder.Cmd.ShapeId, Is.EqualTo(CrowdSimulationOrderAdapter.PlainClickShapeId), "普通右键的阵型");
+            Assert.That(firstOrder.Cmd.HasAuto && firstOrder.Cmd.Auto == runtime.OrderPrefs!.MagicBox, Is.True,
+                "普通右键走偏好路径，auto 位应抄绑定的 magic box 偏好");
+            Assert.That(firstOrder.Cmd.HasFogTerrain, Is.True, "右键令应携带迷雾开关");
+            Assert.That(firstOrder.Cmd.FogTerrain, Is.True, "第一笔右键令应携带进图抄入的偏好（开）");
+        });
+
+        // 快捷键翻偏好后的下一笔右键令携带关，并把它落到内核。
+        PressAction(host, toggle);
+        host.Advance();
+        Assert.That(runtime.OrderPrefs!.OptimisticTerrain, Is.False, "第二笔右键前偏好应已是关");
+        logAtStart = s.Commands.Log.Count;
+        var (second, more) = MouseBatch(s, typeId, 1000000, 1200000);
+        Assert.That(queue.TryEnqueueSharedBatch(more), Is.EqualTo(OrderSubmitResult.Queued), "第二笔订单没进队列");
+        Assert.That(host.AdvanceUntil(() => s.Commands.Log.Count > logAtStart, 60), Is.True, "第二笔订单没有排空");
+        var secondOrder = LastOrder(s, logAtStart);
+        Assert.Multiple(() =>
+        {
+            Assert.That(secondOrder.Cmd.FogTerrain, Is.False, "切换后的右键令应携带新偏好（关）");
+            Assert.That((secondOrder.Cmd.XCm, secondOrder.Cmd.YCm), Is.EqualTo(second));
+        });
+
+        Assert.That(host.AdvanceUntil(() => !fog.Terrain, 60), Is.True, "第二笔右键令执行后内核迷雾开关应关上");
+    }
+
+    [Test]
+    public void OrderFogTerrainOnSessionWithoutFog_IsExplicitlyRejectedOrHarmless()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        Assert.That(session.Fog, Is.Null, "场景无效：这应该是没有迷雾的会话");
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
+        uint member = session.Units.HandleAt(0);
+
+        var withFog = JsonNode.Parse($$"""
+            {"type":"order","player":1,"xCm":480000,"yCm":460000,"shape":"box","fogTerrain":true,"members":[{{member}}]}
+            """)!;
+        InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(
+            () => session.Commands.Submit<object?>(session, withFog, CrowdSimCommands.Exec))!;
+        Assert.That(rejected.Message, Does.Contain("迷雾未启用"), "无迷雾会话上带 fogTerrain 的令应显式报错");
+        Assert.That(session.Commands.Log, Is.Empty, "被拒的令不应进日志");
+
+        var withoutFog = JsonNode.Parse($$"""
+            {"type":"order","player":1,"xCm":480000,"yCm":460000,"shape":"box","members":[{{member}}]}
+            """)!;
+        Assert.DoesNotThrow(() => session.Commands.Submit<object?>(session, withoutFog, CrowdSimCommands.Exec),
+            "无迷雾会话上不带 fogTerrain 的令应无害执行");
+        Assert.That(session.Commands.Log, Has.Count.EqualTo(1), "不带开关的令应正常进日志");
+    }
+
+    [Test]
+    public void FogTerrainOrders_ReplyToTheSameChecksum()
+    {
+        var (_, live) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        using var service = new PathQueryService(live.Navs, live.Config, 1, TimeSpan.FromSeconds(30), live.ResolveNavContext);
+        live.EnableMovement(CrowdMovementKernel.Create(live), new CrowdSimPlanner(live, service));
+        TestDefaults.EnableFog(live);
+        live.BlockOnDueReplies = true;
+        Assert.That(live.Fog!.Terrain, Is.False, "对拍沙盒开局应关闭乐观迷雾");
+        live.Commands.Submit<object?>(live, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.SpawnAt,
+            Player = Me,
+            XCm = OptimisticStartX,
+            YCm = OptimisticStartY,
+            Count = OptimisticSquad,
+            UnitType = 0,
+            RIdx = 0,
+        }, CrowdSimCommands.Exec);
+        Order(live, Me, OptimisticGoalX, OptimisticGoalY, fogTerrain: true);
+        Assert.That(live.Fog.Terrain, Is.True, "开的令执行后迷雾开关应是开");
+        CrowdUatKit.Step(live, 40);
+        Order(live, Me, OptimisticGoalX, OptimisticStartY, fogTerrain: false);
+        Assert.That(live.Fog.Terrain, Is.False, "关的令执行后迷雾开关应是关");
+        CrowdUatKit.Step(live, 40);
+
+        var capture = CrowdSimReplay.Capture(live);
+        var replay = new CrowdSimSession(live.Config, Arch.Core.World.Create(), live.Navs, live.NavByLayerRadius, live.Presentation)
+        {
+            Structures = live.Structures,
+            RebakeSources = live.RebakeSources,
+            NavTileCache = live.NavTileCache,
+        };
+        using var replayService = new PathQueryService(replay.Navs, replay.Config, 1, TimeSpan.FromSeconds(30), replay.ResolveNavContext);
+        replay.EnableMovement(CrowdMovementKernel.Create(replay), new CrowdSimPlanner(replay, replayService));
+        TestDefaults.EnableFog(replay);
+        replay.BlockOnDueReplies = true;
+        var report = CrowdSimReplay.Replay(replay, capture);
+        Assert.That(report.Passed, Is.True, report.Error);
+        Assert.That(report.Checksum, Is.EqualTo(capture.Checksum), "开与关的令回放后校验码不一致");
+        Assert.That(report.Commands, Is.EqualTo(3), "回放应执行生成加两笔令");
+        Assert.That(replay.Fog!.Terrain, Is.False, "回放终态的迷雾开关应与活会话一致");
     }
 
     [Test]
@@ -354,6 +631,136 @@ public sealed class FogShowcaseTests
         }
 
         return n;
+    }
+
+    private static string PlayerViewAction(CrowdShowcaseHost host, string key)
+        => CrowdShowcaseHost.MergedConfig(host.Engine, "CrowdSimulationPlayerView.json")["actions"]![key]!.GetValue<string>();
+
+    private static string BindingPath(string actionId)
+    {
+        string file = Path.Combine(CrowdShowcaseHost.RepoRoot(), "mods", "showcases", "crowd_simulation",
+            "CrowdSimulationS4DeployMod", "assets", "Input", "default_input.json");
+        return FindBinding(JsonNode.Parse(File.ReadAllText(file))!, actionId)
+            ?? throw new InvalidOperationException($"default_input.json 里没有 {actionId} 的绑定。");
+    }
+
+    private static string? FindBinding(JsonNode node, string actionId)
+    {
+        if (node is JsonObject obj)
+        {
+            if (obj.TryGetPropertyValue("actionId", out var id) && id != null && id.GetValue<string>() == actionId
+                && obj.TryGetPropertyValue("path", out var path) && path != null)
+            {
+                return path.GetValue<string>();
+            }
+
+            foreach (var (_, child) in obj)
+            {
+                if (child != null && FindBinding(child, actionId) is { } found) return found;
+            }
+        }
+        else if (node is JsonArray arr)
+        {
+            foreach (var child in arr)
+            {
+                if (child != null && FindBinding(child, actionId) is { } found) return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static AuthoritativeInputAccumulator Accumulator(CrowdShowcaseHost host)
+        => host.Engine.GetService(CoreServiceKeys.AuthoritativeInputAccumulator)
+            ?? throw new InvalidOperationException("引擎没有权威输入累加器。");
+
+    private static void PressAction(CrowdShowcaseHost host, string actionId)
+        => Accumulator(host).CaptureAction(actionId, Vector3.One, true, true, false);
+
+    private static bool HudSwitchOn(CrowdShowcaseHost host)
+        => host.HudNode("crowd-optimistic-switch").HasClass("nf-switch-on");
+
+    /// <summary>HUD 面板按墙钟限速采样（hud.json 的 sampleMs.player），等 HUD 反映新状态要按墙钟等，tick 数不作数。</summary>
+    private static bool AdvanceUntilHudReflects(CrowdShowcaseHost host, Func<bool> done)
+    {
+        long deadline = Stopwatch.GetTimestamp() + (long)((HudPlayerSampleMs() * 2 + 200) / 1000d * Stopwatch.Frequency);
+        while (Stopwatch.GetTimestamp() < deadline)
+        {
+            host.Advance();
+            if (done()) return true;
+        }
+
+        return false;
+    }
+
+    private static int HudPlayerSampleMs()
+    {
+        string file = Path.Combine(CrowdShowcaseHost.RepoRoot(), "mods", "capabilities", "navigation",
+            "CrowdSimulationUiMod", "assets", "CrowdSimulationUi", "hud.json");
+        return JsonNode.Parse(File.ReadAllText(file))!["sampleMs"]!["player"]!.GetValue<int>();
+    }
+
+    /// <summary>把这一帧渲染出的 HUD 存进测试产物目录，佐证同次运行的状态。</summary>
+    private static void SaveHudSnapshot(CrowdShowcaseHost host, string file)
+    {
+        if (host.Ui.IsDirty) host.Ui.Render();
+        using var surface = SKSurface.Create(new SKImageInfo(1280, 720));
+        surface.Canvas.Clear(new SKColor(96, 104, 88));
+        new SkiaUiRenderer().RenderToCanvas(host.UiHost.Scene!, surface.Canvas, 1280, 720);
+        using var image = surface.Snapshot();
+        using var png = image.Encode(SKEncodedImageFormat.Png, 100);
+        string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, file);
+        using var output = File.Create(path);
+        png.SaveTo(output);
+        TestContext.Out.WriteLine($"snapshot: {path}");
+    }
+
+    private static (int Tick, CrowdSimCommand Cmd) LastOrder(CrowdSimSession s, int afterIndex)
+    {
+        var log = s.Commands.Log;
+        return log.Count <= afterIndex
+            ? throw new InvalidOperationException("没有新的群体指令。")
+            : log[log.Count - 1];
+    }
+
+    private static ((int X, int Y), Order[]) MouseBatch(CrowdSimSession s, int typeId, int xCm, int yCm)
+    {
+        var batch = new Order[s.Units.Count];
+        for (int i = 0; i < batch.Length; i++)
+        {
+            batch[i] = new Order
+            {
+                OrderTypeId = typeId,
+                PlayerId = Me,
+                Actor = s.Units.EntityAt(i),
+                Args = OrderArgs.CreateSingleWorldCm(new Vector3(xCm, 0f, yCm)),
+            };
+        }
+
+        return ((xCm, yCm), batch);
+    }
+
+    /// <summary>按住辅键从 from 拖到 to 松开提交：真实输入动作走 ApplyInput 的拖线摆阵路径。</summary>
+    private static void DragLine(CrowdShowcaseHost host, PickingRay ray, string secondary, string commit, (int X, int Y) from, (int X, int Y) to)
+    {
+        var input = Accumulator(host);
+        ray.At = from;
+        input.CaptureAction(secondary, Vector3.One, true, false, false);
+        host.Advance();
+        ray.At = to;
+        input.CaptureAction(secondary, Vector3.One, true, false, false);
+        input.CaptureAction(commit, Vector3.One, true, true, false);
+        host.Advance();
+        input.CaptureAction(secondary, Vector3.One, false, false, true);
+    }
+
+    /// <summary>不论屏幕坐标，射线都从目标点正上方垂直向下，落点就是给定的厘米坐标。</summary>
+    private sealed class PickingRay : IScreenRayProvider
+    {
+        public (int X, int Y) At;
+
+        public ScreenRay GetRay(Vector2 screenPosition)
+            => new(new Vector3(At.X / 100f, 10000f, At.Y / 100f), new Vector3(0f, -1f, 0f));
     }
 
     private static int FogCell(CrowdFog fog, int xCm, int yCm)
