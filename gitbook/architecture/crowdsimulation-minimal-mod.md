@@ -35,17 +35,17 @@ $T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_m
 | 文件 | 内容 |
 | --- | --- |
 | `mod.json` | 依赖 `CrowdSimulationMod`、`CrowdSimulationStandardMod`，都写 `^1.0.0`。`LudotsCoreMod` 由它们间接带进来 |
-| `assets/game.json` | `startupMapId`；`startupLocalSeats` 把 `seat.0` 绑到玩家 1 |
-| `assets/Engine/clock.json` | `{ "FixedHz": 30 }`。核心默认 20，群体地图的时钟由地图 Mod 自己写 |
-| `assets/Camera/virtual_cameras.json` | 虚拟相机 `<ModId>.Camera`，地图 `DefaultCamera` 引用它 |
-| `assets/Navigation/navmesh.json` | `maps.<mapId>`：`solver`、`logicTerrainAsset`、`navCellSizeCm`、`terrainTypes`（见第 2 步） |
-| `assets/Navigation/agent_profiles.json` | 体型 `<mapId>_unit`：`radiusCm` 150，`navProfileId` 是 `--navProfile` 给的值 |
-| `assets/Maps/<mapId>.json` | 一块 1,600,000 cm 的 `Grid` 板、高度图路径、相机、两个敌对队伍、两名玩家（见第 4 步） |
-| `assets/Entities/templates.json` | 队伍、玩家、单位三个模板（见第 6 步） |
-| `assets/Presentation/presenters.json`、`mesh_assets.json` | 单位的表现和网格（见第 6 步） |
-| `assets/CrowdSimulationConfig.json` | 这张图的群体配置（见第 7 步） |
-| `assets/CrowdSimulationDebug.json`、`config_catalog.json` | 开场脚本，以及把它按 `DeepObject` 登记的目录 |
-| `assets/Presentation/crowd_terrain_type_overlay.json` | `{ "enabled": true }`，进图就显示地形类型叠层，按 `[` 切换 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/game.json` | `startupMapId`；`startupLocalSeats` 把 `seat.0` 绑到玩家 1 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Engine/clock.json` | `{ "FixedHz": 30 }`。核心默认 20，群体地图的时钟由地图 Mod 自己写 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Camera/virtual_cameras.json` | 虚拟相机 `<ModId>.Camera`，地图 `DefaultCamera` 引用它 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Navigation/navmesh.json` | `maps.<mapId>`：`solver`、`logicTerrainAsset`、`navCellSizeCm`、`terrainTypes`（见第 2 步） |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Navigation/agent_profiles.json` | 体型 `<mapId>_unit`：`radiusCm` 150，`navProfileId` 是 `--navProfile` 给的值 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Maps/<mapId>.json` | 一块 1,600,000 cm 的 `Grid` 板、高度图路径、相机、两个敌对队伍、两名玩家（见第 4 步） |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Entities/templates.json` | 队伍、玩家、单位三个模板（见第 6 步） |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/` 下的 `presenters.json`、`mesh_assets.json` | 单位的表现和网格（见第 6 步） |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/CrowdSimulationConfig.json` | 这张图的群体配置（见第 7 步） |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/` 下的 `CrowdSimulationDebug.json`、`config_catalog.json` | 开场脚本，以及把它按 `DeepObject` 登记的目录 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/crowd_terrain_type_overlay.json` | `{ "enabled": true }`，进图就显示地形类型叠层，按 `[` 切换 |
 
 骨架本身就能进图：跑完第 3、5 步的三条 nav 命令，两名玩家各 100 个单位从 (600000, 800000) 和 (1000000, 800000) 走向对方。`src/Tests/CrowdSimulationTests/Authoring/CrowdModScaffoldTests.cs` 按这个流程跑一遍。下面各步写的是这张图在骨架上改了什么。
 
@@ -53,7 +53,7 @@ $T mod init --id CrowdSimulationMinimalMod --template crowd-data --mapId crowd_m
 
 ## 第 2 步：导航配置
 
-`assets/Navigation/navmesh.json` 不用改：
+`mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Navigation/navmesh.json` 不用改：
 
 - `solver: crowd-simulation`。
 - `logicTerrainAsset: terrain/crowd_minimal.map_data.bin`，下一步的工具和烘焙都读它。
@@ -81,7 +81,7 @@ $T nav init-crowd-heightmap --mapId crowd_minimal --modId CrowdSimulationMinimal
 
 ## 第 4 步：地图 json
 
-骨架里的 `assets/Maps/crowd_minimal.json` 已经有：
+骨架里的 `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Maps/crowd_minimal.json` 已经有：
 
 - `Tags: ["crowd_simulation"]`。
 - 一块 `Grid` 板，`WidthCm` / `HeightCm` 1,600,000，`Grid.CellSizeCm` 100。板不设 `DataFile`。
@@ -93,7 +93,7 @@ $T nav init-crowd-heightmap --mapId crowd_minimal --modId CrowdSimulationMinimal
 - `DefaultCamera` 的目标改成 (800000, 770000)，对着墙。
 - `Entities` 加 31 个 `crowd_minimal.wall_block`，`InstanceId` 是 `wall_112` 到 `wall_142`。位置是格心：X = 803125（列 128），Y = (行 + 0.5) × 6250。这 31 条是用一段脚本按公式生成后贴进来的，手写也一样。
 
-墙块模板加在 `assets/Entities/templates.json`：`ManifestationObstacleIntent2D` 的 `shape` 是 `Box`，`sinkNavigationObstacle` 为 true，`halfWidthCm` = `halfHeightCm` = 3125，正好一个导航格。阻挡物只能是正方形，这是 `CrowdSimulationAuthoringContract` 的要求。运行时用标准参数里的结构模板 `building` 管这些阻挡物。
+墙块模板加在 `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Entities/templates.json`：`ManifestationObstacleIntent2D` 的 `shape` 是 `Box`，`sinkNavigationObstacle` 为 true，`halfWidthCm` = `halfHeightCm` = 3125，正好一个导航格。阻挡物只能是正方形，这是 `CrowdSimulationAuthoringContract` 的要求。运行时用标准参数里的结构模板 `building` 管这些阻挡物。
 
 ## 第 5 步：烘焙 .navsurface
 
@@ -107,26 +107,26 @@ $T nav bake-crowd-navsurface --mapId crowd_minimal --modId CrowdSimulationMinima
 
 骨架写好的单位不用改。
 
-单位模板 `crowd_minimal.unit` 在 `assets/Entities/templates.json`，`CrowdSimulationAgent` 四个字段都必填：`profileId: crowd_minimal_unit`、`speedCmPerSec: 1400`、`pushPriority: 2`、`autoDeploy: true`。档案 `crowd_minimal_unit` 的 `navProfileId` 是 `foot`。另有 `crowd_minimal.team` 和 `crowd_minimal.player` 两个只有 `Name` 的模板，给地图的队伍和玩家用。
+单位模板 `crowd_minimal.unit` 在 `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Entities/templates.json`，`CrowdSimulationAgent` 四个字段都必填：`profileId: crowd_minimal_unit`、`speedCmPerSec: 1400`、`pushPriority: 2`、`autoDeploy: true`。档案 `crowd_minimal_unit` 的 `navProfileId` 是 `foot`。另有 `crowd_minimal.team` 和 `crowd_minimal.player` 两个只有 `Name` 的模板，给地图的队伍和玩家用。
 
 群体运行时绑定所有带 `CrowdSimulationAgent` 的模板；每种被引用的移动类型 × 每个半径级须有模板。这个 Mod 只有 `foot` 与半径 150 cm 一格。开场脚本用 `spawnAt` 的 `template: crowd_minimal.unit`，不用下标。S1、S3、S4 的 20 个演示单位在 `CrowdSimulationDemoContentMod`，不依赖它就不会装进来。
 
-表现在 `assets/Presentation/presenters.json` 和 `mesh_assets.json`：
+表现在 `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/` 的 `presenters.json` 和 `mesh_assets.json`：
 
 - `crowd_minimal.units.bootstrap`：`EntitySpawned` / `EntityDestroyed` 按模板 `crowd_minimal.unit` 建删表现。
-- 表现定义 `crowd_minimal.unit`：网格 `crowd_minimal.unit.body`（`mesh_assets.json` 里的立方体原语），缩放 [12, 8, 12]，偏移 [0, 4, 0]；颜色参数 `crowd_minimal.unit.color` 接 `entityColorVector` 与玩家调色板；`Grounding` 用 `SnapToGround`。
+- 表现定义 `crowd_minimal.unit`：网格 `crowd_minimal.unit.body`（`mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/mesh_assets.json` 里的立方体原语），缩放 [12, 8, 12]，偏移 [0, 4, 0]；颜色参数 `crowd_minimal.unit.color` 接 `entityColorVector` 与玩家调色板；`Grounding` 用 `SnapToGround`。
 - 选中圈由能力 Mod 提供，不用写。
 
 ## 第 7 步：群体配置和脚本
 
-`assets/CrowdSimulationConfig.json` 只写这张图的事实，按 DeepObject 叠在标准参数上：
+`mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/CrowdSimulationConfig.json` 只写这张图的事实，按 DeepObject 叠在标准参数上：
 
 - `world.seed: 1`。
 - `deploy.initialUnits: 0`。开局不撒单位，单位由脚本生成。
 - `deploy.bases`：玩家 1 在 (715625, 828125)，玩家 2 在 (715625, 765625)（无 `color` 字段）。
 `initialUnits`、`bases` 没有标准值，地图不写就加载失败。桥能落在哪类区域写在结构模板的 `placement`（`endpointAreas`、`interiorAreas`），这张图不放桥，不用写。
 
-`assets/CrowdSimulationDebug.json` 的 `session.script`：tick 0 两条 `spawnAt`（各 200 个，`template: crowd_minimal.unit`），tick 1 两条 `order` 到 (890625, 828125) 与 (890625, 765625)。正本见该 Mod 的 JSON 文件。
+`mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/CrowdSimulationDebug.json` 的 `session.script`：tick 0 两条 `spawnAt`（各 200 个，`template: crowd_minimal.unit`），tick 1 两条 `order` 到 (890625, 828125) 与 (890625, 765625)。正本见该 Mod 的 JSON 文件。
 
 地形颜色和迷雾贴花颜色用标准参数里的 `Presentation/terrain_type_colors.json` 和 `Presentation/crowd_fog_decal.json`，这里不用写。
 
@@ -162,22 +162,22 @@ dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Releas
 | 文件 | 来源 |
 | --- | --- |
 | `mod.json` | `mod init`，改了描述和标签 |
-| `assets/game.json` | `mod init` |
-| `assets/Engine/clock.json` | `mod init` |
-| `assets/Camera/virtual_cameras.json` | `mod init` |
-| `assets/config_catalog.json` | `mod init` |
-| `assets/Navigation/navmesh.json` | `mod init` |
-| `assets/Navigation/agent_profiles.json` | `mod init` |
-| `assets/Entities/templates.json` | `mod init`，加了墙块模板 |
-| `assets/Presentation/presenters.json` | `mod init` |
-| `assets/Presentation/mesh_assets.json` | `mod init` |
-| `assets/Presentation/crowd_terrain_type_overlay.json` | `mod init` |
-| `assets/CrowdSimulationConfig.json` | `mod init`，改了出生点 |
-| `assets/CrowdSimulationDebug.json` | `mod init`，改了脚本 |
-| `assets/Maps/crowd_minimal.json` | `mod init`，改了相机目标，墙块条目脚本生成 |
-| `assets/terrain/crowd_minimal.map_data.bin` | `nav init-crowd-terrain` |
-| `assets/terrain/crowd_minimal.height` | `nav init-crowd-heightmap` |
-| `assets/terrain/crowd_minimal.navsurface` | `nav bake-crowd-navsurface` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/game.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Engine/clock.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Camera/virtual_cameras.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/config_catalog.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Navigation/navmesh.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Navigation/agent_profiles.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Entities/templates.json` | `mod init`，加了墙块模板 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/presenters.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/mesh_assets.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Presentation/crowd_terrain_type_overlay.json` | `mod init` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/CrowdSimulationConfig.json` | `mod init`，改了出生点 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/CrowdSimulationDebug.json` | `mod init`，改了脚本 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/Maps/crowd_minimal.json` | `mod init`，改了相机目标，墙块条目脚本生成 |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/terrain/crowd_minimal.map_data.bin` | `nav init-crowd-terrain` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/terrain/crowd_minimal.height` | `nav init-crowd-heightmap` |
+| `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/terrain/crowd_minimal.navsurface` | `nav bake-crowd-navsurface` |
 
 ## 做的过程中撞到的问题
 
