@@ -35,6 +35,12 @@ namespace Ludots.Core.Presentation.Presenters
                    _slotByEntityId[entity.Id] != 0;
         }
 
+        /// <summary>历史分配过的槽位高水位（单调递增，含已释放待复用的槽）。</summary>
+        public int AllocatedSlotHighWater => _highWaterMark;
+
+        /// <summary>当前占用槽位数：高水位减去空闲栈中待复用的槽。</summary>
+        public int ActiveSlotCount => _highWaterMark - _freeSlots.Count;
+
         public int Allocate(Entity entity, int controllerId)
         {
             return EnsureAndResolveSlot(entity, controllerId);

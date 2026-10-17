@@ -38,9 +38,9 @@ namespace Ludots.Tests.Presentation
             recorder.CapturePhase("pre-construct");
 
             // 引擎生命周期收在局部函数栈内：Debug 下方法局部会钉住 GC 根，
-            // 出栈后再采 post-dispose 才是真实释放后活集。
+            // 出栈后再采 post-dispose 才是真实释放后活集；post-dispose 用 LOH 压缩回收实测可达对象。
             LifecycleOutcome outcome = RunEngineLifecycle(recorder);
-            recorder.CapturePhase("post-dispose");
+            recorder.CapturePhase("post-dispose", compacting: true);
 
             string artifactDir = recorder.WriteArtifacts("artifacts/benchmarks/presenter-blacksmith-scatter-memory-phases");
             string reportPath = Path.Combine(artifactDir, "memory-phase-report.md");
@@ -66,6 +66,8 @@ namespace Ludots.Tests.Presentation
                 Assert.That(outcome.WorldHudDrops, Is.EqualTo(0), "观测期间 world HUD 不得丢弃。");
                 Assert.That(outcome.ScreenHudDrops, Is.EqualTo(0), "观测期间 screen HUD 不得丢弃。");
                 Assert.That(outcome.SkinnedDrops, Is.EqualTo(0), "观测期间 skinned 缓冲不得丢弃。");
+                Assert.That(recorder.AllocationSamplingActive, Is.True, "GCAllocationTick 事件源必须实际启用，否则热点证据降级。");
+                Assert.That(recorder.AllocationSamplingErrors, Is.EqualTo(0), "采样回调不得有吞掉的异常。");
                 Assert.That(File.Exists(reportPath), Is.True);
                 Assert.That(File.Exists(Path.Combine(artifactDir, "memory-phase-samples.jsonl")), Is.True);
             });
@@ -91,6 +93,8 @@ namespace Ludots.Tests.Presentation
                     recorder.CapturePhase("post-config", staged);
                     TestContext.Out.WriteLine(
                         $"merged presentation config: {PresentationMemoryPhaseRecorder.DescribePresentationConfig(staged)}");
+                    TestContext.Out.WriteLine(
+                        $"merged gas runtime capacity: {PresentationMemoryPhaseRecorder.DescribeGasRuntimeCapacityConfig(staged)}");
                 },
                 afterStart: staged => recorder.CapturePhase("post-start", staged));
 
@@ -131,6 +135,7 @@ namespace Ludots.Tests.Presentation
 
                 Assert.That(initFrames, Is.LessThan(MaxInitializationFrames), "30k scatter 初始化在帧预算内没有收敛。");
                 recorder.CapturePhase("post-init", engine);
+                recorder.CaptureSubPhasePoint("init-loop-break", engine);
 
                 var tree = CountBlacksmithTree(engine);
 

@@ -48,9 +48,9 @@ namespace Ludots.Tests.GAS.Production
             recorder.CapturePhase("pre-construct");
 
             // 引擎生命周期收在局部函数栈内：Debug 下方法局部会钉住 GC 根，
-            // 出栈后再采 post-dispose 才是真实释放后活集。
+            // 出栈后再采 post-dispose 才是真实释放后活集；post-dispose 用 LOH 压缩回收实测可达对象。
             (int settledMediumCount, int mediumBars) = RunEngineLifecycle(recorder);
-            recorder.CapturePhase("post-dispose");
+            recorder.CapturePhase("post-dispose", compacting: true);
 
             string artifactDir = recorder.WriteArtifacts("artifacts/benchmarks/visual-benchmark-medium-memory-phases");
             string reportPath = Path.Combine(artifactDir, "memory-phase-report.md");
@@ -61,6 +61,8 @@ namespace Ludots.Tests.GAS.Production
             {
                 Assert.That(settledMediumCount, Is.EqualTo(MediumEntityCount));
                 Assert.That(mediumBars, Is.GreaterThan(0), "medium 是 Presenter HUD 负载，必须产出 world HUD bar。");
+                Assert.That(recorder.AllocationSamplingActive, Is.True, "GCAllocationTick 事件源必须实际启用，否则热点证据降级。");
+                Assert.That(recorder.AllocationSamplingErrors, Is.EqualTo(0), "采样回调不得有吞掉的异常。");
                 Assert.That(File.Exists(reportPath), Is.True);
                 Assert.That(File.Exists(Path.Combine(artifactDir, "memory-phase-samples.jsonl")), Is.True);
             });
@@ -80,6 +82,8 @@ namespace Ludots.Tests.GAS.Production
             recorder.CapturePhase("post-config", engine);
             TestContext.Out.WriteLine(
                 $"merged presentation config: {PresentationMemoryPhaseRecorder.DescribePresentationConfig(engine)}");
+            TestContext.Out.WriteLine(
+                $"merged gas runtime capacity: {PresentationMemoryPhaseRecorder.DescribeGasRuntimeCapacityConfig(engine)}");
             engine.Start();
             recorder.CapturePhase("post-start", engine);
 
