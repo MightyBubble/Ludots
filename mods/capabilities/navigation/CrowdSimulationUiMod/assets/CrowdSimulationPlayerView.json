@@ -68,6 +68,7 @@
     "cycleClickTemplate": "CrowdSimulation.Player.CycleClickTemplate",
     "cycleClickRadius": "CrowdSimulation.Player.CycleClickRadius",
     "toggleMagicBox": "CrowdSimulation.Player.ToggleMagicBox",
+    "toggleOptimisticTerrain": "CrowdSimulation.Player.ToggleOptimisticTerrain",
     "cycleShape": "CrowdSimulation.Player.CycleShape",
     "clickCountDown": "CrowdSimulation.Player.ClickCountDown",
     "clickCountUp": "CrowdSimulation.Player.ClickCountUp",

@@ -241,6 +241,8 @@ public sealed class CrowdSimulationConfig
         public required bool LineOfSight { get; init; }
         /// <summary>观察者眼高，厘米。</summary>
         public required int EyeCm { get; init; }
+        /// <summary>开局是否把未探索地形当成可通行。order 的 fogTerrain 可在运行时改 CrowdFog.Terrain。</summary>
+        public required bool OptimisticTerrain { get; init; }
     }
 
     public sealed class FormationSection

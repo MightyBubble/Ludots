@@ -166,6 +166,7 @@ internal sealed class CrowdPlayerViewActions
     [JsonRequired] public string CycleClickTemplate { get; init; } = "";
     [JsonRequired] public string CycleClickRadius { get; init; } = "";
     [JsonRequired] public string ToggleMagicBox { get; init; } = "";
+    [JsonRequired] public string ToggleOptimisticTerrain { get; init; } = "";
     [JsonRequired] public string CycleShape { get; init; } = "";
     [JsonRequired] public string ClickCountDown { get; init; } = "";
     [JsonRequired] public string ClickCountUp { get; init; } = "";
@@ -192,6 +193,7 @@ internal sealed class CrowdPlayerViewActions
         Require(path, "cycleClickTemplate", CycleClickTemplate);
         Require(path, "cycleClickRadius", CycleClickRadius);
         Require(path, "toggleMagicBox", ToggleMagicBox);
+        Require(path, "toggleOptimisticTerrain", ToggleOptimisticTerrain);
         Require(path, "cycleShape", CycleShape);
         Require(path, "clickCountDown", ClickCountDown);
         Require(path, "clickCountUp", ClickCountUp);

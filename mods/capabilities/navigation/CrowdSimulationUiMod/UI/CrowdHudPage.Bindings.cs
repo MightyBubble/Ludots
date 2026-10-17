@@ -166,6 +166,7 @@ internal sealed partial class CrowdHudPage
     private CrowdHudClassSwitch[] _dockPages = null!;
     private CrowdHudClassSwitch _magicSwitch = null!;
     private CrowdHudClassSwitch _losSwitch = null!;
+    private CrowdHudClassSwitch _optimisticSwitch = null!;
     private CrowdHudClassSwitch _routeSwitch = null!;
     private CrowdHudClassSwitch _fogSwitch = null!;
     private CrowdHudClassSwitch[] _overlaySwitches = null!;
@@ -224,6 +225,7 @@ internal sealed partial class CrowdHudPage
         _dockPages = Visibilities("crowd-dock-deploy", "crowd-dock-tools", "crowd-dock-tests", "crowd-dock-prefs");
         _magicSwitch = Toggle("crowd-magic-switch", "nf-switch-on");
         _losSwitch = Toggle("crowd-los-switch", "nf-switch-on");
+        _optimisticSwitch = Toggle("crowd-optimistic-switch", "nf-switch-on");
         _routeSwitch = Toggle("crowd-pv-route-switch", "nf-switch-on");
         _fogSwitch = Toggle("crowd-pv-fog-switch", "nf-switch-on");
         _overlaySwitches = new CrowdHudClassSwitch[OverlayIds.Length];
