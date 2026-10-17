@@ -56,7 +56,7 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedName~CrowdSimulationTests.Showcases"
 ```
 
-真实窗口截图和录像在 `artifacts/acceptance/crowdsimulation-showcases/`，用 Raylib 客户端加 `mod:AgentBridgeMod` 拍：进图后暂停，每次步进 10 tick，到点截图。图里 HUD 第三行的 tick 是会话 tick。
+真实窗口截图和录像在 `artifacts/acceptance/crowdsimulation-showcases/`，用 Raylib 客户端加 `mod:AgentBridgeMod` 拍：进图后暂停，远离目标时每次步进 10 tick，距目标约 40 tick 以内每次 1 tick，并等 HUD 采样落到这个 tick 再截。会话 tick 在左栏调试视图「缓存」页的「tick / 指令日志」，格式是 `{会话 tick} / {指令日志条数}`。这一行在默认 1280×720 里布局 y=815，画在窗口外。2026-10-17 重拍行军和连点时，只在当次进程里把这两个场景的窗口改成 1280×1100，拍完把 `game.json` 还原。机器是 `Linux 6.12.94+ x86_64`，`DISPLAY=:1`，`LIBGL_ALWAYS_SOFTWARE=1`，`GALLIUM_DRIVER=llvmpipe`。六张图上的读数是：`march_leg1_a.png` 300 / 2，`march_leg2_b.png` 472 / 3，`march.png` 712 / 4，`repeat_click_leg1_settling.png` 300 / 2，`repeat_click_leg2_clicks.png` 480 / 5，`repeat_click.png` 630 / 10。
 
 | 场景 | 文件（会话 tick） |
 |---|---|
