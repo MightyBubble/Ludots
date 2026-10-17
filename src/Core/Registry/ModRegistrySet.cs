@@ -10,6 +10,7 @@ public sealed class ModRegistrySet
         Tags = CreateTags();
         Attributes = CreateAttributes();
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributeIds];
+        AttributeEventTagIds = new int[AttributeRegistry.MaxAttributes];
         AbilityIds = CreateAbilityIds();
         AbilityCategories = CreateAbilityCategories();
         EffectTemplateIds = CreateEffectTemplateIds();
@@ -21,6 +22,11 @@ public sealed class ModRegistrySet
     public IdentityTable Tags { get; private set; }
     public IdentityTable Attributes { get; private set; }
     public AttributeRegistry.AttributeConstraints[] AttributeConstraints { get; private set; }
+
+    /// <summary>
+    /// 属性 id 随当前登记表重发。事件标签映射挂在这张表上，换表后旧 id 不得继续指向旧标签。
+    /// </summary>
+    public int[] AttributeEventTagIds { get; private set; }
     public IdentityTable AbilityIds { get; private set; }
     public IdentityTable AbilityCategories { get; private set; }
     public IdentityTable EffectTemplateIds { get; private set; }
@@ -62,6 +68,7 @@ public sealed class ModRegistrySet
     {
         Attributes = CreateAttributes();
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributeIds];
+        AttributeEventTagIds = new int[AttributeRegistry.MaxAttributes];
     }
     public void ReplaceAbilityIds()
     {
