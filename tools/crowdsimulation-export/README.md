@@ -34,8 +34,10 @@ dotnet test src/Tests/CrowdSimulationTests --filter "FullyQualifiedName~CrowdFuz
 
 ## benchmarkStress50k.mjs
 
-与 `stress-50k.json` 同场景，在 Web 无头内核测每 tick 墙钟耗时（中位 / p95），输出 JSON 供文档对照 C# `CrowdKernel50KBenchmarkTests`。
+读 `stress-50k.json`（厘米、玩家 1..4），换成 Web 的米制和 0 基玩家后，用无头内核跑文件里的预热段和测量段。不读 `BENCH_SCENARIOS`。输出 JSON 供文档对照 C# `CrowdKernel50KBenchmarkTests`。
 
 ```bash
-node scripts/benchmarkStress50k.mjs --warmup 40 --measured 200
+node scripts/benchmarkStress50k.mjs --scenario mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json
 ```
+
+脚本放在 Web 沙盒的 `scripts/`（与 `src/engine/` 同级）时，`--scenario` 仍指向 Ludots 仓库里的那份文件。
