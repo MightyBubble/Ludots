@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="73b3d10a-d98d-4a2e-8da2-067a717e0162" name="ROG@DESKTOP-R0A3N5D 2026-10-17 20:27:43" runUser="DESKTOP-R0A3N5D\ROG" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-17T20:27:43.3559364+08:00" queuing="2026-10-17T20:27:43.3559367+08:00" start="2026-10-17T20:27:38.0020173+08:00" finish="2026-10-17T20:27:43.4024940+08:00" />
+  <TestSettings name="default" id="9c3d2e3d-3329-4829-a281-6f37d4b299aa">
+    <Deployment runDeploymentRoot="ROG_DESKTOP-R0A3N5D_2026-10-17_20_27_43" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="31c77764-0bdd-410a-b944-e954acfbff52" testId="c558b63a-3ec7-b08f-1e08-6c5d9ddb86d9" testName="RouteSink_UncommittedSyncDoesNotMutateActiveRouteState" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0041590" startTime="2026-10-17T20:27:43.3334796+08:00" endTime="2026-10-17T20:27:43.3376385+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="31c77764-0bdd-410a-b944-e954acfbff52" />
+    <UnitTestResult executionId="f829054d-7084-4ec8-8e9d-ba9a31b382da" testId="1fff960e-2c26-ceed-57a8-07edfbd43450" testName="RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0203100" startTime="2026-10-17T20:27:43.3131403+08:00" endTime="2026-10-17T20:27:43.3334498+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f829054d-7084-4ec8-8e9d-ba9a31b382da" />
+    <UnitTestResult executionId="ee6e1c60-014b-4c73-b7ee-c77fc5bbe98f" testId="5b4289b1-8e17-0a23-e201-c946233925f4" testName="RouteSink_MemberPathFailureRestoresPreparedRouteState" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0045010" startTime="2026-10-17T20:27:43.3086062+08:00" endTime="2026-10-17T20:27:43.3131069+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ee6e1c60-014b-4c73-b7ee-c77fc5bbe98f" />
+    <UnitTestResult executionId="c9802521-bc61-4a8c-9e6c-19617a446888" testId="506558b6-055a-eb4c-9a34-48e35579961d" testName="RouteSink_CachesRouteAndAdvancesWaypointWithoutReSolving" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0081020" startTime="2026-10-17T20:27:43.2663284+08:00" endTime="2026-10-17T20:27:43.2744299+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c9802521-bc61-4a8c-9e6c-19617a446888" />
+    <UnitTestResult executionId="80d3a248-7611-4dcf-ab61-a8c1de381247" testId="6736fae5-fe47-dbaf-bf2b-ab41d49edea4" testName="RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0127200" startTime="2026-10-17T20:27:43.2852133+08:00" endTime="2026-10-17T20:27:43.2979326+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="80d3a248-7611-4dcf-ab61-a8c1de381247" />
+    <UnitTestResult executionId="c7a79422-e0c9-4035-958e-924bfed427f9" testId="401deb2d-9e61-792f-4e04-babd27bd6131" testName="RouteSink_ConfiguredProfilePathFailureIsNotDowngradedToDirectTarget" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0106750" startTime="2026-10-17T20:27:43.2744877+08:00" endTime="2026-10-17T20:27:43.2851621+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c7a79422-e0c9-4035-958e-924bfed427f9" />
+    <UnitTestResult executionId="2b16a27e-2067-43df-8d6f-b9758f63b621" testId="e4689357-9042-6366-17e2-b5baafe729a3" testName="RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig" computerName="DESKTOP-R0A3N5D" duration="00:00:00.4094080" startTime="2026-10-17T20:27:42.8561578+08:00" endTime="2026-10-17T20:27:43.2655656+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b16a27e-2067-43df-8d6f-b9758f63b621" />
+    <UnitTestResult executionId="8edb7ef4-c870-4abf-b79c-8ff5592d3934" testId="7ba9180f-b6e4-5051-f461-eacd224338c0" testName="RouteSink_MemberPathFailureDoesNotApplyPartialBatchTargets" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0105990" startTime="2026-10-17T20:27:43.2979598+08:00" endTime="2026-10-17T20:27:43.3085584+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8edb7ef4-c870-4abf-b79c-8ff5592d3934" />
+    <UnitTestResult executionId="20c7800c-c603-4973-955e-c85d13ba3506" testId="76e1b0db-b635-eb95-ce15-c75cdd5cb627" testName="RouteSemantics_AdvanceCircleMustContainUnitStopCircle" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0147750" startTime="2026-10-17T20:27:42.8401953+08:00" endTime="2026-10-17T20:27:42.8549197+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="20c7800c-c603-4973-955e-c85d13ba3506" />
+    <UnitTestResult executionId="4cf22e9a-bbdb-4891-8b2e-7aaa237a6ee5" testId="d52881b7-1b57-e250-06f9-a7922a4acb0c" testName="RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0006890" startTime="2026-10-17T20:27:43.2656259+08:00" endTime="2026-10-17T20:27:43.2663147+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4cf22e9a-bbdb-4891-8b2e-7aaa237a6ee5" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="d52881b7-1b57-e250-06f9-a7922a4acb0c">
+      <Execution id="4cf22e9a-bbdb-4891-8b2e-7aaa237a6ee5" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt" />
+    </UnitTest>
+    <UnitTest name="RouteSink_ConfiguredProfilePathFailureIsNotDowngradedToDirectTarget" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="401deb2d-9e61-792f-4e04-babd27bd6131">
+      <Execution id="c7a79422-e0c9-4035-958e-924bfed427f9" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_ConfiguredProfilePathFailureIsNotDowngradedToDirectTarget" />
+    </UnitTest>
+    <UnitTest name="RouteSink_MemberPathFailureDoesNotApplyPartialBatchTargets" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7ba9180f-b6e4-5051-f461-eacd224338c0">
+      <Execution id="8edb7ef4-c870-4abf-b79c-8ff5592d3934" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_MemberPathFailureDoesNotApplyPartialBatchTargets" />
+    </UnitTest>
+    <UnitTest name="RouteSemantics_AdvanceCircleMustContainUnitStopCircle" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="76e1b0db-b635-eb95-ce15-c75cdd5cb627">
+      <Execution id="20c7800c-c603-4973-955e-c85d13ba3506" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSemantics_AdvanceCircleMustContainUnitStopCircle" />
+    </UnitTest>
+    <UnitTest name="RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="6736fae5-fe47-dbaf-bf2b-ab41d49edea4">
+      <Execution id="80d3a248-7611-4dcf-ab61-a8c1de381247" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased" />
+    </UnitTest>
+    <UnitTest name="RouteSink_MemberPathFailureRestoresPreparedRouteState" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="5b4289b1-8e17-0a23-e201-c946233925f4">
+      <Execution id="ee6e1c60-014b-4c73-b7ee-c77fc5bbe98f" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_MemberPathFailureRestoresPreparedRouteState" />
+    </UnitTest>
+    <UnitTest name="RouteSink_CachesRouteAndAdvancesWaypointWithoutReSolving" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="506558b6-055a-eb4c-9a34-48e35579961d">
+      <Execution id="c9802521-bc61-4a8c-9e6c-19617a446888" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_CachesRouteAndAdvancesWaypointWithoutReSolving" />
+    </UnitTest>
+    <UnitTest name="RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="1fff960e-2c26-ceed-57a8-07edfbd43450">
+      <Execution id="f829054d-7084-4ec8-8e9d-ba9a31b382da" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination" />
+    </UnitTest>
+    <UnitTest name="RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="e4689357-9042-6366-17e2-b5baafe729a3">
+      <Execution id="2b16a27e-2067-43df-8d6f-b9758f63b621" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig" />
+    </UnitTest>
+    <UnitTest name="RouteSink_UncommittedSyncDoesNotMutateActiveRouteState" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="c558b63a-3ec7-b08f-1e08-6c5d9ddb86d9">
+      <Execution id="31c77764-0bdd-410a-b944-e954acfbff52" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_UncommittedSyncDoesNotMutateActiveRouteState" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="c558b63a-3ec7-b08f-1e08-6c5d9ddb86d9" executionId="31c77764-0bdd-410a-b944-e954acfbff52" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1fff960e-2c26-ceed-57a8-07edfbd43450" executionId="f829054d-7084-4ec8-8e9d-ba9a31b382da" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5b4289b1-8e17-0a23-e201-c946233925f4" executionId="ee6e1c60-014b-4c73-b7ee-c77fc5bbe98f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="506558b6-055a-eb4c-9a34-48e35579961d" executionId="c9802521-bc61-4a8c-9e6c-19617a446888" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6736fae5-fe47-dbaf-bf2b-ab41d49edea4" executionId="80d3a248-7611-4dcf-ab61-a8c1de381247" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="401deb2d-9e61-792f-4e04-babd27bd6131" executionId="c7a79422-e0c9-4035-958e-924bfed427f9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e4689357-9042-6366-17e2-b5baafe729a3" executionId="2b16a27e-2067-43df-8d6f-b9758f63b621" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ba9180f-b6e4-5051-f461-eacd224338c0" executionId="8edb7ef4-c870-4abf-b79c-8ff5592d3934" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="76e1b0db-b635-eb95-ce15-c75cdd5cb627" executionId="20c7800c-c603-4973-955e-c85d13ba3506" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d52881b7-1b57-e250-06f9-a7922a4acb0c" executionId="4cf22e9a-bbdb-4891-8b2e-7aaa237a6ee5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="10" executed="10" passed="10" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll&#xD;
+   NUnit3TestExecutor discovered 10 of 10 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

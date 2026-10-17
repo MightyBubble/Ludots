@@ -167,6 +167,45 @@ public sealed class MinimapKnowledgeProjectionTests
     }
 
     [Test]
+    public void Refresh_DenseSamePixelKeepsFirstDisclosedMarkerAndUnknownYieldsPixel()
+    {
+        using GameEngine engine = CreateEngine();
+        MinimapRuntime runtime = CreateRuntime(maxMarkersPerFieldPixel: 1);
+        var markers = new MinimapMarkerBuffer(8);
+        var screenMarkers = new MinimapScreenMarkerBuffer(8);
+
+        Entity viewer = engine.World.Create();
+        Entity unknownTarget = engine.World.Create();
+        Entity liveTarget = engine.World.Create();
+        Entity lastKnownTarget = engine.World.Create();
+
+        var store = new KnowledgeProjectionStore(initialCapacity: 8);
+        store.Upsert(viewer, liveTarget, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
+        store.Upsert(viewer, lastKnownTarget, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer));
+        InstallKnowledgeServices(engine, store, null);
+        ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer, 1, "seat.0");
+
+        markers.BeginFrame();
+        var color = new Vector4(0.2f, 0.8f, 1f, 1f);
+        Assert.That(markers.TryAdd(9101, unknownTarget, 2000f, 0f, in color, 8f), Is.True);
+        Assert.That(markers.TryAdd(9102, liveTarget, 2000f, 0f, in color, 8f), Is.True);
+        Assert.That(markers.TryAdd(9103, lastKnownTarget, 2000f, 0f, in color, 8f), Is.True);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
+
+        runtime.Refresh(engine, markers, screenMarkers);
+        MinimapDebugSnapshot snapshot = runtime.CaptureDebugSnapshot();
+
+        Assert.That(snapshot.MarkerCount, Is.EqualTo(3));
+        Assert.That(snapshot.VisibleMarkerCount, Is.EqualTo(1),
+            "Same-pixel dense markers must keep exactly one marker under the one-per-field-pixel cap.");
+        Assert.That(screenMarkers.Count, Is.EqualTo(1));
+        Assert.That(snapshot.VisibleMarkers[0].KnowledgeState, Is.EqualTo(MinimapKnowledgeState.LiveVisible),
+            "The kept marker must be the first one through the knowledge check; an unknown marker must yield its pixel to later markers.");
+        Assert.That(snapshot.VisibleMarkers[0].WorldXcm, Is.EqualTo(2000f));
+    }
+
+    [Test]
     public void Issue198_RefreshKnowledgeFilteringAllocatesZeroAfterWarmup()
     {
         using GameEngine engine = CreateEngine();
@@ -220,10 +259,11 @@ public sealed class MinimapKnowledgeProjectionTests
         return engine;
     }
 
-    private static MinimapRuntime CreateRuntime()
+    private static MinimapRuntime CreateRuntime(int maxMarkersPerFieldPixel = 0)
     {
         return new MinimapRuntime(new MinimapRuntimeConfig
         {
+            MaxMarkersPerFieldPixel = maxMarkersPerFieldPixel,
             InitialZoomNormalized = 1f,
             WheelZoomNormalizedStep = 0.08f,
             ZoomSliderEnabled = true,

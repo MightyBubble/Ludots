@@ -13,6 +13,7 @@ using Ludots.UI;
 using NUnit.Framework;
 using OwnershipCascadeShowcaseMod;
 using OwnershipCascadeShowcaseMod.Runtime;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -36,7 +37,7 @@ public sealed class OwnershipCascadeShowcaseAcceptanceTests
     public void OwnershipCascadeShowcase_CapturesAndReclaimsOwnsChain()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "ownership-cascade-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/ownership-cascade-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

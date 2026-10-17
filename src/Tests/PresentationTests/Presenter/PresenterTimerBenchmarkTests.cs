@@ -9,6 +9,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -120,11 +121,7 @@ namespace Ludots.Tests.Presentation
 
         private static void WriteReport(in TimerBenchmarkResult single, in TimerBenchmarkResult triple)
         {
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "presenter-timer");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-timer");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             var sb = new StringBuilder();

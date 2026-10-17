@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="08ac1e06-1eca-4828-977b-433b723b9d72" name="ROG@DESKTOP-R0A3N5D 2026-10-17 20:43:22" runUser="DESKTOP-R0A3N5D\ROG" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-17T20:43:22.1348363+08:00" queuing="2026-10-17T20:43:22.1348366+08:00" start="2026-10-17T20:43:18.8307252+08:00" finish="2026-10-17T20:43:28.6509607+08:00" />
+  <TestSettings name="default" id="25175f5c-10d6-4968-91a5-45ac88d29eb4">
+    <Deployment runDeploymentRoot="ROG_DESKTOP-R0A3N5D_2026-10-17_20_43_22" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="7c97c6b2-9f16-497c-b6f4-7e48c7f5dc52" testId="0160549d-b916-8ad1-69ee-a55b53cd03a7" testName="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1920,1080)" computerName="DESKTOP-R0A3N5D" duration="00:00:02.4151189" startTime="2026-10-17T20:43:19.2597339+08:00" endTime="2026-10-17T20:43:21.6748277+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7c97c6b2-9f16-497c-b6f4-7e48c7f5dc52">
+      <Output>
+        <ErrorInfo>
+          <Message>  开局几帧画完后有 31 个像素和整张重画不同，范围 {Left=1895,Top=443,Width=1,Height=31}&#xD;
+Assert.That(first, Is.Zero)&#xD;
+  Expected: 0&#xD;
+  But was:  31&#xD;
+</Message>
+          <StackTrace>   at CrowdSimulationTests.Presentation.CrowdHudRetainedRepaintTests.SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(Int32 width, Int32 height) in D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\Presentation\CrowdHudRetainedRepaintTests.cs:line 20&#xD;
+
+1)    at CrowdSimulationTests.Presentation.CrowdHudRetainedRepaintTests.SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(Int32 width, Int32 height) in D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\Presentation\CrowdHudRetainedRepaintTests.cs:line 20&#xD;
+
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6249d08b-aadc-4c0f-9948-bf65d03a8afa" testId="04e16edb-abfd-c1ff-3d38-304c653b13b1" testName="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1280,720)" computerName="DESKTOP-R0A3N5D" duration="00:00:06.8232290" startTime="2026-10-17T20:43:21.6754210+08:00" endTime="2026-10-17T20:43:28.4986500+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6249d08b-aadc-4c0f-9948-bf65d03a8afa" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1280,720)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="04e16edb-abfd-c1ff-3d38-304c653b13b1">
+      <Execution id="6249d08b-aadc-4c0f-9948-bf65d03a8afa" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudRetainedRepaintTests" name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1280,720)" />
+    </UnitTest>
+    <UnitTest name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1920,1080)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="0160549d-b916-8ad1-69ee-a55b53cd03a7">
+      <Execution id="7c97c6b2-9f16-497c-b6f4-7e48c7f5dc52" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudRetainedRepaintTests" name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1920,1080)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="0160549d-b916-8ad1-69ee-a55b53cd03a7" executionId="7c97c6b2-9f16-497c-b6f4-7e48c7f5dc52" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="04e16edb-abfd-c1ff-3d38-304c653b13b1" executionId="6249d08b-aadc-4c0f-9948-bf65d03a8afa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="2" executed="2" passed="1" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll&#xD;
+   NUnit3TestExecutor discovered 2 of 2 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+DIFF x=1895 y=443 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=444 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=445 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=446 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=447 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=448 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=449 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=450 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=451 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=452 expected=FF74716C actual=FF74716D&#xD;
+DIFF x=1895 y=453 expected=FF74716C actual=FF74716D&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

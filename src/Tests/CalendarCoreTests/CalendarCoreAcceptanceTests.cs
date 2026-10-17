@@ -4,6 +4,7 @@ using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.CalendarCore;
 
@@ -14,8 +15,7 @@ public sealed class CalendarCoreAcceptanceTests
     [Test]
     public void CalendarCore_MultiCalendarFestivalsAndSubscribedDispatch_WritesAcceptanceArtifacts()
     {
-        string repoRoot = CalendarFixtures.FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "calendar-core");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/calendar-core");
         Directory.CreateDirectory(artifactDir);
 
         var rows = new List<PhaseRow>();

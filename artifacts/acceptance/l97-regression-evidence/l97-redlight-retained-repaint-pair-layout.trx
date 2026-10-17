@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="88960bc3-816f-4cad-a9a3-a1e6a0748a4c" name="ROG@DESKTOP-R0A3N5D 2026-10-17 20:44:28" runUser="DESKTOP-R0A3N5D\ROG" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-17T20:44:28.6962259+08:00" queuing="2026-10-17T20:44:28.6962261+08:00" start="2026-10-17T20:44:25.4072881+08:00" finish="2026-10-17T20:44:50.3023014+08:00" />
+  <TestSettings name="default" id="a7eaef99-c97a-4e34-b66d-91270fb559a9">
+    <Deployment runDeploymentRoot="ROG_DESKTOP-R0A3N5D_2026-10-17_20_44_28" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="2bccaf36-ce37-4122-a7b9-2230ebdf0547" testId="04e16edb-abfd-c1ff-3d38-304c653b13b1" testName="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1280,720)" computerName="DESKTOP-R0A3N5D" duration="00:00:06.8589810" startTime="2026-10-17T20:44:43.2913254+08:00" endTime="2026-10-17T20:44:50.1503063+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2bccaf36-ce37-4122-a7b9-2230ebdf0547" />
+    <UnitTestResult executionId="6575678e-a91e-4164-af62-8b5dbded24af" testId="aa606954-b991-c3bd-b986-44bffda52913" testName="AllPanelsOpen_MatchPrototypeZones_NoOverlap_AndCentreStaysClear(1280,720)" computerName="DESKTOP-R0A3N5D" duration="00:00:02.5460090" startTime="2026-10-17T20:44:28.1185088+08:00" endTime="2026-10-17T20:44:30.6645172+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6575678e-a91e-4164-af62-8b5dbded24af">
+      <Output>
+        <StdOut>1280x720 left UiRect { X = 12, Y = 12, Width = 272, Height = 696, Right = 284, Bottom = 708 } right UiRect { X = 996, Y = 12, Width = 272, Height = 696, Right = 1268, Bottom = 708 } bar UiRect { X = 332, Y = 12, Width = 616, Height = 54, Right = 948, Bottom = 66 } hint UiRect { X = 536, Y = 72, Width = 208, Height = 27, Right = 744, Bottom = 99 } dock UiRect { X = 296, Y = 396, Width = 688, Height = 312, Right = 984, Bottom = 708 } topBottom 158 clear 238</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ebec4f56-5bd5-4fa4-b193-49f7306f056b" testId="ed0ad19d-4dff-36ba-c555-433ccd2d6efd" testName="AllPanelsOpen_NoTextSpillsOutOfItsPanel(1920,1080)" computerName="DESKTOP-R0A3N5D" duration="00:00:02.7746150" startTime="2026-10-17T20:44:30.6660516+08:00" endTime="2026-10-17T20:44:33.4406663+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ebec4f56-5bd5-4fa4-b193-49f7306f056b" />
+    <UnitTestResult executionId="7218ed9d-42f2-4e40-8258-8a11416c686e" testId="09840ead-c75b-cde3-93b3-6e71df93588b" testName="AllPanelsOpen_NoTextSpillsOutOfItsPanel(1280,720)" computerName="DESKTOP-R0A3N5D" duration="00:00:02.7785780" startTime="2026-10-17T20:44:33.4407050+08:00" endTime="2026-10-17T20:44:36.2192826+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7218ed9d-42f2-4e40-8258-8a11416c686e" />
+    <UnitTestResult executionId="876f26d0-0a76-4d7e-96fc-8c071edd0b32" testId="bf9a71dc-4eaa-729e-7169-969fa2d89eda" testName="AllPanelsOpen_MatchPrototypeZones_NoOverlap_AndCentreStaysClear(1920,1080)" computerName="DESKTOP-R0A3N5D" duration="00:00:02.2806840" startTime="2026-10-17T20:44:25.8372543+08:00" endTime="2026-10-17T20:44:28.1178994+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="876f26d0-0a76-4d7e-96fc-8c071edd0b32">
+      <Output>
+        <StdOut>1920x1080 left UiRect { X = 12, Y = 12, Width = 288, Height = 1056, Right = 300, Bottom = 1068 } right UiRect { X = 1620, Y = 12, Width = 288, Height = 1056, Right = 1908, Bottom = 1068 } bar UiRect { X = 652, Y = 12, Width = 616, Height = 54, Right = 1268, Bottom = 66 } hint UiRect { X = 856, Y = 72, Width = 208, Height = 27, Right = 1064, Bottom = 99 } dock UiRect { X = 312, Y = 858, Width = 1296, Height = 210, Right = 1608, Bottom = 1068 } topBottom 99 clear 759</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="042064b3-7685-4dae-a802-8b1a5a524f4e" testId="0160549d-b916-8ad1-69ee-a55b53cd03a7" testName="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1920,1080)" computerName="DESKTOP-R0A3N5D" duration="00:00:07.0700770" startTime="2026-10-17T20:44:36.2211939+08:00" endTime="2026-10-17T20:44:43.2912702+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="042064b3-7685-4dae-a802-8b1a5a524f4e" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1280,720)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="04e16edb-abfd-c1ff-3d38-304c653b13b1">
+      <Execution id="2bccaf36-ce37-4122-a7b9-2230ebdf0547" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudRetainedRepaintTests" name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1280,720)" />
+    </UnitTest>
+    <UnitTest name="AllPanelsOpen_NoTextSpillsOutOfItsPanel(1280,720)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="09840ead-c75b-cde3-93b3-6e71df93588b">
+      <Execution id="7218ed9d-42f2-4e40-8258-8a11416c686e" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudLayoutTests" name="AllPanelsOpen_NoTextSpillsOutOfItsPanel(1280,720)" />
+    </UnitTest>
+    <UnitTest name="AllPanelsOpen_NoTextSpillsOutOfItsPanel(1920,1080)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="ed0ad19d-4dff-36ba-c555-433ccd2d6efd">
+      <Execution id="ebec4f56-5bd5-4fa4-b193-49f7306f056b" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudLayoutTests" name="AllPanelsOpen_NoTextSpillsOutOfItsPanel(1920,1080)" />
+    </UnitTest>
+    <UnitTest name="AllPanelsOpen_MatchPrototypeZones_NoOverlap_AndCentreStaysClear(1920,1080)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="bf9a71dc-4eaa-729e-7169-969fa2d89eda">
+      <Execution id="876f26d0-0a76-4d7e-96fc-8c071edd0b32" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudLayoutTests" name="AllPanelsOpen_MatchPrototypeZones_NoOverlap_AndCentreStaysClear(1920,1080)" />
+    </UnitTest>
+    <UnitTest name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1920,1080)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="0160549d-b916-8ad1-69ee-a55b53cd03a7">
+      <Execution id="042064b3-7685-4dae-a802-8b1a5a524f4e" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudRetainedRepaintTests" name="SampleRedraws_RepaintOnlyDamage_AndMatchAFullRepaintPixelForPixel(1920,1080)" />
+    </UnitTest>
+    <UnitTest name="AllPanelsOpen_MatchPrototypeZones_NoOverlap_AndCentreStaysClear(1280,720)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="aa606954-b991-c3bd-b986-44bffda52913">
+      <Execution id="6575678e-a91e-4164-af62-8b5dbded24af" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Presentation.CrowdHudLayoutTests" name="AllPanelsOpen_MatchPrototypeZones_NoOverlap_AndCentreStaysClear(1280,720)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="04e16edb-abfd-c1ff-3d38-304c653b13b1" executionId="2bccaf36-ce37-4122-a7b9-2230ebdf0547" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="aa606954-b991-c3bd-b986-44bffda52913" executionId="6575678e-a91e-4164-af62-8b5dbded24af" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ed0ad19d-4dff-36ba-c555-433ccd2d6efd" executionId="ebec4f56-5bd5-4fa4-b193-49f7306f056b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="09840ead-c75b-cde3-93b3-6e71df93588b" executionId="7218ed9d-42f2-4e40-8258-8a11416c686e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bf9a71dc-4eaa-729e-7169-969fa2d89eda" executionId="876f26d0-0a76-4d7e-96fc-8c071edd0b32" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0160549d-b916-8ad1-69ee-a55b53cd03a7" executionId="042064b3-7685-4dae-a802-8b1a5a524f4e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll&#xD;
+   NUnit3TestExecutor discovered 6 of 6 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+1920x1080 left UiRect { X = 12, Y = 12, Width = 288, Height = 1056, Right = 300, Bottom = 1068 } right UiRect { X = 1620, Y = 12, Width = 288, Height = 1056, Right = 1908, Bottom = 1068 } bar UiRect { X = 652, Y = 12, Width = 616, Height = 54, Right = 1268, Bottom = 66 } hint UiRect { X = 856, Y = 72, Width = 208, Height = 27, Right = 1064, Bottom = 99 } dock UiRect { X = 312, Y = 858, Width = 1296, Height = 210, Right = 1608, Bottom = 1068 } topBottom 99 clear 759&#xD;
+&#xD;
+1280x720 left UiRect { X = 12, Y = 12, Width = 272, Height = 696, Right = 284, Bottom = 708 } right UiRect { X = 996, Y = 12, Width = 272, Height = 696, Right = 1268, Bottom = 708 } bar UiRect { X = 332, Y = 12, Width = 616, Height = 54, Right = 948, Bottom = 66 } hint UiRect { X = 536, Y = 72, Width = 208, Height = 27, Right = 744, Bottom = 99 } dock UiRect { X = 296, Y = 396, Width = 688, Height = 312, Right = 984, Bottom = 708 } topBottom 158 clear 238&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

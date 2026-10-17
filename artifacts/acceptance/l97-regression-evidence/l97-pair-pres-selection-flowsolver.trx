@@ -1,0 +1,1517 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="67e414e6-94cc-4dcb-b86d-b8994c4cdd47" name="ROG@DESKTOP-R0A3N5D 2026-10-17 20:34:32" runUser="DESKTOP-R0A3N5D\ROG" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-17T20:34:32.8353609+08:00" queuing="2026-10-17T20:34:32.8353611+08:00" start="2026-10-17T20:34:32.0233848+08:00" finish="2026-10-17T20:35:07.4614459+08:00" />
+  <TestSettings name="default" id="fdb4d479-6712-4dc7-9c60-360f867d57be">
+    <Deployment runDeploymentRoot="ROG_DESKTOP-R0A3N5D_2026-10-17_20_34_32" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="04630951-520d-458f-985c-06b3328984e2" testId="5f3d5ee7-4fff-bef7-05ed-42b512168cf0" testName="MassNavigationConfig_RejectsLegacyWorldObstacles" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0046460" startTime="2026-10-17T20:34:32.8463531+08:00" endTime="2026-10-17T20:34:32.8509987+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04630951-520d-458f-985c-06b3328984e2" />
+    <UnitTestResult executionId="cb7b4cbc-e3ba-4b89-b6ed-d117ba87fe03" testId="33d8c928-8694-edb0-eca9-399872b279b8" testName="ParallelStep_RequiresSchedulerWhenConfiguredParallel" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0106649" startTime="2026-10-17T20:34:32.8827449+08:00" endTime="2026-10-17T20:34:32.8934096+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cb7b4cbc-e3ba-4b89-b6ed-d117ba87fe03" />
+    <UnitTestResult executionId="2232c62f-8f0e-4416-a7ed-9847f75f7cf8" testId="7e570c08-5059-be27-0b6a-d85fa08e50ec" testName="ScreenRegionBroadphaseRetainsCandidatesAcrossTheDeclaredHeightSpan" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0002980" startTime="2026-10-17T20:35:07.3004030+08:00" endTime="2026-10-17T20:35:07.3007008+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2232c62f-8f0e-4416-a7ed-9847f75f7cf8" />
+    <UnitTestResult executionId="4e45b35a-f274-4839-a979-0fc323390a24" testId="e6eb8b4e-448c-b748-3ce3-7db9233f57a6" testName="SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0112009" startTime="2026-10-17T20:34:33.0134000+08:00" endTime="2026-10-17T20:34:33.0246008+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4e45b35a-f274-4839-a979-0fc323390a24" />
+    <UnitTestResult executionId="90c65360-a019-4d35-8ea1-8859ea45fdac" testId="612e1a3d-a5f5-af83-209b-7f1baba992c2" testName="MassNavigationConfig_SonarModeRequiresSonarSection" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0032730" startTime="2026-10-17T20:34:32.8690322+08:00" endTime="2026-10-17T20:34:32.8723052+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="90c65360-a019-4d35-8ea1-8859ea45fdac" />
+    <UnitTestResult executionId="90dc1e92-5497-4d17-99aa-75c0f9abd97d" testId="3c33e89a-98b1-1510-f3ed-72f4680b533b" testName="SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0356990" startTime="2026-10-17T20:34:33.0246216+08:00" endTime="2026-10-17T20:34:33.0603200+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="90dc1e92-5497-4d17-99aa-75c0f9abd97d" />
+    <UnitTestResult executionId="bb28fe08-5e9c-43cc-b89a-9993b1c3f4cc" testId="bc199e49-4650-d5a2-f3df-ba788daddebc" testName="AutoSpawnLayout_RequiresExplicitRandomSeed" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0160170" startTime="2026-10-17T20:34:32.4897265+08:00" endTime="2026-10-17T20:34:32.5057178+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bb28fe08-5e9c-43cc-b89a-9993b1c3f4cc" />
+    <UnitTestResult executionId="09a5415a-8538-4d42-9248-1853d1d4daa5" testId="c9fdbb9a-1e98-96c2-63b2-d279d099f06e" testName="MarqueeHitUsesTheLastPresentedInterpolatedGroundPose" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0009390" startTime="2026-10-17T20:34:56.9389573+08:00" endTime="2026-10-17T20:34:56.9398964+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="09a5415a-8538-4d42-9248-1853d1d4daa5" />
+    <UnitTestResult executionId="49a0a837-12b7-4b3d-baab-87dadaa1ad65" testId="0f0f5f53-a103-b365-2819-cf26b16fbd58" testName="BattleContextProjectsControlsAndBoxSelectMounts" computerName="DESKTOP-R0A3N5D" duration="00:00:14.8628160" startTime="2026-10-17T20:34:33.2000460+08:00" endTime="2026-10-17T20:34:48.0628615+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="49a0a837-12b7-4b3d-baab-87dadaa1ad65">
+      <Output>
+        <StdOut>[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at D:\Ludots-wt\crowdsim-l97\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Skip code load for MassNavigationMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at D:\Ludots-wt\crowdsim-l97\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...&#xD;
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded&#xD;
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 17 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.cast_q.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.command_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Engine] Loading Map: mass_navigation&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (64000x64000 cells, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'&#xD;
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 4,096,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.&#xD;
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Navigation/navmesh.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json&#xD;
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.&#xD;
+[INF][Engine] Firing MapLoaded event for mass_navigation...&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+player entity: 7&#xD;
+battle id=4 installed=True&#xD;
+boxing id=5 installed=True&#xD;
+has InteractionContextInstance: True ctxId=4 inputCtx=1&#xD;
+startupInputContexts: Default_Gameplay&#xD;
+HasContext(CaseE.Controls) before ticks: True&#xD;
+HasContext(CaseE.Controls) after ticks: True&#xD;
+selectable collection count: 2500&#xD;
+marquee source: 10000 on-screen selectable, bbox=(436,336)-(1345,1042)&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 4 triggers to map 'mass_navigation'.&#xD;
+boxing active after press: True&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+selected collection count: 2500&#xD;
+[INF][Engine] Unloading ModLoader contexts...</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e4271ba0-77f5-440b-803a-cdff9ce39a3d" testId="70165454-a933-d4ee-b777-c32506577cbb" testName="RightClickOrdersTheControllableSelectionThroughTheCommandGraph" computerName="DESKTOP-R0A3N5D" duration="00:00:10.3583370" startTime="2026-10-17T20:34:56.9399109+08:00" endTime="2026-10-17T20:35:07.2982471+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4271ba0-77f5-440b-803a-cdff9ce39a3d">
+      <Output>
+        <StdOut>[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at D:\Ludots-wt\crowdsim-l97\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Skip code load for MassNavigationMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at D:\Ludots-wt\crowdsim-l97\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...&#xD;
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded&#xD;
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 17 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.cast_q.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.command_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Engine] Loading Map: mass_navigation&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (64000x64000 cells, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'&#xD;
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 4,096,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.&#xD;
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Navigation/navmesh.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json&#xD;
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.&#xD;
+[INF][Engine] Firing MapLoaded event for mass_navigation...&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+selected actors with an active order after right click: 2500/2500; drained=1 accepted=1 rejected=0 reason=&lt;none&gt;&#xD;
+[INF][Engine] Unloading ModLoader contexts...</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1242f8d2-6918-4774-986e-c8b114197bbc" testId="98d27ae2-0dd2-4c54-cf71-228984e5f498" testName="MarqueeHitAccountsForTerrainHeight" computerName="DESKTOP-R0A3N5D" duration="00:00:08.8759730" startTime="2026-10-17T20:34:48.0629291+08:00" endTime="2026-10-17T20:34:56.9389015+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1242f8d2-6918-4774-986e-c8b114197bbc">
+      <Output>
+        <StdOut>[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at D:\Ludots-wt\crowdsim-l97\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Skip code load for MassNavigationMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at D:\Ludots-wt\crowdsim-l97\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...&#xD;
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded&#xD;
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 17 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.cast_q.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.command_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Engine] Loading Map: mass_navigation&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (64000x64000 cells, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'&#xD;
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 4,096,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.&#xD;
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Navigation/navmesh.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json&#xD;
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.&#xD;
+[INF][Engine] Firing MapLoaded event for mass_navigation...&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+height=31193cm flat=(640,403) raised=(640,313) error=90px&#xD;
+flatRect+height=False raisedRect+height=True&#xD;
+[INF][Engine] Unloading ModLoader contexts...</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="efdbf8ce-967b-42ae-9f37-7502a82af9b4" testId="644699a1-9161-a016-33cf-63cfe6572fd8" testName="Step_UsesCallerDeltaTimeAsSingleSimulationClock" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0202789" startTime="2026-10-17T20:34:33.1748297+08:00" endTime="2026-10-17T20:34:33.1951089+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="efdbf8ce-967b-42ae-9f37-7502a82af9b4" />
+    <UnitTestResult executionId="29a6e897-ca61-4148-a73a-476bab7a9116" testId="435d33f0-653d-ffff-b8bd-afa2fd871625" testName="CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0037570" startTime="2026-10-17T20:34:32.5064858+08:00" endTime="2026-10-17T20:34:32.5102434+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="29a6e897-ca61-4148-a73a-476bab7a9116" />
+    <UnitTestResult executionId="a3bb565d-3b5a-4ca2-80df-2ba9129ede89" testId="7888fa96-9259-84fa-e54e-86145c2195fd" testName="MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0068700" startTime="2026-10-17T20:34:32.8510191+08:00" endTime="2026-10-17T20:34:32.8578892+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a3bb565d-3b5a-4ca2-80df-2ba9129ede89" />
+    <UnitTestResult executionId="e9a7a818-2f2a-414b-8006-9739a4c71600" testId="6586a654-beca-09bb-2fee-fc8f7e780f45" testName="CadenceAgentSlicing_RejectsUnsustainableSliceRate" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0001900" startTime="2026-10-17T20:34:32.5102588+08:00" endTime="2026-10-17T20:34:32.5104486+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e9a7a818-2f2a-414b-8006-9739a4c71600" />
+    <UnitTestResult executionId="d1ecf2cb-754a-4c01-ac23-54de6fd247da" testId="7e3b3e99-d69c-2f08-9c2b-e4bc3b8308a1" testName="MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0040419" startTime="2026-10-17T20:34:32.8621526+08:00" endTime="2026-10-17T20:34:32.8661941+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d1ecf2cb-754a-4c01-ac23-54de6fd247da" />
+    <UnitTestResult executionId="faf9bc65-a00d-4959-b92f-4a6566551482" testId="8736c1e4-c2f3-cf71-e932-753062368697" testName="ScreenProjectionRejectsInvalidHeightContracts" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0020699" startTime="2026-10-17T20:35:07.2982995+08:00" endTime="2026-10-17T20:35:07.3003693+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="faf9bc65-a00d-4959-b92f-4a6566551482" />
+    <UnitTestResult executionId="598d76df-c6b2-43bf-85f4-b3afac8dff00" testId="b138e8a0-3e3d-e6e1-0b1c-a2313a4d08a9" testName="SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0428020" startTime="2026-10-17T20:34:33.1056224+08:00" endTime="2026-10-17T20:34:33.1484239+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="598d76df-c6b2-43bf-85f4-b3afac8dff00" />
+    <UnitTestResult executionId="55ec5fc1-de04-44db-b699-217a09da0e2a" testId="651ab4eb-495f-8a2f-8f60-273c0ba47998" testName="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(1000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0921790" startTime="2026-10-17T20:34:32.5119070+08:00" endTime="2026-10-17T20:34:32.6040850+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="55ec5fc1-de04-44db-b699-217a09da0e2a">
+      <Output>
+        <StdOut>agents=1000 hardResolveMs=1.626 candidates=1000 pairs=4549 penetrating=241 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b6eb4f82-b122-475a-8f71-0b1c941e0f99" testId="107f1d01-f68f-c200-be87-597f7e439ec9" testName="ParallelStep_WorkerCountDoesNotChangeSimulationResult" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0414130" startTime="2026-10-17T20:34:32.8934318+08:00" endTime="2026-10-17T20:34:32.9348440+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b6eb4f82-b122-475a-8f71-0b1c941e0f99" />
+    <UnitTestResult executionId="dc3ac528-93cc-4c13-a0bf-3b5283f2b5b9" testId="089a5e5c-dcdd-ced4-d1ec-230ca935cad4" testName="MassNavigationConfig_RequiresExplicitParallelWorkerCount" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0020770" startTime="2026-10-17T20:34:32.8579060+08:00" endTime="2026-10-17T20:34:32.8599828+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dc3ac528-93cc-4c13-a0bf-3b5283f2b5b9" />
+    <UnitTestResult executionId="42ea5557-1f43-42a1-ab16-5d4ef3a687c3" testId="03dc6347-20e3-b9b0-7f67-41f85f2a459f" testName="SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0452380" startTime="2026-10-17T20:34:33.0603574+08:00" endTime="2026-10-17T20:34:33.1055948+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="42ea5557-1f43-42a1-ab16-5d4ef3a687c3" />
+    <UnitTestResult executionId="72206c43-7a07-4d51-9671-a321f533b7c9" testId="2e2ecb75-393d-ef89-bad2-87b47aa23fcf" testName="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(5000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0614310" startTime="2026-10-17T20:34:32.6041174+08:00" endTime="2026-10-17T20:34:32.6655477+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="72206c43-7a07-4d51-9671-a321f533b7c9">
+      <Output>
+        <StdOut>agents=5000 hardResolveMs=1.022 candidates=5000 pairs=23385 penetrating=1143 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d2be0043-5df2-4953-b4ad-ac5fffe8c9c6" testId="08ab2c00-f9e2-c604-1041-25aa2eec374f" testName="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(5000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0163500" startTime="2026-10-17T20:34:32.7713443+08:00" endTime="2026-10-17T20:34:32.7876942+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d2be0043-5df2-4953-b4ad-ac5fffe8c9c6">
+      <Output>
+        <StdOut>agents=5000 elapsedMs=4.253 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="66dffd7d-4298-44f4-9576-6ec53a61af4a" testId="ba7150bb-6289-d5ae-4146-9af87587701e" testName="SpawnJitter_UsesConfiguredSeedDeterministically" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0263400" startTime="2026-10-17T20:34:33.1484621+08:00" endTime="2026-10-17T20:34:33.1748021+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66dffd7d-4298-44f4-9576-6ec53a61af4a" />
+    <UnitTestResult executionId="85ecc1f2-72e6-4b07-8945-50f18fef6652" testId="4d4e1a34-5ebc-8526-d10f-5401b2125821" testName="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(1000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0082360" startTime="2026-10-17T20:34:32.7630896+08:00" endTime="2026-10-17T20:34:32.7713251+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="85ecc1f2-72e6-4b07-8945-50f18fef6652">
+      <Output>
+        <StdOut>agents=1000 elapsedMs=0.709 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="5037d5cd-1cbb-45fc-9fbb-5a546205086a" testId="7fbcbf1c-5d2b-be02-ca4a-d3905f76821d" testName="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(10000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0886620" startTime="2026-10-17T20:34:32.6655746+08:00" endTime="2026-10-17T20:34:32.7542365+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5037d5cd-1cbb-45fc-9fbb-5a546205086a">
+      <Output>
+        <StdOut>agents=10000 hardResolveMs=2.201 candidates=10000 pairs=48108 penetrating=2214 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a2db0a72-833b-4bdd-871c-abd0c1c0d35c" testId="638ee857-22ea-a17f-f86f-5adcdb37289e" testName="SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0784990" startTime="2026-10-17T20:34:32.9348707+08:00" endTime="2026-10-17T20:34:33.0133685+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a2db0a72-833b-4bdd-871c-abd0c1c0d35c" />
+    <UnitTestResult executionId="213ff00a-a22a-4536-aeda-7ba3912fc15a" testId="0dadf631-6594-568e-35d3-392c9660f707" testName="ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0103940" startTime="2026-10-17T20:34:32.8723287+08:00" endTime="2026-10-17T20:34:32.8827223+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="213ff00a-a22a-4536-aeda-7ba3912fc15a" />
+    <UnitTestResult executionId="24ffaed7-21a2-4258-a281-c2ae03d861e5" testId="95724ac5-fff9-debb-3dc0-5fe0cfb59f26" testName="HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0076400" startTime="2026-10-17T20:34:32.7553881+08:00" endTime="2026-10-17T20:34:32.7630283+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="24ffaed7-21a2-4258-a281-c2ae03d861e5" />
+    <UnitTestResult executionId="d1469840-9990-43a2-9a15-8b9878688d47" testId="28f6a95a-0c06-90b6-ae0b-c6c9dfec7b51" testName="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(10000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0339190" startTime="2026-10-17T20:34:32.7877160+08:00" endTime="2026-10-17T20:34:32.8216344+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d1469840-9990-43a2-9a15-8b9878688d47">
+      <Output>
+        <StdOut>agents=10000 elapsedMs=4.993 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a24ff9e7-536a-4e8c-9319-c29c8a117f88" testId="6cb8313c-8420-db4c-942a-44f1e3075eb8" testName="MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0027930" startTime="2026-10-17T20:34:32.8662150+08:00" endTime="2026-10-17T20:34:32.8690076+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a24ff9e7-536a-4e8c-9319-c29c8a117f88" />
+    <UnitTestResult executionId="63744a4f-3403-44b3-8fce-1b8d1b76667a" testId="b3930377-4d67-349b-f665-3dc033bd7ffc" testName="MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0119840" startTime="2026-10-17T20:34:32.8216989+08:00" endTime="2026-10-17T20:34:32.8336821+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="63744a4f-3403-44b3-8fce-1b8d1b76667a" />
+    <UnitTestResult executionId="b20dcacd-024a-4837-943d-543dca27998d" testId="23e32619-663d-32b3-17fc-305b41edff41" testName="MassNavigationConfig_HotZonesAreOptionalDebugSection" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0050430" startTime="2026-10-17T20:34:32.8379872+08:00" endTime="2026-10-17T20:34:32.8430296+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b20dcacd-024a-4837-943d-543dca27998d" />
+    <UnitTestResult executionId="f487f4b3-7d0d-433d-8d48-f16f7f8e4f58" testId="ede45ef2-7e15-2f29-97ba-a51c34b1b42d" testName="MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0021430" startTime="2026-10-17T20:34:32.8599963+08:00" endTime="2026-10-17T20:34:32.8621390+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f487f4b3-7d0d-433d-8d48-f16f7f8e4f58" />
+    <UnitTestResult executionId="5fa3c0c9-9341-4ddb-8828-059ae7894555" testId="f29e6c53-6753-8c89-4b5a-b616657ea63d" testName="CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0014240" startTime="2026-10-17T20:34:32.5104543+08:00" endTime="2026-10-17T20:34:32.5118779+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5fa3c0c9-9341-4ddb-8828-059ae7894555" />
+    <UnitTestResult executionId="fc8a4f2f-2a55-4652-ad48-95d20646a1a4" testId="17199fd7-feb5-200a-60fd-6fc0374b05a6" testName="Step_ZeroDeltaDoesNotAdvanceArrivalTimeout" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0042230" startTime="2026-10-17T20:34:33.1951463+08:00" endTime="2026-10-17T20:34:33.1993693+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fc8a4f2f-2a55-4652-ad48-95d20646a1a4" />
+    <UnitTestResult executionId="6b0be4c7-b1de-448a-acb6-17d645a6750b" testId="be2447da-51c4-a831-10db-0226b3e6593c" testName="MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0032880" startTime="2026-10-17T20:34:32.8430495+08:00" endTime="2026-10-17T20:34:32.8463371+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6b0be4c7-b1de-448a-acb6-17d645a6750b" />
+    <UnitTestResult executionId="c47d021d-cfd0-4ffb-a882-1779d275b484" testId="89f2e092-f205-9de1-e693-22d110bf8875" testName="MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0042470" startTime="2026-10-17T20:34:32.8337133+08:00" endTime="2026-10-17T20:34:32.8379604+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c47d021d-cfd0-4ffb-a882-1779d275b484" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="ParallelStep_WorkerCountDoesNotChangeSimulationResult" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="107f1d01-f68f-c200-be87-597f7e439ec9">
+      <Execution id="b6eb4f82-b122-475a-8f71-0b1c941e0f99" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="ParallelStep_WorkerCountDoesNotChangeSimulationResult" />
+    </UnitTest>
+    <UnitTest name="AutoSpawnLayout_RequiresExplicitRandomSeed" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="bc199e49-4650-d5a2-f3df-ba788daddebc">
+      <Execution id="bb28fe08-5e9c-43cc-b89a-9993b1c3f4cc" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="AutoSpawnLayout_RequiresExplicitRandomSeed" />
+    </UnitTest>
+    <UnitTest name="CadenceAgentSlicing_RejectsUnsustainableSliceRate" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="6586a654-beca-09bb-2fee-fc8f7e780f45">
+      <Execution id="e9a7a818-2f2a-414b-8006-9739a4c71600" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="CadenceAgentSlicing_RejectsUnsustainableSliceRate" />
+    </UnitTest>
+    <UnitTest name="ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="0dadf631-6594-568e-35d3-392c9660f707">
+      <Execution id="213ff00a-a22a-4536-aeda-7ba3912fc15a" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="ede45ef2-7e15-2f29-97ba-a51c34b1b42d">
+      <Execution id="f487f4b3-7d0d-433d-8d48-f16f7f8e4f58" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="e6eb8b4e-448c-b748-3ce3-7db9233f57a6">
+      <Execution id="4e45b35a-f274-4839-a979-0fc323390a24" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot" />
+    </UnitTest>
+    <UnitTest name="MarqueeHitAccountsForTerrainHeight" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="98d27ae2-0dd2-4c54-cf71-228984e5f498">
+      <Execution id="1242f8d2-6918-4774-986e-c8b114197bbc" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavSelectionChainTests" name="MarqueeHitAccountsForTerrainHeight" />
+    </UnitTest>
+    <UnitTest name="MarqueeHitUsesTheLastPresentedInterpolatedGroundPose" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="c9fdbb9a-1e98-96c2-63b2-d279d099f06e">
+      <Execution id="09a5415a-8538-4d42-9248-1853d1d4daa5" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavSelectionChainTests" name="MarqueeHitUsesTheLastPresentedInterpolatedGroundPose" />
+    </UnitTest>
+    <UnitTest name="BattleContextProjectsControlsAndBoxSelectMounts" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="0f0f5f53-a103-b365-2819-cf26b16fbd58">
+      <Execution id="49a0a837-12b7-4b3d-baab-87dadaa1ad65" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavSelectionChainTests" name="BattleContextProjectsControlsAndBoxSelectMounts" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_HotZonesAreOptionalDebugSection" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="23e32619-663d-32b3-17fc-305b41edff41">
+      <Execution id="b20dcacd-024a-4837-943d-543dca27998d" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_HotZonesAreOptionalDebugSection" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RejectsLegacyWorldObstacles" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="5f3d5ee7-4fff-bef7-05ed-42b512168cf0">
+      <Execution id="04630951-520d-458f-985c-06b3328984e2" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RejectsLegacyWorldObstacles" />
+    </UnitTest>
+    <UnitTest name="MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="b3930377-4d67-349b-f665-3dc033bd7ffc">
+      <Execution id="63744a4f-3403-44b3-8fce-1b8d1b76667a" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored" />
+    </UnitTest>
+    <UnitTest name="CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="f29e6c53-6753-8c89-4b5a-b616657ea63d">
+      <Execution id="5fa3c0c9-9341-4ddb-8828-059ae7894555" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks" />
+    </UnitTest>
+    <UnitTest name="SpawnJitter_UsesConfiguredSeedDeterministically" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="ba7150bb-6289-d5ae-4146-9af87587701e">
+      <Execution id="66dffd7d-4298-44f4-9576-6ec53a61af4a" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SpawnJitter_UsesConfiguredSeedDeterministically" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="03dc6347-20e3-b9b0-7f67-41f85f2a459f">
+      <Execution id="42ea5557-1f43-42a1-ab16-5d4ef3a687c3" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RequiresExplicitParallelWorkerCount" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="089a5e5c-dcdd-ced4-d1ec-230ca935cad4">
+      <Execution id="dc3ac528-93cc-4c13-a0bf-3b5283f2b5b9" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RequiresExplicitParallelWorkerCount" />
+    </UnitTest>
+    <UnitTest name="Step_UsesCallerDeltaTimeAsSingleSimulationClock" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="644699a1-9161-a016-33cf-63cfe6572fd8">
+      <Execution id="efdbf8ce-967b-42ae-9f37-7502a82af9b4" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="Step_UsesCallerDeltaTimeAsSingleSimulationClock" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="be2447da-51c4-a831-10db-0226b3e6593c">
+      <Execution id="6b0be4c7-b1de-448a-acb6-17d645a6750b" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(1000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="4d4e1a34-5ebc-8526-d10f-5401b2125821">
+      <Execution id="85ecc1f2-72e6-4b07-8945-50f18fef6652" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(1000)" />
+    </UnitTest>
+    <UnitTest name="ParallelStep_RequiresSchedulerWhenConfiguredParallel" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="33d8c928-8694-edb0-eca9-399872b279b8">
+      <Execution id="cb7b4cbc-e3ba-4b89-b6ed-d117ba87fe03" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="ParallelStep_RequiresSchedulerWhenConfiguredParallel" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="638ee857-22ea-a17f-f86f-5adcdb37289e">
+      <Execution id="a2db0a72-833b-4bdd-871c-abd0c1c0d35c" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity" />
+    </UnitTest>
+    <UnitTest name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(5000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="2e2ecb75-393d-ef89-bad2-87b47aa23fcf">
+      <Execution id="72206c43-7a07-4d51-9671-a321f533b7c9" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(5000)" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(10000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="28f6a95a-0c06-90b6-ae0b-c6c9dfec7b51">
+      <Execution id="d1469840-9990-43a2-9a15-8b9878688d47" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(10000)" />
+    </UnitTest>
+    <UnitTest name="CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="435d33f0-653d-ffff-b8bd-afa2fd871625">
+      <Execution id="29a6e897-ca61-4148-a73a-476bab7a9116" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(5000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="08ab2c00-f9e2-c604-1041-25aa2eec374f">
+      <Execution id="d2be0043-5df2-4953-b4ad-ac5fffe8c9c6" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(5000)" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="b138e8a0-3e3d-e6e1-0b1c-a2313a4d08a9">
+      <Execution id="598d76df-c6b2-43bf-85f4-b3afac8dff00" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_SonarModeRequiresSonarSection" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="612e1a3d-a5f5-af83-209b-7f1baba992c2">
+      <Execution id="90c65360-a019-4d35-8ea1-8859ea45fdac" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_SonarModeRequiresSonarSection" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="95724ac5-fff9-debb-3dc0-5fe0cfb59f26">
+      <Execution id="24ffaed7-21a2-4258-a281-c2ae03d861e5" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="3c33e89a-98b1-1510-f3ed-72f4680b533b">
+      <Execution id="90dc1e92-5497-4d17-99aa-75c0f9abd97d" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity" />
+    </UnitTest>
+    <UnitTest name="RightClickOrdersTheControllableSelectionThroughTheCommandGraph" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="70165454-a933-d4ee-b777-c32506577cbb">
+      <Execution id="e4271ba0-77f5-440b-803a-cdff9ce39a3d" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavSelectionChainTests" name="RightClickOrdersTheControllableSelectionThroughTheCommandGraph" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="89f2e092-f205-9de1-e693-22d110bf8875">
+      <Execution id="c47d021d-cfd0-4ffb-a882-1779d275b484" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds" />
+    </UnitTest>
+    <UnitTest name="ScreenRegionBroadphaseRetainsCandidatesAcrossTheDeclaredHeightSpan" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7e570c08-5059-be27-0b6a-d85fa08e50ec">
+      <Execution id="2232c62f-8f0e-4416-a7ed-9847f75f7cf8" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavSelectionChainTests" name="ScreenRegionBroadphaseRetainsCandidatesAcrossTheDeclaredHeightSpan" />
+    </UnitTest>
+    <UnitTest name="ScreenProjectionRejectsInvalidHeightContracts" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="8736c1e4-c2f3-cf71-e932-753062368697">
+      <Execution id="faf9bc65-a00d-4959-b92f-4a6566551482" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavSelectionChainTests" name="ScreenProjectionRejectsInvalidHeightContracts" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7888fa96-9259-84fa-e54e-86145c2195fd">
+      <Execution id="a3bb565d-3b5a-4ca2-80df-2ba9129ede89" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping" />
+    </UnitTest>
+    <UnitTest name="Step_ZeroDeltaDoesNotAdvanceArrivalTimeout" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="17199fd7-feb5-200a-60fd-6fc0374b05a6">
+      <Execution id="fc8a4f2f-2a55-4652-ad48-95d20646a1a4" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="Step_ZeroDeltaDoesNotAdvanceArrivalTimeout" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7e3b3e99-d69c-2f08-9c2b-e4bc3b8308a1">
+      <Execution id="d1ecf2cb-754a-4c01-ac23-54de6fd247da" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="6cb8313c-8420-db4c-942a-44f1e3075eb8">
+      <Execution id="a24ff9e7-536a-4e8c-9319-c29c8a117f88" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections" />
+    </UnitTest>
+    <UnitTest name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(10000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7fbcbf1c-5d2b-be02-ca4a-d3905f76821d">
+      <Execution id="5037d5cd-1cbb-45fc-9fbb-5a546205086a" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(10000)" />
+    </UnitTest>
+    <UnitTest name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(1000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="651ab4eb-495f-8a2f-8f60-273c0ba47998">
+      <Execution id="55ec5fc1-de04-44db-b699-217a09da0e2a" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(1000)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5f3d5ee7-4fff-bef7-05ed-42b512168cf0" executionId="04630951-520d-458f-985c-06b3328984e2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="33d8c928-8694-edb0-eca9-399872b279b8" executionId="cb7b4cbc-e3ba-4b89-b6ed-d117ba87fe03" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e570c08-5059-be27-0b6a-d85fa08e50ec" executionId="2232c62f-8f0e-4416-a7ed-9847f75f7cf8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e6eb8b4e-448c-b748-3ce3-7db9233f57a6" executionId="4e45b35a-f274-4839-a979-0fc323390a24" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="612e1a3d-a5f5-af83-209b-7f1baba992c2" executionId="90c65360-a019-4d35-8ea1-8859ea45fdac" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3c33e89a-98b1-1510-f3ed-72f4680b533b" executionId="90dc1e92-5497-4d17-99aa-75c0f9abd97d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc199e49-4650-d5a2-f3df-ba788daddebc" executionId="bb28fe08-5e9c-43cc-b89a-9993b1c3f4cc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c9fdbb9a-1e98-96c2-63b2-d279d099f06e" executionId="09a5415a-8538-4d42-9248-1853d1d4daa5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0f0f5f53-a103-b365-2819-cf26b16fbd58" executionId="49a0a837-12b7-4b3d-baab-87dadaa1ad65" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="70165454-a933-d4ee-b777-c32506577cbb" executionId="e4271ba0-77f5-440b-803a-cdff9ce39a3d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="98d27ae2-0dd2-4c54-cf71-228984e5f498" executionId="1242f8d2-6918-4774-986e-c8b114197bbc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="644699a1-9161-a016-33cf-63cfe6572fd8" executionId="efdbf8ce-967b-42ae-9f37-7502a82af9b4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="435d33f0-653d-ffff-b8bd-afa2fd871625" executionId="29a6e897-ca61-4148-a73a-476bab7a9116" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7888fa96-9259-84fa-e54e-86145c2195fd" executionId="a3bb565d-3b5a-4ca2-80df-2ba9129ede89" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6586a654-beca-09bb-2fee-fc8f7e780f45" executionId="e9a7a818-2f2a-414b-8006-9739a4c71600" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e3b3e99-d69c-2f08-9c2b-e4bc3b8308a1" executionId="d1ecf2cb-754a-4c01-ac23-54de6fd247da" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8736c1e4-c2f3-cf71-e932-753062368697" executionId="faf9bc65-a00d-4959-b92f-4a6566551482" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b138e8a0-3e3d-e6e1-0b1c-a2313a4d08a9" executionId="598d76df-c6b2-43bf-85f4-b3afac8dff00" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="651ab4eb-495f-8a2f-8f60-273c0ba47998" executionId="55ec5fc1-de04-44db-b699-217a09da0e2a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="107f1d01-f68f-c200-be87-597f7e439ec9" executionId="b6eb4f82-b122-475a-8f71-0b1c941e0f99" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="089a5e5c-dcdd-ced4-d1ec-230ca935cad4" executionId="dc3ac528-93cc-4c13-a0bf-3b5283f2b5b9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03dc6347-20e3-b9b0-7f67-41f85f2a459f" executionId="42ea5557-1f43-42a1-ab16-5d4ef3a687c3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2e2ecb75-393d-ef89-bad2-87b47aa23fcf" executionId="72206c43-7a07-4d51-9671-a321f533b7c9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="08ab2c00-f9e2-c604-1041-25aa2eec374f" executionId="d2be0043-5df2-4953-b4ad-ac5fffe8c9c6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ba7150bb-6289-d5ae-4146-9af87587701e" executionId="66dffd7d-4298-44f4-9576-6ec53a61af4a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4d4e1a34-5ebc-8526-d10f-5401b2125821" executionId="85ecc1f2-72e6-4b07-8945-50f18fef6652" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7fbcbf1c-5d2b-be02-ca4a-d3905f76821d" executionId="5037d5cd-1cbb-45fc-9fbb-5a546205086a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="638ee857-22ea-a17f-f86f-5adcdb37289e" executionId="a2db0a72-833b-4bdd-871c-abd0c1c0d35c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0dadf631-6594-568e-35d3-392c9660f707" executionId="213ff00a-a22a-4536-aeda-7ba3912fc15a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="95724ac5-fff9-debb-3dc0-5fe0cfb59f26" executionId="24ffaed7-21a2-4258-a281-c2ae03d861e5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="28f6a95a-0c06-90b6-ae0b-c6c9dfec7b51" executionId="d1469840-9990-43a2-9a15-8b9878688d47" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6cb8313c-8420-db4c-942a-44f1e3075eb8" executionId="a24ff9e7-536a-4e8c-9319-c29c8a117f88" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b3930377-4d67-349b-f665-3dc033bd7ffc" executionId="63744a4f-3403-44b3-8fce-1b8d1b76667a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="23e32619-663d-32b3-17fc-305b41edff41" executionId="b20dcacd-024a-4837-943d-543dca27998d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ede45ef2-7e15-2f29-97ba-a51c34b1b42d" executionId="f487f4b3-7d0d-433d-8d48-f16f7f8e4f58" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f29e6c53-6753-8c89-4b5a-b616657ea63d" executionId="5fa3c0c9-9341-4ddb-8828-059ae7894555" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="17199fd7-feb5-200a-60fd-6fc0374b05a6" executionId="fc8a4f2f-2a55-4652-ad48-95d20646a1a4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="be2447da-51c4-a831-10db-0226b3e6593c" executionId="6b0be4c7-b1de-448a-acb6-17d645a6750b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="89f2e092-f205-9de1-e693-22d110bf8875" executionId="c47d021d-cfd0-4ffb-a882-1779d275b484" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="39" executed="39" passed="39" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll&#xD;
+   NUnit3TestExecutor discovered 39 of 39 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+agents=1000 hardResolveMs=1.626 candidates=1000 pairs=4549 penetrating=241 allocated=0&#xD;
+&#xD;
+agents=5000 hardResolveMs=1.022 candidates=5000 pairs=23385 penetrating=1143 allocated=0&#xD;
+&#xD;
+agents=10000 hardResolveMs=2.201 candidates=10000 pairs=48108 penetrating=2214 allocated=0&#xD;
+&#xD;
+agents=1000 elapsedMs=0.709 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0&#xD;
+&#xD;
+agents=5000 elapsedMs=4.253 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0&#xD;
+&#xD;
+agents=10000 elapsedMs=4.993 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0&#xD;
+&#xD;
+[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at D:\Ludots-wt\crowdsim-l97\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Skip code load for MassNavigationMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at D:\Ludots-wt\crowdsim-l97\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...&#xD;
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded&#xD;
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 17 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.cast_q.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.command_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Engine] Loading Map: mass_navigation&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (64000x64000 cells, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'&#xD;
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 4,096,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.&#xD;
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Navigation/navmesh.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json&#xD;
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.&#xD;
+[INF][Engine] Firing MapLoaded event for mass_navigation...&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+player entity: 7&#xD;
+battle id=4 installed=True&#xD;
+boxing id=5 installed=True&#xD;
+has InteractionContextInstance: True ctxId=4 inputCtx=1&#xD;
+startupInputContexts: Default_Gameplay&#xD;
+HasContext(CaseE.Controls) before ticks: True&#xD;
+HasContext(CaseE.Controls) after ticks: True&#xD;
+selectable collection count: 2500&#xD;
+marquee source: 10000 on-screen selectable, bbox=(436,336)-(1345,1042)&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 4 triggers to map 'mass_navigation'.&#xD;
+boxing active after press: True&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+selected collection count: 2500&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+&#xD;
+[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at D:\Ludots-wt\crowdsim-l97\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Skip code load for MassNavigationMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at D:\Ludots-wt\crowdsim-l97\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...&#xD;
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded&#xD;
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 17 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.cast_q.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.command_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Engine] Loading Map: mass_navigation&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (64000x64000 cells, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'&#xD;
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 4,096,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.&#xD;
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Navigation/navmesh.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json&#xD;
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.&#xD;
+[INF][Engine] Firing MapLoaded event for mass_navigation...&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+height=31193cm flat=(640,403) raised=(640,313) error=90px&#xD;
+flatRect+height=False raisedRect+height=True&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+&#xD;
+[INF][Engine] Initializing with ConfigPipeline...&#xD;
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4&#xD;
+[INF][ModLoader] Mod Load Order:&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):&#xD;
+[INF][ModLoader] - LudotsCoreMod (P:-1000)&#xD;
+[INF][ModLoader] - SelectionInteractionMod (P:0)&#xD;
+[INF][ModLoader] - MassNavigationMod (P:0)&#xD;
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)&#xD;
+[INF][ModLoader] Loading DLL for LudotsCoreMod at D:\Ludots-wt\crowdsim-l97\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...&#xD;
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized&#xD;
+[INF][ModLoader] LudotsCoreMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded LudotsCoreMod&#xD;
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Skip code load for MassNavigationMod: manifest has no 'main' (asset-only mod).&#xD;
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at D:\Ludots-wt\crowdsim-l97\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll&#xD;
+[INF][ModLoader] Scanning 2 types in assembly...&#xD;
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...&#xD;
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded&#xD;
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.&#xD;
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod&#xD;
+[INF][Config] Merged fragment from: Core:game.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json&#xD;
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod&#xD;
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Config] Loading DataRegistry&lt;EntityTemplate&gt; from Entities/templates.json...&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json&#xD;
+[INF][Config] Loaded 17 DataRegistry&lt;EntityTemplate&gt; items.&#xD;
+[INF][Engine] Initializing Core GAS Systems...&#xD;
+[INF][Config] Merged fragment from: Core:Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json&#xD;
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json&#xD;
+[INF][Config] Merged fragment from: Core:Enums/enums.json&#xD;
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json&#xD;
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.cast_q.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.command_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/scopes.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/progressions.json&#xD;
+[INF][Config] Merged fragment from: Core:Progression/requirements.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/shapes.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/layouts.json&#xD;
+[INF][Config] Merged fragment from: Core:Items/definitions.json&#xD;
+[INF][Config] Merged fragment from: Core:Exchange/operations.json&#xD;
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json&#xD;
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json&#xD;
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json&#xD;
+[INF][Config] Merged fragment from: Core:AI/hfsm.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json&#xD;
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json&#xD;
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/lines.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json&#xD;
+[INF][Config] Merged fragment from: Core:Story/speakers.json&#xD;
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json&#xD;
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json&#xD;
+[INF][ModLoader] No registration conflicts detected.&#xD;
+[INF][Config] Merged fragment from: Core:config_catalog.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json&#xD;
+[INF][Config] Merged fragment from: Core:Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json&#xD;
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json&#xD;
+[INF][Engine] Firing GameStart event...&#xD;
+[LudotsCoreMod] Core systems installed&#xD;
+[INF][Engine] Loading Map: mass_navigation&#xD;
+[INF][Map] Loading Map: mass_navigation&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json&#xD;
+[INF][Map] Map 'mass_navigation' loaded.&#xD;
+[INF][Map] Creating GridBoard 'default' (64000x64000 cells, cell=100cm)&#xD;
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'&#xD;
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).&#xD;
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 4,096,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.&#xD;
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json&#xD;
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Navigation/navmesh.json&#xD;
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.&#xD;
+[INF][Engine] Creating Entities from MapConfig...&#xD;
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.&#xD;
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60&#xD;
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json&#xD;
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json&#xD;
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.&#xD;
+[INF][Engine] Firing MapLoaded event for mass_navigation...&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.&#xD;
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.&#xD;
+[INF][Engine] Appended 8 triggers to map 'mass_navigation'.&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).&#xD;
+selected actors with an active order after right click: 2500/2500; drained=1 accepted=1 rejected=0 reason=&lt;none&gt;&#xD;
+[INF][Engine] Unloading ModLoader contexts...&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

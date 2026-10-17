@@ -1,0 +1,321 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="be0a0ee4-a820-4e0b-87f1-9f01d679b980" name="ROG@DESKTOP-R0A3N5D 2026-10-17 20:35:17" runUser="DESKTOP-R0A3N5D\ROG" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-17T20:35:17.3189520+08:00" queuing="2026-10-17T20:35:17.3189525+08:00" start="2026-10-17T20:35:16.5097918+08:00" finish="2026-10-17T20:35:17.8626418+08:00" />
+  <TestSettings name="default" id="5620e74d-48b6-4ea9-84e3-54230f06827c">
+    <Deployment runDeploymentRoot="ROG_DESKTOP-R0A3N5D_2026-10-17_20_35_17" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="bb8c7f28-bde3-4b74-922c-ffde69b96aa8" testId="d52881b7-1b57-e250-06f9-a7922a4acb0c" testName="RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0003570" startTime="2026-10-17T20:35:17.6975914+08:00" endTime="2026-10-17T20:35:17.6979481+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bb8c7f28-bde3-4b74-922c-ffde69b96aa8" />
+    <UnitTestResult executionId="feb972fd-2851-4890-ab1d-defaf3d056ff" testId="e6eb8b4e-448c-b748-3ce3-7db9233f57a6" testName="SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0116910" startTime="2026-10-17T20:35:17.4958758+08:00" endTime="2026-10-17T20:35:17.5075667+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="feb972fd-2851-4890-ab1d-defaf3d056ff" />
+    <UnitTestResult executionId="56767fad-0697-42da-a6b0-39ef11c8d809" testId="4d4e1a34-5ebc-8526-d10f-5401b2125821" testName="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(1000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0096390" startTime="2026-10-17T20:35:17.2560663+08:00" endTime="2026-10-17T20:35:17.2657057+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="56767fad-0697-42da-a6b0-39ef11c8d809">
+      <Output>
+        <StdOut>agents=1000 elapsedMs=0.776 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6ef3eb49-36be-4103-a55d-a00ab9ea6925" testId="7fbcbf1c-5d2b-be02-ca4a-d3905f76821d" testName="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(10000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0881400" startTime="2026-10-17T20:35:17.1597234+08:00" endTime="2026-10-17T20:35:17.2478632+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6ef3eb49-36be-4103-a55d-a00ab9ea6925">
+      <Output>
+        <StdOut>agents=10000 hardResolveMs=2.180 candidates=10000 pairs=48108 penetrating=2214 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a7f2c5f4-c5b1-4f2d-b48b-dd54847c072c" testId="6736fae5-fe47-dbaf-bf2b-ab41d49edea4" testName="RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0055770" startTime="2026-10-17T20:35:17.7042191+08:00" endTime="2026-10-17T20:35:17.7097957+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a7f2c5f4-c5b1-4f2d-b48b-dd54847c072c" />
+    <UnitTestResult executionId="6014b807-f0c9-48c3-8c35-bcef79a1097d" testId="638ee857-22ea-a17f-f86f-5adcdb37289e" testName="SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0734260" startTime="2026-10-17T20:35:17.4224198+08:00" endTime="2026-10-17T20:35:17.4958453+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6014b807-f0c9-48c3-8c35-bcef79a1097d" />
+    <UnitTestResult executionId="334c6f4d-fd99-4bd3-9adc-36184574ada1" testId="6586a654-beca-09bb-2fee-fc8f7e780f45" testName="CadenceAgentSlicing_RejectsUnsustainableSliceRate" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0002440" startTime="2026-10-17T20:35:16.9946152+08:00" endTime="2026-10-17T20:35:16.9948585+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="334c6f4d-fd99-4bd3-9adc-36184574ada1" />
+    <UnitTestResult executionId="e738063f-03ee-47c6-bd68-5da6e2ea4aee" testId="0dadf631-6594-568e-35d3-392c9660f707" testName="ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0101110" startTime="2026-10-17T20:35:17.3541918+08:00" endTime="2026-10-17T20:35:17.3643022+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e738063f-03ee-47c6-bd68-5da6e2ea4aee" />
+    <UnitTestResult executionId="e6e20a22-23c7-464f-92f2-e051bed32410" testId="6cb8313c-8420-db4c-942a-44f1e3075eb8" testName="MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0024140" startTime="2026-10-17T20:35:17.3489460+08:00" endTime="2026-10-17T20:35:17.3513597+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e6e20a22-23c7-464f-92f2-e051bed32410" />
+    <UnitTestResult executionId="62994705-7db0-4761-b961-dac55ba6eb57" testId="3c33e89a-98b1-1510-f3ed-72f4680b533b" testName="SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0342080" startTime="2026-10-17T20:35:17.5075940+08:00" endTime="2026-10-17T20:35:17.5418009+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62994705-7db0-4761-b961-dac55ba6eb57" />
+    <UnitTestResult executionId="baa12f5d-391f-4c7f-976e-624f38f9aab7" testId="28f6a95a-0c06-90b6-ae0b-c6c9dfec7b51" testName="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(10000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0225320" startTime="2026-10-17T20:35:17.2830626+08:00" endTime="2026-10-17T20:35:17.3055946+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="baa12f5d-391f-4c7f-976e-624f38f9aab7">
+      <Output>
+        <StdOut>agents=10000 elapsedMs=5.005 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="c9da1291-cfd9-4dfc-bf4d-766fad440a63" testId="b138e8a0-3e3d-e6e1-0b1c-a2313a4d08a9" testName="SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0433889" startTime="2026-10-17T20:35:17.5853841+08:00" endTime="2026-10-17T20:35:17.6287721+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c9da1291-cfd9-4dfc-bf4d-766fad440a63" />
+    <UnitTestResult executionId="18012823-59ce-4421-ac45-8eddce48ba45" testId="5f3d5ee7-4fff-bef7-05ed-42b512168cf0" testName="MassNavigationConfig_RejectsLegacyWorldObstacles" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0048120" startTime="2026-10-17T20:35:17.3282329+08:00" endTime="2026-10-17T20:35:17.3330444+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="18012823-59ce-4421-ac45-8eddce48ba45" />
+    <UnitTestResult executionId="cdd221ff-daa5-45df-aae2-91d7a78010dc" testId="33d8c928-8694-edb0-eca9-399872b279b8" testName="ParallelStep_RequiresSchedulerWhenConfiguredParallel" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0173640" startTime="2026-10-17T20:35:17.3643290+08:00" endTime="2026-10-17T20:35:17.3816928+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cdd221ff-daa5-45df-aae2-91d7a78010dc" />
+    <UnitTestResult executionId="a3388bf7-e210-4d19-b82c-89209f5f8399" testId="7ba9180f-b6e4-5051-f461-eacd224338c0" testName="RouteSink_MemberPathFailureDoesNotApplyPartialBatchTargets" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0035240" startTime="2026-10-17T20:35:17.7098152+08:00" endTime="2026-10-17T20:35:17.7133395+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a3388bf7-e210-4d19-b82c-89209f5f8399" />
+    <UnitTestResult executionId="81030782-a2e0-4f46-8c83-e953c547f966" testId="089a5e5c-dcdd-ced4-d1ec-230ca935cad4" testName="MassNavigationConfig_RequiresExplicitParallelWorkerCount" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0023110" startTime="2026-10-17T20:35:17.3402661+08:00" endTime="2026-10-17T20:35:17.3425765+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="81030782-a2e0-4f46-8c83-e953c547f966" />
+    <UnitTestResult executionId="95b03e2e-6848-4941-8cdc-24168ae1f3f5" testId="401deb2d-9e61-792f-4e04-babd27bd6131" testName="RouteSink_ConfiguredProfilePathFailureIsNotDowngradedToDirectTarget" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0028220" startTime="2026-10-17T20:35:17.7013795+08:00" endTime="2026-10-17T20:35:17.7042017+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="95b03e2e-6848-4941-8cdc-24168ae1f3f5" />
+    <UnitTestResult executionId="7bc6504d-b29b-4b2e-a87c-bf234cc74f17" testId="651ab4eb-495f-8a2f-8f60-273c0ba47998" testName="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(1000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.1018070" startTime="2026-10-17T20:35:16.9962706+08:00" endTime="2026-10-17T20:35:17.0980771+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7bc6504d-b29b-4b2e-a87c-bf234cc74f17">
+      <Output>
+        <StdOut>agents=1000 hardResolveMs=3.010 candidates=1000 pairs=4549 penetrating=241 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f192ba63-9daa-475c-95c5-1c4bb8f0053e" testId="17199fd7-feb5-200a-60fd-6fc0374b05a6" testName="Step_ZeroDeltaDoesNotAdvanceArrivalTimeout" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0032960" startTime="2026-10-17T20:35:17.6795766+08:00" endTime="2026-10-17T20:35:17.6828723+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f192ba63-9daa-475c-95c5-1c4bb8f0053e" />
+    <UnitTestResult executionId="bae7452b-ef85-4a5f-8d75-3387d89b937f" testId="7888fa96-9259-84fa-e54e-86145c2195fd" testName="MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0071830" startTime="2026-10-17T20:35:17.3330675+08:00" endTime="2026-10-17T20:35:17.3402504+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bae7452b-ef85-4a5f-8d75-3387d89b937f" />
+    <UnitTestResult executionId="8d0d2b6e-5337-430e-9cbf-eb0dfc11cf49" testId="89f2e092-f205-9de1-e693-22d110bf8875" testName="MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0034010" startTime="2026-10-17T20:35:17.3176307+08:00" endTime="2026-10-17T20:35:17.3210318+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8d0d2b6e-5337-430e-9cbf-eb0dfc11cf49" />
+    <UnitTestResult executionId="95de405e-87ed-4f62-a385-1ff0f1d8d7e7" testId="95724ac5-fff9-debb-3dc0-5fe0cfb59f26" testName="HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0071970" startTime="2026-10-17T20:35:17.2488020+08:00" endTime="2026-10-17T20:35:17.2559992+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="95de405e-87ed-4f62-a385-1ff0f1d8d7e7" />
+    <UnitTestResult executionId="c5ef004b-8e29-4b14-9dab-f8584f75cb29" testId="506558b6-055a-eb4c-9a34-48e35579961d" testName="RouteSink_CachesRouteAndAdvancesWaypointWithoutReSolving" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0033920" startTime="2026-10-17T20:35:17.6979649+08:00" endTime="2026-10-17T20:35:17.7013564+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c5ef004b-8e29-4b14-9dab-f8584f75cb29" />
+    <UnitTestResult executionId="71418ece-bfd5-44e8-a7a0-1d27e3d23d24" testId="5b4289b1-8e17-0a23-e201-c946233925f4" testName="RouteSink_MemberPathFailureRestoresPreparedRouteState" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0034890" startTime="2026-10-17T20:35:17.7133561+08:00" endTime="2026-10-17T20:35:17.7168448+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="71418ece-bfd5-44e8-a7a0-1d27e3d23d24" />
+    <UnitTestResult executionId="9ae877a3-09ae-452c-9d09-6a8ddbaa4cc4" testId="03dc6347-20e3-b9b0-7f67-41f85f2a459f" testName="SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0435200" startTime="2026-10-17T20:35:17.5418323+08:00" endTime="2026-10-17T20:35:17.5853517+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9ae877a3-09ae-452c-9d09-6a8ddbaa4cc4" />
+    <UnitTestResult executionId="2a7d4dae-b5bf-402d-814b-144e72d11ad9" testId="7e3b3e99-d69c-2f08-9c2b-e4bc3b8308a1" testName="MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0038680" startTime="2026-10-17T20:35:17.3449960+08:00" endTime="2026-10-17T20:35:17.3488640+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a7d4dae-b5bf-402d-814b-144e72d11ad9" />
+    <UnitTestResult executionId="e52381ae-cc32-4b8b-aba0-081b550a3d63" testId="ede45ef2-7e15-2f29-97ba-a51c34b1b42d" testName="MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0023890" startTime="2026-10-17T20:35:17.3425908+08:00" endTime="2026-10-17T20:35:17.3449800+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e52381ae-cc32-4b8b-aba0-081b550a3d63" />
+    <UnitTestResult executionId="bfab2cba-82c1-416a-9e76-86580f3ece44" testId="2e2ecb75-393d-ef89-bad2-87b47aa23fcf" testName="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(5000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0615720" startTime="2026-10-17T20:35:17.0981168+08:00" endTime="2026-10-17T20:35:17.1596881+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bfab2cba-82c1-416a-9e76-86580f3ece44">
+      <Output>
+        <StdOut>agents=5000 hardResolveMs=1.188 candidates=5000 pairs=23385 penetrating=1143 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3618ccc5-1d88-4a01-b8ef-519b9f042352" testId="08ab2c00-f9e2-c604-1041-25aa2eec374f" testName="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(5000)" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0173070" startTime="2026-10-17T20:35:17.2657265+08:00" endTime="2026-10-17T20:35:17.2830332+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3618ccc5-1d88-4a01-b8ef-519b9f042352">
+      <Output>
+        <StdOut>agents=5000 elapsedMs=6.241 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3b5bb4f8-935d-4022-8bc5-6e1d881685b4" testId="f29e6c53-6753-8c89-4b5a-b616657ea63d" testName="CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0013630" startTime="2026-10-17T20:35:16.9948654+08:00" endTime="2026-10-17T20:35:16.9962281+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3b5bb4f8-935d-4022-8bc5-6e1d881685b4" />
+    <UnitTestResult executionId="2fa0c2a7-6d44-437d-ae9f-4cf9a43fa4d5" testId="c558b63a-3ec7-b08f-1e08-6c5d9ddb86d9" testName="RouteSink_UncommittedSyncDoesNotMutateActiveRouteState" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0033390" startTime="2026-10-17T20:35:17.7273143+08:00" endTime="2026-10-17T20:35:17.7306534+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2fa0c2a7-6d44-437d-ae9f-4cf9a43fa4d5" />
+    <UnitTestResult executionId="3aa2bfbf-7d24-4d32-a5f3-c363c5d76a8c" testId="be2447da-51c4-a831-10db-0226b3e6593c" testName="MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0030620" startTime="2026-10-17T20:35:17.3251581+08:00" endTime="2026-10-17T20:35:17.3282202+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3aa2bfbf-7d24-4d32-a5f3-c363c5d76a8c" />
+    <UnitTestResult executionId="7ce5438b-7b03-4051-859f-3dadbfff03fe" testId="612e1a3d-a5f5-af83-209b-7f1baba992c2" testName="MassNavigationConfig_SonarModeRequiresSonarSection" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0028010" startTime="2026-10-17T20:35:17.3513758+08:00" endTime="2026-10-17T20:35:17.3541768+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7ce5438b-7b03-4051-859f-3dadbfff03fe" />
+    <UnitTestResult executionId="de4876da-af82-4c7b-8a8e-ed929e5407fa" testId="1fff960e-2c26-ceed-57a8-07edfbd43450" testName="RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0104180" startTime="2026-10-17T20:35:17.7168588+08:00" endTime="2026-10-17T20:35:17.7272760+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="de4876da-af82-4c7b-8a8e-ed929e5407fa" />
+    <UnitTestResult executionId="849adbd6-45aa-404a-928d-7c1cec1fdccd" testId="e4689357-9042-6366-17e2-b5baafe729a3" testName="RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0130090" startTime="2026-10-17T20:35:17.6845498+08:00" endTime="2026-10-17T20:35:17.6975585+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="849adbd6-45aa-404a-928d-7c1cec1fdccd" />
+    <UnitTestResult executionId="5cb71fd8-66c2-4622-9f12-4415c1489698" testId="435d33f0-653d-ffff-b8bd-afa2fd871625" testName="CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0040850" startTime="2026-10-17T20:35:16.9905037+08:00" endTime="2026-10-17T20:35:16.9945883+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5cb71fd8-66c2-4622-9f12-4415c1489698" />
+    <UnitTestResult executionId="7b6695eb-b8cb-4be7-a95b-b970a80f7567" testId="23e32619-663d-32b3-17fc-305b41edff41" testName="MassNavigationConfig_HotZonesAreOptionalDebugSection" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0040970" startTime="2026-10-17T20:35:17.3210483+08:00" endTime="2026-10-17T20:35:17.3251451+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7b6695eb-b8cb-4be7-a95b-b970a80f7567" />
+    <UnitTestResult executionId="140c2867-21f9-43e3-836b-f57c256f881f" testId="b3930377-4d67-349b-f665-3dc033bd7ffc" testName="MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0119300" startTime="2026-10-17T20:35:17.3056753+08:00" endTime="2026-10-17T20:35:17.3176051+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="140c2867-21f9-43e3-836b-f57c256f881f" />
+    <UnitTestResult executionId="6ccc47f5-d7a9-4046-a113-7f609ad594f1" testId="107f1d01-f68f-c200-be87-597f7e439ec9" testName="ParallelStep_WorkerCountDoesNotChangeSimulationResult" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0406700" startTime="2026-10-17T20:35:17.3817213+08:00" endTime="2026-10-17T20:35:17.4223912+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6ccc47f5-d7a9-4046-a113-7f609ad594f1" />
+    <UnitTestResult executionId="7b91a3d8-d102-477c-80af-293493708140" testId="76e1b0db-b635-eb95-ce15-c75cdd5cb627" testName="RouteSemantics_AdvanceCircleMustContainUnitStopCircle" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0010300" startTime="2026-10-17T20:35:17.6835056+08:00" endTime="2026-10-17T20:35:17.6845352+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7b91a3d8-d102-477c-80af-293493708140" />
+    <UnitTestResult executionId="6f002601-2342-432b-869f-c077c7fae7fd" testId="644699a1-9161-a016-33cf-63cfe6572fd8" testName="Step_UsesCallerDeltaTimeAsSingleSimulationClock" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0217680" startTime="2026-10-17T20:35:17.6577821+08:00" endTime="2026-10-17T20:35:17.6795501+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6f002601-2342-432b-869f-c077c7fae7fd" />
+    <UnitTestResult executionId="28380aa7-f065-47c3-92b1-ef67a75854b5" testId="bc199e49-4650-d5a2-f3df-ba788daddebc" testName="AutoSpawnLayout_RequiresExplicitRandomSeed" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0150000" startTime="2026-10-17T20:35:16.9748957+08:00" endTime="2026-10-17T20:35:16.9898672+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="28380aa7-f065-47c3-92b1-ef67a75854b5" />
+    <UnitTestResult executionId="2f0398b1-77f2-4629-b086-834c79a84c64" testId="ba7150bb-6289-d5ae-4146-9af87587701e" testName="SpawnJitter_UsesConfiguredSeedDeterministically" computerName="DESKTOP-R0A3N5D" duration="00:00:00.0289500" startTime="2026-10-17T20:35:17.6288036+08:00" endTime="2026-10-17T20:35:17.6577531+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2f0398b1-77f2-4629-b086-834c79a84c64" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="ParallelStep_WorkerCountDoesNotChangeSimulationResult" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="107f1d01-f68f-c200-be87-597f7e439ec9">
+      <Execution id="6ccc47f5-d7a9-4046-a113-7f609ad594f1" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="ParallelStep_WorkerCountDoesNotChangeSimulationResult" />
+    </UnitTest>
+    <UnitTest name="AutoSpawnLayout_RequiresExplicitRandomSeed" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="bc199e49-4650-d5a2-f3df-ba788daddebc">
+      <Execution id="28380aa7-f065-47c3-92b1-ef67a75854b5" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="AutoSpawnLayout_RequiresExplicitRandomSeed" />
+    </UnitTest>
+    <UnitTest name="CadenceAgentSlicing_RejectsUnsustainableSliceRate" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="6586a654-beca-09bb-2fee-fc8f7e780f45">
+      <Execution id="334c6f4d-fd99-4bd3-9adc-36184574ada1" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="CadenceAgentSlicing_RejectsUnsustainableSliceRate" />
+    </UnitTest>
+    <UnitTest name="ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="0dadf631-6594-568e-35d3-392c9660f707">
+      <Execution id="e738063f-03ee-47c6-bd68-5da6e2ea4aee" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="ede45ef2-7e15-2f29-97ba-a51c34b1b42d">
+      <Execution id="e52381ae-cc32-4b8b-aba0-081b550a3d63" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="e6eb8b4e-448c-b748-3ce3-7db9233f57a6">
+      <Execution id="feb972fd-2851-4890-ab1d-defaf3d056ff" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot" />
+    </UnitTest>
+    <UnitTest name="RouteSink_UncommittedSyncDoesNotMutateActiveRouteState" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="c558b63a-3ec7-b08f-1e08-6c5d9ddb86d9">
+      <Execution id="2fa0c2a7-6d44-437d-ae9f-4cf9a43fa4d5" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_UncommittedSyncDoesNotMutateActiveRouteState" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_HotZonesAreOptionalDebugSection" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="23e32619-663d-32b3-17fc-305b41edff41">
+      <Execution id="7b6695eb-b8cb-4be7-a95b-b970a80f7567" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_HotZonesAreOptionalDebugSection" />
+    </UnitTest>
+    <UnitTest name="RouteSink_CachesRouteAndAdvancesWaypointWithoutReSolving" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="506558b6-055a-eb4c-9a34-48e35579961d">
+      <Execution id="c5ef004b-8e29-4b14-9dab-f8584f75cb29" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_CachesRouteAndAdvancesWaypointWithoutReSolving" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RejectsLegacyWorldObstacles" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="5f3d5ee7-4fff-bef7-05ed-42b512168cf0">
+      <Execution id="18012823-59ce-4421-ac45-8eddce48ba45" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RejectsLegacyWorldObstacles" />
+    </UnitTest>
+    <UnitTest name="MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="b3930377-4d67-349b-f665-3dc033bd7ffc">
+      <Execution id="140c2867-21f9-43e3-836b-f57c256f881f" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored" />
+    </UnitTest>
+    <UnitTest name="CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="f29e6c53-6753-8c89-4b5a-b616657ea63d">
+      <Execution id="3b5bb4f8-935d-4022-8bc5-6e1d881685b4" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks" />
+    </UnitTest>
+    <UnitTest name="SpawnJitter_UsesConfiguredSeedDeterministically" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="ba7150bb-6289-d5ae-4146-9af87587701e">
+      <Execution id="2f0398b1-77f2-4629-b086-834c79a84c64" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SpawnJitter_UsesConfiguredSeedDeterministically" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="03dc6347-20e3-b9b0-7f67-41f85f2a459f">
+      <Execution id="9ae877a3-09ae-452c-9d09-6a8ddbaa4cc4" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RequiresExplicitParallelWorkerCount" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="089a5e5c-dcdd-ced4-d1ec-230ca935cad4">
+      <Execution id="81030782-a2e0-4f46-8c83-e953c547f966" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RequiresExplicitParallelWorkerCount" />
+    </UnitTest>
+    <UnitTest name="Step_UsesCallerDeltaTimeAsSingleSimulationClock" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="644699a1-9161-a016-33cf-63cfe6572fd8">
+      <Execution id="6f002601-2342-432b-869f-c077c7fae7fd" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="Step_UsesCallerDeltaTimeAsSingleSimulationClock" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="be2447da-51c4-a831-10db-0226b3e6593c">
+      <Execution id="3aa2bfbf-7d24-4d32-a5f3-c363c5d76a8c" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(1000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="4d4e1a34-5ebc-8526-d10f-5401b2125821">
+      <Execution id="56767fad-0697-42da-a6b0-39ef11c8d809" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(1000)" />
+    </UnitTest>
+    <UnitTest name="ParallelStep_RequiresSchedulerWhenConfiguredParallel" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="33d8c928-8694-edb0-eca9-399872b279b8">
+      <Execution id="cdd221ff-daa5-45df-aae2-91d7a78010dc" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="ParallelStep_RequiresSchedulerWhenConfiguredParallel" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="638ee857-22ea-a17f-f86f-5adcdb37289e">
+      <Execution id="6014b807-f0c9-48c3-8c35-bcef79a1097d" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity" />
+    </UnitTest>
+    <UnitTest name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(5000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="2e2ecb75-393d-ef89-bad2-87b47aa23fcf">
+      <Execution id="bfab2cba-82c1-416a-9e76-86580f3ece44" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(5000)" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(10000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="28f6a95a-0c06-90b6-ae0b-c6c9dfec7b51">
+      <Execution id="baa12f5d-391f-4c7f-976e-624f38f9aab7" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(10000)" />
+    </UnitTest>
+    <UnitTest name="CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="435d33f0-653d-ffff-b8bd-afa2fd871625">
+      <Execution id="5cb71fd8-66c2-4622-9f12-4415c1489698" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm" />
+    </UnitTest>
+    <UnitTest name="RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="6736fae5-fe47-dbaf-bf2b-ab41d49edea4">
+      <Execution id="a7f2c5f4-c5b1-4f2d-b48b-dd54847c072c" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(5000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="08ab2c00-f9e2-c604-1041-25aa2eec374f">
+      <Execution id="3618ccc5-1d88-4a01-b8ef-519b9f042352" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(5000)" />
+    </UnitTest>
+    <UnitTest name="RouteSink_MemberPathFailureDoesNotApplyPartialBatchTargets" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7ba9180f-b6e4-5051-f461-eacd224338c0">
+      <Execution id="a3388bf7-e210-4d19-b82c-89209f5f8399" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_MemberPathFailureDoesNotApplyPartialBatchTargets" />
+    </UnitTest>
+    <UnitTest name="RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="1fff960e-2c26-ceed-57a8-07edfbd43450">
+      <Execution id="de4876da-af82-4c7b-8a8e-ed929e5407fa" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="b138e8a0-3e3d-e6e1-0b1c-a2313a4d08a9">
+      <Execution id="c9da1291-cfd9-4dfc-bf4d-766fad440a63" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_SonarModeRequiresSonarSection" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="612e1a3d-a5f5-af83-209b-7f1baba992c2">
+      <Execution id="7ce5438b-7b03-4051-859f-3dadbfff03fe" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_SonarModeRequiresSonarSection" />
+    </UnitTest>
+    <UnitTest name="RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="e4689357-9042-6366-17e2-b5baafe729a3">
+      <Execution id="849adbd6-45aa-404a-928d-7c1cec1fdccd" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig" />
+    </UnitTest>
+    <UnitTest name="HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="95724ac5-fff9-debb-3dc0-5fe0cfb59f26">
+      <Execution id="95de405e-87ed-4f62-a385-1ff0f1d8d7e7" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolveCandidateGating_CoversLowerIndexDisplacedAgentWithoutFallbackProbe" />
+    </UnitTest>
+    <UnitTest name="SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="3c33e89a-98b1-1510-f3ed-72f4680b533b">
+      <Execution id="62994705-7db0-4761-b961-dac55ba6eb57" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity" />
+    </UnitTest>
+    <UnitTest name="RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="d52881b7-1b57-e250-06f9-a7922a4acb0c">
+      <Execution id="bb8c7f28-bde3-4b74-922c-ffde69b96aa8" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="89f2e092-f205-9de1-e693-22d110bf8875">
+      <Execution id="8d0d2b6e-5337-430e-9cbf-eb0dfc11cf49" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds" />
+    </UnitTest>
+    <UnitTest name="RouteSink_MemberPathFailureRestoresPreparedRouteState" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="5b4289b1-8e17-0a23-e201-c946233925f4">
+      <Execution id="71418ece-bfd5-44e8-a7a0-1d27e3d23d24" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_MemberPathFailureRestoresPreparedRouteState" />
+    </UnitTest>
+    <UnitTest name="RouteSink_ConfiguredProfilePathFailureIsNotDowngradedToDirectTarget" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="401deb2d-9e61-792f-4e04-babd27bd6131">
+      <Execution id="95b03e2e-6848-4941-8cdc-24168ae1f3f5" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSink_ConfiguredProfilePathFailureIsNotDowngradedToDirectTarget" />
+    </UnitTest>
+    <UnitTest name="RouteSemantics_AdvanceCircleMustContainUnitStopCircle" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="76e1b0db-b635-eb95-ce15-c75cdd5cb627">
+      <Execution id="7b91a3d8-d102-477c-80af-293493708140" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationRouteExecutionContractTests" name="RouteSemantics_AdvanceCircleMustContainUnitStopCircle" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7888fa96-9259-84fa-e54e-86145c2195fd">
+      <Execution id="bae7452b-ef85-4a5f-8d75-3387d89b937f" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping" />
+    </UnitTest>
+    <UnitTest name="Step_ZeroDeltaDoesNotAdvanceArrivalTimeout" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="17199fd7-feb5-200a-60fd-6fc0374b05a6">
+      <Execution id="f192ba63-9daa-475c-95c5-1c4bb8f0053e" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="Step_ZeroDeltaDoesNotAdvanceArrivalTimeout" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7e3b3e99-d69c-2f08-9c2b-e4bc3b8308a1">
+      <Execution id="2a7d4dae-b5bf-402d-814b-144e72d11ad9" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults" />
+    </UnitTest>
+    <UnitTest name="MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="6cb8313c-8420-db4c-942a-44f1e3075eb8">
+      <Execution id="e6e20a22-23c7-464f-92f2-e051bed32410" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections" />
+    </UnitTest>
+    <UnitTest name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(10000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="7fbcbf1c-5d2b-be02-ca4a-d3905f76821d">
+      <Execution id="6ef3eb49-36be-4103-a55d-a00ab9ea6925" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(10000)" />
+    </UnitTest>
+    <UnitTest name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(1000)" storage="d:\ludots-wt\crowdsim-l97\src\tests\presentationtests\bin\debug\net9.0\presentationtests.dll" id="651ab4eb-495f-8a2f-8f60-273c0ba47998">
+      <Execution id="7bc6504d-b29b-4b2e-a87c-bf234cc74f17" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.Presentation.MassNavigationFlowSolverStateConfigurationTests" name="HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(1000)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="d52881b7-1b57-e250-06f9-a7922a4acb0c" executionId="bb8c7f28-bde3-4b74-922c-ffde69b96aa8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e6eb8b4e-448c-b748-3ce3-7db9233f57a6" executionId="feb972fd-2851-4890-ab1d-defaf3d056ff" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4d4e1a34-5ebc-8526-d10f-5401b2125821" executionId="56767fad-0697-42da-a6b0-39ef11c8d809" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7fbcbf1c-5d2b-be02-ca4a-d3905f76821d" executionId="6ef3eb49-36be-4103-a55d-a00ab9ea6925" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6736fae5-fe47-dbaf-bf2b-ab41d49edea4" executionId="a7f2c5f4-c5b1-4f2d-b48b-dd54847c072c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="638ee857-22ea-a17f-f86f-5adcdb37289e" executionId="6014b807-f0c9-48c3-8c35-bcef79a1097d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6586a654-beca-09bb-2fee-fc8f7e780f45" executionId="334c6f4d-fd99-4bd3-9adc-36184574ada1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0dadf631-6594-568e-35d3-392c9660f707" executionId="e738063f-03ee-47c6-bd68-5da6e2ea4aee" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6cb8313c-8420-db4c-942a-44f1e3075eb8" executionId="e6e20a22-23c7-464f-92f2-e051bed32410" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3c33e89a-98b1-1510-f3ed-72f4680b533b" executionId="62994705-7db0-4761-b961-dac55ba6eb57" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="28f6a95a-0c06-90b6-ae0b-c6c9dfec7b51" executionId="baa12f5d-391f-4c7f-976e-624f38f9aab7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b138e8a0-3e3d-e6e1-0b1c-a2313a4d08a9" executionId="c9da1291-cfd9-4dfc-bf4d-766fad440a63" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5f3d5ee7-4fff-bef7-05ed-42b512168cf0" executionId="18012823-59ce-4421-ac45-8eddce48ba45" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="33d8c928-8694-edb0-eca9-399872b279b8" executionId="cdd221ff-daa5-45df-aae2-91d7a78010dc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ba9180f-b6e4-5051-f461-eacd224338c0" executionId="a3388bf7-e210-4d19-b82c-89209f5f8399" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="089a5e5c-dcdd-ced4-d1ec-230ca935cad4" executionId="81030782-a2e0-4f46-8c83-e953c547f966" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="401deb2d-9e61-792f-4e04-babd27bd6131" executionId="95b03e2e-6848-4941-8cdc-24168ae1f3f5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="651ab4eb-495f-8a2f-8f60-273c0ba47998" executionId="7bc6504d-b29b-4b2e-a87c-bf234cc74f17" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="17199fd7-feb5-200a-60fd-6fc0374b05a6" executionId="f192ba63-9daa-475c-95c5-1c4bb8f0053e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7888fa96-9259-84fa-e54e-86145c2195fd" executionId="bae7452b-ef85-4a5f-8d75-3387d89b937f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="89f2e092-f205-9de1-e693-22d110bf8875" executionId="8d0d2b6e-5337-430e-9cbf-eb0dfc11cf49" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="95724ac5-fff9-debb-3dc0-5fe0cfb59f26" executionId="95de405e-87ed-4f62-a385-1ff0f1d8d7e7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="506558b6-055a-eb4c-9a34-48e35579961d" executionId="c5ef004b-8e29-4b14-9dab-f8584f75cb29" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5b4289b1-8e17-0a23-e201-c946233925f4" executionId="71418ece-bfd5-44e8-a7a0-1d27e3d23d24" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03dc6347-20e3-b9b0-7f67-41f85f2a459f" executionId="9ae877a3-09ae-452c-9d09-6a8ddbaa4cc4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e3b3e99-d69c-2f08-9c2b-e4bc3b8308a1" executionId="2a7d4dae-b5bf-402d-814b-144e72d11ad9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ede45ef2-7e15-2f29-97ba-a51c34b1b42d" executionId="e52381ae-cc32-4b8b-aba0-081b550a3d63" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2e2ecb75-393d-ef89-bad2-87b47aa23fcf" executionId="bfab2cba-82c1-416a-9e76-86580f3ece44" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="08ab2c00-f9e2-c604-1041-25aa2eec374f" executionId="3618ccc5-1d88-4a01-b8ef-519b9f042352" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f29e6c53-6753-8c89-4b5a-b616657ea63d" executionId="3b5bb4f8-935d-4022-8bc5-6e1d881685b4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c558b63a-3ec7-b08f-1e08-6c5d9ddb86d9" executionId="2fa0c2a7-6d44-437d-ae9f-4cf9a43fa4d5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="be2447da-51c4-a831-10db-0226b3e6593c" executionId="3aa2bfbf-7d24-4d32-a5f3-c363c5d76a8c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="612e1a3d-a5f5-af83-209b-7f1baba992c2" executionId="7ce5438b-7b03-4051-859f-3dadbfff03fe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1fff960e-2c26-ceed-57a8-07edfbd43450" executionId="de4876da-af82-4c7b-8a8e-ed929e5407fa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e4689357-9042-6366-17e2-b5baafe729a3" executionId="849adbd6-45aa-404a-928d-7c1cec1fdccd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="435d33f0-653d-ffff-b8bd-afa2fd871625" executionId="5cb71fd8-66c2-4622-9f12-4415c1489698" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="23e32619-663d-32b3-17fc-305b41edff41" executionId="7b6695eb-b8cb-4be7-a95b-b970a80f7567" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b3930377-4d67-349b-f665-3dc033bd7ffc" executionId="140c2867-21f9-43e3-836b-f57c256f881f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="107f1d01-f68f-c200-be87-597f7e439ec9" executionId="6ccc47f5-d7a9-4046-a113-7f609ad594f1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="76e1b0db-b635-eb95-ce15-c75cdd5cb627" executionId="7b91a3d8-d102-477c-80af-293493708140" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="644699a1-9161-a016-33cf-63cfe6572fd8" executionId="6f002601-2342-432b-869f-c077c7fae7fd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc199e49-4650-d5a2-f3df-ba788daddebc" executionId="28380aa7-f065-47c3-92b1-ef67a75854b5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ba7150bb-6289-d5ae-4146-9af87587701e" executionId="2f0398b1-77f2-4629-b086-834c79a84c64" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="43" executed="43" passed="43" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\Ludots-wt\crowdsim-l97\src\Tests\PresentationTests\bin\Debug\net9.0\PresentationTests.dll&#xD;
+   NUnit3TestExecutor discovered 43 of 43 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+agents=1000 hardResolveMs=3.010 candidates=1000 pairs=4549 penetrating=241 allocated=0&#xD;
+&#xD;
+agents=5000 hardResolveMs=1.188 candidates=5000 pairs=23385 penetrating=1143 allocated=0&#xD;
+&#xD;
+agents=10000 hardResolveMs=2.180 candidates=10000 pairs=48108 penetrating=2214 allocated=0&#xD;
+&#xD;
+agents=1000 elapsedMs=0.776 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0&#xD;
+&#xD;
+agents=5000 elapsedMs=6.241 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0&#xD;
+&#xD;
+agents=10000 elapsedMs=5.005 candidates=0 fallbackAgents=0 fallbackPairs=0 pairs=0 allocated=0&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

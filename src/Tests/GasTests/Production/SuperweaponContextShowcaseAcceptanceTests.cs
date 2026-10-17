@@ -19,6 +19,7 @@ using Ludots.Core.Scripting;
 using NUnit.Framework;
 using SuperweaponContextShowcaseMod;
 using SuperweaponContextShowcaseMod.Runtime;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -60,7 +61,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             AssertLauncherBinding(repoRoot);
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "superweapon-context-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/superweapon-context-showcase");
             Directory.CreateDirectory(artifactDir);
 
             var backend = new TestInputBackend();

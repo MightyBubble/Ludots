@@ -8,6 +8,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Vision;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -19,8 +20,7 @@ public sealed class FogOfWarShowcaseAcceptanceTests
     [Test]
     public void FogOfWarShowcase_CoreScenarioCoversWarFogEpic()
     {
-        string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "fog-of-war-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/fog-of-war-showcase");
         Directory.CreateDirectory(artifactDir);
         foreach (string file in Directory.GetFiles(artifactDir))
         {
@@ -216,22 +216,5 @@ public sealed class FogOfWarShowcaseAcceptanceTests
             new RelationshipBandRegistry(),
             new RelationshipChangeBuffer(capacity: 4),
             new RelationshipReverseIndex(world));
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        for (int i = 0; i < 12 && dir != null; i++)
-        {
-            if (Directory.Exists(Path.Combine(dir.FullName, "mods")) &&
-                File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
-            {
-                return dir.FullName;
-            }
-
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Failed to locate repository root.");
     }
 }
