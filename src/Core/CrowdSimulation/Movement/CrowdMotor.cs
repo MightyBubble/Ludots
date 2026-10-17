@@ -27,7 +27,8 @@ public static class CrowdMotor
             N2 = navCellsPerSide * navCellsPerSide,
             Dt = dt,
             Cs = navCellCm,
-            Lim = navCellCm * navCellsPerSide - Fix64.FromFloat(0.01f),
+            // Web 夹在 world.size − 0.01 米（= 1 厘米）；厘米域同值，贴边单位的停靠位置两端才一致。
+            Lim = navCellCm * navCellsPerSide - Fix64.OneValue,
             Response = Fix64.OneValue - Fix64Math.Exp(-k.Accel * dt),
             ResponseRest = Fix64.OneValue - Fix64Math.Exp(-k.Accel * k.RestAccelScale * dt),
             CosT = Fix64Math.Cos(maxTurn),

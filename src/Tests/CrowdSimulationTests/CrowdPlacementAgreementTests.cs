@@ -26,17 +26,20 @@ public sealed class CrowdPlacementAgreementTests
         var bridge = session.Config.Structures.Templates[store.TemplateIndexOf("bridge")];
         var size = Fix64.FromInt(cell);
 
-        Agree(session, building, Fix64.FromInt(-cell), Fix64.FromInt(free.Y * cell + cell / 2), size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.OutOfBounds);
+        // 越界、跨陆地、压阻挡、压已有结构都不拒绝：Web 参考的放置接受它们，栅格按格矩形夹回网格。
+        // 半出界的建筑还有界内格可画；整段出界的足迹不画格。
+        int east = store.NavCellsPerSide * cell;
+        Agree(session, building, Fix64.FromInt(east - cell / 2), Fix64.FromInt(free.Y * cell + cell / 2), size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.None);
         Agree(
             session, bridge,
             Fix64.FromInt(run.X * cell + cell / 2), Fix64.FromInt(run.Y * cell + cell / 2), size,
             Fix64.FromInt((run.X + 5) * cell + cell / 2), Fix64.FromInt(run.Y * cell + cell / 2),
-            CrowdPlacementReject.InteriorArea);
+            CrowdPlacementReject.None);
         store.Blocked[blocked.Index] = 1;
-        Agree(session, building, Fix64.FromInt(blocked.X * cell + cell / 2), Fix64.FromInt(blocked.Y * cell + cell / 2), size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.OverlapsBlocked);
+        Agree(session, building, Fix64.FromInt(blocked.X * cell + cell / 2), Fix64.FromInt(blocked.Y * cell + cell / 2), size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.None);
         var at = (Fix64.FromInt(free.X * cell + cell / 2), Fix64.FromInt(free.Y * cell + cell / 2));
         Agree(session, building, at.Item1, at.Item2, size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.None);
-        Agree(session, building, at.Item1, at.Item2, size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.OverlapsStructure);
+        Agree(session, building, at.Item1, at.Item2, size, Fix64.Zero, Fix64.Zero, CrowdPlacementReject.None);
     }
 
     [Test]
@@ -84,24 +87,16 @@ public sealed class CrowdPlacementAgreementTests
         store.Blocked[free.Index] = 1;
         system.Update(0f);
         reason = CrowdStructurePlacement.Judge(store, template, footprint, ref cells, ref flags, out count);
-        Assert.That(reason, Is.EqualTo(CrowdPlacementReject.OverlapsBlocked));
-        var illegal = CrowdPresentationConfig.Rgba(TestRgba(255, 77, 64, 242), "deploy.placeIllegal");
-        int illegalCells = 0;
-        for (int i = 0; i < routes.Polylines.Count; i++)
-        {
-            if (routes.Polylines[i].Color == illegal) illegalCells++;
-        }
-
-        Assert.That(illegalCells, Is.EqualTo(count));
+        Assert.That(reason, Is.EqualTo(CrowdPlacementReject.None), "压到阻挡格不再拒绝：预览与正式放置都接受。");
         var hud = default(CrowdDeployHud);
         Assert.That(feed.ReadDeploy(ref hud), Is.True);
         Assert.That(hud.PreviewShown, Is.True);
-        Assert.That(hud.PreviewValid, Is.False);
-        Assert.That(hud.PreviewReason, Is.EqualTo(CrowdPlacementReject.OverlapsBlocked));
+        Assert.That(hud.PreviewValid, Is.True);
+        Assert.That(hud.PreviewReason, Is.EqualTo(CrowdPlacementReject.None));
         using (var ui = new CrowdHudTestHost())
         {
             ui.Frame(feed);
-            Assert.That(ui.Text("crowd-tool-hint"), Does.Contain("(压到阻挡格)"));
+            Assert.That(ui.Text("crowd-tool-hint"), Does.Contain("(此处可放)"));
         }
 
         for (int i = 0; i < 4; i++)

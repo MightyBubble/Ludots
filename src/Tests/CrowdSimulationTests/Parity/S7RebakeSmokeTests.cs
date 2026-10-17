@@ -81,15 +81,15 @@ public class S7RebakeSmokeTests
     }
 
     [Test]
-    public void LayeredTemplatePlace_IsRejected()
+    public void LayeredTemplatePlace_IsAccepted()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         int before = session.Structures!.EntityIds.Count;
-        var report = Ludots.Core.CrowdSimulation.Structures.CrowdStructureOps.PlaceStructure(
+        Ludots.Core.CrowdSimulation.Structures.CrowdStructureOps.PlaceStructure(
             session, "bridge", Fix64Cm(500000), Fix64Cm(500000), Fix64Cm(400), Fix64Cm(600000), Fix64Cm(500000));
-        Assert.That(report, Is.Null);
-        Assert.That(session.LastPlacementReject, Is.EqualTo(Ludots.Core.CrowdSimulation.Structures.CrowdPlacementReject.EndpointArea));
-        Assert.That(session.Structures.EntityIds.Count, Is.EqualTo(before));
+        // 切片 >1 时报告异拍发布，这里只看放置本身：演示桥模板不带区域表，跨非深水区也放置，与 Web 参考一致。
+        Assert.That(session.LastPlacementReject, Is.EqualTo(Ludots.Core.CrowdSimulation.Structures.CrowdPlacementReject.None));
+        Assert.That(session.Structures.EntityIds.Count, Is.EqualTo(before + 1));
     }
 
     private static System.Text.Json.Nodes.JsonNode Cmd(string json) =>

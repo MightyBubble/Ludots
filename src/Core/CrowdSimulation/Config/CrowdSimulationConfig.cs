@@ -400,11 +400,15 @@ public sealed class CrowdSimulationConfig
     {
     }
 
-    /// <summary>按格的静态地形区域判：两个端点格在 endpointAreas 里，其余盖住的格在 interiorAreas 里。</summary>
+    /// <summary>
+    /// 按格的静态地形区域判：两个端点格在 endpointAreas 里，其余盖住的格在 interiorAreas 里。
+    /// 两表可省略：省略的模板不做地形限制（演示桥模板如此，与 Web 参考一致）。
+    /// </summary>
     public sealed class StructureSpanEndsPlacement : StructurePlacementEntry
     {
-        public required string[] EndpointAreas { get; init; }
-        public required string[] InteriorAreas { get; init; }
+        public string[]? EndpointAreas { get; init; }
+
+        public string[]? InteriorAreas { get; init; }
     }
 
     public sealed class DeploySection

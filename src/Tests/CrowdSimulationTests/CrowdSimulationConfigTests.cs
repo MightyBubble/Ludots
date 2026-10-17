@@ -409,10 +409,8 @@ public class CrowdSimulationConfigTests
             Assert.That(bridge.AreaIndex, Is.EqualTo(Area("deck")), id);
             Assert.That(bridge.PortalReachNavCells, Is.EqualTo(4), id);
             Assert.That(bridge.Placement, Is.EqualTo(CrowdStructurePlacementKind.SpanEnds), id);
-            Assert.That(Enumerable.Range(0, bridge.EndpointAreas.Length).Where(a => bridge.EndpointAreas[a]).ToArray(),
-                Is.EquivalentTo(new[] { Area("shallow"), Area("open") }), id);
-            Assert.That(Enumerable.Range(0, bridge.InteriorAreas.Length).Where(a => bridge.InteriorAreas[a]).ToArray(),
-                Is.EqualTo(new[] { Area("deep") }), id);
+            Assert.That(bridge.EndpointAreas, Is.Null, id);
+            Assert.That(bridge.InteriorAreas, Is.Null, id);
         }
 
         Assert.That(byId["bridge"].LifetimeSec, Is.Null);

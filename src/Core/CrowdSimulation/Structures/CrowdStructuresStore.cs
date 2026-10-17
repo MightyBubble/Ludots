@@ -52,6 +52,8 @@ public sealed class CrowdStructuresStore
     private readonly byte[] _terrainArea;
     /// <summary>建仓时的阻挡。之后放上的实体不写进这份数组。</summary>
     private readonly byte[] _terrainBlocked;
+    /// <summary>栅格重标的基线。构造出的认知仓用它 = _terrainBlocked（地形源起底）；Build() 的真相仓里地图阻挡物是实体，基线不含其静态印记，否则拆除地图阻挡物是空操作。</summary>
+    private byte[] _rasterBaseBlocked;
 
     private readonly CrowdSimulationRuntimeConfig _config;
     private readonly byte[] _terrainType;
@@ -90,6 +92,7 @@ public sealed class CrowdStructuresStore
         int n2 = NavCellsPerSide * NavCellsPerSide;
         _terrainArea = (byte[])grid.Area.Clone();
         _terrainBlocked = (byte[])grid.Blocked.Clone();
+        _rasterBaseBlocked = _terrainBlocked;
         Area = (byte[])grid.Area.Clone();
         Blocked = (byte[])grid.Blocked.Clone();
         Fix64 maxRadius = Fix64.Zero;
@@ -114,6 +117,7 @@ public sealed class CrowdStructuresStore
         IReadOnlyList<BlockerFootprint> blockers)
     {
         var store = new CrowdStructuresStore(config, grid);
+        store._rasterBaseBlocked = new byte[grid.Blocked.Length];
         foreach (var b in blockers)
         {
             int tplIndex = config.Structures.RequireMapTemplate(b.TemplateId, CrowdStructureEffectKind.Block);
@@ -414,6 +418,17 @@ public sealed class CrowdStructuresStore
         return hit;
     }
 
+    /// <summary>重标基线面。与活栅格的全量重标同一基线：真相仓的地图阻挡物是实体，这里不含其静态印记。</summary>
+    internal SurfaceGrid RasterBaseSurface() => new()
+    {
+        NavCellsPerSide = NavCellsPerSide,
+        NavCellSizeCm = NavCellSizeCm,
+        TerrainType = _terrainType,
+        Area = _terrainArea,
+        Blocked = _rasterBaseBlocked,
+        LinkCandidates = _linkCandidates,
+    };
+
     /// <summary>地形源。区域是建仓时的地形映射，阻挡是建仓时的阻挡，都不含此后放上的实体。</summary>
     internal SurfaceGrid TerrainSurface() => new()
     {
@@ -487,8 +502,8 @@ public sealed class CrowdStructuresStore
             for (int x = rect.X0; x < rect.X1; x++)
             {
                 Area[row + x] = _terrainArea[row + x];
-                // 先回到建仓时的阻挡，再由仍在场的足迹盖 1。清成 0 会把地形阻挡擦掉，拆除后和全量重标对不上。
-                Blocked[row + x] = _terrainBlocked[row + x];
+                // 先回到重标基线，再由仍在场的足迹盖 1。认知仓的基线即建仓时的阻挡；真相仓地图阻挡物是实体，基线无其印记，拆除才能真正解锁。
+                Blocked[row + x] = _rasterBaseBlocked[row + x];
             }
         }
 

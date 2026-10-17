@@ -79,6 +79,8 @@ public sealed class NavContext
     internal readonly HashSet<int> TileSeenScratch = new(16);
     internal readonly List<int> ChangedTileList = new(16);
     internal readonly HashSet<int> SameTiles = new(16);
+    /// <summary>本次重烘里代价格有变的 tile。tile 内容条目相同时的 HPA 距离复用还要求代价没变：认知变体的假设区域可以与真相同可走、不同代价。</summary>
+    internal readonly HashSet<int> CostChangedTiles = new(16);
     internal NavTileEntry?[]? PrevTiles;
 
     private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>

@@ -85,7 +85,7 @@ public static class CrowdSimulationValidator
         var entities = new List<(int Id, int TplIndex, CrowdStructureFootprint Fp)>(store.EntityIds.Count);
         store.CopyLiveEntities(entities);
         BeliefRank[] ranks = Array.Empty<BeliefRank>();
-        var derived = CrowdStructuresStore.BuildBeliefField(session.Config, store.TerrainSurface(), entities, ref ranks);
+        var derived = CrowdStructuresStore.BuildBeliefField(session.Config, store.RasterBaseSurface(), entities, ref ranks);
         int n = store.Area.Length;
         for (int i = 0; i < n; i++)
         {

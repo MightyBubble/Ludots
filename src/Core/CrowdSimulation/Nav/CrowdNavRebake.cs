@@ -114,7 +114,9 @@ public static class CrowdNavRebake
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         int erosion = Math.Max(0, nav.ClearanceNavCells - 1);
-        int baseKind = Classify(nav, sources, store, rect);
+        var costTiles = nav.CostChangedTiles;
+        costTiles.Clear();
+        int baseKind = Classify(nav, sources, store, rect, costTiles, navCellsPerTile, navTilesPerSide);
         int upperKind = RefreshUpper(nav, sources, rect, erosion);
         int kind = baseKind > upperKind ? baseKind : upperKind;
         var grown = Grow(rect, erosion, navCellsPerSide);
@@ -133,7 +135,8 @@ public static class CrowdNavRebake
         {
             ErodeRect(nav, nav.Walk, navCellsPerSide, nav.ClearanceNavCells, grown, nav.Passable);
             var dirty = TilesOf(nav, grown, navCellsPerTile, navTilesPerSide);
-            // 重烘后拿到同一内容条目(缓存命中)的 tile:HPA 簇内距离逐位复用
+            // 重烘后拿到同一内容条目(缓存命中)且代价格没变的 tile:HPA 簇内距离逐位复用。
+            // 内容相同只说明可走形相同；认知变体的假设区域可在同一可走形下改代价，距离必须重算。
             var prev = PrevOf(nav, dirty.Count);
             for (int i = 0; i < dirty.Count; i++) prev[i] = nav.Tiles![dirty[i]];
             BakeTiles(nav, dirty, cache, store.Area);
@@ -141,7 +144,7 @@ public static class CrowdNavRebake
             same.Clear();
             for (int i = 0; i < dirty.Count; i++)
             {
-                if (ReferenceEquals(nav.Tiles![dirty[i]], prev[i])) same.Add(dirty[i]);
+                if (ReferenceEquals(nav.Tiles![dirty[i]], prev[i]) && !costTiles.Contains(dirty[i])) same.Add(dirty[i]);
             }
 
             FinishPassable(nav, sources, store, dirty, grown, same);
@@ -409,7 +412,10 @@ public static class CrowdNavRebake
         NavContext nav,
         CrowdRebakeSources sources,
         CrowdStructuresStore store,
-        (int X0, int Y0, int X1, int Y1) rect)
+        (int X0, int Y0, int X1, int Y1) rect,
+        HashSet<int> costChangedTiles,
+        int navCellsPerTile,
+        int navTilesPerSide)
     {
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide;
@@ -444,12 +450,14 @@ public static class CrowdNavRebake
                 {
                     cost[i] = cell;
                     if (kind == KindNone) kind = KindCost;
+                    costChangedTiles.Add((y / navCellsPerTile) * navTilesPerSide + (x / navCellsPerTile));
                 }
 
                 if (speedDivisor[i] != div)
                 {
                     speedDivisor[i] = div;
                     if (kind == KindNone) kind = KindCost;
+                    costChangedTiles.Add((y / navCellsPerTile) * navTilesPerSide + (x / navCellsPerTile));
                 }
 
                 byte w = cell > Fix64.Zero && blocked[i] == 0 ? (byte)1 : (byte)0;
