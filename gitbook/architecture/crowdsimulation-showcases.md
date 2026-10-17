@@ -10,7 +10,7 @@
 | `crowd_simulation_showcase_reversal_raylib` | `CrowdSimulationReversalShowcaseMod` | 方块向东出发，tick 3 掉头往西，tick 46 同向再令一次 |
 | `crowd_simulation_showcase_repeat_click_raylib` | `CrowdSimulationRepeatClickShowcaseMod` | 方块集结后，从 tick 450 起每 10 tick 对同一目标再点一次，共 8 次 |
 | `crowd_simulation_showcase_fog_explore_raylib` | `CrowdSimulationFogExploreShowcaseMod` | 视野外的敌方小队、敌方目标和南边的新建筑都不画；tick 80 有 5 个敌人出现在本方旁边；tick 110 本方向南探索，约 tick 2689 看见建筑 |
-| `crowd_simulation_showcase_fog_reroute_raylib` | `CrowdSimulationFogRerouteShowcaseMod` | 8 名步兵从陆地 (378125, 359375) 开往正北 (378125, 659375)。直线上格 (60,103) 是还没探索过的水域，岸上格 (60,102) 在 tick 8 放一栋边长 6250 cm 的建筑。开乐观时领队路径先直穿这格水，看见建筑和真实水域后改道并到达；关乐观时第一条路径就绕开这格水 |
+| `crowd_simulation_showcase_fog_reroute_raylib` | `CrowdSimulationFogRerouteShowcaseMod` | 2 名步兵从陆地 (1334375, 315625) 开往正北 (1334375, 528125)。直线上 y=80..83 是一排还没探索过的水域，岸上格 (213,79) 在 tick 60 放一栋边长 6250 cm 的建筑。开乐观时领队路径先直穿这排水，看见建筑和真实水域后改道并到达；关乐观时第一条路径就绕开 |
 | `crowd_simulation_showcase_fog_shared_vision_raylib` | `CrowdSimulationFogAllyVisionShowcaseMod` | 玩家 1 原地不动，盟友玩家 3 去看东边的建筑（约 tick 185 看见）、再往西路过敌人（约 tick 609）；tick 800 拆掉建筑，玩家 1 这边留残影，盟友回去后约 tick 1281 残影消失 |
 | `crowd_simulation_showcase_stress_50k_raylib` | `CrowdSimulationStress50kShowcaseMod` | 和 50k 门禁同一场景：开局 5 万步兵，tick 2 四方都开往 (1200000, 800000)；遥测面板默认打开 |
 
@@ -40,7 +40,7 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 ## 组成
 
 - `CrowdSimulationShowcaseStageMod`：所有场景共用的舞台。依赖 S4 部署演示，把开局部署人数设为 0，清空 S4 的演示脚本，关掉自动回放，玩家视图按迷雾隐藏敌方。
-- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下。迷雾探索把镜头拉到 2,900,000 cm、目标 (10000, 315000)，整张地图连同四边都在画面里，能看出迷雾盖到地图边缘。乐观迷雾把镜头收到距离 800,000 cm、目标 (378125, 509375)，对着这段南北向的穿越），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
+- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下。迷雾探索把镜头拉到 2,900,000 cm、目标 (10000, 315000)，整张地图连同四边都在画面里，能看出迷雾盖到地图边缘。乐观迷雾把镜头收到距离 700,000 cm、目标 (1334375, 421875)，对着这段南北向的穿越），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
 - 脚本可以引用文件：`session.scriptAsset` 写 mod 内相对路径，指向根上有 `script` 数组的文档（和回归场景同一种格式）。会话先跑这份文件里的行，再跑 `session.script`，合起来仍须按 tick 升序。行军、折返、连点三个场景共用的 120 人开局写在舞台 Mod 的 `assets/CrowdSimulation/showcase/formation-120.json`，三个场景只写自己的指令。5 万单位场景直接引用 50k 门禁读的 `assets/CrowdSimulation/regress/stress-50k.json`，演示和门禁是同一个文件。
 - 行军和连点的第一条指令都是 tick 0 走到 A 点，这一行没有抽出来：它是各自场景的第一步，连点场景后面八次点击也是同一个 A 点，抽成共享文件反而要拆成两层引用。
 
