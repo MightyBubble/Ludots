@@ -198,7 +198,6 @@ public sealed class FogShowcaseTests
         Assert.That(s.Fog!.Terrain, Is.False);
         int spawned = CrowdUatKit.SpawnAt(s, Fix64.FromInt(OptimisticStartX), Fix64.FromInt(OptimisticStartY), OptimisticSquad, rIdx: 0);
         Assert.That(spawned, Is.EqualTo(OptimisticSquad));
-        int id = Place(s, "building", OptimisticBuildX, OptimisticBuildY, OptimisticBuildSizeCm);
         Order(s, Me, OptimisticGoalX, OptimisticGoalY, fogTerrain: false);
         Assert.That(s.Fog.Terrain, Is.False);
 
@@ -210,11 +209,17 @@ public sealed class FogShowcaseTests
         }
 
         Assert.That(group, Is.Not.Null, "关闭乐观后没有规划完的领队");
-        Assert.That(group!.NavId, Is.EqualTo(group.BodyNavId), "关闭乐观应走真相导航");
+        Assert.That(group!.NavId, Is.EqualTo(group.BodyNavId), "没有未知实体时，关闭乐观应走真相导航");
         var path0 = PathOf(group.Leader!);
         Assert.That(PathHitsCell(path0, OptimisticWaterCellX, OptimisticWaterCellY, OptimisticCellCm), Is.False,
             "已知地形的第一条路径不应穿过水域");
+        int id = Place(s, "building", OptimisticBuildX, OptimisticBuildY, OptimisticBuildSizeCm);
         Assert.That(s.Fog.Belief[Group(s, Me)].ContainsKey(id), Is.False, "出发时岸上的建筑不应已在认知里");
+        CrowdUatKit.Step(s, 4);
+        var afterPlace = ReadyGroup(s, Me);
+        Assert.That(afterPlace, Is.Not.Null);
+        Assert.That(PathHitsCell(PathOf(afterPlace!.Leader!), OptimisticWaterCellX, OptimisticWaterCellY, OptimisticCellCm), Is.False,
+            "放下一栋还没看见的建筑后，已知路线不应改去穿过水域");
 
         bool crossed = false;
         bool arrived = false;
