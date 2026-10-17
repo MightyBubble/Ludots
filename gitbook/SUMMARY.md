@@ -151,6 +151,7 @@
   - [Raylib Render 产品化合同](architecture/raylib-render-productization.md)
   - [Raylib 引擎工程分层与关卡容器格式](architecture/raylib-engine-project-scene-format.md)
   - [CrowdSimulation 与 NavSurface：导航体系重构](architecture/crowdsimulation-and-navsurface.md)
+    - [CrowdSimulation 移植交接](architecture/crowdsimulation-handoff.md)
     - [CrowdSimulation 最小样板：从空目录做一个群体地图 Mod](architecture/crowdsimulation-minimal-mod.md)
     - [CrowdSimulation 演示场景：行军、折返、连点、迷雾、5 万单位](architecture/crowdsimulation-showcases.md)
     - [CrowdSimulation 配置合同参考](architecture/crowdsimulation-data-schema.md)
