@@ -1037,8 +1037,8 @@ namespace Ludots.Tests.Architecture.Governance
                     missing.Add($"{spec.Issue}: GasTests.csproj missing {spec.ModName}.csproj reference");
                 }
 
-                if (!acceptance.Contains("\"artifacts\"", StringComparison.Ordinal) ||
-                    !acceptance.Contains("\"showcases\"", StringComparison.Ordinal) ||
+                if ((!acceptance.Contains("CommittedTestArtifacts.Resolve(\"artifacts/showcases", StringComparison.Ordinal) &&
+                     !acceptance.Contains("CommittedTestArtifacts.Resolve($\"artifacts/showcases", StringComparison.Ordinal)) ||
                     !acceptance.Contains(spec.ArtifactFolder, StringComparison.Ordinal))
                 {
                     missing.Add($"{spec.Issue}: acceptance test missing artifacts/showcases/{spec.ArtifactFolder}");
