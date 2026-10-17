@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="8516f191-4471-45fc-956d-b6913ccfb6a0" name="ROG@DESKTOP-R0A3N5D 2026-10-17 20:47:49" runUser="DESKTOP-R0A3N5D\ROG" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-17T20:47:49.2220432+08:00" queuing="2026-10-17T20:47:49.2220437+08:00" start="2026-10-17T20:45:19.1099939+08:00" finish="2026-10-17T20:50:19.4797751+08:00" />
+  <TestSettings name="default" id="8d3c7939-f44e-4d9b-8e95-9a0926811653">
+    <Deployment runDeploymentRoot="ROG_DESKTOP-R0A3N5D_2026-10-17_20_47_49" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="c13be81f-0062-498a-b25c-905b7b2c7246" testId="ee36085c-3365-fb34-86f5-f1b1d62a3c7f" testName="AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(&quot;cache&quot;)" computerName="DESKTOP-R0A3N5D" duration="00:02:29.6606610" startTime="2026-10-17T20:45:19.5281180+08:00" endTime="2026-10-17T20:47:49.1887174+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c13be81f-0062-498a-b25c-905b7b2c7246">
+      <Output>
+        <StdOut>50k HUD ui-path [cache]: tickMedian hidden=122.311ms visible=122.530ms noise=19.777ms hudFrame median=0.026ms p95=1.740ms max=3.800ms nonSampleFrames=113 nonSampleAlloc=0 sampleFrames=7 sampleAllocAvg=0 composes=0 renders=124 lastComposeMs=0.000 reads status=129 player=129 inspect=0 nav=65 telemetry=129&#xD;
+window 30s: frames=1875 ticks=899 gc0=0 gc1=0 gc2=0 processAllocated=3488 hudAlloc sample=0 nonSample=0 sampleFrames=117 redraws=117 redrawCost median=0.987ms p95=1.638ms max=2.100ms redrawCpu median=2.190ms p95=3.770ms referenceCpu median=2.069ms p95=2.583ms redrawWall median=2.258ms p95=3.844ms max=4.044ms composes=0</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e568dfb8-0948-4d05-b253-5102e66c53e9" testId="29f6a351-153b-ef57-83bc-edaf2ee382c0" testName="AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(&quot;inspect&quot;)" computerName="DESKTOP-R0A3N5D" duration="00:02:30.1360120" startTime="2026-10-17T20:47:49.1900206+08:00" endTime="2026-10-17T20:50:19.3260299+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e568dfb8-0948-4d05-b253-5102e66c53e9">
+      <Output>
+        <StdOut>50k HUD ui-path [inspect]: tickMedian hidden=72.564ms visible=73.222ms noise=7.256ms hudFrame median=0.019ms p95=1.003ms max=1.752ms nonSampleFrames=105 nonSampleAlloc=0 sampleFrames=15 sampleAllocAvg=0 composes=0 renders=124 lastComposeMs=0.000 reads status=129 player=130 inspect=129 nav=0 telemetry=129&#xD;
+window 30s: frames=1875 ticks=899 gc0=0 gc1=0 gc2=0 processAllocated=4352 hudAlloc sample=0 nonSample=0 sampleFrames=234 redraws=117 redrawCost median=0.865ms p95=1.353ms max=2.347ms redrawCpu median=2.116ms p95=3.275ms referenceCpu median=2.171ms p95=2.837ms redrawWall median=2.157ms p95=3.399ms max=6.269ms composes=0</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(&quot;inspect&quot;)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="29f6a351-153b-ef57-83bc-edaf2ee382c0">
+      <Execution id="e568dfb8-0948-4d05-b253-5102e66c53e9" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Performance.CrowdHud50KUiPathTests" name="AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(&quot;inspect&quot;)" />
+    </UnitTest>
+    <UnitTest name="AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(&quot;cache&quot;)" storage="d:\ludots-wt\crowdsim-l97\src\tests\crowdsimulationtests\bin\debug\net9.0\crowdsimulationtests.dll" id="ee36085c-3365-fb34-86f5-f1b1d62a3c7f">
+      <Execution id="c13be81f-0062-498a-b25c-905b7b2c7246" />
+      <TestMethod codeBase="D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="CrowdSimulationTests.Performance.CrowdHud50KUiPathTests" name="AllPanelsVisible_FramesAllocateNothing_NoGcIn30s_RedrawWithinBudget_AndTickTimeStaysInNoise(&quot;cache&quot;)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="ee36085c-3365-fb34-86f5-f1b1d62a3c7f" executionId="c13be81f-0062-498a-b25c-905b7b2c7246" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="29f6a351-153b-ef57-83bc-edaf2ee382c0" executionId="e568dfb8-0948-4d05-b253-5102e66c53e9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\Ludots-wt\crowdsim-l97\src\Tests\CrowdSimulationTests\bin\Debug\net9.0\CrowdSimulationTests.dll&#xD;
+   NUnit3TestExecutor discovered 2 of 2 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+50k HUD ui-path [cache]: tickMedian hidden=122.311ms visible=122.530ms noise=19.777ms hudFrame median=0.026ms p95=1.740ms max=3.800ms nonSampleFrames=113 nonSampleAlloc=0 sampleFrames=7 sampleAllocAvg=0 composes=0 renders=124 lastComposeMs=0.000 reads status=129 player=129 inspect=0 nav=65 telemetry=129&#xD;
+window 30s: frames=1875 ticks=899 gc0=0 gc1=0 gc2=0 processAllocated=3488 hudAlloc sample=0 nonSample=0 sampleFrames=117 redraws=117 redrawCost median=0.987ms p95=1.638ms max=2.100ms redrawCpu median=2.190ms p95=3.770ms referenceCpu median=2.069ms p95=2.583ms redrawWall median=2.258ms p95=3.844ms max=4.044ms composes=0&#xD;
+&#xD;
+50k HUD ui-path [inspect]: tickMedian hidden=72.564ms visible=73.222ms noise=7.256ms hudFrame median=0.019ms p95=1.003ms max=1.752ms nonSampleFrames=105 nonSampleAlloc=0 sampleFrames=15 sampleAllocAvg=0 composes=0 renders=124 lastComposeMs=0.000 reads status=129 player=130 inspect=129 nav=0 telemetry=129&#xD;
+window 30s: frames=1875 ticks=899 gc0=0 gc1=0 gc2=0 processAllocated=4352 hudAlloc sample=0 nonSample=0 sampleFrames=234 redraws=117 redrawCost median=0.865ms p95=1.353ms max=2.347ms redrawCpu median=2.116ms p95=3.275ms referenceCpu median=2.171ms p95=2.837ms redrawWall median=2.157ms p95=3.399ms max=6.269ms composes=0&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
