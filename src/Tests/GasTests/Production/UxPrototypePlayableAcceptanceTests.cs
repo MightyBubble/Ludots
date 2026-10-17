@@ -34,6 +34,7 @@ using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -87,8 +88,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void UxPrototype_PlayableAcceptance_WritesArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "ux-prototype");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/ux-prototype");
             Directory.CreateDirectory(artifactDir);
 
             var trace = new List<object>();

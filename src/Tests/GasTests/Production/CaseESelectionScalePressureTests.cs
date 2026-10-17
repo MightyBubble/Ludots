@@ -191,7 +191,7 @@ public sealed class CaseESelectionScalePressureTests
         if (enforceLatencyBudget)
             Assert.That(maxTickMs, Is.LessThan(500.0), $"10.拖拽单拍峰值 = {maxTickMs:F2}ms 超围栏");
 
-        WriteBenchmark(repoRoot, population: 10_000, rosterSingleMs, rosterPerEventMs, rosterStreamMs, dragMs, maxTickMs,
+        WriteBenchmark(population: 10_000, rosterSingleMs, rosterPerEventMs, rosterStreamMs, dragMs, maxTickMs,
             rosterCount, worldAmount, fullBandPreview, halfBandPreview);
     }
 
@@ -262,7 +262,6 @@ public sealed class CaseESelectionScalePressureTests
     }
 
     private static void WriteBenchmark(
-        string repoRoot,
         int population,
         double rosterSingleMs,
         double rosterPerEventMs,
@@ -274,7 +273,7 @@ public sealed class CaseESelectionScalePressureTests
         int hoverFull,
         int hoverHalf)
     {
-        string dir = Path.Combine(repoRoot, BenchDir);
+        string dir = CommittedTestArtifacts.Resolve(BenchDir);
         Directory.CreateDirectory(dir);
         string csv = Path.Combine(dir, "case-e-selection-scale.csv");
         bool exists = File.Exists(csv);

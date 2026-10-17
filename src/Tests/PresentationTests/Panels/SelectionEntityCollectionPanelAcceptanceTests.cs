@@ -18,6 +18,7 @@ using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation;
 
@@ -51,8 +52,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     [Test]
     public void InteractionShowcase_CommandSourceEntityCollectionPanel_VirtualizesAndWritesScreenshotArtifacts()
     {
-        string repoRoot = FindRepoRoot();
-        string artifactRoot = Path.Combine(repoRoot, "artifacts", "acceptance", "command-source-entity-collection-panel");
+        string artifactRoot = CommittedTestArtifacts.Resolve("artifacts/acceptance/command-source-entity-collection-panel");
         string screenRoot = Path.Combine(artifactRoot, "screens");
         Directory.CreateDirectory(screenRoot);
 

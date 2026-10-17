@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
@@ -290,6 +291,23 @@ namespace Ludots.Tests.Presentation
             float flatY = wpSample.Value.Y.ToFloat();
             Assert.That(heightmap!.TrySampleHeightCm(flatX, flatY, out float heightCm), Is.True);
             Assert.That(heightCm, Is.GreaterThan(10000f), "the origin relief is hundreds of metres");
+
+            // The map camera sits 140m from a follow point on the raised surface, so the ground
+            // point is outside the frustum and WorldToScreen returns NaN. Which agent the query
+            // returns first also moves that point in or out of the default frame. Measure with a
+            // camera that can see both heights.
+            var framedView = new HeadlessViewController(1280f, 720f);
+            var framedCamera = new CameraManager();
+            framedCamera.ApplyPose(new CameraPoseRequest
+            {
+                TargetCm = new Vector2(flatX, flatY),
+                TargetHeightCm = heightCm * 0.5f,
+                DistanceCm = 200_000f,
+                Pitch = 42f,
+                Yaw = 45f,
+                FovYDeg = framedView.Fov,
+            });
+            proj = new CoreScreenProjector(framedCamera, framedView);
 
             var flatPos = Ludots.Core.Mathematics.WorldPlane2D.LogicCmToVisualMeters(in wpSample.Value);
             var raisedPos = Ludots.Core.Mathematics.WorldPlane2D.LogicCmToVisualMeters(in wpSample.Value, heightCm / 100f);

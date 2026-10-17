@@ -59,6 +59,21 @@ namespace Ludots.Core.Knowledge
         public bool CanReadRelationship(int relationshipTypeId) => RelationshipTypeMask.ContainsId(relationshipTypeId);
 
         public bool CanReadTag(int tagId) => TagMask.ContainsId(tagId);
+
+        public KnowledgeDisclosureRecord ToDisclosureRecord()
+        {
+            return new KnowledgeDisclosureRecord(
+                Presence,
+                Position,
+                in AttributeMask,
+                in RelationshipTypeMask,
+                in TagMask,
+                Source,
+                ObservedTick,
+                ExpiryTick,
+                ConfidencePermille,
+                Revision);
+        }
     }
 
     public sealed class KnowledgeProjectionResolver
@@ -94,6 +109,21 @@ namespace Ludots.Core.Knowledge
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _relationProjector = relationProjector;
             _scopeResolver = scopeResolver;
+        }
+
+        public bool TryResolveDisclosure(
+            Entity viewer,
+            Entity target,
+            int currentTick,
+            out KnowledgeDisclosureRecord record)
+        {
+            record = default;
+            if (viewer == Entity.Null || target == Entity.Null)
+            {
+                return false;
+            }
+
+            return _store.TryGet(viewer, target, currentTick, out record);
         }
 
         public bool CanKnowEntity(Entity viewer, Entity target, int currentTick)

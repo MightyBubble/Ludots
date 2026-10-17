@@ -32,6 +32,7 @@ using NUnit.Framework;
 using RtsDemoMod.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -244,8 +245,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void RtsStrategicShowcase_WritesAcceptanceArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
+            string artifactDir = CommittedTestArtifacts.Resolve($"artifacts/acceptance/{ArtifactFolderName}");
             Directory.CreateDirectory(artifactDir);
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(screensDir);
