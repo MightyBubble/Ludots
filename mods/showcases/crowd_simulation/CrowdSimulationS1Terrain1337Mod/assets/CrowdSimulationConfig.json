@@ -1,4 +1,7 @@
 {
+  "fog": {
+    "optimisticTerrain": false
+  },
   "world": {
     "seed": 1337
   },

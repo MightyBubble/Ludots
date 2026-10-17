@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text.Json.Nodes;
+using System.Text.Json.Nodes
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -160,6 +161,20 @@ public class CrowdSimulationConfigTests
         json.Remove("hpa");
         var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
         Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
+    }
+
+    [Test]
+    public void OptimisticTerrain_SandboxStaysClosed_StandardStartsOpen_MissingFieldRejected()
+    {
+        JsonObject sandbox = TestDefaults.DefaultConfigJson();
+        Assert.That(sandbox["fog"]!["optimisticTerrain"]!.GetValue<bool>(), Is.False);
+        Assert.That(TestDefaults.Assemble().Fog.OptimisticTerrain, Is.False);
+        var standard = JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "CrowdSimulationConfig.json")))!.AsObject();
+        Assert.That(standard["fog"]!["optimisticTerrain"]!.GetValue<bool>(), Is.True);
+
+        sandbox["fog"]!.AsObject().Remove("optimisticTerrain");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(sandbox))!;
+        Assert.That(ex.Message, Does.Contain("optimisticTerrain"));
     }
 
     [Test]
