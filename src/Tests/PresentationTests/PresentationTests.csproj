@@ -53,6 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\CommittedTestArtifacts.cs" Link="CommittedTestArtifacts.cs" />
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\TeamRelationTestHarness.cs" Link="TeamRelationTestHarness.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />
@@ -60,6 +61,7 @@
     <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
     <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
     <Compile Include="..\TestCommon\MinimapTestActions.cs" Link="MinimapTestActions.cs" />
+    <Compile Include="..\TestCommon\PresentationMemoryPhaseRecorder.cs" Link="PresentationMemoryPhaseRecorder.cs" />
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- RaylibBoneTransformProviderTests 需要 native raylib（LoadModelAnimations 纯 CPU，无 GL 上下文） -->
     <None Include="..\..\Platforms\Desktop\raylib.dll" Link="raylib.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Platforms\Desktop\raylib.dll')" />

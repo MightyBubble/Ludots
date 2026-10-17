@@ -1,3 +1,4 @@
+using System;
 using Arch;
 using Arch.Core;
 using Ludots.Core.Client;
@@ -37,6 +38,19 @@ namespace Ludots.Tests.Presentation
 
         internal static GameEngine CreateEngine(params string[] modIds)
         {
+            return CreateEngineStaged(modIds, afterConstruct: null, afterConfig: null, afterStart: null);
+        }
+
+        /// <summary>
+        /// 分阶段建引擎：内存阶段观测需要在构造后/配置加载后/启动后三个边界采样，
+        /// 默认 CreateEngine 的调用方不传回调，行为与原来完全一致。
+        /// </summary>
+        internal static GameEngine CreateEngineStaged(
+            string[] modIds,
+            Action<GameEngine>? afterConstruct,
+            Action<GameEngine>? afterConfig,
+            Action<GameEngine>? afterStart)
+        {
             ResetGlobalRegistries();
             _ = typeof(PresenterBlacksmithShowcaseModEntry).Assembly;
             string repoRoot = FindRepoRoot();
@@ -45,11 +59,14 @@ namespace Ludots.Tests.Presentation
             List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, resolvedModIds);
 
             var engine = new GameEngine();
+            afterConstruct?.Invoke(engine);
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
             InstallHeadlessPresentation(engine);
+            afterConfig?.Invoke(engine);
             engine.Start();
             InstallSoleLocalSeatViewer(engine);
+            afterStart?.Invoke(engine);
             return engine;
         }
 

@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\CommittedTestArtifacts.cs" Link="CommittedTestArtifacts.cs" />
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\TeamRelationTestHarness.cs" Link="TeamRelationTestHarness.cs" />
     <Compile Include="..\TestCommon\BehaviorTreeFactory.cs" Link="BehaviorTreeFactory.cs" />
@@ -34,6 +35,7 @@
     <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
     <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
     <Compile Include="..\TestCommon\MinimapTestActions.cs" Link="MinimapTestActions.cs" />
+    <Compile Include="..\TestCommon\PresentationMemoryPhaseRecorder.cs" Link="PresentationMemoryPhaseRecorder.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\tools\FieldEditor\FieldEditor.csproj" />
     <ProjectReference Include="..\..\Graph\Ludots.Graph.Codegen\Ludots.Graph.Codegen.csproj" />
