@@ -223,12 +223,177 @@ public sealed class L76FogGateTests
         Assert.That(scopeAfterShare, Is.EqualTo(groupA + 1));
     }
 
-    /// <summary>认知导航版本和到达集合还没有基线，这行先不测。</summary>
+    /// <summary>
+    /// 换雾实现前的 s7 雾脚本和回收脚本：认知导航是否物化、版本、流场到达格、到达单位句柄。
+    /// 夹具是那次运行的采样。当前会话重采后，认知组先对照，再对照其余组的到达格。
+    /// </summary>
     [Test]
-    public void CognitiveNav_AndArrivalSet_WaitForBaseline()
+    public void CognitiveNavVersion_AndArrivalCells_MatchBaseline()
     {
-        Assert.Ignore("认知导航版本和到达集合还没有基线，这行先不测。");
+        JsonObject fixture = JsonNode.Parse(File.ReadAllText(CognitiveNavBaselinePath()))!.AsObject();
+        JsonObject scenarios = fixture["scenarios"]!.AsObject();
+        var actualByName = new Dictionary<string, JsonObject>(scenarios.Count);
+        foreach (var scenario in scenarios)
+        {
+            actualByName[scenario.Key] = SampleCognitiveNav(scenario.Key);
+        }
+
+        foreach (bool cognitiveOnly in new[] { true, false })
+        {
+            foreach (var scenario in scenarios)
+            {
+                JsonObject actual = actualByName[scenario.Key];
+                JsonObject expected = scenario.Value!.AsObject();
+                Assert.That(actual["period"]!.GetValue<int>(), Is.EqualTo(expected["period"]!.GetValue<int>()), scenario.Key);
+                Assert.That(actual["endTick"]!.GetValue<int>(), Is.EqualTo(expected["endTick"]!.GetValue<int>()), scenario.Key);
+                AssertSeries(expected["samples"]!.AsArray(), actual["samples"]!.AsArray(), scenario.Key, cognitiveOnly);
+                AssertSnapshot(expected["end"]!, actual["end"]!, $"{scenario.Key} end", cognitiveOnly);
+            }
+        }
     }
+
+    private static JsonObject SampleCognitiveNav(string truthName)
+    {
+        var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
+        session.BlockOnDueReplies = true;
+
+        string dir = Path.Combine(Parity.S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
+        var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, truthName)))!;
+        var reference = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
+        reference.ValidateStructure(session);
+        var fog = session.Fog!;
+        int period = fog.Period;
+        int ticks = meta["ticks"]!.GetValue<int>();
+        var samples = new JsonArray();
+        for (int t = 0; t < ticks; t++)
+        {
+            reference.ApplyDue(session);
+            Step(session);
+            if (t % period == 0) samples.Add(CognitiveSnapshot(session, t));
+        }
+
+        var fogVersion = new JsonArray();
+        for (int g = 0; g < fog.VisionGroupCount; g++) fogVersion.Add(fog.Version[g]);
+        return new JsonObject
+        {
+            ["ticks"] = ticks,
+            ["period"] = period,
+            ["endTick"] = session.TickCount,
+            ["fogVersion"] = fogVersion,
+            ["samples"] = samples,
+            ["end"] = CognitiveSnapshot(session, session.TickCount),
+        };
+    }
+
+    private static JsonObject CognitiveSnapshot(CrowdSimSession session, int tick)
+    {
+        var groups = new JsonArray();
+        foreach (var group in session.Groups.Groups)
+        {
+            if (group == null || group.Count == 0) continue;
+            bool cognitive = group.NavId >= CrowdBeliefNavs.BeliefStride;
+            bool materialized = session.TryGetMaterializedNav(group.NavId, out var nav);
+            var row = new JsonObject
+            {
+                ["id"] = group.Id,
+                ["player"] = group.Player,
+                ["count"] = group.Count,
+                ["navId"] = group.NavId,
+                ["cognitive"] = cognitive,
+                ["materialized"] = materialized,
+                ["navVersion"] = materialized ? JsonValue.Create(nav.Version) : null,
+            };
+            if (group.Flow == null)
+            {
+                row["arrivalCells"] = null;
+                row["reached"] = null;
+            }
+            else
+            {
+                row["reached"] = group.Flow.Reached;
+                row["goal"] = group.Flow.Goal;
+                row["flowNavId"] = group.Flow.NavId;
+                row["arrivalCells"] = ArrivalCells(group.Flow);
+            }
+
+            groups.Add(row);
+        }
+
+        var arrived = new JsonArray();
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            if (session.World.Get<CrowdSimulationUnitState>(session.Units.EntityAt(i)).State == (byte)CrowdUnitState.Arrived)
+            {
+                arrived.Add(session.Units.HandleAt(i));
+            }
+        }
+
+        return new JsonObject
+        {
+            ["tick"] = tick,
+            ["groups"] = groups,
+            ["arrivedHandles"] = arrived,
+        };
+    }
+
+    private static JsonArray ArrivalCells(Ludots.Core.CrowdSimulation.Nav.FlowField flow)
+    {
+        var integ = flow.Integ;
+        var cells = new JsonArray();
+        for (int i = 0; i < integ.Length; i++)
+        {
+            if (integ[i] != Fix64.MaxValue) cells.Add(i);
+        }
+
+        return cells;
+    }
+
+    private static void AssertSeries(JsonArray expected, JsonArray actual, string label, bool cognitiveOnly)
+    {
+        Assert.That(actual.Count, Is.EqualTo(expected.Count), label);
+        for (int i = 0; i < expected.Count; i++)
+        {
+            AssertSnapshot(expected[i]!, actual[i]!, $"{label} tick {expected[i]!["tick"]}", cognitiveOnly);
+        }
+    }
+
+    private static void AssertSnapshot(JsonNode expected, JsonNode actual, string label, bool cognitiveOnly)
+    {
+        Assert.That(actual["tick"]!.GetValue<int>(), Is.EqualTo(expected["tick"]!.GetValue<int>()), label);
+        if (!JsonNode.DeepEquals(expected["arrivedHandles"], actual["arrivedHandles"]))
+        {
+            Assert.Fail($"{label} 到达句柄 基线 {expected["arrivedHandles"]!.ToJsonString()} 当前 {actual["arrivedHandles"]!.ToJsonString()}");
+        }
+
+        JsonArray expectedGroups = expected["groups"]!.AsArray();
+        JsonArray actualGroups = actual["groups"]!.AsArray();
+        Assert.That(actualGroups.Count, Is.EqualTo(expectedGroups.Count), label);
+        for (int i = 0; i < expectedGroups.Count; i++)
+        {
+            bool cognitive = expectedGroups[i]!["cognitive"]!.GetValue<bool>() || actualGroups[i]!["cognitive"]!.GetValue<bool>();
+            if (cognitive != cognitiveOnly) continue;
+            AssertGroup(expectedGroups[i]!.AsObject(), actualGroups[i]!.AsObject(), $"{label} 组 {expectedGroups[i]!["id"]}");
+        }
+    }
+
+    private static void AssertGroup(JsonObject expected, JsonObject actual, string label)
+    {
+        foreach (string key in new[] { "id", "player", "count", "navId", "cognitive", "materialized", "navVersion", "reached", "goal", "flowNavId" })
+        {
+            if (JsonNode.DeepEquals(expected[key], actual[key])) continue;
+            Assert.Fail($"{label} {key} 基线 {Text(expected[key])} 当前 {Text(actual[key])}");
+        }
+
+        if (JsonNode.DeepEquals(expected["arrivalCells"], actual["arrivalCells"])) return;
+        Assert.Fail($"{label} arrivalCells 基线 {Count(expected["arrivalCells"])} 格 当前 {Count(actual["arrivalCells"])} 格");
+    }
+
+    private static string Text(JsonNode? node) => node?.ToJsonString() ?? "null";
+
+    private static string Count(JsonNode? node) => node is JsonArray cells ? cells.Count.ToString() : "null";
 
     private static void AssertCounts(JsonNode before, JsonNode after)
     {
@@ -443,5 +608,18 @@ public sealed class L76FogGateTests
         }
 
         throw new InvalidOperationException("找不到 l76-fog.json。");
+    }
+
+    private static string CognitiveNavBaselinePath()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            string path = Path.Combine(dir.FullName, "src", "Tests", "CrowdSimulationTests", "Performance", "l76-cognitive-nav-arrival.json");
+            if (File.Exists(path)) return path;
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("找不到 l76-cognitive-nav-arrival.json。");
     }
 }
