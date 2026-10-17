@@ -51,6 +51,16 @@ public sealed class CrowdWebFuzzParityFixture
 {
     public const string SchemaV3 = "crowd-fuzz-parity-v3";
 
+    private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
+    {
+        "paritySchema", "seed", "opCount", "blast", "templateOrder", "formationOrder", "initialStructures", "steps",
+    };
+
+    private static readonly HashSet<string> StepFields = new(StringComparer.Ordinal)
+    {
+        "rngDraws", "op", "units", "validateOk", "validateErrors", "unitChecksumHex", "positionStatL1Cm",
+    };
+
     public required string ParitySchema { get; init; }
     public required long Seed { get; init; }
     public required int OpCount { get; init; }
@@ -61,7 +71,8 @@ public sealed class CrowdWebFuzzParityFixture
     public static CrowdWebFuzzParityFixture Load(string path)
     {
         var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
-        string schema = RequireString(root, "paritySchema");
+        CrowdWebFuzzFixtureJson.RejectUnknownFields(root, RootFields, "模糊对拍夹具");
+        string schema = CrowdWebFuzzFixtureJson.RequireString(root, "paritySchema");
         if (schema != SchemaV3)
         {
             throw new InvalidOperationException($"模糊对拍夹具 paritySchema 需为 {SchemaV3}，实际是 {schema}。");
@@ -69,18 +80,19 @@ public sealed class CrowdWebFuzzParityFixture
 
         var palette = new CrowdWebFuzzPalette
         {
-            TemplateIds = RequireIdList(root, "templateOrder"),
-            FormationIds = RequireIdList(root, "formationOrder"),
-            InitialStructureAnchors = RequirePointList(root, "initialStructures"),
+            TemplateIds = CrowdWebFuzzFixtureJson.RequireIdList(root, "templateOrder"),
+            FormationIds = CrowdWebFuzzFixtureJson.RequireIdList(root, "formationOrder"),
+            InitialStructureAnchors = CrowdWebFuzzFixtureJson.RequirePointList(root, "initialStructures"),
         };
 
-        long seed = RequireLong(root, "seed");
-        int opCount = RequireInt(root, "opCount", 1, null);
+        long seed = CrowdWebFuzzFixtureJson.RequireLong(root, "seed");
+        int opCount = CrowdWebFuzzFixtureJson.RequireInt(root, "opCount", 1, null);
         var blastNode = root["blast"] as JsonObject
             ?? throw new InvalidOperationException("模糊对拍夹具缺少 blast。");
+        CrowdWebFuzzFixtureJson.RejectUnknownFields(blastNode, new HashSet<string> { "ringScale", "impulse" }, "模糊对拍夹具 blast");
         var blast = new CrowdWebFuzzBlast(
-            Fix64.FromDouble(RequireDouble(blastNode, "ringScale")),
-            Fix64.FromDouble(RequireDouble(blastNode, "impulse")));
+            Fix64.FromDouble(CrowdWebFuzzFixtureJson.RequireDouble(blastNode, "ringScale")),
+            Fix64.FromDouble(CrowdWebFuzzFixtureJson.RequireDouble(blastNode, "impulse")));
         var stepsNode = root["steps"] as JsonArray
             ?? throw new InvalidOperationException("模糊对拍夹具缺少 steps。");
         if (stepsNode.Count != opCount)
@@ -91,7 +103,10 @@ public sealed class CrowdWebFuzzParityFixture
         var steps = new List<CrowdWebFuzzStepRecord>(stepsNode.Count);
         for (int i = 0; i < stepsNode.Count; i++)
         {
-            steps.Add(ParseStep(stepsNode[i] as JsonObject ?? throw new InvalidOperationException($"steps[{i}] 需为对象。")));
+            var row = stepsNode[i] as JsonObject
+                ?? throw new InvalidOperationException($"模糊对拍夹具 steps[{i}] 需为对象。");
+            CrowdWebFuzzFixtureJson.RejectUnknownFields(row, StepFields, $"模糊对拍夹具 steps[{i}]");
+            steps.Add(CrowdWebFuzzStepParse.ParseStep(row, $"模糊对拍夹具 steps[{i}]"));
         }
 
         return new CrowdWebFuzzParityFixture
@@ -104,144 +119,74 @@ public sealed class CrowdWebFuzzParityFixture
             Steps = steps,
         };
     }
+}
 
-    private static CrowdWebFuzzStepRecord ParseStep(JsonObject row)
+/// <summary>step 行（v3 对拍与 v1 trace 共用）的解析。</summary>
+internal static class CrowdWebFuzzStepParse
+{
+    public static CrowdWebFuzzStepRecord ParseStep(JsonObject row, string where)
     {
         var rngNode = row["rngDraws"] as JsonArray
-            ?? throw new InvalidOperationException("step 缺少 rngDraws。");
+            ?? throw new InvalidOperationException($"{where} 缺少 rngDraws。");
         var draws = new List<uint>(rngNode.Count);
         for (int i = 0; i < rngNode.Count; i++)
         {
-            draws.Add(rngNode[i]?.GetValue<uint>()
-                ?? throw new InvalidOperationException($"rngDraws[{i}] 需为无符号整数。"));
+            draws.Add(CrowdWebFuzzFixtureJson.RequireU32(rngNode, i, $"{where} rngDraws[{i}]"));
         }
 
         var opNode = row["op"] as JsonObject
-            ?? throw new InvalidOperationException("step 缺少 op。");
-        string kind = RequireString(opNode, "kind");
-        JsonObject? @params = opNode["params"] as JsonObject;
+            ?? throw new InvalidOperationException($"{where} 缺少 op。");
+        CrowdWebFuzzFixtureJson.RejectUnknownFields(opNode, new HashSet<string> { "kind", "params" }, $"{where} op");
+        string kind = CrowdWebFuzzFixtureJson.RequireString(opNode, "kind");
+        JsonObject? @params = opNode["params"] as JsonObject
+            ?? throw new InvalidOperationException($"{where} op.params 需为对象（导出端每个 op 都带参数对象）。");
+        bool validateOk = CrowdWebFuzzFixtureJson.RequireBool(row, "validateOk");
         return new CrowdWebFuzzStepRecord
         {
             RngDraws = draws,
             Op = new CrowdWebFuzzOpRecord { Kind = kind, Params = @params },
-            Units = RequireInt(row, "units", 0, null),
-            ValidateOk = RequireBool(row, "validateOk"),
-            ValidateErrors = ParseErrors(row),
-            UnitChecksumHex = RequireString(row, "unitChecksumHex"),
-            PositionStatL1Cm = RequireLong(row, "positionStatL1Cm"),
+            Units = CrowdWebFuzzFixtureJson.RequireInt(row, "units", 0, null),
+            ValidateOk = validateOk,
+            ValidateErrors = ParseErrors(row, where, validateOk),
+            UnitChecksumHex = CrowdWebFuzzFixtureJson.RequireString(row, "unitChecksumHex"),
+            PositionStatL1Cm = CrowdWebFuzzFixtureJson.RequireLong(row, "positionStatL1Cm"),
         };
     }
 
-    private static IReadOnlyList<string>? ParseErrors(JsonObject row)
+    /// <summary>
+    /// 校验错误行的严格合同：导出端成功步省略 validateErrors、失败步必带非空错误串数组——
+    /// 缺键与结论矛盾、非数组、空数组、null/非字符串/空白串错误项都拒绝，不静默降级。
+    /// </summary>
+    private static IReadOnlyList<string>? ParseErrors(JsonObject row, string where, bool validateOk)
     {
-        if (row["validateErrors"] is not JsonArray arr || arr.Count == 0) return null;
+        if (!row.ContainsKey("validateErrors"))
+        {
+            return validateOk
+                ? null
+                : throw new InvalidOperationException($"{where} validateOk 为假时必须带 validateErrors。");
+        }
+
+        if (validateOk)
+        {
+            throw new InvalidOperationException($"{where} validateOk 为真时不得出现 validateErrors。");
+        }
+
+        if (row["validateErrors"] is not JsonArray arr || arr.Count == 0)
+        {
+            throw new InvalidOperationException($"{where} validateErrors 需为非空字符串数组。");
+        }
+
         var list = new List<string>(arr.Count);
         for (int i = 0; i < arr.Count; i++)
         {
-            list.Add(arr[i]?.GetValue<string>() ?? "");
+            if (arr[i] is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{where} validateErrors[{i}] 需为非空字符串。");
+            }
+
+            list.Add(text);
         }
 
         return list;
-    }
-
-    private static string RequireString(JsonObject obj, string key)
-    {
-        if (obj[key] is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为非空字符串。");
-        }
-
-        return text;
-    }
-
-    private static IReadOnlyList<string> RequireIdList(JsonObject obj, string key)
-    {
-        if (obj[key] is not JsonArray arr || arr.Count == 0)
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为非空 id 数组。");
-        }
-
-        var ids = new List<string>(arr.Count);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < arr.Count; i++)
-        {
-            if (arr[i] is not JsonValue value || !value.TryGetValue<string>(out string? id) || string.IsNullOrWhiteSpace(id))
-            {
-                throw new InvalidOperationException($"模糊对拍夹具: {key}[{i}] 需为非空字符串。");
-            }
-
-            if (!seen.Add(id))
-            {
-                throw new InvalidOperationException($"模糊对拍夹具: {key} 中 id {id} 重复。");
-            }
-
-            ids.Add(id);
-        }
-
-        return ids;
-    }
-
-    private static IReadOnlyList<(double X, double Y)> RequirePointList(JsonObject obj, string key)
-    {
-        if (obj[key] is not JsonArray arr)
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为 [x, y] 数组。");
-        }
-
-        var points = new List<(double X, double Y)>(arr.Count);
-        for (int i = 0; i < arr.Count; i++)
-        {
-            if (arr[i] is not JsonArray pair || pair.Count != 2
-                || pair[0] is not JsonValue xv || !xv.TryGetValue<double>(out double x) || !double.IsFinite(x)
-                || pair[1] is not JsonValue yv || !yv.TryGetValue<double>(out double y) || !double.IsFinite(y))
-            {
-                throw new InvalidOperationException($"模糊对拍夹具: {key}[{i}] 需为两个有限数值。");
-            }
-
-            points.Add((x, y));
-        }
-
-        return points;
-    }
-
-    private static bool RequireBool(JsonObject obj, string key)
-    {
-        if (obj[key] is not JsonValue value || !value.TryGetValue<bool>(out bool flag))
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为布尔值。");
-        }
-
-        return flag;
-    }
-
-    private static int RequireInt(JsonObject obj, string key, int min, int? max)
-    {
-        if (obj[key] is not JsonValue value || !value.TryGetValue<int>(out int number) || number < min || (max is int hi && number > hi))
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为 ≥ {min} 的整数。");
-        }
-
-        return number;
-    }
-
-    private static long RequireLong(JsonObject obj, string key)
-    {
-        if (obj[key] is not JsonValue value || !value.TryGetValue<long>(out long number))
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为整数。");
-        }
-
-        return number;
-    }
-
-    private static double RequireDouble(JsonObject obj, string key)
-    {
-        if (obj[key] is not JsonValue value || !value.TryGetValue<double>(out double number)
-            || double.IsNaN(number) || double.IsInfinity(number))
-        {
-            throw new InvalidOperationException($"模糊对拍夹具: {key} 需为有限数值。");
-        }
-
-        return number;
     }
 }

@@ -30,8 +30,13 @@ public static class CrowdWebFuzzRunner
     private const int DragWidthMinCm = 10000;
     private const int DragWidthSpanCm = 80000;
 
+    /// <summary>
+    /// 跑 fuzz 并按需逐 tick 抓快照：每个成功推进的 tick 后向 <paramref name="trace"/> 追加一份只读快照
+    /// （与 Web 导出器 captureTick 同构），供 <see cref="CrowdWebFuzzTraceCompare"/> 对拍。
+    /// </summary>
     public static CrowdWebFuzzRunResult Run(
-        CrowdSimSession session, int opCount, CrowdWebFuzzBlast blast, CrowdWebFuzzPalette palette, long seed)
+        CrowdSimSession session, int opCount, CrowdWebFuzzBlast blast, CrowdWebFuzzPalette palette, long seed,
+        List<CrowdWebFuzzTickTrace>? trace = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(palette);
@@ -72,7 +77,7 @@ public static class CrowdWebFuzzRunner
                         op = ExecOrder(session, rng, rngDraws, worldSizeM, selection, formationIds);
                     }
 
-                    StepTwice(session);
+                    StepTwice(session, trace, k + 1);
                     string? validateError = TryValidate(session, op.Kind);
                     bool ok = validateError == null;
                     steps.Add(new CrowdWebFuzzStepRecord
@@ -530,27 +535,25 @@ public static class CrowdWebFuzzRunner
             members = CaptureAllOwn(session, player);
         }
 
-        if (members.Length > 0)
+        // 没有单位也提交：fogTerrain 在空选择上仍然切换，移动指令本身不建立。
+        var cmd = new CrowdSimCommand
         {
-            var cmd = new CrowdSimCommand
-            {
-                Kind = CrowdSimCommandKind.Order,
-                Player = player,
-                XCm = (int)Math.Round(x * CmPerMeter),
-                YCm = (int)Math.Round(y * CmPerMeter),
-                ShapeId = shapeId,
-                HasAuto = true,
-                Auto = auto,
-                HasFace = drag,
-                FaceX = faceX ?? Fix64.Zero,
-                FaceY = faceY ?? Fix64.Zero,
-                WidthCm = widthCm,
-                HasFogTerrain = true,
-                FogTerrain = fogTerrain,
-                Members = members,
-            };
-            session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
-        }
+            Kind = CrowdSimCommandKind.Order,
+            Player = player,
+            XCm = (int)Math.Round(x * CmPerMeter),
+            YCm = (int)Math.Round(y * CmPerMeter),
+            ShapeId = shapeId,
+            HasAuto = true,
+            Auto = auto,
+            HasFace = drag,
+            FaceX = faceX ?? Fix64.Zero,
+            FaceY = faceY ?? Fix64.Zero,
+            WidthCm = widthCm,
+            HasFogTerrain = true,
+            FogTerrain = fogTerrain,
+            Members = members,
+        };
+        session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
         return new CrowdWebFuzzOpRecord
         {
             Kind = "order",
@@ -630,7 +633,7 @@ public static class CrowdWebFuzzRunner
         return list.ToArray();
     }
 
-    private static void StepTwice(CrowdSimSession session)
+    private static void StepTwice(CrowdSimSession session, List<CrowdWebFuzzTickTrace>? trace, int opIndex)
     {
         int guard = CrowdSimulationLimits.AdvanceStallGuardFactor;
         for (int i = 0; i < 2; i++)
@@ -642,6 +645,8 @@ public static class CrowdWebFuzzRunner
                     throw new InvalidOperationException("会话推进停摆过长。");
                 }
             }
+
+            trace?.Add(CrowdWebFuzzTraceCapture.Capture(session, opIndex));
         }
     }
 
