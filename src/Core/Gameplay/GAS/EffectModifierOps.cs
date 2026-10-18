@@ -4,16 +4,8 @@ using Ludots.Core.Gameplay.Components;
 
 namespace Ludots.Core.Gameplay.GAS
 {
-    /// <summary>
-    /// Static utility for applying effect modifiers to attribute buffers.
-    /// Extracted from <see cref="EffectModifiers.ApplyTo"/> to follow ECS best practice:
-    /// components are data containers, systems/utilities own all behavior.
-    /// </summary>
     public static class EffectModifierOps
     {
-        /// <summary>
-        /// Apply all modifiers in the set to the target AttributeBuffer.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Apply(in EffectModifiers modifiers, ref AttributeBuffer buffer)
         {
@@ -21,7 +13,7 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Apply aggregated modifiers while bypassing ClampCurrentToBase.
+        /// Bypasses ClampCurrentToBase.
         /// Used by attribute recomputation to rebuild dynamic caps before persistent current values are restored.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -38,7 +30,7 @@ namespace Ludots.Core.Gameplay.GAS
                 var mod = modifiers.Get(i);
                 if ((uint)mod.AttributeId >= (uint)AttributeBuffer.MAX_ATTRS)
                 {
-                    continue; // 高槽位（≥64）只存在于 WorldAttributeStore，由调用方的高车道处理（RFC-0067 P1）
+                    continue; // 高槽位（≥64）只存在于 WorldAttributeStore，由调用方的高车道处理
                 }
 
                 float current = buffer.GetCurrent(mod.AttributeId);

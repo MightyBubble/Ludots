@@ -52,9 +52,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
 
-        /// <summary>
-        /// Remove an entry by key.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Remove(int key)
         {
@@ -65,7 +62,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 {
                     if (keys[i] != key) continue;
 
-                    // Shift remaining entries
                     for (int j = i; j < Count - 1; j++)
                     {
                         keys[j] = keys[j + 1];

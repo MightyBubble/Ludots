@@ -38,7 +38,6 @@ namespace Ludots.Core.Diagnostics
         public void Flush()
         {
             _signal.Set();
-            // Give writer thread a moment to drain
             Thread.Sleep(10);
         }
 

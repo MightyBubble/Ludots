@@ -86,12 +86,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>Source tag ID that granted this override (used for removal when source expires).</summary>
         public fixed int SourceTagIds[CAPACITY];
 
-        /// <summary>
-        /// Grant an ability override to a specific slot.
-        /// </summary>
-        /// <param name="slotIndex">The slot index to override (0 to CAPACITY-1).</param>
-        /// <param name="abilityId">The override ability ID.</param>
-        /// <param name="sourceTagId">The tag ID that granted this override (for tracking removal).</param>
         public void Grant(int slotIndex, int abilityId, int sourceTagId)
         {
             if ((uint)slotIndex >= CAPACITY) return;
@@ -102,9 +96,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             SourceTagIds[slotIndex] = sourceTagId;
         }
         
-        /// <summary>
-        /// Grant an ability override using a template entity.
-        /// </summary>
         public void Grant(int slotIndex, Entity templateEntity, int sourceTagId)
         {
             if ((uint)slotIndex >= CAPACITY) return;
@@ -115,9 +106,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             SourceTagIds[slotIndex] = sourceTagId;
         }
         
-        /// <summary>
-        /// Revoke an override from a specific slot.
-        /// </summary>
         public void Revoke(int slotIndex)
         {
             if ((uint)slotIndex >= CAPACITY) return;
@@ -148,18 +136,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return count;
         }
         
-        /// <summary>
-        /// Check if a slot has an override.
-        /// </summary>
         public bool HasOverride(int slotIndex)
         {
             if ((uint)slotIndex >= CAPACITY) return false;
             return AbilityIds[slotIndex] != 0 || TemplateIds[slotIndex] != 0;
         }
         
-        /// <summary>
-        /// Get the override for a slot.
-        /// </summary>
         public AbilitySlotState GetOverride(int slotIndex)
         {
             if ((uint)slotIndex >= CAPACITY) return default;

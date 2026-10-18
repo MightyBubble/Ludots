@@ -210,9 +210,8 @@ namespace Ludots.Tests.Presentation
             Vector4 barForeground = new(0.16f, 0.82f, 0.36f, 0.96f);
             Vector4 textColor = new(0.94f, 0.96f, 0.88f, 1f);
 
-            // 生产管线形态：BeginProjectedBuild(retained) → 顺序 TryUpsert（serial 命中即跳过/位置 lane）
-            // → EndProjectedBuild(removeUnseen) → ClearDeltas——与 WorldHudToScreenSystem 全量重建同款；
-            // 字典 ColdAdd 重建形态（Clear+TryAdd）自 52e5bd5e66 起已被生产淘汰，另测为对照指标。
+            // 与 WorldHudToScreenSystem 全量重建同款的生产管线形态，基准才测生产路径；
+            // 字典 ColdAdd（Clear+TryAdd）重建已被生产淘汰，不在本基准内。
             screenHud.BeginProjectedBuild(retained: true);
             int changedEntities = 0;
             long checksum = 0;

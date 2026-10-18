@@ -19,7 +19,7 @@ public static class LiveSkillWorkbenchIds
 
 	public const string AssetIndexPath = "LiveSkillWorkbenchMod:Assets/live-skill-workbench-app/index.html";
 
-	/// <summary>#624 default save target when Showcase Mod is mounted.</summary>
+	/// <summary>Default save target when Showcase Mod is mounted.</summary>
 	public const string DefaultSaveTargetModId = "CapabilityStandardLiveSkillWorkbenchShowcaseMod";
 
 	/// <summary>Staged edits are not classified until precheck runs.</summary>

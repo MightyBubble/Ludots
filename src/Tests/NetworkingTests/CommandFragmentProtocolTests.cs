@@ -35,7 +35,6 @@ public sealed class CommandFragmentProtocolTests
         byte[][] wires = EncodeAll(encoder, sessionEpoch: 7, clientBatchSequence: 99, batchPayload, count);
         var reassembler = new CommandFragmentReassembler(MaxCommandPayloadBytes, MaxFragments);
 
-        // Out-of-order: last → first → middle ascending.
         Assert.That(reassembler.TryAcceptWirePayload(wires[count - 1]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
         Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Assembling));
         Assert.That(reassembler.TryAcceptWirePayload(wires[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));

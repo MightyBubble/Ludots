@@ -6,7 +6,6 @@ using CameraShowcaseMod.Systems;
 
 namespace CameraShowcaseMod.Triggers
 {
-    /// <summary>Registers the showcase per-tick input poll (F4 command-source follow) once per game start.</summary>
     public sealed class InstallCameraShowcaseSystemsOnGameStartTrigger : Trigger
     {
         private readonly IModContext _context;

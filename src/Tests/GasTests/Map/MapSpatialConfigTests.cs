@@ -87,7 +87,6 @@ namespace GasTests
             Assert.That(clone.DataFile, Is.EqualTo("terrain.hex"));
             Assert.That(clone.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
 
-            // Modify clone, original unchanged
             clone.WidthCm = 51_200;
             clone.ContinuousHeightmapAsset = "other.height";
             Assert.That(original.WidthCm, Is.EqualTo(25_600));

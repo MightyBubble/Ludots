@@ -16,17 +16,10 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Comprehensive tests for Phase Listener, Batch Ops, and Hex spatial query systems.
-    /// </summary>
     [TestFixture]
     public class PhaseListenerBatchHexTests
     {
         private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Module C: HexCoordinates Utility Tests
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void HexCoordinates_Distance_Zero()
@@ -69,7 +62,6 @@ namespace Ludots.Tests.GAS
                 That(HexCoordinates.Distance(center, neighbors[i]), Is.EqualTo(1), $"Neighbor {i}");
             }
 
-            // All unique
             for (int i = 0; i < 6; i++)
                 for (int j = i + 1; j < 6; j++)
                     That(neighbors[i], Is.Not.EqualTo(neighbors[j]), $"Neighbor {i} vs {j}");
@@ -159,17 +151,13 @@ namespace Ludots.Tests.GAS
             That(HexCoordinates.RangeCount(3), Is.EqualTo(37));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Module B: Batch / Iteration Ops
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void AddInt_BasicArithmetic()
         {
             var program = new GraphProgramBuffer();
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 7);    // I[0] = 7
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 1, imm: 3);    // I[1] = 3
-            program.Add((ushort)GraphNodeOp.AddInt, dst: 2, a: 0, b: 1);  // I[2] = 7 + 3 = 10
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 7);
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 1, imm: 3);
+            program.Add((ushort)GraphNodeOp.AddInt, dst: 2, a: 0, b: 1);
 
             var world = World.Create();
             var caster = world.Create();
@@ -184,10 +172,10 @@ namespace Ludots.Tests.GAS
         public void CompareLtInt_ReturnsCorrectBool()
         {
             var program = new GraphProgramBuffer();
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 3);      // I[0] = 3
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 1, imm: 7);      // I[1] = 7
-            program.Add((ushort)GraphNodeOp.CompareLtInt, dst: 0, a: 0, b: 1); // B[0] = (3 < 7) = 1
-            program.Add((ushort)GraphNodeOp.CompareLtInt, dst: 1, a: 1, b: 0); // B[1] = (7 < 3) = 0
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 3);
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 1, imm: 7);
+            program.Add((ushort)GraphNodeOp.CompareLtInt, dst: 0, a: 0, b: 1);
+            program.Add((ushort)GraphNodeOp.CompareLtInt, dst: 1, a: 1, b: 0);
 
             var world = World.Create();
             var caster = world.Create();
@@ -203,11 +191,11 @@ namespace Ludots.Tests.GAS
         public void CompareEqInt_ReturnsCorrectBool()
         {
             var program = new GraphProgramBuffer();
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 5);      // I[0] = 5
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 1, imm: 5);      // I[1] = 5
-            program.Add((ushort)GraphNodeOp.ConstInt, dst: 2, imm: 3);      // I[2] = 3
-            program.Add((ushort)GraphNodeOp.CompareEqInt, dst: 0, a: 0, b: 1); // B[0] = (5 == 5) = 1
-            program.Add((ushort)GraphNodeOp.CompareEqInt, dst: 1, a: 0, b: 2); // B[1] = (5 == 3) = 0
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 5);
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 1, imm: 5);
+            program.Add((ushort)GraphNodeOp.ConstInt, dst: 2, imm: 3);
+            program.Add((ushort)GraphNodeOp.CompareEqInt, dst: 0, a: 0, b: 1);
+            program.Add((ushort)GraphNodeOp.CompareEqInt, dst: 1, a: 0, b: 2);
 
             var world = World.Create();
             var caster = world.Create();
@@ -231,8 +219,8 @@ namespace Ludots.Tests.GAS
 
             var api = new GasGraphRuntimeApi(world, tagOps: _tagOps);
             var program = new GraphProgramBuffer();
-            program.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);             // E[0] = caster
-            program.Add((ushort)GraphNodeOp.HasTag, dst: 0, a: 0, imm: tagId); // B[0] = HasTag(E[0], tagId)
+            program.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);
+            program.Add((ushort)GraphNodeOp.HasTag, dst: 0, a: 0, imm: tagId);
 
             var state = SetupExecution(world, entity, entity, program, api);
             var instructions = ExtractInstructions(program);
@@ -249,7 +237,6 @@ namespace Ludots.Tests.GAS
             var e1 = world.Create();
             var e2 = world.Create();
 
-            // Manually populate TargetList
             var targetBuffer = new Entity[64];
             targetBuffer[0] = e0;
             targetBuffer[1] = e1;
@@ -259,7 +246,7 @@ namespace Ludots.Tests.GAS
             var iRegs = new int[16];
             var bRegs = new byte[16];
             var eRegs = new Entity[16];
-            eRegs[0] = e0; // caster
+            eRegs[0] = e0;
 
             var targetList = new GraphTargetList(targetBuffer);
             targetList.SetCount(3);
@@ -281,10 +268,9 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            // I[0] = 1 (index)
             iRegs[0] = 1;
             var program = new GraphProgramBuffer();
-            program.Add((ushort)GraphNodeOp.TargetListGet, dst: 3, a: 0, flags: 0); // E[3] = Targets[I[0]], B[0] = valid
+            program.Add((ushort)GraphNodeOp.TargetListGet, dst: 3, a: 0, flags: 0);
 
             var instructions = ExtractInstructions(program);
             GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
@@ -344,12 +330,11 @@ namespace Ludots.Tests.GAS
         };
 
             var program = new GraphProgramBuffer();
-            program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 42); // templateId = 42
+            program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 42);
 
             var instructions = ExtractInstructions(program);
             GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
 
-            // Check all 5 requests were published
             That(requestQueue.Count, Is.EqualTo(5));
             for (int i = 0; i < 5; i++)
             {
@@ -361,10 +346,6 @@ namespace Ludots.Tests.GAS
 
             world.Dispose();
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Module A: Phase Listener
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public unsafe void ListenerBuffer_TryAdd_And_Collect()
@@ -378,17 +359,14 @@ namespace Ludots.Tests.GAS
 
             Span<PhaseListenerCollectedAction> actions = stackalloc PhaseListenerCollectedAction[8];
 
-            // Match scope=Target, tag=10
             int n = buf.Collect(10, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target, actions);
             That(n, Is.EqualTo(1));
             That(actions[0].GraphProgramId, Is.EqualTo(100));
 
-            // Match scope=Source, tag=20
             n = buf.Collect(20, 0, EffectPhaseId.OnApply, PhaseListenerScope.Source, actions);
             That(n, Is.EqualTo(1));
             That(actions[0].EventTagId, Is.EqualTo(200));
 
-            // No match
             n = buf.Collect(99, 0, EffectPhaseId.OnHit, PhaseListenerScope.Target, actions);
             That(n, Is.EqualTo(0));
         }
@@ -397,17 +375,14 @@ namespace Ludots.Tests.GAS
         public unsafe void ListenerBuffer_ListenEffectId_Matching()
         {
             var buf = new EffectPhaseListenerBuffer();
-            // Listener that matches specific effectTemplateId=42
             buf.TryAdd(0, 42, EffectPhaseId.OnApply, PhaseListenerScope.Source,
                 PhaseListenerActionFlags.ExecuteGraph, 100, 0, 50, 1);
 
             Span<PhaseListenerCollectedAction> actions = stackalloc PhaseListenerCollectedAction[8];
 
-            // Matches: effectTemplateId=42
             int n = buf.Collect(0, 42, EffectPhaseId.OnApply, PhaseListenerScope.Source, actions);
             That(n, Is.EqualTo(1));
 
-            // No match: effectTemplateId=99
             n = buf.Collect(0, 99, EffectPhaseId.OnApply, PhaseListenerScope.Source, actions);
             That(n, Is.EqualTo(0));
 
@@ -449,7 +424,6 @@ namespace Ludots.Tests.GAS
                 That(buf.TryAdd(i, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
                     PhaseListenerActionFlags.ExecuteGraph, i + 1, 0, i, i), Is.True);
             }
-            // Overflow
             That(buf.TryAdd(99, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
                 PhaseListenerActionFlags.ExecuteGraph, 999, 0, 99, 99), Is.False);
             That(buf.Count, Is.EqualTo(EffectPhaseListenerBuffer.CAPACITY));
@@ -465,12 +439,10 @@ namespace Ludots.Tests.GAS
 
             Span<PhaseListenerCollectedAction> actions = stackalloc PhaseListenerCollectedAction[8];
 
-            // Match phase=OnApply, tag=10
             int n = reg.Collect(EffectPhaseId.OnApply, 10, 0, actions);
             That(n, Is.EqualTo(1));
             That(actions[0].GraphProgramId, Is.EqualTo(100));
 
-            // No match: wrong phase
             n = reg.Collect(EffectPhaseId.OnExpire, 10, 0, actions);
             That(n, Is.EqualTo(0));
         }
@@ -503,10 +475,6 @@ namespace Ludots.Tests.GAS
             That(setup.OwnerEffectIds[0], Is.EqualTo(0));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Module A: Executor Dispatch Integration
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ExecutorDispatch_FiresListenerGraph_OnTargetBuffer()
         {
@@ -514,14 +482,12 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Register a graph program that writes I[0] = 42
             var programs = new GraphProgramRegistry();
             var prog = new GraphProgramBuffer();
             prog.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 42);
             int graphId = 1;
             programs.Register(graphId, ExtractInstructions(prog), GraphKind.Effect);
 
-            // Register listener on target entity (scope=Target, phase=OnApply, tag=wildcard)
             var listenerBuf = new EffectPhaseListenerBuffer();
             listenerBuf.TryAdd(0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
                 PhaseListenerActionFlags.ExecuteGraph, graphId, 0, 50, ownerEffectId: 1);
@@ -554,7 +520,7 @@ namespace Ludots.Tests.GAS
             transaction.Begin();
             api.BeginEffectSideEffectTransaction(transaction);
 
-            // Execute OnApply with effectCategoryId=10 (non-zero to trigger dispatch)
+            // effectCategoryId must be non-zero to trigger listener dispatch
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectCategoryId: 10, effectTemplateId: 1);
             transaction.Commit();
@@ -1448,9 +1414,8 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ExecutorDispatch_ListenerGraphBuiltin_IsRejectedByListenerOperationPolicy()
         {
-            // Main's GraphKindOperationPolicy bans InvokeBuiltin in listener graphs because listener
-            // execution carries no owner EffectTemplate context; the PR-era "listener builtin receives
-            // effect context" contract was retired with that policy decision.
+            // GraphKindOperationPolicy bans InvokeBuiltin in listener graphs: listener execution
+            // carries no owner EffectTemplate context.
             using var world = World.Create();
             var caster = world.Create();
             var target = world.Create();
@@ -1514,7 +1479,6 @@ namespace Ludots.Tests.GAS
             var globalReg = new GlobalPhaseListenerRegistry();
 
             int eventTag = 999;
-            // Register listener on caster entity (scope=Source)
             var listenerBuf = new EffectPhaseListenerBuffer();
             listenerBuf.TryAdd(0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Source,
                 PhaseListenerActionFlags.PublishEvent, 0, eventTag, 50, ownerEffectId: 1);
@@ -1551,10 +1515,6 @@ namespace Ludots.Tests.GAS
 
             world.Dispose();
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Stress Tests
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void Stress_FanOutApplyEffect_1000Targets()
@@ -1679,7 +1639,6 @@ namespace Ludots.Tests.GAS
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
 
-            // Only phase OnApply(4) should trigger → 500 events
             eventBus.Update();
             That(eventBus.Events.Count, Is.EqualTo(500));
             Console.WriteLine($"[Stress] 500 entities x 8 phases listener dispatch: {sw.Elapsed.TotalMilliseconds:F2}ms");
@@ -1687,14 +1646,9 @@ namespace Ludots.Tests.GAS
             world.Dispose();
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  MUD: AOE Fireball + Searing Chain + Flame Spread
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void MUD_AOEFireball_SearingChain_Scenario()
         {
-            // Setup
             var world = World.Create();
             var caster = world.Create();
             var victim1 = world.Create();
@@ -1711,14 +1665,13 @@ namespace Ludots.Tests.GAS
 
             // Graph.SearingChainBonus: publishes event so we can detect it fired
             var bonusProg = new GraphProgramBuffer();
-            bonusProg.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);              // E[0] = caster
-            bonusProg.Add((ushort)GraphNodeOp.LoadExplicitTarget, dst: 1);      // E[1] = target
-            bonusProg.Add((ushort)GraphNodeOp.ConstFloat, dst: 0, immF: 50f);   // F[0] = 50 (bonus damage)
-            bonusProg.Add((ushort)GraphNodeOp.SendEvent, a: 1, imm: 777, b: 0); // SendEvent(target, tag=777, F[0])
+            bonusProg.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);
+            bonusProg.Add((ushort)GraphNodeOp.LoadExplicitTarget, dst: 1);
+            bonusProg.Add((ushort)GraphNodeOp.ConstFloat, dst: 0, immF: 50f);
+            bonusProg.Add((ushort)GraphNodeOp.SendEvent, a: 1, imm: 777, b: 0);
             int bonusGraphId = 1;
             programs.Register(bonusGraphId, ExtractInstructions(bonusProg), GraphKind.Effect);
 
-            // Register "Searing Chain" listener on caster (scope=Source, phase=OnApply)
             var casterBuf = new EffectPhaseListenerBuffer();
             casterBuf.TryAdd(0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Source,
                 PhaseListenerActionFlags.Both, bonusGraphId, 888, 100, ownerEffectId: 1);
@@ -1736,7 +1689,6 @@ namespace Ludots.Tests.GAS
             transaction.Begin();
             api.BeginEffectSideEffectTransaction(transaction);
 
-            // Simulate: caster's Fireball.Hit applies to victim1, victim2, victim3
             var behavior = new EffectPhaseGraphBindings();
             int fireballHitTag = 10;
             int fireballHitTemplate = 42;
@@ -1787,7 +1739,6 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             var target = world.Create();
 
-            // Simulate OnApply registering a listener via TryAddTemplate (compile-time setup)
             var templateSetup = new EffectPhaseListenerBuffer();
             templateSetup.TryAddTemplate(0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
                 PhaseListenerActionFlags.PublishEvent, 0, 500, 10);
@@ -1807,7 +1758,6 @@ namespace Ludots.Tests.GAS
             }
             That(buf.Count, Is.EqualTo(1));
 
-            // Simulate OnRemove unregistering
             buf.RemoveByOwner(99);
             That(buf.Count, Is.EqualTo(0));
 
@@ -1815,10 +1765,6 @@ namespace Ludots.Tests.GAS
 
             world.Dispose();
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Helpers
-        // ════════════════════════════════════════════════════════════════════
 
         // Helper fields for test state — ref struct cannot be returned from methods.
         private float[] _testFloatRegs = Array.Empty<float>();

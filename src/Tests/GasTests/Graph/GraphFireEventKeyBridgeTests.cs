@@ -13,10 +13,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>
-    /// Focused slice: the graph-runtime → TriggerManager FireEventKey bridge and the
-    /// blackboard capacity-overflow throw. Bounded — no spawn/destroy, no new opcode yet.
-    /// </summary>
     public sealed class GraphFireEventKeyBridgeTests
     {
         private sealed class RecordingTrigger : Trigger
@@ -31,8 +27,6 @@ namespace Ludots.Tests.Gas.Graph
                 return Task.CompletedTask;
             }
         }
-
-        // ── FireEventKey bridge ──
 
         [Test]
         public void FireEventKey_MappedScope_FiresMapScopedTrigger()
@@ -215,8 +209,6 @@ namespace Ludots.Tests.Gas.Graph
                 api.EndEffectSideEffectTransaction(transaction);
             }
         }
-
-        // ── Blackboard capacity overflow throws ──
 
         [Test]
         public void BlackboardFloat_Overflow_Throws()

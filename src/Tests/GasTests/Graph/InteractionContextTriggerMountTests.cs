@@ -131,9 +131,9 @@ namespace Ludots.Tests.Gas.Graph
             world.Destroy(subject);
             gate.Update(0.016f);
 
-            // Destroy-time contract: the retired heartbeat sweep is gone. The
-            // dead subject's own context mounts are reclaimed on the destroy handler — no
-            // staged budget, no wave — so the ledger gap closes immediately.
+            // Destroy-time contract: the dead subject's own context mounts are reclaimed on
+            // the destroy handler — no staged budget, no wave — so the ledger gap closes
+            // immediately.
             Assert.That(gate.MountedSubjectCount, Is.EqualTo(0));
             Assert.That(
                 triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded),
@@ -189,25 +189,22 @@ namespace Ludots.Tests.Gas.Graph
             int counterProfileId = profiles.ProfileIdRegistry.GetId(CounterProfile);
             int bootstrapId = ConfigKeyRegistry.Register(CounterProfile);
 
-            // Window opens: gate mounts the profile's triggers (Activated slot is empty here).
+            // Window opens; this profile declares no Activated slot.
             runtime.Activate(subject, bootstrapId, 0);
             gate.Update(0.016f);
             Assert.That(gate.TryGetMountedTriggers(subject, counterProfileId, out _), Is.True,
                 "counter profile's declared trigger mounts on activation");
 
-            // Change point: DeactivateContext → onDeactivated slot runs synchronously.
             runtime.Deactivate(subject, bootstrapId);
             Assert.That(ReadCounter(world, subject), Is.EqualTo(1),
                 "onDeactivated slot runs at the same change point, not on a later tick");
 
-            // Next gate update: deferred unmount flush + reconcile must not re-run the slot.
             gate.Update(0.016f);
             Assert.That(ReadCounter(world, subject), Is.EqualTo(1),
                 "reconcile must not re-run the deactivated slot (single execution)");
             Assert.That(gate.TryGetMountedTriggers(subject, counterProfileId, out _), Is.False,
                 "change-point unmount is flushed by the gate update");
 
-            // A fresh window still fires the slot once again (re-activation is not poisoned).
             runtime.Activate(subject, bootstrapId, 0);
             gate.Update(0.016f);
             runtime.Deactivate(subject, bootstrapId);
@@ -240,14 +237,12 @@ namespace Ludots.Tests.Gas.Graph
             int parentKey = ConfigKeyRegistry.Register(ParentProfile);
             int childKey = ConfigKeyRegistry.Register(ForegroundChildProfile);
 
-            // Parent window opens interactive: both the event-bound and the action-bound mount.
             gate.Update(0.016f);
             Assert.That(gate.TryGetMountedTriggers(subject, parentId, out IReadOnlyList<Trigger> parentMounts), Is.True);
             Assert.That(parentMounts.Count, Is.EqualTo(2), "parent opens with event + action mounts");
             Assert.That(HasActionMount(parentMounts, out _), Is.True, "parent's interactive mount registered");
             Assert.That(triggers.HasMapEventSubscribers(_mapId, GameEvents.MapLoaded), Is.True);
 
-            // Foreground child activates → parent's interactive mount parks; event mount stays.
             runtime.Activate(subject, childKey, parentKey);
             gate.Update(0.016f);
             Assert.That(
@@ -264,14 +259,12 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(runtime.IsActive(subject, parentId) && runtime.IsActive(subject, childId),
                 "（③）parent + child scope coexist (non-stack)");
 
-            // Reconcile again under the same regime: parking is idempotent, no mount churn.
             gate.Update(0.016f);
             Assert.That(
                 gate.TryGetMountedTriggers(subject, parentId, out IReadOnlyList<Trigger> stillParked) &&
                 stillParked.Count == 1,
                 "parked diff is idempotent — second reconcile does not churn mounts");
 
-            // Child deactivates → parent interactive mount restored, still no slot.
             runtime.Deactivate(subject, childKey);
             gate.Update(0.016f);
             Assert.That(

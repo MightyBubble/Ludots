@@ -13,7 +13,7 @@ namespace Ludots.Adapter.Raylib
     /// <summary>
     /// 宿主输入路由：真实鼠标/键盘与 synthetic 回放经同一输入合同进入 UI，输出捕获语义
     /// （UiCaptured/UiWheelCaptured）供宿主决定世界指针拦截。frameIndex 与诊断路径由宿主显式传入，
-    /// 回放时序与真实输入共享同一基准（#1324 自 RaylibHostLoop 拆出，无 static 可变状态）。
+    /// 回放时序与真实输入共享同一基准；无 static 可变状态。
     /// </summary>
     internal sealed class RaylibHostInputRouter
     {

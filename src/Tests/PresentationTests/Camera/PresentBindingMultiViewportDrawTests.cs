@@ -23,11 +23,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {
-    /// <summary>
-    /// Headless acceptance for the multi-viewport present slice: per-binding cull-pass
-    /// multiplexing with union CullState semantics, the host-agnostic per-binding drive sequence,
-    /// and rect-routed picking under multiple PresentBindings.
-    /// </summary>
     [TestFixture]
     public sealed class PresentBindingMultiViewportDrawTests
     {

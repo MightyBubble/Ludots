@@ -20,7 +20,7 @@ namespace Ludots.Core.Presentation.Coordinates
             return new Vector3(
                 logicPos.X * ScaleFactor,
                 heightLevel * ScaleFactor,
-                -logicPos.Y * ScaleFactor // Inverting Y to map to -Z
+                -logicPos.Y * ScaleFactor
             );
         }
 

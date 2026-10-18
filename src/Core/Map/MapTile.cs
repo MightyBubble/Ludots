@@ -2,9 +2,6 @@ using System;
 
 namespace Ludots.Core.Map
 {
-    /// <summary>
-    /// Represents a 256x256 block of grids.
-    /// </summary>
     public class MapTile
     {
         public const int Size = 256;

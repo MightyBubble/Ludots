@@ -411,7 +411,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DerivedGraph_NonLinearFormula_ComputesCDMultiplier()
         {
-            // Arrange: entity with AbilityHaste=50 → CDMultiplier = 1/(1+50/100) = 0.6667
             using var world = World.Create();
 
             int abilityHasteAttrId = AttributeRegistry.Register("tests.derived-graph.non-linear.ability-haste");
@@ -426,14 +425,6 @@ namespace Ludots.Tests.GAS
             buf.SetBase(abilityHasteAttrId, 50f);
             buf.SetCurrent(abilityHasteAttrId, 50f);
 
-            // Build derived graph program:
-            // F[0] = LoadSelfAttribute(Imm=abilityHasteAttrId)  → 50
-            // F[1] = ConstFloat(100)
-            // F[2] = DivFloat(F[0], F[1])                       → 0.5
-            // F[3] = ConstFloat(1)
-            // F[4] = AddFloat(F[3], F[2])                        → 1.5
-            // F[5] = DivFloat(F[3], F[4])                        → 0.6667
-            // WriteSelfAttribute(Imm=cdMultiplierAttrId, A=F[5])
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = abilityHasteAttrId },
@@ -453,7 +444,6 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            // Act: run aggregator
             var aggDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: aggDirty);
             using var system = new AttributeAggregatorSystem(
@@ -465,7 +455,6 @@ namespace Ludots.Tests.GAS
             aggDirty.MarkDirty(entity);
             system.Update(0f);
 
-            // Assert
             ref var result = ref world.Get<AttributeBuffer>(entity);
             float cdMul = result.GetCurrent(cdMultiplierAttrId);
             That(cdMul, Is.EqualTo(1f / 1.5f).Within(0.001f),
@@ -475,7 +464,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DerivedGraph_ArmorToEHP_ComputesCorrectly()
         {
-            // Arrange: HP=1000, Armor=100 → PhysicalEHP = 1000 * (1 + 100/100) = 2000
             using var world = World.Create();
 
             int hpAttrId = AttributeRegistry.Register("tests.derived-graph.armor.health");
@@ -493,15 +481,6 @@ namespace Ludots.Tests.GAS
             buf.SetBase(armorAttrId, 100f);
             buf.SetCurrent(armorAttrId, 100f);
 
-            // Graph: PhysEHP = HP * (1 + Armor/100)
-            // F[0] = LoadSelfAttribute(HP)        → 1000
-            // F[1] = LoadSelfAttribute(Armor)     → 100
-            // F[2] = ConstFloat(100)
-            // F[3] = DivFloat(F[1], F[2])          → 1.0
-            // F[4] = ConstFloat(1)
-            // F[5] = AddFloat(F[4], F[3])           → 2.0
-            // F[6] = MulFloat(F[0], F[5])           → 2000
-            // WriteSelfAttribute(PhysEHP, F[6])
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = hpAttrId },
@@ -541,7 +520,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DerivedGraph_NoBinding_AggregatesNormally()
         {
-            // Entity without AttributeDerivedGraphBinding should aggregate normally
             using var world = World.Create();
 
             var entity = world.Create(
@@ -573,7 +551,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DerivedGraph_DirtyFlags_IncludeDerivedChanges()
         {
-            // Derived graph writes should be reflected in dirty flags
             using var world = World.Create();
 
             int sourceAttr = AttributeRegistry.Register("tests.derived-graph.dirty.source");

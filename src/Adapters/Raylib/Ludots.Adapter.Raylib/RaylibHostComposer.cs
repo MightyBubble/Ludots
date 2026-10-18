@@ -41,7 +41,6 @@ namespace Ludots.Adapter.Raylib
             var consoleBackend = new RaylibConsoleLogBackend();
             ILogBackend effectiveBackend = consoleBackend;
 
-            // Check if file logging is requested after config merge
             Log.Initialize(effectiveBackend);
 
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
@@ -61,7 +60,6 @@ namespace Ludots.Adapter.Raylib
             new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets, materialAssets)
                 .Apply("raylib", engine.ConfigCatalog, engine.ConfigConflictReport);
 
-            // Upgrade backend with file logging if configured
             if (config.Logging.FileLogging)
             {
                 var fileBackend = new FileLogBackend(config.Logging.LogFilePath);

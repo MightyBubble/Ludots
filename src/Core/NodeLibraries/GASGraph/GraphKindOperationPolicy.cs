@@ -139,7 +139,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 // CreatePanel/DestroyPanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext→caster，DestroyPanel→任意 scope），不是寄存器引用。SubmitCommandIntent 的 A 是可选 target 实体寄存器：byte.MaxValue 表示"仅地面事实"。SubmitAssignedOrder 的 A 是可选目标实体寄存器：byte.MaxValue 表示未指实体目标，运行时填 Entity.Null。
-                // CreatePanel/DestroyPanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext→caster，DestroyPanel→任意 scope），不是寄存器引用。
                 // WriteCollection 的 A 同理：可选 owner 操作数，byte.MaxValue 表示"缺省"（→caster）。
                 bool aIsOptionalAbsent = instruction.A == byte.MaxValue &&
                     op is GraphNodeOp.CreatePanel

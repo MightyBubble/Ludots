@@ -40,10 +40,6 @@ namespace Ludots.Tests.ThreeC
             LowLodDistanceCm = 20000f,
         };
 
-        // ------------------------------------------------------------
-        //  Test Doubles
-        // ------------------------------------------------------------
-
         /// <summary>Captures CameraRenderState3D sent by CameraPresenter.</summary>
         private sealed class StubCameraAdapter : ICameraAdapter
         {
@@ -151,10 +147,6 @@ namespace Ludots.Tests.ThreeC
             public Ludots.Core.Map.Hex.HexCoordinates WorldToHex(in WorldCmInt2 world) => default;
         }
 
-        // ------------------------------------------------------------
-        //  SetUp
-        // ------------------------------------------------------------
-
         [SetUp]
         public void Setup()
         {
@@ -169,10 +161,6 @@ namespace Ludots.Tests.ThreeC
                 });
             }
         }
-
-        // ------------------------------------------------------------
-        //  A. Camera State & Manager
-        // ------------------------------------------------------------
 
         [Test]
         public void CameraState_DefaultValues_MatchExpected()
@@ -220,10 +208,6 @@ namespace Ludots.Tests.ThreeC
 
             That(manager.State.Yaw, Is.EqualTo(85f).Within(0.01f));
         }
-
-        // ------------------------------------------------------------
-        //  B. Camera Preset Runtime Behaviors
-        // ------------------------------------------------------------
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildOrbitInputHandler()
         {
@@ -411,8 +395,6 @@ namespace Ludots.Tests.ThreeC
             input.Apply(CameraBehaviorInputChannels.RotateLeft, rotateLeft ? 1f : 0f, AttributeBindingMode.Override);
             input.Apply(CameraBehaviorInputChannels.RotateRight, rotateRight ? 1f : 0f, AttributeBindingMode.Override);
         }
-        //  C. Camera Presenter
-        // ------------------------------------------------------------
 
         [Test]
         public void Presenter_FirstUpdate_SphericalToCartesianCorrect()
@@ -471,7 +453,6 @@ namespace Ludots.Tests.ThreeC
             presenter.Update(manager, 1f);
 
             var up = adapter.LastState.Up;
-            // Up should be approximately UnitZ, not UnitY
             That(MathF.Abs(up.Z), Is.GreaterThan(0.5f), "Near-vertical pitch should switch Up toward UnitZ");
         }
 
@@ -489,7 +470,6 @@ namespace Ludots.Tests.ThreeC
             manager.PreviousState.FovYDeg = 60f;
             manager.PreviousState.TargetCm = Vector2.Zero;
 
-            // Second frame: move target -> position should lerp, not snap
             manager.State.Yaw = 0f;
             manager.State.Pitch = 45f;
             manager.State.DistanceCm = 1000f;
@@ -503,10 +483,6 @@ namespace Ludots.Tests.ThreeC
             That(adapter.LastState.Position.X, Is.EqualTo(25f).Within(0.01f));
             That(adapter.LastState.Target.X, Is.EqualTo(25f).Within(0.01f));
         }
-
-        // ------------------------------------------------------------
-        //  D. Camera Culling
-        // ------------------------------------------------------------
 
         private static PresenterEntityRuntime CreatePresenterPayload(World world, Entity entity)
         {
@@ -611,7 +587,7 @@ namespace Ludots.Tests.ThreeC
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            var entity = CreateCullableEntity(world, 100, 100); // very close to camera target
+            var entity = CreateCullableEntity(world, 100, 100);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
@@ -747,7 +723,6 @@ namespace Ludots.Tests.ThreeC
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: presenters);
 
-            // Frame 1: entity is visible
             system.Update(0.016f);
             That(world.Get<CullState>(entity).IsVisible, Is.True, "Frame 1: should be visible");
 
@@ -895,10 +870,6 @@ namespace Ludots.Tests.ThreeC
             That(cull.ScreenCoverage01, Is.EqualTo(0f));
         }
 
-        // ------------------------------------------------------------
-        //  E. Character Position Pipeline
-        // ------------------------------------------------------------
-
         [Test]
         public void Culling_StaticCameraYawChange_RecomputesStaticVisibility()
         {
@@ -1014,16 +985,13 @@ namespace Ludots.Tests.ThreeC
             var saveSystem = new SavePreviousWorldPositionSystem(world);
             saveSystem.Update(0.02f);
 
-            // After save, previous should equal current
             ref var prev = ref world.Get<PreviousWorldPositionCm>(entity);
             That(prev.Value.X.RawValue, Is.EqualTo(Fix64.FromInt(100).RawValue));
             That(prev.Value.Y.RawValue, Is.EqualTo(Fix64.FromInt(200).RawValue));
 
-            // Now change current position
             ref var cur = ref world.Get<WorldPositionCm>(entity);
             cur.Value = Fix64Vec2.FromInt(500, 600);
 
-            // Save again
             saveSystem.Update(0.02f);
 
             ref var prev2 = ref world.Get<PreviousWorldPositionCm>(entity);
@@ -1036,7 +1004,6 @@ namespace Ludots.Tests.ThreeC
         {
             using var world = World.Create();
 
-            // Create PresentationFrameState singleton with alpha=0.5
             world.Create(
                 new PresentationFrameState { InterpolationAlpha = 0.5f, Enabled = true },
                 new PresentationFrameStateTag()
@@ -1122,7 +1089,6 @@ namespace Ludots.Tests.ThreeC
                 new PresentationFrameStateTag()
             );
 
-            // Entity WITHOUT CullState component -> should always sync
             var entity = world.Create(
                 WorldPositionCm.FromCm(300, 400),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 400) },
@@ -1137,10 +1103,6 @@ namespace Ludots.Tests.ThreeC
             That(visual.Position.X, Is.EqualTo(3f).Within(0.05f));
             That(visual.Position.Z, Is.EqualTo(4f).Within(0.05f));
         }
-
-        // ------------------------------------------------------------
-        //  F. Input Edge Detection & Order Building
-        // ------------------------------------------------------------
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildSimpleInputHandler()
         {
@@ -1176,23 +1138,19 @@ namespace Ludots.Tests.ThreeC
         {
             var (backend, handler) = BuildSimpleInputHandler();
 
-            // Frame 1: key not pressed
             handler.Update(1f / 60f);
             That(handler.PressedThisFrame("Attack"), Is.False);
             That(handler.ReleasedThisFrame("Attack"), Is.False);
 
-            // Frame 2: press key
             backend.Buttons["<Keyboard>/a"] = true;
             handler.Update(1f / 60f);
             That(handler.PressedThisFrame("Attack"), Is.True, "First frame of press should be PressedThisFrame");
             That(handler.ReleasedThisFrame("Attack"), Is.False);
 
-            // Frame 3: key held (still pressed)
             handler.Update(1f / 60f);
             That(handler.PressedThisFrame("Attack"), Is.False, "Subsequent held frames should not be PressedThisFrame");
             That(handler.IsDown("Attack"), Is.True);
 
-            // Frame 4: release key
             backend.Buttons["<Keyboard>/a"] = false;
             handler.Update(1f / 60f);
             That(handler.ReleasedThisFrame("Attack"), Is.True, "First frame of release should be ReleasedThisFrame");
@@ -1209,7 +1167,6 @@ namespace Ludots.Tests.ThreeC
             handler.Update(1f / 60f);
             That(handler.IsDown("Attack"), Is.True);
 
-            // Block input
             handler.InputBlocked = true;
             handler.Update(1f / 60f);
 
@@ -1259,12 +1216,10 @@ namespace Ludots.Tests.ThreeC
             var player = world.Create();
             system.SetSolePossessedActor(player, 1);
 
-            // Frame 1: no press
             handler.Update(1f / 60f);
             system.Update(0.016f);
             That(capturedOrder, Is.Null, "No order before button press");
 
-            // Frame 2: press left mouse button
             backend.Buttons["<Mouse>/LeftButton"] = true;
             handler.Update(1f / 60f);
             system.Update(0.016f);

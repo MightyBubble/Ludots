@@ -30,8 +30,8 @@ namespace ArpgDemoMod.Triggers
             if (!HasTag(mapTags, "arpg")) return Task.CompletedTask;
 
             var world = engine.World;
-            var q = new QueryDescription().WithAll<Name>();
-            world.Query(in q, (Entity e, ref Name name) =>
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
             {
                 if (!string.Equals(name.Value, "ArpgHero", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(name.Value, "ArpgEnemy", StringComparison.OrdinalIgnoreCase))
@@ -39,17 +39,17 @@ namespace ArpgDemoMod.Triggers
                     return;
                 }
 
-                TagStateInstaller.EnsureInstalled(world, e);
+                TagStateInstaller.EnsureInstalled(world, entity);
             });
 
             return Task.CompletedTask;
         }
 
-        private static bool HasTag(List<string> tags, string t)
+        private static bool HasTag(List<string> tags, string tag)
         {
             for (int i = 0; i < tags.Count; i++)
             {
-                if (string.Equals(tags[i], t, StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(tags[i], tag, StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
         }

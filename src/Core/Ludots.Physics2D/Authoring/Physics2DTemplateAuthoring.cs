@@ -114,7 +114,7 @@ public static class Physics2DTemplateAuthoring
         float inverseInertia = ReadFloat(obj, "inverseInertia", componentName, 0f);
         if (!obj.TryGetPropertyValue("bodyType", out JsonNode? bodyTypeNode) || bodyTypeNode == null)
         {
-            // No explicit bodyType keeps the pre-#732 contract: inverseMass alone decides static (0) vs dynamic (>0).
+            // No explicit bodyType: inverseMass alone decides static (0) vs dynamic (>0).
             return Mass2D.FromFloat(ReadRequiredFloat(obj, "inverseMass", componentName), inverseInertia);
         }
 

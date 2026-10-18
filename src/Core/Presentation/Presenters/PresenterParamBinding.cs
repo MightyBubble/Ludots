@@ -15,9 +15,6 @@ namespace Ludots.Core.Presentation.Presenters
         /// </summary>
         public int ParamKey;
 
-        /// <summary>
-        /// The data source to resolve each frame.
-        /// </summary>
         public ValueRef Value;
     }
 }

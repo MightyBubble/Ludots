@@ -21,7 +21,7 @@ public sealed class RaylibShaderContractTests
             Assert.That(shader, Does.Contain("layout(std430, binding = 3) readonly buffer InstanceBlock"));
             Assert.That(shader, Does.Contain("int poseBase = poseRow * int(uPoseStride + 0.5) + int(uBoneBase);"));
             Assert.That(shader, Does.Contain("int instanceVec4 = (int(uInstanceBase) + gl_InstanceID) * 4;"));
-            // 实例变换来自 SSBO 的仿射三列重建，不再有实例矩阵顶点属性
+            // 实例变换来自 SSBO 的仿射三列重建
             Assert.That(shader, Does.Contain("vec4(transformC0.w, transformC1.w, transformC2.w, 1.0)"));
             Assert.That(shader, Does.Not.Contain("in mat4 instanceTransform"));
             Assert.That(shader, Does.Not.Contain("texelFetch"));

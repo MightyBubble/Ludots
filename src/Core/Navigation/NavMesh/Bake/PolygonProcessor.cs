@@ -3,9 +3,6 @@ using System.Collections.Generic;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
-    /// <summary>
-    /// Represents a polygon with an outer boundary and optional holes.
-    /// </summary>
     public readonly struct Polygon
     {
         public readonly IntPoint[] Outer;
@@ -18,9 +15,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
     }
 
-    /// <summary>
-    /// Result of polygon processing with validation status.
-    /// </summary>
     public readonly struct ValidPolygonSet
     {
         public readonly Polygon[] Polygons;
@@ -37,9 +31,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public static ValidPolygonSet Empty => new ValidPolygonSet(Array.Empty<Polygon>(), false, Array.Empty<string>());
     }
 
-    /// <summary>
-    /// Configuration for polygon processing.
-    /// </summary>
     public readonly struct PolygonProcessConfig
     {
         /// <summary>Minimum ring area (in grid units squared * 2) to keep.</summary>
@@ -51,7 +42,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// <summary>Collinearity tolerance for point removal (0 = exact).</summary>
         public readonly double CollinearTolerance;
 
-        /// <summary>Enable self-intersection detection.</summary>
         public readonly bool CheckSelfIntersection;
 
         public PolygonProcessConfig(long minRingArea2 = 4, int duplicateThreshold = 0, 
@@ -66,14 +56,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public static PolygonProcessConfig Default => new PolygonProcessConfig();
     }
 
-    /// <summary>
-    /// Processes raw contour rings into valid polygons with proper hole assignment.
-    /// </summary>
     public static class PolygonProcessor
     {
-        /// <summary>
-        /// Processes a list of rings into a valid polygon set.
-        /// </summary>
         public static ValidPolygonSet Process(List<IntRing> rings, in PolygonProcessConfig config)
         {
             if (rings == null || rings.Count == 0)
@@ -81,12 +65,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             var warnings = new List<string>();
 
-            // Step 1: Filter by minimum area
             var filtered = FilterByArea(rings, config.MinRingArea2, warnings);
             if (filtered.Count == 0)
                 return ValidPolygonSet.Empty;
 
-            // Step 2: Remove duplicate and collinear points
             var cleaned = new List<IntRing>(filtered.Count);
             foreach (var ring in filtered)
             {
@@ -104,10 +86,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (cleaned.Count == 0)
                 return ValidPolygonSet.Empty;
 
-            // Step 3: Normalize winding (outer = CCW, holes = CW)
             var normalized = NormalizeWinding(cleaned);
 
-            // Step 4: Separate outers and holes
             var outers = new List<IntRing>();
             var holes = new List<IntRing>();
             foreach (var ring in normalized)
@@ -118,10 +98,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     holes.Add(ring);
             }
 
-            // Step 5: Assign holes to outers
             var polygons = AssignHolesToOuters(outers, holes, warnings);
 
-            // Step 6: Optional self-intersection check
             if (config.CheckSelfIntersection)
             {
                 for (int i = 0; i < polygons.Count; i++)
@@ -147,12 +125,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             );
         }
 
-        /// <summary>
-        /// Overload that uses NavBuildConfig.
-        /// </summary>
         public static ValidPolygonSet Process(List<IntRing> rings, in NavBuildConfig config)
         {
-            // Convert NavBuildConfig to PolygonProcessConfig with reasonable defaults
             var processConfig = new PolygonProcessConfig(
                 minRingArea2: 4,
                 duplicateThreshold: 0,
@@ -198,7 +172,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 var current = points[i];
 
-                // Check for duplicate with previous point
                 if (result.Count > 0)
                 {
                     var prev = result[result.Count - 1];
@@ -206,7 +179,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         continue;
                 }
 
-                // Check for collinearity with previous and next points
                 if (result.Count >= 2 && collinearTol >= 0)
                 {
                     var prev = result[result.Count - 1];
@@ -214,7 +186,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     
                     if (AreCollinear(prevPrev, prev, current, collinearTol))
                     {
-                        // Remove the middle point and add current
                         result.RemoveAt(result.Count - 1);
                     }
                 }
@@ -222,10 +193,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 result.Add(current);
             }
 
-            // Check wrap-around collinearity
             while (result.Count >= 3)
             {
-                // Check if last, first, second are collinear
                 var last = result[result.Count - 1];
                 var first = result[0];
                 var second = result[1];
@@ -236,7 +205,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     continue;
                 }
 
-                // Check if second-to-last, last, first are collinear
                 var secondLast = result[result.Count - 2];
                 if (AreCollinear(secondLast, last, first, collinearTol))
                 {
@@ -247,7 +215,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 break;
             }
 
-            // Check for duplicate first/last
             if (result.Count >= 2 && ArePointsEqual(result[0], result[result.Count - 1], dupThreshold))
             {
                 result.RemoveAt(result.Count - 1);
@@ -263,7 +230,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         private static bool AreCollinear(IntPoint a, IntPoint b, IntPoint c, double tolerance)
         {
-            // Cross product of (b-a) and (c-a)
             long cross = (long)(b.X - a.X) * (c.Y - a.Y) - (long)(b.Y - a.Y) * (c.X - a.X);
             
             if (tolerance == 0)
@@ -288,9 +254,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return rings;
         }
 
-        /// <summary>
-        /// Assigns holes to their containing outer polygons.
-        /// </summary>
         private static List<Polygon> AssignHolesToOuters(List<IntRing> outers, List<IntRing> holes, List<string> warnings)
         {
             var polygons = new List<Polygon>(outers.Count);
@@ -304,7 +267,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 assignedHoles[i] = new List<IntPoint[]>();
             }
 
-            // Assign each hole to the smallest containing outer
             foreach (var hole in holes)
             {
                 int bestOuter = -1;
@@ -335,7 +297,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 }
             }
 
-            // Build polygons
             for (int i = 0; i < outers.Count; i++)
             {
                 var holesList = assignedHoles[i];
@@ -364,12 +325,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 if ((pi.Y > point.Y) != (pj.Y > point.Y))
                 {
-                    // Calculate x-intersection
                     long dx = pj.X - pi.X;
                     long dy = pj.Y - pi.Y;
                     long py = point.Y - pi.Y;
                     
-                    // x = pi.X + (point.Y - pi.Y) * dx / dy
                     if (dy != 0)
                     {
                         long xIntersect = pi.X + (py * dx) / dy;
@@ -386,9 +345,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return inside;
         }
 
-        /// <summary>
-        /// Checks if a polygon has self-intersecting edges.
-        /// </summary>
         public static bool HasSelfIntersection(IntPoint[] polygon)
         {
             if (polygon == null || polygon.Length < 4)
@@ -396,7 +352,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             int n = polygon.Length;
 
-            // Check all pairs of non-adjacent edges
             for (int i = 0; i < n; i++)
             {
                 var a1 = polygon[i];
@@ -404,7 +359,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 for (int j = i + 2; j < n; j++)
                 {
-                    // Skip adjacent edges
                     if (j == (i + n - 1) % n)
                         continue;
 
@@ -426,13 +380,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// </summary>
         private static bool EdgesIntersect(IntPoint a1, IntPoint a2, IntPoint b1, IntPoint b2)
         {
-            // Cross product orientation test
             long d1 = CrossProduct(b1, b2, a1);
             long d2 = CrossProduct(b1, b2, a2);
             long d3 = CrossProduct(a1, a2, b1);
             long d4 = CrossProduct(a1, a2, b2);
 
-            // Check if segments straddle each other
             if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
                 ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)))
             {
@@ -447,9 +399,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return (long)(a.X - o.X) * (b.Y - o.Y) - (long)(a.Y - o.Y) * (b.X - o.X);
         }
 
-        /// <summary>
-        /// Reverses the winding order of a polygon's points.
-        /// </summary>
         public static IntPoint[] ReverseWinding(IntPoint[] points)
         {
             var result = new IntPoint[points.Length];

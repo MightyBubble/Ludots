@@ -3,14 +3,8 @@ using System.Numerics;
 
 namespace Ludots.Core.Gameplay.Camera
 {
-    /// <summary>
-    /// Generic distance-to-pitch sample for host-managed orbit cameras.
-    /// </summary>
     public readonly record struct PlatformManagedCameraDistancePitchSample(float DistanceCm, float PitchDeg);
 
-    /// <summary>
-    /// Host snapshot for the active platform-managed camera rig.
-    /// </summary>
     public sealed class PlatformManagedCameraControlSnapshot
     {
         public bool IsAvailable { get; set; }
@@ -50,9 +44,6 @@ namespace Ludots.Core.Gameplay.Camera
         }
     }
 
-    /// <summary>
-    /// Host tuning block for platform-managed cameras.
-    /// </summary>
     public sealed class PlatformManagedCameraTuningSnapshot
     {
         public bool IsAvailable { get; set; }
@@ -99,9 +90,6 @@ namespace Ludots.Core.Gameplay.Camera
             => new(false, suppressesHostInput, worldAvailable, errorMessage ?? string.Empty);
     }
 
-    /// <summary>
-    /// Host service that exposes platform-owned camera state to platform-managed drivers.
-    /// </summary>
     public interface IPlatformManagedCameraHostService
     {
         PlatformManagedCameraControlSnapshot ReadControlSnapshot();

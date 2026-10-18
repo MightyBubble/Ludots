@@ -9,7 +9,7 @@ using MessagePack.Formatters;
 namespace Ludots.Core.Persistence
 {
     /// <summary>
-    /// Region volume component formatters (#1461): identity/shape, tag filter, and
+    /// Region volume component formatters: identity/shape, tag filter, and
     /// emission contract persisted as flat primitive arrays (fixed-point via raw
     /// values, polygon vertices and payload entries as nested arrays).
     /// </summary>

@@ -24,7 +24,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
     private const float TeaCellSpacing = 0.55f;
     private const float TeaCellHalf = 0.21f;
 
-    // P5 scroll geometry: world-space right side, rows go down from the anchor.
+    // Scroll geometry: world-space right side, rows go down from the anchor.
     private const float ScrollAnchorX = 7.5f;
     private const float ScrollAnchorY = 4.5f;
     private const float ScrollRowWidth = 3.2f;
@@ -260,8 +260,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
             });
         }
     }
-
-    // ── P5 scroll ────────────────────────────────────────────────────────────
 
     private void BuildScroll(GraphOpsNodeDriverContext ctx)
     {
@@ -510,7 +508,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         float rowRight = anchorX + ScrollRowWidth * 0.5f;
         float rowLeft = anchorX - ScrollRowWidth * 0.5f;
         int water = _ints[0];
-        int limit = casterHealthMax(ctx);
+        int limit = CasterHealthMax(ctx);
         bool away = IsAway(ctx);
 
         foreach (ScrollArrow arrow in _scrollArrows)
@@ -637,8 +635,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         });
     }
 
-    // ── Call / Return 驿站台 ──────────────────────────────────────────────────
-
     private void DrawPostStation(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
         int ally = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "ally");
@@ -726,8 +722,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         });
     }
 
-    // ── InvokeScript 双卷轴 ──────────────────────────────────────────────────
-
     private void DrawDualScroll(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
         if (_calleeGraphId <= 0 ||
@@ -802,8 +796,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         }
     }
 
-    // ── MoveInt 寄存器面板 ────────────────────────────────────────────────────
-
     private void DrawRegisterPanel(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
         float boxW = 1.4f;
@@ -836,8 +828,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         }
     }
 
-    // ── HaltReturnInt 答案托盘 ───────────────────────────────────────────────
-
     private void DrawAnswerTray(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
         int count = _cursor.ReturnInt;
@@ -861,8 +851,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         }
     }
 
-    // ── Yield 残影连拍 ───────────────────────────────────────────────────────
-
     private void DrawYieldGhosts(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
         if (_cursor.Status != GraphExecutionStatus.Yielded)
@@ -883,9 +871,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
         }
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    private int casterHealthMax(GraphOpsNodeDriverContext ctx)
+    private int CasterHealthMax(GraphOpsNodeDriverContext ctx)
     {
         int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
         return caster >= 0 ? (int)ctx.Vignette.Actors[caster].HealthMax : 0;
@@ -1121,7 +1107,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResume
     }
 
     /// <summary>
-    /// Resolves the callee graph ID for the gallery's InvokeScript demo.
     /// When the authored node uses functionName (FuncLib path), allocates a local callee ID
     /// and patches the instruction so the local registry can serve the call.
     /// </summary>

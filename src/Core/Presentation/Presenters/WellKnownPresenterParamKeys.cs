@@ -15,21 +15,13 @@ namespace Ludots.Core.Presentation.Presenters
         public const int BarWidth = 1;
         /// <summary>Bar height in pixels. Default: 6.</summary>
         public const int BarHeight = 2;
-        /// <summary>Foreground color red channel.</summary>
         public const int BarForegroundR = 4;
-        /// <summary>Foreground color green channel.</summary>
         public const int BarForegroundG = 5;
-        /// <summary>Foreground color blue channel.</summary>
         public const int BarForegroundB = 6;
-        /// <summary>Foreground color alpha channel.</summary>
         public const int BarForegroundA = 7;
-        /// <summary>Background color red channel.</summary>
         public const int BarBackgroundR = 8;
-        /// <summary>Background color green channel.</summary>
         public const int BarBackgroundG = 9;
-        /// <summary>Background color blue channel.</summary>
         public const int BarBackgroundB = 10;
-        /// <summary>Background color alpha channel.</summary>
         public const int BarBackgroundA = 11;
 
         // ── WorldText ──
@@ -40,13 +32,9 @@ namespace Ludots.Core.Presentation.Presenters
         public const int TextValue1 = 1;
         /// <summary>Font size override.</summary>
         public const int TextFontSize = 3;
-        /// <summary>Text color red channel.</summary>
         public const int TextColorR = 4;
-        /// <summary>Text color green channel.</summary>
         public const int TextColorG = 5;
-        /// <summary>Text color blue channel.</summary>
         public const int TextColorB = 6;
-        /// <summary>Text color alpha channel.</summary>
         public const int TextColorA = 7;
         /// <summary>Stable text token ID for localization.</summary>
         public const int TextTokenId = 15;
@@ -60,23 +48,14 @@ namespace Ludots.Core.Presentation.Presenters
         public const int OverlayAngle = 2;
         /// <summary>Rotation offset in degrees.</summary>
         public const int OverlayRotation = 3;
-        /// <summary>Fill color red channel.</summary>
         public const int OverlayFillR = 4;
-        /// <summary>Fill color green channel.</summary>
         public const int OverlayFillG = 5;
-        /// <summary>Fill color blue channel.</summary>
         public const int OverlayFillB = 6;
-        /// <summary>Fill color alpha channel.</summary>
         public const int OverlayFillA = 7;
-        /// <summary>Border color red channel.</summary>
         public const int OverlayBorderR = 8;
-        /// <summary>Border color green channel.</summary>
         public const int OverlayBorderG = 9;
-        /// <summary>Border color blue channel.</summary>
         public const int OverlayBorderB = 10;
-        /// <summary>Border color alpha channel.</summary>
         public const int OverlayBorderA = 11;
-        /// <summary>Border width.</summary>
         public const int OverlayBorderWidth = 12;
         /// <summary>Rectangle length (for rectangular overlays).</summary>
         public const int OverlayLength = 13;
@@ -95,11 +74,8 @@ namespace Ludots.Core.Presentation.Presenters
         public const int SplineP3 = 23;
         /// <summary>Spline ribbon width.</summary>
         public const int SplineWidth = 24;
-        /// <summary>Spline fill color.</summary>
         public const int SplineFillColor = 25;
-        /// <summary>Spline border color.</summary>
         public const int SplineBorderColor = 26;
-        /// <summary>Spline border width.</summary>
         public const int SplineBorderWidth = 27;
 
         // ── Marker3D ──
@@ -112,13 +88,9 @@ namespace Ludots.Core.Presentation.Presenters
         public const int MarkerScaleY = 2;
         /// <summary>Per-axis scale Z override.</summary>
         public const int MarkerScaleZ = 3;
-        /// <summary>Marker color red channel.</summary>
         public const int MarkerColorR = 4;
-        /// <summary>Marker color green channel.</summary>
         public const int MarkerColorG = 5;
-        /// <summary>Marker color blue channel.</summary>
         public const int MarkerColorB = 6;
-        /// <summary>Marker color alpha channel.</summary>
         public const int MarkerColorA = 7;
     }
 }

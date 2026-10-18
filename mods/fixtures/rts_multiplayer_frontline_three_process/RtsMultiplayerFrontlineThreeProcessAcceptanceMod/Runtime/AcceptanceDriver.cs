@@ -1686,7 +1686,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     _commandPort.LastSubmittedBatchSequence == 0)
                 {
                     InputOrderActivationResult activation = _inputOrderMapping?.LastActivationResult ?? default;
-                    // InteractionContextStack 已随 #1306 路线④退役(投影吸收);命令失败诊断不再有栈可读。
+                    // InteractionContextStack 已退役(投影吸收);命令失败诊断不再有栈可读。
                     string stackInfo = "stack=retired(#1306)";
                     throw new InvalidOperationException(
                         $"Input action '{_pendingCommandAction}' did not produce exactly one submitted network command batch; " +

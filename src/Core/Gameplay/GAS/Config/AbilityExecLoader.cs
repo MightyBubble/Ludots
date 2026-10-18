@@ -14,7 +14,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 {
     /// <summary>
     /// Loads ability definitions from JSON and populates AbilityDefinitionRegistry
-    /// with the new AbilityExecSpec execution model.
+    /// with the AbilityExecSpec execution model.
     /// JSON format: array of ability objects with "id", "exec", "blockTags" etc.
     /// </summary>
     public sealed class AbilityExecLoader
@@ -54,9 +54,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         }
 
-        /// <summary>
-        /// Load abilities from the config pipeline and register them.
-        /// </summary>
         public void Load(
             ConfigCatalog? catalog = null,
             ConfigConflictReport? report = null,
@@ -108,7 +105,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         /// <summary>
-        /// Compile a single ability from a JSON object (for testing / external callers).
+        /// Exposed for tests and external callers.
         /// </summary>
         public static AbilityDefinition CompileAbility(JsonObject obj, string id, string path)
         {
@@ -122,7 +119,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
 
-            // ── exec block ──
             if (obj["exec"] is JsonObject execObj)
             {
                 CompileCallerParamsPool(
@@ -150,7 +146,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Ability '{id}' in '{path}' field 'exec' is required.");
             }
 
-            // ── onActivateEffects ──
             if (obj["onActivateEffects"] != null)
             {
                 throw new InvalidOperationException(
@@ -160,7 +155,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             RequireKnownRootProperties(obj, id, path);
 
-            // ── blockTags ──
             if (obj["blockTags"] is JsonObject blockObj)
             {
                 var blockTags = default(AbilityActivationBlockTags);
@@ -184,18 +178,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.ActivationBlockTags = blockTags;
             }
 
-            // ── categories (ability classification; not gameplay tags) ──
+            // categories: ability classification; not gameplay tags.
             if (obj["catalogTags"] != null)
             {
                 throw new InvalidOperationException(
                     $"Ability '{id}' in '{path}' field 'catalogTags' was renamed to 'categories'.");
             }
 
-            if (obj["categories"] is JsonArray catalogArr)
+            if (obj["categories"] is JsonArray categoriesArr)
             {
                 var categories = default(GameplayTagContainer);
                 bool hasCategories = false;
-                foreach (var entry in catalogArr)
+                foreach (var entry in categoriesArr)
                 {
                     string? categoryName = entry?.GetValue<string>();
                     if (string.IsNullOrWhiteSpace(categoryName))
@@ -212,7 +206,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasCategories = hasCategories;
             }
 
-            // ── interactionContextProfile (RFC-0065 CTX-6) ──
+            // interactionContextProfile: RFC-0065 CTX-6.
             if (obj["interactionContextProfile"] != null)
             {
                 string? contextProfileId = obj["interactionContextProfile"]?.GetValue<string>();
@@ -232,14 +226,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasActivationPrecondition = def.ActivationPrecondition.ValidationGraphId > 0;
             }
 
-            // ── toggleSpec ──
             if (obj["toggleSpec"] is JsonObject toggleObj)
             {
                 def.ToggleSpec = CompileToggleSpec(toggleObj, id, path);
                 def.HasToggleSpec = def.ToggleSpec.ToggleTagId > 0;
             }
 
-            // ── targeting ──
             if (obj["targeting"] is JsonObject targetingObj)
             {
                 def.Targeting = CompileTargeting(targetingObj, id, path);
@@ -334,8 +326,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        // ──────────────── ExecSpec ────────────────
-
         private static AbilityExecSpec CompileExecSpec(
             JsonObject execObj,
             string id,
@@ -347,21 +337,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var spec = default(AbilityExecSpec);
 
-            // clockId
             string clockStr = RequireNonEmptyString(execObj["clockId"], "exec.clockId", id, path);
             spec.ClockId = ParseClockId(clockStr);
 
-            // interruptAny
-            if (execObj["interruptAny"] is JsonArray intArr)
+            if (execObj["interruptAny"] is JsonArray interruptAnyArr)
             {
-                for (int i = 0; i < intArr.Count; i++)
+                for (int i = 0; i < interruptAnyArr.Count; i++)
                 {
-                    string tag = RequireNonEmptyString(intArr[i], $"exec.interruptAny[{i}]", id, path);
+                    string tag = RequireNonEmptyString(interruptAnyArr[i], $"exec.interruptAny[{i}]", id, path);
                     spec.InterruptAny.AddTag(TagRegistry.Register(tag));
                 }
             }
 
-            // items
             if (execObj["items"] is JsonArray itemsArr)
             {
                 if (itemsArr.Count > AbilityExecSpec.MAX_ITEMS)
@@ -539,8 +526,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "Valid values: Default, Source, Target, TargetContext.");
         }
 
-        // ──────────────── CallerParamsPool ────────────────
-
         private static void CompileCallerParamsPool(
             JsonObject execObj,
             string id,
@@ -627,8 +612,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 hasPool = true;
             }
         }
-
-        // ──────────────── Toggle / Targeting ────────────────
 
         private static void CompileCallerParamEntry(
             ref EffectConfigParams callerParams,
@@ -1108,8 +1091,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             return result;
         }
-
-        // ──────────────── Parsing helpers ────────────────
 
         private static GasClockId ParseClockId(string str)
         {

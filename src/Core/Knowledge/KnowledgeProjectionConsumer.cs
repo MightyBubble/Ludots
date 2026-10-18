@@ -127,15 +127,6 @@ namespace Ludots.Core.Knowledge
         }
 
         /// <summary>
-        /// Per-marker consumers (the minimap projects one marker per agent) only need the raw disclosure
-        /// behind a viewer/target pair. This skips scope resolution, the accumulator merge and the
-        /// KnowledgeProjection construction, which is where thousands of per-frame resolutions spent
-        /// their time.
-        /// </summary>
-        /// <summary>Dense-consumer form: caller hoists the resolver and tick out of its per-entity loop.</summary>
-
-
-        /// <summary>
         /// Resolves the viewer's knowledge resolver and the current step tick once, so dense consumers
         /// (one query per on-screen entity) do not repeat two string-keyed global lookups per entity.
         /// </summary>

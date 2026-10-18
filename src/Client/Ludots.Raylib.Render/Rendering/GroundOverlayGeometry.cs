@@ -213,7 +213,7 @@ namespace Ludots.Raylib.Render
             return written;
         }
 
-        /// <summary>沿路径生成宽 width 的条带（中心在 lateralOffset），Y 取路径点各自高度加 lift。</summary>
+        /// <summary>条带 Y 取路径点各自高度加 lift。</summary>
         public static int WriteRibbonStrip(ReadOnlySpan<Vector3> path, float lateralOffset, float width, float lift, Span<Vector3> vertices)
         {
             if (path.Length < 2 || width <= 0f)

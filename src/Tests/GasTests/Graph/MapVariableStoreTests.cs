@@ -42,8 +42,6 @@ namespace Ludots.Tests.Gas.Graph
             GraphIdRegistry.Clear();
         }
 
-        // ── Declaration strictness ──
-
         [Test]
         public void Parse_UnknownField_Rejected()
         {
@@ -193,8 +191,6 @@ namespace Ludots.Tests.Gas.Graph
                 Throws.InvalidOperationException.With.Message.Contains("phase"));
         }
 
-        // ── Store fail-closed + revisions + change events ──
-
         [Test]
         public void Store_UndeclaredRead_ThrowsNamingMapAndVar()
         {
@@ -286,8 +282,6 @@ namespace Ludots.Tests.Gas.Graph
             }));
         }
 
-        // ── Session lifecycle ──
-
         [Test]
         public void LoadMap_DeclaringVariables_CreatesStore_AndUnloadDestroysIt()
         {
@@ -321,8 +315,6 @@ namespace Ludots.Tests.Gas.Graph
                 () => engine.LoadMap(MapIdValue),
                 Throws.InvalidOperationException.With.Message.Contains("priority"));
         }
-
-        // ── Graph ops end-to-end through the TriggerGraph front door ──
 
         [Test]
         public void TriggerGraph_ReadAddWrite_RunsFromEntryPc_AndFiresMapVariableChangedWithPayload()

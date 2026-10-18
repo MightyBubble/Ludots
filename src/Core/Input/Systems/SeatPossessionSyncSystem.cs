@@ -9,8 +9,8 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Input.Systems
 {
     /// <summary>
-    /// Keeps each seat's possessed rep aligned with <see cref="PlayerEntityLookup"/>.
-    /// Replaces LocalPlayerEntityResolverSystem (Epic #896) — no explicit-binding bypass.
+    /// Keeps each seat's possessed rep aligned with <see cref="PlayerEntityLookup"/>;
+    /// no explicit-binding bypass.
     /// </summary>
     public sealed class SeatPossessionSyncSystem : ISystem<float>
     {

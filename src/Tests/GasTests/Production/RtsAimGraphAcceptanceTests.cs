@@ -74,7 +74,6 @@ public sealed class RtsAimGraphAcceptanceTests
             ?? throw new InvalidOperationException("OrderTypeRegistry service is missing.");
         int castAbilityTypeId = orderTypes.GetId("castAbility");
 
-        // ── Q 按下 → 激活衍生瞄准 context（父=战斗）──
         backend.SetButton("<Keyboard>/q", true);
         TickUntil(engine, 30, () =>
             engine.World.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances instances) &&
@@ -87,7 +86,6 @@ public sealed class RtsAimGraphAcceptanceTests
             aim[0].ParentContextId == battleId,
             "SkillQ 按下激活衍生瞄准 context（父=战斗）");
 
-        // ── 左键确认 → 地面点解析 → SubmitCast → 活跃集成员收到 castAbility(槽位0) → 瞄准 context 停用 ──
         var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
             as Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem
             ?? throw new InvalidOperationException("CommandIntentBufferDrain service is missing.");
@@ -174,14 +172,13 @@ public sealed class RtsAimGraphAcceptanceTests
         int rosterKeyIdWarm = store.KeyRegistry.GetId("rts.selectable");
         TickUntil(engine, 60, () =>
             rosterKeyIdWarm > 0 &&
-            store.TryGet(rep, rosterKeyIdWarm, out var rh2) &&
-            store.TryGetView(rh2, out var rv2) &&
-            rv2.Count > 0);
+            store.TryGet(rep, rosterKeyIdWarm, out var rosterHandle) &&
+            store.TryGetView(rosterHandle, out var rosterView) &&
+            rosterView.Count > 0);
 
         int commandSourceKeyId = store.KeyRegistry.GetId("collection.command.source");
         Assert.That(commandSourceKeyId, Is.GreaterThan(0), "collection.command.source 键已注册（battle profile 声明）");
 
-        // ── 左键拖框：press 起角+激活 selecting context，release 提交命中到命令源集合 ──
         backend.SetMousePosition(new Vector2(0f, 0f));
         backend.SetButton("<Mouse>/LeftButton", true);
         TickUntil(engine, 30, () =>

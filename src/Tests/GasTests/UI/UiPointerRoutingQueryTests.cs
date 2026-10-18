@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.UI
 {
     /// <summary>
-    /// UiPointerRoutingQuery (#1585 U1 groundwork): pointer routing reads entity state —
+    /// UiPointerRoutingQuery: pointer routing reads entity state —
     /// the seat's rep active context chain — plus profile declarations, never view state.
     /// The newest chain entry that declares routing decides; undeclaring contexts defer to
     /// ancestors, mirroring the order drain's LIFO arbitration.

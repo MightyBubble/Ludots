@@ -196,7 +196,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"{InlineCycleError}: InlineGraph cycle involving '{hostGraphId}' → '{macroKey}'.");
             }
 
-            // Expand nested InlineGraph inside the macro document first (in place).
             List<InlineSite> nested = CollectSites(macroKey, macro, site.Depth + 1);
             for (int i = 0; i < nested.Count; i++)
             {
@@ -427,7 +426,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             string exitTarget = outgoing[0].To;
             string prefixedStart = PrefixedId(siteNodeId, fragment.EntryStartNodeId);
 
-            // Retarget Entry / Entries that started at the InlineGraph site.
             if (string.Equals(host.Entry, siteNodeId, StringComparison.Ordinal))
             {
                 host.Entry = prefixedStart;
@@ -442,7 +440,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            // Drop site node and its incident control edges.
             host.Nodes.RemoveAll(n => string.Equals(n.Id, siteNodeId, StringComparison.Ordinal));
             host.ControlEdges.RemoveAll(e =>
                 string.Equals(e.From, siteNodeId, StringComparison.Ordinal) ||

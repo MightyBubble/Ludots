@@ -6,7 +6,7 @@ using Ludots.Core.Config;
 namespace Ludots.Core.UI.CommandDeck
 {
     /// <summary>
-    /// Loader for <c>UI/command_deck_profiles.json</c> (WPK-3). Catalog-declared DeepObject merge
+    /// Loader for <c>UI/command_deck_profiles.json</c>. Catalog-declared DeepObject merge
     /// through <see cref="ConfigPipeline"/>; structural validation fails fast. Reference existence
     /// is checked by <see cref="CommandDeckProfileRegistry.Install"/>.
     /// </summary>

@@ -98,8 +98,7 @@ namespace Ludots.Tests.Architecture.Governance
         [Test]
         public void PresentationRequestKind_AllowlistMatchesEpicInventory()
         {
-            // Prefab was deleted from this allowlist; do not reintroduce it.
-            // Spline ribbon kinds land as P4 (#929) already merged into atmosphere.
+            // The Prefab slot (value 2) is retired; do not reuse the number or reintroduce the kind.
             string[] expected =
             {
                 nameof(PresentationRequestKind.VisualProxy),

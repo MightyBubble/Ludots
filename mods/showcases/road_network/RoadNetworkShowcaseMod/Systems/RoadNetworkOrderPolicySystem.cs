@@ -15,8 +15,8 @@ using RoadNetworkShowcaseMod.Gameplay;
 namespace RoadNetworkShowcaseMod.Systems
 {
     /// <summary>
-    /// Road-network order policy (migration slice 2): the local order mapping installs through
-    /// the CoreInputMod auto assembly; this policy system waits for that mapping and reroutes its
+    /// Road-network order policy: the local order mapping installs through the CoreInputMod auto
+    /// assembly; this policy system waits for that mapping and reroutes its
     /// submit handlers through the road move-order expander, emitting transient cue markers per
     /// submitted order.
     /// </summary>

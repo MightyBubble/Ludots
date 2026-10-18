@@ -14,20 +14,16 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Unit tests for the order-driven graph brain slice (issue #1536 切 A):
+    /// Unit tests for the order-driven graph brain slice:
     ///   - Pure ops: LoadEntityPosX/Y, IntToFloat, FloatToInt, SqrtFloat
     ///   - Order action ops: SubmitAssignedOrder, CompleteActiveOrder (runtime API bridge)
     ///   - Order type symbol resolution (semantic key → id, fail-closed)
-    ///   - Compile validation/emit and kind policy for the new ops
+    ///   - Compile validation/emit and kind policy for the order ops
     ///   - GraphActionBrainHostSystem glue contract
     /// </summary>
     [TestFixture, NonParallelizable]
     public class GraphBrainOrderOpsTests
     {
-        // ════════════════════════════════════════════════════════════════════
-        //  Pure ops
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void LoadEntityPosXY_ReadsWorldCentimeters()
         {
@@ -134,10 +130,6 @@ namespace Ludots.Tests.GAS
 
             That(error.Message, Does.Contain("SqrtNegativeInput"));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  SubmitAssignedOrder / CompleteActiveOrder (runtime API bridge)
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void SubmitAssignedOrder_EnqueuesImmediateOrderWithOwnerAndSpatialArgs()
@@ -269,10 +261,6 @@ namespace Ludots.Tests.GAS
             That(noActive.Message, Does.Contain("NoActiveOrderToComplete"));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Symbol resolution
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void ResolveOrderType_ResolvesSemanticKeyAndFailsClosed()
         {
@@ -300,10 +288,6 @@ namespace Ludots.Tests.GAS
                 () => unbound.ResolveOrderType("moveTo"))!;
             That(unboundError.Message, Does.Contain("no OrderTypeRegistry"));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Compile + kind policy + metadata
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void SubmitAssignedOrder_CompilesFromDocumentWithSemanticOrderType()
@@ -510,10 +494,6 @@ namespace Ludots.Tests.GAS
             That(posX.Kind, Is.EqualTo(EffectOperationKind.Pure));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  GraphActionBrainHostSystem
-        // ════════════════════════════════════════════════════════════════════
-
         private sealed class OpenGate : IGameplayAdvanceGate
         {
             public static readonly OpenGate Instance = new();
@@ -576,10 +556,6 @@ namespace Ludots.Tests.GAS
             InvalidOperationException error = Throws<InvalidOperationException>(() => system.Update(1f / 30f))!;
             That(error.Message, Does.Contain("UnknownScriptKey"));
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Helpers
-        // ════════════════════════════════════════════════════════════════════
 
         private static GraphExecutionState Execute(
             World world,

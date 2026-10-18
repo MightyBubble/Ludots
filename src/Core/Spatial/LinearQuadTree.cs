@@ -5,19 +5,15 @@ using System.Numerics;
 namespace Ludots.Core.Spatial
 {
     /// <summary>
-    /// A Linear QuadTree implementation that stores nodes in a flat array.
     /// Optimized for static/semi-static spatial queries.
-    /// Uses Morton Codes (Z-Order Curve) could be a future optimization.
-    /// Currently implements a standard pointer-less array-based tree.
     /// </summary>
-    /// <typeparam name="T">The type of item stored.</typeparam>
     public class LinearQuadTree<T>
     {
         private struct Node
         {
             public int FirstChildIndex; // -1 if leaf
-            public int Count;           // Number of items in this node (and subnodes?)
-            public int FirstItemIndex;  // Index into the item array
+            public int Count;
+            public int FirstItemIndex;
             public Rect Bounds;
         }
 
@@ -74,27 +70,19 @@ namespace Ludots.Core.Spatial
 
         private void Insert(int nodeIndex, int depth, T item, Rect bounds)
         {
-            // If we are at max depth, just add here
             if (depth >= _maxDepth)
             {
                 AddItemToNode(nodeIndex, item, bounds);
                 return;
             }
 
-            // If leaf, split? Or just add? 
-            // Simple logic: If leaf, try to push down. If not leaf, push down.
             ref var node = ref _nodes[nodeIndex];
-            
-            // If leaf and not full... (Simplified: Always split if not leaf, or lazy split)
-            // For Linear Quadtree, usually we pre-split or split on demand.
             
             if (node.FirstChildIndex == -1)
             {
-                // Split
                 Split(nodeIndex);
             }
             
-            // Find child that contains the item
             int childIndex = GetQuadrant(node.Bounds, bounds);
             if (childIndex != -1)
             {
@@ -102,7 +90,6 @@ namespace Ludots.Core.Spatial
             }
             else
             {
-                // Overlaps multiple quadrants, store in this node
                 AddItemToNode(nodeIndex, item, bounds);
             }
         }
@@ -110,7 +97,6 @@ namespace Ludots.Core.Spatial
         private void Split(int nodeIndex)
         {
             int firstChild = _nodeCount;
-            // Allocate 4 children
             if (_nodeCount + 4 > _nodes.Length) Array.Resize(ref _nodes, _nodes.Length * 2);
 
             Rect b = _nodes[nodeIndex].Bounds;
@@ -162,9 +148,8 @@ namespace Ludots.Core.Spatial
 
         public void Query(Rect area, List<T> results)
         {
-            // Iterative traversal using stack
             int stackTop = 0;
-            _stack[0] = 0; // Push root
+            _stack[0] = 0;
 
             while (stackTop >= 0)
             {
@@ -173,7 +158,6 @@ namespace Ludots.Core.Spatial
 
                 if (!node.Bounds.Intersects(area)) continue;
 
-                // Check items in this node
                 int currentItem = node.FirstItemIndex;
                 while (currentItem != -1)
                 {
@@ -185,7 +169,6 @@ namespace Ludots.Core.Spatial
                     currentItem = itemData.NextItemIndex;
                 }
 
-                // Push children
                 if (node.FirstChildIndex != -1)
                 {
                     // Push in reverse order

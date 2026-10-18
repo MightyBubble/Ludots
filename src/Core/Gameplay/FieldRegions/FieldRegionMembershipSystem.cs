@@ -303,7 +303,7 @@ namespace Ludots.Core.Gameplay.FieldRegions
         private void FireRegionEvent(
             MapSession session, EventKey eventKey, Entity entity, DiscreteIdFieldLayerData layer, int regionId)
         {
-            // Unified emission outlet (#1468): a region entity authored with
+            // Unified emission outlet: a region entity authored with
             // RegionVolumeEmissionCm (Fields/region_emissions.json) redirects its
             // crossings to the declared events with the authored payload; the
             // engine defaults stay FieldRegionEntered/Exited with the same facts.

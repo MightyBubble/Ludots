@@ -106,9 +106,6 @@ namespace Ludots.Core.Engine
             return true;
         }
 
-        /// <summary>
-        /// Check whether a system has already been activated.
-        /// </summary>
         public bool IsActivated(string name) => _activated.Contains(name);
     }
 }

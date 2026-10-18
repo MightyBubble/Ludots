@@ -28,7 +28,6 @@ namespace Ludots.Core.Presentation.Presenters
         public readonly bool DependsOnLocalPossession => Inline is
             InlineConditionKind.SourceIsSolePossessedRep or InlineConditionKind.TargetIsSolePossessedRep;
 
-        /// <summary>A default ConditionRef that always evaluates to true.</summary>
         public static readonly ConditionRef AlwaysTrue = default;
     }
 }

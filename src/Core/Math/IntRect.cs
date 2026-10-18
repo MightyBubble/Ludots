@@ -11,7 +11,7 @@ namespace Ludots.Core.Mathematics
         public readonly int Height;
 
         public int Left => X;
-        public int Top => Y; // Assuming Y-up or Y-down doesn't matter for struct logic, but usually Top is MinY or MaxY
+        public int Top => Y; // The struct fixes no Y-axis direction; whether Top is MinY or MaxY follows the caller's Y-up/Y-down convention.
         public int Right => X + Width;
         public int Bottom => Y + Height;
 

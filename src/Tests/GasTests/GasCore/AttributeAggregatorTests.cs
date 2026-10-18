@@ -11,12 +11,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Tests for attribute aggregation with multiple modifiers:
-    /// - Add + Multiply + Override stacking
-    /// - Multiple modifiers on the same attribute
-    /// - Order-of-operations correctness
-    /// </summary>
     [TestFixture]
     public class AttributeAggregatorTests
     {
@@ -56,7 +50,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public unsafe void AddAndMultiply_Combined()
         {
-            // Base = 100, Add +20, Multiply x1.5 → expected (100+20)*1.5 = 180
             float baseValue = 100f;
             var mods = new EffectModifiers();
             mods.Add(attrId: 0, ModifierOp.Add, 20f);
@@ -83,7 +76,6 @@ namespace Ludots.Tests.GAS
             mods.Add(attrId: 0, ModifierOp.Add, 50f);
             mods.Add(attrId: 0, ModifierOp.Override, 42f);
 
-            // Override should discard all Add values and set to 42
             float overrideValue = float.NaN;
             for (int i = 0; i < mods.Count; i++)
             {

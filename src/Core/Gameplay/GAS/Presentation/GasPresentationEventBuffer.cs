@@ -8,23 +8,18 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
     /// </summary>
     public enum GasPresentationEventKind : byte
     {
-        // Ability lifecycle
         CastStarted = 1,
         CastFailed = 2,
         CastCommitted = 3,
         CastFinished = 4,
         CastInterrupted = 5,
 
-        // Effect lifecycle
         EffectApplied = 10,
         EffectActivated = 11,
         EffectExpired = 12,
         EffectCancelled = 13,
     }
 
-    /// <summary>
-    /// Why an ability cast was rejected.
-    /// </summary>
     public enum AbilityCastFailReason : byte
     {
         None = 0,
@@ -37,7 +32,6 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
     }
 
     /// <summary>
-    /// A single presentation event emitted by the GAS pipeline.
     /// Written during fixed-tick; read by presentation systems each render frame.
     /// </summary>
     public struct GasPresentationEvent

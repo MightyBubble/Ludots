@@ -207,7 +207,6 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        /// <summary>逐网格绘制：逐材质写贴图通道 flag 与 PBR 因子，注入 IBL/阴影纹理后 DrawMesh。</summary>
         public void DrawModel(Model model, RaylibMatrix transform)
         {
             ThrowIfDisposed();
@@ -239,7 +238,6 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        /// <summary>全模型材质读数（HUD/验收结论数据源）。</summary>
         public static MaterialInspection[] Inspect(Model model)
         {
             var result = new MaterialInspection[model.materialCount];

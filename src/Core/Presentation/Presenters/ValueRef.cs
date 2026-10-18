@@ -77,7 +77,6 @@ namespace Ludots.Core.Presentation.Presenters
     /// </summary>
     public struct ValueRef
     {
-        /// <summary>The kind of data source.</summary>
         public ValueSourceKind Source;
 
         /// <summary>
@@ -88,7 +87,6 @@ namespace Ludots.Core.Presentation.Presenters
         /// </summary>
         public int SourceId;
 
-        /// <summary>The literal value when Source == Constant.</summary>
         public float ConstantValue;
 
         /// <summary>

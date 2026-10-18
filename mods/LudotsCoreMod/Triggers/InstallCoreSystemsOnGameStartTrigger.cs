@@ -5,9 +5,7 @@ using Ludots.Core.Scripting;
 namespace LudotsCoreMod.Triggers
 {
     /// <summary>
-    /// Trigger that installs core game systems on game start.
-    /// Core systems that were previously hardcoded in GameEngine.InitializeCoreSystems
-    /// are now registered here to make them replaceable by other mods.
+    /// Installs core game systems on game start so that other mods can replace them.
     /// </summary>
     public sealed class InstallCoreSystemsOnGameStartTrigger : Trigger
     {
@@ -25,7 +23,6 @@ namespace LudotsCoreMod.Triggers
                 return Task.CompletedTask;
             }
 
-            // Prevent double installation
             if (engine.GlobalContext.TryGetValue(InstalledKey, out var installedObj) &&
                 installedObj is bool installed &&
                 installed)
@@ -36,9 +33,8 @@ namespace LudotsCoreMod.Triggers
 
             System.Console.WriteLine("[LudotsCoreMod] Core systems installed");
             
-            // Note: Most core GAS systems are still initialized in GameEngine.InitializeCoreSystems
-            // This trigger is here to demonstrate the architecture where systems can be
-            // registered by mods. Future refactoring will move more systems here.
+            // Most core GAS systems are still initialized in GameEngine.InitializeCoreSystems;
+            // this trigger exists to demonstrate the architecture where systems can be registered by mods.
 
             return Task.CompletedTask;
         }

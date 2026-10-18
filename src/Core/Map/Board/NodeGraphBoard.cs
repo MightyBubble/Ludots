@@ -22,8 +22,7 @@ namespace Ludots.Core.Map.Board
         public LoadedGraphRuntime GraphRuntime { get; }
 
         // The graph store/runtime is the board's purpose and stays eager; only the entity
-        // partition/query pair defers (satellite boards carry no consumers until BoardRef
-        // dispatch lands, #1567 slice 2).
+        // partition/query pair defers (satellite boards carry no consumers).
         private ChunkedGridSpatialPartitionWorld? _partition;
         private SpatialQueryService? _queryService;
 

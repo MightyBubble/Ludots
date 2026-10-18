@@ -13,7 +13,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>RFC-0065 CTX-4: FilterProfile registry, association expansion cache and tag rules.</summary>
     [TestFixture]
     [NonParallelizable]
     public sealed class FilterProfileTests

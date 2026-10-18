@@ -19,7 +19,7 @@ using ComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 namespace GasTests.Physics2D
 {
     /// <summary>
-    /// Issue #732: contact event export pipeline — opt-in emitters, begin/end edge detection
+    /// Contact event export pipeline — opt-in emitters, begin/end edge detection
     /// on CollisionPair.ContactCount transitions, entity-death End synthesis, drain contract,
     /// overflow and layer allowlist contract errors, and deterministic event ordering.
     /// </summary>
@@ -70,11 +70,11 @@ namespace GasTests.Physics2D
                 var simulation = CreateSimulation(world, shapeStorage, poses, queue);
 
                 var recorded = new List<(ContactEventType2D, int, int, long, long)>();
-                void StepAndDrain(int approachStep)
+                void StepAndDrain(int targetXCm)
                 {
                     for (int station = 0; station < stationCount; station++)
                     {
-                        var target = Fix64Vec2.FromInt(approachStep, station * 2000);
+                        var target = Fix64Vec2.FromInt(targetXCm, station * 2000);
                         poses.SetKinematicTargetPose(kinematics[station], target, Fix64.Zero);
                     }
 

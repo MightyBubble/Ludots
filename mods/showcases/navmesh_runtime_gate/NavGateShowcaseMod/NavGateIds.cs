@@ -31,7 +31,7 @@ internal static class NavGateIds
     // 行军超过该时长仍未触发就强制落门，保证第一圈就出现惊喜时刻。
     public const int MarchGateFallbackTicks = 300;
 
-    // NAV-R2 稳定性熔断：runtime recast 落门/抬门重烤存在同线程长阻塞与
+    // 稳定性熔断：runtime recast 落门/抬门重烤存在同线程长阻塞与
     // BuildPolyDetail 活锁（见 artifacts/techdebt/2608-nav-runtime-bake-livelock.md），
     // 自动巡演最多完整落门 N 圈，之后停止自动落门并显式提示。
     public const int MaxAutoGateCycles = 3;

@@ -10,9 +10,6 @@ namespace Ludots.Core.Presentation.Camera
     /// </summary>
     public interface ICameraAdapter
     {
-        /// <summary>
-        /// Updates the camera transform.
-        /// </summary>
         void UpdateCamera(in CameraRenderState3D state);
     }
 }

@@ -25,10 +25,10 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 PNL-4 - <c>CollectionGasEntityCommandPanelSource</c> consumes the
-    /// <see cref="AbilityAggregationProfileRegistry"/> kernel. Covers the M6 catalog cases
-    /// (mixed marine/tank selection grouped by cast family, FormSet override recompute) and P3
-    /// (runtime profile switch regroups without re-selection), plus activation fan-out to every
+    /// <c>CollectionGasEntityCommandPanelSource</c> consumes the
+    /// <see cref="AbilityAggregationProfileRegistry"/> kernel. Covers the catalog cases
+    /// (mixed marine/tank selection grouped by cast family, FormSet override recompute) and
+    /// runtime profile switch regrouping without re-selection, plus activation fan-out to every
     /// surviving group member. All family/ability names are test data, never Core concepts.
     /// </summary>
     [TestFixture]
@@ -286,7 +286,6 @@ namespace Ludots.Tests.GAS
             Assert.That(slots[1].DetailLabel, Does.StartWith("3 owners | "), "pre-override: charge family has 3 members.");
             Assert.That(EntityCommandPanelSourceDispatch.TryGetRevision(source, in context, out uint beforeRevision), Is.True);
 
-            // Form switch remaps the elite marine's slot 2 (charge cannon -> untagged form variant).
             ref var formSlots = ref engine.World.Get<AbilityFormSlotBuffer>(fixture.Elite);
             formSlots.SetOverride(2, FormVariantAbilityId);
 
@@ -306,7 +305,7 @@ namespace Ludots.Tests.GAS
                 "clearing the override restores the original family grouping.");
         }
 
-        /// <summary>M6 background selection: [marine1, marine2, eliteMarine, tank1, tank2].</summary>
+        /// <summary>Background selection: [marine1, marine2, eliteMarine, tank1, tank2].</summary>
         private readonly struct SelectionFixture
         {
             public SelectionFixture(Entity collectionOwner, Entity elite, Entity tank1, Entity tank2)

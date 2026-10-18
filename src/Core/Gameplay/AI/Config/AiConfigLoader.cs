@@ -247,7 +247,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                     var bindings = Array.Empty<ActionBinding>();
                     if (obj.TryGetPropertyValue("Bindings", out var bindNode) && bindNode is JsonArray bindArr)
                     {
-                        var btmp = new List<ActionBinding>(bindArr.Count);
+                        var parsedBindings = new List<ActionBinding>(bindArr.Count);
                         for (int b = 0; b < bindArr.Count; b++)
                         {
                             string bindingPath = $"AI/goap_actions.json:{id}.Bindings[{b}]";
@@ -268,9 +268,9 @@ namespace Ludots.Core.Gameplay.AI.Config
                             }
 
                             int sk = RequireOrderBlackboardKey(bObj, "SourceKey", $"{bindingPath}.SourceKey");
-                            btmp.Add(new ActionBinding(bop, sk));
+                            parsedBindings.Add(new ActionBinding(bop, sk));
                         }
-                        bindings = btmp.ToArray();
+                        bindings = parsedBindings.ToArray();
                     }
 
                     ValidateActionOrderBindings(in orderSpec, bindings, $"AI/goap_actions.json:{id}");

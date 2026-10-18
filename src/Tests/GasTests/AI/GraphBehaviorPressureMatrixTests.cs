@@ -322,7 +322,6 @@ namespace Ludots.Tests.Gas.AI
 
         private static GraphInstruction[] BuildNopChainThenHalt(int minLength)
         {
-            // ConstInt + MoveInt* + HaltReturnInt; pad with MoveInt self copies.
             if (minLength < 3) minLength = 3;
             var list = new System.Collections.Generic.List<GraphInstruction>(minLength)
             {

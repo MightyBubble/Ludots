@@ -19,9 +19,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public fixed int WorldIds[MAX_ENTRIES];
         public fixed int Versions[MAX_ENTRIES];
 
-        /// <summary>
-        /// Try to get an Entity value by key.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGet(int key, out Entity value)
         {
@@ -41,9 +38,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
 
-        /// <summary>
-        /// Set an Entity value for a key.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int key, Entity value)
         {
@@ -52,7 +46,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             fixed (int* worldIds = WorldIds)
             fixed (int* versions = Versions)
             {
-                // Check if key exists
                 for (int i = 0; i < Count; i++)
                 {
                     if (keys[i] != key) continue;
@@ -62,7 +55,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
                     return;
                 }
 
-                // Add new entry
                 if (Count >= MAX_ENTRIES)
                 {
                     throw new InvalidOperationException(
@@ -76,9 +68,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
 
-        /// <summary>
-        /// Remove an entry by key.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Remove(int key)
         {
@@ -91,7 +80,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 {
                     if (keys[i] != key) continue;
                     
-                    // Shift remaining entries
                     for (int j = i; j < Count - 1; j++)
                     {
                         keys[j] = keys[j + 1];
@@ -106,9 +94,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
 
-        /// <summary>
-        /// Check if a key exists.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasKey(int key)
         {
@@ -122,9 +107,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
 
-        /// <summary>
-        /// Clear all entries.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()
         {

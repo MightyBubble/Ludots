@@ -498,7 +498,6 @@ namespace Ludots.Core.Gameplay.Dialogue
         }
 
         /// <summary>
-        /// Completes the oldest live <see cref="GraphCallbackTypes.DialogConfirm"/> waiter, if any.
         /// Drain stays on Continuation phase — Dialogue only Completes.
         /// </summary>
         private void CompletePendingDialogConfirm(bool confirmed)

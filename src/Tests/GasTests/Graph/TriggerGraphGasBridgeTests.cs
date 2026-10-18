@@ -19,9 +19,9 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// GAS → TriggerManager bridges (#1031 D4/D5): post-swap visibility, payload contract,
+    /// GAS → TriggerManager bridges: post-swap visibility, payload contract,
     /// map routing, drop counters, moment mirroring without stealing presentation events,
-    /// and the presentation-side Fire guard (#1031 D6).
+    /// and the presentation-side Fire guard.
     /// </summary>
     [NonParallelizable]
     public sealed class TriggerGraphGasBridgeTests

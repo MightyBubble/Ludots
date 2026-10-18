@@ -133,13 +133,11 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        /// <summary>True when the profile id has been installed.</summary>
         public bool IsInstalled(int profileId)
         {
             return profileId > 0 && profileId < _profiles.Length && _profiles[profileId] != null;
         }
 
-        /// <summary>Installed profile row by id; false when not installed.</summary>
         public bool TryGetDefinition(int profileId, out InteractionContextProfileDefinition definition)
         {
             if (!IsInstalled(profileId))
@@ -215,7 +213,7 @@ namespace Ludots.Core.Input.Interaction
             return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
         }
 
-        private int _inputContextIdsFor(int profileId)
+        private int ResolveInputContextId(int profileId)
         {
             string inputContextId = _profiles[profileId].InputContextId;
             return string.IsNullOrWhiteSpace(inputContextId)
@@ -270,7 +268,7 @@ namespace Ludots.Core.Input.Interaction
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
             _isForeground[profileId] = definition.Foreground;
-            _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);
+            _inputContextIdsByProfile[profileId] = ResolveInputContextId(profileId);
             _onActivatedGraphIds[profileId] = ResolveLifecycleGraphIds(
                 definition.OnActivated,
                 "onActivated",

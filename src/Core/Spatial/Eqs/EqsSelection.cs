@@ -2,7 +2,6 @@ using System;
 
 namespace Ludots.Core.Spatial.Eqs
 {
-    /// <summary>Selection strategies over scored EQS candidates.</summary>
     public static class EqsSelection
     {
         /// <summary>Return the highest-scoring non-filtered candidate. Deterministic tie-break by index.</summary>
@@ -32,7 +31,7 @@ namespace Ludots.Core.Spatial.Eqs
 
         /// <summary>
         /// Write the top-N non-filtered candidates (descending score) into <paramref name="destination"/>.
-        /// Returns count written. Uses in-place selection over a copy of indices.
+        /// Returns count written.
         /// </summary>
         public static int TopN(ReadOnlySpan<EqsItem> items, Span<EqsItem> destination)
         {

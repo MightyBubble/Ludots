@@ -15,7 +15,7 @@ namespace Ludots.Tests.Architecture
 {
     /// <summary>
     /// terrainFeed=direct(高度场列直灌)与 terrainFeed=triangles(每格三角化)的双轨对拍:
-    /// 同一合成地形(平原+台地断崖+水湾+阻挡条)按 #1344 判据锁拓扑等价——
+    /// 同一合成地形(平原+台地断崖+水湾+阻挡条)按对拍判据锁拓扑等价——
     /// 采样点可行域一致率、可行三角数量级一致、台地区域 area 一致。
     /// </summary>
     [TestFixture]
@@ -100,7 +100,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(tile.Portals.Length, Is.GreaterThan(0), "flat plain tile must carry portals");
         }
 
-        /// <summary>#1368 终态:粗格战略瓦片(体素=地形格)是合法档位,两轨都必须干净烤成。</summary>
+        /// <summary>粗格战略瓦片(体素=地形格)是合法档位,两轨都必须干净烤成。</summary>
         [Test]
         public void CoarseStrategicTile_BakesCleanlyOnBothFeeds()
         {
@@ -149,8 +149,7 @@ namespace Ludots.Tests.Architecture
         }
 
         /// <summary>Blocked 切发射是两轨共同语义(NavTileBuilder.AddFace 对 blocked 角早退,
-        /// 共享分类器同判)——直灌轨在被阻挡区必须成洞。(审计更正:此前据混叠测量误断
-        /// "Blocked 不参与发射"并写反了测试,现已以共享分类器为单一语义源。)</summary>
+        /// 共享分类器同判)——直灌轨在被阻挡区必须成洞。</summary>
         [Test]
         public void DirectFeed_BlockedCells_CutEmission()
         {
@@ -344,7 +343,6 @@ namespace Ludots.Tests.Architecture
                 }
             }
 
-            // 阻挡条
             for (int r = 30; r < 34; r++)
             {
                 for (int c = 20; c < 160; c++)

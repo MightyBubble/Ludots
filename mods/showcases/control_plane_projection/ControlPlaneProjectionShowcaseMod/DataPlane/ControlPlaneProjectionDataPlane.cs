@@ -11,10 +11,8 @@ using ControlPlaneProjectionShowcaseMod.Runtime;
 namespace ControlPlaneProjectionShowcaseMod.DataPlane
 {
     /// <summary>
-    /// CEF-ready WebUI dataplane contract for the control plane projection showcase. Publishes the
-    /// topic <c>ludots.showcase.control_plane.state</c> as a JSON snapshot and handles the
-    /// <c>toggleProxy</c> command. The contract layer only depends on the entity collection store and
-    /// the shared scenario state; activation (surface + transport) is capability-gated elsewhere.
+    /// The contract layer only depends on the entity collection store and the shared scenario state;
+    /// activation (surface + transport) is capability-gated elsewhere.
     /// </summary>
     public sealed class ControlPlaneProjectionDataPlane : IWebUiTopicProducer
     {

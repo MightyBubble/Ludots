@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// TriggerGraph-only #1116/#1115 per-op galleries: StoreArg* staging reaches the
+/// TriggerGraph-only per-op galleries: StoreArg* staging reaches the
 /// InvokeGraph callee through the named argument key (int return, float echoed into a
 /// map variable, entity physically moved by the callee), the InvokeGraph entry-label
 /// call selects the authored entry, and DispatchMapEvent fires a declared custom

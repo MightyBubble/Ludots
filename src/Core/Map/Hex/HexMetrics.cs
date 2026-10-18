@@ -35,9 +35,6 @@ namespace Ludots.Core.Map.Hex
 
         private const float Sqrt3 = 1.7320508f;
 
-        /// <summary>
-        /// Default metrics (EdgeLength = 4m = 400cm).
-        /// </summary>
         public static HexMetrics Default { get; } = new HexMetrics(400);
 
         public HexMetrics(int edgeLengthCm)

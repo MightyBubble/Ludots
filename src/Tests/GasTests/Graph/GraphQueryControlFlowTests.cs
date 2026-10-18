@@ -198,8 +198,6 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void Compile_ScriptKindAcceptsQueryAllMapEntities()
         {
-            // D15 治根：集合查询读面对齐 Script（修 Script 能写不能读集合的不对称），
-            // QueryAllMapEntities 在 Script 图可作者。
             var doc = new GraphControlFlowDocument
             {
                 Id = "tests.script.accept-query-op",
@@ -218,8 +216,8 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void Compile_ScriptKindStillRejectsUnauthorizedQueryOps()
         {
-            // 镜像不变量钉住 D2 格局的另一半：未放行的 Query 类 op（QueryCollect* 族，
-            // 掩码 QueryOnly）在 Script 里仍拒——集合查询读面只对齐到放行族，不整类放宽。
+            // 与 Compile_ScriptKindAcceptsQueryAllMapEntities 互为镜像不变量：未放行的 Query 类 op
+            // （QueryCollect* 族，掩码 QueryOnly）在 Script 里仍拒——集合查询读面只对齐到放行族，不整类放宽。
             var doc = new GraphControlFlowDocument
             {
                 Id = "tests.script.reject-query-collect",

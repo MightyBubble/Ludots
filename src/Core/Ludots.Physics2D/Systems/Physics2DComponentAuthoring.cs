@@ -10,7 +10,7 @@ using Ludots.Core.Physics2D.Components;
 namespace Ludots.Core.Physics2D.Systems
 {
     /// <summary>
-    /// Downstream physics component authoring (#1480): Collider2D and the static
+    /// Downstream physics component authoring: Collider2D and the static
     /// body state live in this assembly, below Core, so their template setters
     /// register here through <see cref="ComponentRegistry.RegisterAuthoring"/> —
     /// GameEngine invokes this once at physics install (the optional-assembly

@@ -294,7 +294,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (!volume.Shape.Contains(tracked.Position, volume.Anchor))
             {
-                // Swept crossing (#1475): a mover whose travel segment passed
+                // Swept crossing: a mover whose travel segment passed
                 // through the volume between waves still reports the crossing as
                 // an enter+exit pair, without joining the occupancy inside-set.
                 if (tracked.HasPreviousPosition &&
@@ -727,7 +727,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            // Shared outlet with the field membership line (#1468); semantics
+            // Shared outlet with the field membership line; semantics
             // documented on RegionEmissionFiring.
             RegionEmissionFiring.Fire(
                 _triggerManager,

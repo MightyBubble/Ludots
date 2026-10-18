@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #1126 AwaitCallback: registration-ordered resume (not completion order);
+    /// AwaitCallback: registration-ordered resume (not completion order);
     /// invalid / double-complete / dead target fail closed.
     /// </summary>
     [TestFixture]
@@ -32,7 +32,6 @@ namespace Ludots.Tests.Gas.Graph
             int firstHandle = BeginAwait(callbacks, first, DialogConfirm, resultBoolRegister: 0);
             int secondHandle = BeginAwait(callbacks, second, DialogConfirm, resultBoolRegister: 1);
 
-            // Complete second first — resume order must still be first then second.
             callbacks.Complete(secondHandle, confirmed: false);
             callbacks.Complete(firstHandle, confirmed: true);
             callbacks.Drain();

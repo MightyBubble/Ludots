@@ -3,9 +3,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Presenters
 {
-    /// <summary>
-    /// Resolved presenter-facing phase result derived from normalized audience and ownership facts.
-    /// </summary>
     public struct PresentPhaseResult
     {
         public bool ShouldPresent;

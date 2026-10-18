@@ -22,14 +22,12 @@ namespace Ludots.Core.Config
         }
 
         /// <summary>
-        /// Collects and deep-merges all game.json fragments into a single GameConfig.
         /// Merge order: Core:game.json -> Mods (by priority) -> Final
         /// </summary>
         public GameConfig MergeGameConfig()
         {
             var fragments = CollectFragments("game.json");
             
-            // Start with empty JsonObject
             var merged = new JsonObject();
             
             foreach (var fragment in fragments)
@@ -40,7 +38,6 @@ namespace Ludots.Core.Config
                 }
             }
             
-            // Deserialize merged JSON to GameConfig.
             var options = StrictJsonOptions.CreateCamelCase();
             options.Converters.Add(new JsonStringEnumConverter());
             
@@ -52,7 +49,6 @@ namespace Ludots.Core.Config
         }
 
         /// <summary>
-        /// Deep merges source JsonObject into target JsonObject.
         /// - Scalars: source overwrites target
         /// - Arrays: source overwrites target (not appended)
         /// - Objects: recursively merged
@@ -72,7 +68,6 @@ namespace Ludots.Core.Config
                 
                 if (!target.ContainsKey(key))
                 {
-                    // Key doesn't exist in target, just clone and add
                     target[key] = sourceValue.DeepClone();
                     continue;
                 }
@@ -81,19 +76,16 @@ namespace Ludots.Core.Config
                 
                 if (sourceValue is JsonObject sourceObj && targetValue is JsonObject targetObj)
                 {
-                    // Both are objects - recursively merge
                     DeepMerge(targetObj, sourceObj);
                 }
                 else
                 {
-                    // Scalars or arrays - source overwrites target
                     target[key] = sourceValue.DeepClone();
                 }
             }
         }
 
         /// <summary>
-        /// Collects JsonNodes from all matching files in Core and Mods.
         /// Use this when each file represents a single configuration object (e.g., MapConfig).
         /// </summary>
         public List<JsonNode> CollectFragments(string relativePath)
@@ -161,9 +153,6 @@ namespace Ludots.Core.Config
             return ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
         }
 
-        /// <summary>
-        /// DeepObject convenience: returns a single merged JsonObject.
-        /// </summary>
         public JsonObject MergeDeepObjectFromCatalog(
             in ConfigCatalogEntry entry, ConfigConflictReport report = null)
         {

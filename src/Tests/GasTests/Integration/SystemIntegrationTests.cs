@@ -31,7 +31,6 @@ namespace Ludots.Tests.GAS
             _eventBus = new GameplayEventBus();
             _physicsWorld = new PhysicsWorld();
             
-            // 设置SharedJobScheduler以支持并行查询
             if (World.SharedJobScheduler == null)
             {
                 World.SharedJobScheduler = new JobScheduler(new JobScheduler.Config
@@ -53,7 +52,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestSystemExecutionOrder()
         {
-            // Arrange: 创建所有系统（跳过需要依赖的系统）
             var reactionSystem = new ReactionSystem(_world, null, _eventBus);
             var effectTemplates = new EffectTemplateRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -83,7 +81,6 @@ namespace Ludots.Tests.GAS
             var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps, aggregateDirty: _tagOps.AggregateDirty);
             var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: effectRequests, tagOps: _tagOps);
             
-            // Act: 按Phase顺序执行
             float dt = 0.016f;
             
             Console.WriteLine("[SystemIntegrationTests] Phase 1: InputCollection (skipped - requires dependencies)");
@@ -102,14 +99,12 @@ namespace Ludots.Tests.GAS
             Console.WriteLine("[SystemIntegrationTests] Phase 6: Cleanup");
             lifetimeSystem.Update(dt);
             
-            // Assert: 系统执行顺序正确
             Pass("System execution order verified");
         }
         
         [Test]
         public void TestEffectLifecycle_StateTransitions()
         {
-            // Arrange: 创建Effect
             var effectEntity = _world.Create();
             var effect = new GameplayEffect
             {
@@ -122,44 +117,35 @@ namespace Ludots.Tests.GAS
             _world.Add(effectEntity, effect);
             _world.Add(effectEntity, new EffectContext { Source = effectEntity, Target = effectEntity });
             _world.Add(effectEntity, new EffectModifiers());
-            // PendingEffect marker tag removed — state is managed via GameplayEffect.State
             
-            // Act: 模拟Effect生命周期
             ref var effectRef = ref _world.Get<GameplayEffect>(effectEntity);
             
-            // Created -> Pending
             effectRef.State = EffectState.Pending;
             That(effectRef.State, Is.EqualTo(EffectState.Pending));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Created -> Pending");
             
-            // Pending -> Trigger
             effectRef.State = EffectState.Trigger;
             That(effectRef.State, Is.EqualTo(EffectState.Trigger));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Pending -> Trigger");
             
-            // Trigger -> Calculate
             effectRef.State = EffectState.Calculate;
             That(effectRef.State, Is.EqualTo(EffectState.Calculate));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Trigger -> Calculate");
             
-            // Calculate -> Apply
             effectRef.State = EffectState.Apply;
             That(effectRef.State, Is.EqualTo(EffectState.Apply));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Calculate -> Apply");
             
-            // Apply -> Committed
             effectRef.State = EffectState.Committed;
             That(effectRef.State, Is.EqualTo(EffectState.Committed));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Apply -> Committed");
             
-            // Assert
             Pass("Effect lifecycle state transitions verified");
         }
         
         [Test]
         public void TestTagOps_WithTagRuleSet_Integration()
         {
-            // Arrange
             var entity = _world.Create();
             _world.Add(entity, new GameplayTagContainer());
             _world.Add(entity, new TagCountContainer());
@@ -168,7 +154,6 @@ namespace Ludots.Tests.GAS
             int tagB = 2;
             int tagC = 3;
             
-            // 注册规则：tagA attached tagB, tagA removed tagC
             var ruleSetA = new TagRuleSet();
             unsafe
             {
@@ -179,15 +164,12 @@ namespace Ludots.Tests.GAS
             }
             _tagOps.RegisterTagRuleSet(tagA, ruleSetA);
             
-            // 先添加tagC
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(entity);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagC);
             
-            // Act: 添加tagA，应该自动添加tagB并移除tagC
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagA);
             
-            // Assert
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             That(tags.HasTag(tagA), Is.True);
@@ -200,7 +182,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TestDeferredTrigger_Integration()
         {
-            // Arrange
             var entity = _world.Create();
             _world.Add(entity, new AttributeBuffer());
             _world.Add(entity, new ActiveEffectContainer());
@@ -210,7 +191,6 @@ namespace Ludots.Tests.GAS
             var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue, _tagOps);
             var processSystem = new DeferredTriggerProcessSystem(_world, triggerQueue, new GameplayEventBus());
             
-            // 修改属性值（触发脏标记）
             ref var attrBuffer = ref _world.Get<AttributeBuffer>(entity);
             attrBuffer.SetBase(0, 100f);
             attrBuffer.SetCurrent(0, 150f);
@@ -218,17 +198,13 @@ namespace Ludots.Tests.GAS
             ref var dirtyFlags = ref _world.Get<DirtyFlags>(entity);
             dirtyFlags.MarkAttributeDirty(0);
             
-            // Act: Phase 5 - 收集延迟触发器
             collectionSystem.Update(0.016f);
             
-            // Assert: 触发器应该被收集
             That(triggerQueue.AttributeTriggerCount, Is.GreaterThan(0));
             Console.WriteLine($"[SystemIntegrationTests] TestDeferredTrigger_Integration: Collected {triggerQueue.AttributeTriggerCount} attribute triggers");
             
-            // Act: Phase 5 - 处理延迟触发器
             processSystem.Update(0.016f);
             
-            // Assert: 队列应该被清空
             That(triggerQueue.AttributeTriggerCount, Is.EqualTo(0));
             Console.WriteLine($"[SystemIntegrationTests] TestDeferredTrigger_Integration: Processed triggers successfully");
         }

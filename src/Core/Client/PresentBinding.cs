@@ -31,7 +31,6 @@ namespace Ludots.Core.Client
             PresentResolutionPx = presentResolutionPx;
         }
 
-        /// <summary>Target logical view id.</summary>
         public string LogicViewId { get; }
 
         /// <summary>Normalized host rect (x, y, width, height) in 0..1 space.</summary>

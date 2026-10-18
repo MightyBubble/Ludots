@@ -230,7 +230,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         /// <summary>
-        /// Network-payload-side guard for terminology rule 4 (#902 3.5): local I/O concepts
+        /// Network-payload-side guard for terminology rule 4: local I/O concepts
         /// (seatId / controlSchemeId / device identifiers) must not enter network payloads —
         /// wire payloads carry participant / player / semantic command identity only. Scans the
         /// wire codecs, schemas, and session payload shapes under src/Core/Networking and the
@@ -334,7 +334,7 @@ namespace Ludots.Tests.Architecture.Governance
         };
 
         // Network-payload counterpart of LocalIoSaveKeyAllowlist: shrink-only, adjudicated
-        // exceptions only. The online wire (#711) landed with zero local I/O payload keys,
+        // exceptions only. The online wire landed with zero local I/O payload keys,
         // so the list starts empty.
         private static readonly SaveKeyAllowance[] NetworkLocalIoKeyAllowlist =
         {

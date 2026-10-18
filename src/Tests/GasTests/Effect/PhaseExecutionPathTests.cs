@@ -11,28 +11,15 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Graph execution path tests for all 8 EffectPhaseId values.
-    /// Ensures that EffectPhaseExecutor correctly dispatches Pre/Main/Post
-    /// graphs for every lifecycle phase. Covers the 5 previously untested
-    /// phases: OnCalculate, OnResolve, OnHit, OnPeriod, OnRemove.
-    ///
-    /// Each test uses BlackboardFloatBuffer writes to verify execution occurred
-    /// and Pre→Main→Post ordering is respected.
-    /// </summary>
     [TestFixture]
     public class PhaseExecutionPathTests
     {
-        // BB key constants �?each graph writes to a unique key so we can verify ordering
+        // BB key constants: each graph writes to a unique key so we can verify ordering
         private const int BbKeyPre = 1;
         private const int BbKeyMain = 2;
         private const int BbKeyPost = 3;
-        private const int BbKeyAccum = 10; // accumulator for ordering verification
+        private const int BbKeyAccum = 10;
 
-        /// <summary>
-        /// Helper: create a graph program that writes a float value to a BB key on the target entity.
-        /// Instructions: F[0] = value, E[0] = LoadExplicitTarget, WriteBlackboardFloat(E[0], keyId, F[0])
-        /// </summary>
         private static GraphInstruction[] MakeBbWriteProgram(int bbKeyId, float value)
         {
             return new[]
@@ -44,11 +31,6 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        /// <summary>
-        /// Helper: create a graph program that reads BB key, adds delta, writes back.
-        /// Used to verify ordering (Pre writes initial, Main adds, Post adds).
-        /// Instructions: E[0]=Target, F[1]=ReadBB(key), F[2]=delta, F[3]=F[1]+F[2], WriteBB(key, F[3])
-        /// </summary>
         private static GraphInstruction[] MakeBbAccumProgram(int bbKeyId, float delta)
         {
             return new[]
@@ -62,10 +44,6 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        /// <summary>
-        /// Runs Pre→Main→Post for the given phase and verifies the accumulated BB value.
-        /// Pre writes 10, Main adds 20 (=30), Post adds 30 (=60).
-        /// </summary>
         private void RunPreMainPostOrderTest(EffectPhaseId phase)
         {
             using var world = World.Create();
@@ -80,19 +58,14 @@ namespace Ludots.Tests.GAS
             int mainId = 101;
             int postId = 102;
 
-            // Pre: write BB[Accum] = 10
             programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f), GraphKind.Effect);
-            // Main: BB[Accum] += 20
             programs.Register(mainId, MakeBbAccumProgram(BbKeyAccum, 20f), GraphKind.Effect);
-            // Post: BB[Accum] += 30
             programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f), GraphKind.Effect);
 
-            // Register preset with Main graph for target phase
             var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
             ptDef.DefaultPhaseHandlers[phase] = PhaseHandler.Graph(mainId);
             presetTypes.Register(in ptDef);
 
-            // Behavior with Pre and Post
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(phase, PhaseSlot.Pre, preId);
             behavior.TryAddStep(phase, PhaseSlot.Post, postId);
@@ -119,9 +92,6 @@ namespace Ludots.Tests.GAS
                 $"Phase {phase}: Pre(10) �?Main(+20=30) �?Post(+30=60)");
         }
 
-        /// <summary>
-        /// Runs Pre-only graph for the given phase and verifies BB write.
-        /// </summary>
         private void RunPreOnlyTest(EffectPhaseId phase)
         {
             using var world = World.Create();
@@ -160,9 +130,6 @@ namespace Ludots.Tests.GAS
                 $"Phase {phase}: Pre graph wrote expected value");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  OnCalculate (Phase 1) �?compute final Modifier values
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OnCalculate_PreMainPost_ExecuteInOrder()
@@ -176,9 +143,6 @@ namespace Ludots.Tests.GAS
             RunPreOnlyTest(EffectPhaseId.OnCalculate);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  OnResolve (Phase 2) �?target resolution
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OnResolve_PreMainPost_ExecuteInOrder()
@@ -192,9 +156,6 @@ namespace Ludots.Tests.GAS
             RunPreOnlyTest(EffectPhaseId.OnResolve);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  OnHit (Phase 3) �?per-target hit validation
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OnHit_PreMainPost_ExecuteInOrder()
@@ -208,9 +169,6 @@ namespace Ludots.Tests.GAS
             RunPreOnlyTest(EffectPhaseId.OnHit);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  OnPeriod (Phase 5) �?periodic tick
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OnPeriod_PreMainPost_ExecuteInOrder()
@@ -224,9 +182,6 @@ namespace Ludots.Tests.GAS
             RunPreOnlyTest(EffectPhaseId.OnPeriod);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  OnRemove (Phase 7) �?forced removal
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OnRemove_PreMainPost_ExecuteInOrder()
@@ -240,9 +195,6 @@ namespace Ludots.Tests.GAS
             RunPreOnlyTest(EffectPhaseId.OnRemove);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Cross-phase verification �?ensure each phase dispatches independently
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void AllPhases_IndependentDispatching()
@@ -255,7 +207,6 @@ namespace Ludots.Tests.GAS
             var templates = new EffectTemplateRegistry();
             var handlers = new GasGraphOpHandlerTable();
 
-            // Register a unique graph per phase that writes the phase ordinal as BB float
             var behavior = new EffectPhaseGraphBindings();
             var allPhases = new[]
             {
@@ -272,7 +223,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < allPhases.Length; i++)
             {
                 int graphId = 300 + i;
-                int bbKey = 50 + i; // unique BB key per phase
+                int bbKey = 50 + i;
                 GraphKind kind = allPhases[i] == EffectPhaseId.OnPropose
                     ? GraphKind.Validation
                     : GraphKind.Effect;
@@ -305,7 +256,6 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            // Execute each phase independently
             for (int i = 0; i < allPhases.Length; i++)
             {
                 if (allPhases[i] == EffectPhaseId.OnPropose)
@@ -322,7 +272,6 @@ namespace Ludots.Tests.GAS
                     allPhases[i], in behavior, EffectPresetType.None);
             }
 
-            // Verify each non-validation phase wrote its unique value.
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
             for (int i = 0; i < allPhases.Length; i++)
             {
@@ -337,9 +286,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  SkipMain �?verify SkipMain works across all phases
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void OnCalculate_SkipMain_OnlyPrePostRun()
@@ -371,10 +317,6 @@ namespace Ludots.Tests.GAS
             RunSkipMainTest(EffectPhaseId.OnRemove);
         }
 
-        /// <summary>
-        /// Verifies that SkipMain prevents the Main handler from executing.
-        /// Pre writes 10, Main would write 999 (should be skipped), Post adds 30 �?expect 40.
-        /// </summary>
         private void RunSkipMainTest(EffectPhaseId phase)
         {
             using var world = World.Create();
@@ -389,11 +331,8 @@ namespace Ludots.Tests.GAS
             int mainId = 401;
             int postId = 402;
 
-            // Pre: BB[Accum] = 10
             programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f), GraphKind.Effect);
-            // Main: would overwrite BB[Accum] = 999 (should be SKIPPED)
             programs.Register(mainId, MakeBbWriteProgram(BbKeyAccum, 999f), GraphKind.Effect);
-            // Post: BB[Accum] += 30
             programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f), GraphKind.Effect);
 
             var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };

@@ -9,7 +9,7 @@ using Ludots.Core.Commands;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
-using Ludots.Core.Gameplay.GAS; // For GameplayEffectFactory & EventBus
+using Ludots.Core.Gameplay.GAS;
 using GasBenchmarkMod.Triggers;
 using Ludots.Core.Physics;
 
@@ -42,7 +42,6 @@ namespace GasBenchmarkMod
         {
             _modContext = modContext;
             EventKey = GasBenchmarkEvents.RunGasBenchmark; 
-            // We can now invoke this event via console or other triggers
         }
 
         public override Task ExecuteAsync(ScriptContext context)
@@ -97,7 +96,6 @@ namespace GasBenchmarkMod
             var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, fanOutCommandCapacity: 65536, clock, templates: effectTemplates, tagOps: tagOps);
             var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
-            // Removed obsolete systems
 
             var abilityTemplateEntity = world.Create();
             world.Add(abilityTemplateEntity, new AbilityTemplate());
@@ -142,7 +140,6 @@ namespace GasBenchmarkMod
             var source = world.Create();
             float dt = 0.016f;
 
-            // Warmup Phase
             context.Log("[GasBenchmarkMod] Warming up (10 frames)...");
             for (int i = 0; i < 10; i++)
             {

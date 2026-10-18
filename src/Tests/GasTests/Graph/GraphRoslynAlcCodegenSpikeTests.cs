@@ -12,7 +12,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #860 R0 + Track C spike: linear/branch int graph → C# codegen → Roslyn → Collectible ALC → hot swap,
+    /// Spike: linear/branch int graph → C# codegen → Roslyn → Collectible ALC → hot swap,
     /// with fail-closed compile errors and native/interpret/codegen microbench reporting.
     /// Correctness tests carry <c>ci-gate</c>; microbench is <c>benchmark</c> only (no hard ratio asserts).
     /// </summary>
@@ -184,7 +184,6 @@ namespace Ludots.Tests.Gas.Graph
         [Category("ci-gate")]
         public void Codegen_IfElseIntProgram_MatchesInterpretVm_TrueBranch()
         {
-            // if (3 < 7) I[2]=10; else I[2]=20;
             GraphInstruction[] program = BuildIfElseLtProgram(left: 3, right: 7);
             int interpret = ExecuteInterpretRegister(program, register: 2);
 
@@ -203,7 +202,6 @@ namespace Ludots.Tests.Gas.Graph
         [Category("ci-gate")]
         public void Codegen_IfElseIntProgram_MatchesInterpretVm_FalseBranch()
         {
-            // if (9 < 4) I[2]=10; else I[2]=20;
             GraphInstruction[] program = BuildIfElseLtProgram(left: 9, right: 4);
             int interpret = ExecuteInterpretRegister(program, register: 2);
 
@@ -238,8 +236,8 @@ namespace Ludots.Tests.Gas.Graph
         [Category("ci-gate")]
         public void HotReload_BranchedProgram_ReplacesEntrypoint()
         {
-            GraphInstruction[] programA = BuildIfElseLtProgram(left: 1, right: 2); // → 10
-            GraphInstruction[] programB = BuildIfElseLtProgram(left: 8, right: 2); // → 20
+            GraphInstruction[] programA = BuildIfElseLtProgram(left: 1, right: 2);
+            GraphInstruction[] programB = BuildIfElseLtProgram(left: 8, right: 2);
 
             using var host = new GraphRoslynAlcCompilerHost();
             That(ExecuteCodegenRegister(host.CompileAndActivate(programA, "branch-a"), 2),

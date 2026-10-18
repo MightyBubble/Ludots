@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.WebUiPanelKit;
 
 /// <summary>
-/// WPK-10: one panel type per small showcase folder; RTS/4X semantics live in profile JSON only.
+/// One panel type per small showcase folder; RTS/4X semantics live in profile JSON only.
 /// </summary>
 [TestFixture]
 public sealed class PanelKitSmallShowcaseTests

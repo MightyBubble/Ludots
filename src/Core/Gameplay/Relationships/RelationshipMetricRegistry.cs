@@ -45,7 +45,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public string? GetName(int id) => _ids.GetName(id);
 
-        /// <summary>#1570：metric 词汇按名惰性映射到 AttributeRegistry（同名同 id）。
+        /// <summary>metric 词汇按名惰性映射到 AttributeRegistry（同名同 id）。
         /// 不做注册副作用——静态属性表属于引擎装配/测试重置生命周期，缓存 id 会随
         /// ReplaceAttributes 失效成陈旧映射；每次按名解析，未知则放弃写穿。</summary>
         public bool TryGetAttributeId(int metricId, out int attributeId)

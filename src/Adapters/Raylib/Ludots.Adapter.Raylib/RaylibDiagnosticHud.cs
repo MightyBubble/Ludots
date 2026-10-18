@@ -11,7 +11,7 @@ namespace Ludots.Adapter.Raylib
 {
     /// <summary>
     /// 轻量原生诊断 HUD（点阵字形、零资产依赖）：LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD 开关驱动的
-    /// FPS/帧耗时/车道计数只读面板。绘制发生在覆盖层合成之后、EndDrawing 之前（#1325 自宿主拆出）。
+    /// FPS/帧耗时/车道计数只读面板。绘制发生在覆盖层合成之后、EndDrawing 之前。
     /// </summary>
     internal static class RaylibDiagnosticHud
     {

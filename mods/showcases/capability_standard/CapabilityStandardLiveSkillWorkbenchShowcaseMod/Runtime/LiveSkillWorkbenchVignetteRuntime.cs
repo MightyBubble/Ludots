@@ -333,7 +333,6 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
                 if (_beatTime > 2.5f)
                 {
                     // Do not loop automatic re-apply of the same graph body (id already hot-replaced).
-                    // Hold proof state.
                     _beatTime = 0f;
                 }
 

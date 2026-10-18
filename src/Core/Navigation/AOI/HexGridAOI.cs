@@ -13,7 +13,6 @@ namespace Ludots.Core.Navigation.AOI
         // Temporary set for update logic to avoid allocs
         private readonly HashSet<long> _newActiveChunks = new HashSet<long>();
 
-        // ILoadedChunks implementation
         public IReadOnlyCollection<long> ActiveChunkKeys => _activeChunks;
 
         public bool IsLoaded(long chunkKey) => _activeChunks.Contains(chunkKey);
@@ -49,7 +48,6 @@ namespace Ludots.Core.Navigation.AOI
         {
             if (_activeChunks.Count == 0) return;
 
-            // Snapshot keys — event handlers may call back into this instance
             var snapshot = new long[_activeChunks.Count];
             _activeChunks.CopyTo(snapshot);
             _activeChunks.Clear();
@@ -64,11 +62,9 @@ namespace Ludots.Core.Navigation.AOI
         {
             _newActiveChunks.Clear();
 
-            // Convert world position (cm) to Hex
             var centerHex = HexCoordinates.FromWorldPositionCm(
                 new System.Numerics.Vector3(source.CenterXcm, 0f, source.CenterZcm));
             
-            // Calculate chunk range based on radius (all in centimeters)
             int chunkWorldSizeCm = SpatialScaleDefaults.TerrainChunkCells * HexCoordinates.EdgeLengthCm;
             int radiusInChunks = (int)Math.Ceiling((float)source.RadiusCm / chunkWorldSizeCm) + 1;
 
@@ -76,7 +72,6 @@ namespace Ludots.Core.Navigation.AOI
             int centerChunkX = cx >> VertexChunk.ChunkSizeShift;
             int centerChunkY = cy >> VertexChunk.ChunkSizeShift;
 
-            // Simple square loop around center chunk
             for (int x = centerChunkX - radiusInChunks; x <= centerChunkX + radiusInChunks; x++)
             {
                 for (int y = centerChunkY - radiusInChunks; y <= centerChunkY + radiusInChunks; y++)
@@ -87,7 +82,6 @@ namespace Ludots.Core.Navigation.AOI
                 }
             }
 
-            // Detect Exits
             foreach (long key in _activeChunks)
             {
                 if (!_newActiveChunks.Contains(key))
@@ -96,7 +90,6 @@ namespace Ludots.Core.Navigation.AOI
                 }
             }
 
-            // Detect Enters
             foreach (long key in _newActiveChunks)
             {
                 if (!_activeChunks.Contains(key))
@@ -105,7 +98,6 @@ namespace Ludots.Core.Navigation.AOI
                 }
             }
 
-            // Swap sets
             _activeChunks.Clear();
             foreach (var key in _newActiveChunks)
             {

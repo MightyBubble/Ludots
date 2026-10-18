@@ -8,7 +8,6 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.GAS.Config
 {
     /// <summary>
-    /// Loads PresetTypeDefinition entries from preset_types.json.
     /// Each entry declares components, active phases, lifetime constraints,
     /// and default phase handlers. All semantic strings must use exact casing.
     /// </summary>

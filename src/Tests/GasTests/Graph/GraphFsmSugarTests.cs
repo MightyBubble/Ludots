@@ -23,7 +23,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// FsmState 糖（FSM-1a）：编译期展开为 ReadMapVarInt + SwitchInt 式臂链，零新 opcode。
+    /// FsmState 糖：编译期展开为 ReadMapVarInt + SwitchInt 式臂链，零新 opcode。
     /// 消融对照 = 手写 ReadMapVarInt→SwitchInt 链逐指令元组全等。
     /// </summary>
     [TestFixture]
@@ -409,7 +409,7 @@ namespace Ludots.Tests.Gas.Graph
         public void HfsmLeafScripts_DeHollowed_AndSugarFixtureDrivesPhaseCycle()
         {
             // L1 HFSM leaf Scripts must stay real (not ConstInt→HaltReturnInt shells).
-            // Whole-machine Script shells are no longer production SSOT — phase cycle uses
+            // Whole-machine Script shells are not production SSOT — phase cycle uses
             // the test-only GraphFsmHost sugar fixture (GraphFsmHostTests).
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _, out _);
             foreach (string name in new[]

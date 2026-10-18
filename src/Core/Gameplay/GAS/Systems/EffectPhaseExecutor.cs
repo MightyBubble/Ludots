@@ -57,7 +57,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
         private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
 
-        // Scratch buffer for collected listener actions
         private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[PhaseListenerDispatchScratchCapacity];
         private readonly int _graphProgramScratchCapacity;
 
@@ -272,7 +271,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             bool trackValidationResult,
             ref byte validationResult)
         {
-            // ① Pre graph (user-defined)
             int listenerActionCount = effectCategoryId != 0 || effectTemplateId != 0
                 ? CollectAndPreflightListeners(world, api, caster, target, phase, effectCategoryId, effectTemplateId)
                 : 0;
@@ -295,14 +293,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExecuteMainHandler(world, api, caster, target, targetContext, targetPos, phase, presetTypeId, effectTemplateId, in mergedParams, builtinRuntime, randomSeed, rootId, trackValidationResult, ref validationResult);
             }
 
-            // ③ Post graph (user-defined)
             int postGraphId = behavior.GetGraphId(phase, PhaseSlot.Post);
             if (postGraphId > 0)
             {
                 ExecuteGraph(world, api, caster, target, targetContext, targetPos, postGraphId, effectTemplateId, phase, in mergedParams, builtinRuntime, randomSeed, rootId, trackValidationResult, ref validationResult);
             }
 
-            // ④ Dispatch Phase Listeners
             if (listenerActionCount > 0)
             {
                 ExecuteCollectedListeners(
@@ -402,9 +398,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return validationResult != 0;
         }
 
-        /// <summary>
-        /// Execute the Main handler for a phase based on PresetTypeDefinition.
-        /// </summary>
         private void ExecuteMainHandler(
             World world,
             IGraphRuntimeApi api,
@@ -479,7 +472,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int totalCollected = 0;
             int totalDropped = 0;
 
-            // a. Target entity's buffer (scope = Target)
             if (world.IsAlive(target) && world.Has<EffectPhaseListenerBuffer>(target))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(target);
@@ -488,7 +480,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 totalDropped += dropped;
             }
 
-            // b. Caster entity's buffer (scope = Source)
             if (world.IsAlive(caster) && world.Has<EffectPhaseListenerBuffer>(caster))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(caster);
@@ -497,7 +488,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 totalDropped += dropped;
             }
 
-            // c. Global listeners
             if (_globalListeners != null)
             {
                 int n = _globalListeners.Collect(phase, effectCategoryId, effectTemplateId, scratch.Slice(totalCollected), out int dropped);
@@ -521,7 +511,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // If buffer is full, some listeners may have been truncated (budget mode).
             // No Console.WriteLine to avoid GC allocation in hot path.
 
-            // Sort by priority descending (higher = earlier)
             var actions = scratch.Slice(0, totalCollected);
             SortByPriorityDescending(actions);
 
@@ -758,9 +747,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ref validationResult);
         }
 
-        /// <summary>
-        /// Execute a single graph program by ID.
-        /// </summary>
         public void ExecuteGraph(
             World world,
             IGraphRuntimeApi api,

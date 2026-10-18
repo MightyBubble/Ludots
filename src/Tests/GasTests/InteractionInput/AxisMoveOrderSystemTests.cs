@@ -18,7 +18,7 @@ using Ludots.Tests.TestCommon;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 INT-6 (DEC-15): WASD axis intent to throttled move order kernel, driven by the
+    /// WASD axis intent to throttled move order kernel, driven by the
     /// active control scheme's <c>axisMove</c> declaration. Orders always go through
     /// <see cref="OrderQueue"/> and never write <see cref="WorldPositionCm"/> directly.
     /// </summary>

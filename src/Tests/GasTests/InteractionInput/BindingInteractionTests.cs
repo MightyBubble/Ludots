@@ -25,7 +25,6 @@ namespace Ludots.Tests.GAS
         {
             var (backend, handler) = Build(TapBinding("TapSelect"), DragBinding("BoxSelect"));
 
-            // Press, drag beyond threshold, release: only BoxSelect fires.
             backend.Buttons["<Mouse>/leftButton"] = true;
             backend.MousePosition = new Vector2(100f, 100f);
             handler.Update(FrameSeconds);

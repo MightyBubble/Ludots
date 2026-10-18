@@ -105,7 +105,6 @@ namespace Ludots.Tests.GAS
 
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
 
-            // Mod allowed-set refusal keeps the active scheme and its contexts.
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.False);
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
             harness.Backend.Buttons["<Keyboard>/q"] = true;
@@ -123,7 +122,6 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, withHandler: false);
             harness.InstallTwoSchemes();
 
-            // Headless: no input handler exists; only preference bookkeeping runs.
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
             Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeB),
                 "the active scheme choice must persist into the CTX-8 preference store.");

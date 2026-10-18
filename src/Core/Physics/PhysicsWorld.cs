@@ -7,17 +7,14 @@ namespace Ludots.Core.Physics
 {
     public class PhysicsWorld
     {
-        // Map Grid Size = 1
-        // Physics Cell Size = 16 Map Grids
+        // CellSize is in map-grid units: one physics cell spans 16 map grids.
         public const int CellSize = 16;
-        public const int TileSizeInCells = WorldMap.TileSize / CellSize; // 256 / 16 = 16
+        public const int TileSizeInCells = WorldMap.TileSize / CellSize;
         
-        // World Size in Cells
         public int WorldWidthInCells { get; private set; }
         public int WorldHeightInCells { get; private set; }
         
-        // Flat array of cells for the whole world
-        // This avoids per-tile object overhead and makes cross-tile queries easy.
+        // Flat, not nested per tile: avoids per-tile object overhead and makes cross-tile queries easy.
         private List<Entity>[] _cells; 
 
         public PhysicsWorld(int widthInChunks = 64, int heightInChunks = 64)

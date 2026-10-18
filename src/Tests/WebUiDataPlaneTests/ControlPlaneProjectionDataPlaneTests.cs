@@ -18,9 +18,9 @@ using ControlPlaneProjectionShowcaseMod.Runtime;
 namespace Ludots.Tests.WebUiDataPlane;
 
 /// <summary>
-/// Contract tests for the control plane projection showcase dataplane (RFC-0065 SHOW-2): topic snapshot
-/// shape, the tag-only toggleProxy command, router/permission wiring, and the not-ready behavior. The
-/// scenario state is constructed directly (no engine) with the minimal runtime it needs to be Ready.
+/// Contract tests for the control plane projection showcase dataplane: topic snapshot shape, the
+/// tag-only toggleProxy command, router/permission wiring, and the not-ready behavior. The scenario
+/// state is constructed directly (no engine) with the minimal runtime it needs to be Ready.
 /// </summary>
 [TestFixture]
 public sealed class ControlPlaneProjectionDataPlaneTests
@@ -60,7 +60,6 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 		Assert.That(p2Domain.GetArrayLength(), Is.EqualTo(1));
 		Assert.That(p2Domain[0].GetProperty("entityId").GetInt32(), Is.EqualTo(harness.ProxiedUnit.Id));
 
-		// The tag-only toggle is reflected in the next snapshot.
 		Assert.That(harness.Producer.ApplyCommand(ToggleRequest()).Success, Is.True);
 		Assert.That(harness.Producer.TryCreateSnapshot(in context, out WebUiOutboundPacket toggled), Is.True);
 		using JsonDocument toggledDocument = JsonDocument.Parse(toggled.Payload);

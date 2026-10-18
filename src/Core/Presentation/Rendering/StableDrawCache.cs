@@ -9,8 +9,7 @@ namespace Ludots.Core.Presentation.Rendering
     /// <summary>
     /// Frame-persistent cache of the latest visual proxies keyed by StableId.
     /// Request flush updates the cache; frame projection replays it into adapter-facing
-    /// buffers. This keeps authoring/runtime semantics unchanged while introducing
-    /// the Layer 5 cache boundary required by compiled lanes.
+    /// buffers. Acts as the Layer 5 cache boundary required by compiled lanes.
     /// </summary>
     public sealed class StableDrawCache
     {

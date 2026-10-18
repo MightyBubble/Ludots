@@ -423,11 +423,10 @@ namespace Ludots.Core.Presentation.Rendering
             Vector3 b = new Vector3(p2.Pos.X, p2.WaterY + 0.003f, p2.Pos.Z);
             Vector3 c = new Vector3(p3.Pos.X, p3.WaterY + 0.003f, p3.Pos.Z);
 
-            // Depth tint from water column (shallow turquoise → deep navy), data-driven by WaterY − terrain Y.
-            AppendTri(dst, a, b, c, WaterColor(p1), WaterColor(p2), WaterColor(p3));
+            AppendTri(dst, a, b, c, WaterDepthTint(p1), WaterDepthTint(p2), WaterDepthTint(p3));
         }
 
-        private static Vector4 WaterColor(in Vtx p)
+        private static Vector4 WaterDepthTint(in Vtx p)
         {
             float depth = MathF.Max(0f, p.WaterY - p.Pos.Y);
             // ~0m column → pale turquoise; ≥6m → deep ocean.

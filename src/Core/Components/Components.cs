@@ -29,17 +29,11 @@ namespace Ludots.Core.Components
     {
         public Fix64Vec2 Value;
         
-        /// <summary>
-        /// 从整数厘米创建
-        /// </summary>
         public static WorldPositionCm FromCm(int x, int y) => new WorldPositionCm 
         { 
             Value = Fix64Vec2.FromInt(x, y) 
         };
         
-        /// <summary>
-        /// 从浮点厘米创建
-        /// </summary>
         public static WorldPositionCm FromCmFloat(float x, float y) => new WorldPositionCm 
         { 
             Value = Fix64Vec2.FromFloat(x, y) 

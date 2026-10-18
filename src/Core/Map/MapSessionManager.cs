@@ -69,7 +69,6 @@ namespace Ludots.Core.Map
 
         public void PushFocused(MapId mapId)
         {
-            // Suspend current focused session
             if (_focusStack.Count > 0)
             {
                 var current = _focusStack.Peek();
@@ -98,7 +97,6 @@ namespace Ludots.Core.Map
             var popped = _focusStack.Pop();
             Log.Info(in LogChannels.Map, $"Map '{popped}' popped from focus.");
 
-            // Restore previous focused session
             if (_focusStack.Count > 0)
             {
                 var restored = _focusStack.Peek();
@@ -122,7 +120,6 @@ namespace Ludots.Core.Map
             // Remove from focus stack (may be at any position)
             RemoveFromFocusStack(mapId);
 
-            // Restore the new top-of-stack to Active
             if (_focusStack.Count > 0)
             {
                 var newTop = _focusStack.Peek();

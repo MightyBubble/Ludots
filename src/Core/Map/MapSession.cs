@@ -17,10 +17,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Map
 {
-    /// <summary>
-    /// Lifecycle manager for a loaded map.
-    /// Holds Board collection, triggers, context, and state.
-    /// </summary>
     public sealed class MapSession : IDisposable
     {
         public MapId MapId { get; }
@@ -71,7 +67,7 @@ namespace Ludots.Core.Map
 
         /// <summary>
         /// Field region emission contracts keyed by region key, loaded from
-        /// Fields/region_emissions.json at map load (#1468); region entities carry
+        /// Fields/region_emissions.json at map load; region entities carry
         /// the matching RegionVolumeEmissionCm. Null after Cleanup/Dispose.
         /// </summary>
         public IReadOnlyDictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>? FieldRegionEmissions { get; internal set; }
@@ -109,9 +105,9 @@ namespace Ludots.Core.Map
         }
 
         /// <summary>
-        /// The root board (#1567): anchors the host world frame and backs engine-level
+        /// The root board: anchors the host world frame and backs engine-level
         /// spatial services. Honors the map's RootBoard designation; falls back to the
-        /// first board exactly like the pre-#1567 behavior. Null on boardless maps.
+        /// first board. Null on boardless maps.
         /// </summary>
         public IBoard PrimaryBoard
         {
@@ -155,7 +151,6 @@ namespace Ludots.Core.Map
 
             Log.Info(in LogChannels.Map, $"Cleaning up map '{MapId}'...");
 
-            // Collect entities that belong to THIS map, then destroy.
             // Two-pass to avoid structural changes during query iteration.
             var toDestroy = new List<Entity>();
             var targetMapId = MapId;
@@ -190,7 +185,6 @@ namespace Ludots.Core.Map
 
             Log.Info(in LogChannels.Map, $"Destroyed {toDestroy.Count} map entities (MapId={MapId}).");
 
-            // Dispose all boards
             foreach (var kvp in _boards)
             {
                 try

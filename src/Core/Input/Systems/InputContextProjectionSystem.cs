@@ -9,7 +9,6 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Systems
 {
-    /// <summary>Diff operation of one projected input context command.</summary>
     public enum InputContextProjectionOp : byte
     {
         Push = 1,

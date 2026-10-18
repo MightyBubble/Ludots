@@ -36,7 +36,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         NegFloat = 28,
         RandomFloat01 = 34,
         // ── Int Math (29, 31-33) ──
-        AddInt            = 29,   // I[Dst] = I[A] + I[B]
+        AddInt            = 29,
         CompareGtFloat = 30,
         CompareLtInt      = 31,   // B[Dst] = I[A] < I[B] ? 1 : 0
         CompareEqInt      = 32,   // B[Dst] = I[A] == I[B] ? 1 : 0
@@ -199,7 +199,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Yield = 432,           // pause; resume at next instruction
         HaltReturnInt = 433,   // halt with ReturnInt = I[A]
         InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
-        MoveInt = 435,         // I[Dst] = I[A]
+        MoveInt = 435,
 
         // ── Generic lookup-table reads (436-438) ──
         /// <summary>I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key).</summary>
@@ -289,7 +289,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         StartDialogue = 462,
 
-        /// Set the target entity's interaction mode: add/replace the sparse
+        /// <summary>Set the target entity's interaction mode: add/replace the sparse
         /// InteractionMode component, or remove it when the mode is the reserved mode.normal.
         /// E[A] = target entity (A=0xFF → caster); Imm = mode id symbol, patched to a
         /// ConfigKeyRegistry id and resolved against the installed interaction mode map —
@@ -392,14 +392,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
 
-        // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
+        // ── Order-driven graph brains (484-499 reserved as the
         //    graph-input-order-chain line's renumbering buffer) ──
 
         /// <summary>Read an entity's world X in int centimeters. E[A] = source; I[Dst] = xCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
         LoadEntityPosX = 500,
         /// <summary>Read an entity's world Y in int centimeters. E[A] = source; I[Dst] = yCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
         LoadEntityPosY = 501,
-        IntToFloat = 502,    // F[Dst] = I[A]
+        IntToFloat = 502,
         /// <summary>Float→Int with round-half-away-from-zero, matching the world-centimeter rounding convention.</summary>
         FloatToInt = 503,
         SqrtFloat = 504,     // F[Dst] = sqrt(F[A]); negative input fails closed
@@ -452,8 +452,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// TargetList := candidates that are command-source selectable now: CommandSourceSelectableTag
         /// present and CommandSourceSelectableState, when present, enabled. Candidates order preserved;
-        /// viewer-independent. Restores the selectable gate the retired CommandSourceAcquisitionSystem
-        /// enforced for click and box acquisition.
+        /// viewer-independent.
         /// </summary>
         QueryFilterSelectable = 487,
 
@@ -511,7 +510,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ReadCalendarCyclePhaseIndex = 526,
         /// <summary>I[Dst] = whole days until the named phase. Imm packs cycle and calendar. ImmF packs the phase symbol index and the optional 1-based day inside that phase (0 = phase start).</summary>
         ReadCalendarDaysUntilPhase = 527,
-        /// <summary>I[Dst] = I[A] - I[B].</summary>
         SubInt = 528,
 
         /// <summary>

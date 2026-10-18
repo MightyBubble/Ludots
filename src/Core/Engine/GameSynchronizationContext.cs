@@ -23,9 +23,7 @@ namespace Ludots.Core.Engine
 
         public void ProcessQueue()
         {
-            // Process all pending actions for this frame
-            // Limit loop count to prevent infinite loop if actions re-queue themselves immediately?
-            // For now, simple drain.
+            // Bounded drain: actions re-enqueued during this pass run next frame instead of looping forever.
             int count = _queue.Count;
             while (count > 0 && _queue.TryDequeue(out var action))
             {

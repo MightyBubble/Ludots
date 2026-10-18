@@ -290,7 +290,6 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     continue;
                 }
 
-                // Composite: push next child or finish.
                 int cursor = _childCursor[stackBase + depth - 1];
                 if (cursor >= node.ChildCount)
                 {

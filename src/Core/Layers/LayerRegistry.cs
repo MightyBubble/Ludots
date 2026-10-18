@@ -73,7 +73,7 @@ namespace Ludots.Core.Layers
         }
 
         /// <summary>
-        /// Authoring-time resolution (#1480): registers unknown layer names while the
+        /// Authoring-time resolution: registers unknown layer names while the
         /// registry is unfrozen — the same convention GameplayTagContainer authoring
         /// uses — so entity templates and the contact-emitter allowlist can declare
         /// layers without a C# registration step. Post-freeze readers keep GetIndex.

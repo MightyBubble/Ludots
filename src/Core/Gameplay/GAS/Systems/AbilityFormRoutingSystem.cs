@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
     /// <summary>
-    /// Resolves the active form route for each actor and writes stable form-layer slot overrides.
     /// Effective slot resolution remains centralized in <see cref="AbilitySlotResolver"/>.
     /// </summary>
     public sealed class AbilityFormRoutingSystem : BaseSystem<World, float>

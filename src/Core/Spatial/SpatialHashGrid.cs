@@ -6,30 +6,19 @@ using System.Runtime.CompilerServices;
 namespace Ludots.Core.Spatial
 {
     /// <summary>
-    /// A high-performance spatial hash grid for storing and querying 2D entities.
-    /// Uses a 1D array for bucket storage to minimize GC overhead.
     /// Best for uniformly distributed dynamic objects.
     /// </summary>
-    /// <typeparam name="T">The type of ID/Entity to store (e.g., int EntityId)</typeparam>
     public class SpatialHashGrid<T> where T : unmanaged
     {
         private readonly float _cellSize;
         private readonly Dictionary<long, Bucket> _buckets;
-        private readonly List<T> _queryResultCache; // Reusable list for queries
+        private readonly List<T> _queryResultCache;
 
-        // We implement a custom bucket using pooled arrays/lists to avoid creating objects per cell
-        // But for simplicity and decent performance, a Dictionary<long, List<T>> is common.
-        // To be strictly Zero-GC, we would need a flat array hash map. 
-        // Given "best practice" request, let's stick to Dictionary for sparse storage but optimize the List.
-        
-        // Actually, for strict Zero-GC, Dictionary causes allocations on Insert if buckets are new.
-        // Let's implement a Fixed-Size Hash Table if the world bounds are known, 
-        // OR use a Dictionary with a custom struct Bucket that holds a compact array index.
+        // Sparse storage choice: Dictionary of bucket Lists. Not strictly zero-GC —
+        // inserting into a new bucket allocates; strict zero-GC would need a flat array hash map.
 
         private struct Bucket
         {
-            // We'll store items in a global pool and just store the head index here?
-            // Or just a simple List<T> for now, assuming reusing the list instance.
             public List<T> Items; 
         }
 
@@ -57,8 +46,8 @@ namespace Ludots.Core.Spatial
             if (_buckets.TryGetValue(key, out var bucket))
             {
                 bucket.Items.Remove(item);
-                // Optional: Remove bucket if empty to save memory, but keeps GC churn. 
-                // Better keep it if it's likely to be reused.
+                // Empty buckets are kept on purpose: they are likely to be reused, and
+                // removing them would churn GC when the cell refills.
             }
         }
         
@@ -95,9 +84,8 @@ namespace Ludots.Core.Spatial
                         int count = items.Count;
                         for (int i = 0; i < count; i++)
                         {
-                            // Note: Exact distance check should happen outside if we only store IDs.
-                            // If we want exact check here, we need position data.
-                            // Assuming Broad-phase here.
+                            // Broad-phase only: items are stored without positions, so exact
+                            // distance checks belong to the caller.
                             _queryResultCache.Add(items[i]);
                         }
                     }

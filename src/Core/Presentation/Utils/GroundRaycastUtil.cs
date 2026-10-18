@@ -7,10 +7,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Utils
 {
-    /// <summary>
-    /// 通用地面射线求交工具。
-    /// 将屏幕射线与 Y=0 地面平面求交，返回世界厘米坐标。
-    /// </summary>
     public static class GroundRaycastUtil
     {
         /// <summary>
@@ -55,7 +51,7 @@ namespace Ludots.Core.Presentation.Utils
         }
 
         /// <summary>
-        /// 屏幕射线与 Y=0 地面求交，返回交点的视觉空间米坐标 (XZ 平面)。
+        /// 屏幕射线与 Y=0 地面求交，交点夹取到世界边界内。
         /// </summary>
         public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm)
         {

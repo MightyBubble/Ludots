@@ -61,7 +61,6 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         }
 
         /// <summary>
-        /// Stages a structured operation into the debug patch.
         /// Invalid edits are rejected with diagnostics and do not mutate the patch.
         /// </summary>
         public LiveEditStageResult TryStage(in LiveDebugPatchOperation operation, DateTime? updatedUtc = null)
@@ -80,7 +79,6 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         }
 
         /// <summary>
-        /// Discards all staged edits and returns the session to a clean state.
         /// Revision advances so observers can detect the rollback coherently.
         /// </summary>
         public LiveEditStageResult Discard(DateTime? updatedUtc = null)

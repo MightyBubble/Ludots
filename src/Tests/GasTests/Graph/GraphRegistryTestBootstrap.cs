@@ -13,7 +13,7 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>Loads core GAS Script graphs plus func_lib / action_lib via production catalog loaders.</summary>
+    /// <summary>Loads via the production catalog loaders.</summary>
     internal static class GraphRegistryTestBootstrap
     {
         public static GraphProgramRegistry LoadCoreScriptsFuncLibAndActionLib(out GraphFunctionCatalog catalog)

@@ -17,8 +17,6 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// 规模回归：N 个不同效果通过真实 EffectLifetimeSystem 处理（一人一个持续效果）。
-    /// 覆盖周期未到 / 周期到达 / 大批到期+监听器清理 / 失败中止 / 分片执行五个场景，
-    /// Release 下预热 + 重复采样报告每帧中位数、P95 与分配量。
     /// 全部使用多个不同实体，禁止单实体循环替代。
     /// </summary>
     [TestFixture]
@@ -33,9 +31,6 @@ namespace Ludots.Tests.GAS
         private static readonly QueryDescription _effectQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext>();
 
-        // ─────────────────────────────────────────────────────────────
-        // 场景 1：周期尚未到达 —— 效果保持有效、无副作用、耗时近线性
-        // ─────────────────────────────────────────────────────────────
         [TestCase(1000)]
         [TestCase(5000)]
         [TestCase(10000)]
@@ -83,15 +78,11 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine(
                 $"waiting count={count} medianMs={median:F3} p95Ms={p95:F3} allocated={allocated} perFrame=[{string.Join(",", perFrameAlloc)}] samples=[{string.Join(",", samples.Select(s => s.ToString("F2")))}]");
 
-            // 周期未到：效果全部保持有效，无副作用。
             That(world.CountEntities(in _effectQuery), Is.EqualTo(count));
             That(allocated, Is.LessThanOrEqualTo(64));
             That(median, Is.LessThan(1000d / 60d), "A waiting effect pass must fit within the entire 60 Hz frame budget.");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 场景 2：周期到达 —— 每个应触发效果恰好执行一次，属性正确
-        // ─────────────────────────────────────────────────────────────
         [TestCase(1000)]
         [TestCase(5000)]
         [TestCase(10000)]
@@ -115,7 +106,6 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
-            // OnPeriod Post 图：把 Durability current 减 7。
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
@@ -228,9 +218,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 场景 3：大批效果同时到期 —— 标签、效果列表、监听器完整清理
-        // ─────────────────────────────────────────────────────────────
         [TestCase(1000)]
         [TestCase(5000)]
         [TestCase(10000)]
@@ -254,7 +241,6 @@ namespace Ludots.Tests.GAS
                 programs,
                 "Test/EffectLifetimeScaleTests.BulkExpiry.json");
 
-            // 每轮：重建世界，测单次同 tick 到期整帧的耗时与分配，并验清理完整。
             var samples = new List<double>(5);
             var perSampleAlloc = new List<long>(5);
             for (int round = 0; round < 5; round++)
@@ -263,12 +249,10 @@ namespace Ludots.Tests.GAS
                 using (session.World)
                 using (session.Lifetime)
                 {
-                    // 未到期：全部有效。
                     session.Clock.Advance(ClockDomainId.FixedFrame, 0);
                     session.Lifetime.Update(0.016f);
                     That(session.World.CountEntities(in _effectQuery), Is.EqualTo(count));
 
-                    // 单次到期帧。
                     GC.GetAllocatedBytesForCurrentThread();
                     long frameBefore = GC.GetAllocatedBytesForCurrentThread();
                     session.Clock.Advance(ClockDomainId.FixedFrame, 1);
@@ -277,7 +261,6 @@ namespace Ludots.Tests.GAS
                     samples.Add(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
                     perSampleAlloc.Add(GC.GetAllocatedBytesForCurrentThread() - frameBefore);
 
-                    // 清理完整：效果实体全部销毁、目标容器清空、监听器清空。
                     That(session.World.CountEntities(in _effectQuery), Is.EqualTo(0), $"round {round}");
                     for (int i = 0; i < count; i++)
                     {
@@ -298,9 +281,6 @@ namespace Ludots.Tests.GAS
                 $"bulk-expiry count={count} tags={grantTags} medianMs={median:F3} p95Ms={p95:F3} allocated={allocated} perAlloc=[{string.Join(",", perSampleAlloc)}] samples=[{string.Join(",", samples.Select(s => s.ToString("F2")))}]");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 场景 4：处理中失败或中止 —— 属性、标签、计时状态、外部队列恢复
-        // ─────────────────────────────────────────────────────────────
         [Test]
         public void AbortMidProcessing_RestoresWorldAndExternalQueues()
         {
@@ -330,9 +310,6 @@ namespace Ludots.Tests.GAS
             That(session.PresentationEvents.Count, Is.EqualTo(count));
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 场景 5：分片执行 —— 与一次执行完成的最终结果和事件顺序一致
-        // ─────────────────────────────────────────────────────────────
         [Test]
         public void SlicedExecution_MatchesSinglePass()
         {
@@ -436,10 +413,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 辅助
-        // ─────────────────────────────────────────────────────────────
-        /// <summary>count 个单位，每人一个 Infinite + period 的持续效果，返回效果实体数组。</summary>
         private static Entity[] CreateOnePersistentEffectPerUnit(World world, int count, int periodTicks)
         {
             var effects = new Entity[count];

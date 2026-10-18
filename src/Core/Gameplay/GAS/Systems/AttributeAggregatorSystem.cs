@@ -157,7 +157,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// <summary>
         /// 高槽位（[64, Plan)）聚合：current=base 叠加已提交效果的修饰符（聚合车道），
         /// cap 捕获聚合值、current 恢复持久值（与内嵌 RestorePersistentCurrentValues 同语义；
-        /// 派生图高槽位车道属 P3，本切不接）。cap/current 变化标行级高脏位，由延迟触发器消费。
+        /// 派生图高槽位车道未接入）。cap/current 变化标行级高脏位，由延迟触发器消费。
         /// </summary>
         private static void ProcessHighSlots(World world, Entity entity)
         {
@@ -299,7 +299,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// 旧 AttributeAggregatorWithDirtyJob 的逐实体聚合体；DirtyFlags 缺失由调用方先行抛错，
+        /// DirtyFlags 缺失由调用方先行抛错，
         /// 本方法入口即假定四组件齐备。CommandBuffer 仅承载 GameplayAttributeChangedBits 的
         /// 首次结构 Add（该组件由 ClearPresentationFlagsSystem 每 tick 清除并移除，结构合同属表现消费方）。
         /// </summary>
@@ -337,7 +337,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             bool hasPresentationChanged = world.Has<GameplayAttributeChangedBits>(entity);
             GameplayAttributeChangedBits presentationChangedLocal = default;
 
-            // 4. 标记脏属性（用于延迟触发器）
             ulong changedMask = 0UL;
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {

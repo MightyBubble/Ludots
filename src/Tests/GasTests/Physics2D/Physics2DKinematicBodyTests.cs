@@ -18,7 +18,7 @@ using ComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 namespace GasTests.Physics2D
 {
     /// <summary>
-    /// Issue #732: kinematic body contract — dynamic-layer broadphase tracking, infinite-mass
+    /// Kinematic body contract — dynamic-layer broadphase tracking, infinite-mass
     /// solving, pose-driven API with derived velocity, sleeping wake-up, contract errors,
     /// determinism, and steady-state zero allocation.
     /// </summary>
@@ -347,9 +347,8 @@ namespace GasTests.Physics2D
             // kinematic and a static wall whose final gap (45 cm) is narrower than the box,
             // so at least one collision pair stays continuously active during measurement.
             // Contact break/re-form cycles are intentionally excluded here: re-activating the
-            // ActiveCollisionPairTag archetype after it empties re-allocates an Arch chunk,
-            // a pre-existing property of the tag mechanism that #641 already ruled will be
-            // replaced by fixed slots (identical allocation reproduces with dynamic-only bodies).
+            // ActiveCollisionPairTag archetype after it empties re-allocates an Arch chunk
+            // (identical allocation reproduces with dynamic-only bodies).
             int wallShape = _shapeStorage.RegisterBox(50f, 50f);
             world.Create(
                 Position2D.FromCm(100, 0),

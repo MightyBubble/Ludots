@@ -51,7 +51,6 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState>()
             .WithNone<FacingDirection, PresentationStaticTransform>();
             
-        // 带 FacingDirection 的查询（同步位置 + 旋转）
         private static readonly QueryDescription _facingNoCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>()
             .WithNone<CullState, PresentationStaticTransform>();

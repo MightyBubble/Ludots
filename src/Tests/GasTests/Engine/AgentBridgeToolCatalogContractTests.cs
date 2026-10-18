@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas
 {
     /// <summary>
-    /// #1056 P0-1: every concrete IAgentTool in the AgentBridge assembly must be
+    /// Every concrete IAgentTool in the AgentBridge assembly must be
     /// registered through BuiltinAgentTools (HTTP / MCP / CLI / Inspector share one catalog).
     /// </summary>
     public sealed class AgentBridgeToolCatalogContractTests

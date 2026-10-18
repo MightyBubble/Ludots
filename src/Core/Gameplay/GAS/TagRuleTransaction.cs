@@ -8,17 +8,10 @@ namespace Ludots.Core.Gameplay.GAS
     {
         private ProcessedOpTable _processed;
         
-        // 事务步数计数器
         private int _stepCount = 0;
         
-        /// <summary>
-        /// 事务是否激活
-        /// </summary>
         public bool IsActive { get; private set; }
         
-        /// <summary>
-        /// 开始事务
-        /// </summary>
         public void Begin()
         {
             IsActive = true;
@@ -26,9 +19,6 @@ namespace Ludots.Core.Gameplay.GAS
             _stepCount = 0;
         }
         
-        /// <summary>
-        /// 结束事务
-        /// </summary>
         public void End()
         {
             IsActive = false;
@@ -39,8 +29,6 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>
         /// 尝试标记Tag操作已处理（用于循环阻断）
         /// </summary>
-        /// <param name="tagId">Tag ID</param>
-        /// <param name="isAdd">是否为Add操作（false表示Remove）</param>
         /// <returns>true表示可以处理，false表示已处理或预算超限</returns>
         public bool TryMarkProcessed(int tagId, bool isAdd)
         {
@@ -49,10 +37,9 @@ namespace Ludots.Core.Gameplay.GAS
                 return false;
             }
             
-            // 检查预算限制
             if (_stepCount >= GasConstants.MAX_TAG_RULE_TRANSACTION_STEPS)
             {
-                return false; // 预算超限
+                return false;
             }
             
             if (_processed.Count >= GasConstants.MAX_PROCESSED_SET_CAPACITY)
@@ -69,14 +56,8 @@ namespace Ludots.Core.Gameplay.GAS
             return true;
         }
         
-        /// <summary>
-        /// 获取当前事务步数
-        /// </summary>
         public int StepCount => _stepCount;
         
-        /// <summary>
-        /// 获取ProcessedSet大小
-        /// </summary>
         public int ProcessedSetSize => _processed.Count;
 
         private unsafe struct ProcessedOpTable

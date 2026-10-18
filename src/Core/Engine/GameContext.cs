@@ -11,7 +11,6 @@ namespace Ludots.Core.Engine
         public World World => Engine.World;
         public IMapManager MapManager => Engine.MapManager;
         
-        // Helper to access services stored in GlobalContext (like UIRoot)
         public T GetService<T>(ServiceKey<T> key)
         {
             return Engine.GetService(key);

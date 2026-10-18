@@ -6,9 +6,6 @@ using Ludots.Core.Navigation.Pathing;
 
 namespace Ludots.Core.Spatial.Eqs
 {
-    /// <summary>
-    /// Context passed to all EQS tests, carrying world references and query origin.
-    /// </summary>
     public readonly struct EqsContext
     {
         public readonly WorldCmInt2 Origin;

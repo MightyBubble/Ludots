@@ -11,7 +11,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public List<NavLayerConfig> Layers { get; set; } = new List<NavLayerConfig>();
         public List<NavAreaCostConfig> Areas { get; set; } = new List<NavAreaCostConfig>();
 
-        /// <summary>Per-map nav tile grids keyed by map id then board name (#1567: nav-owned home).</summary>
+        /// <summary>Per-map nav tile grids keyed by map id then board name (nav-owned home).</summary>
         public Dictionary<string, NavMapNavBoardsConfig> Maps { get; set; } = new Dictionary<string, NavMapNavBoardsConfig>();
         public NavRuntimeIncrementalConfig RuntimeIncremental { get; set; } = new NavRuntimeIncrementalConfig();
         public string TerrainFeed { get; set; } = NavBakeNames.TerrainFeedTriangles;

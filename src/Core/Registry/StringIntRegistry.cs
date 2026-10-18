@@ -41,8 +41,7 @@ namespace Ludots.Core.Registry
         }
 
         /// <summary>
-        /// Register a string key and return its auto-assigned int ID.
-        /// If already registered, returns the existing ID (idempotent).
+        /// Idempotent: registering a name that is already registered returns its existing ID.
         /// </summary>
         public int Register(string name)
         {
@@ -71,9 +70,6 @@ namespace Ludots.Core.Registry
             return _nameToId.TryGetValue(name, out int id) ? id : _invalidId;
         }
 
-        /// <summary>
-        /// Try to get the int ID for a string key.
-        /// </summary>
         public bool TryGetId(string name, out int id)
         {
             if (!string.IsNullOrWhiteSpace(name) && _nameToId.TryGetValue(name, out id))
@@ -135,9 +131,6 @@ namespace Ludots.Core.Registry
             return true;
         }
 
-        /// <summary>
-        /// Freeze the registry. No further registrations are allowed after this call.
-        /// </summary>
         public void Freeze() => _frozen = true;
 
         private void EnsureCapacity(int id)

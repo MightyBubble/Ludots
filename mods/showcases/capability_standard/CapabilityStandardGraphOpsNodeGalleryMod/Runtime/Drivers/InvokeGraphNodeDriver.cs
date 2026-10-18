@@ -18,11 +18,10 @@ using Ludots.Platform.Abstractions;
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
-/// Hosts the TriggerGraph-only #1116/#1115 vignettes: StoreArg* staging → InvokeGraph
+/// Hosts the TriggerGraph-only vignettes: StoreArg* staging → InvokeGraph
 /// subgraph round-trips (int return, float echo through a map variable, entity moved by
 /// the callee), the InvokeGraph entry-label call, and DispatchMapEvent firing a schema
-/// MapHeartbeat-like dispatch through a declared custom map event (the retired
-/// think-wave cadence is demonstrated via a custom event; #1398 刀2). The shared callee is a real
+/// MapHeartbeat-like dispatch through a declared custom map event. The shared callee is a real
 /// TriggerGraph with one entry per demo; the caller is registered into a local
 /// GraphProgramRegistry so load-time validation (kind, entry label) runs for real.
 /// </summary>

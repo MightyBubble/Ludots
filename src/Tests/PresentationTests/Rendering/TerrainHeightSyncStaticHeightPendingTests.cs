@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation
 {
     /// <summary>
-    /// Regression coverage for issue #639: static Once height pending may resolve flat y=0
+    /// Static Once height pending may resolve flat y=0
     /// only when the focused map does not declare a visual heightmap. Declared maps keep
     /// PresentationStaticHeightPending until a finite ContinuousHeightmap sample succeeds.
     /// MapLoadStatus alone is neither necessary nor sufficient for that invariant.

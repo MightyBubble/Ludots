@@ -150,11 +150,6 @@ namespace Ludots.Tests.GAS
             That(commands.Count, Is.Zero);
         }
 
-        // Note: EffectCallbackComponent has been removed per the "Everything is Graph" architecture.
-        // OnApply/OnExpire callbacks are now Phase Graph bindings in EffectPhaseGraphBindings.
-        // Budget tests for Phase Graph-based callbacks will be added once graph programs
-        // are available in the test fixture.
-
         [Test]
         public void EffectApplicationSystem_ProcessesInstantEffects_WithoutCallbacks()
         {
@@ -198,7 +193,6 @@ namespace Ludots.Tests.GAS
 
                 proposal.Update(0.016f);
 
-                // Without callbacks, no EffectRequests should be published
                 That(requests.Count, Is.EqualTo(0));
             }
             finally
@@ -449,7 +443,6 @@ namespace Ludots.Tests.GAS
 
                 lifetime.Update(0.016f);
 
-                // Without callbacks, no EffectRequests should be published
                 That(requests.Count, Is.EqualTo(0));
             }
             finally

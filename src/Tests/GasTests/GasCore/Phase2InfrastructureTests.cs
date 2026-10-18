@@ -17,10 +17,6 @@ namespace GasTests
     [TestFixture]
     public class Phase2InfrastructureTests
     {
-        // ────────────────────────────────────────────────────────
-        // FireMapEvent isolation — only the specified map's triggers fire
-        // ────────────────────────────────────────────────────────
-
         [Test]
         public void FireMapEvent_OnlyTriggersSpecifiedMap()
         {
@@ -41,7 +37,6 @@ namespace GasTests
             tm.RegisterMapTriggers(mapIdA, new List<Trigger> { triggerA });
             tm.RegisterMapTriggers(mapIdB, new List<Trigger> { triggerB });
 
-            // Fire only for mapA
             var ctx = new ScriptContext();
             tm.FireMapEvent(mapIdA, GameEvents.MapLoaded, ctx);
 
@@ -61,7 +56,6 @@ namespace GasTests
             var mapId = new MapId("test_map");
             tm.RegisterMapTriggers(mapId, new List<Trigger> { trigger });
 
-            // Fire a different event key
             tm.FireMapEvent(mapId, GameEvents.MapUnloaded, new ScriptContext());
             Assert.That(fired, Is.EqualTo(0));
         }
@@ -84,7 +78,6 @@ namespace GasTests
             tm.RegisterMapTriggers(mapA, new List<Trigger> { triggerA });
             tm.RegisterMapTriggers(mapB, new List<Trigger> { triggerB });
 
-            // Fire for both maps sequentially
             tm.FireMapEvent(mapA, GameEvents.MapLoaded, new ScriptContext());
             tm.FireMapEvent(mapB, GameEvents.MapLoaded, new ScriptContext());
 
@@ -131,16 +124,11 @@ namespace GasTests
             mapATrigger.AddAction(new DelegateCommand(_ => { mapACount++; return Task.CompletedTask; }));
             tm.RegisterMapTriggers(new MapId("map_a"), new List<Trigger> { mapATrigger });
 
-            // Fire for map_b: neither global nor map_a scoped should fire.
             tm.FireMapEvent(new MapId("map_b"), GameEvents.MapLoaded, new ScriptContext());
 
             Assert.That(globalCount, Is.EqualTo(0), "Global trigger should NOT fire during FireMapEvent");
             Assert.That(mapACount, Is.EqualTo(0), "Foreign map-scoped trigger should NOT fire");
         }
-
-        // ────────────────────────────────────────────────────────
-        // Priority sorting — lower Priority executes first
-        // ────────────────────────────────────────────────────────
 
         [Test]
         public void FireMapEvent_SortsByPriority_LowerFirst()
@@ -158,7 +146,6 @@ namespace GasTests
             t50.AddAction(new DelegateCommand(_ => { order.Add(50); return Task.CompletedTask; }));
 
             var mapId = new MapId("sorted_map");
-            // Register in reverse priority order to verify sorting
             tm.RegisterMapTriggers(mapId, new List<Trigger> { t100, t0, t50 });
 
             tm.FireMapEvent(mapId, GameEvents.MapLoaded, new ScriptContext());
@@ -190,10 +177,6 @@ namespace GasTests
             Assert.That(order[0], Is.EqualTo(1));
             Assert.That(order[1], Is.EqualTo(99));
         }
-
-        // ────────────────────────────────────────────────────────
-        // EventHandler — simple mod callbacks
-        // ────────────────────────────────────────────────────────
 
         [Test]
         public void RegisterEventHandler_FiresOnMatchingEvent()
@@ -244,10 +227,6 @@ namespace GasTests
             Assert.That(tm.Errors[0].EventKey, Is.EqualTo(GameEvents.GameStart));
             Assert.That(tm.Errors[0].Exception.Message, Is.EqualTo("startup failed"));
         }
-
-        // ────────────────────────────────────────────────────────
-        // SystemFactoryRegistry
-        // ────────────────────────────────────────────────────────
 
         [Test]
         public void SystemFactoryRegistry_Register_TryActivate_Succeeds()
@@ -323,10 +302,6 @@ namespace GasTests
             var result = registry.TryActivate("DoesNotExist", new ScriptContext(), engine);
             Assert.That(result, Is.False);
         }
-
-        // ────────────────────────────────────────────────────────
-        // TriggerDecoratorRegistry
-        // ────────────────────────────────────────────────────────
 
         [Test]
         public void TriggerDecoratorRegistry_RegisterByType_AppliesMatching()
@@ -407,10 +382,6 @@ namespace GasTests
             Assert.That(trigger.Actions, Has.Count.EqualTo(4));
         }
 
-        // ────────────────────────────────────────────────────────
-        // MapSessionManager — additive model
-        // ────────────────────────────────────────────────────────
-
         [Test]
         public void MapSessionManager_UnloadSession_RemovesFromFocusStack()
         {
@@ -424,14 +395,11 @@ namespace GasTests
             mgr.CreateSession(new MapId("b"), configB);
             mgr.PushFocused(new MapId("b"));
 
-            // B is on top
             Assert.That(mgr.FocusedSession.MapId, Is.EqualTo(new MapId("b")));
 
-            // Unload B
             using var world = Arch.Core.World.Create();
             mgr.UnloadSession(new MapId("b"), world);
 
-            // A should be restored
             Assert.That(mgr.FocusedSession.MapId, Is.EqualTo(new MapId("a")));
             Assert.That(mgr.FocusedSession.State, Is.EqualTo(MapSessionState.Active));
         }
@@ -446,19 +414,13 @@ namespace GasTests
             mgr.CreateSession(new MapId("battle"), new Ludots.Core.Config.MapConfig { Id = "battle" });
             mgr.PushFocused(new MapId("battle"));
 
-            // Both sessions exist
             Assert.That(mgr.All, Has.Count.EqualTo(2));
             Assert.That(mgr.GetSession(new MapId("strategic")), Is.Not.Null);
             Assert.That(mgr.GetSession(new MapId("battle")), Is.Not.Null);
 
-            // Strategic is suspended, battle is active
             Assert.That(mgr.GetSession(new MapId("strategic")).State, Is.EqualTo(MapSessionState.Suspended));
             Assert.That(mgr.GetSession(new MapId("battle")).State, Is.EqualTo(MapSessionState.Active));
         }
-
-        // ────────────────────────────────────────────────────────
-        // Critical #1 regression: Cleanup only destroys its own MapId
-        // ────────────────────────────────────────────────────────
 
         [Test]
         public void Cleanup_OnlyDestroysEntitiesForOwnMapId()
@@ -468,22 +430,18 @@ namespace GasTests
             var mapA = new MapId("strategic");
             var mapB = new MapId("battle_42");
 
-            // Spawn 3 entities for mapA, 2 for mapB
             for (int i = 0; i < 3; i++)
                 world.Create(new MapEntity { MapId = mapA });
             for (int i = 0; i < 2; i++)
                 world.Create(new MapEntity { MapId = mapB });
 
-            // Verify 5 total
             int total = 0;
             world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => total++);
             Assert.That(total, Is.EqualTo(5));
 
-            // Cleanup only mapB
             var sessionB = new MapSession(mapB, new MapConfig { Id = "battle_42" });
             sessionB.Cleanup(world);
 
-            // mapA entities should survive, mapB entities destroyed
             int remaining = 0;
             var survivorMapIds = new List<MapId>();
             world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity e, ref MapEntity me) =>
@@ -508,11 +466,9 @@ namespace GasTests
             for (int i = 0; i < 4; i++)
                 world.Create(new MapEntity { MapId = mapA });
 
-            // Cleanup the empty map
             var sessionEmpty = new MapSession(mapEmpty, new MapConfig { Id = "empty_map" });
             sessionEmpty.Cleanup(world);
 
-            // All mapA entities must survive
             int count = 0;
             world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => count++);
             Assert.That(count, Is.EqualTo(4));
@@ -574,10 +530,6 @@ namespace GasTests
             world.Dispose();
         }
 
-        // ────────────────────────────────────────────────────────
-        // Helper types
-        // ────────────────────────────────────────────────────────
-
         private class TestTriggerA : Trigger
         {
             public TestTriggerA() { EventKey = GameEvents.MapLoaded; }
@@ -605,7 +557,6 @@ namespace GasTests
         }
     }
 
-    // Extension to allow minimal initialization for tests
     public static class GameEngineTestExtensions
     {
         public static void InitializeMinimal(this GameEngine engine)

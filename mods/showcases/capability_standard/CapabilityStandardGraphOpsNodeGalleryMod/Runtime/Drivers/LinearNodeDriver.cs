@@ -359,7 +359,6 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             picked ? GraphShowcaseStagePresenter.EnemyColor : GraphShowcaseStagePresenter.GhostColor);
     }
 
-    /// <summary>Two parallel arrows from the track edge pointing at the picked block.</summary>
     private static void DrawPickArrows(DebugDrawCommandBuffer debugDraw, float trackLeft, float pickY)
     {
         float x = trackLeft - 0.55f;

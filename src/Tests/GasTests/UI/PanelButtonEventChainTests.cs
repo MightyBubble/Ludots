@@ -25,7 +25,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.UI
 {
     /// <summary>
-    /// Button event chain (#1585 U2): loader strictness (button ↔ event wiring both ways,
+    /// Button event chain: loader strictness (button ↔ event wiring both ways,
     /// tap-only gestures, payload field coverage), payload baking, and the bridge — audience
     /// admission before injection, eventId-即-action-id enforcement, and the press edge
     /// landing in the firing seat's handler with a scheduled release.
@@ -35,8 +35,6 @@ namespace Ludots.Tests.GasTests.UI
     {
         private const string TemplateId = "tests.panel.dialog";
         private const string ChooseActionId = "Ui.DialogChoose";
-
-        // ── Loader: Button ↔ event wiring ──
 
         [Test]
         public void Loader_ButtonWithEventAndPayload_Parses()
@@ -103,8 +101,6 @@ namespace Ludots.Tests.GasTests.UI
                 Throws.InvalidOperationException.With.Message.Contains("requires a label"));
         }
 
-        // ── Payload baking ──
-
         [Test]
         public void PayloadBaker_LiteralAndBind_Succeed()
         {
@@ -131,8 +127,6 @@ namespace Ludots.Tests.GasTests.UI
                 () => PanelButtonPayloadBaker.Bake(template, template.Events[0], button, scope),
                 Throws.InvalidOperationException.With.Message.Contains("option"));
         }
-
-        // ── Bridge: admission, injection, release ──
 
         [Test]
         public void Bridge_AdmittedFire_InjectsPressIntoSeatHandlerThenReleases()
@@ -229,8 +223,6 @@ namespace Ludots.Tests.GasTests.UI
                 Throws.InvalidOperationException.With.Message.Contains("tip.titleBind"));
         }
 
-        // ── companion payload events (in-tick dispatch) ──
-
         [Test]
         public void Bridge_PayloadFire_QueuesCompanionDispatchedOnceInTick()
         {
@@ -273,8 +265,6 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(error!.Message, Does.Contain("panel." + ChooseActionId));
             Assert.That(error.Message, Does.Contain("not a declared custom event"));
         }
-
-        // ── helpers ──
 
         private static PanelLayoutControl RequireButton(PanelTemplate template)
         {

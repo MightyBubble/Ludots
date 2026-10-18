@@ -79,9 +79,6 @@ public sealed record LiveSkillWorkbenchDocumentDto(
 	string? SelectedCatalogId = null,
 	string? SourceUri = null);
 
-/// <summary>
-/// Binds a field descriptor to a catalog definition id.
-/// </summary>
 public sealed record LiveSkillWorkbenchFieldBindingDto(
 	string DefinitionId,
 	LiveSkillWorkbenchFieldDescriptorDto Field);

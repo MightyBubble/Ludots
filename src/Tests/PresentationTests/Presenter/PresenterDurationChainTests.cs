@@ -52,8 +52,6 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        // ── 编译期：duration 只产生 TimerSet 计划与 Destroy 规则 ──
-
         [Test]
         public void ConfigLoader_Duration_CompilesToTimerSetAndDestroyRules()
         {
@@ -155,8 +153,6 @@ namespace Ludots.Tests.Presentation
                 """);
             Assert.That(ex!.Message, Does.Contain("duration-authored"));
         }
-
-        // ── 运行期：TimerSet → TimerExpired → Rule → DestroyPresenter 逐拍链路 ──
 
         [Test]
         public void Chain_DurationPresenter_ExpiresThroughTimerRuleDestroy()
@@ -414,8 +410,6 @@ namespace Ludots.Tests.Presentation
                 created: new Entity[1]));
         }
 
-        // ── 配置 fixture：显式 Rule → DestroyPresenter（非编译链的作者视图） ──
-
         [Test]
         public void AuthoredChain_TimerExpiredRuleToDestroyPresenter()
         {
@@ -467,8 +461,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(fixture.World.IsAlive(presenter), Is.False);
         }
 
-        // ── FadeOverLifetime 语义保真：definition 上的 authored duration 仍是 fade 分母 ──
-
         [Test]
         public void FadeOverLifetime_StillReadsAuthoredDurationFromDefinition()
         {
@@ -496,8 +488,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(def.HasOutputMotionOrFade, Is.True);
             Assert.That(def.DefaultLifetime, Is.EqualTo(2f).Within(0.0001f), "fade 分母仍是 definition 上的 authored duration");
         }
-
-        // ── Headless E2E 验收：真实 JSON 驱动全链路 + 逐拍 trace 落盘 ──
 
         [Test]
         public void Acceptance_DurationChain_HappyKillAndRepeatDestroy_WriteArtifacts()
@@ -639,8 +629,6 @@ namespace Ludots.Tests.Presentation
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), reportText);
             TestContext.Out.WriteLine(reportText);
         }
-
-        // ── 配置夹具辅助 ──
 
         private PresenterDefinitionRegistry LoadDefinitions(bool withAssets = false)
         {

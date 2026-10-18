@@ -11,9 +11,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
 {
-    /// <summary>
-    /// #625 player-path acceptance (headless): edit → apply → trace → AI bind → save.
-    /// </summary>
     [TestFixture]
     public sealed class LiveSkillWorkbenchShowcaseAcceptanceTests
     {
@@ -49,7 +46,6 @@ namespace Ludots.Tests.Gas.Production
 
             try
             {
-                // Edit effect duration → NextCast
                 LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
                 var provenance = new LiveEditProvenance(LiveEditSource.ManualWorkbench, "showcase://effect");
                 Assert.That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
@@ -61,7 +57,6 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(effects.TryGet(effectId, out EffectTemplateData after), Is.True);
                 Assert.That(after.DurationTicks, Is.EqualTo(40));
 
-                // Trace
                 AbilityIdRegistry.Register("ability.Fireball");
                 tracer.Ingest(new GasPresentationEvent
                 {
@@ -75,7 +70,6 @@ namespace Ludots.Tests.Gas.Production
                 });
                 Assert.That(tracer.SnapshotRecent(8).Count, Is.GreaterThanOrEqualTo(2));
 
-                // AI draft → classify/commit → bind
                 LiveAiSkillDraft draft = ai.Generate(
                     "做一个小范围冰冻技能",
                     new LiveEditProvenance(LiveEditSource.AiGeneratedDraft, "ai://frost"));
@@ -92,7 +86,6 @@ namespace Ludots.Tests.Gas.Production
                 LiveAiDraftPlaytestBind bind = binder.Bind(draft, actorEntityId: 99);
                 Assert.That(bind.AbilityKey, Is.EqualTo(DeterministicFakeAiSkillDraftGenerator.FrostNovaAbilityKey));
 
-                // Save
                 LiveEditSavePreview preview = save.Preview(aiSession, "ShowcaseMod", modRoot);
                 Assert.That(preview.CanSave, Is.True);
                 Assert.That(save.Save(aiSession, preview).Succeeded, Is.True);

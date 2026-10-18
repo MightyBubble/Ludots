@@ -153,8 +153,8 @@ namespace Ludots.Core.Spatial
         }
 
         /// <summary>
-        /// Set an optional ILoadedChunks reference. When set, queries may check
-        /// whether entities belong to a loaded chunk (future optimization point).
+        /// Set an optional ILoadedChunks reference; queries do not consult
+        /// loaded-chunk membership yet.
         /// </summary>
         public void SetLoadedChunks(ILoadedChunks? loadedChunks)
         {
@@ -181,7 +181,6 @@ namespace Ludots.Core.Spatial
 
         public SpatialQueryResult QueryRadius(WorldCmInt2 center, int radiusCm, Span<Entity> buffer)
         {
-            // Coarse: AABB query via backend (bounding square)
             int count = _backend.QueryRadius(center, radiusCm, buffer, out int dropped);
             int unique = SpatialQueryPostProcessor.SortStableDedup(buffer.Slice(0, count));
 
@@ -208,11 +207,9 @@ namespace Ludots.Core.Spatial
         {
             if (_positionProvider is null)
                 throw new InvalidOperationException("EntityPositionProvider not set. Call SetPositionProvider() before shape queries.");
-            // Coarse: bounding circle → AABB
             var aabb = WorldAabbCm.FromCenterRadius(origin, rangeCm);
             int count = _backend.QueryAabb(aabb, buffer, out int dropped);
             int unique = SpatialQueryPostProcessor.SortStableDedup(buffer.Slice(0, count));
-            // Fine: radius + angle test
             int write = 0;
             long r2 = (long)rangeCm * rangeCm;
             for (int i = 0; i < unique; i++)
@@ -237,12 +234,10 @@ namespace Ludots.Core.Spatial
         {
             if (_positionProvider is null)
                 throw new InvalidOperationException("EntityPositionProvider not set. Call SetPositionProvider() before shape queries.");
-            // Coarse: bounding circle → AABB
             int boundingRadius = IntSqrt((long)halfWidthCm * halfWidthCm + (long)halfHeightCm * halfHeightCm) + 1;
             var aabb = WorldAabbCm.FromCenterRadius(center, boundingRadius);
             int count = _backend.QueryAabb(aabb, buffer, out int dropped);
             int unique = SpatialQueryPostProcessor.SortStableDedup(buffer.Slice(0, count));
-            // Fine: rotate point into OBB local space, test against half-extents
             SinCosDeg(rotationDeg, out int sinR, out int cosR); // sin/cos * 1024
             int write = 0;
             for (int i = 0; i < unique; i++)
@@ -263,7 +258,6 @@ namespace Ludots.Core.Spatial
         {
             if (_positionProvider is null)
                 throw new InvalidOperationException("EntityPositionProvider not set. Call SetPositionProvider() before shape queries.");
-            // Build a bounding AABB for the capsule
             SinCosDeg(directionDeg, out int sinD, out int cosD); // * 1024
             int endX = origin.X + (int)((long)cosD * lengthCm / 1024);
             int endY = origin.Y + (int)((long)sinD * lengthCm / 1024);
@@ -275,8 +269,6 @@ namespace Ludots.Core.Spatial
             int count = _backend.QueryAabb(aabb, buffer, out int dropped);
             int unique = SpatialQueryPostProcessor.SortStableDedup(buffer.Slice(0, count));
 
-            // Fine: project point onto line segment, check perpendicular distance ≤ halfWidth
-            // Line direction unit vector * 1024
             long dirX = cosD;  // already *1024
             long dirY = sinD;
             long lenSq1024 = (long)lengthCm * 1024; // length * 1024 (for projection)
@@ -287,12 +279,9 @@ namespace Ludots.Core.Spatial
                 WorldCmInt2 pos = _positionProvider!(buffer[i]);
                 long dx = pos.X - origin.X;
                 long dy = pos.Y - origin.Y;
-                // t = dot(d, dir) / length, with dir already *1024
                 long dot = dx * dirX + dy * dirY; // result in cm*1024
-                // Clamp projection t to [0, length*1024]
                 if (dot < 0) dot = 0;
                 else if (dot > lenSq1024) dot = lenSq1024;
-                // Closest point on segment (in cm*1024 relative to origin)
                 long cpX = dot * dirX / 1024; // cm*1024
                 long cpY = dot * dirY / 1024; // cm*1024
                 // Distance squared from point to closest point (convert dx/dy to *1024)
@@ -304,8 +293,6 @@ namespace Ludots.Core.Spatial
             }
             return new SpatialQueryResult(write, dropped);
         }
-
-        // ── Hex spatial queries ──
 
         public SpatialQueryResult QueryHexRange(HexCoordinates center, int hexRadius, Span<Entity> buffer)
         {
@@ -346,7 +333,6 @@ namespace Ludots.Core.Spatial
         private SpatialQueryResult QueryHexCells(Span<HexCoordinates> hexes, Span<Entity> buffer)
         {
             // Half-extents of one hex cell's bounding box (pointy-top)
-            // Use HexMetrics if available, otherwise fall back to default values
             int halfW, halfH;
             if (_hexMetrics is not null)
             {
@@ -374,7 +360,6 @@ namespace Ludots.Core.Spatial
                 totalDropped += dropped;
             }
 
-            // Dedup across all hex cells
             int unique = SpatialQueryPostProcessor.SortStableDedup(buffer.Slice(0, totalWritten));
             return new SpatialQueryResult(unique, totalDropped);
         }
@@ -402,7 +387,6 @@ namespace Ludots.Core.Spatial
             cos1024 = MathUtil.Cos(deg) * 1024 / 1000;
         }
 
-        /// <summary>Integer square root.</summary>
         private static int IntSqrt(long v)
         {
             if (v <= 0) return 0;

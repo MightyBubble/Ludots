@@ -23,7 +23,6 @@ namespace Ludots.Core.Map
         /// <summary>最近一次 LoadMap 的跨 mod 片段合并报告（纯记录型；每次 LoadMap 重置）。</summary>
         public MapMergeReport LastMergeReport { get; } = new MapMergeReport();
 
-        // Registry for Map Definitions (Code-First)
         private readonly Dictionary<MapId, MapDefinition> _definitions = new Dictionary<MapId, MapDefinition>();
         private readonly Dictionary<Type, MapDefinition> _typeToDefinition = new Dictionary<Type, MapDefinition>();
 
@@ -77,7 +76,7 @@ namespace Ludots.Core.Map
             {
                 ResolvePendingTombstones(mapId.Value, config);
                 // Backfill runs once at the top level only: parent configs must stay
-                // un-backfilled so child conflict checks compare authored values (#1567).
+                // un-backfilled so child conflict checks compare authored values.
                 ApplyWorldTuningToBoards(config);
             }
             return config;
@@ -98,7 +97,6 @@ namespace Ludots.Core.Map
             
             try
             {
-                // 0. Check if we have a code definition
                 MapDefinition definition = null;
                 if (_definitions.TryGetValue(mapId, out var def))
                 {
@@ -106,13 +104,10 @@ namespace Ludots.Core.Map
                     Log.Info(in LogChannels.Map, $"Found Code Definition: {def.GetType().Name}");
                 }
 
-                // 1. Find all config fragments
                 var configs = new List<MapConfig>();
 
-                // If definition exists, use its DataFilePath. Otherwise use default convention.
                 string jsonPath = definition != null ? definition.DataFilePath : $"Maps/{mapId}.json";
 
-                // Normalize path to remove leading slash if any
                 if (jsonPath.StartsWith("/") || jsonPath.StartsWith("\\")) jsonPath = jsonPath.Substring(1);
 
                 if (_configPipeline == null)
@@ -154,14 +149,12 @@ namespace Ludots.Core.Map
                     return null;
                 }
 
-                // 2. Merge configs
                 var finalConfig = new MapConfig { Id = mapId.ToString() };
                 foreach (var cfg in configs)
                 {
                     MergeMapConfig(finalConfig, cfg);
                 }
             
-                // 3. Apply Definition Metadata (Tags + Boards from code-first)
                 if (definition != null)
                 {
                     if (finalConfig.Tags == null) finalConfig.Tags = new List<string>();
@@ -192,7 +185,6 @@ namespace Ludots.Core.Map
                     }
                 }
 
-                // 4. Handle Inheritance (ParentId)
                 if (!string.IsNullOrEmpty(finalConfig.ParentId))
                 {
                     Log.Info(in LogChannels.Map, $"Loading Parent Map: {finalConfig.ParentId}");
@@ -286,7 +278,6 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Merge Tags
             if (source.Tags != null)
             {
                 if (target.Tags == null) target.Tags = new List<string>();
@@ -318,7 +309,6 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Merge TriggerTypes (dedup)
             if (source.TriggerTypes != null)
             {
                 foreach (var tt in source.TriggerTypes)
@@ -862,7 +852,7 @@ namespace Ludots.Core.Map
             }
         }
 
-        private static string spatialTypeOf(BoardConfig board) =>
+        private static string SpatialTypeOf(BoardConfig board) =>
             (board.SpatialType ?? "Grid").Trim();
 
         private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
@@ -885,7 +875,7 @@ namespace Ludots.Core.Map
                     $"Map '{mapId}' board '{board.Name}' requires a positive WidthCm/HeightCm that covers at least one cell of Grid.CellSizeCm.");
             }
 
-            bool isHex = spatialTypeOf(board) is "HexGrid" or "Hex";
+            bool isHex = SpatialTypeOf(board) is "HexGrid" or "Hex";
             if (isHex)
             {
                 if (board.Hex == null || board.Hex.EdgeLengthCm <= 0)

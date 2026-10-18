@@ -42,7 +42,7 @@ public sealed class LiveSkillWorkbenchModEntry : IMod
 			?? throw new InvalidOperationException("LiveSkillWorkbenchRuntime was not created during OnLoad.");
 		GameEngine engine = context.GetEngine();
 
-		// Publish before DataPlane so other Mods can resolve the host (#618+ extension point).
+		// Publish before DataPlane so other Mods can resolve the host.
 		engine.SetService(LiveSkillWorkbenchServiceKeys.Runtime, runtime);
 
 		if (!engine.TryGetService(CoreServiceKeys.LiveGasEditPipeline, out LiveGasEditPipeline pipeline) ||

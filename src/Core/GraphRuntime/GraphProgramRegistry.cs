@@ -580,7 +580,7 @@ namespace Ludots.Core.GraphRuntime
         }
 
         /// <summary>
-        /// InvokeGraph (#1116): Imm must name a registered TriggerGraph; an authored entry
+        /// InvokeGraph: Imm must name a registered TriggerGraph; an authored entry
         /// label (Flags bit 1, symbol index B | C &lt;&lt; 8 into the caller's symbol table)
         /// must exist in the target's entry table — on first validation the instruction is
         /// rewritten in place to A = entry ordinal + 1 (B/C cleared) so the runtime reads a

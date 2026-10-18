@@ -67,7 +67,6 @@ public sealed class DualSeatPanelsShowcaseAcceptanceTests
         Assert.That(repZero, Is.Not.EqualTo(repOne));
         Assert.That(engine.World.IsAlive(repZero) && engine.World.IsAlive(repOne), Is.True);
 
-        // ── three template panels: two per-seat + one shared ──
         PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("PanelHost service is missing.");
         Assert.That(panelHost.Count, Is.EqualTo(3), "two per-seat panels plus one shared panel instance");
@@ -133,7 +132,6 @@ public sealed class DualSeatPanelsShowcaseAcceptanceTests
         Assert.That(variables.ReadInt("dsp_boost_total"), Is.EqualTo(boostsAfterTwoAdmitted),
             "a refused operation never increments the admitted-event audit counter");
 
-        // Shared panel: one instance, both seats operate the same counter.
         PressAndTick(engine, channelZero, DualSeatPanelsShowcaseIds.ChargeAction);
         PressAndTick(engine, channelOne, DualSeatPanelsShowcaseIds.ChargeAction);
         Assert.That(variables!.ReadInt("dsp_shared_charges"), Is.EqualTo(2), "both seats accumulate the one shared counter");

@@ -8,7 +8,7 @@ using Ludots.Platform.Abstractions;
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
-/// Hosts the TriggerGraph-only LoadPlacedRegion vignette (#1108). Executes the roll-call
+/// Hosts the TriggerGraph-only LoadPlacedRegion vignette. Executes the roll-call
 /// entry directly (gallery does not mount the graph — mounting would fail-closed on the
 /// intentional ghost region miss). Asserts authored yard=1 and ghost=0 via map variables.
 /// </summary>

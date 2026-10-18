@@ -109,12 +109,12 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
 
         var ctx = runtime.Context;
         int stranger = GraphOpsNodeActorBinding.FindRole(runtime.Vignette, "caster");
-        Assert.That(strayDisclosure(ctx, ctx.Viewer, ctx.SimActors[stranger]), Is.False,
+        Assert.That(StrayDisclosure(ctx, ctx.Viewer, ctx.SimActors[stranger]), Is.False,
             "no disclosure is written for the stranger; the second pass must read 看不见.");
         Assert.That(ctx.ActorHudLit[stranger], Is.False, "the stranger's health bar must stay hidden.");
     }
 
-    private static bool strayDisclosure(GraphOpsNodeDriverContext ctx, Entity viewer, Entity stranger)
+    private static bool StrayDisclosure(GraphOpsNodeDriverContext ctx, Entity viewer, Entity stranger)
     {
         return ctx.Knowledge!.TryGet(viewer, stranger, currentTick: 0, out _);
     }

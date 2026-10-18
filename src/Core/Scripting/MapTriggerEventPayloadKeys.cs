@@ -1,10 +1,5 @@
 namespace Ludots.Core.Scripting
 {
-    /// <summary>
-    /// ScriptContext payload keys carried by map trigger events
-    /// (EntitySpawned / EntityDied / EntityAliveCountChanged /
-    /// RegionEntered / RegionExited).
-    /// </summary>
     public static class MapTriggerEventPayloadKeys
     {
         public const string SourceEntity = "MapTrigger.SourceEntity";      // Entity

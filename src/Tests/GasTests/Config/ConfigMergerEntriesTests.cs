@@ -7,9 +7,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Unit tests for ConfigMerger.MergeArrayByIdToEntries — the core merge primitive.
-    /// </summary>
     [TestFixture]
     public class ConfigMergerEntriesTests
     {

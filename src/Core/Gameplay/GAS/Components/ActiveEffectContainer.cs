@@ -12,7 +12,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
         public const int CAPACITY = GasConstants.ACTIVE_EFFECT_CONTAINER_CAPACITY;
         
-        // Parallel arrays for Entity fields
         public fixed int Ids[CAPACITY];
         public fixed int WorldIds[CAPACITY];
         public fixed int Versions[CAPACITY];
@@ -22,13 +21,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public bool Add(Entity entity)
         {
             if (Count >= CAPACITY) return false;
-            
-            // We need to read private fields? 
-            // Entity fields are public readonly in the file I read!
-            // public readonly int Id;
-            // public readonly int WorldId;
-            // public readonly int Version;
-            // So we can read them directly.
             
             Ids[Count] = entity.Id;
             WorldIds[Count] = entity.WorldId;
@@ -43,7 +35,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 if (Ids[i] == entity.Id && WorldIds[i] == entity.WorldId && Versions[i] == entity.Version)
                 {
-                    // Swap remove
                     int last = Count - 1;
                     Ids[i] = Ids[last];
                     WorldIds[i] = WorldIds[last];

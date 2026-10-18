@@ -22,8 +22,6 @@ namespace Ludots.Tests.GAS
             That(back, Is.EqualTo(hex));
         }
 
-        // ── Custom HexMetrics tests ──
-
         [TestCase(0, 0)]
         [TestCase(3, -2)]
         [TestCase(-1, 5)]

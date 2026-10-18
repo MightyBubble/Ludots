@@ -14,8 +14,8 @@ namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
     /// BT composition sugar (BtSequence/BtSelector/BtDecorator): compile-shape, fail-closed,
-    /// and single-run behavior. Judge (a): the tree structure appears in the instruction
-    /// stream as plain Call/Return/CompareEqInt/JumpIfFalse — sugar never becomes an opcode.
+    /// and single-run behavior. The tree structure appears in the instruction stream as plain
+    /// Call/Return/CompareEqInt/JumpIfFalse — sugar never becomes an opcode.
     /// </summary>
     [TestFixture]
     [Category("ci-gate")]
@@ -24,7 +24,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtTree_CompilesToPlainOpcodes_NoNewOpcode()
         {
-            GraphControlFlowCompileResult compiled = CompileTreeResult(CreateJudgeTreeJson());
+            GraphControlFlowCompileResult compiled = CompileTreeResult(CreateFixtureTreeJson());
 
             Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
             GraphInstruction[] program = compiled.Package!.Value.Program;
@@ -331,7 +331,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtSequence_NoChildren_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.ControlEdges.RemoveAll(e => e.From == "seq");
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
@@ -345,7 +345,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtComposite_UnknownControlPort_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.ControlEdges.Add(new GraphControlFlowEdge("seq", GraphControlFlowPorts.Next, "c1"));
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
@@ -357,7 +357,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtComposite_MalformedChildPort_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.ControlEdges.Add(new GraphControlFlowEdge("seq", "child:abc", "c1"));
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
@@ -369,11 +369,11 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtDecorator_EmptyOrUnknownKind_FailsClosed()
         {
-            GraphControlFlowDocument empty = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument empty = CompileDocument(CreateFixtureTreeJson());
             empty.Nodes.First(n => n.Id == "inv").DecoratorKind = " ";
             Assert.That(GraphControlFlowCompiler.Compile(empty).Succeeded, Is.False);
 
-            GraphControlFlowDocument unknown = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument unknown = CompileDocument(CreateFixtureTreeJson());
             unknown.Nodes.First(n => n.Id == "inv").DecoratorKind = "succeeder";
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(unknown);
             Assert.That(compiled.Succeeded, Is.False);
@@ -384,7 +384,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtDecorator_MissingChild_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.ControlEdges.RemoveAll(e => e.From == "inv");
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
@@ -396,7 +396,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtSugar_NonScriptKind_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.Kind = "Effect";
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
@@ -409,7 +409,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtSugar_EntryNotComposite_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.Entry = "c1";
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
@@ -421,7 +421,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtLeafChain_AuthoredHaltReturnInt_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.Nodes.Add(new GraphControlFlowNode { Id = "haltLeaf", Op = nameof(GraphNodeOp.HaltReturnInt) });
             doc.ControlEdges.Add(new GraphControlFlowEdge("sel", GraphControlFlowPorts.Child(2), "haltLeaf"));
 
@@ -434,7 +434,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtComposite_EnteredByNextEdge_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.ControlEdges.RemoveAll(e => e.From == "sel" && e.FromPort == GraphControlFlowPorts.Child(0));
             doc.ControlEdges.Add(new GraphControlFlowEdge("c1", GraphControlFlowPorts.Next, "sel"));
 
@@ -447,7 +447,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void BtLeafTerminal_FloatOutput_FailsClosed()
         {
-            GraphControlFlowDocument doc = CompileDocument(CreateJudgeTreeJson());
+            GraphControlFlowDocument doc = CompileDocument(CreateFixtureTreeJson());
             doc.Nodes.Add(new GraphControlFlowNode { Id = "fLeaf", Op = nameof(GraphNodeOp.ConstFloat), FloatValue = 1f });
             doc.ControlEdges.Add(new GraphControlFlowEdge("sel", GraphControlFlowPorts.Child(2), "fLeaf"));
 
@@ -465,11 +465,11 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         /// <summary>
-        /// Judge (a) fixture: BtSequence(3 children) wrapping a BtSelector(2 children) and a
+        /// Fixture: BtSequence(3 children) wrapping a BtSelector(2 children) and a
         /// BtDecorator(inverter). c1 succeeds, the selector short-circuits on its second child,
         /// the inverter flips it back to Failure — the tick must halt with 0.
         /// </summary>
-        private static string CreateJudgeTreeJson()
+        private static string CreateFixtureTreeJson()
             => """
                 {
                   "kind": "Script",

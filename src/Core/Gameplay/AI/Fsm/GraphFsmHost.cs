@@ -11,7 +11,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 namespace Ludots.Core.Gameplay.AI.Fsm
 {
     /// <summary>
-    /// FSM 图宿主（FSM-1a）：一张由 FsmState 糖分派的 Script 图 + 每 agent 一个私有
+    /// FSM 图宿主：一张由 FsmState 糖分派的 Script 图 + 每 agent 一个私有
     /// MapVariableStore（相位 SSOT，map 变量语义）+ 每 agent 常驻执行帧。
     /// 每波每 agent 恰好一个 dispatch slice：喂胶水（传感器写 I[0]）→ 读 stateVar 分派到
     /// 相位臂 → 臂内 WriteMapVarInt 迁移相位，下一波生效（与 HFSM 每 tick 至多一次迁移

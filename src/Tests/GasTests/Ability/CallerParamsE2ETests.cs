@@ -45,10 +45,6 @@ namespace Ludots.Tests.GAS
             EffectParamKeys.Initialize();
         }
 
-        // ------------------------------------------------------------
-        //  Scenario: CallerParams override ForceX/Y in ApplyForce2D preset
-        // ------------------------------------------------------------
-
         [Test]
         public void CallerParams_OverrideForceValues_InInstantEffect()
         {
@@ -77,7 +73,6 @@ namespace Ludots.Tests.GAS
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
-                // Publish request with CallerParams overriding default force
                 int tplId = EffectTemplateIdRegistry.GetId("Effect.Preset.ApplyForce2D");
                 That(tplId, Is.GreaterThan(0), "Template should be registered");
 
@@ -172,10 +167,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ------------------------------------------------------------
-        //  Scenario: Request without CallerParams uses template ConfigParams
-        // ------------------------------------------------------------
-
         [Test]
         public void NoCallerParams_UsesTemplateConfigParams()
         {
@@ -235,10 +226,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ------------------------------------------------------------
-        //  Scenario: Graph-originated CallerParams bridge
-        // ------------------------------------------------------------
-
         [Test]
         public void GraphBridge_EffectArgs_ConvertsToCallerParams()
         {
@@ -271,10 +258,6 @@ namespace Ludots.Tests.GAS
             That(req.CallerParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy), Is.True);
             That(fy, Is.EqualTo(-3.3f).Within(1e-6f));
         }
-
-        // ------------------------------------------------------------
-        //  Scenario: EffectRequest.CallerParams multiple keys
-        // ------------------------------------------------------------
 
         [Test]
         public void CallerParams_MultipleKeys_AllPreservedInRequest()
@@ -594,10 +577,6 @@ namespace Ludots.Tests.GAS
             That(world.Get<GameplayTagContainer>(actor).HasTag(lockoutTagId), Is.False);
             That(world.Get<ActiveEffectContainer>(actor).Count, Is.EqualTo(0));
         }
-
-        // ------------------------------------------------------------
-        //  Helpers
-        // ------------------------------------------------------------
 
         private static void SetupEffectsJson(string root)
         {

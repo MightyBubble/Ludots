@@ -15,8 +15,6 @@ namespace Ludots.Core.Map.Hex
 
         public int S => -Q - R;
 
-        // Grid Constants
-        // Assuming 4 meters per edge as per requirements
         public const float EdgeLength = 4.0f; 
 
         public const int EdgeLengthCm = 400;
@@ -29,9 +27,7 @@ namespace Ludots.Core.Map.Hex
         public const float HexWidth = 6.92820323f; // sqrt(3) * 4
         public const float HexHeight = 8.0f;       // 2 * 4
         
-        // Horizontal distance between adjacent column centers
         public const float ColSpacing = HexWidth; 
-        // Vertical distance between adjacent row centers
         public const float RowSpacing = 6.0f; // 1.5 * 4
 
         public HexCoordinates(int q, int r)
@@ -217,7 +213,7 @@ namespace Ludots.Core.Map.Hex
 
         /// <summary>
         /// Generates a unique chunk key for the given chunk coordinates.
-        /// Packs two shorts (chunkX, chunkY) into a long.
+        /// Packs two ints (chunkX, chunkY) into a long.
         /// </summary>
         public static long GetChunkKey(int chunkX, int chunkY)
         {
@@ -243,7 +239,6 @@ namespace Ludots.Core.Map.Hex
 
         public override int GetHashCode()
         {
-            // Optimized hash code for small integers
             return HashCode.Combine(Q, R);
         }
 

@@ -13,11 +13,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// OnPeriod 纯属性增量编译内核的健全性边界：判定器命中/不命中/混合边界、
-    /// 内核与解释 VM 的逐位等价（含 RNG 种子链）、守卫失败落回解释路径并保持
-    /// 事务回滚语义、死亡目标的静默跳过、无相位工作模板的空程序编译。
-    /// </summary>
     [TestFixture]
     public sealed class EffectPeriodKernelTests
     {

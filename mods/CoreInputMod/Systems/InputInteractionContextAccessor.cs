@@ -116,8 +116,7 @@ namespace CoreInputMod.Systems
 
             // Selection-routed casts act on the command-source primary (the selected entity);
             // sessions without a selection (massnav-style camera seats) fall back to the
-            // possessed rep. fe1dae22d6 dropped the first arm, sending showcase casts to the
-            // seat rep instead of the selected unit.
+            // possessed rep.
             if (TryGetCommandSourceOwner(out Entity commandOwner) &&
                 TryGetCommandSourcePrimary(commandOwner, out Entity selected) &&
                 _world.IsAlive(selected) &&
@@ -130,8 +129,8 @@ namespace CoreInputMod.Systems
             return GetSolePossessedRepOrNull();
         }
 
-        /// <summary>Presentation-side convention for the command-actor roster collection (v2:
-        /// the key is this surface's own declaration; contexts no longer route collections).</summary>
+        /// <summary>Presentation-side convention for the command-actor roster collection:
+        /// the key is this surface's own declaration.</summary>
         internal const string CommandActorCollectionKey = "collection.command.source";
 
         public Entity GetSolePossessedRepOrNull()

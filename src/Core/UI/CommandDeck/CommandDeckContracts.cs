@@ -5,7 +5,7 @@ using Arch.Core;
 namespace Ludots.Core.UI.CommandDeck
 {
     /// <summary>
-    /// CommandDeck display modes (WPK-3). Four presentation strategies over one ability-backed
+    /// CommandDeck display modes. Four presentation strategies over one ability-backed
     /// command pipeline — not four backends.
     /// </summary>
     public enum CommandDeckDisplayMode : byte

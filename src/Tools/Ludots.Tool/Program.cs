@@ -26,10 +26,8 @@ namespace Ludots.Tool
         {
             var rootCommand = new RootCommand("Ludots Mod Development Tool");
 
-            // --- 'mod' command group ---
             var modCommand = new Command("mod", "Manage Ludots mods");
             
-            // 'init' command
             var initCommand = new Command("init", "Initialize a new mod project");
             var modIdOption = new Option<string>("--id", "The ID of the mod");
             modIdOption.IsRequired = true;
@@ -46,7 +44,6 @@ namespace Ludots.Tool
                 InitMod(id, dir, template);
             });
             
-            // 'build' command
             var buildCommand = new Command("build", "Build the mod project");
             var buildIdOption = new Option<string>("--id", "The ID of the mod to build");
             buildIdOption.IsRequired = true;
@@ -658,7 +655,6 @@ namespace {modId}
                 return;
             }
             
-            // Run dotnet build
             var process = System.Diagnostics.Process.Start("dotnet", $"build \"{csprojPath}\"");
             process.WaitForExit();
             

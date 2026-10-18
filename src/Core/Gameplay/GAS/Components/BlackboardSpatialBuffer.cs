@@ -68,9 +68,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
-        /// <summary>
-        /// Get the number of points for a key.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetPointCount(int key)
         {
@@ -83,9 +80,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
 
-        /// <summary>
-        /// Get a point by key and index.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetPointAt(int key, int pointIndex, out Vector3 point)
         {
@@ -212,7 +206,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 {
                     point = new Vector3(px[offset], py[offset], pz[offset]);
                     
-                    // Shift remaining points
                     for (int i = 0; i < pointCounts[idx] - 1; i++)
                     {
                         px[offset + i] = px[offset + i + 1];
@@ -225,9 +218,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
-        /// <summary>
-        /// Clear all points for a key.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ClearPoints(int key)
         {
@@ -240,16 +230,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
         }
 
-        /// <summary>
-        /// Remove an entry entirely.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RemoveEntry(int key)
         {
             int idx = FindEntry(key);
             if (idx < 0) return false;
             
-            // Shift remaining entries
             fixed (int* keys = Keys)
             fixed (int* pointCounts = PointCounts)
             fixed (float* px = PointsX)
@@ -275,18 +261,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
-        /// <summary>
-        /// Check if a key exists.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasKey(int key)
         {
             return FindEntry(key) >= 0;
         }
 
-        /// <summary>
-        /// Clear all entries.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()
         {

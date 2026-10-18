@@ -420,7 +420,6 @@ namespace Ludots.Core.Config
                     {
                         AngleRad = facingAngle,
                     };
-                    // Seed VisualTransform from the effective batch placement.
                     VisualTransform visual = CreatePlacementVisualTransform(in worldPosition, facingAngle);
                     CullState cull = descriptor.CullState;
                     visuals[componentIndex] = visual;

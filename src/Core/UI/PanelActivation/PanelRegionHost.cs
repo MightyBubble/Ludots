@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Ludots.Core.UI.PanelActivation
 {
     /// <summary>
-    /// Region-side executor (#1014): turns activation-store truth into surface
+    /// Region-side executor: turns activation-store truth into surface
     /// lease diffs. The host never decides visibility; it reconciles leases with
     /// the snapshot written by ShowPanel/HidePanel ops (or direct API calls).
     /// </summary>

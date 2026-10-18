@@ -10,8 +10,7 @@ using Raylib_cs;
 namespace Ludots.Tests.RaylibAdapter;
 
 /// <summary>
-/// RaylibAssetStore 的消费者级回归（#1327 复核补测）：Dispose 后获取、材质部分绑定失败的租约回收、
-/// 蒙皮缓存链式回退聚合。装载/销毁全部走假委托，不触碰 GL。
+/// 装载/销毁全部走假委托，这些消费者级回归不触碰 GL。
 /// </summary>
 [TestFixture]
 public sealed class RaylibAssetStoreConsumerTests

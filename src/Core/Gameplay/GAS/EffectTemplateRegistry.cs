@@ -38,8 +38,6 @@ namespace Ludots.Core.Gameplay.GAS
         DeployConsumeSource = 16,
     }
 
-    // ── TargetResolver: pluggable target fan-out for effects ──
-
     /// <summary>
     /// How the resolver collects targets.
     /// None = no fan-out (default, current 1:1 behavior).
@@ -81,7 +79,7 @@ namespace Ludots.Core.Gameplay.GAS
         OriginalSource = 0,
         OriginalTarget = 1,
         OriginalTargetContext = 2,
-        ResolvedEntity = 3,   // the entity found by the resolver
+        ResolvedEntity = 3,
     }
 
     /// <summary>
@@ -129,8 +127,6 @@ namespace Ludots.Core.Gameplay.GAS
         public uint LayerMask;         // 0 = no layer filter
     }
 
-    // ── Three-layer Target Resolution ──
-
     /// <summary>
     /// How to FIND targets (spatial query, hex, graph, relationship...).
     /// </summary>
@@ -161,8 +157,6 @@ namespace Ludots.Core.Gameplay.GAS
         public TargetResolverContextMapping ContextMapping;
     }
 
-    // ── Projectile + UnitCreation descriptors ──
-
     /// <summary>
     /// Parameters for LaunchProjectile effects.
     /// </summary>
@@ -180,17 +174,12 @@ namespace Ludots.Core.Gameplay.GAS
         public int HitEffectTemplateId;
         /// <summary>Effect template ID used only for presentation startup binding.</summary>
         public int PresentationEffectTemplateId;
-        /// <summary>How the projectile computes movement.</summary>
         public ProjectileTravelMode TravelMode;
-        /// <summary>How the projectile reacts to mid-flight entity collisions.</summary>
         public ProjectileImpactPolicy ImpactPolicy;
-        /// <summary>Collision query half-width in centimeters.</summary>
         public int CollisionHalfWidthCm;
-        /// <summary>Relationship filter applied to collision hits.</summary>
         public RelationFilter CollisionRelationFilter;
-        /// <summary>Whether to ignore the source entity in collision hits.</summary>
         public bool CollisionExcludeSource;
-        /// <summary>Maximum number of distinct collision hits before despawn. Must fit ProjectileState.HitHistoryCapacity.</summary>
+        /// <summary>Must fit ProjectileState.HitHistoryCapacity.</summary>
         public int MaxHitCount;
     }
 
@@ -206,9 +195,6 @@ namespace Ludots.Core.Gameplay.GAS
         ContinueOnHit = 2,
     }
 
-    /// <summary>
-    /// Parameters for CreateUnit effects.
-    /// </summary>
     public struct UnitCreationDescriptor
     {
         public UnitCreationPlacementPattern PlacementPattern;
@@ -219,15 +205,12 @@ namespace Ludots.Core.Gameplay.GAS
         public string TemplateId;
         /// <summary>True when CreateUnit should materialize a template instead of a bare UnitType.</summary>
         public bool UseTemplateSpawn;
-        /// <summary>Number of units to create.</summary>
         public int Count;
         /// <summary>Spawn offset radius from target position (cm).</summary>
         public int OffsetRadius;
         /// <summary>Effect template ID to apply to each spawned unit.</summary>
         public int OnSpawnEffectTemplateId;
-        /// <summary>Whether the spawned unit should inherit PlayerOwner from the source entity.</summary>
         public bool CopySourcePlayerOwner;
-        /// <summary>Whether the source entity should become the parent relation of the spawned unit.</summary>
         public bool LinkSourceAsParent;
         /// <summary>Fixed formation radius in centimeters for non-scatter patterns.</summary>
         public int PlacementRadiusCm;
@@ -249,12 +232,8 @@ namespace Ludots.Core.Gameplay.GAS
         TangentCounterClockwise = 3,
     }
 
-    /// <summary>
-    /// Direction mode for displacement effects.
-    /// </summary>
     public enum DisplacementDirectionMode : byte
     {
-        /// <summary>Move toward target entity.</summary>
         ToTarget = 0,
         /// <summary>Move away from source entity (knockback).</summary>
         AwayFromSource = 1,
@@ -273,11 +252,8 @@ namespace Ludots.Core.Gameplay.GAS
         public DisplacementDirectionMode DirectionMode;
         /// <summary>Fixed direction in radians (only used when DirectionMode=Fixed). Stored as int for Fix64 conversion.</summary>
         public int FixedDirectionDeg;
-        /// <summary>Total distance to travel in centimeters.</summary>
         public int TotalDistanceCm;
-        /// <summary>Total duration in ticks.</summary>
         public int TotalDurationTicks;
-        /// <summary>Whether to override navigation input during displacement.</summary>
         public bool OverrideNavigation;
     }
 
@@ -307,14 +283,12 @@ namespace Ludots.Core.Gameplay.GAS
         public bool SnapSubjectToParentPosition;
         public int RelationshipTypeId;
 
-        // ── Attach 参数（局部姿 + 继承声明）──
         public int AttachOffsetXCm;
         public int AttachOffsetYCm;
         public int AttachFacingDeg;
         public bool AttachInheritParentFacing;
         public Ludots.Core.Components.AttachedOffsetRotation AttachOffsetRotation;
 
-        // ── Detach 参数（落位策略）──
         public Ludots.Core.Gameplay.Attachment.DetachPlacement DetachPlacementKind;
         public int DetachPerimeterRadiusCm;
     }
@@ -332,8 +306,6 @@ namespace Ludots.Core.Gameplay.GAS
         public int EntityOrderIntArg0;
         public OrderSubmitMode SubmitMode;
     }
-
-    // ── EffectTemplateData ──
 
     public struct EffectTemplateData
     {
@@ -364,12 +336,10 @@ namespace Ludots.Core.Gameplay.GAS
         public bool ParticipatesInResponse;
         public EffectModifiers Modifiers;
 
-        // ── Target fan-out (three-layer split) ──
         public TargetQueryDescriptor TargetQuery;
         public TargetFilterDescriptor TargetFilter;
         public TargetDispatchDescriptor TargetDispatch;
 
-        // ── Projectile + UnitCreation + Displacement ──
         public ProjectileDescriptor Projectile;
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
@@ -380,19 +350,15 @@ namespace Ludots.Core.Gameplay.GAS
         public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
         public int ProgressionId;
 
-        // ── Phase Graph bindings ──
         public EffectPhaseGraphBindings PhaseGraphBindings;
         public EffectConfigParams ConfigParams;
 
-        // ── Phase Listeners (bound to this effect's lifecycle) ──
-        // Uses EffectPhaseListenerBuffer directly; OwnerEffectIds are 0 at compile-time,
-        // filled with real entity ids at runtime registration.
+        // Phase Listeners (bound to this effect's lifecycle): uses EffectPhaseListenerBuffer directly;
+        // OwnerEffectIds are 0 at compile-time, filled with real entity ids at runtime registration.
         public EffectPhaseListenerBuffer ListenerSetup;
 
-        // ── Granted Tags: tags contributed by this effect to the target ──
         public EffectGrantedTags GrantedTags;
 
-        // ── Stack Policy ──
         public bool HasStackPolicy;
         public StackPolicy StackPolicy;
         public StackOverflowPolicy StackOverflowPolicy;
@@ -657,7 +623,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return false;
             }
 
-            // Replace slot 0 if present; otherwise append.
             unsafe
             {
                 if (data.GrantedTags.Count <= 0)

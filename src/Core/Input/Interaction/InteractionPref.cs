@@ -101,7 +101,6 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        /// <summary>Remove the override for one ability template; true when an entry existed.</summary>
         public bool ClearAbilityOverride(int abilityTemplateId)
         {
             unsafe
@@ -128,7 +127,6 @@ namespace Ludots.Core.Input.Interaction
             return false;
         }
 
-        /// <summary>True when an override entry exists for the ability template.</summary>
         public bool TryGetAbilityOverride(int abilityTemplateId, out int commandIntentId, out int castDispatchProfileId)
         {
             commandIntentId = 0;

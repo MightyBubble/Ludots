@@ -950,8 +950,7 @@ namespace Ludots.Core.Presentation.Hud
             LaneState lane = _lanes[laneIndex];
             EnsureLaneCapacity(lane, lane.Count + 1);
             lane.Items[lane.Count++] = item;
-            // 稳定 id 条目必须登记索引：RemoveStable 只认 StableIndexById，漏登记即永生孤儿
-            // （#HUD 残留：边缘刮过的文本黏屏）。
+            // 稳定 id 条目必须登记索引：RemoveStable 只认 StableIndexById，漏登记即永生孤儿。
             if (item.StableId > 0)
             {
                 lane.StableIndexById[item.StableId] = lane.Count - 1;

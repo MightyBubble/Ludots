@@ -108,7 +108,6 @@ namespace Ludots.Tests.Presentation
                 new PresentationStableIdAllocator(),
                 definitions);
 
-            // Create a fake dead entity to use as parent
             Entity fakeParent = world.Create();
             world.Destroy(fakeParent);
 

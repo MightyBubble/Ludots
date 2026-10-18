@@ -6,7 +6,7 @@ using Ludots.Core.Config;
 namespace Ludots.Core.UI.ProductionOverview
 {
     /// <summary>
-    /// Loader for <c>UI/production_overview_profiles.json</c> (WPK-4). Catalog-declared DeepObject
+    /// Loader for <c>UI/production_overview_profiles.json</c>. Catalog-declared DeepObject
     /// merge through <see cref="ConfigPipeline"/>; structural validation fails fast. Reference
     /// existence is checked by <see cref="ProductionOverviewProfileRegistry.Install"/>.
     /// </summary>

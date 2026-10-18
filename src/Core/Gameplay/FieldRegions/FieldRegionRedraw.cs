@@ -10,7 +10,6 @@ namespace Ludots.Core.Gameplay.FieldRegions
     /// <summary>One runtime redraw edit: author region key plus inclusive rect strokes.</summary>
     public sealed record FieldRegionStrokeEdit(string RegionKey, IReadOnlyList<FieldCellRectStroke> Rects);
 
-    /// <summary>Summary of one applied redraw batch.</summary>
     public sealed record FieldRedrawResult(string LayerKey, int RegionsRegistered, int CellsChanged);
 
     /// <summary>
@@ -75,7 +74,6 @@ namespace Ludots.Core.Gameplay.FieldRegions
                 }
             }
 
-            // Phase 3: entities, footprints, projections.
             Dictionary<int, int> counts = FieldRegionMaterializer.CountRegionCells(layer.Field);
             FieldRegionMaterializer.EnsureRuntimeRegions(world, session, index, layer, counts);
             for (int regionId = 1; regionId <= layer.Regions.Count; regionId++)

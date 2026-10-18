@@ -56,7 +56,6 @@ namespace Ludots.Core.Presentation.Systems
 
             int tick = _session.CurrentTick;
 
-            // Project gameplay events into the presentation event stream for presenter rules.
             var events = _eventBus.Events;
             for (int i = 0; i < events.Count; i++)
             {
@@ -75,7 +74,6 @@ namespace Ludots.Core.Presentation.Systems
                     nameof(GameplayEventBus));
             }
 
-            // Project GAS-authored presentation events into the shared presentation stream.
             if (_gasEvents.Count > 0)
             {
                 var gasSpan = _gasEvents.Events;
@@ -232,7 +230,6 @@ namespace Ludots.Core.Presentation.Systems
                 _gasEvents.Clear();
             }
 
-            // Project owner fact changes into both the event stream and the owner-change index.
             var job = new TagChangedJob
             {
                 Stream = _stream,

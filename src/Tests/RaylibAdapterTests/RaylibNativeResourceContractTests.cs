@@ -8,7 +8,7 @@ namespace Ludots.Tests.RaylibAdapter;
 
 /// <summary>
 /// 源码契约：raylib 原生资源的加载/卸载在生产代码里只允许出现在 RaylibNativeResources 门面，
-/// 保证 RaylibNativeResourceLedger 台账不漏登记（#1322 W0）。
+/// 保证 RaylibNativeResourceLedger 台账不漏登记。
 /// 匹配是空白容忍的正则（Rl / Raylib / Raylib_cs.Raylib 三种限定形式），
 /// 但文本契约无法封死任意别名 using——最终防线是门面记账邻接检查与评审。
 /// </summary>

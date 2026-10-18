@@ -334,8 +334,6 @@ namespace Ludots.Tests.Presentation
                 "InitializeTransform 后世界位置应等于新 owner 变换加 anchor 偏移");
         }
 
-        // ── 夹具 ──
-
         private static GameEngine CreateEngine(string repoRoot, params string[] showcaseMods)
         {
             var mods = new List<string>(BaseMods);

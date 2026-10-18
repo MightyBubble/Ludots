@@ -583,7 +583,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             int borderSize = RcConfig.CalcBorder(radius, cellSize);
 
-            // detail 采样参数是运行时重烤的稳定性约束（NAV-R2）：采样间距过细 +
+            // detail 采样参数是运行时重烤的稳定性约束：采样间距过细 +
             // 误差阈值过紧时，BuildPolyDetail 的逐样例插入循环在大多边形上呈平方级
             // 膨胀，量化地形上误差永难收敛 → 单瓦分钟级阻塞。hull 顶点高度本就精确，
             // 粗间距 + 宽误差只损失面内高度细化，不影响寻路拓扑。sampleDist=0 会令

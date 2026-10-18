@@ -44,25 +44,21 @@ namespace Ludots.Core.Fields.Influence
             return field;
         }
 
-        /// <summary>Try to get existing field by key.</summary>
         public bool TryGet(string key, out InfluenceField field)
         {
             return _fields.TryGetValue(key, out field!);
         }
 
-        /// <summary>Remove field by key.</summary>
         public bool Remove(string key)
         {
             return _fields.Remove(key);
         }
 
-        /// <summary>Clear all fields.</summary>
         public void Clear()
         {
             _fields.Clear();
         }
 
-        /// <summary>Decay all registered fields by the same factor.</summary>
         public void DecayAll(float factor)
         {
             foreach (var field in _fields.Values)

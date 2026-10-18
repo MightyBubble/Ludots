@@ -151,7 +151,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryHexRange, LinearAll, GraphValueType.Void, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryHexRing, LinearAll, GraphValueType.Void, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryHexNeighbors, LinearAll, GraphValueType.Void);
-            // Effect-transactional: Script hosts may apply templates (#1536 behavior hosts),
+            // Effect-transactional: Script hosts may apply templates,
             // but the TriggerGraph dialect stays effect-free by contract.
             Add(rows, GraphNodeOp.ApplyEffectTemplate, EffectAndScriptOnly, GraphValueType.Void, portApplyTemplate, scriptPorts: portApplyTemplate, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.FanOutApplyEffect, LinearEffect, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
@@ -177,7 +177,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.TableReadInt, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             // World / presentation side effects: Effect gallery + Script/TriggerGraph hosts only.
             // Must not sit on LinearQueryScript — that mask leaked them into Score/Validation
-            // authoring while metadata still said Pure (#1410).
+            // authoring while metadata still said Pure.
             Add(rows, GraphNodeOp.ShowPanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.HidePanel, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.CreatePanel, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
@@ -199,9 +199,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SubmitEngageBatch, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTarget, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SubmitResponseChainOrder, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ActivateVirtualCamera, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
-            // to the caller; GraphReturnWriter must not steal collection writes). Optional source
-            // resolves the owner entity (defaults to caster) — map-domain observers writing another
-            // rep's collection declare it explicitly.
 
             Add(rows, GraphNodeOp.BindQueryCollection, ScriptAndTriggerGraph, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SetPanelAudience, EffectAndScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst, worldSideEffect: true);
@@ -236,9 +233,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.RelationshipAggSumMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.RelationshipAggMaxMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.RelationshipAggAverageMetric, QueryOnly, queryOut: GraphValueType.Int, queryPorts: portListSource, flags: GraphOperandRole.RelationshipTypeFlags, imm: GraphOperandRole.SymbolImm);
-            // D15 治根：集合查询读面 = Query | Script | TriggerGraph。Script 与 TriggerGraph
-            // 共用同一线性（Script 镜像）编译路径；此前 Script 能写集合（WriteCollection 含
-            // Script）却读不回来，是 D2 按需放行时遗留的不对称。槽图（函数体）读交接集合
+            // 集合查询读面 = Query | Script | TriggerGraph。Script 与 TriggerGraph
+            // 共用同一线性（Script 镜像）编译路径；槽图（函数体）读交接集合
             // 因此不需要伪装成 TriggerGraph。Query 纯函数禁写不变量不受影响（写操作不含 Query）。
             Add(rows, GraphNodeOp.QueryAllMapEntities, ScriptTriggerQuery, queryOut: GraphValueType.TargetList);
             Add(rows, GraphNodeOp.QueryFromCollection, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
@@ -330,7 +326,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SinkPresentationText, ScriptAndTriggerGraph, GraphValueType.Void, portA, scriptPorts: portA, imm: GraphOperandRole.Immediate, worldSideEffect: true);
             Add(rows, GraphNodeOp.LoadTextKey, ScriptAndTriggerGraph, GraphValueType.Text, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.StartDialogue, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
-            // ── Order-driven graph brains (issue #1536) ──
+            // ── Order-driven graph brains ──
             Add(rows, GraphNodeOp.LoadEntityPosX, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.LoadEntityPosY, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.IntToFloat, LinearQueryScript, GraphValueType.Float, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float);

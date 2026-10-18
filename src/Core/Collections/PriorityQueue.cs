@@ -22,10 +22,8 @@ namespace Ludots.Core.Collections
         private Node[] _nodes;
         private int _count;
         
-        // Optional: Map item to index for O(1) UpdatePriority or Contains?
-        // For simple A*, we often don't need DecreaseKey if we just add duplicates.
-        // But for strict 0-GC on complex types, we might. 
-        // For now, let's keep it simple: Binary Min-Heap.
+        // No item→index map (would allow O(1) UpdatePriority/Contains): A* adds duplicates
+        // instead of DecreaseKey; strict 0-GC on complex types might demand one later.
 
         public int Count => _count;
         public int Capacity => _nodes.Length;
@@ -57,7 +55,6 @@ namespace Ludots.Core.Collections
             T result = _nodes[0].Item;
             _count--;
             
-            // Move last item to root
             _nodes[0] = _nodes[_count];
             // Clear the last slot to release references if T is a class
             _nodes[_count] = default; 

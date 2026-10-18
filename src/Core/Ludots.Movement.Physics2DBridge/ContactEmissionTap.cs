@@ -9,7 +9,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Movement.Physics2DBridge
 {
     /// <summary>
-    /// Sensor-emission tap (#1469): routes contact begin/end edges whose party
+    /// Sensor-emission tap: routes contact begin/end edges whose party
     /// carries <see cref="RegionVolumeEmissionCm"/> into the unified region
     /// emission contract — the same outlet, vocabulary, and schema validation the
     /// vector volume and field membership lines use. Contact semantics stay

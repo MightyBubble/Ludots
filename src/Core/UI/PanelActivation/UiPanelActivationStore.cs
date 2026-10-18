@@ -5,7 +5,7 @@ using Ludots.Core.UI.PanelProjection;
 namespace Ludots.Core.UI.PanelActivation
 {
     /// <summary>
-    /// Activation truth for panel types (#1014 / constitution contract five).
+    /// Activation truth for panel types.
     /// Written exclusively by <see cref="PanelActivationApi"/> via the write token;
     /// everyone else reads. Show/hide requests come from ShowPanel/HidePanel graph ops
     /// or direct system API calls — the store never decides, it records.

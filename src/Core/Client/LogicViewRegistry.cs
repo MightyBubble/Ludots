@@ -6,7 +6,7 @@ using Ludots.Core.Gameplay.Camera;
 namespace Ludots.Core.Client
 {
     /// <summary>
-    /// Pure logical vision registry (Epic #896 / #902).
+    /// Pure logical vision registry.
     /// Participant-owned views and optional client-present view; presentation binds via <see cref="PresentBinding"/>.
     /// </summary>
     public sealed class LogicViewRegistry

@@ -211,7 +211,7 @@ namespace Ludots.Core.Config
         }
 
         /// <summary>
-        /// Public authoring registration for downstream assemblies (#1480): the
+        /// Public authoring registration for downstream assemblies: the
         /// physics project registers its own component setters this way at install
         /// time (same delegate shape as the built-ins).
         /// </summary>
@@ -1918,9 +1918,9 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 ForwardOffsetCm = forwardOffsetCm,
             });
 
-            // 位置跟随职责已并入通用 AttachmentPositionSyncSystem：跟随父的 manifestation
-            // 在装配期取得 AttachedLocalPose（前向偏移沿自身朝向旋转），朝向仍由
-            // ManifestationMotion2DSystem 计算。既有模板 JSON 无需变更。
+            // 跟随父的位置派生走通用 AttachmentPositionSyncSystem：此处为跟随的 manifestation
+            // 补挂 AttachedLocalPose（前向偏移沿自身朝向旋转）；朝向仍由
+            // ManifestationMotion2DSystem 计算。
             if (followParentPosition != 0)
             {
                 entity.Add(new Ludots.Core.Components.AttachedLocalPose

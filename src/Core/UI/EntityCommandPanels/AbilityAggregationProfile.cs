@@ -6,7 +6,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.UI.EntityCommandPanels
 {
-    /// <summary>Merged root of <c>UI/ability_aggregation_profiles.json</c> (RFC-0065 PNL-1/2, DEC-10).</summary>
+    /// <summary>Merged root of <c>UI/ability_aggregation_profiles.json</c>.</summary>
     public sealed class AbilityAggregationProfilesConfig
     {
         public List<AbilityAggregationProfileDefinition> Profiles { get; set; }
@@ -14,9 +14,9 @@ namespace Ludots.Core.UI.EntityCommandPanels
 
     /// <summary>
     /// One panel aggregation profile. <c>GroupBy</c> is a key selector expression resolved by prefix
-    /// through the registry's selector table (DEC-10, non-closed enum): <c>catalog.&lt;categoryPrefix&gt;</c>,
+    /// through the registry's selector table (non-closed enum): <c>catalog.&lt;categoryPrefix&gt;</c>,
     /// <c>template.id</c>, <c>ability.id</c>, plus any mod-registered prefix. <c>Overflow</c> is an
-    /// opaque registry key consumed by the panel router (PNL-3); the kernel never interprets it.
+    /// opaque registry key consumed by the panel router; the kernel never interprets it.
     /// </summary>
     public sealed class AbilityAggregationProfileDefinition
     {
@@ -29,7 +29,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
     /// Group key namespaces for <see cref="AbilityAggregationResult"/> keys. Keys are
     /// <c>(kind &lt;&lt; 32) | id</c> so groups sort deterministically by (kind, id).
     /// These are key layout constants, not a dispatch enum — grouping dispatch goes through
-    /// the registry's selector delegate table (DEC-11).
+    /// the registry's selector delegate table.
     /// </summary>
     public static class AbilityAggregationKeyKinds
     {
@@ -45,7 +45,6 @@ namespace Ludots.Core.UI.EntityCommandPanels
         /// <summary>Key id is the owner unit template plus command slot index.</summary>
         public const int OwnerTemplateSlot = 4;
 
-        /// <summary>Compose a group key from a kind namespace and an id.</summary>
         public static long MakeKey(int kind, int id)
         {
             return ((long)kind << 32) | (uint)id;
@@ -99,13 +98,10 @@ namespace Ludots.Core.UI.EntityCommandPanels
         private int _groupCount;
         private int _memberCount;
 
-        /// <summary>Number of groups produced by the last build.</summary>
         public int GroupCount => _groupCount;
 
-        /// <summary>Total number of (entity, slotIndex) members across all groups.</summary>
         public int MemberCount => _memberCount;
 
-        /// <summary>Group key of <paramref name="groupIndex"/> (see <see cref="AbilityAggregationKeyKinds"/> layout).</summary>
         public long GetGroupKey(int groupIndex)
         {
             ValidateGroupIndex(groupIndex);

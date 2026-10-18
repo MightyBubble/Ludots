@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Slice-3 acceptance (#1398): one right-click Command routes per hit-target kind through a
+    /// One right-click Command routes per hit-target kind through a
     /// data table — wolf → weapon cast (slot 0), tower → siege cast (slot 1), ground → moveTo.
     /// The whole chain is data: TriggerGraph + lookup table + abilities + Q4 formula effect.
     /// </summary>
@@ -162,7 +162,7 @@ namespace Ludots.Tests.GAS
                         new Ludots.Core.Gameplay.GAS.Components.ActiveEffectContainer(),
                         new Ludots.Core.Gameplay.GAS.Components.DirtyFlags(),
                         new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 },
-                        Attr2(600)),
+                        MoveSpeedAttr(600)),
                     "ballista_wolf" => Engine.World.Create(
                         new Ludots.Core.Components.WorldPositionCm { Value = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(xCm, yCm) },
                         Attr(300, 0),
@@ -219,7 +219,7 @@ namespace Ludots.Tests.GAS
                 return a;
             }
 
-            private static Ludots.Core.Gameplay.GAS.Components.AttributeBuffer Attr2(float moveSpeed)
+            private static Ludots.Core.Gameplay.GAS.Components.AttributeBuffer MoveSpeedAttr(float moveSpeed)
             {
                 var a = new Ludots.Core.Gameplay.GAS.Components.AttributeBuffer();
                 a.SetBase(Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("MoveSpeed"), moveSpeed);
@@ -337,7 +337,6 @@ namespace Ludots.Tests.GAS
                 HealthAttr = AttributeRegistry.GetId("Ballista.Health"),
             };
             Assert.That(ctx.HealthAttr, Is.GreaterThan(0), "Ballista.Health registered by fixture");
-            // 诊断：startup contexts + trigger mounts
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
             {
                 TestContext.Out.WriteLine($"[boot] input context[{i}]: {engine.MergedConfig.StartupInputContexts[i]}");

@@ -43,8 +43,8 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
 
     /// <summary>
     /// Sets the world entity each agent acts on (caster for its lifecycle/condition graphs).
-    /// Agents with no bound entity (unset or out-of-range) resolve to <see cref="Entity.Null"/>,
-    /// preserving the legacy register-only behavior of the showcase hosts.
+    /// Agents with no bound entity (unset or out-of-range) resolve to <see cref="Entity.Null"/>
+    /// and run register-only.
     /// </summary>
     public void EnsureAgentCasterCapacity(int capacity)
     {
@@ -63,7 +63,6 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         _agentCasters = next;
     }
 
-    /// <summary>Binds an agent slot to the world entity it acts on (its graphs' caster).</summary>
     public void SetAgentCaster(int agentIndex, Entity entity)
     {
         EnsureAgentCasterCapacity(agentIndex + 1);

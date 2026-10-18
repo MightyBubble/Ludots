@@ -4,15 +4,11 @@ using System.Numerics;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
-    /// <summary>
-    /// Result of triangulation containing vertices and triangle indices.
-    /// </summary>
     public readonly struct TriMesh
     {
         /// <summary>Vertices in XZ plane (Y is up in world space).</summary>
         public readonly Vector2[] Vertices;
 
-        /// <summary>Triangle indices (3 indices per triangle).</summary>
         public readonly int[] Triangles;
 
         public TriMesh(Vector2[] vertices, int[] triangles)
@@ -27,34 +23,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public static TriMesh Empty => new TriMesh(Array.Empty<Vector2>(), Array.Empty<int>());
     }
 
-    /// <summary>
-    /// Interface for polygon triangulation implementations.
-    /// </summary>
     public interface ITriangulator
     {
-        /// <summary>
-        /// Triangulates a polygon with optional holes.
-        /// </summary>
-        /// <param name="polygon">The polygon to triangulate.</param>
-        /// <param name="mesh">The resulting triangle mesh.</param>
-        /// <param name="error">Error message if triangulation fails.</param>
-        /// <returns>True if triangulation succeeded.</returns>
         bool TryTriangulate(Polygon polygon, out TriMesh mesh, out string error);
 
-        /// <summary>
-        /// Triangulates multiple polygons into a single mesh.
-        /// </summary>
         bool TryTriangulate(ValidPolygonSet polygonSet, out TriMesh mesh, out string error);
     }
 
-    /// <summary>
-    /// Factory for creating triangulator instances.
-    /// </summary>
     public static class TriangulatorFactory
     {
-        /// <summary>
-        /// Creates the default triangulator (Constrained Delaunay Triangulation).
-        /// </summary>
         public static ITriangulator CreateDefault()
         {
             return new CdtTriangulator();
@@ -88,22 +65,18 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             try
             {
-                // Convert IntPoints to Vector2
                 var outerPoints = ConvertToVector2(polygon.Outer);
                 
-                // Ensure CCW winding for outer
                 if (!IsCounterClockwise(outerPoints))
                 {
                     Array.Reverse(outerPoints);
                 }
 
-                // For polygons without holes, use simple ear clipping
                 if (polygon.Holes == null || polygon.Holes.Length == 0)
                 {
                     return TriangulateSimplePolygon(outerPoints, out mesh, out error);
                 }
 
-                // For polygons with holes, merge holes into outer boundary
                 var mergedPolygon = MergeHolesIntoOuter(outerPoints, polygon.Holes);
                 return TriangulateSimplePolygon(mergedPolygon, out mesh, out error);
             }
@@ -136,7 +109,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     return false;
                 }
 
-                // Offset triangle indices for merged mesh
                 int baseIndex = allVertices.Count;
                 allVertices.AddRange(polyMesh.Vertices);
 
@@ -191,7 +163,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 return true;
             }
 
-            // Create vertex index list
             var indices = new List<int>(n);
             for (int i = 0; i < n; i++)
                 indices.Add(i);
@@ -218,11 +189,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     var pCur = points[iCur];
                     var pNext = points[iNext];
 
-                    // Check if this is a convex vertex (ear candidate)
                     if (!IsConvexVertex(pPrev, pCur, pNext))
                         continue;
 
-                    // Check if any other vertex is inside this triangle
                     bool isEar = true;
                     for (int j = 0; j < indices.Count; j++)
                     {
@@ -238,12 +207,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                     if (isEar)
                     {
-                        // Add triangle (CCW order)
                         triangles.Add(iPrev);
                         triangles.Add(iCur);
                         triangles.Add(iNext);
 
-                        // Remove the ear vertex
                         indices.RemoveAt(i);
                         earFound = true;
                         break;
@@ -253,7 +220,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 if (!earFound)
                 {
                     // No ear found - polygon might be malformed
-                    // Try to continue with remaining vertices
                     if (indices.Count >= 3)
                     {
                         // Force add remaining as triangle(s)
@@ -268,7 +234,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 }
             }
 
-            // Add final triangle
             if (indices.Count == 3)
             {
                 triangles.Add(indices[0]);
@@ -288,7 +253,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         private static bool IsConvexVertex(Vector2 prev, Vector2 cur, Vector2 next)
         {
-            // Cross product of (cur - prev) and (next - cur)
             float cross = (cur.X - prev.X) * (next.Y - cur.Y) - (cur.Y - prev.Y) * (next.X - cur.X);
             return cross > 0; // CCW = convex
         }
@@ -324,13 +288,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 var holePoints = ConvertToVector2(hole);
 
-                // Ensure CW winding for holes
                 if (IsCounterClockwise(holePoints))
                 {
                     Array.Reverse(holePoints);
                 }
 
-                // Find the rightmost vertex in the hole
                 int rightmostHole = 0;
                 for (int i = 1; i < holePoints.Length; i++)
                 {
@@ -340,29 +302,23 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 var holeVertex = holePoints[rightmostHole];
 
-                // Find the closest visible vertex in the outer boundary
                 int closestOuter = FindClosestVisibleVertex(result.ToArray(), holeVertex);
                 if (closestOuter < 0)
                     closestOuter = 0; // Fallback
 
-                // Insert hole into outer boundary with bridge edges
                 var merged = new List<Vector2>();
 
-                // Add outer vertices up to and including the bridge point
                 for (int i = 0; i <= closestOuter; i++)
                     merged.Add(result[i]);
 
-                // Add hole vertices starting from rightmost, wrapping around
                 for (int i = 0; i <= holePoints.Length; i++)
                 {
                     int idx = (rightmostHole + i) % holePoints.Length;
                     merged.Add(holePoints[idx]);
                 }
 
-                // Bridge back to outer
                 merged.Add(result[closestOuter]);
 
-                // Add remaining outer vertices
                 for (int i = closestOuter + 1; i < result.Count; i++)
                     merged.Add(result[i]);
 

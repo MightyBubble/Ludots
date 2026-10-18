@@ -25,7 +25,7 @@ namespace Ludots.Core.Engine
 
         public MapSession CurrentMapSession { get; private set; }
 
-        // Board-scoped query facades (#1567 slice 2): one shared world partition, per-board
+        // Board-scoped query facades: one shared world partition, per-board
         // semantics. Entities stay world-indexed; a board scope swaps in that board's
         // converter/hex metrics/extent, so hex satellites answer with their own topology.
         private readonly Dictionary<string, Ludots.Core.Spatial.SpatialQueryService> _boardScopedQueries =

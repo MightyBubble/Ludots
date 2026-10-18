@@ -6,10 +6,6 @@ using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Gameplay.Spawning.Systems
 {
-    /// <summary>
-    /// Removes child manifestations that are explicitly tied to a parent's
-    /// active ability execution.
-    /// </summary>
     public sealed class DestroyWhenParentExecutionEndsSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()

@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>RFC-0065 CTRL-2: runtime spawns join the owns topology exactly like map-load binding.</summary>
+    /// <summary>Runtime spawns join the owns topology exactly like map-load binding.</summary>
     [TestFixture]
     public sealed class OwnershipEdgeBuilderTests
     {

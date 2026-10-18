@@ -4,9 +4,9 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.Config
 {
     /// <summary>
-    /// Map-level spatial budget (#1567 rootboard ruling): partition granularity and
-    /// streaming capacity for the whole map. Null entries mean not authored; when
-    /// authored, they are the single budget every board runs on.
+    /// Map-level spatial budget: partition granularity and streaming capacity for
+    /// the whole map. Null entries mean not authored; when authored, they are the
+    /// single budget every board runs on.
     /// </summary>
     public class WorldTuningConfig
     {

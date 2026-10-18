@@ -48,7 +48,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
     private int[] _target = Array.Empty<int>();
     private float[] _ex = Array.Empty<float>();
     private float[] _ey = Array.Empty<float>();
-    private bool[] _eAlive = Array.Empty<bool>();
+    private bool[] _enemyAlive = Array.Empty<bool>();
 
     public static readonly Vector2[] PatrolPath =
     {
@@ -63,7 +63,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
     public int[] TargetIndex => _target;
     public float[] EnemyX => _ex;
     public float[] EnemyY => _ey;
-    public bool[] EnemyAlive => _eAlive;
+    public bool[] EnemyAlive => _enemyAlive;
     public int EnemyCount => _ex.Length;
     public bool Paused => _paused;
     public bool L2Enabled => _l2Enabled;
@@ -113,7 +113,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
         }
 
         _brain = new BtBrainHostSystem(_world, _programs, api, new AlwaysAdvanceGate(), _behavior);
-        _ex = new float[2]; _ey = new float[2]; _eAlive = new bool[2];
+        _ex = new float[2]; _ey = new float[2]; _enemyAlive = new bool[2];
         Metrics.AgentCount = n;
     }
 
@@ -128,7 +128,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
     public void TogglePaused() => _paused = !_paused;
     public void Step() { if (_paused) Advance(_thinkPeriodSeconds); }
     public void ToggleL2() { _l2Enabled = !_l2Enabled; if (!_l2Enabled) Array.Clear(_intent); }
-    public void ToggleStimulus() { _stimulusEnabled = !_stimulusEnabled; _time = 0f; if (!_stimulusEnabled) Array.Clear(_eAlive); }
+    public void ToggleStimulus() { _stimulusEnabled = !_stimulusEnabled; _time = 0f; if (!_stimulusEnabled) Array.Clear(_enemyAlive); }
     public void IncreaseSightRadius() => _sightRadius = MathF.Min(10f, _sightRadius + 1.5f);
     public void DecreaseSightRadius() => _sightRadius = MathF.Max(1.5f, _sightRadius - 1.5f);
     public void IncreaseThinkPeriod() => _thinkPeriodSeconds = MathF.Min(1f, _thinkPeriodSeconds * 1.5f);
@@ -146,7 +146,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
         int patrol = 0, chase = 0, attack = 0, alive = 0;
         for (int i = 0; i < _intent.Length; i++)
             { switch (_intent[i]) { case 1: chase++; break; case 2: attack++; break; default: patrol++; break; } }
-        for (int i = 0; i < _eAlive.Length; i++) if (_eAlive[i]) alive++;
+        for (int i = 0; i < _enemyAlive.Length; i++) if (_enemyAlive[i]) alive++;
         return new GraphShowcaseControlState(
             "BT Arena", "Component-driven behavior tree showcase.",
             _status,
@@ -199,26 +199,26 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
     private int DistanceToTargetCm(int guard)
     {
         int e = _target[guard];
-        if (e < 0 || !_eAlive[e]) return NoTargetDistanceCm;
+        if (e < 0 || !_enemyAlive[e]) return NoTargetDistanceCm;
         float dx = _ex[e] - _gx[guard], dy = _ey[e] - _gy[guard];
         return (int)MathF.Ceiling(MathF.Sqrt(dx*dx + dy*dy) * 100f);
     }
 
     private void UpdateEnemies()
     {
-        if (!_stimulusEnabled) { Array.Clear(_eAlive); return; }
+        if (!_stimulusEnabled) { Array.Clear(_enemyAlive); return; }
         float c = _time % 8f;
-        if (c < 6f) { _eAlive[0] = true; _ex[0] = 12f - c*3.5f; _ey[0] = MathF.Sin(c*1.2f)*2f; } else _eAlive[0] = false;
+        if (c < 6f) { _enemyAlive[0] = true; _ex[0] = 12f - c*3.5f; _ey[0] = MathF.Sin(c*1.2f)*2f; } else _enemyAlive[0] = false;
         float c2 = (_time+4f) % 10f;
-        if (c2 < 5f) { _eAlive[1] = true; _ex[1] = -12f + c2*4f; _ey[1] = 3f; } else _eAlive[1] = false;
+        if (c2 < 5f) { _enemyAlive[1] = true; _ex[1] = -12f + c2*4f; _ey[1] = 3f; } else _enemyAlive[1] = false;
     }
 
     private int FindNearestEnemy(int guard)
     {
         int best = -1; float bd = _sightRadius;
-        for (int e = 0; e < _eAlive.Length; e++)
+        for (int e = 0; e < _enemyAlive.Length; e++)
         {
-            if (!_eAlive[e]) continue;
+            if (!_enemyAlive[e]) continue;
             float d = MathF.Sqrt((_ex[e]-_gx[guard])*(_ex[e]-_gx[guard]) + (_ey[e]-_gy[guard])*(_ey[e]-_gy[guard]));
             if (d <= bd) { bd = d; best = e; }
         }
@@ -230,7 +230,7 @@ public sealed class BehaviorTreeArenaRuntime : IDisposable
         for (int i = 0; i < _gx.Length; i++)
         {
             if (_intent[i] == 2) continue;
-            bool ch = _intent[i] == 1 && _target[i] >= 0 && _eAlive[_target[i]];
+            bool ch = _intent[i] == 1 && _target[i] >= 0 && _enemyAlive[_target[i]];
             Vector2 d; float sp;
             if (ch) { int e = _target[i]; d = new(_ex[e], _ey[e]); sp = _config.ChaseSpeed; }
             else

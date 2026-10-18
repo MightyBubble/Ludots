@@ -360,9 +360,9 @@ namespace Ludots.Tests.GAS
 
                 const int orderCastAbility = 100;
 
-                var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
-                var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
-                var tagOps2 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+                var (orderTypeRegistry, orderRuleRegistry) = CreateTestOrderRuntime(orderCastAbility);
+                var orderBufferSystem = new OrderBufferSystem(world, clock, orderTypeRegistry, orderRuleRegistry, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -377,8 +377,8 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: tagOps2);
-                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps2, aggregateDirty: tagOps2.AggregateDirty);
+                    tagOps: tagOps);
+                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
 
@@ -408,7 +408,7 @@ namespace Ludots.Tests.GAS
                 {
                     budgetReset.Update(1f);
                     clockSystem.Update(1f);
-                    orderBufferSystem2.Update(1f);
+                    orderBufferSystem.Update(1f);
                     effectLoop.Update(1f);
                     agg.Update(1f);
                     admissionResults.EndEntityIntake();
@@ -495,10 +495,10 @@ namespace Ludots.Tests.GAS
                 const int orderCastAbility = 100;
 
                 var promptState = new ResponseChainPromptState();
-                var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
-                var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
-                var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
-                var abilityExec = new AbilityExecSystem(world, clock, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
+                var (orderTypeRegistry, orderRuleRegistry) = CreateTestOrderRuntime(orderCastAbility);
+                var orderBufferSystem = new OrderBufferSystem(world, clock, orderTypeRegistry, orderRuleRegistry, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+                var abilityExec = new AbilityExecSystem(world, clock, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -513,7 +513,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: tagOps3)
+                    tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -547,7 +547,7 @@ namespace Ludots.Tests.GAS
                     {
                         incomingOrders.TryEnqueue(new Order { OrderId = (i * targets.Length) + t + 1, OrderTypeId = orderCastAbility, Actor = player, Target = targets[t], Args = new OrderArgs { I0 = 0 } });
                     }
-                    orderBufferSystem3.Update(1f);
+                    orderBufferSystem.Update(1f);
                     abilityExec.Update(1f);
                     effectLoop.Update(1f);
                     eventBus.Update();
@@ -593,7 +593,7 @@ namespace Ludots.Tests.GAS
                     totalRoots += targets.Length;
 
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();
-                    orderBufferSystem3.Update(1f);
+                    orderBufferSystem.Update(1f);
                     ticksDispatch += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
 
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();

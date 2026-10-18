@@ -69,7 +69,6 @@ namespace Ludots.Core.Gameplay.GAS
 
         public void Update()
         {
-            // Swap buffers and reset counts
             var temp = _currentEvents;
             _currentEvents = _nextEvents;
             _nextEvents = temp;

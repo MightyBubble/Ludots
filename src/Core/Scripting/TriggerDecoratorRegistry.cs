@@ -20,9 +20,6 @@ namespace Ludots.Core.Scripting
         private readonly Dictionary<string, List<GameCommand>> _anchorDecorators
             = new Dictionary<string, List<GameCommand>>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>
-        /// Register a decorator that matches triggers of a specific type.
-        /// </summary>
         public void Register<T>(Action<T> decorator) where T : Trigger
         {
             if (decorator == null) throw new ArgumentNullException(nameof(decorator));
@@ -81,7 +78,6 @@ namespace Ludots.Core.Scripting
 
             var triggerType = trigger.GetType();
 
-            // 1. Type-matched decorators
             for (int i = 0; i < _typedDecorators.Count; i++)
             {
                 var (type, decorator) = _typedDecorators[i];
@@ -98,7 +94,6 @@ namespace Ludots.Core.Scripting
                 }
             }
 
-            // 2. Name-matched decorators
             string typeName = triggerType.Name;
             if (_namedDecorators.TryGetValue(typeName, out var namedList))
             {
@@ -115,7 +110,6 @@ namespace Ludots.Core.Scripting
                 }
             }
 
-            // 3. Anchor-matched decorators — inject commands after matching AnchorCommand
             if (_anchorDecorators.Count > 0)
             {
                 // Walk actions in reverse to handle insertions without shifting indices

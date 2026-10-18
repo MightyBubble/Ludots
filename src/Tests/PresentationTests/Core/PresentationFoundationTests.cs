@@ -1219,7 +1219,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _), Is.True);
             // 分层 JIT/PGO 升级与静态惰性初始化发生在头几千次调用：合同测的是稳态，
-            // 预热不足会把一次性开销记进预算（曾以恒定 24B 假红出现）。
+            // 预热不足会把一次性开销记进预算。
             for (int warmup = 0; warmup < 4096; warmup++)
             {
                 behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _);

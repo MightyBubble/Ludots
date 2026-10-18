@@ -3922,7 +3922,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         private void RemoveOwnerPayloadRef(Entity owner)
         {
-            // Owner payload presence is now derived from the owner -> presenter index.
+            // Owner payload presence is derived from the owner -> presenter index.
         }
 
         private PresenterWorldFacing ResolvePresenterWorldFacing(Entity owner)

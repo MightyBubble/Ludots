@@ -14,14 +14,14 @@ using Ludots.Core.UI.EntityCommandPanels;
 namespace EntityCommandPanelMod.Runtime
 {
     /// <summary>
-    /// Collection-selection GAS command panel source (RFC-0065 PNL-4). Grouping is fully delegated
-    /// to the <see cref="AbilityAggregationProfileRegistry"/> kernel (DEC-10): every kernel group is
+    /// Collection-selection GAS command panel source. Grouping is fully delegated
+    /// to the <see cref="AbilityAggregationProfileRegistry"/> kernel: every kernel group is
     /// one panel cell, the cell view is composed from the group's member slot views (representative
     /// icon/label from the first member, state flags OR-ed, lockout max, badge = member count).
     /// <see cref="CopyAggregationMembers"/> exposes the surviving member set for CommandDeck route
     /// profiles; <see cref="ActivateSlot"/> activates every surviving member behind the displayed
     /// group cell. <see cref="SetAggregationProfile"/> switches the active profile at
-    /// runtime (P3): the next build regroups and the revision hash changes, so open panels re-pull
+    /// runtime: the next build regroups and the revision hash changes, so open panels re-pull
     /// without rebinding. FormSet switches need no extra code here — the kernel groups over the
     /// <c>AbilitySlotResolver</c> effective abilities on every build.
     /// </summary>
@@ -82,7 +82,7 @@ namespace EntityCommandPanelMod.Runtime
         }
 
         /// <summary>
-        /// Switch the active aggregation profile (RFC-0065 P3 player preference). Takes effect on
+        /// Switch the active aggregation profile (player preference). Takes effect on
         /// the next build; the panel revision changes so open panels regroup without re-selection.
         /// Fails fast on profiles that are not installed in the kernel registry.
         /// </summary>
@@ -392,7 +392,7 @@ namespace EntityCommandPanelMod.Runtime
             {
                 if (aggregateCount >= MaxAggregatedSlots)
                 {
-                    // Overflow handling beyond the panel capacity is the router's concern (PNL-3).
+                    // Overflow handling beyond the panel capacity is the router's concern.
                     break;
                 }
 

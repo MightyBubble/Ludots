@@ -95,7 +95,7 @@ namespace Ludots.Adapter.Raylib
     /// 唯一生产帧执行者：RaylibHostLoop 构建一帧输入后由本类执行 BeginDrawing..覆盖层合成的完整 pass 序列。
     /// 执行方式是先经 BuildPassPlan 声明本帧 pass，再按声明顺序逐项执行——声明顺序与执行顺序由结构保证一致；
     /// LastExecutedPasses 在 RenderFrame 入口清零、按"已进入"记录（进入后抛错的 pass 也在轨迹内），供诊断与漂移测试消费。
-    /// EndDrawing 及其后的截图取证仍归宿主循环（ENG-1c）。
+    /// EndDrawing 及其后的截图取证仍归宿主循环。
     /// </summary>
     internal sealed class RaylibFrameRenderer : IDisposable
     {
@@ -331,7 +331,7 @@ namespace Ludots.Adapter.Raylib
                         Rl.EndDrawing();
                     }
 
-                    // 退役资源按定义无引用，异常帧冲刷同样安全；持续异常不再累积退役队列（复核修复）。
+                    // 退役资源按定义无引用，异常帧冲刷同样安全；持续异常不再累积退役队列。
                     _primitiveRenderer.FlushRetiredAssets();
                 }
             }
@@ -484,7 +484,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             // 后处理 RT 必须在水面 RT pass 之后开启：水面 EndTextureMode 会把渲染目标切回默认帧缓冲，
-            // 先开后处理 RT 再画水面会丢失 RT 绑定（旧宿主水面帧直接熄掉调色的根因）。
+            // 先开后处理 RT 再画水面会丢失 RT 绑定。
             if (input.UsePostProcess)
             {
                 Add(output, ref count, RaylibFramePass.BeginWorldTexture);
@@ -670,8 +670,8 @@ namespace Ludots.Adapter.Raylib
             try
             {
                 if (frame.DrawContinuousHeightmap &&
-                    _engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? vhCaster) &&
-                    vhCaster is IContinuousHeightmapRenderSource heightmapCaster)
+                    _engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? continuousHeightmapForShadow) &&
+                    continuousHeightmapForShadow is IContinuousHeightmapRenderSource heightmapCaster)
                 {
                     _continuousHeightmapRenderer.RenderShadow(heightmapCaster, frame.ActiveCamera, shadow);
                 }

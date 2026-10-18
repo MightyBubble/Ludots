@@ -15,9 +15,6 @@ namespace Ludots.Core.Physics2D.Components
         Polygon = 2
     }
 
-    /// <summary>
-    /// 物理材质（定点数）。
-    /// </summary>
     public struct PhysicsMaterial2D
     {
         public Fix64 Friction;
@@ -25,18 +22,12 @@ namespace Ludots.Core.Physics2D.Components
         public Fix64 BaseDamping;
     }
 
-    /// <summary>
-    /// 阻尼场（定点数）。
-    /// </summary>
     public struct DampingField
     {
         public Fix64 Radius;
         public Fix64 DampingValue;
     }
 
-    /// <summary>
-    /// 实体当前受到的场阻尼总量（定点数）。
-    /// </summary>
     public struct AppliedDamping
     {
         public Fix64 TotalFieldDamping;

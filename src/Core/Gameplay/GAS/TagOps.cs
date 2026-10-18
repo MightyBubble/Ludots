@@ -38,9 +38,6 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>属性聚合脏注册表：属性变异经 TagOps 统一携带，标记与消费共享同一实例。</summary>
         public AttributeAggregateDirtyRegistry? AggregateDirty { get; }
 
-        /// <summary>
-        /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).
-        /// </summary>
         public TagRuleRegistry Rules => _rules;
         public DirtyEntityQueue DirtyEntities => _dirtyEntities;
 
@@ -294,8 +291,6 @@ namespace Ludots.Core.Gameplay.GAS
             return compiled.DisabledIfAny != 0 && dirtyTags.Intersects(in compiled.DisabledIfMask);
         }
 
-        // ── Public API: without DirtyFlags ──
-
         internal unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
         {
             return AddTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
@@ -305,8 +300,6 @@ namespace Ludots.Core.Gameplay.GAS
         {
             return RemoveTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
         }
-
-        // ── Public API: with DirtyFlags ──
 
         internal bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
         {
@@ -329,8 +322,6 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
         }
-
-        // ── Unified core implementations ──
 
         private unsafe bool AddTagCore(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
         {
@@ -518,14 +509,10 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        // ── Helpers ──
-
         private static unsafe void MarkDirty(DirtyFlags* dirty, int tagId)
         {
             if (dirty != null) dirty->MarkTagDirty(tagId);
         }
-
-        // ── Multi-tag operations ──
 
         public bool ContainsAll(ref GameplayTagContainer tagContainer, in GameplayTagContainer required, TagSense sense)
         {

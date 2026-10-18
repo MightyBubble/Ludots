@@ -13,11 +13,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Unit tests for new Graph operations added during the architecture overhaul:
-    ///   - LoadContextSource / LoadContextTarget / LoadContextTargetContext
-    ///   - ApplyEffectDynamic / FanOutApplyEffectDynamic
-    /// </summary>
     [TestFixture]
     public class NewGraphOpsTests
     {
@@ -27,10 +22,6 @@ namespace Ludots.Tests.GAS
             EffectParamKeys.Initialize();
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  LoadContextSource / LoadContextTarget / LoadContextTargetContext
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void GraphOps_LoadContextSource_LoadsFromExecutionState()
         {
@@ -39,7 +30,6 @@ namespace Ludots.Tests.GAS
             var target = world.Create();
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
-            // LoadContextSource loads the caster entity into an entity register
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.LoadContextSource, Dst = 2 },
@@ -116,10 +106,6 @@ namespace Ludots.Tests.GAS
             That(Array.Exists(pkg.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.RemoveEffectTemplate), Is.True);
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  ApplyEffectDynamic
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void GraphOps_ApplyEffectDynamic_PublishesEffectRequest()
         {
@@ -130,7 +116,6 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // I[0] = templateId, E[0] = caster, E[1] = target
             // ApplyEffectDynamic: source=Caster(implicit), target=E[A], templateId=I[B]
             var program = new GraphInstruction[]
             {
@@ -149,10 +134,6 @@ namespace Ludots.Tests.GAS
             That(req.Target, Is.EqualTo(target));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  FanOutApplyEffectDynamic
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void GraphOps_FanOutApplyEffectDynamic_PublishesForAllTargets()
         {
@@ -165,7 +146,6 @@ namespace Ludots.Tests.GAS
             var t2 = world.Create();
             var t3 = world.Create();
 
-            // Build target list with 3 targets, then FanOut with templateId from I[B]
             // FanOutApplyEffectDynamic: source=E[A], templateId=I[B], targets=TargetList
             var f = new float[GraphVmLimits.MaxFloatRegisters];
             var iArr = new int[GraphVmLimits.MaxIntRegisters];
@@ -212,10 +192,6 @@ namespace Ludots.Tests.GAS
             That(requests[2].Target, Is.EqualTo(t3));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Combined: LoadConfig → ApplyEffectDynamic
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void GraphOps_LoadConfigEffectId_ThenDynamicApply_WorksEndToEnd()
         {
@@ -226,13 +202,11 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Set up config context with a payload effect ID
             var config = new EffectConfigParams();
             int payloadKey = EffectParamKeys.PayloadEffectId;
             config.TryAddEffectTemplateId(payloadKey, 777);
             api.SetConfigContext(in config);
 
-            // Graph: load payload effect ID from config, then apply it dynamically
             // ApplyEffectDynamic: source=Caster(implicit), target=E[A], templateId=I[B]
             var program = new GraphInstruction[]
             {
@@ -273,10 +247,6 @@ namespace Ludots.Tests.GAS
 
             That(world.Get<GameplayEffect>(effect).CancelRequested, Is.True);
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Helpers
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void GraphOps_RelationshipCrudAndTypedReadWrite_Work()

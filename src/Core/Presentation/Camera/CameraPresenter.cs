@@ -38,9 +38,6 @@ namespace Ludots.Core.Presentation.Camera
             _timingDiagnostics = timingDiagnostics;
         }
 
-        /// <summary>
-        /// Updates the visual camera from the interpolated logic camera state.
-        /// </summary>
         public void Update(CameraManager cameraManager, float interpolationAlpha, RenderCameraDebugState cameraDebug = null)
         {
             long start = Stopwatch.GetTimestamp();

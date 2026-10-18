@@ -29,8 +29,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     ///   ownership are captured at destroy time). Map-domain EntityDied observers
     ///   keep wave granularity.
     /// - After death the entity's mounts are inert (TriggerGraphMountTrigger
-    ///   CheckConditions false on dead scope) and swept lazily at think waves with a
-    ///   bounded budget; entity mounts with any other event key dispatch through the
+    ///   CheckConditions false on dead scope) and reclaimed at the destroy tick;
+    ///   entity mounts with any other event key dispatch through the
     ///   map bus registration normally. Entity payloads are scope-filtered: an
     ///   unmarked scope accepts only its own source/target, while a scope carrying
     ///   EntityTriggerGraphAggregateRoot accepts attached descendants too.
@@ -70,9 +70,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>
         /// Mount owners whose subject is dead but whose mounts are not yet reclaimed;
-        /// test observability. Destroy-time reclamation makes this transient: with the
-        /// think-wave sweep retired, a destroy reclaims its subject's mounts
-        /// in the same handler, so the count is non-zero only mid-handler.
+        /// test observability. Destroy-time reclamation makes this transient: a destroy
+        /// reclaims its subject's mounts in the same handler, so the count is non-zero
+        /// only mid-handler.
         /// </summary>
         public int GetDeadMountCount(MapId mapId)
         {
@@ -269,7 +269,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             // The entity's own TemplateEntity mounts are reclaimed here too: no staged
             // budget applies to a single destroy (it is naturally bounded by the dead
-            // subject's mount count) and the think-wave sweep is retired.
+            // subject's mount count).
             for (int i = 0; i < _ownedScratch.Count; i++)
             {
                 if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.TemplateEntity)
@@ -280,8 +280,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// Reclaim every mount a dead subject owns, immediately and completely:
-        /// destroy-time reclamation replaces the retired heartbeat budget sweep).
+        /// Reclaim every mount a dead subject owns, immediately and completely at
+        /// destroy time (no staged budget).
         /// </summary>
         private void ReclaimMounts(TriggerMountOwner owner)
         {

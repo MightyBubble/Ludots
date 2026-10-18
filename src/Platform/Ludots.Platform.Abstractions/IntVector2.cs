@@ -17,7 +17,7 @@ namespace Ludots.Platform.Abstractions
         public static IntVector2 One => new IntVector2(1, 1);
         public static IntVector2 Left => new IntVector2(-1, 0);
         public static IntVector2 Right => new IntVector2(1, 0);
-        public static IntVector2 Up => new IntVector2(0, -1); // Assuming Y-down for grid usually, but logic depends on usage
+        public static IntVector2 Up => new IntVector2(0, -1);
         public static IntVector2 Down => new IntVector2(0, 1);
 
         public static IntVector2 operator +(IntVector2 a, IntVector2 b) => new IntVector2(a.X + b.X, a.Y + b.Y);

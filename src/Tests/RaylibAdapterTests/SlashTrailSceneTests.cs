@@ -44,7 +44,7 @@ namespace Ludots.Tests.RaylibAdapter
                 scene.SimulateTrailFrame(out _, out _);
             }
 
-            // 挥砍窗口 0.45s ≈ 27 帧；连续 10 帧的 PushHead 都必须真实落地，条带逐帧增长。
+            // 挥砍窗口 0.45s ≈ 27 帧，10 帧仍在窗口内。
             ReadOnlySpan<TrailMeshSample> samples = scene.TrailBuffer.GetSamples(0);
             Assert.That(samples.Length, Is.EqualTo(10), "连续帧采样必须真实增长（readonly struct 防御性副本会让它永远停在 1）");
             Assert.That(scene.TrailBuffer.Count, Is.EqualTo(1));
@@ -63,7 +63,7 @@ namespace Ludots.Tests.RaylibAdapter
         {
             using var scene = new SlashTrailScene();
 
-            // 整个挥砍周期 + 余量：样本全部超寿命后被淘汰，缓冲回到空态。
+            // 整个挥砍周期 + 余量。
             for (int i = 0; i < 150; i++)
             {
                 scene.SimulateTrailFrame(out _, out _);

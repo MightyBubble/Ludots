@@ -10,7 +10,6 @@ namespace Ludots.Core.Collections.Graphs
     /// </summary>
     public class StructGraph
     {
-        // Edge storage
         internal struct Edge
         {
             public int TargetNodeId;
@@ -18,10 +17,8 @@ namespace Ludots.Core.Collections.Graphs
             public int NextEdgeIndex; // Linked list for edges of a node
         }
 
-        // Node storage
-        // Instead of a Node class, we store data in parallel arrays
         private int[] _nodeFirstEdge; // Index of the first edge for each node (-1 if none)
-        private Edge[] _edges;        // Pool of all edges
+        private Edge[] _edges;
         private int _edgeCount;
         private int _nodeCapacity;
 
@@ -37,9 +34,6 @@ namespace Ludots.Core.Collections.Graphs
             _edgeCount = 0;
         }
 
-        /// <summary>
-        /// Adds a directed edge from source to target.
-        /// </summary>
         public void AddEdge(int sourceNode, int targetNode, float cost)
         {
             EnsureEdgeCapacity();
@@ -61,10 +55,7 @@ namespace Ludots.Core.Collections.Graphs
             _edgeCount = 0;
         }
 
-        /// <summary>
-        /// Enumerator for zero-allocation iteration over edges.
-        /// Usage: foreach (var edge in graph.GetEdges(nodeId)) { ... }
-        /// </summary>
+        /// <summary>Zero-allocation enumerator over the edges of one node.</summary>
         public EdgeEnumerator GetEdges(int nodeId)
         {
             return new EdgeEnumerator(_edges, _nodeFirstEdge[nodeId]);
@@ -105,7 +96,6 @@ namespace Ludots.Core.Collections.Graphs
                 return true;
             }
             
-            // Standard GetEnumerator for foreach support
             public EdgeEnumerator GetEnumerator() => this;
         }
 
@@ -138,7 +128,6 @@ namespace Ludots.Core.Collections.Graphs
             if (newCapacity <= _nodeCapacity) return;
             
             Array.Resize(ref _nodeFirstEdge, newCapacity);
-            // Fill new slots with -1
             for (int i = _nodeCapacity; i < newCapacity; i++)
             {
                 _nodeFirstEdge[i] = -1;

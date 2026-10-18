@@ -30,21 +30,6 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS.Features.EffectExecution
 {
-    /// <summary>
-    /// Comprehensive tests for the Tag-Effect Architecture:
-    ///   - EffectLifetimeKind precision (only 3 values)
-    ///   - LifetimeFlags
-    ///   - TagContribution + TagContributionFormula
-    ///   - EffectGrantedTags component
-    ///   - EffectTagContributionHelper (Grant/Revoke/Update)
-    ///   - EffectStack with policies
-    ///   - ExpireCondition config parsing
-    ///   - GrantedTags config parsing
-    ///   - Stack config parsing
-    ///   - BuiltinHandlers.RegisterAll
-    ///   - Integration: tag grant on apply, tag revoke on expire
-    ///   - Integration: stack merge + tag update
-    /// </summary>
     [TestFixture]
     public class TagEffectArchitectureTests
     {
@@ -65,9 +50,9 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             var values = Enum.GetValues(typeof(EffectLifetimeKind));
             That(values.Length, Is.EqualTo(3));
-            That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)0), Is.True); // Instant
-            That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)1), Is.True); // After
-            That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)2), Is.True); // Infinite
+            That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)0), Is.True);
+            That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)1), Is.True);
+            That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)2), Is.True);
             That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)3), Is.False); // UntilTagRemoved removed
             That(Enum.IsDefined(typeof(EffectLifetimeKind), (byte)4), Is.False); // WhileTagPresent removed
         }
@@ -92,7 +77,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             var tc = new TagContribution { Formula = TagContributionFormula.Fixed, Amount = 10 };
             That(tc.Compute(1), Is.EqualTo(10));
-            That(tc.Compute(5), Is.EqualTo(10)); // Fixed ignores stack count
+            That(tc.Compute(5), Is.EqualTo(10));
             That(tc.Compute(0), Is.EqualTo(10));
         }
 
@@ -171,7 +156,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             EffectTagContributionHelper.Grant(in tags, ref container, stackCount: 5);
 
             That(container.GetCount(10), Is.EqualTo(30)); // 5 * 6
-            That(container.GetCount(20), Is.EqualTo(1));   // Fixed
+            That(container.GetCount(20), Is.EqualTo(1));
         }
 
         [Test]
@@ -198,11 +183,9 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             EffectTagContributionHelper.Grant(in tags, ref container, stackCount: 3);
             That(container.GetCount(10), Is.EqualTo(18)); // 3 * 6
 
-            // Stack 3 → 5
             EffectTagContributionHelper.Update(in tags, ref container, oldStackCount: 3, newStackCount: 5);
             That(container.GetCount(10), Is.EqualTo(30)); // 5 * 6 (delta +12)
 
-            // Stack 5 → 2
             EffectTagContributionHelper.Update(in tags, ref container, oldStackCount: 5, newStackCount: 2);
             That(container.GetCount(10), Is.EqualTo(12)); // 2 * 6 (delta -18)
         }
@@ -356,7 +339,6 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         [Test]
         public void Helper_MultiTag_StackScenario()
         {
-            // Scenario from plan: effectA Linear(6), effectB Linear(7)
             var tagsA = new EffectGrantedTags();
             tagsA.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Linear, Amount = 6 });
 
@@ -2732,10 +2714,8 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             using var world = World.Create();
 
-            // Create target entity with TagCountContainer
             var target = world.Create(new TagCountContainer());
 
-            // Create a duration effect entity with EffectGrantedTags
             var grantedTags = new EffectGrantedTags();
             int slowTagId = 42;
             grantedTags.Add(new TagContribution { TagId = slowTagId, Formula = TagContributionFormula.Linear, Amount = 6 });
@@ -2746,7 +2726,6 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 grantedTags
             );
 
-            // Simulate Grant (OnApply)
             int stackCount = 1;
             ref readonly var gt = ref world.Get<EffectGrantedTags>(effectEntity);
             ref var tagCounts = ref world.Get<TagCountContainer>(target);
@@ -2754,7 +2733,6 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             That(tagCounts.GetCount(slowTagId), Is.EqualTo(6));
 
-            // Simulate Revoke (OnExpire)
             EffectTagContributionHelper.Revoke(in gt, ref tagCounts, stackCount);
             That(tagCounts.GetCount(slowTagId), Is.EqualTo(0));
         }
@@ -2776,17 +2754,14 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 new EffectStack { Count = 3, Limit = 10, Policy = StackPolicy.RefreshDuration }
             );
 
-            // Initial grant at stack 3
             ref readonly var gt = ref world.Get<EffectGrantedTags>(effectEntity);
             ref var tagCounts = ref world.Get<TagCountContainer>(target);
             EffectTagContributionHelper.Grant(in gt, ref tagCounts, stackCount: 3);
             That(tagCounts.GetCount(slowTagId), Is.EqualTo(18)); // 3 * 6
 
-            // Stack 3 → 5
             EffectTagContributionHelper.Update(in gt, ref tagCounts, oldStackCount: 3, newStackCount: 5);
             That(tagCounts.GetCount(slowTagId), Is.EqualTo(30)); // 5 * 6
 
-            // Revoke all at stack 5
             EffectTagContributionHelper.Revoke(in gt, ref tagCounts, stackCount: 5);
             That(tagCounts.GetCount(slowTagId), Is.EqualTo(0));
         }
@@ -2830,7 +2805,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         [Test]
         public void Integration_TwoEffects_SameTag_DifferentFormulas()
         {
-            // Plan scenario: 5 layers effectA (Linear*6=30) + 10 layers effectB (Linear*7=70) = 100
+            // 5 layers effectA (Linear*6=30) + 10 layers effectB (Linear*7=70) = 100
             var container = new TagCountContainer();
             int tagId = 99;
 
@@ -2863,21 +2838,17 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             using var world = World.Create();
             int tagId = 77;
 
-            // Entity has the tag initially
             var tagContainer = new GameplayTagContainer();
             tagContainer.AddTag(tagId);
             var target = world.Create(tagContainer);
 
             var condition = new GasCondition(GasConditionKind.TagPresent, tagId, TagSense.Present);
 
-            // Tag present → should NOT expire
             That(GasConditionEvaluator.ShouldExpire(world, target, in condition, _tagOps), Is.False);
 
-            // Remove the tag
             ref var tc = ref world.Get<GameplayTagContainer>(target);
             tc.RemoveTag(tagId);
 
-            // Tag absent → should expire
             That(GasConditionEvaluator.ShouldExpire(world, target, in condition, _tagOps), Is.True);
         }
 
@@ -2894,17 +2865,12 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             // Tag absent → should NOT expire (condition wants tag to be absent)
             That(GasConditionEvaluator.ShouldExpire(world, target, in condition, _tagOps), Is.False);
 
-            // Add the tag
             ref var tc = ref world.Get<GameplayTagContainer>(target);
             tc.AddTag(tagId);
 
             // Tag present → should expire (condition was "keep alive while tag absent")
             That(GasConditionEvaluator.ShouldExpire(world, target, in condition, _tagOps), Is.True);
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Helper: create a minimal ConfigPipeline from a JSON effect string
-        // ════════════════════════════════════════════════════════════════════
 
         private sealed class TestLineQueryService : ISpatialQueryService
         {

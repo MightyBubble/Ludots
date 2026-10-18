@@ -16,9 +16,6 @@ using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
-    /// <summary>
-    /// Main processing loop stage: ProposalAndApply → Lifetime → PostLifetimeProposalAndApply → Done.
-    /// </summary>
     public enum EffectLoopStage : byte
     {
         ProposalAndApply = 0,
@@ -27,9 +24,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         Done = 3,
     }
 
-    /// <summary>
-    /// Sub-stage within a ProposalAndApply stage.
-    /// </summary>
     public enum EffectLoopSubstage : byte
     {
         Proposal = 0,

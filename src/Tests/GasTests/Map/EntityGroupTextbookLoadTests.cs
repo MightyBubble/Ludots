@@ -13,7 +13,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// 切A 验收：教科书 showcase 的 templates.json + map 不新增任何模板类型即可装载——
+    /// 教科书 showcase 的 templates.json + map 不新增任何模板类型即可装载——
     /// 营地是一个普通 EntityTemplate，递归 children 展开、localId 路径累积、attach 标记解析。
     /// </summary>
     [TestFixture]

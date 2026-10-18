@@ -14,7 +14,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// ISSUE-1521 验收基准：已提交周期效果的履约域单事件边际成本。
+    /// 验收基准：已提交周期效果的履约域单事件边际成本。
     /// 形态：每效果 period 在 [8,64] 均匀随机 + 哈希初相（聚合到货近似泊松），
     /// 走生产 EffectLifetimeSystem（时间轮+编译内核+事务提交）与聚合器整链。
     /// 断言：精简目标（履约车道本体）单事件边际 ≤2µs；富目标（含

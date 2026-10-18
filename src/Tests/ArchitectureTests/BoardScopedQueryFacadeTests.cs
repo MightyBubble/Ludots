@@ -10,7 +10,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.Architecture
 {
     /// <summary>
-    /// #1567 slice 2 board-scoped query contract: one shared world partition, per-board
+    /// Board-scoped query contract: one shared world partition, per-board
     /// query facades. A board facade must see every world-indexed entity (board-blind
     /// index), answer in the board's own frame semantics (hex metrics, extent), and stay
     /// stable per board name.

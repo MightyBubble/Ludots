@@ -12,9 +12,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// EffectDueWheel（GAS 效果到期时间轮 A 档）单元与系统级回归：
-    /// 桶环到期顺序、双 kind 合并、幂等替换、取消、溢出道晋升、tick 回退重建、
-    /// 惰性删除、遗留道分类，以及 30K 远期注册的稳态 AdvanceTo 微基准。
+    /// EffectDueWheel（GAS 效果到期时间轮 A 档）单元与系统级回归。
     /// </summary>
     [TestFixture]
     public sealed class EffectDueWheelTests
@@ -284,7 +282,6 @@ namespace Ludots.Tests.GAS
             That(lifetime.DueWheel!.Count, Is.Zero);
         }
 
-        /// <summary>30K 远期注册的稳态推进：1000 次 AdvanceTo 平均耗时须远低于 0.05ms。</summary>
         [Test]
         public void SteadyStateThirtyThousandFarFutureRegistrations_AdvanceToStaysCheap()
         {

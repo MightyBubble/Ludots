@@ -10,18 +10,14 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Adapter.Web.Streaming
 {
-    /// <summary>
-    /// Delta encoder: compares current frame against previous and emits only changed items.
-    /// Falls back to full frame if delta would exceed the full size.
-    /// </summary>
     public sealed class DeltaCompressor
     {
         private PrimitiveDrawItem[] _prevPrimitives = Array.Empty<PrimitiveDrawItem>();
         private int _prevPrimitiveCount;
-        private int _prevDebugLineHash;
-        private int _prevDebugCircleHash;
-        private int _prevDebugBoxHash;
-        private int _prevGroundOverlayHash;
+        private int _prevDebugLineCount;
+        private int _prevDebugCircleCount;
+        private int _prevDebugBoxCount;
+        private int _prevGroundOverlayCount;
 
         private byte[] _buffer = new byte[128 * 1024];
         private int _pos;
@@ -131,9 +127,9 @@ namespace Ludots.Adapter.Web.Streaming
 
         private void WriteGroundOverlayIfChanged(GroundOverlayBuffer? buf)
         {
-            int hash = HashBuffer(buf);
-            if (hash == _prevGroundOverlayHash) return;
-            _prevGroundOverlayHash = hash;
+            int hash = GetGroundOverlayCount(buf);
+            if (hash == _prevGroundOverlayCount) return;
+            _prevGroundOverlayCount = hash;
 
             if (buf == null || buf.Count == 0) return;
             var span = buf.GetSpan();
@@ -198,11 +194,11 @@ namespace Ludots.Adapter.Web.Streaming
             if (buf == null) return;
             int lHash = buf.Lines.Count;
             int cHash = buf.Circles.Count;
-            int bHash = buf.Boxes.Count;
+            int boxCount = buf.Boxes.Count;
 
-            if (lHash != _prevDebugLineHash)
+            if (lHash != _prevDebugLineCount)
             {
-                _prevDebugLineHash = lHash;
+                _prevDebugLineCount = lHash;
                 if (buf.Lines.Count > 0)
                 {
                     int count = buf.Lines.Count;
@@ -220,9 +216,9 @@ namespace Ludots.Adapter.Web.Streaming
                 }
             }
 
-            if (cHash != _prevDebugCircleHash)
+            if (cHash != _prevDebugCircleCount)
             {
-                _prevDebugCircleHash = cHash;
+                _prevDebugCircleCount = cHash;
                 if (buf.Circles.Count > 0)
                 {
                     int count = buf.Circles.Count;
@@ -240,9 +236,9 @@ namespace Ludots.Adapter.Web.Streaming
                 }
             }
 
-            if (bHash != _prevDebugBoxHash)
+            if (boxCount != _prevDebugBoxCount)
             {
-                _prevDebugBoxHash = bHash;
+                _prevDebugBoxCount = boxCount;
                 if (buf.Boxes.Count > 0)
                 {
                     int count = buf.Boxes.Count;
@@ -446,7 +442,7 @@ namespace Ludots.Adapter.Web.Streaming
             _prevPrimitiveCount = count;
         }
 
-        private static int HashBuffer(GroundOverlayBuffer? buf)
+        private static int GetGroundOverlayCount(GroundOverlayBuffer? buf)
         {
             return buf?.Count ?? 0;
         }

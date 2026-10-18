@@ -7,9 +7,6 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Board
 {
-    /// <summary>
-    /// HexGrid-based Board. Supports terrain (VertexMap) and navigation.
-    /// </summary>
     public sealed class HexGridBoard : ITerrainBoard, INavigableBoard
     {
         public BoardId Id { get; }
@@ -27,8 +24,8 @@ namespace Ludots.Core.Map.Board
         public HexMetrics HexMetrics { get; }
 
         // HexGridAOI doubles as the loaded-chunks source and is cheap; the partition and
-        // the hex-aware query service stay unallocated until first access (satellite boards
-        // carry no consumers until BoardRef dispatch lands, #1567 slice 2).
+        // the hex-aware query service stay unallocated until first access (satellite
+        // boards carry no consumers).
         public HexGridAOI HexGridAOI { get; } = new();
         private ChunkedGridSpatialPartitionWorld? _partition;
         private SpatialQueryService? _queryService;

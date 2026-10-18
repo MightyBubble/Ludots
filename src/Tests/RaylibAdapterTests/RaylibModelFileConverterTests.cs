@@ -4,7 +4,7 @@ using Ludots.Raylib.Render;
 namespace Ludots.Tests.RaylibAdapter;
 
 /// <summary>
-/// #1050 回归锁：native raylib 5.5 的 OBJ 装载分支对无 texcoord/normal 索引的面片
+/// native raylib 5.5 的 OBJ 装载分支对无 texcoord/normal 索引的面片
 /// （`f v` 形态）AccessViolation。该形态的 OBJ 必须经 Assimp 转换器产出合法 GLB，
 /// 引擎内不允许再出现直连 Rl.LoadModel 的 OBJ 路径。
 /// </summary>

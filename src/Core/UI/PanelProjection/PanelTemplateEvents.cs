@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Zero-code UI event declaration (#1013): one event id, one trigger, one typed
+    /// Zero-code UI event declaration: one event id, one trigger, one typed
     /// payload schema. Payloads validate strictly — unknown or mistyped fields fail.
     /// </summary>
     public sealed class PanelTemplateEvent
@@ -42,7 +42,7 @@ namespace Ludots.Core.UI.PanelProjection
     }
 
     /// <summary>
-    /// One intent-map entry (#1013): how a declared event becomes a gameplay intent.
+    /// One intent-map entry: how a declared event becomes a gameplay intent.
     /// Args map $payload.<field> references; attribution resolves at runtime from
     /// playerSource/actorSource — the panel never constructs orders.
     /// </summary>
@@ -79,7 +79,7 @@ namespace Ludots.Core.UI.PanelProjection
         public string ActorSource { get; }
     }
 
-    /// <summary>Resolved intent ready for admission (#1013 MVP).</summary>
+    /// <summary>Resolved intent ready for admission.</summary>
     public sealed record PanelIntent(
         string Intent,
         IReadOnlyDictionary<string, object?> Args,

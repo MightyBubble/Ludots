@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     }
 
     /// <summary>
-    /// Provenance retained so accepted edits can later be saved as Mod config (#624).
+    /// Provenance retained so accepted edits can later be saved as Mod config.
     /// This slice records provenance only; it does not persist files.
     /// </summary>
     public readonly struct LiveEditProvenance
@@ -49,7 +49,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public string? AuthorNote { get; }
 
         /// <summary>
-        /// Optional Mod-relative config path hint for later save (#624).
+        /// Optional Mod-relative config path hint for later save.
         /// </summary>
         public string? ConfigRelativePath { get; }
     }

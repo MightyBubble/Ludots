@@ -674,11 +674,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(harness.Entered.Count, Is.EqualTo(1));
         }
 
-        /// <summary>
-        /// Builds the template components JSON with the volume anchored at
-        /// (x, y) through a WorldPositionCm component, optionally appending extra
-        /// component JSON (tag filter / emission) after the volume component.
-        /// </summary>
         private static string VolumeAt(int x, int y, string regionVolumeJson, string? extraComponents = null)
         {
             string volumeBody = regionVolumeJson.TrimStart('{').TrimEnd('}').Trim();
@@ -924,7 +919,7 @@ namespace Ludots.Tests.Gas.Graph
 
             /// <summary>
             /// Teleport with a recorded previous position, mirroring how the movement
-            /// pipeline maintains PreviousWorldPositionCm each tick (#1475).
+            /// pipeline maintains PreviousWorldPositionCm each tick.
             /// </summary>
             public void SweepTo(Entity entity, int xCm, int yCm)
             {

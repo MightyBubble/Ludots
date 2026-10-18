@@ -27,8 +27,8 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
     private float _time;
     private float[] _sx = Array.Empty<float>();
     private float[] _sy = Array.Empty<float>();
-    private float _ix;
-    private float _iy;
+    private float _intruderX;
+    private float _intruderY;
     private bool _intruderAlive;
     private bool _paused;
     private bool _l2Enabled = true;
@@ -40,8 +40,8 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
     public float[] SentryX => _sx;
     public float[] SentryY => _sy;
     public int SentryCount => _sx.Length;
-    public float IntruderX => _ix;
-    public float IntruderY => _iy;
+    public float IntruderX => _intruderX;
+    public float IntruderY => _intruderY;
     public bool IntruderAlive => _intruderAlive;
     public HfsmWorld? FeaturedWorld => _hfsm;
     public HfsmWorld? CrowdWorld => _crowd;
@@ -224,7 +224,7 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
 
         for (int i = 0; _l2Enabled && i < _sx.Length; i++)
         {
-            if (_intruderAlive && Dist2(_sx[i], _sy[i], _ix, _iy) <= _alertRadius * _alertRadius)
+            if (_intruderAlive && Dist2(_sx[i], _sy[i], _intruderX, _intruderY) <= _alertRadius * _alertRadius)
             {
                 _hfsm!.LatchStimulus(i);
             }
@@ -270,14 +270,14 @@ public sealed class HfsmSentryArenaRuntime : IDisposable
         if (cycle < 9f)
         {
             _intruderAlive = true;
-            _ix = 10f - cycle * 2.2f;
-            _iy = MathF.Sin(cycle * 0.7f) * 1.5f;
+            _intruderX = 10f - cycle * 2.2f;
+            _intruderY = MathF.Sin(cycle * 0.7f) * 1.5f;
         }
         else
         {
             _intruderAlive = false;
-            _ix = 20f;
-            _iy = 0f;
+            _intruderX = 20f;
+            _intruderY = 0f;
         }
     }
 

@@ -12,9 +12,6 @@ namespace Ludots.Core.Map.Board
         private readonly List<string> _idToName = new List<string>();
         private readonly object _lock = new object();
 
-        /// <summary>
-        /// Get or allocate an interned int ID for the given board name.
-        /// </summary>
         public int GetOrAdd(string boardName)
         {
             lock (_lock)
@@ -29,9 +26,6 @@ namespace Ludots.Core.Map.Board
             }
         }
 
-        /// <summary>
-        /// Resolve an interned ID back to a board name.
-        /// </summary>
         public string GetName(int id)
         {
             lock (_lock)

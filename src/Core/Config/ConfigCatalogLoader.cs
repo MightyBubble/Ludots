@@ -38,8 +38,8 @@ namespace Ludots.Core.Config
                 ValidateKnownProperties(obj, relativePath, i);
                 string path = ReadRequiredString(obj, "Path", relativePath, i);
                 ValidateRelativeConfigPath(path, relativePath, i, "Path");
-                string pol = ReadRequiredString(obj, "Policy", relativePath, i);
-                ConfigMergePolicy policy = ParsePolicy(pol, path);
+                string policyText = ReadRequiredString(obj, "Policy", relativePath, i);
+                ConfigMergePolicy policy = ParsePolicy(policyText, path);
 
                 string idField = "id";
                 if (obj.TryGetPropertyValue("IdField", out _))
@@ -50,22 +50,22 @@ namespace Ludots.Core.Config
                 string[] appendFields = Array.Empty<string>();
                 if (obj.TryGetPropertyValue("ArrayAppendFields", out var ap))
                 {
-                    if (ap is not JsonArray apArr)
+                    if (ap is not JsonArray appendFieldsArray)
                     {
                         throw new InvalidOperationException(
                             $"Config catalog entry '{path}' ArrayAppendFields must be a JSON array.");
                     }
 
-                    var tmp = new List<string>(apArr.Count);
-                    for (int a = 0; a < apArr.Count; a++)
+                    var tmp = new List<string>(appendFieldsArray.Count);
+                    for (int a = 0; a < appendFieldsArray.Count; a++)
                     {
-                        if (apArr[a] == null)
+                        if (appendFieldsArray[a] == null)
                         {
                             throw new InvalidOperationException(
                                 $"Config catalog entry '{path}' ArrayAppendFields[{a}] must be a non-empty string.");
                         }
 
-                        var s = apArr[a]!.ToString();
+                        var s = appendFieldsArray[a]!.ToString();
                         if (string.IsNullOrWhiteSpace(s))
                         {
                             throw new InvalidOperationException(

@@ -9,10 +9,6 @@ namespace Ludots.Core.Gameplay.Camera
     /// </summary>
     public class CameraState
     {
-        /// <summary>
-        /// The world position (centimeters) the camera is focusing on.
-        /// Using Vector2 for smooth movement.
-        /// </summary>
         public Vector2 TargetCm { get; set; }
 
         public float TargetHeightCm { get; set; }
@@ -27,9 +23,6 @@ namespace Ludots.Core.Gameplay.Camera
         /// </summary>
         public float Pitch { get; set; } = 45.0f;
 
-        /// <summary>
-        /// Distance from the target (centimeters).
-        /// </summary>
         public float DistanceCm { get; set; } = 2000.0f;
 
         /// <summary>

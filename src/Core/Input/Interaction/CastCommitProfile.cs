@@ -53,10 +53,8 @@ namespace Ludots.Core.Input.Interaction
             Count = count;
         }
 
-        /// <summary>Number of payload entries on the op.</summary>
         public int Count { get; }
 
-        /// <summary>Payload entry at <paramref name="index"/>.</summary>
         public CastCommitPayloadEntry this[int index]
         {
             get
@@ -139,7 +137,6 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>Installed interaction context profile id; 0 when the op declared none.</summary>
         public int ContextProfileId { get; }
 
-        /// <summary>The op's payload value sources.</summary>
         public CastCommitOrderPayload Payload { get; }
     }
 

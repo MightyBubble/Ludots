@@ -7,7 +7,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 namespace Ludots.Core.UI.CommandDeck
 {
     /// <summary>
-    /// Installs and looks up CommandDeck profiles (WPK-3). Unknown display/source kinds and missing
+    /// Installs and looks up CommandDeck profiles. Unknown display/source kinds and missing
     /// referenced aggregation/route/filter profile ids fail fast at install.
     /// </summary>
     public sealed class CommandDeckProfileRegistry

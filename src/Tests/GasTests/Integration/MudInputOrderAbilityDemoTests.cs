@@ -17,24 +17,10 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// MUD-like demo tests + stress tests for the Input/Order/Ability audit features:
-    ///   - OrderBuffer PendingBuffer E2E flow
-    ///   - Toggle Ability lifecycle
-    ///   - GrantedSlot override merging
-    ///   - Graph-based order validation
-    ///   - OrderBuffer stress test
-    /// 
-    /// Follows MUD-style log output: section markers, narrative lines, compact status.
-    /// </summary>
     [TestFixture]
     public class MudInputOrderAbilityDemoTests
     {
         private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-
-        // ════════════════════════════════════════════════════════════════════
-        // E2E: PendingBuffer — Input Buffering Scenario
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void MudPendingBuffer_InputBuffering_DemoLog()
@@ -46,30 +32,25 @@ namespace Ludots.Tests.GAS
 
             var buffer = OrderBuffer.CreateEmpty();
 
-            // Scenario: Player spams Q during another ability's execution
             var moveOrder = new Order { OrderTypeId = 1, OrderId = 1 };
             var qSkillOrder = new Order { OrderTypeId = 10, OrderId = 2 };
             var wSkillOrder = new Order { OrderTypeId = 11, OrderId = 3 };
 
-            // Step 1: Player issues Move order — becomes active
             buffer.SetActiveDirect(in moveOrder, priority: 0);
             sb.AppendLine("[MUD][ORDER] 玩家下达【移动】指令。");
             sb.AppendLine($"  HasActive={buffer.HasActive} ActiveTag={buffer.ActiveOrder.Order.OrderTypeId} HasPending={buffer.HasPending}");
 
-            // Step 2: During move, player presses Q — blocked, goes to pending
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][ORDER] 移动中，玩家按下【Q技能】—— 指令被缓冲。");
             buffer.SetPending(in qSkillOrder, priority: 5, expireStep: 50, insertStep: 10);
             sb.AppendLine($"  HasPending={buffer.HasPending} PendingTag={buffer.PendingOrder.Order.OrderTypeId} ExpireStep={buffer.PendingOrder.ExpireStep}");
 
-            // Step 3: Player presses W — overwrites Q in pending (last-write-wins)
             sb.AppendLine("[MUD][ORDER] 玩家又按下【W技能】—— 覆盖之前的Q缓冲。");
             buffer.SetPending(in wSkillOrder, priority: 5, expireStep: 60, insertStep: 15);
             sb.AppendLine($"  HasPending={buffer.HasPending} PendingTag={buffer.PendingOrder.Order.OrderTypeId} (last-write-wins)");
 
             That(buffer.PendingOrder.Order.OrderTypeId, Is.EqualTo(11), "W should overwrite Q");
 
-            // Step 4: Move completes — pending should be ready to submit
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][ORDER] 移动完成，系统尝试提交缓冲的W技能。");
             buffer.ClearActive();
@@ -83,7 +64,6 @@ namespace Ludots.Tests.GAS
             That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(11), "W should now be active");
             That(buffer.HasPending, Is.False);
 
-            // Step 5: Test pending expiration
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             buffer.ClearActive();
             buffer.SetPending(in qSkillOrder, priority: 5, expireStep: 20, insertStep: 0);
@@ -99,10 +79,6 @@ namespace Ludots.Tests.GAS
             Console.WriteLine(sb.ToString());
             Pass("PendingBuffer E2E demo complete");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        // E2E: Toggle Ability — Activate/Deactivate Lifecycle
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void MudToggleAbility_ActivateDeactivate_DemoLog()
@@ -139,14 +115,12 @@ namespace Ludots.Tests.GAS
 
             sb.AppendLine("[MUD][TOGGLE] 注册开关技能：ID=1, ToggleTag=100, Effects=[201,202]");
 
-            // Simulate toggle activation
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][TOGGLE] 玩家按下 E —— 激活开关技能。");
 
             That(registry.TryGet(1, out var retrieved), Is.True);
             That(retrieved.HasToggleSpec, Is.True);
 
-            // Simulate checking if toggle tag is active on actor
             using var world = World.Create();
             var actor = world.Create(new GameplayTagContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
@@ -154,13 +128,11 @@ namespace Ludots.Tests.GAS
             sb.AppendLine($"  激活前: HasToggleTag={tags.HasTag(toggleTagId)}");
             That(tags.HasTag(toggleTagId), Is.False);
 
-            // Activate: grant toggle tag
             tags.AddTag(toggleTagId);
             sb.AppendLine($"  激活后: HasToggleTag={tags.HasTag(toggleTagId)}");
             sb.AppendLine($"  → 附加持续效果: TemplateId={effectTemplateId1}, {effectTemplateId2}");
             That(tags.HasTag(toggleTagId), Is.True);
 
-            // Deactivate: remove toggle tag
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][TOGGLE] 玩家再次按下 E —— 关闭开关技能。");
             tags.RemoveTag(toggleTagId);
@@ -176,10 +148,6 @@ namespace Ludots.Tests.GAS
             Pass("Toggle ability E2E demo complete");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // E2E: GrantedSlot — Item/Buff Override Scenario
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void MudGrantedSlot_ItemOverride_DemoLog()
         {
@@ -189,10 +157,10 @@ namespace Ludots.Tests.GAS
             sb.AppendLine("═══════════════════════════════════════════════════════════════");
 
             var baseSlots = new AbilityStateBuffer();
-            baseSlots.AddAbility(10); // slot 0: Fireball
-            baseSlots.AddAbility(20); // slot 1: IceBlast
-            baseSlots.AddAbility(30); // slot 2: HealingWave
-            baseSlots.AddAbility(40); // slot 3: Teleport
+            baseSlots.AddAbility(10);
+            baseSlots.AddAbility(20);
+            baseSlots.AddAbility(30);
+            baseSlots.AddAbility(40);
 
             sb.AppendLine("[MUD][SLOT] 基础技能栏: [Fireball(10), IceBlast(20), HealingWave(30), Teleport(40)]");
 
@@ -200,7 +168,6 @@ namespace Ludots.Tests.GAS
             var form = default(AbilityFormSlotBuffer);
             var itemGranted = default(ItemGrantedSlotBuffer);
 
-            // Item grants an override to slot 1
             int itemBuffTag = 500;
             granted.Grant(1, abilityId: 99, sourceTagId: itemBuffTag);
             sb.AppendLine("[MUD][SLOT] 装备【地狱火杖】—— 槽位1替换为 InfernoBlast(99)。");
@@ -214,7 +181,6 @@ namespace Ludots.Tests.GAS
             That(AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 1).AbilityId, Is.EqualTo(99));
             That(AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 0).AbilityId, Is.EqualTo(10));
 
-            // Buff expires — revoke by source
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][SLOT] 【地狱火杖】buff过期 —— 恢复原始技能。");
             int revoked = granted.RevokeBySource(itemBuffTag);
@@ -232,10 +198,6 @@ namespace Ludots.Tests.GAS
             Pass("GrantedSlot E2E demo complete");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // E2E: Graph Validation — Order Rejected by Validation Graph
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void MudGraphValidation_RejectAndPass_DemoLog()
         {
@@ -248,7 +210,6 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Case 1: Empty program — invalid under the explicit-halt graph contract
             sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 非法，必须显式 HaltReturnInt。");
             var emptyError = Throws<InvalidOperationException>(() =>
                 GasGraphExecutor.ExecuteValidation(
@@ -256,7 +217,6 @@ namespace Ludots.Tests.GAS
                     ReadOnlySpan<GraphInstruction>.Empty, null!))!;
             sb.AppendLine($"  Error={emptyError.Message}");
 
-            // Case 2: Reject program — SetBool B[0] = 0
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][VALID] Case 2: 校验图设置 B[0]=0 → 拒绝。");
             var reject = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 };
@@ -270,7 +230,6 @@ namespace Ludots.Tests.GAS
             sb.AppendLine($"  Result={result2}");
             That(result2, Is.False);
 
-            // Case 3: Pass program — SetBool B[0] = 1 (explicit pass)
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][VALID] Case 3: 校验图显式设置 B[0]=1 → 通过。");
             var passInstr = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
@@ -291,10 +250,6 @@ namespace Ludots.Tests.GAS
             Console.WriteLine(sb.ToString());
             Pass("Graph validation E2E demo complete");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STRESS: OrderBuffer — High-throughput Enqueue/Dequeue/Pending
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void StressTest_OrderBuffer_HighThroughput()
@@ -326,21 +281,18 @@ namespace Ludots.Tests.GAS
                 int entityIdx = frame % entitiesPerBatch;
                 ref var buffer = ref buffers[entityIdx];
 
-                // Enqueue
                 var order = new Order { OrderTypeId = frame % 20, OrderId = frame };
                 if (buffer.Enqueue(in order, priority: frame % 5, expireStep: frame + 100, insertStep: frame))
                 {
                     totalEnqueues++;
                 }
 
-                // Promote if no active
                 if (!buffer.HasActive && buffer.HasQueued)
                 {
                     buffer.PromoteNext();
                     totalPromotes++;
                 }
 
-                // Every 3rd frame: complete active and check pending
                 if (frame % 3 == 0 && buffer.HasActive)
                 {
                     buffer.ClearActive();
@@ -354,20 +306,17 @@ namespace Ludots.Tests.GAS
                     }
                 }
 
-                // Every 7th frame: set pending
                 if (frame % 7 == 0)
                 {
                     buffer.SetPending(in order, 5, expireStep: frame + 10, insertStep: frame);
                     totalPendingSets++;
                 }
 
-                // Every 5th frame: expire pending
                 if (frame % 5 == 0 && buffer.ExpirePending(frame))
                 {
                     totalPendingExpires++;
                 }
 
-                // Every 10th frame: remove expired
                 if (frame % 10 == 0)
                 {
                     buffer.RemoveExpired(frame);
@@ -389,17 +338,12 @@ namespace Ludots.Tests.GAS
 
             Console.WriteLine(sb.ToString());
 
-            // Sanity checks
             That(totalEnqueues, Is.GreaterThan(0));
             That(totalPromotes, Is.GreaterThan(0));
             That(sw.Elapsed.TotalMilliseconds, Is.LessThan(5000), "Should complete within 5 seconds");
 
             Pass("OrderBuffer stress test complete");
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STRESS: GrantedSlotBuffer — Rapid Grant/Revoke Cycles
-        // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void StressTest_GrantedSlotBuffer_RapidCycles()
@@ -432,22 +376,18 @@ namespace Ludots.Tests.GAS
                 int slot = c % GrantedSlotBuffer.CAPACITY;
                 int sourceTag = (c / GrantedSlotBuffer.CAPACITY) % 100 + 1;
 
-                // Grant
                 granted.Grant(slot, abilityId: 1000 + c % 50, sourceTagId: sourceTag);
                 totalGrants++;
 
-                // Resolve
                 var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, slot);
                 totalResolves++;
 
-                // Every 3rd cycle: revoke
                 if (c % 3 == 0)
                 {
                     granted.Revoke(slot);
                     totalRevokes++;
                 }
 
-                // Every 100th cycle: revoke by source
                 if (c % 100 == 0)
                 {
                     totalRevokes += granted.RevokeBySource(sourceTag);
@@ -473,10 +413,6 @@ namespace Ludots.Tests.GAS
             Pass("GrantedSlotBuffer stress test complete");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // STRESS: GraphExecutor.ExecuteValidation — Throughput
-        // ════════════════════════════════════════════════════════════════════
-
         [Test]
         public void StressTest_GraphValidation_Throughput()
         {
@@ -489,7 +425,6 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Small validation program: SetBool B[0] = 1 (pass)
             var passInstruction = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
             var program = new[]
             {

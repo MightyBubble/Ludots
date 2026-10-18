@@ -63,7 +63,6 @@ namespace Ludots.Tests.Architecture
             Assert.That(ReferenceEquals(buffer.Tiles[0].VertexYcm, first.VertexYcm), Is.True);
             Assert.That(ReferenceEquals(buffer.Tiles[0].VertexZcm, first.VertexZcm), Is.True);
 
-            // Topology round-trip: triangle indices reference the published vertex arrays.
             Assert.That(first.TriangleCount, Is.EqualTo(2));
             for (int triangle = 0; triangle < first.TriangleCount; triangle++)
             {

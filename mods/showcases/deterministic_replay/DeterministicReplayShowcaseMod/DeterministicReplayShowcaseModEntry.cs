@@ -95,7 +95,7 @@ internal sealed class ReplayShowcasePresentationSystem : BaseSystem<World, float
         var cyan = new DebugDrawColor(72, 226, 210);
         _debugDraw.Circles.Add(new DebugDrawCircle2D { Center = live, Radius = 3.2f, Thickness = 0.22f, Color = cyan });
 
-        // recorded path (magenta, thin) vs replay path (gold, thick) — overlap is the visible proof
+        // recorded path (cyan) vs replay path (gold) — overlap is the visible proof
         DrawTrail(_liveTrail, new DebugDrawColor(72, 226, 210, 150));
         DrawTrail(_replayTrail, new DebugDrawColor(255, 202, 72, 220));
     }

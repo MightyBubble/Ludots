@@ -5,7 +5,7 @@ using Arch.System;
 namespace Ludots.Core.Gameplay.Relationships
 {
     /// <summary>
-    /// Drives <see cref="AssociationControlProfileRuntime"/> once per tick (RFC-0065 CTRL-4b).
+    /// Drives <see cref="AssociationControlProfileRuntime"/> once per tick.
     /// The runtime itself gates on relationship-revision / tag-bit changes, so unchanged ticks do no work.
     /// </summary>
     public sealed class AssociationControlProfileSystem : BaseSystem<World, float>

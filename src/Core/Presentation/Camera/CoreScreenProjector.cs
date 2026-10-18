@@ -73,10 +73,6 @@ namespace Ludots.Core.Presentation.Camera
                 _view.Fov == view.Fov;
         }
 
-        /// <summary>
-        /// Bind a <see cref="CameraPresenter"/> so projection uses the smoothed camera
-        /// that matches the 3D render camera exactly.
-        /// </summary>
         public void BindPresenter(CameraPresenter presenter) => _presenter = presenter;
 
         public void BindPresentationAlphaProvider(Func<float> presentationAlphaProvider)

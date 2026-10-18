@@ -23,15 +23,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     public static class GridMeshBuilder
     {
         /// <summary>
-        /// Builds a triangle mesh from all walkable triangles in the mask.
         /// Vertices are tile-local integer grid coordinates stored as Vector2(col, row).
         /// </summary>
-        /// <param name="mask">Triangle-level walkability mask for one tile.</param>
         /// <param name="originCol">Global column of tile origin (for row-parity calculation).</param>
         /// <param name="originRow">Global row of tile origin (for row-parity calculation).</param>
-        /// <param name="mesh">Resulting triangle mesh.</param>
-        /// <param name="error">Error message if building fails.</param>
-        /// <returns>True on success.</returns>
         public static bool TryBuild(
             in TriWalkMask mask,
             int originCol,
@@ -45,7 +40,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int tileW = mask.TileWidth;
             int tileH = mask.TileHeight;
 
-            // Vertex deduplication: grid point (localCol, localRow) → vertex index.
             // Max possible unique vertices = (tileW+1) * (tileH+1) = 65*65 = 4225.
             // Using a flat array indexed by (row * stride + col) is faster than a dictionary.
             int stride = tileW + 1;
@@ -68,7 +62,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         if (!mask.IsWalkable(localC, localR, triIdx))
                             continue;
 
-                        // Get the three vertex grid positions for this triangle.
                         GetTriangleVertexPositions(localC, localR, triIdx, isOddRow,
                             out int c0, out int r0,
                             out int c1, out int r1,
@@ -111,13 +104,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             out int c1, out int r1,
             out int c2, out int r2)
         {
-            // v00
             int v00c = localC, v00r = localR;
-            // v10
             int v10c = localC + 1, v10r = localR;
-            // v01
             int v01c = localC, v01r = localR + 1;
-            // v11
             int v11c = localC + 1, v11r = localR + 1;
 
             if (!isOddRow)
@@ -132,9 +121,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        /// <summary>
-        /// Gets or creates a vertex index for the grid point (col, row).
-        /// </summary>
         private static int GetOrAddVertex(int[] indexMap, List<Vector2> vertices, int stride, int col, int row)
         {
             int flatIdx = row * stride + col;

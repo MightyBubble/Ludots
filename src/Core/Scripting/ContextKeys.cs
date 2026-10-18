@@ -4,10 +4,6 @@ using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Scripting
 {
-    /// <summary>
-    /// Legacy string-based context keys. Use <see cref="CoreServiceKeys"/> with
-    /// <see cref="ServiceKey{T}"/> for compile-time type safety instead.
-    /// </summary>
     [Obsolete("Use CoreServiceKeys with ServiceKey<T> for type-safe access. This class will be removed in a future release.")]
     public static class ContextKeys
     {
@@ -89,11 +85,9 @@ namespace Ludots.Core.Scripting
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed; unified into Presenter entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
         public const string SplineRibbonBuffer = "SplineRibbonBuffer";
-        // IndicatorRequestBuffer removed; unified into Presenter direct API
         public const string PresenterDefinitionRegistry = "PresenterDefinitionRegistry";
         public const string PresenterEntityRuntime = "PresenterEntityRuntime";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";

@@ -8,8 +8,7 @@ namespace Ludots.Core.Physics2D.Components
     }
 
     /// <summary>
-    /// 碰撞对（全定点数域）。
-    /// 存储碰撞检测结果和迭代求解器的累积冲量。
+    /// 全定点数域：存储碰撞检测结果和迭代求解器的累积冲量。
     /// </summary>
     public struct CollisionPair
     {

@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Architecture
 {
     /// <summary>
-    /// Satellite boards carry no consumers until BoardRef dispatch lands (#1567 slice 2):
+    /// Satellite boards carry no consumers:
     /// their partition/streaming/query state must stay unallocated at construction, and
     /// first access must build exactly one instance that the board keeps exposing.
     /// </summary>

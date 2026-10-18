@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 {
     /// <summary>
-    /// #623: AI draft must be structured patch data, never free-text execution.
+    /// AI draft must be structured patch data, never free-text execution.
     /// </summary>
     public sealed class LiveAiSkillDraft
     {
@@ -120,7 +120,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     }
 
     /// <summary>
-    /// Temporary playtest bind for a validated draft. Does not persist Mod files (#624).
+    /// Temporary playtest bind for a validated draft. Does not persist Mod files.
     /// </summary>
     public sealed class LiveAiDraftPlaytestBind
     {

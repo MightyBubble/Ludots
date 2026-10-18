@@ -89,9 +89,6 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        /// <summary>
-        /// Verify Grid and Chunked backends produce identical results through the ISpatialPartitionWorld interface.
-        /// </summary>
         [Test]
         public void ISpatialPartitionWorld_GridAndChunked_QueryParity()
         {
@@ -105,7 +102,6 @@ namespace Ludots.Tests.GAS
                 var entities = new List<Entity>();
                 var positions = new List<(int x, int y)>();
 
-                // Insert 100 entities at random cell positions
                 for (int i = 0; i < 100; i++)
                 {
                     var e = world.Create();
@@ -117,7 +113,6 @@ namespace Ludots.Tests.GAS
                     positions.Add((cx, cy));
                 }
 
-                // Query various regions and compare
                 for (int q = 0; q < 30; q++)
                 {
                     int x = rng.Next(0, 50);
@@ -131,7 +126,7 @@ namespace Ludots.Tests.GAS
                     int gridCount = gridWorld.Query(in rect, gridBuf, out int gridDropped);
                     int chunkedCount = chunkedWorld.Query(in rect, chunkedBuf, out int chunkedDropped);
 
-                    // Both should return same entities (sort for deterministic comparison)
+                    // Backend query order may differ — compare as sets.
                     var gridSet = new HashSet<Entity>();
                     var chunkedSet = new HashSet<Entity>();
                     for (int i = 0; i < gridCount; i++) gridSet.Add(gridBuf[i]);
@@ -141,14 +136,12 @@ namespace Ludots.Tests.GAS
                     That(chunkedSet.SetEquals(gridSet), Is.True, $"Query {q}: entity set mismatch");
                 }
 
-                // Test Remove parity
                 for (int i = 0; i < 10; i++)
                 {
                     gridWorld.Remove(entities[i], positions[i].x, positions[i].y);
                     chunkedWorld.Remove(entities[i], positions[i].x, positions[i].y);
                 }
 
-                // Verify post-removal query parity
                 for (int q = 0; q < 10; q++)
                 {
                     int x = rng.Next(0, 50);

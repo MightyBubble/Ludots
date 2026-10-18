@@ -9,7 +9,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Client
 {
     /// <summary>
-    /// Programmatic sole-seat possession binding for harnesses and showcases (Epic #896).
+    /// Programmatic sole-seat possession binding for harnesses and showcases.
     /// Not a LocalPlayer compatibility shim — writes only seat/LogicView registries (+ MapSession.LocalSeats when present).
     /// </summary>
     public static class ClientLocalSeatBindings

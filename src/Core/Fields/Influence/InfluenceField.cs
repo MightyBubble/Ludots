@@ -37,7 +37,7 @@ namespace Ludots.Core.Fields.Influence
         public int CopyNonDefaultCells(Span<FieldCellValue2D<float>> destination)
             => _field.CopyNonDefaultCells(destination);
 
-        /// <summary>Project radial influence centered at <paramref name="center"/> with peak value and falloff.</summary>
+        /// <summary>Project radial influence centered at <paramref name="center"/> with peak value and falloff; covered cells accumulate additively onto existing values.</summary>
         public void Stamp(WorldCmInt2 center, int radiusCm, float peak, FalloffKind falloff)
         {
             if (radiusCm <= 0 || peak == 0f)
@@ -61,7 +61,7 @@ namespace Ludots.Core.Fields.Influence
 
                     if (distSq > radiusSq)
                     {
-                        continue; // outside stamp radius
+                        continue;
                     }
 
                     float distCm = (float)Math.Sqrt(distSq);
@@ -75,7 +75,7 @@ namespace Ludots.Core.Fields.Influence
                     };
 
                     float current = _field.Get(cell);
-                    _field.Set(cell, current + influence); // additive
+                    _field.Set(cell, current + influence);
                 }
             }
         }

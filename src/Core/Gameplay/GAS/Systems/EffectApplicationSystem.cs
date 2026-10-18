@@ -67,7 +67,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly List<PendingEffectEntry> _pendingEffects;
 
-        // ── TargetResolver fan-out (shared types from TargetResolverFanOutHelper) ──
         private readonly FanOutCommandBuffer _fanOutCommands;
         private readonly RootBudgetTable _fanOutBudget;
         // An injected budget is advanced by the effect-loop owner once per processing transaction.
@@ -125,7 +124,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly TagOps _tagOps;
         private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
-        // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
@@ -494,7 +492,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                // Fan-out: publish TargetResolver fan-out EffectRequests (time-sliced)
                 if (_sliceStage == ApplicationStage.FanOutTargets)
                 {
                     while (_playbackCursor < _fanOutCommands.Count)
@@ -515,7 +512,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                // Replay deferred phase listener registrations (structural changes)
                 if (_sliceStage == ApplicationStage.RegisterListeners)
                 {
                     while (_playbackCursor < _pendingListenerRegistrations.Count)
@@ -755,19 +751,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Execute a phase graph for an effect entity, reading its template for behavior and config.
         /// Passes effectCategoryId and effectTemplateId for Phase Listener matching.
         /// </summary>
         private void ExecutePhaseForEffect(Entity effectEntity, in EffectContext context, in EffectTemplateData tpl, EffectPhaseId phase, BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
             if (_phaseExecutor == null || _graphApi == null) return;
 
-            // Determine template id for listener matching
             int templateId = 0;
             if (World.IsAlive(effectEntity) && World.Has<EffectTemplateRef>(effectEntity))
                 templateId = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
 
-            // Build merged config: template params + caller overrides
             var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, effectEntity, in tpl.ConfigParams);
 
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
@@ -851,7 +844,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Register effect-bound phase listeners from the template's ListenerSetup.
         /// Called during the OnApply phase.
         /// </summary>
         private unsafe void RegisterListenersFromTemplate(in EffectContext context, in EffectTemplateData tpl, int ownerEffectId)

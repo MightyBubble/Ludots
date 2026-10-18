@@ -10,7 +10,7 @@ namespace Ludots.Core.Client
         string? ControlSchemeId = null);
 
     /// <summary>
-    /// Client-local seat table (Epic #896). Seats are I/O channels that may possess a participant;
+    /// Client-local seat table. Seats are I/O channels that may possess a participant;
     /// they do not own players. AI participants need no seat.
     /// </summary>
     public sealed class ClientLocalSeatRegistry

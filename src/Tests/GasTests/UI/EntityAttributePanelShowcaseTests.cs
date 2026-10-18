@@ -138,11 +138,11 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(values.Get("squadAttack"), Is.EqualTo(36f));
             Assert.That(values.Get("rank.badge"), Is.EqualTo(11f));
 
-            // 4) same template serves the collection scope (#1012).
+            // 4) same template serves the collection scope.
             PanelVariableSet collectionScope = new PanelInstance(template, factionOwner).Evaluate(reader);
             Assert.That(collectionScope.Get("squadAttack"), Is.EqualTo(36f));
 
-            // 5) the declared event resolves to a seat-attributed intent (#1013).
+            // 5) the declared event resolves to a seat-attributed intent.
             var intentResolver = new PanelIntentResolver(template);
             PanelIntent intent = intentResolver.Resolve(
                 "ui.entity.inspect",

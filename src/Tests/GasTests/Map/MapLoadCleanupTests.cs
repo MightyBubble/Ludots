@@ -82,19 +82,15 @@ namespace GasTests
         {
             var session = CreateSessionWithBoard("map_a");
 
-            // Spawn 5 entities for "map_a"
             for (int i = 0; i < 5; i++)
                 SpawnMapEntity(session, "map_a", i, 0);
 
-            // Verify 5 map entities exist
             int countBefore = 0;
             _world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => countBefore++);
             Assert.That(countBefore, Is.EqualTo(5));
 
-            // Cleanup via MapSession
             session.Cleanup(_world);
 
-            // Verify all map entities destroyed
             int countAfter = 0;
             _world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => countAfter++);
             Assert.That(countAfter, Is.EqualTo(0));
@@ -106,19 +102,16 @@ namespace GasTests
             var session = CreateSessionWithBoard("map_a");
             var partition = session.PrimaryBoard.SpatialPartition;
 
-            // Add entities to spatial partition via board
             SpawnMapEntity(session, "map_a", 2, 3);
             SpawnMapEntity(session, "map_a", 4, 5);
 
-            // Verify spatial partition has data
             Span<Entity> buffer = stackalloc Entity[16];
             int countBefore = partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
             Assert.That(countBefore, Is.EqualTo(2));
 
-            // Cleanup 鈥?disposes boards which clears spatial partition
+            // Cleanup disposes the boards, which clears the spatial partition
             session.Cleanup(_world);
 
-            // Spatial partition should be empty after board disposal
             int countAfter = partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
             Assert.That(countAfter, Is.EqualTo(0));
         }
@@ -128,24 +121,19 @@ namespace GasTests
         {
             var sessionA = CreateSessionWithBoard("map_a");
 
-            // Simulate loading map_a
             for (int i = 0; i < 3; i++)
                 SpawnMapEntity(sessionA, "map_a", i, 0);
 
-            // Cleanup map_a
             sessionA.Cleanup(_world);
 
-            // Simulate loading map_b
             var sessionB = CreateSessionWithBoard("map_b");
             for (int i = 0; i < 4; i++)
                 SpawnMapEntity(sessionB, "map_b", i, 1);
 
-            // Only map_b entities should exist
             int count = 0;
             _world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => count++);
             Assert.That(count, Is.EqualTo(4));
 
-            // Cleanup map_b
             sessionB.Cleanup(_world);
 
             int countFinal = 0;

@@ -21,7 +21,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     /// </summary>
     public sealed class CdtTriangulator : ITriangulator
     {
-        // ───────────────── Internal triangle representation ─────────────────
 
         private struct Tri
         {
@@ -35,7 +34,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        // ───────────────── ITriangulator interface ─────────────────
 
         public bool TryTriangulate(Polygon polygon, out TriMesh mesh, out string error)
         {
@@ -97,15 +95,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return true;
         }
 
-        // ───────────────── Core CDT algorithm ─────────────────
 
         private TriMesh TriangulatePolygon(Polygon polygon)
         {
-            // Collect all unique points from outer + holes
             var points = new List<Vector2>();
             var constraintEdges = new List<(int a, int b)>();
 
-            // Add outer boundary
             int outerStart = points.Count;
             foreach (var p in polygon.Outer)
                 points.Add(new Vector2(p.X, p.Y));
@@ -121,7 +116,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 constraintEdges.Add((a, b));
             }
 
-            // Add holes
             if (polygon.Holes != null)
             {
                 foreach (var hole in polygon.Holes)
@@ -149,41 +143,34 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (inputCount < 3)
                 return TriMesh.Empty;
 
-            // Step 1: Create super-triangle
             CreateSuperTriangle(points, out int stA, out int stB, out int stC);
 
             var tris = new List<Tri> { new Tri(stA, stB, stC) };
 
-            // Step 2: Insert points using Bowyer-Watson
             for (int i = 0; i < inputCount; i++)
             {
                 InsertPoint(points, tris, i);
             }
 
-            // Step 3: Recover constraint edges
             foreach (var (ca, cb) in constraintEdges)
             {
                 RecoverConstraintEdge(points, tris, ca, cb);
             }
 
-            // Step 4: Mark exterior triangles via flood-fill
             var constraintSet = new HashSet<long>();
             foreach (var (ca, cb) in constraintEdges)
                 constraintSet.Add(EdgeKey(ca, cb));
 
             RemoveExteriorTriangles(points, tris, constraintSet, stA, stB, stC);
 
-            // Step 5: Remove super-triangle vertices, compact, and return
             return BuildResult(points, tris, inputCount);
         }
 
-        // ───────────────── Bowyer-Watson point insertion ─────────────────
 
         private static void InsertPoint(List<Vector2> points, List<Tri> tris, int pi)
         {
             var p = points[pi];
 
-            // Find all triangles whose circumcircle contains p
             var badIndices = new List<int>();
             for (int t = 0; t < tris.Count; t++)
             {
@@ -222,7 +209,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 CountEdge(edgeCount, tri.C, tri.A);
             }
 
-            // Boundary edges: count == 1
             var boundary = new List<(int v1, int v2)>();
             foreach (var kv in edgeCount)
             {
@@ -230,7 +216,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     boundary.Add((kv.Value.v1, kv.Value.v2));
             }
 
-            // Kill bad triangles
             foreach (int ti in badIndices)
             {
                 var tri = tris[ti];
@@ -238,7 +223,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 tris[ti] = tri;
             }
 
-            // Create new triangles connecting p to each boundary edge
             foreach (var (v1, v2) in boundary)
             {
                 tris.Add(new Tri(pi, v1, v2));
@@ -254,29 +238,24 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 map[key] = (a, b, 1);
         }
 
-        // ───────────────── Constraint edge recovery ─────────────────
 
         private static void RecoverConstraintEdge(List<Vector2> points, List<Tri> tris, int ca, int cb)
         {
-            // Check if constraint edge already exists
             if (FindEdgeTriangle(tris, ca, cb) >= 0)
                 return;
 
-            // Find triangles crossed by the constraint edge and flip until recovered
             int maxAttempts = tris.Count * 4;
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 if (FindEdgeTriangle(tris, ca, cb) >= 0)
-                    return; // recovered
+                    return;
 
-                // Find a crossing edge and flip it
                 bool flipped = false;
                 for (int t = 0; t < tris.Count; t++)
                 {
                     if (!tris[t].Alive) continue;
                     var tri = tris[t];
 
-                    // Check each edge of this triangle
                     if (TryFlipCrossingEdge(points, tris, t, tri.A, tri.B, ca, cb)) { flipped = true; break; }
                     if (TryFlipCrossingEdge(points, tris, t, tri.B, tri.C, ca, cb)) { flipped = true; break; }
                     if (TryFlipCrossingEdge(points, tris, t, tri.C, tri.A, ca, cb)) { flipped = true; break; }
@@ -290,27 +269,21 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             List<Vector2> points, List<Tri> tris,
             int triIdx, int ea, int eb, int ca, int cb)
         {
-            // Skip edges that share a vertex with the constraint
             if (ea == ca || ea == cb || eb == ca || eb == cb)
                 return false;
 
-            // Check if edge (ea, eb) intersects constraint (ca, cb)
             if (!EdgesIntersectProperly(points[ea], points[eb], points[ca], points[cb]))
                 return false;
 
-            // Find the triangle on the other side of edge (ea, eb)
             int otherTri = FindAdjacentTriangle(tris, triIdx, ea, eb);
             if (otherTri < 0) return false;
 
-            // Get the opposite vertices
             int ec = GetThirdVertex(tris[triIdx], ea, eb);
             int ed = GetThirdVertex(tris[otherTri], ea, eb);
 
-            // Check if the quadrilateral (ec, ea, ed, eb) is convex
             if (!IsConvexQuad(points[ec], points[ea], points[ed], points[eb]))
                 return false;
 
-            // Flip: replace (ea,eb) diagonal with (ec,ed) diagonal
             var t1 = tris[triIdx]; t1.Alive = false; tris[triIdx] = t1;
             var t2 = tris[otherTri]; t2.Alive = false; tris[otherTri] = t2;
 
@@ -320,14 +293,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return true;
         }
 
-        // ───────────────── Exterior triangle removal ─────────────────
 
         private static void RemoveExteriorTriangles(
             List<Vector2> points, List<Tri> tris,
             HashSet<long> constraintEdges,
             int stA, int stB, int stC)
         {
-            // Build adjacency: edge → list of alive triangle indices
             var edgeToTris = new Dictionary<long, List<int>>();
             for (int t = 0; t < tris.Count; t++)
             {
@@ -338,7 +309,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 AddEdgeTri(edgeToTris, tri.C, tri.A, t);
             }
 
-            // First: remove any triangle that uses a super-triangle vertex
             var seedExterior = new HashSet<int>();
             for (int t = 0; t < tris.Count; t++)
             {
@@ -364,7 +334,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 void FloodEdge(int v1, int v2)
                 {
-                    // Don't cross constraint edges
                     if (constraintEdges.Contains(EdgeKey(v1, v2)))
                         return;
 
@@ -378,7 +347,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 }
             }
 
-            // Kill all exterior triangles
             foreach (int ti in exterior)
             {
                 var tri = tris[ti];
@@ -398,7 +366,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             list.Add(triIdx);
         }
 
-        // ───────────────── Result building ─────────────────
 
         private static TriMesh BuildResult(List<Vector2> points, List<Tri> tris, int inputVertexCount)
         {
@@ -418,7 +385,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             foreach (int vi in usedVertices)
             {
-                if (vi >= inputVertexCount) continue; // super-triangle vertex, skip
+                if (vi >= inputVertexCount) continue;
                 vertexRemap[vi] = outVertices.Count;
                 outVertices.Add(points[vi]);
             }
@@ -430,7 +397,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 int a = vertexRemap[tri.A];
                 int b = vertexRemap[tri.B];
                 int c = vertexRemap[tri.C];
-                if (a < 0 || b < 0 || c < 0) continue; // references super vertex
+                if (a < 0 || b < 0 || c < 0) continue;
                 outTriangles.Add(a);
                 outTriangles.Add(b);
                 outTriangles.Add(c);
@@ -442,11 +409,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return new TriMesh(outVertices.ToArray(), outTriangles.ToArray());
         }
 
-        // ───────────────── Geometry helpers ─────────────────
 
         private static void CreateSuperTriangle(List<Vector2> points, out int iA, out int iB, out int iC)
         {
-            // Find bounding box of all points
             float minX = float.MaxValue, minY = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue;
             for (int i = 0; i < points.Count; i++)
@@ -475,8 +440,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         /// <summary>
-        /// Returns true if point p is inside the circumcircle of triangle (a, b, c).
-        /// Uses the standard determinant test (exact for our integer-coordinate inputs).
+        /// Standard determinant circumcircle test; exact for our integer-coordinate inputs.
         /// </summary>
         private static bool InCircumcircle(Vector2 a, Vector2 b, Vector2 c, Vector2 p)
         {
@@ -491,7 +455,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 (bx * bx + by * by) * (ax * cy - cx * ay) +
                 (cx * cx + cy * cy) * (ax * by - bx * ay);
 
-            // For CCW triangles, det > 0 means p is inside circumcircle
             // Handle near-zero winding by checking triangle orientation
             double triArea2 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
             if (triArea2 < 0) det = -det; // CW triangle → flip sign
@@ -525,7 +488,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             double d3 = Cross2D(a1, a2, b1);
             double d4 = Cross2D(a1, a2, b2);
 
-            // Proper crossing: the endpoints straddle each other
             if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
                 ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)))
                 return true;
@@ -536,7 +498,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         private static bool IsConvexQuad(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
         {
             // Quad vertices in order: a, b, c, d
-            // Check that all cross products have the same sign
             double c1 = Cross2D(a, b, c);
             double c2 = Cross2D(b, c, d);
             double c3 = Cross2D(c, d, a);
@@ -579,7 +540,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return ((long)a << 32) | (uint)b;
         }
 
-        /// <summary>Finds any alive triangle containing edge (a, b). Returns -1 if none.</summary>
         private static int FindEdgeTriangle(List<Tri> tris, int a, int b)
         {
             for (int t = 0; t < tris.Count; t++)
@@ -608,7 +568,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return -1;
         }
 
-        /// <summary>Returns the vertex of the triangle that is neither ea nor eb.</summary>
         private static int GetThirdVertex(in Tri tri, int ea, int eb)
         {
             if (tri.A != ea && tri.A != eb) return tri.A;

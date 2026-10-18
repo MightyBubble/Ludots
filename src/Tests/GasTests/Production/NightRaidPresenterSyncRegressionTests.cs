@@ -11,10 +11,9 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.Production
 {
     /// <summary>
-    /// Regression: graph-written WorldPositionCm must reach the presentation layer —
-    /// the hero's VisualTransform has to follow a SetWorldPosition teleport within a
-    /// couple of ticks, otherwise the presenter freezes at spawn while logic moves
-    /// (the "left click does nothing" night raid bug).
+    /// Graph-written WorldPositionCm must reach the presentation layer: the hero's
+    /// VisualTransform has to follow a SetWorldPosition teleport within a couple of
+    /// ticks, otherwise the presenter freezes at spawn while logic moves.
     /// </summary>
     [NonParallelizable]
     [TestFixture]

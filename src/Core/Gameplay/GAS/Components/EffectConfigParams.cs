@@ -25,18 +25,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// different parameterization (e.g. different child effect IDs, multipliers, caps).
     /// Zero-GC: fixed-size struct, no heap allocations.
     /// </summary>
-    /// <summary>
-    /// Per-EffectTemplate parameter table. Optimized: uses a single Values array
-    /// (int/float union via Unsafe.As) instead of parallel IntValues+FloatValues,
-    /// saving ~128 bytes per instance (292B vs 420B).
-    /// </summary>
     public unsafe struct EffectConfigParams
     {
         public const int MAX_PARAMS = GasConstants.EFFECT_CONFIG_PARAMS_MAX;
 
         public int Count;
         public fixed int Keys[MAX_PARAMS];           // config key id (resolved from string at load time)
-        public fixed byte Types[MAX_PARAMS];         // ConfigParamType
+        public fixed byte Types[MAX_PARAMS];
         public fixed int Values[MAX_PARAMS];         // int, effectTemplateId, or float (via Unsafe.As)
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -215,7 +210,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 int callerKey = caller.Keys[ci];
 
-                // Try to find existing entry with same key and overwrite
                 bool found = false;
                 for (int ti = 0; ti < Count; ti++)
                 {
@@ -239,7 +233,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
                         $"GAS.CONFIG_PARAMS.ERR.MergeCapacityExceeded: keyId={callerKey}, capacity={MAX_PARAMS}.");
                 }
 
-                // Not found: append to the fixed-capacity parameter table.
                 Keys[Count] = callerKey;
                 Types[Count] = caller.Types[ci];
                 Values[Count] = caller.Values[ci];

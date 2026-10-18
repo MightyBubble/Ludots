@@ -7,8 +7,8 @@ using Ludots.Core.Scripting;
 namespace CaseESelectionMod;
 
 /// <summary>
-/// Case E selection showcase entry. The base scene remains data-driven; the 10k scene
-/// uses the existing runtime spawn queue only to create its larger deterministic field.
+/// The base scene remains data-driven; the 10k scene uses the existing runtime spawn
+/// queue only to create its larger deterministic field.
 /// </summary>
 public sealed class CaseESelectionModEntry : IMod
 {

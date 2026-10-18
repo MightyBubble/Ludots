@@ -2448,7 +2448,7 @@ Ludots.Core.Scripting.EventSchemaRegistry BuildLauncherEventSchemas(
     return registry;
 }
 
-// Aggregate every launcher mod's Enums/enums.json in load order (#1125): first sight of a
+// Aggregate every launcher mod's Enums/enums.json in load order: first sight of a
 // type name freezes declaration order (the member values); later mods may only append
 // members. The editor's enum pickers and the validate compile resolve against this catalog,
 // mirroring the engine's EnumCatalogLoader instead of one mod's slice.
@@ -4270,7 +4270,7 @@ static bool TryBuildEditorUploadRecastContext(
         var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
         targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
         NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
-        // The bake pipeline tiles by terrain chunk (#1346 bake-side regridding pending);
+        // The bake pipeline tiles by terrain chunk;
         // refuse bakes whose declared nav granularity disagrees, so the mismatch surfaces
         // here instead of at map load.
         if (bakeConfig.Maps.TryGetValue(mapId, out var declaredBoards) &&

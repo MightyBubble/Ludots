@@ -16,19 +16,14 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// 切A 合前对抗性审查 S1：运行时出生路径必须与地图装载对齐——
-    /// S1-1 递归展开内联 children（不丢孙代）、S1-2 attach:false 出生前 fail-fast、
-    /// S1-3 带可寻址后代的实体必须有实例根（缺则 fail-fast）。
+    /// 运行时出生路径必须与地图装载对齐：递归展开内联 children（不丢孙代）、
+    /// attach:false 出生前 fail-fast、带可寻址后代的实体必须有实例根（缺则 fail-fast）。
     /// </summary>
     [TestFixture]
     public sealed class RuntimeEntityTemplateChildrenSpawnTests
     {
         private const string Pose =
             "\"localPose\": { \"offsetXCm\": 10, \"offsetYCm\": 0, \"facingDeg\": 0, \"inheritParentFacing\": false, \"offsetRotation\": \"None\" }";
-
-        // ---------------------------------------------------------------------
-        // S1-1: 运行时出生递归展开内联 children 与被引用模板自身的 children
-        // ---------------------------------------------------------------------
 
         private static readonly string RecursiveTemplates = """
         [
@@ -79,12 +74,10 @@ namespace Ludots.Tests.GAS
             Entity cargo = FindByName(harness.World, "Cargo");
             Entity tower = FindByName(harness.World, "Tower");
 
-            // 孙代（内联 chest→cargo）与“被引用模板自身的 child”（tent→lamp）都在，未静默丢失。
             Assert.That(harness.World.IsAlive(root) && harness.World.IsAlive(tent) && harness.World.IsAlive(lamp) &&
                         harness.World.IsAlive(chest) && harness.World.IsAlive(noId) && harness.World.IsAlive(cargo) &&
                         harness.World.IsAlive(tower), Is.True);
 
-            // 父先于子。
             Assert.That(root.Id, Is.LessThan(tent.Id));
             Assert.That(root.Id, Is.LessThan(tower.Id));
             Assert.That(tent.Id, Is.LessThan(lamp.Id));
@@ -96,11 +89,10 @@ namespace Ludots.Tests.GAS
             Assert.That(tent.Id, Is.LessThan(tower.Id));
             // 同一节点：先展开被引用模板自身的 children（lamp），再展开内联 children（chest、noid）。
             // 队列复用 FIFO：跨 sibling 子树按入队序出队，故这里只锁 parent-before-child 与声明序，
-            // 不锁 MapLoader 的跨子树 DFS 实体 id 序（见交付说明的偏差条目）。
+            // 不锁 MapLoader 的跨子树 DFS 实体 id 序。
             Assert.That(lamp.Id, Is.LessThan(chest.Id));
             Assert.That(chest.Id, Is.LessThan(noId.Id));
 
-            // 父子链接落在正确的父实体上（孙代的 parent 是子代，不是组根）。
             Assert.That(harness.World.Get<ChildOf>(tent).Parent, Is.EqualTo(root));
             Assert.That(harness.World.Get<ChildOf>(tower).Parent, Is.EqualTo(root));
             Assert.That(harness.World.Get<ChildOf>(lamp).Parent, Is.EqualTo(tent));
@@ -120,9 +112,7 @@ namespace Ludots.Tests.GAS
             Assert.That(CountByName(harness.World, "Tent"), Is.EqualTo(1));
         }
 
-        // ---------------------------------------------------------------------
-        // S1-2: attach:false 出生前 fail-fast（切片E 前不支持）
-        // ---------------------------------------------------------------------
+        // attach:false 出生前 fail-fast（切片E 前不支持）。
 
         private static readonly string AttachFalseTemplates = """
         [
@@ -189,10 +179,6 @@ namespace Ludots.Tests.GAS
             Assert.That(ex.Message, Does.Contain("g1.hq.guard"));
         }
 
-        // ---------------------------------------------------------------------
-        // S1-3: 带可寻址后代必须有实例根
-        // ---------------------------------------------------------------------
-
         private static readonly string AddressableTemplates = """
         [
           {
@@ -219,10 +205,6 @@ namespace Ludots.Tests.GAS
             Assert.That(ex.Message, Does.Contain("rt.addr.root"));
             Assert.That(ex.Message, Does.Contain("InstanceId"));
         }
-
-        // ---------------------------------------------------------------------
-        // S1-3（装载侧）：缺 instanceId 的摆放 fail-fast；共用模板靠实例前缀天然不碰撞
-        // ---------------------------------------------------------------------
 
         private static readonly string MapTemplates = """
         [
@@ -289,10 +271,6 @@ namespace Ludots.Tests.GAS
             Assert.That(index.LocalPathCount, Is.EqualTo(0), "children without localId are not addressable");
             Assert.That(CountMapEntities(world), Is.EqualTo(2), "root + anonymous child still materialize");
         }
-
-        // ---------------------------------------------------------------------
-        // Harness
-        // ---------------------------------------------------------------------
 
         private sealed class Harness : IDisposable
         {

@@ -20,7 +20,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// Slice-5 arpg revival acceptance: the dead showcase lives again as pure data on the new
+/// Arpg revival acceptance: the dead showcase lives again as pure data on the new
 /// chain — map binds the player to the hero rep, the template mounts the battle context whose
 /// self-roster graph maintains the active collection, and skill keys 1–6 submit cast intents
 /// through the §12 bridge. No mod gameplay code, no per-mod mapping installer.
@@ -52,7 +52,6 @@ public sealed class ArpgRevivalAcceptanceTests
             baseContext.ContextId == battleId,
             "英雄出生即携带 battle context（模板 initialInteractionContext）");
 
-        // self-roster：活跃集=英雄自身
         var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             as EntityCollectionStore
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");

@@ -7,9 +7,6 @@ namespace Ludots.Core.Mathematics
     {
         public const int ScalingFactor = 1000; // 1.0 = 1000
 
-        /// <summary>
-        /// Integer Square Root.
-        /// </summary>
         public static int Sqrt(long value)
         {
             if (value < 0) return 0;
@@ -32,7 +29,6 @@ namespace Ludots.Core.Mathematics
         /// </summary>
         public static int Sin(int degrees)
         {
-            // Normalize to 0-359
             degrees = degrees % 360;
             if (degrees < 0) degrees += 360;
             return _sinLut[degrees];
@@ -85,9 +81,6 @@ namespace Ludots.Core.Mathematics
             return neg ? q - 1 : q;
         }
 
-        /// <summary>
-        /// Integer ceiling division: rounds towards positive infinity.
-        /// </summary>
         public static int CeilDiv(int value, int divisor)
         {
             int q = value / divisor;
@@ -97,9 +90,6 @@ namespace Ludots.Core.Mathematics
             return pos ? q + 1 : q;
         }
 
-        /// <summary>
-        /// Converts a world-space AABB (in centimeters) to a cell-space IntRect.
-        /// </summary>
         public static IntRect WorldAabbToCellRect(in WorldAabbCm aabb, int cellSizeCm)
         {
             int minX = FloorDiv(aabb.X, cellSizeCm);

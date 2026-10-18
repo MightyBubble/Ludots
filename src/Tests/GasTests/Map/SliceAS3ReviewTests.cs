@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// 切A 第 3 轮全面复审（S3）：锁死"带 children 的模板与 batch lane 的关系"这份合同——
+    /// 锁死"带 children 的模板与 batch lane 的关系"这份合同——
     /// TemplateSpawnDescriptor.Create 把带 children 的模板判为 batch-Incompatible（逐子挂接只能走
     /// 单实体 lane），因此无论地图装载还是运行时出生、无论走哪条 lane，带 children 的模板都
     /// 必须完整物化后代、登记 local 路径、并受可寻址 instanceId 门约束。另锁 inline 引用环的
@@ -46,8 +46,6 @@ namespace Ludots.Tests.GAS
         ]
         """.Replace("{{POSE}}", Pose);
 
-        // 环样本：载体自身无模板 children，环藏在 InlineChildren 的模板引用里（x 自引用）。
-        // 只供运行时 lane（直接装配 registry，不经 LoadTemplates 环校验）使用。
         private static readonly string NamePathTemplates = """
         [
           {
@@ -73,6 +71,8 @@ namespace Ludots.Tests.GAS
         ]
         """.Replace("{{POSE}}", Pose);
 
+        // 环样本：载体自身无模板 children，环藏在 InlineChildren 的模板引用里（x 自引用）。
+        // 只供运行时 lane（直接装配 registry，不经 LoadTemplates 环校验）使用。
         private static readonly string InlineCycleTemplates = """
         [
           { "id": "cyc3.carrier2", "components": { "Name": { "Value": "Cyc3Carrier2" } } },
@@ -248,7 +248,7 @@ namespace Ludots.Tests.GAS
             map.Entities.Add(new EntitySpawnData { Template = "s3.batchroot" });
             map.Entities.Add(new EntitySpawnData { Template = "s3.batchroot" });
 
-            // instanceId 门必须盖住 batch 路径：此前 batch 摆放在 continue 时绕过慢速路径上的门。
+            // instanceId 门必须盖住 batch 路径。
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => loader.LoadEntitiesAndIndex(map))!;
 
@@ -294,8 +294,7 @@ namespace Ludots.Tests.GAS
         public void S3_4_RuntimeCycleThroughInlineChildRef_FailsFastAtRootUpdate()
         {
             // 环经"内联 child 的模板引用"边到达：carrier2 自身无模板 children，
-            // 环藏在 InlineChildren -> cyc3.x -> cyc3.x（自引用）。守卫必须连内联引用一起查
-            // （此前只查模板 children，内联引用的环要晚一步 drain 才现形）。
+            // 环藏在 InlineChildren -> cyc3.x -> cyc3.x（自引用）。守卫必须连内联引用一起查。
             using Harness harness = Harness.Create(InlineCycleTemplates);
 
             var inline = new List<EntityTemplateChild>

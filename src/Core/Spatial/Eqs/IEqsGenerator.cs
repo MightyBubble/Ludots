@@ -4,9 +4,6 @@ using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Spatial.Eqs
 {
-    /// <summary>
-    /// Generator produces candidate positions for EQS query.
-    /// </summary>
     public interface IEqsGenerator
     {
         /// <summary>

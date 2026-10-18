@@ -27,7 +27,6 @@ namespace Ludots.Core.Presentation.Assets
         }
 
         /// <summary>
-        /// Register a descriptor by string key. Returns the assigned int runtime ID.
         /// If the key is already registered, overwrites the descriptor and returns the existing ID.
         /// </summary>
         public int Register(string key, in MeshAssetDescriptor descriptor)

@@ -90,7 +90,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            // 无消费者的事件完全跳过分发：不再每笔 new ScriptContext + 字符串拼接。
+            // 无消费者的事件完全跳过分发：省去每笔 new ScriptContext + 字符串拼接。
             if (!_tagStates.TryGetValue(evt.TagId, out BridgeTagState state))
             {
                 state = new BridgeTagState(mapId, EventKeyPrefix + tagName);

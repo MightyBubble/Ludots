@@ -6,7 +6,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Tests.Presentation
 {
     /// <summary>
-    /// #1491 收割语义的合同：reveal-hidden（全图/benchmark showcase）豁免属性可读性与指令资格；
+    /// reveal-hidden（全图/benchmark showcase）豁免的合同：属性可读性与指令资格；
     /// helper 是该豁免的公共入口（PresentPhaseResolver 门与 CommandSourceEligibility 均经此判定）。
     /// </summary>
     [TestFixture]

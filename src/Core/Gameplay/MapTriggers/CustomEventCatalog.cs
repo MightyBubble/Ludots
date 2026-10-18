@@ -217,7 +217,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (!node.ContainsKey("params"))
             {
                 // Parameterless entries still carry their scope; dropping it here would
-                // silently re-route Global-scope events into the map table (#1123).
+                // silently re-route Global-scope events into the map table.
                 return new EventSchema(eventName, scope, Array.Empty<EventParamSchema>());
             }
 

@@ -13,9 +13,6 @@ using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// Epic #615 remaining slices: #620 Immediate attrs, #621 tracer, #623 AI draft, #624 save.
-    /// </summary>
     [TestFixture]
     public sealed class LiveSkillWorkbenchEpicAcceptanceTests
     {

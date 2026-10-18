@@ -18,11 +18,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
 
-/// <summary>
-/// MOBA demo, played through its own interaction contexts and graphs: smart cast hits the
-/// enemy under the cursor, F3 switches to aim-first (Q opens a range state, left-click an
-/// enemy casts, right-click cancels), and right-click on the ground walks the champion.
-/// </summary>
 [NonParallelizable]
 [TestFixture]
 [Category("acceptance")]

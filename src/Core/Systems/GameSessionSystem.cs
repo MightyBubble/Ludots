@@ -17,7 +17,6 @@ namespace Ludots.Core.Systems
 
         public void Initialize()
         {
-            // No initialization needed
         }
 
         public void Update(in float dt)

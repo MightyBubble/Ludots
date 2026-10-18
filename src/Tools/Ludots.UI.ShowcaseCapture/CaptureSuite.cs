@@ -67,13 +67,13 @@ internal sealed class CaptureSuite
 	}
 	SKRectI sKRectI = BuildFocusRect(uiNode2.LayoutRect, padding, minWidth, minHeight, sKBitmap.Width, sKBitmap.Height);
 		using SKBitmap bitmap = new SKBitmap(sKRectI.Width, sKRectI.Height);
-		using (SKCanvas sKCanvas2 = new SKCanvas(bitmap))
+		using (SKCanvas cropCanvas = new SKCanvas(bitmap))
 		{
-			sKCanvas2.Clear(ResolveSceneBackdrop(scene));
-			sKCanvas2.DrawBitmap(sKBitmap, sKRectI, new SKRect(0f, 0f, sKRectI.Width, sKRectI.Height));
+			cropCanvas.Clear(ResolveSceneBackdrop(scene));
+			cropCanvas.DrawBitmap(sKBitmap, sKRectI, new SKRect(0f, 0f, sKRectI.Width, sKRectI.Height));
 			if (stepName.Contains("phase5", StringComparison.OrdinalIgnoreCase))
 			{
-				DrawPhaseFiveOverlay(sKCanvas2, uiNode2.RenderStyle, stepName);
+				DrawPhaseFiveOverlay(cropCanvas, uiNode2.RenderStyle, stepName);
 			}
 		}
 		string filePath = Path.Combine(_screens, stepName + ".png");

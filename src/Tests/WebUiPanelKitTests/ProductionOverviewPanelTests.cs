@@ -14,9 +14,8 @@ using NUnit.Framework;
 namespace Ludots.Tests.WebUiPanelKit;
 
 /// <summary>
-/// WPK-4 Production / Worker / Queue overview contract tests: project command/status/queue,
-/// worker buckets from collection + tag/order/attribute, fail-fast missing sources/profile,
-/// DataPlane payload shape, and no parallel production store.
+/// Production overview is a pure projection of command-panel status/queue and collection worker buckets;
+/// there is no parallel production store.
 /// </summary>
 [TestFixture]
 public sealed class ProductionOverviewPanelTests

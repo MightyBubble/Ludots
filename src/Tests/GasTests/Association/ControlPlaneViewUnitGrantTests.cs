@@ -11,7 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 §5.4 mind_control-style unit-scope grants: a Controls edge to a plain unit makes the unit's
+    /// Mind_control-style unit-scope grants: a Controls edge to a plain unit makes the unit's
     /// domain partially controlled, and <see cref="ControlPlaneView"/> projects only the controllable rows of
     /// that domain. Domain collections are written directly through the store to keep the scenario independent
     /// from the routed writer.

@@ -55,7 +55,6 @@ namespace Ludots.Core.Systems
         private readonly ParamDefault[][] _presenterBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
         private ComponentAuthoringContext _authoringContext = ComponentAuthoringContext.Empty;
         
-        // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
         public EntityTemplateKeyRegistry EntityTemplateKeys { get; }
         private readonly Dictionary<string, string> _templateSources = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -425,8 +424,6 @@ namespace Ludots.Core.Systems
 
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
         {
-            // This loads "Entities/templates.json" from Core and all Mods
-            // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json", catalog, report);
             ExpandTemplateInheritance(report);
             EntityTemplateKeys.Clear();
@@ -623,12 +620,7 @@ namespace Ludots.Core.Systems
             }
 
 
-            // We need to extract the dictionary from the registry to pass to EntityBuilder
-            // Or better, update EntityBuilder to accept DataRegistry or just the Interface.
-            // For now, let's just create a dictionary snapshot or pass the lookup function.
-            
-            // Current EntityBuilder expects Dictionary<string, EntityTemplate>.
-            // We can convert DataRegistry content to Dictionary easily.
+            // EntityBuilder 需要 Dictionary<string, EntityTemplate>，故由 DataRegistry 内容物化快照。
             var templates = new System.Collections.Generic.Dictionary<string, EntityTemplate>();
             foreach(var t in TemplateRegistry.GetAll())
             {
@@ -776,7 +768,7 @@ namespace Ludots.Core.Systems
                 }
 
                 // 可寻址路径 = 摆放实例根 instanceId + localId 链；缺 instanceId 的后代会
-                // 落进根名字空间与兄弟撞名。此门必须盖住 batch 与非 batch 两条路径（S3-a）。
+                // 落进根名字空间与兄弟撞名。此门必须盖住 batch 与非 batch 两条路径。
                 if (string.IsNullOrWhiteSpace(entityData.InstanceId) &&
                     EntityTemplate.HasAddressableDescendant(templates[entityData.Template].Children, TemplateRegistry))
                 {
@@ -945,7 +937,7 @@ namespace Ludots.Core.Systems
         /// map 装载 lane 的模板 children 物化：与 runtime spawn 队列同一 EntityBuilder 物化路径、
         /// 同一 AttachedPoseMath 落位数学，仅时序不同（map 装载是同步 lane）。
         /// 装载期已校验引用与无环，此处递归必然终止。带 localId 的节点以摆放实例根路径
-        /// 前缀累积成可寻址路径，登记进 entityIndex（切A 只留形状，供切D/切F 消费）。
+        /// 前缀累积成可寻址路径，登记进 entityIndex（只登记"本地路径 → 实体"形状，解析由消费方负责）。
         /// </summary>
         private void SpawnTemplateChildrenAtMapLoad(
             EntityBuilder builder,
@@ -1202,7 +1194,7 @@ namespace Ludots.Core.Systems
                 titles.StampIfBound(_world, childEntity, childLocalPath);
             }
 
-            // attach:false 的独立出生属切E；本切仍走结构挂接，保留标记与禁令豁免。
+            // attach:false 的子节点在本 lane 仍走结构挂接（非独立出生）；标记与禁令豁免照常保留。
             Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
                 _world,
                 arbiter: null,
@@ -1210,7 +1202,7 @@ namespace Ludots.Core.Systems
                 parent,
                 Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context));
 
-            // 先展开被引用模板自身的 children（main 既有先例），再展开本节点的内联 children。
+            // 先展开被引用模板自身的 children，再展开本节点的内联 children。
             SpawnTemplateChildrenAtMapLoad(
                 builder,
                 templates,

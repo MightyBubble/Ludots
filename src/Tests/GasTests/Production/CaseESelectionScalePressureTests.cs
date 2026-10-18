@@ -97,7 +97,6 @@ public sealed class CaseESelectionScalePressureTests
 
         Entity commander = Resolve(engine, "case-e-commander");
 
-        // ── 造 10k 人口：100 可选（team1 + marine 模板 + 可见横排）+ 9894 填充（team2）──
         int marineTemplateKey = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
             is EntityTemplateKeyRegistry keys ? keys.GetId("case_e_marine") : throw new InvalidOperationException("template key registry missing");
         var selectable = CreateUnits(engine, teamId: 1, templateKey: marineTemplateKey, count: selectableCount, xStepCm: Math.Max(1, 800 / selectableCount), xStartCm: -(selectableCount * Math.Max(1, 800 / selectableCount)) / 2);
@@ -151,7 +150,6 @@ public sealed class CaseESelectionScalePressureTests
             "全幅框命中全部已入候选集的单位（候选集=当前 {rosterCount} 支）");
         AssertNoTriggerErrors(engine);
 
-        // 20 次扫框：指针横移，逐次重扫候选集
         for (int i = 1; i <= 20; i++)
         {
             float x = -1200f + i * 120f;
@@ -212,7 +210,6 @@ public sealed class CaseESelectionScalePressureTests
         return units;
     }
 
-    /// <summary>世界里满足「team=1 + case_e_marine 模板」的可选单位总数（世界构成基线）。</summary>
     private static int CountEligibleMarines(GameEngine engine)
     {
         int marineKey = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
@@ -271,8 +268,8 @@ public sealed class CaseESelectionScalePressureTests
         double maxTickMs,
         int rosterCount,
         int worldAmount,
-        int hoverFull,
-        int hoverHalf)
+        int fullBandPreview,
+        int halfBandPreview)
     {
         string dir = Path.Combine(repoRoot, BenchDir);
         Directory.CreateDirectory(dir);
@@ -285,12 +282,12 @@ public sealed class CaseESelectionScalePressureTests
                 w.WriteLine("utc,population,two_transitions_and_reads_ms,batch_per_write_ms,batch100_and_read_ms,drag_total_ms,drag_max_tick_ms,roster_count,world_marines,hover_full,hover_half");
             }
 
-            w.WriteLine($"{DateTime.UtcNow:O},{population},{rosterSingleMs:F3},{rosterPerEventMs:F3},{rosterStreamMs:F3},{dragMs:F3},{maxTickMs:F3},{rosterCount},{worldAmount},{hoverFull},{hoverHalf}");
+            w.WriteLine($"{DateTime.UtcNow:O},{population},{rosterSingleMs:F3},{rosterPerEventMs:F3},{rosterStreamMs:F3},{dragMs:F3},{maxTickMs:F3},{rosterCount},{worldAmount},{fullBandPreview},{halfBandPreview}");
         }
 
         TestContext.WriteLine($"roster_single={rosterSingleMs:F2}ms roster_per_event={rosterPerEventMs:F2}ms " +
             $"roster_stream100={rosterStreamMs:F2}ms drag={dragMs:F2}ms max_tick={maxTickMs:F2}ms " +
-            $"roster={rosterCount}/{worldAmount} hover_full={hoverFull} hover_half={hoverHalf}");
+            $"roster={rosterCount}/{worldAmount} hover_full={fullBandPreview} hover_half={halfBandPreview}");
     }
 
     // ── 与 CaseESelectionShowcaseAcceptanceTests 同款 headless 夹具 ──

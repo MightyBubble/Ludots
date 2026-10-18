@@ -64,11 +64,8 @@ namespace ModdingTest
             GameEngine engine = null;
             try
             {
-                // Note: GameBootstrapper expects "assets" folder to be discoverable from baseDirectory or parents
-                // But our assetsDir might be far away if we are in bin/Debug...
-                // GameBootstrapper.FindAssetsRootStrict looks up parent directories.
-                // If we are in bin/Debug/net9.0, and assets is in project root, it should find it.
-                // Let's verify.
+                // GameBootstrapper.FindAssetsRootStrict resolves "assets" by walking up parent
+                // directories, so the bin/Debug base directory still finds repo-root assets.
                 
                 Console.WriteLine("[Bootstrapper] Initializing...");
                 var result = GameBootstrapper.InitializeFromBaseDirectory(rootDir);
@@ -111,7 +108,6 @@ namespace ModdingTest
             // 4. Verify Pipeline (Test Logic)
             Console.WriteLine("\n=== Verifying Config Pipeline ===");
             
-            // Access Registry via Engine -> MapLoader
             if (engine.MapLoader != null && engine.MapLoader.TemplateRegistry != null)
             {
                 var registry = engine.MapLoader.TemplateRegistry;
@@ -211,7 +207,6 @@ namespace ModdingTest
                 Console.WriteLine($"FAILURE: Camera verification threw: {ex}");
             }
 
-            // Cleanup
             engine.Dispose();
             if (File.Exists(gameJsonPath)) File.Delete(gameJsonPath);
             // Don't delete mod files yet, might need them for debugging or subsequent runs

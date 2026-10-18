@@ -203,8 +203,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             DebugDrawColor.Green);
     }
 
-    // ── 记事板（黑板）──
-
     private void DrawMemoBoard(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, MemoSlot flashSlot, int wave, bool showReadbackCheck)
     {
         const float boardWidth = 2.0f;
@@ -499,8 +497,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         DrawStakeChip(debugDraw, (sx + tx) * 0.5f, (sy + ty) * 0.5f, NamedColor, scale: 1.4f);
     }
 
-    // ── 配置册 ──
-
     private enum ConfigRow
     {
         Tier = 0,
@@ -652,8 +648,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             debugDraw, (sx + tx) * 0.5f, (sy + ty) * 0.5f + 0.3f, GraphShowcaseStagePresenter.BadgeKind.Flame, TicketColor, scale: 0.9f);
     }
 
-    // ── 情境信封 ──
-
     private enum EnvelopeCard
     {
         Gold = 0,
@@ -756,8 +750,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawThickOutlineCircle(
             debugDraw, contextActor.X, contextActor.Y - 0.1f, 0.8f, GraphShowcaseStagePresenter.OutlineDark, NamedColor);
     }
-
-    // ── 状态 ──
 
     private void SeedBlackboard(GraphOpsNodeDriverContext ctx)
     {

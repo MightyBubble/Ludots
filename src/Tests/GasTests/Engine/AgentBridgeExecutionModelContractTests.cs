@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas
 {
     /// <summary>
-    /// Bridge execution-model contracts (#1081 P0): loop-health diagnostics must
+    /// Bridge execution-model contracts: loop-health diagnostics must
     /// distinguish a stalled game loop from a live one, and the input event
     /// ledger must record inject events with causal anchors (pump/tick) and a
     /// bounded ring. These run without any HTTP listener.

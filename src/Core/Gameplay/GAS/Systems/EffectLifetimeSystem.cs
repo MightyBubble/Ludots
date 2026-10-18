@@ -34,7 +34,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly ISpatialQueryService? _spatialQueries;
         private readonly GasPresentationEventBuffer? _presentationEvents;
 
-        // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor? _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? _graphApiHost;
@@ -53,10 +52,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectPhaseSideEffectTransaction _phaseTransaction;
 
 
-        /// <summary>
-        /// Records effects whose phase graphs need execution.
-        /// Stores the effect's own template ID and context for phase graph execution.
-        /// </summary>
         private struct PhaseGraphEntry
         {
             public int TemplateId;
@@ -800,7 +795,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         // OnPeriod callbacks are handled via Phase Graph bindings.
 
 
-                        // Collect for Phase Graph execution (OnPeriod)
                         if (World.Has<EffectTemplateRef>(entity))
                         {
                             AddFixed(
@@ -912,7 +906,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 // OnExpire/OnRemove callbacks are handled via Phase Graph bindings.
 
-                // Collect for Phase Graph execution (OnExpire + OnRemove)
                 if (World.Has<EffectTemplateRef>(entity))
                 {
                     int tplId = World.Get<EffectTemplateRef>(entity).TemplateId;
@@ -931,7 +924,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     AddFixed(RemovePhaseGraphs, entry, nameof(RemovePhaseGraphs));
                 }
 
-                // Revoke granted tags from target before destroying
                 if (World.Has<EffectGrantedTags>(entity) && World.IsAlive(context.Target))
                 {
                     ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(entity);

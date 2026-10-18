@@ -24,11 +24,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
 {
-    /// <summary>
-    /// MUD-style demo-log tests for every Demo Mod.
-    /// Each test loads mods via GameEngine pipeline, entities come from Map JSON / Triggers,
-    /// runs gameplay scenarios, and writes a human-readable .log file.
-    /// </summary>
     [NonParallelizable]
     [TestFixture]
     public sealed class ProductionModDemoLogTests
@@ -42,9 +37,6 @@ namespace Ludots.Tests.GAS.Production
             GC.Collect();
         }
 
-        // ─────────────────────────────────────────────────
-        //  MOBA
-        // ─────────────────────────────────────────────────
         [Test]
         public void MobaDemoLog()
         {
@@ -56,7 +48,7 @@ namespace Ludots.Tests.GAS.Production
             RunWithEngine(new[] { "LudotsCoreMod", "MobaDemoMod" }, "entry", engine =>
             {
                 var world = engine.World;
-                var (hero, enemy1, enemy2) = FindEntities3(world, "Hero", "Enemy1", "Enemy2");
+                var (hero, enemy1, enemy2) = FindEntityTriple(world, "Hero", "Enemy1", "Enemy2");
                 int healthId = EnsureAttr("Health");
                 int forceXId = EnsureAttr("Physics.ForceRequestX");
                 int forceYId = EnsureAttr("Physics.ForceRequestY");
@@ -65,7 +57,6 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[MOBA]", "初始状态", world, enemy1, "Enemy1", new[] { healthId }, new[] { "Health" });
                 LogEntityState(sb, "[MOBA]", "初始状态", world, enemy2, "Enemy2", new[] { healthId }, new[] { "Health" });
 
-                // ── Q: 单体伤害 ──
                 sb.AppendLine("[MOBA] Hero 对 Enemy1 施放【Q - 直接伤害 -20HP】。");
                 CastAbility(engine, hero, enemy1, slot: 0);
                 Tick(engine, 60);
@@ -74,8 +65,6 @@ namespace Ludots.Tests.GAS.Production
                 float e1Hp = world.Get<AttributeBuffer>(enemy1).GetCurrent(healthId);
                 Assert.That(e1Hp, Is.EqualTo(80f).Within(0.01f), "Q should deal 20 damage");
 
-                // ── W: 自我治疗 ──
-                // 先让 hero 受点伤
                 var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int qTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");
                 effectRequests.Publish(new EffectRequest { RootId = 0, Source = enemy1, Target = hero, TargetContext = default, TemplateId = qTplId });
@@ -90,14 +79,12 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[MOBA]", "W 后", world, hero, "Hero", new[] { healthId }, new[] { "Health" });
                 Assert.That(heroHpHealed, Is.GreaterThan(heroHpDamaged), "W should heal hero");
 
-                // ── E: 锥形 AOE ──
                 sb.AppendLine("[MOBA] Hero 对 Enemy1 方向施放【E - 锥形搜索 AOE -5HP】。");
                 CastAbility(engine, hero, enemy1, slot: 2);
                 Tick(engine, 60);
                 LogEntityState(sb, "[MOBA]", "E 后", world, enemy1, "Enemy1", new[] { healthId }, new[] { "Health" });
                 LogEntityState(sb, "[MOBA]", "E 后", world, enemy2, "Enemy2", new[] { healthId }, new[] { "Health" });
 
-                // ── DoT: 持续伤害 ──
                 int dotId = EffectTemplateIdRegistry.GetId("Effect.Moba.DOT.Burn");
                 float e1BeforeDot = world.Get<AttributeBuffer>(enemy1).GetCurrent(healthId);
                 sb.AppendLine("[MOBA] 对 Enemy1 施加【Burn DoT -3HP/tick】。");
@@ -107,7 +94,7 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[MOBA]", "DoT 后", world, enemy1, "Enemy1", new[] { healthId }, new[] { "Health" });
                 sb.AppendLine($"[MOBA] Enemy1 Burn 累计伤害 = {e1BeforeDot - e1AfterDot:F1}。");
 
-                // ── Debuff: Slow / Silence (applied to hero for safe testing, enemies lack GameplayTagContainer) ──
+                // Debuffs target hero, not enemies: enemies lack GameplayTagContainer.
                 int slowId = EffectTemplateIdRegistry.GetId("Effect.Moba.Debuff.Slow");
                 int silenceId = EffectTemplateIdRegistry.GetId("Effect.Moba.Debuff.Silence");
                 if (slowId > 0)
@@ -125,7 +112,6 @@ namespace Ludots.Tests.GAS.Production
                     LogTags(sb, "[MOBA]", world, engine, hero, "Hero", new[] { "Status.Slowed", "Status.Silenced" });
                 }
 
-                // ── Aura: 友方治疗光环 ──
                 int auraId = EffectTemplateIdRegistry.GetId("Effect.Moba.Aura.FriendlyHeal");
                 if (auraId > 0)
                 {
@@ -135,7 +121,6 @@ namespace Ludots.Tests.GAS.Production
                     sb.AppendLine("[MOBA] 光环已激活 (PeriodicSearch radius=700 Friendly)。");
                 }
 
-                // ── LaunchProjectile: 弹道生成 ──
                 int projectileTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Projectile.Arrow");
                 if (projectileTplId > 0)
                 {
@@ -148,7 +133,6 @@ namespace Ludots.Tests.GAS.Production
                     Assert.That(projectileAfter, Is.GreaterThanOrEqualTo(projectileBefore), "LaunchProjectile should not reduce projectile count unexpectedly.");
                 }
 
-                // ── ApplyForce2D: 力输入注入 ──
                 int forceTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Force.E");
                 if (forceTplId > 0)
                 {
@@ -163,7 +147,6 @@ namespace Ludots.Tests.GAS.Production
                     Assert.That(MathF.Abs(fxAfter) + MathF.Abs(fyAfter), Is.GreaterThan(0.01f), "ApplyForce2D should write force request attributes.");
                 }
 
-                // ── CreateUnit: 召唤单位 ──
                 int summonTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Summon.Skeleton");
                 if (summonTplId > 0)
                 {
@@ -180,7 +163,6 @@ namespace Ludots.Tests.GAS.Production
                     sb.AppendLine("[MOBA] Summon 请求已执行（CreateUnit preset 覆盖验证通过）。");
                 }
 
-                // ── Displacement: 位移效果 ──
                 int displacementTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Displacement.R");
                 if (displacementTplId > 0 && world.Has<WorldPositionCm>(enemy2))
                 {
@@ -204,9 +186,6 @@ namespace Ludots.Tests.GAS.Production
             WriteLog("moba_demo.log", sb);
         }
 
-        // ─────────────────────────────────────────────────
-        //  TCG (Chain + Stack + GrantedTags)
-        // ─────────────────────────────────────────────────
         [Test]
         public void TcgDemoLog_Chain()
         {
@@ -218,13 +197,12 @@ namespace Ludots.Tests.GAS.Production
             RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_chain", engine =>
             {
                 var world = engine.World;
-                var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
+                var (hero, enemy) = FindEntityPair(world, "TcgHero", "TcgEnemy");
                 int healthId = EnsureAttr("Health");
 
                 LogEntityState(sb, "[TCG]", "初始状态", world, hero, "TcgHero", new[] { healthId }, new[] { "Health" });
                 LogEntityState(sb, "[TCG]", "初始状态", world, enemy, "TcgEnemy", new[] { healthId }, new[] { "Health" });
 
-                // ── Fireball (slot 0, ability 2101) ──
                 float enemyBefore = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
                 sb.AppendLine("[TCG] TcgHero 发动【火球术 -30HP】→ TcgEnemy。");
                 CastAbility(engine, hero, enemy, slot: 0);
@@ -248,12 +226,11 @@ namespace Ludots.Tests.GAS.Production
             RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_stack", engine =>
             {
                 var world = engine.World;
-                var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
+                var (hero, enemy) = FindEntityPair(world, "TcgHero", "TcgEnemy");
                 int healthId = EnsureAttr("Health");
 
                 LogEntityState(sb, "[TCG]", "初始状态", world, enemy, "TcgEnemy", new[] { healthId }, new[] { "Health" });
 
-                // PoisonCounter slot 1 (ability 2102) - stackable DoT, limit 5, AddDuration
                 var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int poisonId = EffectTemplateIdRegistry.GetId("Effect.Tcg.PoisonCounter");
 
@@ -291,13 +268,12 @@ namespace Ludots.Tests.GAS.Production
             RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_grant", engine =>
             {
                 var world = engine.World;
-                var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
+                var (hero, enemy) = FindEntityPair(world, "TcgHero", "TcgEnemy");
                 int healthId = EnsureAttr("Health");
                 int attackId = EnsureAttr("Attack");
 
                 LogEntityState(sb, "[TCG]", "初始状态", world, hero, "TcgHero", new[] { healthId, attackId }, new[] { "Health", "Attack" });
 
-                // MagicBarrier (slot 0, ability 2103 on tcg_grant map) - grants Immune.Spell
                 sb.AppendLine("[TCG] TcgHero 施放【魔法屏障】→ 自身 (Infinite Buff, GrantedTags: Immune.Spell)。");
                 var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int magicBarrierId = EffectTemplateIdRegistry.GetId("Effect.Tcg.MagicBarrier");
@@ -305,7 +281,6 @@ namespace Ludots.Tests.GAS.Production
                 Tick(engine, 10);
                 LogTags(sb, "[TCG]", world, engine, hero, "TcgHero", new[] { "Immune.Spell" });
 
-                // PowerBoost (slot 1, ability 2104) - buffs Attack +20, grants Status.Empowered
                 sb.AppendLine("[TCG] TcgHero 施放【力量强化】→ 自身 (Infinite Buff, Attack+20, GrantedTags: Status.Empowered)。");
                 int powerBoostId = EffectTemplateIdRegistry.GetId("Effect.Tcg.PowerBoost");
                 effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = hero, TargetContext = default, TemplateId = powerBoostId });
@@ -320,9 +295,6 @@ namespace Ludots.Tests.GAS.Production
             WriteLog("tcg_grant_demo.log", sb);
         }
 
-        // ─────────────────────────────────────────────────
-        //  ARPG
-        // ─────────────────────────────────────────────────
         [Test]
         public void ArpgDemoLog()
         {
@@ -334,14 +306,13 @@ namespace Ludots.Tests.GAS.Production
             RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
             {
                 var world = engine.World;
-                var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
+                var (hero, enemy) = FindEntityPair(world, "ArpgHero", "ArpgEnemy");
                 int healthId = EnsureAttr("Health");
                 int armorId = EnsureAttr("Armor");
 
                 LogEntityState(sb, "[ARPG]", "初始状态", world, hero, "ArpgHero", new[] { healthId, armorId }, new[] { "Health", "Armor" });
                 LogEntityState(sb, "[ARPG]", "初始状态", world, enemy, "ArpgEnemy", new[] { healthId, armorId }, new[] { "Health", "Armor" });
 
-                // ── Slot 0 (3101): FireArrow - 发射弹道，命中后施加 Poison DoT ──
                 float enemyBefore = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
                 sb.AppendLine("[ARPG] ArpgHero 施放【火焰箭】→ ArpgEnemy (弹道 speed=1200, 命中后 Poison DoT)。");
                 CastAbility(engine, hero, enemy, slot: 0);
@@ -350,8 +321,6 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[ARPG]", "火焰箭后", world, enemy, "ArpgEnemy", new[] { healthId }, new[] { "Health" });
                 sb.AppendLine($"[ARPG] 火焰箭累计伤害 = {enemyBefore - enemyAfterArrow:F1} (含 Poison DoT 跳动)。");
 
-                // ── Slot 1 (3102): HealPotion +25HP ──
-                // 先让 hero 受伤
                 var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int poisonId = EffectTemplateIdRegistry.GetId("Effect.Arpg.Poison");
                 effectRequests.Publish(new EffectRequest { RootId = 0, Source = enemy, Target = hero, TargetContext = default, TemplateId = poisonId });
@@ -366,14 +335,12 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[ARPG]", "药水后", world, hero, "ArpgHero", new[] { healthId }, new[] { "Health" });
                 Assert.That(heroHpHealed, Is.GreaterThan(heroHpDamaged), "HealPotion should heal");
 
-                // ── Slot 2 (3103): SummonWolf - CreateUnit ──
                 sb.AppendLine("[ARPG] ArpgHero 施放【召唤灰狼】(CreateUnit: Unit.Wolf)。");
                 CastAbility(engine, hero, hero, slot: 2);
                 Tick(engine, 10);
                 bool wolfSpawned = HasNamePrefix(world, "Unit:Unit.Wolf");
                 sb.AppendLine($"[ARPG] 灰狼召唤结果: {(wolfSpawned ? "成功" : "未检测到")}。");
 
-                // ── Slot 3 (3104): TagClip Stunned → TagRule → CannotMove ──
                 sb.AppendLine("[ARPG] ArpgHero 触发【眩晕测试】(TagClip: Status.Stunned 60ticks, TagRule: →CannotMove)。");
                 CastAbility(engine, hero, hero, slot: 3);
                 Tick(engine, 5);
@@ -383,7 +350,6 @@ namespace Ludots.Tests.GAS.Production
                 Tick(engine, 120);
                 LogTags(sb, "[ARPG]", world, engine, hero, "ArpgHero", new[] { "Status.Stunned", "Status.CannotMove" });
 
-                // ── Slot 4 (3105): Bleed DoT - stackable AddDuration, GrantedTags: Status.Bleeding ──
                 float enemyBeforeBleed = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
                 sb.AppendLine("[ARPG] ArpgHero 施放【流血 DoT】→ ArpgEnemy (slot 4, stack limit=5, AddDuration, GrantedTags: Status.Bleeding)。");
                 CastAbility(engine, hero, enemy, slot: 4);
@@ -394,7 +360,6 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[ARPG]", "流血后", world, enemy, "ArpgEnemy", new[] { healthId }, new[] { "Health" });
                 sb.AppendLine($"[ARPG] 流血累计伤害 = {enemyBeforeBleed - enemyAfterBleed:F1}。");
 
-                // ── Slot 5 (3106): IronSkin Buff - Armor+20, GrantedTags: Status.Armored ──
                 sb.AppendLine("[ARPG] ArpgHero 施放【铁甲术】→ 自身 (slot 5, Armor+20, GrantedTags: Status.Armored)。");
                 CastAbility(engine, hero, hero, slot: 5);
                 Tick(engine, 30);
@@ -411,9 +376,6 @@ namespace Ludots.Tests.GAS.Production
             WriteLog("arpg_demo.log", sb);
         }
 
-        // ─────────────────────────────────────────────────
-        //  4X
-        // ─────────────────────────────────────────────────
         [Test]
         public void FourXDemoLog()
         {
@@ -442,7 +404,6 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[4X]", "初始状态", world, governor, "Governor", govAttrs, govNames);
                 LogEntityState(sb, "[4X]", "初始状态", world, site, "OutpostSite", new[] { healthId }, new[] { "Health" });
 
-                // ── 阵营关系 ──
                 sb.AppendLine("[4X] 阵营关系:");
                 sb.AppendLine($"[4X]   Empire(1)↔Federation(2) = {DescribeTeamRelation(engine, 1, 2)}");
                 sb.AppendLine($"[4X]   Empire(1)↔Horde(3)      = {DescribeTeamRelation(engine, 1, 3)}");
@@ -451,14 +412,12 @@ namespace Ludots.Tests.GAS.Production
                 sb.AppendLine($"[4X]   Federation(2)↔Nomads(4) = {DescribeTeamRelation(engine, 2, 4)}");
                 sb.AppendLine($"[4X]   Horde(3)↔Nomads(4)      = {DescribeTeamRelation(engine, 3, 4)}");
 
-                // ── Slot 0 (4101): BuildOutpost - CreateUnit ──
                 sb.AppendLine("[4X] Governor 施放【建造前哨】→ OutpostSite (CreateUnit: Unit.Outpost)。");
                 CastAbility(engine, governor, site, slot: 0);
                 Tick(engine, 15);
                 bool outpostSpawned = HasNamePrefix(world, "Unit:Unit.Outpost");
                 sb.AppendLine($"[4X] 前哨建造结果: {(outpostSpawned ? "成功" : "未检测到")}。");
 
-                // ── Slot 1 (4102): Colonize - TagClip Status.Colonizing → TagRule Status.Working ──
                 // Need Status.CanColonize tag first - it's a RequiredAll
                 // Skip if blocked, just attempt and log
                 sb.AppendLine("[4X] Governor 尝试施放【殖民开拓】(TagClip: Status.Colonizing → TagRule: Status.Working)。");
@@ -466,20 +425,17 @@ namespace Ludots.Tests.GAS.Production
                 Tick(engine, 5);
                 LogTags(sb, "[4X]", world, engine, governor, "Governor", new[] { "Status.Colonizing", "Status.Working" });
 
-                // ── Slot 3 (4104): TechResearch - Buff with GrantedTags: Status.Researching, TechProgress+10 ──
                 sb.AppendLine("[4X] Governor 施放【科技研究】→ 自身 (Buff: TechProgress+, GrantedTags: Status.Researching)。");
                 CastAbility(engine, governor, governor, slot: 3);
                 Tick(engine, 10);
                 LogEntityState(sb, "[4X]", "研究后", world, governor, "Governor", govAttrs, govNames);
                 LogTags(sb, "[4X]", world, engine, governor, "Governor", new[] { "Status.Researching" });
 
-                // ── Slot 4 (4105): DiplomacyPact - Buff grants Status.Allied (self-target) ──
                 sb.AppendLine("[4X] Governor 施放【外交协定】→ 自身 (GrantedTags: Status.Allied)。");
                 CastAbility(engine, governor, governor, slot: 4);
                 Tick(engine, 10);
                 LogTags(sb, "[4X]", world, engine, governor, "Governor", new[] { "Status.Allied" });
 
-                // ── Slot 5 (4106): TradeRoute - stackable Gold buff, limit 5, KeepDuration ──
                 var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int tradeId = EffectTemplateIdRegistry.GetId("Effect.4X.TradeRoute");
                 float goldBefore = world.Get<AttributeBuffer>(governor).GetCurrent(goldId);
@@ -500,9 +456,6 @@ namespace Ludots.Tests.GAS.Production
             WriteLog("fourx_demo.log", sb);
         }
 
-        // ─────────────────────────────────────────────────
-        //  RTS (3-faction)
-        // ─────────────────────────────────────────────────
         [Test]
         public void RtsDemoLog()
         {
@@ -516,7 +469,6 @@ namespace Ludots.Tests.GAS.Production
                 var world = engine.World;
                 IEntityCommandPanelSource panelSource = ResolveGasPanelSource(engine);
 
-                // 找出地图生成的实体
                 var peasant = FindEntity(world, "Peasant");
                 var barracks = FindEntity(world, "Barracks");
                 var footman = FindEntity(world, "Footman");
@@ -542,7 +494,6 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[RTS]", "初始状态", world, gateway, "Gateway", new[] { mineralsId, gasId }, new[] { "Minerals", "Gas" });
                 LogEntityState(sb, "[RTS]", "初始状态", world, drone, "Drone", new[] { mineralsId }, new[] { "Minerals" });
 
-                // ── 阵营关系 ──
                 sb.AppendLine("[RTS] 阵营关系:");
                 sb.AppendLine($"[RTS]   Alliance(1)↔Axis(2)   = {DescribeTeamRelation(engine, 1, 2)}");
                 sb.AppendLine($"[RTS]   Alliance(1)↔Protoss(3)= {DescribeTeamRelation(engine, 1, 3)}");
@@ -656,7 +607,7 @@ namespace Ludots.Tests.GAS.Production
             RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
             {
                 World world = engine.World;
-                var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
+                var (hero, enemy) = FindEntityPair(world, "ArpgHero", "ArpgEnemy");
                 int bleedingTagId = TagRegistry.Register("Status.Bleeding");
 
                 Assert.That(world.Has<DirtyFlags>(enemy), Is.True,
@@ -672,10 +623,6 @@ namespace Ludots.Tests.GAS.Production
                 Assert.That(HasEffectiveTag(world, engine, enemy, bleedingTagId), Is.False);
             });
         }
-
-        // ═════════════════════════════════════════════════
-        //  Helpers
-        // ═════════════════════════════════════════════════
 
         private static void RunWithEngine(string[] mods, string mapId, Action<GameEngine> action)
         {
@@ -909,7 +856,7 @@ namespace Ludots.Tests.GAS.Production
             return result;
         }
 
-        private static (Entity a, Entity b) FindEntities2(World world, string nameA, string nameB)
+        private static (Entity a, Entity b) FindEntityPair(World world, string nameA, string nameB)
         {
             Entity a = Entity.Null;
             Entity b = Entity.Null;
@@ -924,7 +871,7 @@ namespace Ludots.Tests.GAS.Production
             return (a, b);
         }
 
-        private static (Entity a, Entity b, Entity c) FindEntities3(World world, string nameA, string nameB, string nameC)
+        private static (Entity a, Entity b, Entity c) FindEntityTriple(World world, string nameA, string nameB, string nameC)
         {
             Entity a = Entity.Null;
             Entity b = Entity.Null;

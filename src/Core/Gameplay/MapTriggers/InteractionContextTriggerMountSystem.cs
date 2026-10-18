@@ -35,23 +35,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <c>onActivated</c>/<c>onDeactivated</c> graph bodies — Activated runs as the window
     /// opens (before the profile's triggers register), Deactivated as it closes (after they
     /// are removed, plus the owner-death path via the destroy boundary). Slots are instant
-    /// boundary hooks (explicitly not a per-tick period, unlike the retired
-    /// <c>whileActive</c>), and belong to their own profile — no owner matching is ever
-    /// needed.
+    /// boundary hooks (explicitly not a per-tick period), and belong to their own profile —
+    /// no owner matching is ever needed.
     /// </para>
     /// <para>
     /// Ledger: mounts are stamped with a <see cref="TriggerMountOwner"/> before registration
     /// and this system keeps no parallel mount list; the TriggerManager owner
     /// index answers "what is mounted for (subject, profile)" and removes by owner. Dead
-    /// subjects are skipped here — their inert mounts are reclaimed by the unified
-    /// heartbeat sweep in <see cref="EntityTriggerGraphMounts"/>, the same
+    /// subjects are skipped here — their inert mounts are reclaimed at the destroy
+    /// boundary by this system and <see cref="EntityTriggerGraphMounts"/>, the same
     /// policy template mounts follow.
     /// </para>
     /// <para>
     /// Mounts are entity-domain TriggerGraph mounts (scope = the context subject) registered
     /// through the map trigger tables, so map unload reclaims them wholesale when the map's
-    /// tables are unregistered; dead subjects go inert and the sweep reclaims them with a
-    /// bounded budget. Input-action payloads seed <c>MapTrigger.Rep</c> (not SourceEntity)
+    /// tables are unregistered; dead subjects go inert and their mounts are reclaimed at
+    /// the destroy boundary. Input-action payloads seed <c>MapTrigger.Rep</c> (not SourceEntity)
     /// from the mount subject; entity-domain mounts therefore match unscoped on the bus path,
     /// while action-bound mounts are dispatched per-subject by the action binding system.
     /// </para>
@@ -81,8 +80,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<int> _staleOpenScratch = new(4);
         // Window lifecycle marks: per subject the currently-open profiles and
         // their mount regime. Keyed subject-first so a reconcile only touches its own entry —
-        // never a whole-window scan (same bounded-scan discipline the retired heartbeat sweep
-        // enforced). A window opens (Activated ran, state recorded) / closes (Deactivated ran,
+        // never a whole-window scan. A window opens (Activated ran, state recorded) / closes (Deactivated ran,
         // state removed); park/unpark only flips the stored regime without a slot.
         private readonly Dictionary<Entity, Dictionary<int, WindowMountState>> _openWindows = new();
         private HashSet<Entity> _frameSubjects = new();
@@ -111,13 +109,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             // An owner destroyed while still carrying context components never
             // went through an explicit deactivation — run each carried context's
             // onDeactivated slot at the destroy boundary so settlement/preview cleanup
-            // still happen (the retired gate skipped dead subjects entirely).
+            // still happen.
             World.SubscribeEntityDestroyed(OnContextOwnerDestroyed);
         }
 
         /// <summary>
-        /// Live subjects carrying context-owned mounts. Dead subjects awaiting the budget
-        /// sweep do not count: their mounts are inert the tick they die.
+        /// Live subjects carrying context-owned mounts. Dead subjects do not count: their
+        /// mounts are reclaimed at the destroy boundary and are inert the tick they die.
         /// </summary>
         public int MountedSubjectCount
             => _triggerManager.CountOwnedMountSubjects(
@@ -163,8 +161,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 Entity subject = _subjects[s];
                 if (!World.IsAlive(subject))
                 {
-                    // Dead subjects keep their (inert) mounts until the unified heartbeat
-                    // sweep reclaims them, the same policy template mounts follow.
+                    // Dead subjects need no reconciliation: their (inert) mounts were
+                    // reclaimed at the destroy boundary, the same policy template mounts follow.
                     continue;
                 }
 
@@ -572,10 +570,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>
         /// Owner-destroyed boundary: while components are still attached, run the
-        /// Deactivated slot for every context the entity carries (base mount + instances).
-        /// This is the death path the retired gate skipped — settlement and preview cleanup
-        /// still run when an owner dies mid-gesture. Mirrors the entity-mount death
-        /// dispatch guard: active map sessions only, no unload-time firing.
+        /// Deactivated slot for every context the entity carries (base mount + instances);
+        /// settlement and preview cleanup still run when an owner dies mid-gesture. Mirrors
+        /// the entity-mount death dispatch guard: active map sessions only, no unload-time firing.
         /// </summary>
         private void OnContextOwnerDestroyed(in Entity entity)
         {
@@ -602,8 +599,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             // Window marks never outlive the subject (active-session or map teardown alike).
             _openWindows.Remove(entity);
 
-            // Destroy-time reclamation: the retired heartbeat sweep is gone, so
-            // the gate reclaims the dead subject's own context mounts right here — after the
+            // Destroy-time reclamation: the gate reclaims the dead subject's own context
+            // mounts right here — after the
             // Deactivated slots, same-handler, no staged budget (naturally bounded by the dead
             // subject's mount count). Entity-domain template mounts are reclaimed by
             // EntityTriggerGraphMounts.OnEntityDestroyed on the same destroy. Ledger cleanup

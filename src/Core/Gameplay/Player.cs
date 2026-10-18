@@ -8,10 +8,6 @@ namespace Ludots.Core.Gameplay
         public int TeamId { get; set; }
         public IInputSource Source { get; }
 
-        /// <summary>
-        /// Pure data state for the player's camera.
-        /// Each player has their own camera configuration.
-        /// </summary>
         public CameraState Camera { get; set; } = new CameraState();
 
         public Player(int id, IInputSource source)

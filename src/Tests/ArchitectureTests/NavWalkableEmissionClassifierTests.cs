@@ -121,12 +121,10 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void AreaMajority_Wins_ThenFirstCornerFallback()
         {
-            // 多数:2,2,7 → 2
             var majority = NavTileBuilder.ClassifyTriangleEmission(
                 Vtx(0, 0, 0, 0, 2, area: 2), Vtx(1, 0, 1, 0, 2, area: 2), Vtx(0, 1, 0, 1, 2, area: 7), Config);
             Assert.That(majority.AreaId, Is.EqualTo(2));
 
-            // 全异:7,3,9 → 首角 7
             var fallback = NavTileBuilder.ClassifyTriangleEmission(
                 Vtx(0, 0, 0, 0, 2, area: 7), Vtx(1, 0, 1, 0, 2, area: 3), Vtx(0, 1, 0, 1, 2, area: 9), Config);
             Assert.That(fallback.AreaId, Is.EqualTo(7));

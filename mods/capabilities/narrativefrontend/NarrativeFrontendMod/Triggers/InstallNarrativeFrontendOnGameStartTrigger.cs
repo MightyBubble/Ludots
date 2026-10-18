@@ -39,7 +39,6 @@ internal sealed class InstallNarrativeFrontendOnGameStartTrigger : Trigger
         var service = new NarrativeFrontendService();
         engine.SetService(NarrativeFrontendServiceKeys.Service, service);
 
-        // Project active DialogueRuntime views; content mods start dialogue via TriggerGraph StartDialogue.
         engine.RegisterPresentationSystem(new NarrativeStoryBridgeSystem(engine, service));
         engine.RegisterPresentationSystem(new NarrativeFrontendPresentationSystem(engine, service));
 

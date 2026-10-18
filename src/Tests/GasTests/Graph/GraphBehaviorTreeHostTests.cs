@@ -17,9 +17,9 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// GraphBehaviorTreeHost acceptance (BT-1 judges b-e). Judge (c) is structural: nothing in
-    /// this file constructs BehaviorTreeWorld or BehaviorTreeDefinition — the tree semantics live
-    /// in the compiled Script instructions and the host only parks/resumes per-agent frames.
+    /// GraphBehaviorTreeHost acceptance. The coverage is structural: nothing in this file
+    /// constructs BehaviorTreeWorld or BehaviorTreeDefinition — the tree semantics live in
+    /// the compiled Script instructions and the host only parks/resumes per-agent frames.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -150,9 +150,10 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         /// <summary>
-        /// Judge (d): a Wait leaf parks pc inside the leaf with the parent's resume address on the
-        /// call stack; the next wave resumes, the leaf Returns, and the sequence continues with its
-        /// next child (the trailing child proves the parent really resumed mid-sequence).
+        /// A Wait leaf parks pc inside the leaf with the parent's resume address on the
+        /// call stack; the next wave resumes, the leaf Returns, and the sequence continues
+        /// with its next child (the trailing child proves the parent really resumed
+        /// mid-sequence).
         /// </summary>
         [Test]
         public void Yield叶跨波恢复_Return弹回父级继续下一子()
@@ -198,7 +199,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(host.LastReturns[0], Is.EqualTo(GraphBtStatusCodes.Failure));
         }
 
-        /// <summary>Judge (e): slice-budget suspension parks the run; the next wave resumes to completion.</summary>
         [Test]
         public void 步数预算越界挂起_下波续跑完成()
         {
@@ -246,7 +246,7 @@ namespace Ludots.Tests.Gas.Graph
                 "The last chain step reports 1, the sequence completes, and the root halts Success.");
         }
 
-        /// <summary>Judge (e): call-stack overflow fails closed at execution (compile-time depth is covered in the sugar tests).</summary>
+        /// <summary>Call-stack overflow fails closed at execution; compile-time depth is covered in the sugar tests.</summary>
         [Test]
         public void 调用栈超上限_失败关闭()
         {
@@ -271,9 +271,10 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         /// <summary>
-        /// Judge (c): the graph path needs only the program registry — the tree, its blackboard
-        /// leaves, and the tick statuses are all Script instructions. Void action leaves report
-        /// Success through the shared epilogue and their side effects go through the runtime API.
+        /// The graph path needs only the program registry — the tree, its blackboard
+        /// leaves, and the tick statuses are all Script instructions. Void action leaves
+        /// report Success through the shared epilogue and their side effects go through
+        /// the runtime API.
         /// </summary>
         [Test]
         public void 树语义在指令里_宿主只需程序登记表()
@@ -344,7 +345,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         /// <summary>
-        /// De-hollowed leaf pattern (BT-B): glue writes the distance into the blackboard;
+        /// De-hollowed leaf pattern: glue writes the distance into the blackboard;
         /// the leaf chain owns the threshold comparison and ends in a Bool tail (the BT
         /// epilogue maps it to Success/Failure), while an intent leaf drains through a
         /// pinned register the host reads back with ReadInt.
@@ -501,7 +502,7 @@ namespace Ludots.Tests.Gas.Graph
         /// <summary>
         /// Hand-authored equivalent of the sugar lowering: Call/Return composites with
         /// CompareEqInt + JumpIfFalse status checks and pinned status registers. No sugar nodes —
-        /// the ablation control arm for judge (b).
+        /// the ablation control arm.
         /// </summary>
         private sealed class ManualTree
         {

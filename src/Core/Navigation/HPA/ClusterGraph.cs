@@ -3,14 +3,10 @@ using Ludots.Core.Collections.Graphs;
 
 namespace Ludots.Core.Navigation.HPA
 {
-    /// <summary>
-    /// Represents the high-level graph where each node is a Chunk (Cluster).
-    /// </summary>
     public class ClusterGraph
     {
         public StructGraph Graph { get; private set; }
         
-        // Map ChunkKey -> Graph Node Index
         private Dictionary<long, int> _chunkToNodeIndex = new Dictionary<long, int>();
         private List<long> _nodeIndexToChunk = new List<long>();
 

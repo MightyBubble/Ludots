@@ -8,7 +8,7 @@ using Ludots.UI.Runtime;
 namespace UiShowcaseCoreMod.Showcase;
 
 /// <summary>
-/// Markup surface adapter (#1010 MVP / #1011): renders a panel template's HTML with
+/// Markup surface adapter: renders a panel template's HTML with
 /// {variable} tokens substituted from the evaluated <see cref="PanelVariableSet"/>.
 /// The adapter only consumes variables; it never fetches graph/attribute data.
 /// </summary>

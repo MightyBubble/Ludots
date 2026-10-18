@@ -194,7 +194,7 @@ namespace Ludots.Core.Navigation.NavMesh
             var portals = BuildPortals(terrain, mapWidth, mapHeight, startC, startR, tileWidth, tileHeight, originXm, originZm, clearanceCm, config);
 
             ulong buildHash = config.ComputeHash();
-            var tmpTile = new NavTile(
+            var builtTile = new NavTile(
                 new NavTileId(chunkX, chunkY, 0),
                 tileVersion,
                 buildHash,
@@ -215,7 +215,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
             using (var ms = new System.IO.MemoryStream())
             {
-                NavTileBinary.Write(ms, tmpTile);
+                NavTileBinary.Write(ms, builtTile);
                 ms.Position = 0;
                 var readBack = NavTileBinary.Read(ms);
                 tile = readBack;

@@ -125,12 +125,9 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Grant tags to the target's <see cref="TagCountContainer"/> based on effect's granted tag declarations.
         /// Called when an effect is first applied.
         /// </summary>
-        /// <param name="grantedTags">The effect's granted tag declarations.</param>
-        /// <param name="tagCounts">The target entity's tag count container.</param>
-        /// <param name="stackCount">Current stack count of the effect (usually 1 on first apply).</param>
+        /// <param name="stackCount">Usually 1 on first apply.</param>
         public static void Grant(in EffectGrantedTags grantedTags, ref TagCountContainer tagCounts, int stackCount, GasBudget budget = null)
         {
             TagCountContainer before = tagCounts;
@@ -151,11 +148,8 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Revoke tags from the target's <see cref="TagCountContainer"/> when an effect expires or is removed.
+        /// Called when an effect expires or is removed.
         /// </summary>
-        /// <param name="grantedTags">The effect's granted tag declarations.</param>
-        /// <param name="tagCounts">The target entity's tag count container.</param>
-        /// <param name="stackCount">Stack count at the time of removal.</param>
         public static void Revoke(in EffectGrantedTags grantedTags, ref TagCountContainer tagCounts, int stackCount, GasBudget budget = null)
         {
             TagCountContainer before = tagCounts;
@@ -171,14 +165,6 @@ namespace Ludots.Core.Gameplay.GAS
             catch { tagCounts = before; throw; }
         }
 
-        /// <summary>
-        /// Update tag counts when a stack count changes (e.g. 3 → 5).
-        /// Computes delta = newAmount - oldAmount for each tag and adjusts accordingly.
-        /// </summary>
-        /// <param name="grantedTags">The effect's granted tag declarations.</param>
-        /// <param name="tagCounts">The target entity's tag count container.</param>
-        /// <param name="oldStackCount">Previous stack count.</param>
-        /// <param name="newStackCount">New stack count.</param>
         public static void Update(in EffectGrantedTags grantedTags, ref TagCountContainer tagCounts, int oldStackCount, int newStackCount, GasBudget budget = null)
         {
             TagCountContainer before = tagCounts;

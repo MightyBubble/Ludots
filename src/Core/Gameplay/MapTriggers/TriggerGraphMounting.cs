@@ -460,7 +460,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 entityIndex,
                 regionIds);
 
-            // Subscription-scope routing (#1123): the table an entry lands in is derived
+            // Subscription-scope routing: the table an entry lands in is derived
             // from the event's schema scope, never authored per-entry, so a Map-scope
             // event cannot enter the global table or vice versa. Schema-less events
             // (engine legacy keys without a schema) stay in the map table. Entity-domain
@@ -519,7 +519,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 if (entry.IsHookFragment)
                 {
-                    // #1124: the body was woven into its target graph's anchor at compile
+                    // The body was woven into its target graph's anchor at compile
                     // time; the fragment itself never dispatches on its authored event.
                     continue;
                 }
@@ -695,7 +695,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
-        /// #1108 fail-closed contract: the compiler has no map context, so every
+        /// Fail-closed contract: the compiler has no map context, so every
         /// LoadPlaced* Imm must be proven against the mounting map's catalogs here.
         /// Programs are symbol-patched before mounting, so Imm is a ConfigKeyRegistry id;
         /// an unresolvable id is itself a load error. Regions never enter EntityIndex.

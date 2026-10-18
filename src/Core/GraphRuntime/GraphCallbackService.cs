@@ -16,7 +16,7 @@ namespace Ludots.Core.GraphRuntime
     }
 
     /// <summary>
-    /// #1126 Graph Continuation: registration-ordered await handles and completion queue.
+    /// Graph Continuation: registration-ordered await handles and completion queue.
     /// Completions enqueue; <see cref="Drain"/> resumes in registration order (not completion order).
     /// </summary>
     public sealed class GraphCallbackService

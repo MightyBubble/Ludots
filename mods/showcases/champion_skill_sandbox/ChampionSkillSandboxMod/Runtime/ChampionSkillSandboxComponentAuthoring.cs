@@ -10,7 +10,7 @@ using Ludots.Core.Physics2D.Components;
 namespace ChampionSkillSandboxMod.Runtime
 {
     /// <summary>
-    /// Sandbox-local authoring. Collider2D 的作者面归 Core（#1480 Physics2DComponentAuthoring，
+    /// Sandbox-local authoring. Collider2D 的作者面归 Core（Physics2DComponentAuthoring，
     /// 扁平 shape schema），模板数据直接用它；这里只登记 Core 没有的 PhysicsMaterial2D。
     /// </summary>
     internal static class ChampionSkillSandboxComponentAuthoring

@@ -77,7 +77,6 @@ namespace Ludots.Core.Map.Hex
             int chunkX = q >> VertexChunk.ChunkSizeShift;
             int chunkY = r >> VertexChunk.ChunkSizeShift;
 
-            // Optional: Bounds check
             if (!IsValidChunk(chunkX, chunkY)) return null;
 
             long key = HexCoordinates.GetChunkKey(chunkX, chunkY);
@@ -124,7 +123,6 @@ namespace Ludots.Core.Map.Hex
             chunk.SetHeight(localX, localY, height);
         }
 
-        // --- New Layered API ---
 
         public byte GetBiome(int q, int r)
         {
@@ -237,7 +235,6 @@ namespace Ludots.Core.Map.Hex
 
         /// <summary>
         /// Gets the logical height at a world position using interpolation.
-        /// Current implementation uses Nearest Neighbor (Vertex Height).
         /// TODO: Implement barycentric interpolation on the triangle grid.
         /// </summary>
         public float GetLogicHeight(Vector3 worldPos)
@@ -301,9 +298,6 @@ namespace Ludots.Core.Map.Hex
             return new Vector2(x, z);
         }
 
-        /// <summary>
-        /// Clears all map data.
-        /// </summary>
         public void Clear()
         {
             _chunks.Clear();
@@ -311,9 +305,6 @@ namespace Ludots.Core.Map.Hex
             _lastChunkKey = -1;
         }
         
-        /// <summary>
-        /// Returns the total number of allocated chunks.
-        /// </summary>
         public int ChunkCount => _chunks.Count;
     }
 }

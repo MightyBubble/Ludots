@@ -4,14 +4,11 @@ using System.Collections.Generic;
 namespace Ludots.Core.Gameplay.GAS.Config
 {
     /// <summary>
-    /// Centralized string → GAS enum parsing utilities.
     /// Single source of truth for all config loaders (EffectTemplateLoader, PresetTypeLoader, etc.).
     /// All methods require exact semantic casing.
     /// </summary>
     public static class GasEnumParser
     {
-        // ── EffectPresetType ──
-
         private static readonly Dictionary<string, EffectPresetType> PresetTypeMap = new(StringComparer.Ordinal)
         {
             { "None", EffectPresetType.None },
@@ -34,7 +31,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         };
 
         /// <summary>
-        /// Parse a preset type string. Throws when the value is missing or not an exact semantic key.
+        /// Throws when the value is missing or not an exact semantic key.
         /// </summary>
         public static EffectPresetType ParsePresetType(string? value)
         {
@@ -52,7 +49,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         /// <summary>
-        /// Parse a preset type string. Throws on unknown values (for strict config contexts).
+        /// Throws on unknown values (for strict config contexts).
         /// </summary>
         public static EffectPresetType ParsePresetTypeStrict(string? value, string context)
         {
@@ -64,8 +61,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (PresetTypeMap.TryGetValue(value, out var result)) return result;
             throw new InvalidOperationException($"{context}: unsupported presetType '{value}'.");
         }
-
-        // ── EffectPhaseId ──
 
         private static readonly Dictionary<string, EffectPhaseId> PhaseNameMap = new(StringComparer.Ordinal)
         {
@@ -80,7 +75,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         };
 
         /// <summary>
-        /// Parse a phase name string to <see cref="EffectPhaseId"/>.
         /// Returns false if the name is not recognized exactly.
         /// </summary>
         public static bool TryParsePhaseId(string? name, out EffectPhaseId phaseId)
@@ -95,7 +89,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         /// <summary>
-        /// Parse a phase name to a <see cref="PhaseFlags"/> value.
         /// Throws if the name is missing or not recognized exactly.
         /// </summary>
         public static PhaseFlags ParsePhaseFlag(string? name)
@@ -113,8 +106,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException($"Unsupported effect phase '{name}'.");
         }
 
-        // ── EffectLifetimeKind / LifetimeFlags ──
-
         private static readonly Dictionary<string, EffectLifetimeKind> LifetimeKindMap = new(StringComparer.Ordinal)
         {
             { "Instant", EffectLifetimeKind.Instant },
@@ -123,7 +114,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         };
 
         /// <summary>
-        /// Parse a lifetime string to <see cref="EffectLifetimeKind"/>.
         /// Returns false if not recognized.
         /// </summary>
         public static bool TryParseLifetimeKind(string? value, out EffectLifetimeKind kind)
@@ -138,7 +128,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         /// <summary>
-        /// Parse a lifetime string to <see cref="EffectLifetimeKind"/>. Throws on unknown values.
+        /// Throws on unknown values.
         /// </summary>
         public static EffectLifetimeKind ParseLifetimeKindStrict(string? value, string context)
         {
@@ -152,7 +142,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         /// <summary>
-        /// Parse a lifetime string to a <see cref="LifetimeFlags"/> value.
         /// Throws if the name is missing or not recognized exactly.
         /// </summary>
         public static LifetimeFlags ParseLifetimeFlag(string? name)
@@ -169,8 +158,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             throw new InvalidOperationException($"Unsupported effect lifetime '{name}'.");
         }
-
-        // ── BuiltinHandlerId ──
 
         private static readonly Dictionary<string, BuiltinHandlerId> BuiltinHandlerMap = new(StringComparer.Ordinal)
         {
@@ -197,7 +184,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         };
 
         /// <summary>
-        /// Parse a builtin handler name string to <see cref="BuiltinHandlerId"/>.
         /// Throws if the name is missing or not recognized exactly.
         /// </summary>
         public static BuiltinHandlerId ParseBuiltinHandlerId(string? name)
@@ -215,8 +201,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException($"Unsupported builtin handler id '{name}'.");
         }
 
-        // ── ComponentFlags ──
-
         private static readonly Dictionary<string, ComponentFlags> ComponentFlagMap = new(StringComparer.Ordinal)
         {
             { "ModifierParams", ComponentFlags.ModifierParams },
@@ -233,7 +217,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         };
 
         /// <summary>
-        /// Parse a component flag name string to <see cref="ComponentFlags"/>.
         /// Throws if the name is missing or not recognized exactly.
         /// </summary>
         public static ComponentFlags ParseComponentFlag(string? name)

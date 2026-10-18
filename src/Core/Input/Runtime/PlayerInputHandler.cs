@@ -982,7 +982,6 @@ namespace Ludots.Core.Input.Runtime
             public readonly float MaxTravelPixels;
             public readonly float ThresholdPixels;
 
-            // Live press tracking
             public bool Held;
             public Vector2 PressPosition;
             public float HeldSeconds;

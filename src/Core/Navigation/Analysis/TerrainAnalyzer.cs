@@ -91,10 +91,9 @@ namespace Ludots.Core.Navigation.Analysis
             
             int maxDiff = Math.Max(diff1, Math.Max(diff2, diff3));
 
-            if (maxDiff == 0) return TerrainWalkability.Walkable; // Flat
-            if (maxDiff == 1) return TerrainWalkability.Walkable; // Slope
+            if (maxDiff == 0) return TerrainWalkability.Walkable;
+            if (maxDiff == 1) return TerrainWalkability.Walkable;
             
-            // MaxDiff >= 2
             return TerrainWalkability.Cliff;
         }
 

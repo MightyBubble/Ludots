@@ -421,7 +421,6 @@ namespace Ludots.Tests.Presentation
             {
                 if (i < 8)
                 {
-                    // 个体目标：unit target 路径。
                     serialFlow.SetUnitTarget(i, 3_000f, 3_000f, resetRecovery: true);
                     parallelFlow.SetUnitTarget(i, 3_000f, 3_000f, resetRecovery: true);
                 }

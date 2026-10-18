@@ -73,9 +73,8 @@ namespace Ludots.Tests.Gas.Graph
             MapVariableStore variables = RequireVariables(engine);
             Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No pulse may fire the entry before the resume dispatch.");
 
-            // The retired MapHeartbeat think-wave cadence is replaced by the
-            // gated map continuation pulse (MapTriggerResume). An unsuspended entry still
-            // dispatches when the pulse fires — same map-bus path, same self scope.
+            // An unsuspended entry still dispatches when the MapTriggerResume pulse
+            // fires — same map-bus path, same self scope.
             engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), engine.CreateContext());
             TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, 40,
                 () => $"MapTriggerResume entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");

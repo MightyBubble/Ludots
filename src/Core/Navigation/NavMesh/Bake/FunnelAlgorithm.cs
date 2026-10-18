@@ -5,9 +5,6 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
-    /// <summary>
-    /// A portal (gate) for funnel algorithm, representing left and right endpoints.
-    /// </summary>
     public readonly struct FunnelPortal
     {
         public readonly Vector2 Left;
@@ -28,9 +25,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public Vector2 Center => (Left + Right) * 0.5f;
     }
 
-    /// <summary>
-    /// Result of the funnel algorithm - a smoothed path.
-    /// </summary>
     public readonly struct FunnelResult
     {
         public readonly Vector2[] Path;
@@ -52,25 +46,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     /// </summary>
     public static class FunnelAlgorithm
     {
-        /// <summary>
-        /// Smooths a path through a sequence of portals using the funnel algorithm.
-        /// </summary>
-        /// <param name="start">Start position.</param>
-        /// <param name="goal">Goal position.</param>
-        /// <param name="portals">Sequence of portals to traverse.</param>
-        /// <returns>Smoothed path result.</returns>
         public static FunnelResult SmoothPath(Vector2 start, Vector2 goal, IReadOnlyList<FunnelPortal> portals)
         {
             if (portals == null || portals.Count == 0)
             {
-                // Direct path from start to goal
                 return new FunnelResult(new[] { start, goal }, true);
             }
 
             var path = new List<Vector2>(portals.Count + 2);
             path.Add(start);
 
-            // Initialize funnel
             var apex = start;
             var portalLeft = start;
             var portalRight = start;
@@ -84,7 +69,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 var left = portal.Left;
                 var right = portal.Right;
 
-                // Update right vertex
                 if (TriangleArea2(apex, portalRight, right) <= 0f)
                 {
                     if (ApproxEqual(apex, portalRight) || TriangleArea2(apex, portalLeft, right) > 0f)
@@ -100,19 +84,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         apex = portalLeft;
                         apexIndex = leftIndex;
 
-                        // Reset portal
                         portalLeft = apex;
                         portalRight = apex;
                         leftIndex = apexIndex;
                         rightIndex = apexIndex;
 
-                        // Restart scan
                         i = apexIndex;
                         continue;
                     }
                 }
 
-                // Update left vertex
                 if (TriangleArea2(apex, portalLeft, left) >= 0f)
                 {
                     if (ApproxEqual(apex, portalLeft) || TriangleArea2(apex, portalRight, left) < 0f)
@@ -128,28 +109,22 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         apex = portalRight;
                         apexIndex = rightIndex;
 
-                        // Reset portal
                         portalLeft = apex;
                         portalRight = apex;
                         leftIndex = apexIndex;
                         rightIndex = apexIndex;
 
-                        // Restart scan
                         i = apexIndex;
                         continue;
                     }
                 }
             }
 
-            // Add goal
             path.Add(goal);
 
             return new FunnelResult(path.ToArray(), true);
         }
 
-        /// <summary>
-        /// Smooths a path given integer coordinates (centimeters).
-        /// </summary>
         public static FunnelResult SmoothPathCm(
             int startXcm, int startZcm,
             int goalXcm, int goalZcm,
@@ -175,9 +150,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return SmoothPath(start, goal, portals);
         }
 
-        /// <summary>
-        /// Converts funnel result back to centimeter coordinates.
-        /// </summary>
         public static (int[] Xcm, int[] Zcm) ToIntPath(FunnelResult result)
         {
             var xcm = new int[result.Path.Length];
@@ -193,7 +165,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         /// <summary>
-        /// Calculates twice the signed area of triangle ABC.
         /// Positive = CCW, Negative = CW, Zero = collinear.
         /// </summary>
         private static float TriangleArea2(Vector2 a, Vector2 b, Vector2 c)
@@ -201,16 +172,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return (b.X - a.X) * (c.Y - a.Y) - (c.X - a.X) * (b.Y - a.Y);
         }
 
-        /// <summary>
-        /// Checks if two points are approximately equal.
-        /// </summary>
         private static bool ApproxEqual(Vector2 a, Vector2 b, float epsilon = 1e-6f)
         {
             return MathF.Abs(a.X - b.X) < epsilon && MathF.Abs(a.Y - b.Y) < epsilon;
         }
 
         /// <summary>
-        /// String-pulling algorithm variant for path smoothing.
         /// This is a simpler alternative to the funnel algorithm.
         /// </summary>
         public static FunnelResult StringPull(Vector2 start, Vector2 goal, IReadOnlyList<FunnelPortal> portals)
@@ -229,7 +196,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 var portal = portals[i];
 
-                // Find the point on the portal edge closest to a straight line from current to goal
                 var portalPoint = ClosestPointOnLineSegment(portal.Left, portal.Right, 
                     ProjectPointOnLine(current, goal, portal.Left, portal.Right));
 
@@ -246,11 +212,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
                 if (canSeeGoal)
                 {
-                    // We can see the goal, no need to add more waypoints
                     break;
                 }
 
-                // Add portal crossing point
                 if (Vector2.DistanceSquared(current, portalPoint) > 0.0001f)
                 {
                     path.Add(portalPoint);
@@ -263,9 +227,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return new FunnelResult(path.ToArray(), true);
         }
 
-        /// <summary>
-        /// Projects a point onto a line and returns the parametric position.
-        /// </summary>
         private static Vector2 ProjectPointOnLine(Vector2 lineStart, Vector2 lineEnd, Vector2 portalLeft, Vector2 portalRight)
         {
             var lineDir = lineEnd - lineStart;
@@ -273,9 +234,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return portalCenter;
         }
 
-        /// <summary>
-        /// Finds the closest point on a line segment to a given point.
-        /// </summary>
         private static Vector2 ClosestPointOnLineSegment(Vector2 segStart, Vector2 segEnd, Vector2 point)
         {
             var seg = segEnd - segStart;
@@ -290,9 +248,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return segStart + seg * t;
         }
 
-        /// <summary>
-        /// Tests if a line segment intersects another line segment.
-        /// </summary>
         private static bool LineIntersectsSegment(Vector2 lineStart, Vector2 lineEnd, Vector2 segStart, Vector2 segEnd)
         {
             float d1 = TriangleArea2(lineStart, lineEnd, segStart);

@@ -10,9 +10,6 @@ namespace HtmlTestMod.Triggers
         public HtmlStartTrigger()
         {
             EventKey = GameEvents.MapLoaded;
-            // Should check for HtmlTestMap? But let's assume it runs on any map for now or stick to original behavior.
-            // Original didn't check for specific map, just MapLoaded. 
-            // We can keep it generic or strict. Let's keep it generic for now as I didn't see HtmlTestMap created.
         }
 
         public override async Task ExecuteAsync(ScriptContext context)

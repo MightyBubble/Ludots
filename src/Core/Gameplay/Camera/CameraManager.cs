@@ -25,15 +25,8 @@ namespace Ludots.Core.Gameplay.Camera
         private Func<WorldAabbCm>? _targetBoundsProvider;
         private Func<IContinuousHeightmap?>? _continuousHeightmapProvider;
 
-        /// <summary>
-        /// The current fixed-step logic state of the camera.
-        /// </summary>
         public CameraState State { get; } = new();
 
-        /// <summary>
-        /// The previous fixed-step logic state of the camera.
-        /// Presentation systems interpolate between PreviousState and State.
-        /// </summary>
         public CameraState PreviousState { get; } = new();
 
         public bool IsRuntimeConfigured => _runtimeContext != null;
@@ -200,9 +193,6 @@ namespace Ludots.Core.Gameplay.Camera
             return updated;
         }
 
-        /// <summary>
-        /// Advances the authoritative camera logic by one fixed-step tick.
-        /// </summary>
         public void Update(float dt)
         {
             CopyState(State, PreviousState);

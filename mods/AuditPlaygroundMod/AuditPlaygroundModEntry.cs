@@ -14,10 +14,8 @@ namespace AuditPlaygroundMod
         {
             context.Log("[AuditPlaygroundMod] Loaded.");
 
-            // Phase2 formal pipeline: use OnEvent instead of legacy RegisterTrigger.
             context.OnEvent(GameEvents.MapLoaded, new AuditGlobalMapLoadedTrigger().ExecuteAsync);
 
-            // Phase2 path: activate presentation control system via factory.
             context.SystemFactoryRegistry.RegisterPresentation("AuditMapControlPresentation", scriptCtx =>
             {
                 var engine = scriptCtx.GetEngine();
@@ -25,20 +23,16 @@ namespace AuditPlaygroundMod
                 return new AuditMapControlPresentationSystem(engine);
             });
 
-            // Decorator demos:
-            // 1) Typed decorator
             context.TriggerDecorators.Register<AuditScopedMapLoadedTrigger>(trigger =>
             {
                 trigger.Priority = -20;
             });
 
-            // 2) Named decorator
             context.TriggerDecorators.Register("AuditScopedMapLoadedTrigger", trigger =>
             {
                 trigger.AddAction(new IncrementGlobalCounterCommand("Audit.NamedDecoratorCount", "named decorator"));
             });
 
-            // 3) Anchor decorator
             context.TriggerDecorators.RegisterAnchor("audit.after_load",
                 new IncrementGlobalCounterCommand("Audit.AnchorDecoratorCount", "anchor decorator"));
         }

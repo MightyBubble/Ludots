@@ -13,12 +13,6 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>
-    /// Dialect rename migration guards: the retired MapTrigger dialect name must be
-    /// gone from the authoring surface (src dialect identifiers, assets registries,
-    /// production graphs and maps) and must fail closed everywhere it can still be
-    /// authored, with messages naming the rename.
-    /// </summary>
     [TestFixture]
     public sealed class TriggerGraphRenameMigrationTests
     {

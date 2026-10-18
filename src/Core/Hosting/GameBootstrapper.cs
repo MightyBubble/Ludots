@@ -59,13 +59,6 @@ namespace Ludots.Core.Hosting
                 : Path.GetFullPath(Path.Combine(resolvedBaseDirectory, bootstrapFile));
         }
 
-        /// <summary>
-        /// New initialization flow using ConfigPipeline for game.json merge:
-        /// 1. Read app bootstrap for launch graph metadata
-        /// 2. Initialize VFS and ModLoader from the resolved launch plan
-        /// 3. Use ConfigPipeline to merge all game.json files (Core -> Mods)
-        /// 4. Pass merged config to GameEngine
-        /// </summary>
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string gameConfigFile)
         {
             if (string.IsNullOrWhiteSpace(baseDirectory))
@@ -74,7 +67,6 @@ namespace Ludots.Core.Hosting
             var baseDir = Path.GetFullPath(baseDirectory);
             var assetsRoot = FindAssetsRootStrict(baseDir);
 
-            // Step 1: Read the launcher bootstrap and resolve the launcher graph.
             string gameJsonPath = ResolveBootstrapPath(baseDir, gameConfigFile);
             if (!File.Exists(gameJsonPath))
                 throw new FileNotFoundException($"Missing launcher bootstrap next to executable: {gameJsonPath}");
@@ -96,12 +88,9 @@ namespace Ludots.Core.Hosting
             string graphPath = ResolveRequiredGraphPath(baseDir, gameJsonPath, bootstrapConfig);
             var resolvedPlan = ResolveGraphPlan(graphPath, gameJsonPath, bootstrapConfig);
 
-            // Step 2 & 3: Initialize engine with launcher-resolved plan
-            // Engine will internally use ConfigPipeline to merge game.json
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(resolvedPlan.ModLoadPlan, assetsRoot);
 
-            // Get the merged config from engine
             var mergedConfig = engine.MergedConfig;
             ApplyHostBrowserRuntimeConfig(engine, mergedConfig, resolvedPlan.BrowserRuntime);
             ValidateNetworkBootstrapPair(mergedConfig, bootstrapConfig.NetworkHost);
