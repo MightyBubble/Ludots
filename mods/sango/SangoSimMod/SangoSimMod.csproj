@@ -2,11 +2,9 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Ported sango simulation sources predate nullable annotations; annotations-only keeps PriorityQueue2's
-         `T?` syntax legal without flooding the port with nullable analysis warnings. -->
+    <!-- Ported sango simulation sources predate nullable annotations; annotations-only
+         keeps occasional `T?` syntax legal without flooding the port with nullable analysis warnings. -->
     <Nullable>annotations</Nullable>
-    <!-- PriorityQueue2 predates the BCL PriorityQueue<TElement,TPriority>; the local type intentionally wins. -->
-    <NoWarn>$(NoWarn);CS0436</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

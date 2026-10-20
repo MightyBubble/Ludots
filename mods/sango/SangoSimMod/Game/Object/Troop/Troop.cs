@@ -62,9 +62,9 @@ namespace Sango.Core
         public City mBelongCity => Leader?.mBelongCity;
 
         /// <summary>
-        /// 所在城池
+        /// 所在城池(合成图上城圈外格子无 BelongCity,消费面按可空处理,见 Person.Escape)
         /// </summary>
-        public City mCurrentCity => cell.BelongCity.mBelongCity == null ? cell.BelongCity : cell.BelongCity.mBelongCity;
+        public City mCurrentCity => cell?.BelongCity?.mBelongCity ?? cell?.BelongCity;
 
         /// <summary>
         /// 统领（主将）
