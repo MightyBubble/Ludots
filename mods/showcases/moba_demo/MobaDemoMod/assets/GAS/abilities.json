@@ -4,14 +4,42 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.Q", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Damage.Q" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.GCD",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.Skill.Q",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Damage.Q"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Cooldown.GCD", "Cooldown.Skill.Q"]
+      "blockedAny": [
+        "Cooldown.GCD",
+        "Cooldown.Skill.Q"
+      ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
+    "targeting": {
+      "castRangeCm": 1200,
+      "impactEffect": "Effect.Moba.Damage.Q"
     }
   },
   {
@@ -19,16 +47,52 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.W", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Heal.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.HOT.Regen" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Buff.SpeedBoost" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.GCD",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.Skill.W",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Heal.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.HOT.Regen"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Buff.SpeedBoost"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Cooldown.GCD", "Cooldown.Skill.W"]
+      "blockedAny": [
+        "Cooldown.GCD",
+        "Cooldown.Skill.W"
+      ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.none"
+    ],
+    "targeting": {
+      "castRangeCm": 1200,
+      "impactEffect": "Effect.Moba.Heal.W"
     }
   },
   {
@@ -36,16 +100,52 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.E", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Damage.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Projectile.Arrow" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Force.E" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.GCD",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.Skill.E",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Damage.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Projectile.Arrow"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Force.E"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Cooldown.GCD", "Cooldown.Skill.E"]
+      "blockedAny": [
+        "Cooldown.GCD",
+        "Cooldown.Skill.E"
+      ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
+    "targeting": {
+      "castRangeCm": 1200,
+      "impactEffect": "Effect.Moba.Damage.E"
     }
   },
   {
@@ -53,17 +153,57 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.GCD", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Lockout.Skill.R", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Search.BlizzardZone" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.DOT.Burn" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Summon.Skeleton" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Displacement.R" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.GCD",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Lockout.Skill.R",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Search.BlizzardZone"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.DOT.Burn"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Summon.Skeleton"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Moba.Displacement.R"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Cooldown.GCD", "Cooldown.Skill.R"]
+      "blockedAny": [
+        "Cooldown.GCD",
+        "Cooldown.Skill.R"
+      ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_only"
+    ],
+    "targeting": {
+      "castRangeCm": 1200,
+      "impactEffect": "Effect.Moba.Search.BlizzardZone"
     }
   }
 ]

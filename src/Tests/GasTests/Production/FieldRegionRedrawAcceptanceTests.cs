@@ -32,7 +32,6 @@ public sealed class FieldRegionRedrawAcceptanceTests
     private static readonly string[] Mods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FieldJingYangTransitMod",
     };
 
@@ -162,7 +161,8 @@ public sealed class FieldRegionRedrawAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.UiCaptured, false);
         return engine;
     }

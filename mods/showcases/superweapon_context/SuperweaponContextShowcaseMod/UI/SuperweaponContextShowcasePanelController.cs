@@ -12,6 +12,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
 using SuperweaponContextShowcaseMod.Runtime;
+using Ludots.Core.Input.Config;
 
 namespace SuperweaponContextShowcaseMod.UI
 {
@@ -240,7 +241,7 @@ namespace SuperweaponContextShowcaseMod.UI
                 ? EntityCollectionContextRuntime.GetCount(
                     engine.GlobalContext,
                     owner,
-                    "collection.command.source")
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : 0;
             if (count <= 0)
             {

@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
-using CoreInputMod.Systems;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -23,7 +22,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
@@ -51,7 +49,7 @@ namespace Ludots.Tests.GAS.Production
     [NonParallelizable]
     [TestFixture]
     [Category("acceptance")]
-    public sealed class ChampionSkillSandboxPlayableAcceptanceTests
+    public sealed partial class ChampionSkillSandboxPlayableAcceptanceTests
     {
         private const float DeltaTime = 1f / 60f;
         private const string MapId = "champion_skill_sandbox";
@@ -76,9 +74,9 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "DiagnosticsOverlayMod",
+            "AimInteractionMod",
             "EntityCommandPanelMod",
             "ChampionSkillSandboxMod"
         };
@@ -228,35 +226,31 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterQ,
                 Is.LessThan(dummyHealthBeforeQ),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Smart cast hit should emit visible pulse markers.");
             TickUntilWorldHudText(engine, frameTimesMs, primitives, worldHud, maxFrames: 8, "Smart cast hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "smartcast_hit");
             timeline.Add($"[T+008] Ezreal Alpha.Cast(Mystic Shot) -> Target Dummy A | Hit | HP {dummyHealthBeforeQ:0} -> {dummyHealthAfterQ:0}");
 
             toolbar.Activate(IndicatorModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
-            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Target Dummy A")), frameTimesMs);
-            backend.SetMousePosition(indicatorHoverPoint);
-            Tick(engine, 1, frameTimesMs);
+            var aimCollections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
+            FindHoverScreenPoint(engine, backend, "Target Dummy A", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Target Dummy A")), frameTimesMs);
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Not.Match("count=[1-9]"),
+                "Plain battle tracking writes aim.target, and the hover ring stays empty until an aim context is open.");
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
-            int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineIndicatorLines),
-                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Ring) > baselineIndicatorRings,
-                maxFrames: 8,
-                describeFailure: () => BuildHoverIndicatorDiagnostics(engine, overlays, baselineIndicatorRings, "Target Dummy A", indicatorHoverPoint));
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} | aimHover={DescribeCollectionByKey(engine, aimCollections, "aim.hover")}");
             Assert.That(
-                CountOverlays(overlays, GroundOverlayShape.Ring),
-                Is.GreaterThan(baselineIndicatorRings),
-                "Indicator hover should add a dedicated marker on the hovered target.");
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Match("count=[1-9]"),
+                "The target ring is seeded when the indicator context opens.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_hover_target");
             timeline.Add("[T+009] Indicator hover over Target Dummy A shows an extra target marker before release");
             float dummyHealthBeforeR = ReadHealth(engine.World, "Target Dummy A");
@@ -266,7 +260,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterR,
                 Is.LessThan(dummyHealthBeforeR),
-                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Indicator release hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Indicator release hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_release_hit");
@@ -274,7 +268,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Jayce Cannon", frameTimesMs);
             toolbar.Activate(PressReleaseModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(PressReleaseModeId));
 
             float jayceDistanceToDummy = ReadDistance(engine.World, "Jayce Cannon", "Target Dummy A");
@@ -287,13 +281,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)}");
             RightClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             Tick(engine, 2, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.EqualTo(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             float dummyHealthAfterCancel = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(dummyHealthAfterCancel, Is.EqualTo(dummyHealthBeforeCancel).Within(0.001f));
 
@@ -302,14 +296,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthAfterCancel, maxFrames: 24);
             float dummyHealthAfterConfirm = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterConfirm,
                 Is.LessThan(dummyHealthAfterCancel),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Press-release confirm hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Press-release confirm hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "press_release_confirm_hit");
@@ -317,7 +311,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             toolbar.Activate(SmartCastModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             var geomancerSlots = CopySelectedSlots(engine);
             Assert.That(geomancerSlots[0].Label, Is.EqualTo("Runic Beacon"));
             Assert.That(geomancerSlots[1].Label, Is.EqualTo("Rune Field"));
@@ -334,7 +328,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterBeam,
                 Is.LessThan(dummyHealthBeforeBeam),
-                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Beam hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Beam hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "prismatic_beam_hit");
@@ -388,10 +382,11 @@ namespace Ludots.Tests.GAS.Production
             }
 
             float dummyHealthAfterRuneField = ReadHealth(engine.World, "Target Dummy C");
+            Entity geomancerForField = FindEntityByName(engine.World, "Geomancer Alpha");
             Assert.That(
                 runeFieldHitConfirmed,
                 Is.True,
-                $"{BuildRuneFieldPeriodicDiagnostics(engine.World)} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+                $"{BuildRuneFieldPeriodicDiagnostics(engine.World)} || tick={engine.GameSession.CurrentTick} || field={ReadPosition(engine.World, "Rune Field")} || dummy={ReadPosition(engine.World, "Target Dummy C")} || aim={DescribeAim(engine, geomancerForField)} point=({TryReadAimFloat(engine, geomancerForField, "aim.point.x_cm")},{TryReadAimFloat(engine, geomancerForField, "aim.point.y_cm")}) || triggers={DescribeTriggerErrors(engine)}");
             Assert.That(
                 dummyHealthAfterRuneField,
                 Is.LessThan(dummyHealthBeforeRuneField),
@@ -424,7 +419,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             toolbar.Activate(SmartCastModeId);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             var spellEngineerSlots = CopySelectedSlots(engine);
             Assert.That(spellEngineerSlots[0].Label, Is.EqualTo("Spell Beacon"));
             Assert.That(spellEngineerSlots[1].Label, Is.EqualTo("Gravity Well"));
@@ -606,6 +601,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             toolbar.Activate(IndicatorModeId);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
             Tick(engine, 2, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "002_dota2_geomancer", EntityCommandPanelShowcaseTheme.Dota2Id);
@@ -613,6 +609,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             toolbar.Activate(PressReleaseModeId);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
             Tick(engine, 2, frameTimesMs);
             CapturePanelThemeSnapshot(engine, uiRoot, snapshots, screensDir, "003_sc2_spell_engineer", EntityCommandPanelShowcaseTheme.Sc2Id);
@@ -822,7 +819,7 @@ namespace Ludots.Tests.GAS.Production
             float healthBeforeQ = ReadHealth(engine.World, "Target Dummy A");
             backend.SetButton("<Keyboard>/q", true);
             Tick(engine, 1, frameTimesMs);
-            string qPressFrameDiagnostics = $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")}";
+            string qPressFrameDiagnostics = $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")}";
             backend.SetButton("<Keyboard>/q", false);
             Tick(engine, 3, frameTimesMs);
             bool qDamagedTarget = WaitUntil(
@@ -833,7 +830,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 qDamagedTarget,
                 Is.True,
-                $"{qPressFrameDiagnostics} || {BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
+                $"{qPressFrameDiagnostics} || {BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
             Tick(engine, 2, frameTimesMs);
             float healthAfterQ = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
@@ -940,7 +937,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
 
             AcceptanceUiHostInstaller.Install(engine);
@@ -980,10 +977,7 @@ namespace Ludots.Tests.GAS.Production
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -1036,7 +1030,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -1106,8 +1100,13 @@ namespace Ludots.Tests.GAS.Production
 
         private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
         {
+            // Aim.Pointer 只在数值变化时触发。重复落到同一屏幕点不会取样；取样的第二拍在下一个固定步续上。
+            // 先挪开再落下，并等那一拍续完，按下前 aim.target 已经在新人身上。
+            backend.SetMousePosition(new Vector2(960f, 540f));
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetMousePosition(GetGroundScreenFromWorld(engine, worldCm));
             engine.GlobalContext[PendingGroundWorldCmKey] = worldCm;
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
@@ -1127,10 +1126,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-                engine.GlobalContext,
-                nameof(ChampionSkillSandboxPlayableAcceptanceTests));
-            groundOverride.Set(bindings.CommandActionId, worldCm);
+            groundOverride.Set("Command", worldCm);
         }
 
         private static void CenterMouse(TestInputBackend backend)
@@ -1871,12 +1867,28 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
             {
-                CastModeType.SmartCastWithIndicator => IndicatorModeId,
-                CastModeType.PressReleaseAimCast => PressReleaseModeId,
-                _ => SmartCastModeId,
-            };
+                return "<none>";
+            }
+
+            string name = ReadAimPrefValue(engine, rep);
+            if (string.Equals(name, "interaction.context.aim.smart", StringComparison.Ordinal))
+            {
+                return SmartCastModeId;
+            }
+
+            if (string.Equals(name, "interaction.context.aim.release", StringComparison.Ordinal))
+            {
+                return IndicatorModeId;
+            }
+
+            if (string.Equals(name, "interaction.context.aim.click", StringComparison.Ordinal))
+            {
+                return PressReleaseModeId;
+            }
+
+            return "<none>";
         }
 
         private static string GetSelectedEntityName(GameEngine engine)
@@ -2557,33 +2569,33 @@ Assert.Fail(
                 details.Add($"backendLeft={backend.GetButton("<Mouse>/LeftButton")}");
             }
 
-            bool pointerCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.PointerInputCaptured.Name, out var pointerCapturedObj) &&
-                pointerCapturedObj is bool pointerCapturedValue &&
-                pointerCapturedValue;
-            details.Add($"pointerCaptured={pointerCaptured}");
-
             if (engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is AuthoritativeGroundPointerOverride groundOverride)
             {
                 details.Add($"groundOverride={groundOverride.HasOverride}");
             }
 
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingMode={mapping.InteractionMode}");
-                details.Add($"mappingAiming={mapping.IsAiming}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
-                {
-                    details.Add($"TargetType={actionMapping.TargetType}");
-                    details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
-                }
-            }
-            else
-            {
-                details.Add("activeMapping=<missing>");
-            }
-
+            details.Add($"interactionContexts=[{DescribeActiveInteractionContexts(engine)}]");
             details.Add($"activeMode={GetActiveModeId(engine)}");
             return string.Join(" | ", details);
+        }
+
+        private static string DescribeActiveInteractionContexts(GameEngine engine)
+        {
+            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (profiles == null || !ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
+            {
+                return "<unavailable>";
+            }
+
+            Span<int> ids = stackalloc int[16];
+            int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(engine.World, rep, ids);
+            var names = new List<string>(count);
+            for (int i = 0; i < count; i++)
+            {
+                names.Add(profiles.ProfileIdRegistry.GetName(ids[i]) ?? ids[i].ToString());
+            }
+
+            return string.Join(",", names);
         }
 
         private static string DescribeActiveInputContexts(PlayerInputHandler input)
@@ -2637,25 +2649,9 @@ Assert.Fail(
         private static string BuildChampionMovementDiagnostics(GameEngine engine, string actorName, Vector2 targetScreen)
         {
             Vector2 actorPosition = ReadPosition(engine.World, actorName);
-            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
-                ? lastGroundObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
-                ? lastOrderObj?.ToString() ?? "<null>"
-                : "<missing>";
             string pressFrame = engine.GlobalContext.TryGetValue(RightClickPressDiagnosticsKey, out var pressFrameObj)
                 ? pressFrameObj?.ToString() ?? "<null>"
                 : "<missing>";
-            string localOrderSource = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LocalOrderSource", out var localOrderSourceObj)
-                ? localOrderSourceObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string activationResult = "<none>";
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is InputOrderMappingSystem mappingSystem)
-            {
-                var last = mappingSystem.LastActivationResult;
-                activationResult = $"{last.State} actor={last.Actor.Id}:{last.Actor.Version} rejection={last.Rejection}";
-            }
             string seatState;
             try
             {
@@ -2679,14 +2675,10 @@ Assert.Fail(
                 $"actorPos=({actorPosition.X:0.##},{actorPosition.Y:0.##})",
                 $"targetScreen=({targetScreen.X:0.##},{targetScreen.Y:0.##})",
                 BuildInputActionDiagnostics(engine, "Command"),
-                $"activation={activationResult}",
                 $"seat={seatState}",
                 $"rightClickPressFrame={pressFrame}",
-                $"localOrderSource={localOrderSource}",
                 BuildAbilityDiagnostics(engine, actorName),
-                BuildSelectionStateDiagnostics(engine),
-                $"lastGround={lastGround}",
-                $"lastOrder={lastOrder}");
+                BuildSelectionStateDiagnostics(engine));
         }
 
         private static string BuildStressSelectionDiagnostics(GameEngine engine, Entity localPlayer, OrderQueue orderQueue)
@@ -2709,7 +2701,7 @@ Assert.Fail(
                 details.Add("currentView=<none>");
             }
 
-            details.Add($"localCommandSource={DescribeCollection(engine, collections, localPlayer, "collection.command.source")}");
+            details.Add($"localCommandSource={DescribeCollection(engine, collections, localPlayer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))}");
             details.Add($"commandPreview={DescribeCollectionByKey(engine, collections, CommandPreviewCollectionKey)}");
 
             details.Add($"orderBufferSpatial=[{BuildOrderBufferSpatialDiagnostics(engine)}]");
@@ -3024,19 +3016,13 @@ Assert.Fail(
                 {
                     WorldCmInt2 worldCm = position.ToWorldCmInt2();
                     projectileSamples.Add(
-                        $"id:{entity.Id}/pos:({worldCm.X},{worldCm.Y})/range:{projectile.Range}/targetPoint:{projectile.HasTargetPoint}/direction:{projectile.HasDirection}/hit:{projectile.HitEffectTemplateId}");
+                        $"id:{entity.Id}/pos:({worldCm.X},{worldCm.Y})/range:{projectile.Range}/targetPoint:{projectile.HasTargetPoint}/direction:{projectile.HasDirection}/hit:{projectile.HitEffectTemplateId}/target:{(world.IsAlive(projectile.Target) && world.TryGet(projectile.Target, out Name targetName) ? targetName.Value : projectile.Target.Id.ToString())}/mode:{projectile.TravelMode}");
                 }
             });
 
             bool hasLockoutTag = EntityHasTag(world, actorName, lockoutTagName);
             int orderQueueCount = engine.GetService(CoreServiceKeys.OrderQueue)?.Count ?? -1;
-            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
-                ? lastGroundObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
-                ? lastOrderObj?.ToString() ?? "<null>"
-                : "<missing>";
-            return $"{label}=lockoutTag:{hasLockoutTag},orderQueue:{orderQueueCount},lastGround:{lastGround},lastOrder:{lastOrder},projectiles:{projectileCount},withTargetPoint:{projectileWithTargetPointCount},withDirection:{projectileWithDirectionCount},withHitTemplate:{projectileHitTemplateCount},samples:[{string.Join(";", projectileSamples)}]";
+            return $"{label}=lockoutTag:{hasLockoutTag},orderQueue:{orderQueueCount},projectiles:{projectileCount},withTargetPoint:{projectileWithTargetPointCount},withDirection:{projectileWithDirectionCount},withHitTemplate:{projectileHitTemplateCount},samples:[{string.Join(";", projectileSamples)}]";
         }
 
         private static string FindRepoRoot()
@@ -3176,5 +3162,31 @@ Assert.Fail(
                 LastState = state;
             }
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

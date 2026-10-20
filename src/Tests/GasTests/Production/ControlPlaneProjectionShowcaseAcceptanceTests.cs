@@ -42,7 +42,6 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod",
         "ControlPlaneProjectionShowcaseMod",
     };
@@ -164,7 +163,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         selected[0] = p1Unit;
         selected[1] = p2Unit;
         var mixedCommandSourceDescriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
             EntityCollectionSourceKind.UiAcquisition,
             EntityCollectionRoleKind.CommandSource,
             contextEntity: state.P1Rep,
@@ -300,7 +299,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         relationships.EnsureLink(foreignRep, foreignUnit, state.OwnsTypeId);
 
         var commandSourceDescriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             title: "SHOW-3 referee command-source fixture",
@@ -744,7 +743,8 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
         engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
         return engine;
@@ -755,10 +755,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var backend = new TestInputBackend();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

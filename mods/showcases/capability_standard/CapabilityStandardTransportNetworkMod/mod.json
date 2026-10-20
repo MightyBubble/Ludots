@@ -4,9 +4,13 @@
   "description": "Capability Standard Transport Network SSOT showcase: the NodeGraph board names the transport asset, and the engine installs it on map load.",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "capability-standard", "transport-network", "node-graph"]
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "transport-network",
+    "node-graph"
+  ]
 }

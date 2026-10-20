@@ -34,7 +34,7 @@ namespace Ludots.Tests.Presentation
     public sealed class CapabilityStandardPresenterCommandShowcaseAcceptanceTests
     {
         private const float DeltaTime = 1f / 60f;
-        private static readonly string[] BaseMods = { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" };
+        private static readonly string[] BaseMods = { "LudotsCoreMod", "CameraProfilesMod" };
         private const string ModId = "CapabilityStandardPresenterCommandShowcaseMod";
         private const string MapId = "capability_standard_presenter_command_showcase";
         private const string BindingName = "capability_standard_presenter_command_showcase";
@@ -344,7 +344,7 @@ namespace Ludots.Tests.Presentation
             List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             engine.Start();
             return engine;
@@ -354,10 +354,7 @@ namespace Ludots.Tests.Presentation
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, new NullInputBackend());

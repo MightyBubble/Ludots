@@ -1,0 +1,27 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.aim_schemes.battle",
+      "commandIntentId": "intent.aim_schemes.command",
+      "bindings": [
+        "Aim.Primary"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.aim_schemes.command"
+        },
+        {
+          "trigger": "graph.aim_schemes.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.aim_schemes.restore_default_pick"
+        }
+      ],
+      "onActivated": [
+        "graph.aim_schemes.bind_aim_actor",
+        "graph.aim.pick.hostile",
+        "graph.aim.enter"
+      ]
+    }
+  ]
+}

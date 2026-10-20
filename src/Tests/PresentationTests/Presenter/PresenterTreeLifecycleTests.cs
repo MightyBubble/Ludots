@@ -19,6 +19,7 @@ using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.Presentation
 {
@@ -373,7 +374,7 @@ namespace Ludots.Tests.Presentation
             using var fixture = PresenterTreeFixture.Create();
             var collectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var collections = new EntityCollectionStore(collectionKeys);
-            int commandSourceKeyId = collectionKeys.Register("collection.command.source");
+            int commandSourceKeyId = collectionKeys.Register("core.selection");
             const int sourceStableId = 9001;
 
             int markerId = fixture.Definitions.Register("selection_marker", new PresenterDefinition());
@@ -439,7 +440,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(fixture.World.IsAlive(rootEntity), Is.True);
 
             fixture.Events.Clear();
-            Assert.That(collections.Remove(player, "collection.command.source"), Is.True);
+            Assert.That(collections.Remove(player, "core.selection"), Is.True);
             collectionEvents.Update(0.016f);
             fixture.TickRuleThenRuntime();
 
@@ -461,7 +462,7 @@ namespace Ludots.Tests.Presentation
         private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, Entity member)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                "core.selection",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 owner,

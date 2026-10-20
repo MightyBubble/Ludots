@@ -23,7 +23,6 @@ namespace Ludots.Tests.Presentation
         private static readonly string[] PrototypeMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "AnimationAcceptanceMod"
         };
 
@@ -185,7 +184,7 @@ namespace Ludots.Tests.Presentation
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);
             engine.Start();
@@ -206,10 +205,7 @@ namespace Ludots.Tests.Presentation
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);

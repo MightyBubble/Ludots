@@ -1,0 +1,44 @@
+[
+  {
+    "id": "showcase.graph_op.LoadAbilityCastRange",
+    "kind": "Effect",
+    "entry": "slot",
+    "nodes": [
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "range",
+        "op": "LoadAbilityCastRange"
+      },
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      { "from": "slot", "fromPort": "next", "to": "range" },
+      { "from": "range", "fromPort": "next", "to": "drain" },
+      { "from": "drain", "fromPort": "next", "to": "explicit" },
+      { "from": "explicit", "fromPort": "next", "to": "hit" }
+    ],
+    "valueEdges": [
+      { "from": "explicit", "fromPort": "value", "to": "range", "toPort": "source" },
+      { "from": "slot", "fromPort": "value", "to": "range", "toPort": "value" },
+      { "from": "drain", "fromPort": "value", "to": "hit", "toPort": "value" },
+      { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" }
+    ]
+  }
+]

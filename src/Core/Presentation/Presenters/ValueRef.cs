@@ -59,7 +59,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         /// <summary>
         /// Read a float from the owner entity's <c>BlackboardFloatBuffer</c>.
-        /// <see cref="ValueRef.SourceId"/> is the ConfigKeyRegistry id of the blackboard key.
+        /// <see cref="ValueRef.SourceId"/> is the <c>OrderBlackboardKeyRegistry</c> id of the blackboard key.
         /// </summary>
         OwnerBlackboardFloat = 9,
 

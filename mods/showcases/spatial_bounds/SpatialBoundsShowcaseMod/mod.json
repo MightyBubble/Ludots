@@ -6,9 +6,14 @@
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "selection", "spatial", "bounds", "input"]
+  "tags": [
+    "showcase",
+    "selection",
+    "spatial",
+    "bounds",
+    "input"
+  ]
 }

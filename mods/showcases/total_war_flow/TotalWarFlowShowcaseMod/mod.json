@@ -5,7 +5,6 @@
   "priority": 1100,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "SelectionInteractionMod": "^1.0.0",
     "MassNavigationMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0",

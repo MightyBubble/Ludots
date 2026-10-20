@@ -133,13 +133,12 @@ namespace Ludots.Tests.GAS
             var modPaths = new List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "chunk_streaming", "ChunkStreamingShowcaseMod"),
             };
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
             return engine;
         }

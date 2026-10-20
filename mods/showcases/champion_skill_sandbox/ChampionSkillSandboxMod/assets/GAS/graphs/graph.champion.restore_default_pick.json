@@ -1,0 +1,83 @@
+[
+  {
+    "id": "graph.champion.restore_default_pick",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "click",
+        "event": "ContextDeactivated",
+        "start": "rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.ContextKeyId": "interaction.context.aim.click"
+          }
+        }
+      },
+      {
+        "label": "release",
+        "event": "ContextDeactivated",
+        "start": "rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.ContextKeyId": "interaction.context.aim.release"
+          }
+        }
+      },
+      {
+        "label": "smart",
+        "event": "ContextDeactivated",
+        "start": "rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.ContextKeyId": "interaction.context.aim.smart"
+          }
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "pick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.pick.hostile"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

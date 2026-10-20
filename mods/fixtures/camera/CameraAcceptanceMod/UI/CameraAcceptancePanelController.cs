@@ -25,6 +25,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.Config;
 
 namespace CameraAcceptanceMod.UI
 {
@@ -1297,7 +1298,7 @@ namespace CameraAcceptanceMod.UI
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out entity);
         }
 

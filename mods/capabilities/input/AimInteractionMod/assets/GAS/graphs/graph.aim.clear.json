@@ -1,0 +1,235 @@
+[
+  {
+    "id": "graph.aim.clear",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "lifecycle",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "q_hov",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "sub_hov",
+        "op": "WriteCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "q_act",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "c99",
+        "op": "ConstInt",
+        "intValue": 99
+      },
+      {
+        "id": "null_get",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "write_valid",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "write_null",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "c2"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "q_hov"
+      },
+      {
+        "from": "q_hov",
+        "fromPort": "next",
+        "to": "sub_hov"
+      },
+      {
+        "from": "sub_hov",
+        "fromPort": "next",
+        "to": "q_act"
+      },
+      {
+        "from": "q_act",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "c99",
+        "fromPort": "next",
+        "to": "null_get"
+      },
+      {
+        "from": "null_get",
+        "fromPort": "next",
+        "to": "write_valid"
+      },
+      {
+        "from": "write_valid",
+        "fromPort": "next",
+        "to": "write_null"
+      },
+      {
+        "from": "write_null",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "c99"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hov",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "sub_hov",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_act",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "c99",
+        "fromPort": "value",
+        "to": "null_get",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_valid",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_null",
+        "toPort": "source"
+      },
+      {
+        "from": "null_get",
+        "fromPort": "value",
+        "to": "write_null",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -41,6 +41,10 @@ namespace Ludots.Core.Scripting
         {
             MapTriggerEventPayloadKeys.SourceMapId,
             MapTriggerEventPayloadKeys.SourceEntity,
+            // Ability-scoped mounts filter on this key. DispatchMapEvent's ability route
+            // stamps it without a schema parameter, because custom schemas cannot declare
+            // the reserved MapTrigger. namespace.
+            MapTriggerEventPayloadKeys.AbilityId,
         };
 
         internal static bool IsTransportMetadataPayloadKey(string payloadKey)
@@ -103,6 +107,9 @@ namespace Ludots.Core.Scripting
                 new("pointerScreenX", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenX),
                 new("pointerScreenY", EventParamType.Float, MapTriggerEventPayloadKeys.PointerScreenY),
                 new("modifiers", EventParamType.Int, MapTriggerEventPayloadKeys.Modifiers),
+                new("actionValueX", EventParamType.Float, MapTriggerEventPayloadKeys.ActionValueX, Optional: true),
+                new("actionValueY", EventParamType.Float, MapTriggerEventPayloadKeys.ActionValueY, Optional: true),
+                new("bindingInt", EventParamType.Int, MapTriggerEventPayloadKeys.BindingInt, Optional: true),
             }),
             new(GameEvents.MapVariableChanged.Value, EventScope.Map, new EventParamSchema[]
             {
@@ -150,6 +157,22 @@ namespace Ludots.Core.Scripting
             {
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
                 new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+            }),
+            new(GameEvents.EntityCollectionMembershipChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("collectionKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.CollectionKeyId),
+                new("memberEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.MemberEntity),
+                new("ownerEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.OwnerEntity),
+            }),
+            new(GameEvents.ContextActivated.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("contextKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextKeyId),
+            }),
+            new(GameEvents.ContextDeactivated.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("contextKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextKeyId),
             }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.

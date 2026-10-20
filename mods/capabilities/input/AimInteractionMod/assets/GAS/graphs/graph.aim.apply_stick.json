@@ -1,0 +1,652 @@
+[
+  {
+    "id": "graph.aim.apply_stick",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "apply",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actor_query",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "sk_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "sk_sv",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "sk_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "sk_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "sk_sx",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.stick.x"
+      },
+      {
+        "id": "sk_sy",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.stick.y"
+      },
+      {
+        "id": "sk_rng",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.range_cm"
+      },
+      {
+        "id": "sk_ox",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "sk_oy",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "sk_oxf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sk_oyf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sk_mx",
+        "op": "MulFloat"
+      },
+      {
+        "id": "sk_my",
+        "op": "MulFloat"
+      },
+      {
+        "id": "sk_px",
+        "op": "AddFloat"
+      },
+      {
+        "id": "sk_py",
+        "op": "AddFloat"
+      },
+      {
+        "id": "sk_set",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "sk_wx",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.point.x_cm"
+      },
+      {
+        "id": "sk_wy",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.point.y_cm"
+      },
+      {
+        "id": "sk_wv",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "pick_radius",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.pick.stick_radius_cm"
+      },
+      {
+        "id": "sk_assist",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete"
+      },
+      {
+        "id": "pick_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
+        "id": "sk_hostile",
+        "op": "QueryFilterRelationship"
+      },
+      {
+        "id": "sk_nearest",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "sk_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "sk_ajump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "sk_wt",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "sk_c99",
+        "op": "ConstInt",
+        "intValue": 99
+      },
+      {
+        "id": "sk_null",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "sk_wnull",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actor_query"
+      },
+      {
+        "from": "actor_query",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "sk_one"
+      },
+      {
+        "from": "sk_one",
+        "fromPort": "next",
+        "to": "sk_sv"
+      },
+      {
+        "from": "sk_sv",
+        "fromPort": "next",
+        "to": "sk_eq"
+      },
+      {
+        "from": "sk_eq",
+        "fromPort": "next",
+        "to": "sk_jump"
+      },
+      {
+        "from": "sk_jump",
+        "fromPort": "false",
+        "to": "halt_ok"
+      },
+      {
+        "from": "sk_jump",
+        "fromPort": "true",
+        "to": "sk_sx"
+      },
+      {
+        "from": "sk_sx",
+        "fromPort": "next",
+        "to": "sk_sy"
+      },
+      {
+        "from": "sk_sy",
+        "fromPort": "next",
+        "to": "sk_rng"
+      },
+      {
+        "from": "sk_rng",
+        "fromPort": "next",
+        "to": "sk_ox"
+      },
+      {
+        "from": "sk_ox",
+        "fromPort": "next",
+        "to": "sk_oy"
+      },
+      {
+        "from": "sk_oy",
+        "fromPort": "next",
+        "to": "sk_oxf"
+      },
+      {
+        "from": "sk_oxf",
+        "fromPort": "next",
+        "to": "sk_oyf"
+      },
+      {
+        "from": "sk_oyf",
+        "fromPort": "next",
+        "to": "sk_mx"
+      },
+      {
+        "from": "sk_mx",
+        "fromPort": "next",
+        "to": "sk_my"
+      },
+      {
+        "from": "sk_my",
+        "fromPort": "next",
+        "to": "sk_px"
+      },
+      {
+        "from": "sk_px",
+        "fromPort": "next",
+        "to": "sk_py"
+      },
+      {
+        "from": "sk_py",
+        "fromPort": "next",
+        "to": "sk_set"
+      },
+      {
+        "from": "sk_set",
+        "fromPort": "next",
+        "to": "sk_wx"
+      },
+      {
+        "from": "sk_wx",
+        "fromPort": "next",
+        "to": "sk_wy"
+      },
+      {
+        "from": "sk_wy",
+        "fromPort": "next",
+        "to": "sk_wv"
+      },
+      {
+        "from": "sk_wv",
+        "fromPort": "next",
+        "to": "pick_radius"
+      },
+      {
+        "from": "sk_assist",
+        "fromPort": "next",
+        "to": "pick_rel"
+      },
+      {
+        "from": "sk_hostile",
+        "fromPort": "next",
+        "to": "sk_nearest"
+      },
+      {
+        "from": "sk_nearest",
+        "fromPort": "next",
+        "to": "sk_alive"
+      },
+      {
+        "from": "sk_alive",
+        "fromPort": "next",
+        "to": "sk_ajump"
+      },
+      {
+        "from": "sk_ajump",
+        "fromPort": "true",
+        "to": "sk_wt"
+      },
+      {
+        "from": "sk_wt",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "sk_ajump",
+        "fromPort": "false",
+        "to": "sk_c99"
+      },
+      {
+        "from": "sk_c99",
+        "fromPort": "next",
+        "to": "sk_null"
+      },
+      {
+        "from": "sk_null",
+        "fromPort": "next",
+        "to": "sk_wnull"
+      },
+      {
+        "from": "sk_wnull",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "next",
+        "to": "sk_assist"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "next",
+        "to": "sk_hostile"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actor_query",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_sv",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_sv",
+        "fromPort": "value",
+        "to": "sk_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_one",
+        "fromPort": "value",
+        "to": "sk_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "sk_eq",
+        "fromPort": "value",
+        "to": "sk_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_sx",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_sy",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_rng",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_ox",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_oy",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_ox",
+        "fromPort": "value",
+        "to": "sk_oxf",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_oy",
+        "fromPort": "value",
+        "to": "sk_oyf",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_sx",
+        "fromPort": "value",
+        "to": "sk_mx",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_rng",
+        "fromPort": "value",
+        "to": "sk_mx",
+        "toPort": "b"
+      },
+      {
+        "from": "sk_sy",
+        "fromPort": "value",
+        "to": "sk_my",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_rng",
+        "fromPort": "value",
+        "to": "sk_my",
+        "toPort": "b"
+      },
+      {
+        "from": "sk_oxf",
+        "fromPort": "value",
+        "to": "sk_px",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_mx",
+        "fromPort": "value",
+        "to": "sk_px",
+        "toPort": "b"
+      },
+      {
+        "from": "sk_oyf",
+        "fromPort": "value",
+        "to": "sk_py",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_my",
+        "fromPort": "value",
+        "to": "sk_py",
+        "toPort": "b"
+      },
+      {
+        "from": "sk_px",
+        "fromPort": "value",
+        "to": "sk_set",
+        "toPort": "a"
+      },
+      {
+        "from": "sk_py",
+        "fromPort": "value",
+        "to": "sk_set",
+        "toPort": "b"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_wx",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_px",
+        "fromPort": "value",
+        "to": "sk_wx",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_wy",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_py",
+        "fromPort": "value",
+        "to": "sk_wy",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_wv",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_one",
+        "fromPort": "value",
+        "to": "sk_wv",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_nearest",
+        "fromPort": "value",
+        "to": "sk_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_alive",
+        "fromPort": "value",
+        "to": "sk_ajump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_wt",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_nearest",
+        "fromPort": "value",
+        "to": "sk_wt",
+        "toPort": "value"
+      },
+      {
+        "from": "sk_c99",
+        "fromPort": "value",
+        "to": "sk_null",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "sk_wnull",
+        "toPort": "source"
+      },
+      {
+        "from": "sk_null",
+        "fromPort": "value",
+        "to": "sk_wnull",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_radius",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "value",
+        "to": "sk_assist",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "value",
+        "to": "sk_hostile",
+        "toPort": "value"
+      }
+    ]
+  }
+]

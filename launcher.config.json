@@ -2747,6 +2747,149 @@
         "type": "path",
         "value": "mods/showcases/panel_button_commands/PanelButtonCommandsShowcaseMod"
       }
+    },
+    {
+      "name": "aim_control_schemes",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/aim_control_schemes/AimControlSchemesShowcaseMod"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadAbilityCastRange",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetTargetPos",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetTargetPosEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetTargetPosEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_Fail",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFailEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFailEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityFacing",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityFacingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityFacingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IsContextActive",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsContextActiveEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIsContextActiveEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadSlotAbilityId",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadSlotAbilityIdEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadSlotAbilityIdEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateContextFromPref",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateContextFromPrefEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateContextFromPrefEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DeactivateOwnContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDeactivateOwnContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDeactivateOwnContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IsPref",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsPrefEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIsPrefEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetPref",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPrefEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetPrefEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapJumpCamera",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapJumpCameraEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapJumpCameraEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapScreenToWorld",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapScreenToWorldEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapScreenToWorldEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapSetZoomFromPointer",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapSetZoomFromPointerEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapSetZoomFromPointerEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapTogglePreset",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapTogglePresetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapTogglePresetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapToggleRotate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapToggleRotateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapToggleRotateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryMinimapRegion",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryMinimapRegionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryMinimapRegionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinimapApplyWheelZoom",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

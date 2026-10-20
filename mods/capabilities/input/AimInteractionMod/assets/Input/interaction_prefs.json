@@ -1,0 +1,21 @@
+{
+  "keys": [
+    {
+      "id": "pref.aim.cast_mode",
+      "contextValued": true,
+      "values": [
+        "interaction.context.aim.click",
+        "interaction.context.aim.release",
+        "interaction.context.aim.smart"
+      ]
+    }
+  ],
+  "defaults": {
+    "prefs": [
+      {
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      }
+    ]
+  }
+}

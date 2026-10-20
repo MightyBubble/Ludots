@@ -7,11 +7,13 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/interaction_context_profiles.json</c> (RFC-0065 CTX-6, §5.3). Catalog-
-    /// declared DeepObject merge through the shared <see cref="ConfigPipeline"/> (a mod fragment's
-    /// profiles array replaces the root's, matching the filter profile family); structural
-    /// validation fails fast. Referenced filter/intent ids resolve at registry install, not here.
-    /// Steady state is the absence of a mounted instance. This loader does not install a reserved profile.
+    /// Loader for <c>Input/interaction_context_profiles.json</c> (RFC-0065 CTX-6, §5.3). Catalog
+    /// policy stays DeepObject. <c>profiles</c> merge ArrayById on <c>id</c>. Nested
+    /// <c>bindings</c>, <c>triggers</c>, <c>onActivated</c>, and <c>onDeactivated</c> append
+    /// via <see cref="ConfigCatalogEntry.ArrayAppendFields"/> so a mod that owns an action can
+    /// add that binding onto an existing profile. Structural validation fails fast. Referenced
+    /// filter/intent ids resolve at registry install, not here. Steady state is the absence of
+    /// a mounted instance. This loader does not install a reserved profile.
     /// </summary>
     public sealed class InteractionContextProfileConfigLoader
     {
@@ -36,11 +38,18 @@ namespace Ludots.Core.Input.Interaction
             string relativePath = "Input/interaction_context_profiles.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
+            if (fragments.Count == 0)
             {
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
+
+            var mergedObject = ConfigMerger.MergeDeepObjectArrayById(
+                fragments,
+                in entry,
+                "profiles",
+                report,
+                entry.ArrayAppendFields);
 
             RejectRetiredPeriodFields(mergedObject, relativePath);
 

@@ -699,7 +699,7 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.LoadPlacedEntity,
                 GraphNodeOp.LoadPlacedRegion,
                 GraphNodeOp.LoadPlacedAnchor,
-                // Named carve-outs: the aimsource kernel family and the collection-query
+                // Named carve-outs: the pointer sample kernel family and the collection-query
                 // seed/filter family join the TriggerGraph authoring face per op (the
                 // input-event graphs' read-side vocabulary); they stay Query-authorable,
                 // so listing them here only exempts them from the Script mirror.

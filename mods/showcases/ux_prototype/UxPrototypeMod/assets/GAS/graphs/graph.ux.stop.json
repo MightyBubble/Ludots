@@ -18,7 +18,7 @@
       {
         "id": "members",
         "op": "QueryFromCollection",
-        "collectionKey": "collection.command.source"
+        "collectionKey": "role:commandSource"
       },
       {
         "id": "count",

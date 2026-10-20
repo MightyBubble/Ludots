@@ -1,0 +1,20 @@
+{
+  "keys": [
+    {
+      "id": "pref.gallery.sample",
+      "contextValued": true,
+      "values": [
+        "interaction.context.gallery.aim",
+        "interaction.context.gallery.pref"
+      ]
+    }
+  ],
+  "defaults": {
+    "prefs": [
+      {
+        "key": "pref.gallery.sample",
+        "value": "interaction.context.gallery.pref"
+      }
+    ]
+  }
+}

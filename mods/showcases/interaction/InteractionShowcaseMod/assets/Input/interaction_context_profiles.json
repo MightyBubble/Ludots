@@ -5,12 +5,97 @@
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Command",
+        "Stop",
+        "QueueModifier",
+        "SkillZ",
+        "SkillF",
+        "RuneBurst",
+        "InteractionModeAction",
+        "Aim.CastMode.Smart",
+        "Aim.CastMode.AimClick",
+        "Aim.CastMode.AimRelease"
       ],
       "triggers": [
         {
           "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.interaction.move"
+        },
+        {
+          "trigger": "graph.interaction.stop"
+        },
+        {
+          "trigger": "graph.interaction.dash_z"
+        },
+        {
+          "trigger": "graph.interaction.toggle_f"
+        },
+        {
+          "trigger": "graph.interaction.rune_aim"
+        },
+        {
+          "trigger": "graph.interaction.enter_action"
+        },
+        {
+          "trigger": "graph.interaction.leave_context_scored"
+        },
+        {
+          "trigger": "graph.interaction.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.interaction.shape_indicate"
+        },
+        {
+          "trigger": "graph.interaction.shape_clear"
+        },
+        {
+          "trigger": "graph.interaction.restore_default_pick"
         }
+      ],
+      "onActivated": [
+        "graph.interaction.write_action_mode",
+        "graph.interaction.bind_aim_actor",
+        "graph.aim.pick.hostile",
+        "graph.aim.enter"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.context_scored",
+      "bindings": [
+        "ActionAttack"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.action_attack"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_rune",
+      "foreground": true,
+      "bindings": [
+        "Interaction.AimConfirm",
+        "Interaction.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.rune_confirm"
+        },
+        {
+          "trigger": "graph.interaction.rune_cancel"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
       ]
     }
   ]

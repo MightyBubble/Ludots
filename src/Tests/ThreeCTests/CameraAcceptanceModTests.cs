@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using CameraAcceptanceMod;
-using CoreInputMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -56,7 +55,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "SharedThreeCProfilesMod",
             "CameraAcceptanceMod"
         };
@@ -1339,7 +1337,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             var view = new StubViewController(1920, 1080);
             engine.SetService(CoreServiceKeys.ViewController, view);
@@ -1385,10 +1383,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
@@ -1811,14 +1806,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
-            if (!collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view) ||
+            if (!collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view) ||
                 view.Count <= 0)
             {
                 return Array.Empty<Entity>();
             }
 
             var members = new Entity[view.Count];
-            int written = collections.CopyEntities(owner, "collection.command.source", members);
+            int written = collections.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), members);
             if (written == members.Length)
             {
                 return members;
@@ -1834,7 +1829,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: local,

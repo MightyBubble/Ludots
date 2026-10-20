@@ -51,6 +51,90 @@ namespace Ludots.Core.Config
             return MergeMany(nodes, in entry);
         }
 
+        /// <summary>
+        /// DeepObject merge of object fragments, with one named array merged ArrayById on <c>id</c>.
+        /// Later fragments win per field. Nested objects merge. Nested arrays inside an id
+        /// append when their field name is in <paramref name="nestedArrayAppendFields"/>;
+        /// every other nested array replaces. Arrays outside the by-id array follow
+        /// <see cref="ConfigCatalogEntry.ArrayAppendFields"/>.
+        /// The catalog has no single policy for an object root plus one by-id array, so callers
+        /// keep <see cref="ConfigMergePolicy.DeepObject"/> and compose the two existing merges here.
+        /// </summary>
+        public static JsonObject MergeDeepObjectArrayById(
+            IReadOnlyList<ConfigFragment> fragments,
+            in ConfigCatalogEntry entry,
+            string arrayField,
+            ConfigConflictReport report = null,
+            string[] nestedArrayAppendFields = null)
+        {
+            if (fragments == null)
+            {
+                throw new ArgumentNullException(nameof(fragments));
+            }
+
+            if (string.IsNullOrWhiteSpace(arrayField))
+            {
+                throw new ArgumentException("Array field name is required.", nameof(arrayField));
+            }
+
+            if (report != null)
+            {
+                for (int i = 0; i < fragments.Count; i++)
+                {
+                    report.RecordFragment(entry.RelativePath, fragments[i].SourceUri);
+                }
+            }
+
+            var objectNodes = new JsonNode[fragments.Count];
+            var arrayFragments = new List<ConfigFragment>();
+            bool anyDeclaresArray = false;
+            for (int i = 0; i < fragments.Count; i++)
+            {
+                if (fragments[i].Node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException(
+                        $"Config '{entry.RelativePath}' fragment '{fragments[i].SourceUri}' must be a JSON object.");
+                }
+
+                objectNodes[i] = obj;
+                if (!obj.TryGetPropertyValue(arrayField, out JsonNode? arrayNode))
+                {
+                    continue;
+                }
+
+                anyDeclaresArray = true;
+                if (arrayNode is not JsonArray)
+                {
+                    throw new InvalidOperationException(
+                        $"Config '{entry.RelativePath}' fragment '{fragments[i].SourceUri}' field '{arrayField}' must be a JSON array.");
+                }
+
+                arrayFragments.Add(new ConfigFragment(arrayNode, fragments[i].SourceUri));
+            }
+
+            string[] rootAppendFields = entry.ArrayAppendFields ?? Array.Empty<string>();
+            var merged = (JsonObject)MergeDeepObject(objectNodes, rootAppendFields);
+            if (!anyDeclaresArray)
+            {
+                return merged;
+            }
+
+            var byIdEntry = new ConfigCatalogEntry(
+                entry.RelativePath,
+                ConfigMergePolicy.ArrayById,
+                "id",
+                nestedArrayAppendFields ?? Array.Empty<string>());
+            List<MergedConfigEntry> entries = MergeArrayByIdToEntriesCore(arrayFragments, in byIdEntry, report: null);
+            var mergedArray = new JsonArray();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                mergedArray.Add(entries[i].Node);
+            }
+
+            merged[arrayField] = mergedArray;
+            return merged;
+        }
+
         private static JsonNode MergeDeepObject(IReadOnlyList<JsonNode> fragments, string[] arrayAppendFields)
         {
             var merged = new JsonObject();
@@ -146,6 +230,7 @@ namespace Ludots.Core.Config
                     if (IsDeleted(obj))
                     {
                         mergedNodes.Remove(id);
+                        _firstSourceById.Remove(id);
                         report?.RecordDeleted(entry.RelativePath, id, src);
                         for (int oi = orderedIds.Count - 1; oi >= 0; oi--)
                         {
@@ -181,7 +266,10 @@ namespace Ludots.Core.Config
             for (int i = 0; i < orderedIds.Count; i++)
             {
                 if (mergedNodes.TryGetValue(orderedIds[i], out var n) && n is JsonObject jObj)
-                    result.Add(new MergedConfigEntry(orderedIds[i], jObj));
+                {
+                    _firstSourceById.TryGetValue(orderedIds[i], out string? source);
+                    result.Add(new MergedConfigEntry(orderedIds[i], jObj, source ?? string.Empty));
+                }
             }
             return result;
         }

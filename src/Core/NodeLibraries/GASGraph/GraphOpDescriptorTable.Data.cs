@@ -16,7 +16,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private const GraphKindMask QueryOnly = GraphKindMask.Query;
 
         // Named per-op TriggerGraph authoring carve-outs over the Query-class set (never a
-        // class-wide mask widening): the aimsource kernel ops and the collection-query
+        // class-wide mask widening): the pointer-sample kernel ops and the collection-query
         // seed/filter family are the read-side vocabulary input-event TriggerGraphs need.
         // The runtime triple is kind=TriggerGraph (this mask bit) && op listed by name on a
         // QueryAndTriggerGraph row && Pure effect metadata; every other Query-class op stays
@@ -45,6 +45,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string[] noPorts = Array.Empty<string>();
             string[] portValue = { GraphControlFlowPorts.Value };
             string[] portAB = { GraphControlFlowPorts.A, GraphControlFlowPorts.B };
+            string[] portABC = { GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C };
             string[] portSourceAB = { GraphControlFlowPorts.Source, GraphControlFlowPorts.A, GraphControlFlowPorts.B };
             string[] portSource = { GraphControlFlowPorts.Source };
             string[] portList = { GraphControlFlowPorts.List };
@@ -134,9 +135,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.CompareLtInt, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.CompareEqInt, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.HasTag, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.CompareEqEntity, LinearAndQuery, GraphValueType.Bool, portAB, queryOut: GraphValueType.Bool, queryPorts: portAB);
+            Add(rows, GraphNodeOp.CompareEqEntity, LinearQueryScript, GraphValueType.Bool, portAB, queryOut: GraphValueType.Bool, queryPorts: portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
             Add(rows, GraphNodeOp.SelectEntity, LinearAll, GraphValueType.Entity, portConditionAB);
-            Add(rows, GraphNodeOp.QueryRadius, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.ImmediateFloat);
+            Add(rows, GraphNodeOp.QueryRadius, LinearQueryScript, GraphValueType.Void, portValue, queryOut: GraphValueType.TargetList, queryPorts: portValue, scriptPorts: portValue, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.ImmediateFloat);
             Add(rows, GraphNodeOp.QuerySortStable, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, queryPorts: portList);
             Add(rows, GraphNodeOp.QueryLimit, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryCone, LinearAll, GraphValueType.Void, portAB, flags: GraphOperandRole.SpatialCapacityFlags);
@@ -144,7 +145,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryLine, LinearAll, GraphValueType.Void, portAB, flags: GraphOperandRole.SpatialCapacityFlags);
             Add(rows, GraphNodeOp.QueryFilterNotEntity, LinearAll, GraphValueType.Void, portSource);
             Add(rows, GraphNodeOp.QueryFilterLayer, LinearAll, GraphValueType.Void, imm: GraphOperandRole.Immediate);
-            Add(rows, GraphNodeOp.QueryFilterRelationship, LinearAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, dst: GraphOperandRole.SymbolDst);
+            Add(rows, GraphNodeOp.QueryFilterRelationship, LinearAndScript, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.AggCount, LinearQueryScript, GraphValueType.Int, queryOut: GraphValueType.Int, queryPorts: portList, scriptOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.AggMinByDistance, LinearQueryScript, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portList, scriptOut: GraphValueType.Entity);
             Add(rows, GraphNodeOp.TargetListGet, LinearAndScript, GraphValueType.Entity, portValue, scriptPorts: portValue, scriptOut: GraphValueType.Entity, flags: GraphOperandRole.BoolScratchFlags);
@@ -253,7 +254,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryCollectProgressionNodes, QueryOnly, queryOut: GraphValueType.IntIdList, queryPorts: portSource);
             Add(rows, GraphNodeOp.QueryCollectAbilityHolders, QueryOnly, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryCollectActiveDialogueChoices, QueryOnly, queryOut: GraphValueType.IntIdList);
-            // ── Aimsource pure helpers: read-only screen/pointer/stick math for aim graphs ──
+            // ── Pointer sample pure helpers: read-only screen/pointer/stick math for aim graphs ──
             Add(rows, GraphNodeOp.ScreenPointToGround, QueryAndTriggerGraph, GraphValueType.Bool, queryOut: GraphValueType.Bool, queryPorts: portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.ScreenPointToEntity, QueryAndTriggerGraph, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadPointerScreenX, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
@@ -289,7 +290,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.InvokeBuiltin, LinearEffect, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadTargetPosX, LinearAndScript, GraphValueType.Int);
             Add(rows, GraphNodeOp.LoadTargetPosY, LinearAndScript, GraphValueType.Int);
-            Add(rows, GraphNodeOp.ClampTargetToRange, LinearAll, GraphValueType.Bool, portAB);
+            Add(rows, GraphNodeOp.ClampTargetToRange, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
             Add(rows, GraphNodeOp.IsPointInCircle, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.SnapToNearestInCollection, LinearAll, GraphValueType.Entity, portSourceValue, flags: GraphOperandRole.BoolScratchFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SnapToNearestGraphEdge, LinearAll, GraphValueType.Bool, portValue);
@@ -332,6 +333,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.StartDialogue, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // ── Order-driven graph brains (issue #1536) ──
             Add(rows, GraphNodeOp.LoadEntityPosX, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, flags: GraphOperandRole.BoolScratchFlags);
+            Add(rows, GraphNodeOp.LoadEntityFacing, LinearQueryScript, GraphValueType.Float, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadEntityPosY, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.IntToFloat, LinearQueryScript, GraphValueType.Float, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.FloatToInt, LinearQueryScript, GraphValueType.Int, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int);
@@ -359,6 +361,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.AcquireTimeFlowPause, ScriptAndTriggerGraph, GraphValueType.Int, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.AcquireTimeFlowScale, ScriptAndTriggerGraph, GraphValueType.Int, portValue, scriptPorts: portValue, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ReleaseTimeFlowToken, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, worldSideEffect: true);
+            Add(rows, GraphNodeOp.IsPref, LinearQueryScript, GraphValueType.Bool, portSourceTargetValue, queryOut: GraphValueType.Bool, queryPorts: portSourceTargetValue, scriptPorts: portSourceTargetValue, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.SetPref, EffectAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.ActivateContextFromPref, EffectAndScript, GraphValueType.Void, portSourceTargetValue, scriptPorts: portSourceTargetValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.DeactivateOwnContext, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.QueryMinimapRegion, EffectAndScript, GraphValueType.Int, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.MinimapScreenToWorld, EffectAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
+            Add(rows, GraphNodeOp.MinimapJumpCamera, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapSetZoomFromPointer, EffectAndScript, GraphValueType.Void, portAB, scriptPorts: portAB, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapTogglePreset, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapToggleRotate, EffectAndScript, GraphValueType.Void, linearPorts: noPorts, scriptPorts: noPorts, worldSideEffect: true);
+            Add(rows, GraphNodeOp.MinimapApplyWheelZoom, EffectAndScript, GraphValueType.Void, portABC, scriptPorts: portABC, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetTargetPos, LinearQueryScript, GraphValueType.Void, portAB, queryPorts: portAB, scriptPorts: portAB);
+            Add(rows, GraphNodeOp.LoadAbilityCastRange, LinearQueryScript, GraphValueType.Float, portSourceValue, queryOut: GraphValueType.Float, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Float);
+            Add(rows, GraphNodeOp.LoadSlotAbilityId, LinearQueryScript, GraphValueType.Int, portSourceValue, queryOut: GraphValueType.Int, queryPorts: portSourceValue, scriptPorts: portSourceValue, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.IsContextActive, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.Fail, LinearQueryScript, GraphValueType.Void, linearPorts: noPorts, queryPorts: noPorts, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
 
             var table = new GraphOpDescriptor[GraphVmLimits.HandlerTableSize];
             for (int i = 0; i < rows.Count; i++)

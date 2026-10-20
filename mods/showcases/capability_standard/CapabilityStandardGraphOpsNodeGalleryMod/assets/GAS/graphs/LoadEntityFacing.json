@@ -1,0 +1,100 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEntityFacing",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "face",
+        "op": "LoadEntityFacing"
+      },
+      {
+        "id": "const",
+        "op": "ConstFloat",
+        "floatValue": 0.1
+      },
+      {
+        "id": "scale",
+        "op": "MulFloat"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "face"
+      },
+      {
+        "from": "face",
+        "fromPort": "next",
+        "to": "const"
+      },
+      {
+        "from": "const",
+        "fromPort": "next",
+        "to": "scale"
+      },
+      {
+        "from": "scale",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "face",
+        "toPort": "source"
+      },
+      {
+        "from": "face",
+        "fromPort": "value",
+        "to": "scale",
+        "toPort": "a"
+      },
+      {
+        "from": "const",
+        "fromPort": "value",
+        "to": "scale",
+        "toPort": "b"
+      },
+      {
+        "from": "scale",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

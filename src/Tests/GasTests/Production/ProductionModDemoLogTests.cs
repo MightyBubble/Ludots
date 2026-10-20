@@ -53,7 +53,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[MOBA] 进入英雄竞技场。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "MobaDemoMod" }, "entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }, "entry", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy1, enemy2) = FindEntities3(world, "Hero", "Enemy1", "Enemy2");
@@ -215,7 +215,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[TCG][Chain] 进入卡牌决斗 (连锁场景)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_chain", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_chain", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
@@ -245,7 +245,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[TCG][Stack] 进入卡牌决斗 (叠加场景)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_stack", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_stack", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[TCG][Grant] 进入卡牌决斗 (GrantedTags 场景)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_grant", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "TcgDemoMod", "CommandSourceCoreFixtureMod" }, "tcg_grant", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "TcgHero", "TcgEnemy");
@@ -331,7 +331,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[ARPG] 进入暗黑风地下城。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod", "CommandSourceCoreFixtureMod" }, "arpg_entry", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
@@ -422,7 +422,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[4X] 进入策略大地图 (4 阵营)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" }, "fourx_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod", "CommandSourceCoreFixtureMod" }, "fourx_entry", engine =>
             {
                 var world = engine.World;
                 var governor = FindEntity(world, "Governor");
@@ -511,7 +511,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[RTS] 进入即时战略战场 (War3 / C&C / Protoss / Zerg 综合沙盘)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod" }, "rts_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "EntityCommandPanelMod", "RtsDemoMod" }, "rts_entry", engine =>
             {
                 var world = engine.World;
                 IEntityCommandPanelSource panelSource = ResolveGasPanelSource(engine);
@@ -653,7 +653,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void Arpg_FirstAbilityBleed_InstallsStatusAndExpiresWithoutPriorDamage()
         {
-            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod", "CommandSourceCoreFixtureMod" }, "arpg_entry", engine =>
             {
                 World world = engine.World;
                 var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
@@ -686,7 +686,7 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             try
             {
-                engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InstallDummyInput(engine);
                 engine.Start();
                 engine.LoadMap(mapId);

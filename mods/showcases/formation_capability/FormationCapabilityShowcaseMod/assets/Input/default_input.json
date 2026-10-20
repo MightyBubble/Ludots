@@ -1,0 +1,29 @@
+{
+  "actions": [
+    {
+      "id": "Command",
+      "name": "Formation_Command",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Formation.Controls",
+      "priority": 40,
+      "bindings": [
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        }
+      ]
+    }
+  ]
+}

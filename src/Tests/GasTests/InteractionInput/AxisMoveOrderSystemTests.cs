@@ -402,7 +402,10 @@ namespace Ludots.Tests.GAS
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = MoveToOrderTypeId });
 
                 var schemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var schemes = new ControlSchemeRuntime(schemeIds, orderTypes);
+                var schemes = new ControlSchemeRuntime(
+                    schemeIds,
+                    orderTypes,
+                    new ClientControlSchemePreferenceStore(Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json")));
 
                 var input = new FrozenInputActionReader();
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);

@@ -1,0 +1,21 @@
+{
+  "actions": [
+    {
+      "id": "Command",
+      "name": "PresenterBlacksmith_Command",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "PresenterBlacksmith.MinimapCommand",
+      "priority": 70,
+      "bindings": [
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        }
+      ]
+    }
+  ]
+}

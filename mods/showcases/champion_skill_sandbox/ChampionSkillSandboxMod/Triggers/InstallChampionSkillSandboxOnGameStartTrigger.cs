@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using ChampionSkillSandboxMod.Runtime;
 using ChampionSkillSandboxMod.Systems;
+using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
@@ -16,16 +17,13 @@ namespace ChampionSkillSandboxMod.Triggers
         private const string InstalledKey = "ChampionSkillSandboxMod.Installed";
         private readonly IModContext _context;
         private readonly ChampionSkillSandboxRuntime _runtime;
-        private readonly ChampionSkillCastModeToolbarProvider _toolbarProvider;
 
         public InstallChampionSkillSandboxOnGameStartTrigger(
             IModContext context,
-            ChampionSkillSandboxRuntime runtime,
-            ChampionSkillCastModeToolbarProvider toolbarProvider)
+            ChampionSkillSandboxRuntime runtime)
         {
             _context = context;
             _runtime = runtime;
-            _toolbarProvider = toolbarProvider;
             EventKey = GameEvents.GameStart;
         }
 
@@ -71,13 +69,13 @@ namespace ChampionSkillSandboxMod.Triggers
                 }
             }
 
-            _toolbarProvider.Bind(engine);
-            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _toolbarProvider);
-            engine.RegisterSystem(new ChampionSkillCastModePollSystem(engine), SystemGroup.LocalInput);
+            EntityCommandPanelToolbarComposer.Require(engine).RegisterTail(
+                ChampionSkillSandboxToolbarTail.ToolbarId,
+                new ChampionSkillSandboxToolbarTail(engine));
             engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 
-            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime and cast mode toolbar registered.");
+            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime and toolbar registered.");
             return Task.CompletedTask;
         }
     }

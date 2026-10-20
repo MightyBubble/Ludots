@@ -65,9 +65,6 @@ namespace InteractionShowcaseMod.Triggers
             engine.RegisterSystem(
                 new InteractionShowcaseSelectionDockSystem(engine, _runtime),
                 SystemGroup.InputCollection);
-            engine.RegisterSystem(
-                new InteractionShowcaseModeSystem(engine.GlobalContext),
-                SystemGroup.LocalInput);
 
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 

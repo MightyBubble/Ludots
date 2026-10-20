@@ -1,0 +1,27 @@
+[
+  {
+    "id": "AimControlSchemes.Camera.Topdown",
+    "displayName": "Aim Control Schemes Topdown",
+    "priority": 100,
+    "distanceCm": 1600,
+    "pitch": 62,
+    "facingMode": "none",
+    "fovYDeg": 50,
+    "yaw": 0,
+    "minDistanceCm": 800,
+    "maxDistanceCm": 3000,
+    "minPitchDeg": 62,
+    "maxPitchDeg": 62,
+    "panMode": "None",
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "followTargetKind": "None",
+    "allowUserInput": false,
+    "targetSource": "Fixed",
+    "fixedTargetCm": {
+      "x": 2000,
+      "y": 2000
+    }
+  }
+]

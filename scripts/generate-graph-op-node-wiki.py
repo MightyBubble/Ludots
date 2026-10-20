@@ -36,7 +36,7 @@ DRIVER_LABELS = {
     "spatial": "空间圈人",
     "query": "名单筛选与汇总",
     "derivedQuery": "派生名单与框选",
-    "aimsource": "瞄准源",
+    "pointerSample": "指针采样",
     "rel": "关系与好感",
     "blackboard": "黑板与配置",
     "event": "事件与吸附",
@@ -67,7 +67,7 @@ HANDBOOK_BY_DRIVER = {
     "placedRegion": ("map-02-triggers.md", "地图触发器 · map-02"),
     "activity": ("map-02-triggers.md", "地图触发器 · map-02"),
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
-    "aimsource": ("gr-op-06-spatial.md", "空间圈人 · gr-op-06"),
+    "pointerSample": ("gr-op-06-spatial.md", "空间圈人 · gr-op-06"),
     "collectionWrite": ("map-02-triggers.md", "地图触发器 · map-02"),
     "order": ("gr-op-14-control-flow.md", "脚本控制流 · gr-op-14"),
     "commandIntent": ("input-01-command-intent.md", "命令意图 · input-01"),
@@ -342,6 +342,10 @@ FAMILY_USE_CASES = {
 # 描述表仍列出这些端口（编辑器要画引脚），但编译期允许不接。边界句由生成器写出，避免手改 wiki 被下一次生成抹掉。
 OPTIONAL_TARGET_BOUNDARY = {
     "SubmitAssignedOrder": "目标口可以不接。不接时这道令没有实体目标，落点仍由 a、b 给出。",
+    "LoadEntityFacing": "源实体死了，或者身上没有 `FacingDirection`，节点直接失败，不会写成 0 度。读出的度数是组件弧度乘 180/π，和 `PointToDirection`、`StickToDirection` 同一套，不折进 0–360。",
+    "LoadSlotAbilityId": "源实体死了，或者这个槽没有装技能，节点直接失败，不会写成 0。读的是槽上解析出来的技能编号，顺序是临时授予、物品授予、形态、底槽。它不打开技能定义。",
+    "IsContextActive": "`source` 可以不接，不接就读跑这张图的人。人死了，或者情境名没装上，节点直接失败。情境装了但当前没挂上，读数是 0。基座挂载和派生实例都算挂着。",
+    "DispatchMapEvent": "可以另接一个 int 口 `ability`。接上之后这次派发带上技能编号，只叫醒这张技能自己挂的触发图，并把跑这张图的人写成事件来源。事件参数里不能再有名叫 ability 的参数。global 不能接这个口。技能编号小于等于 0 直接失败。",
 }
 
 

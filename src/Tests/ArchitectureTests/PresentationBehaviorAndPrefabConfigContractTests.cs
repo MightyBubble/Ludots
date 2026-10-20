@@ -19,6 +19,7 @@ using NUnit.Framework;
 using System.Linq;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.Architecture
 {
@@ -59,7 +60,7 @@ namespace Ludots.Tests.Architecture
 
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             Assert.That(engine.GetService(CoreServiceKeys.PresentationParticleVfxRegistry), Is.Not.Null);
         }
@@ -76,7 +77,7 @@ namespace Ludots.Tests.Architecture
 
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
@@ -91,7 +92,7 @@ namespace Ludots.Tests.Architecture
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             PresentationEventStream stream = engine.GetService(CoreServiceKeys.PresentationEventStream)
                 ?? throw new InvalidOperationException("PresentationEventStream service missing.");
@@ -117,27 +118,29 @@ namespace Ludots.Tests.Architecture
             string repoRoot = FindRepoRoot();
             using var coreEngine = new GameEngine();
             coreEngine.InitializeWithConfigPipeline(
-                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
-                Path.Combine(repoRoot, "assets"));
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")},
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             GameConfig coreConfig = coreEngine.MergedConfig
                 ?? throw new InvalidOperationException("Core engine config was not merged.");
             CommandSourceAcquisitionConfig coreCommandSource = coreConfig.CommandSource
                 ?? throw new InvalidOperationException("Core command-source config was not merged.");
 
             Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
-            Assert.That("collection.command.source", Is.EqualTo("collection.command.source"));
+            Assert.That("core.selection", Is.EqualTo("core.selection"));
 
             using var massNavigationEngine = new GameEngine();
             massNavigationEngine.InitializeWithConfigPipeline(
                 new List<string>
                 {
                     Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                    Path.Combine(repoRoot, "mods", "CoreInputMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),
+                    Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")
                 },
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             GameConfig massNavigationConfig = massNavigationEngine.MergedConfig
                 ?? throw new InvalidOperationException("MassNavigation engine config was not merged.");
             CommandSourceAcquisitionConfig massNavigationCommandSource = massNavigationConfig.CommandSource
@@ -145,7 +148,7 @@ namespace Ludots.Tests.Architecture
 
             EntityCollectionStore collections = massNavigationEngine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
-            Assert.That(collections.KeyRegistry.GetId("collection.command.source"), Is.GreaterThan(0));
+            Assert.That(collections.KeyRegistry.GetId("core.selection"), Is.GreaterThan(0));
             Assert.That(massNavigationConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
                 massNavigationConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),
@@ -1053,6 +1056,7 @@ namespace Ludots.Tests.Architecture
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0,
+      "interactionContextId": "interaction.context.minimap",
       "actions": {
         "zoom": "Minimap.Zoom"
       }
@@ -1141,6 +1145,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.RuntimeEntitySpawnReceiptQueueCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.CameraCulling.HighLodDistanceCm, Is.EqualTo(4000.0f));
             Assert.That(config.Presentation.Minimap.DebugMarkerSampleCapacity, Is.EqualTo(64));
+            Assert.That(config.Presentation.Minimap.InteractionContextId, Is.EqualTo("interaction.context.minimap"));
             config.Presentation.Validate();
         }
 
@@ -1170,7 +1175,7 @@ namespace Ludots.Tests.Architecture
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") , Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")}, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
@@ -1294,6 +1299,7 @@ namespace Ludots.Tests.Architecture
                     MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
                     MinZoomExplicitHalfExtentCm = 750f,
                     MaxZoomExplicitHalfExtentCm = 0f,
+                    InteractionContextId = "interaction.context.minimap",
                     Actions = new MinimapActionsConfig
                     {
                         Zoom = "Minimap.Zoom",

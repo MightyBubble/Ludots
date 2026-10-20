@@ -72,11 +72,12 @@ namespace Ludots.Core.Client
             // sole seat 接管呈现眼时收养现有相机实例：地图 DefaultCamera 位姿可能已落在
             // bootstrap 视图上，重建相机会把作者取景连同实例一起丢弃（投影从此解析到构造默认值）。
             CameraManager? adoptedCamera = ResolveAdoptablePresentCamera(views);
+            string? preservedScheme = PreserveControlScheme(engine, seats, seatId, playerId);
             seats.Clear();
             views.Clear();
             string viewId = views.EnsureDefaultView(possessedRep, camera: adoptedCamera);
             Vector2 presentResolution = ResolvePresentResolution(engine, presentResolutionPx);
-            seats.Add(new ClientLocalSeat(seatId)
+            seats.Add(new ClientLocalSeat(seatId, preservedScheme)
             {
                 PossessedPlayerId = playerId,
                 PossessedRep = possessedRep,
@@ -89,12 +90,61 @@ namespace Ludots.Core.Client
             {
                 engine.CurrentMapSession.LocalSeats = new[]
                 {
-                    new ResolvedLocalSeatPossession(seatId, playerId, possessedRep, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession(seatId, playerId, possessedRep, preservedScheme),
                 };
                 engine.CurrentMapSession.PlayerEntityLookup?.ReplaceWith(replacement);
             }
 
             UpsertSolePlayerLookup(engine, playerId, possessedRep, replacement);
+        }
+
+        private static string? PreserveControlScheme(
+            GameEngine engine,
+            ClientLocalSeatRegistry seats,
+            string seatId,
+            int playerId)
+        {
+            string? preserved = null;
+            System.Collections.Generic.IReadOnlyList<string> existingIds = seats.SeatIds;
+            for (int i = 0; i < existingIds.Count; i++)
+            {
+                ClientLocalSeat existing = seats.Require(existingIds[i]);
+                if (!string.IsNullOrWhiteSpace(existing.ControlSchemeId) &&
+                    (string.Equals(existing.SeatId, seatId, StringComparison.Ordinal) || existingIds.Count == 1))
+                {
+                    preserved = existing.ControlSchemeId;
+                    break;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(preserved) && engine.CurrentMapSession?.LaunchContext != null)
+            {
+                System.Collections.Generic.IReadOnlyList<LocalSeatLaunchBinding> launchSeats =
+                    engine.CurrentMapSession.LaunchContext.LocalSeats;
+                for (int i = 0; i < launchSeats.Count; i++)
+                {
+                    LocalSeatLaunchBinding binding = launchSeats[i];
+                    if (binding.PlayerId == playerId && !string.IsNullOrWhiteSpace(binding.ControlSchemeId))
+                    {
+                        preserved = binding.ControlSchemeId;
+                        break;
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(preserved) &&
+                engine.GlobalContext.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) &&
+                schemeObj is Ludots.Core.Input.Interaction.ControlSchemeRuntime schemes &&
+                schemes.ActiveSchemeId != 0)
+            {
+                string active = schemes.SchemeIdRegistry.GetName(schemes.ActiveSchemeId);
+                if (!string.IsNullOrWhiteSpace(active))
+                {
+                    preserved = active;
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(preserved) ? null : preserved.Trim();
         }
 
         internal static CameraManager? ResolveAdoptablePresentCamera(LogicViewRegistry views)

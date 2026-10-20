@@ -1,7 +1,3 @@
 {
-  "startupMapId": "ownership_cascade_showcase",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "OwnershipCascade.Controls"
-  ]
+  "startupMapId": "ownership_cascade_showcase"
 }

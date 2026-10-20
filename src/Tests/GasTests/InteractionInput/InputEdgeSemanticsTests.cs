@@ -8,6 +8,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Systems;
+using Ludots.Core.Persistence;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -92,6 +93,82 @@ namespace Ludots.Tests.GAS
                 "the other seat's channel keeps its own snapshot; presses never cross seats");
         }
 
+        [Test]
+        public void BindingInt_SecondSlotWhileFirstHeld_FoldsBothPressesIntoTheTick()
+        {
+            var backend = new TestInputBackend();
+            PlayerInputHandler handler = SlotHandler(backend);
+            var accumulator = new AuthoritativeInputAccumulator();
+            var snapshot = new FrozenInputActionReader();
+
+            backend.Buttons["<Keyboard>/q"] = true;
+            handler.Update(1f / 60f);
+            handler.CaptureFrame(accumulator);
+            backend.Buttons["<Keyboard>/w"] = true;
+            handler.Update(1f / 60f);
+            handler.CaptureFrame(accumulator);
+            accumulator.BuildTickSnapshot(snapshot);
+
+            var fires = new List<InputBindingIntFire>();
+            snapshot.CopyBindingIntFires("Aim.Slot", fires);
+            Assert.That(fires, Is.EqualTo(new[]
+            {
+                new InputBindingIntFire(0, Pressed: true, Released: false),
+                new InputBindingIntFire(1, Pressed: true, Released: false),
+            }));
+            Assert.That(snapshot.PressedThisTick("Aim.Slot"), Is.True);
+
+            backend.Buttons["<Keyboard>/w"] = false;
+            handler.Update(1f / 60f);
+            handler.CaptureFrame(accumulator);
+            accumulator.BuildTickSnapshot(snapshot);
+            snapshot.CopyBindingIntFires("Aim.Slot", fires);
+            Assert.That(fires, Is.EqualTo(new[]
+            {
+                new InputBindingIntFire(1, Pressed: false, Released: true),
+            }));
+            Assert.That(snapshot.ReleasedThisTick("Aim.Slot"), Is.False,
+                "the summed action stays down while another slot key is held");
+        }
+
+        [Test]
+        public void BindingInt_Injection_PressThenReleaseOnTheFollowingUpdate()
+        {
+            PlayerInputHandler handler = SlotHandler(new TestInputBackend());
+            handler.InjectButtonPress("Aim.Slot", 5);
+            handler.Update(1f / 60f);
+            var fires = new List<InputBindingIntFire>();
+            handler.CopyBindingIntFires("Aim.Slot", fires);
+            Assert.That(fires, Is.EqualTo(new[]
+            {
+                new InputBindingIntFire(5, Pressed: true, Released: false),
+            }));
+
+            handler.Update(1f / 60f);
+            handler.CopyBindingIntFires("Aim.Slot", fires);
+            Assert.That(fires, Is.EqualTo(new[]
+            {
+                new InputBindingIntFire(5, Pressed: false, Released: true),
+            }));
+            Assert.That(handler.ReleasedThisFrame("Aim.Slot"), Is.True);
+        }
+
+        [Test]
+        public void BindingInt_MixedWithPlainBinding_FailsClosed()
+        {
+            var config = SlotConfig();
+            config.Contexts[0].Bindings.Add(new InputBindingDef
+            {
+                ActionId = "Aim.Slot",
+                Path = "<Keyboard>/t",
+            });
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => InputConfigPipelineLoader.Validate(config, "slots.json", requireDeclaredActionForBindingInt: true))!;
+            Assert.That(ex.Message, Does.Contain("LUDOTS_INPUT_BINDING_INT_MIXED"));
+            Assert.That(ex.Message, Does.Contain("Aim.Slot"));
+        }
+
         private static (TestInputBackend backend, PlayerInputHandler handler, Dictionary<string, object> globals, InputRuntimeSystem frameSystem, AuthoritativeInputSnapshotSystem snapshotSystem, FrozenInputActionReader snapshot) BuildGlobalChain()
         {
             var backend = new TestInputBackend();
@@ -122,12 +199,6 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ConfirmActionId = "Select.Begin",
-                    CommandActionId = "Command",
-                    CancelActionId = "Cancel",
-                },
             };
             var frameSystem = new InputRuntimeSystem(globals, accumulator);
             var snapshotSystem = new AuthoritativeInputSnapshotSystem(snapshot, accumulator);
@@ -158,7 +229,8 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 var schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                    orderTypes);
+                    orderTypes,
+                    new ClientControlSchemePreferenceStore(Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json")));
                 var inputConfig = new InputConfigRoot
                 {
                     Actions = new List<InputActionDef>
@@ -179,10 +251,21 @@ namespace Ludots.Tests.GAS
                     },
                 };
                 var globals = new Dictionary<string, object>();
+                schemes.Install(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        new()
+                        {
+                            Id = "scheme.perseat",
+                            InputContexts = new List<string> { "imc.perseat" },
+                        },
+                    },
+                });
                 var runtime = new ClientLocalSeatInputRuntime(globals, schemes, inputConfig);
                 var seats = new ClientLocalSeatRegistry();
-                seats.Add(new ClientLocalSeat("seat.0"));
-                seats.Add(new ClientLocalSeat("seat.1"));
+                seats.Add(new ClientLocalSeat("seat.0", "scheme.perseat"));
+                seats.Add(new ClientLocalSeat("seat.1", "scheme.perseat"));
                 runtime.PublishSeats(seats);
 
                 return new ChannelHarness { Runtime = runtime, World = world };
@@ -192,6 +275,36 @@ namespace Ludots.Tests.GAS
             {
                 World.Destroy(World);
             }
+        }
+
+        private static InputConfigRoot SlotConfig()
+        {
+            return new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "Aim.Slot", Type = InputActionType.Button },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Aim.Kbm",
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "Aim.Slot", Path = "<Keyboard>/q", IntValue = 0 },
+                            new() { ActionId = "Aim.Slot", Path = "<Keyboard>/w", IntValue = 1 },
+                        },
+                    },
+                },
+            };
+        }
+
+        private static PlayerInputHandler SlotHandler(TestInputBackend backend)
+        {
+            var handler = new PlayerInputHandler(backend, SlotConfig());
+            handler.PushContext("Aim.Kbm");
+            return handler;
         }
 
         private sealed class TestInputBackend : IInputBackend

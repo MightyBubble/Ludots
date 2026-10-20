@@ -1,5 +1,6 @@
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
+using Ludots.Core.Map;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
@@ -73,9 +74,10 @@ internal sealed class ClientIdentityBindingNetworkRuntimeObserver : INetworkRunt
         }
 
         ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine);
+        string schemeId = RequireReboundControlScheme(session, seats, playerId);
         seats.ReplaceAll(new[]
         {
-            new ClientLocalSeat("seat.0")
+            new ClientLocalSeat("seat.0", schemeId)
             {
                 PossessedPlayerId = playerId,
                 PossessedRep = player,
@@ -84,7 +86,55 @@ internal sealed class ClientIdentityBindingNetworkRuntimeObserver : INetworkRunt
         ClientLocalSeatAccess.RequireLogicViews(_engine).EnsureDefaultView(player);
         session.LocalSeats = new[]
         {
-            new Ludots.Core.Gameplay.Teams.ResolvedLocalSeatPossession("seat.0", playerId, player, ControlSchemeId: null),
+            new Ludots.Core.Gameplay.Teams.ResolvedLocalSeatPossession("seat.0", playerId, player, schemeId),
         };
+    }
+
+    private string RequireReboundControlScheme(MapSession session, ClientLocalSeatRegistry seats, int playerId)
+    {
+        string? scheme = null;
+        System.Collections.Generic.IReadOnlyList<string> existingIds = seats.SeatIds;
+        for (int i = 0; i < existingIds.Count; i++)
+        {
+            string? existing = seats.Require(existingIds[i]).ControlSchemeId;
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                scheme = existing;
+                break;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(scheme) && session.LaunchContext != null)
+        {
+            System.Collections.Generic.IReadOnlyList<LocalSeatLaunchBinding> launchSeats = session.LaunchContext.LocalSeats;
+            for (int i = 0; i < launchSeats.Count; i++)
+            {
+                LocalSeatLaunchBinding binding = launchSeats[i];
+                if (binding.PlayerId == playerId && !string.IsNullOrWhiteSpace(binding.ControlSchemeId))
+                {
+                    scheme = binding.ControlSchemeId;
+                    break;
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(scheme) &&
+            _engine.GlobalContext.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) &&
+            schemeObj is Ludots.Core.Input.Interaction.ControlSchemeRuntime schemes &&
+            schemes.ActiveSchemeId != 0)
+        {
+            string active = schemes.SchemeIdRegistry.GetName(schemes.ActiveSchemeId);
+            if (!string.IsNullOrWhiteSpace(active))
+            {
+                scheme = active;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(scheme))
+        {
+            throw new InvalidOperationException("ClientLocalSeat 'seat.0' requires controlSchemeId.");
+        }
+
+        return scheme.Trim();
     }
 }

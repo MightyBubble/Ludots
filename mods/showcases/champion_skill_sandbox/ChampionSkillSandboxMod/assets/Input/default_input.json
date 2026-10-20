@@ -1,15 +1,25 @@
 {
   "actions": [
-    { "id": "SkillQ", "name": "ChampionSkillSandbox_SkillQ", "type": "Button" },
-    { "id": "SkillW", "name": "ChampionSkillSandbox_SkillW", "type": "Button" },
-    { "id": "SkillE", "name": "ChampionSkillSandbox_SkillE", "type": "Button" },
-    { "id": "SkillR", "name": "ChampionSkillSandbox_SkillR", "type": "Button" },
-    { "id": "Stop", "name": "ChampionSkillSandbox_Stop", "type": "Button" },
-    { "id": "QueueModifier", "name": "ChampionSkillSandbox_QueueModifier", "type": "Button" },
-    { "id": "CastModeSmart", "name": "ChampionSkillSandbox_CastModeSmart", "type": "Button" },
-    { "id": "CastModeIndicator", "name": "ChampionSkillSandbox_CastModeIndicator", "type": "Button" },
-    { "id": "CastModePressRelease", "name": "ChampionSkillSandbox_CastModePressRelease", "type": "Button" },
-    { "id": "ResetCamera", "name": "ChampionSkillSandbox_ResetCamera", "type": "Button" }
+    {
+      "id": "Command",
+      "name": "ChampionSkillSandbox_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Stop",
+      "name": "ChampionSkillSandbox_Stop",
+      "type": "Button"
+    },
+    {
+      "id": "QueueModifier",
+      "name": "ChampionSkillSandbox_QueueModifier",
+      "type": "Button"
+    },
+    {
+      "id": "ResetCamera",
+      "name": "ChampionSkillSandbox_ResetCamera",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -17,16 +27,42 @@
       "name": "Champion Skill Sandbox Controls",
       "priority": 90,
       "bindings": [
-        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
-        { "actionId": "SkillW", "path": "<Keyboard>/w" },
-        { "actionId": "SkillE", "path": "<Keyboard>/e" },
-        { "actionId": "SkillR", "path": "<Keyboard>/r" },
-        { "actionId": "Stop", "path": "<Keyboard>/s" },
-        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
-        { "actionId": "CastModeSmart", "path": "<Keyboard>/f1" },
-        { "actionId": "CastModeIndicator", "path": "<Keyboard>/f2" },
-        { "actionId": "CastModePressRelease", "path": "<Keyboard>/f3" },
-        { "actionId": "ResetCamera", "path": "<Keyboard>/f4" }
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "Aim.CastMode.Smart",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "Aim.CastMode.AimRelease",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "Aim.CastMode.AimClick",
+          "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "ResetCamera",
+          "path": "<Keyboard>/f4"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
       ]
     }
   ]

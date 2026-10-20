@@ -1,0 +1,33 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.aim.kbm",
+      "inputContexts": [
+        "Aim.Kbm",
+        "AimSchemes.Controls"
+      ]
+    },
+    {
+      "id": "scheme.aim.gamepad",
+      "inputContexts": [
+        "Aim.Gamepad",
+        "AimSchemes.Controls"
+      ]
+    },
+    {
+      "id": "scheme.aim.kbm_skills",
+      "inputContexts": [
+        "Aim.KbmSkills",
+        "Aim.PrimaryClick",
+        "AimSchemes.Controls"
+      ]
+    },
+    {
+      "id": "scheme.aim.gamepad_left",
+      "inputContexts": [
+        "Aim.GamepadLeft",
+        "AimSchemes.Controls"
+      ]
+    }
+  ]
+}

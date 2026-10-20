@@ -1,0 +1,13 @@
+{
+  "name": "AimInteractionMod",
+  "version": "1.0.0",
+  "description": "Data-only aim: cast modes, aim contexts, tracking graphs, and collection-driven indicators.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": [
+    "input",
+    "aim"
+  ]
+}

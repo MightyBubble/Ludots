@@ -5,7 +5,7 @@
   "TargetFps": 60,
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/capabilities/input/AimInteractionMod",
     "../../../../../../../mods/showcases/moba_demo/MobaDemoMod"
   ]
 }

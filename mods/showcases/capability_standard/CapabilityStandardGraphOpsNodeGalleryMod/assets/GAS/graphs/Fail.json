@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.Fail",
+    "kind": "Effect",
+    "entry": "open",
+    "nodes": [
+      {
+        "id": "open",
+        "op": "ConstBool",
+        "boolValue": true
+      },
+      {
+        "id": "gate",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "boom",
+        "op": "Fail",
+        "message": "GalleryFailNotTaken"
+      }
+    ],
+    "controlEdges": [
+      { "from": "open", "fromPort": "next", "to": "gate" },
+      { "from": "gate", "fromPort": "true", "to": "drain" },
+      { "from": "gate", "fromPort": "false", "to": "boom" },
+      { "from": "drain", "fromPort": "next", "to": "explicit" },
+      { "from": "explicit", "fromPort": "next", "to": "hit" }
+    ],
+    "valueEdges": [
+      { "from": "open", "fromPort": "value", "to": "gate", "toPort": "condition" },
+      { "from": "drain", "fromPort": "value", "to": "hit", "toPort": "value" },
+      { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" }
+    ]
+  }
+]

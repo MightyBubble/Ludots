@@ -1,7 +1,3 @@
 {
-  "startupMapId": "association_stress_showcase",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "AssociationStressShowcase.Controls"
-  ]
+  "startupMapId": "association_stress_showcase"
 }

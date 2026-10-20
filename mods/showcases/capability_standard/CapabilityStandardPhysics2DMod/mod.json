@@ -6,9 +6,12 @@
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "capability-standard", "physics2d"]
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "physics2d"
+  ]
 }

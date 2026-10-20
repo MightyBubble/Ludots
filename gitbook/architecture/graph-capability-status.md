@@ -159,7 +159,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
 | `QueryAllMapEntities` 定长 TargetList（`MaxTargets=256`）全图查询截断 + roster 候选集「全量重建式」无增量维护原语 | **P1 债 · 做法要变** | 债务正本 `artifacts/techdebt/2026-09-07-case-e-selection-query-cap.md`；可复现/观测 `CaseESelectionScalePressureTests` + `docs/benchmarks/case-e-selection-scale/`。两条线：①解除 256 顶（分页/流式收集，图 VM 寄存器模型重新设计——query graph 专属编译管线适配 ECS 流式查询的裂缝）；②候选集从「事件驱动全量重建」迁到「增量成员 + 过滤条件 diff」（并为 team/模板/状态突变补刷新源）。**另开活，别捆本 PR** |
 | 可调用函数远景（Case E：入参表、whileActive（已替 continuousQuery）、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
-| 输入→下令全链图化（选中/名册/下单/瞄准/蓄力/指示器；`SubmitCommandIntent`/`SubmitCast` op + 意图缓冲；引擎特权键拆除：`InteractionContextIds.Default` 稳态锚点、`EntityCollectionKeys` 预注册、`GetControlledActor` 族、`CommandSourceAcquisitionSystem`、`InputOrderMappingSystem` 施法状态机） | **开着 · 切片继续（#1607 已合主干）** | 合同正本 [输入与可调用函数系统·配置宪法](../../mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html) §12；概念正本 `input-command-system.html`；统一分支 #1607 已合 main（`7d77bb72f5`，五线归一 + 吸收 main 含 EQS，PR CI 三绿后合并）。已落：切0/切1、Q4 公式按目标属性分支、Q2 `byAbilityCategory` 槽路由、#1597 退役、集合单一写点、`CommandSourceAcquisitionSystem` 删除、切片③弩车按目标路由（wolf→slot0 weapon / tower→slot1 siege / ground→moveTo 三场景 headless 全绿，纯 JSON 零 C#，`BallistaRouteByTargetAcceptanceTests`）。剩余：S4 技制时序退役、S6 slot 化、S7 InputOrderMapping 拆除、D15 context 生命周期全图化（#1398）；图侧缺件归 #1600。**activeCollectionKey/routing-context 机制已整体退役**（意图自带成员集：提交图 QueryFromCollection/查询装载演员、drain 只做授权+逐成员提交；profile 字段/实例字段/drain 路由/装载校验全部物理删除）。**EQS 围城批量落位已落**（PR #1610：SubmitEngageBatch op + drain 内 EQS 环位逐成员分配 + 占位懒修剪 + moveTo→施法订单续接到位自动开打——#1398 Case 3 / #1600 批量族首件；`Spatial/eqs_queries.json` 纯数据档案，EqsQueryRegistry 引擎服务）。图函数签名/InvokeFunc/登记表仍归上一行远景，不混。 |
+| 输入→下令全链图化（选中/名册/下单/瞄准/蓄力/指示器；`SubmitCommandIntent`/`SubmitCast` op + 意图缓冲；引擎特权键拆除：`InteractionContextIds.Default` 稳态锚点、`EntityCollectionKeys` 预注册、`GetControlledActor` 族、`CommandSourceAcquisitionSystem`、`InputOrderMappingSystem` 施法状态机） | **开着 · 切片继续（#1607 已合主干）** | 合同正本 [输入与可调用函数系统·配置宪法](../../mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html) §12；概念正本 `input-command-system.html`；统一分支 #1607 已合 main（`7d77bb72f5`，五线归一 + 吸收 main 含 EQS，PR CI 三绿后合并）。已落：切0/切1、Q4 公式按目标属性分支、Q2 `byAbilityCategory` 槽路由、#1597 退役、集合单一写点、`CommandSourceAcquisitionSystem` 删除、切片③弩车按目标路由（wolf→slot0 weapon / tower→slot1 siege / ground→moveTo 三场景 headless 全绿，纯 JSON 零 C#，`BallistaRouteByTargetAcceptanceTests`）。**S7 InputOrderMapping 已拆除**（Core 映射运行时、`LocalOrderSource*`、瞄准投影整体删掉，`GraphOrderChainContractTests` 守卫这些名字在仓库里为零）。剩余：S4 技制时序退役、S6 slot 化、D15 context 生命周期全图化（#1398）；图侧缺件归 #1600。**activeCollectionKey/routing-context 机制已整体退役**（意图自带成员集：提交图 QueryFromCollection/查询装载演员、drain 只做授权+逐成员提交；profile 字段/实例字段/drain 路由/装载校验全部物理删除）。**EQS 围城批量落位已落**（PR #1610：SubmitEngageBatch op + drain 内 EQS 环位逐成员分配 + 占位懒修剪 + moveTo→施法订单续接到位自动开打——#1398 Case 3 / #1600 批量族首件；`Spatial/eqs_queries.json` 纯数据档案，EqsQueryRegistry 引擎服务）。图函数签名/InvokeFunc/登记表仍归上一行远景，不混。 |
 | 图序链终态推进（分支 graph-order-migration，15 提交）：SubmitCommandIntent/SubmitCast 双 op + 意图缓冲 + §12 drain；12/12 装配器退役（自动装配）；rts 四技能+选中全图化（采集对 rts 退役）；arpg 复活（self-roster，#1523 关闭）；首批守卫 3 条 | **开着 · 机械展开** | 终态全量 139 vs 基线 140 零新增；剩余=七 mod battle 声明化→锚点拆除、指示器 behaviors、pref 读写 op。验收正本 artifacts/acceptance/case-e-selection-graph-order/battle-report.md |
 
 
@@ -168,6 +168,68 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 又开了一条线：纯数据自定义枚举目录（#1125）。已落地：`Enums/enums.json` 走 ConfigPipeline（ArrayById + `ArrayAppendFields:["members"]`，mod 侧 config_catalog.json 声明）装载成 `EnumCatalog`；成员值=首次声明的顺序索引，后 mod 只能追加成员、同名重声明 fail closed 点名，未知字段/缺 id/非法成员名/缺 members 全 fail closed。`SwitchInt` 节点可绑 `enumType`，case 边写成 `case:成员名`，编译期查目录解析成 int 再走原 SwitchInt 路径（消融测试锁死：与手写 `case:1` 指令序列逐条一致），指令 source map 保留 `case:Combat` 原始拼写；enumType 未注册、成员名不在枚举内、绑定时写裸 int 全 fail closed。新作者糖 `SelectByEnum`（selector + case:成员名 候选 + 可选 default）展开 ConstInt+CompareEqInt+JumpIfFalse+MoveInt 链，零新 opcode/执行器。事件参数可注解 `enumType`（int 参数专属，EventParamType 不加 Enum 成员，防回归断言在 `EnumCatalogTests`）。GameEngine 装载序：枚举目录先于事件目录；编译通道 `Compile(doc, eventSchemas, enums)` 可空参数；Bridge validate 同源聚合，`/api/graph/enums/{modId}` 供编辑器下拉。showcase 一期不做：enum-driven-fsm 归 FSM-1 载体（artifacts/showcases/enum-driven-fsm-showcase-design.md 明说依赖 #1113+本票）。→ https://github.com/MightyBubble/Ludots/issues/1125
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
+
+### 3.3.2 瞄准改走交互状态 + 控制方案（PR #1755 这条线）
+
+`CoreInputMod` 已整个删掉。手柄、键鼠、LoL 式、暗黑式施放全部是交互状态 + 控制方案 + 图，玩法 mod 零 C#。能力 mod 是 `mods/capabilities/input/AimInteractionMod`，四个游戏（冠军沙盒、MOBA、交互展示、`aim_control_schemes`）共用它。
+
+**这条线上没守住的，必须在本线改掉，不另开票拖：**
+
+| 项 | 错在哪 | 怎么改 |
+|----|--------|--------|
+| Core 技能定义上的 `targeting.targetKinds` + `AbilityAcceptsTargetKind`（op 536） | Core 穷举玩法参数，和已删的 `indicator` / `TargetShape` 是同一种做法 | **已改**：全部撤掉，536 号空着。目标规则是能力 mod 的共用规则图 `graph.aim.rule.{none,unit_only,ground_only,unit_or_ground}`，技能在 `triggerGraphs` 里引用；按下图读槽位技能（`LoadSlotAbilityId` 538），用 `DispatchMapEvent` 的技能路由派 `Aim.Rule.Press` / `Aim.Rule.Resolve`，没有规则图接手就 `Fail`。按下不再在规则图里分支，只 `ActivateContextFromPref` |
+| Core 里固定了「施法方式」这一维：`InteractionPref.DefaultCastModeId` / `OverrideCastModeIds`、`Input/cast_modes.json`、`IsCastMode` / `SetCastMode`（531/532） | 和 `targetKinds` 同病：施法方式是 MOBA 词，三消没有。Core 自己从不读它，只有 mod 图读 | **已改**：`Input/interaction_prefs.json` 声明偏好键和允许取值，`InteractionPref` 存固定容量的（键, 值）对，玩家级和按技能模板各一张表；`IsPref` / `SetPref`（540/541）只认符号。531/532 空着。命令意图和派发档案还在，下单排干自己读它们 |
+| 指示器靠 `aim.indicating` 集合开关 | 这个集合只是在镜像「某个瞄准状态开着」 | **已改**：`aim.rules` 听点击 / 松开两个状态的 `ContextActivated` / `ContextDeactivated`，画在主体 `aim.actors` 第 0 个成员上（`ownerSource: EventSourceCollectionMember`）；范围表演按（定义, 范围键, 事件主体）销毁，瞄准中换演员也删得掉。集合已删，Core 集合角色里的 `AimAffected` 也删了 |
+| 游戏专属钩子织进共用能力图：交互展示 `bind_aim_actor` / `shape_indicate` / `shape_clear`，冠军 `bind_aim_actor` / `nearest_hostile_assist` | 钩子织入是全局的，装上就对所有游戏生效，越过了游戏 mod 的职责。现在没有启动预设同时装两个游戏，所以还没炸 | **已改**：五个钩子已删。绑演员留在各游戏自己的图里，挂在自己的战斗上下文上；形状指示改听点击 / 松开状态的 `ContextActivated` / `ContextDeactivated`；就近辅助是能力图 `graph.aim.assist`，冠军图 `graph.champion.arm_hostile_assist` 写黑板 `aim.assist`。加载期钩子只能指向本 mod 声明的图，跨 mod 报出两边的 mod 名和图名 |
+| 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | **已改**：半径和关系改由技能引用的 `graph.aim.pick.hostile` / `graph.aim.pick.friendly` 写到黑板 `aim.pick.pointer_radius_cm`、`aim.pick.stick_radius_cm`、`aim.pick.relationship`，共用追踪图再读。`Ability.AimSchemes.Friendly` 只换引用 |
+| 展示 mod 里还有施法方式 C#：冠军 `ChampionSkillCastModes.cs` + `ChampionSkillCastModeToolbarProvider.cs`，交互展示 `InteractionShowCastModes.cs` | 两份 C# 各读一份 `cast_mode_toolbar.json`，重复造轮子，还直读 `InteractionPref` 判断高亮 | **已改**：按钮、标题和显隐写在 `UI/entity_command_panel_toolbars.json`，每条用 `panel` 绑到一块面板。命令面板模组在加载时装上绑到命令面板的工具栏。按下走现有 `InjectButtonPress`，高亮读调用方传入的玩家代表身上的偏好取值或当前交互状态。这个代表不存在、已死或不唯一，就直接报错。两份展示里的施法方式 C# 已删 |
+| 交互展示 C# 手动 push / pop `Aim.Kbm` 输入上下文（`InteractionShowcaseRuntime`） | 控制方案本来就是「一组输入上下文的组合」，C# 绕过了它 | 已落地。这段 push / pop 和前 90 帧打回 `scheme.default` 的分支已删。座位方案见缺口 5 |
+| `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`）。`user://` 按宿主传入的用户数据根展开。缺根在引擎初始化时报 `userDataRoot`。坏文件报路径。存的方案 id 不在允许集里直接抛。测试引擎每次传一个新的临时目录 |
+| 座位 `controlSchemeId` 在 SHOW-6 以外可以留空 | 空值保持当前已激活的方案，这是 `ParticipantBindingResolver` 的合同 | **已改**：启动座位、`MapLaunchContext`、存档里的座位，缺 `controlSchemeId` 或只写空白都是加载错误。这一局没有启动座位时，仍激活允许集里的第一个方案 |
+| `allowedSchemes` 里同一个 id 出现两次 | 追加合并只往后接，不去重 | **已改**：校验读到重复 id 直接失败 |
+| Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | **已改**：类型、命名空间和服务绑定改成 `GraphPointerSampleRuntime` / `IGraphPointerSampleRuntime`（`Ludots.Core.Input.PointerSample`，`BindPointerSample`）。`ScreenPointToGround` 这些操作名本来就不含 aim，保持不动。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 不归这条线 |
+| 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
+
+**机制缺口和方案（按「先通用件、再删数据副本」做）：**
+
+| # | 缺口 | 方案 |
+|---|------|------|
+| 1 | 每个游戏手抄一份进入图（冠军 / MOBA / 交互 / 方案展示四份同骨架）。原因：`ActivateContext` 的父上下文、集合 key、模板都是编译期符号，`InvokeGraph` 不能传符号参数 | **已改**：进入图只剩 `graph.aim.enter`。`ActivateContext` 不写 `parentContext` 时，父上下文是正在跑这张图的挂载，挂载外直接失败；四个游戏在自己的战斗上下文 `onActivated` 里引用它 |
+| 2 | 钩子全局生效 | **已改**：仓库里的跨 mod 钩子就是上面那五个，已经迁走。`TriggerGraphHookWeaver` 只允许钩子指向本 mod 声明的图 |
+| 3 | 选中变化后重绑瞄准演员：`Select.End` 归 `core.selecting`，战斗上下文里的图收不到，只能往能力图里织钩子 | **已改**：集合成员增删发 `EntityCollectionMembershipChanged`，载荷是集合 key、成员、所有者。绑演员图的 `filters.payload` 写 `role:commandSource`。装载时 `Input/collection_keys.json` 把角色 `commandSource` 换成这一局的集合名；这个角色没声明，编译这条过滤器就失败。没有图订阅这个事件时不分配 |
+| 4 | 原先 `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 已落地。目录策略仍是 DeepObject：管线没有「对象根加一条按 id 合并的数组」这一档，加载器把现成的 DeepObject 和 ArrayById 拼在一起。`schemes` / `profiles` 按 `id` 字段级合并，后加载的字段赢，`inputContexts` 和 `rules` 整段替换。`allowedSchemes` 用 `ArrayAppendFields` 追加，重复 id 在校验里失败关闭。和根资产、能力 mod 相同的副本已从游戏 mod 删掉 |
+| 5 | 原先地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 已落地。进图读的就是 `game.json` 的 `startupLocalSeats[].controlSchemeId`（写进 `MapLaunchContext.LocalSeats`）。SHOW-6 改成「启动方案必须显式声明」，空了报这个字段名。交互展示座位是 `scheme.aim.kbm`。启动座位缺 `controlSchemeId` 或只写空白，加载直接失败 |
+| 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | DEC-15 修订已定：方案只是键位档案，不带偏好。Core 在切方案时发通用事件（新旧方案 id），能力 mod 的图收到后用 `SetPref` 写施法方式 |
+| 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | **已改**：绑定的 `intValue` 随按下和松开写进快照和回放，`graph.aim.press` 与 `graph.aim.release_confirm` 各留一个入口并从 `MapTrigger.BindingInt` 读槽号，方案展示用 `t` / `y` 绑第 5、6 槽 |
+| 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | **已改**：按下图只 `ActivateContextFromPref`（542），取值就是手势状态 id。即时施放是 `interaction.context.aim.smart`，`onActivated` 提交后 `DeactivateOwnContext`。加一种方式是新 profile 加进键 `pref.aim.cast_mode` 的取值，规则图不用改 |
+| 9 | 指示器只有一种形状 | 切片 R 之后形状跟着规则图开的目标状态走：每种形状一个共用目标 context + 一条 presenter 规则，技能引用对应规则图 |
+| 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | **已改**：入口写 `budget: "single-slice"` 后，装载按切片同一套计步算最长路径，超过 64 步就报图名、入口、步数和预算；瞄准的输入入口都标了，指针和摇杆追踪把采样留在宿主，其余放进调用图 |
+| 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后只剩数据：再加一个取值和一个交互状态，规则图不用改 |
+| 12 | 指示器在按下后的下一拍才出现 | **已改**：按下那一拍 `aim.range` 和 `aim.line` 已经挂在瞄准演员上 |
+| 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
+| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：槽位、落点、射程、目标、朝向和摇杆清零只写在 `graph.aim.prepare_actor`。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 和每个游戏的重绑路径也调用它 |
+| 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
+
+**待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
+
+**`CoreInputMod` 收尾已改。** 目录、依赖和 `Default_Gameplay` 都已删掉。根资产的相机键位上下文叫 `Camera.Rig`，`scheme.default` 的 `inputContexts` 就是它；原先跟默认玩法一起激活的 mod，在自己的方案里写上 `Camera.Rig`。`startupInputContexts` 已删：宿主绑上输入处理器时，`ControlSchemeRuntime.ApplyActiveContexts` 把当前方案的上下文推上去。小地图指针仍走 `interaction.context.minimap`（LudotsCoreMod，`foreground`，`pointerRouting` 为 `ui`）。`presentation.minimap.interactionContextId` 指向它。按下、松开、移动是 `graph.minimap.press` / `release` / `track`。滚轮是 `graph.minimap.zoom`：动作 `Minimap.Zoom` 绑在 `Minimap.Device` 上，这个状态的 `inputContextId` 指向它，前台状态打开时投影这组键。世界点选绑在 `Core.Select`，`interaction.context.moba.battle` 的 `inputContextId` 指向它。命令点地仍是 `graph.minimap.command`，图在 LudotsCoreMod，但这个状态默认不挂它。`Command` 由 MinimapShowcaseMod、FogVisionDecayShowcaseMod、PresenterBlacksmithShowcaseMod 各自声明，并合并进这个状态。只装 LudotsCoreMod 时有滚轮，没有命令图。`Command` / `Cancel` 由使用它们的 mod 在自己的输入数据里声明。`PointerPos` 的声明和 `<Mouse>/Pos` 绑在 `Camera.Rig`。指针落在 `pointerRouting` 为 `ui` 的区域里时，相机 `Zoom` 仍按 `suppressOnUiWheelCaptured` 被压住。跳相机只提交 `CameraPoseRequest`。`MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions` 已删。集合键 **已改**：共享图、相机和 presenter 写成 `role:命令角色名`，例如 `role:commandSource`。`Input/collection_keys.json` 把角色名映射到集合名。引擎根文件不声明 `commandSource`，由实际开局声明。同一个角色两处值不一样，装载失败；值相同可以重复。没声明的角色在用到它的图、presenter 或相机上失败，报出角色和来源 mod。字面集合名不加 `role:` 前缀。本机输入开局在地图已有交互状态或吃输入的触发、却没有带 `controlSchemeId` 和附身代表的本地座位时，加载直接失败，错误写出地图名和游戏名；权威服务器和加载时没有输入处理器的无头开局不要座位。
+
+**顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+
+**还开着的子 PR（都是草稿，都叠在 #1755 上）：** #1755 先合进 `main`，再合下面这些。每个 PR 都改了本节自己那一行，后合的要 rebase 本页。
+
+| PR | 内容 | 合并注意 |
+|----|------|----------|
+| https://github.com/MightyBubble/Ludots/pull/1790 | 现行文档改成交互状态和控制方案，退役名字守卫扫文档 | 只改文档和守卫，可以最先合 |
+| https://github.com/MightyBubble/Ludots/pull/1789 | 上面的待查已查清：射程留在技能定义，op 534 留着，`targeting` 缺 `castRangeCm` 装载失败 | 合完把待查段落删掉 |
+| https://github.com/MightyBubble/Ludots/pull/1791 | 引擎根不再声明集合角色，`hover` 归 LudotsCoreMod，`castRaw` 由开局声明 | 无 |
+| https://github.com/MightyBubble/Ludots/pull/1792 | 冠军沙盒工具栏的镜头、主题、压测按钮改成数据，删 `ChampionSkillSandboxToolbarTail.cs`；op 551 `ApplyMapDefaultCamera` | 551 被它占用 |
+| https://github.com/MightyBubble/Ludots/pull/1794 | 第 11 条：先选目标再施放；`DispatchMapEvent` 输出本次派发的提交次数 | 和 #1799 都改瞄准图和交互展示工具栏 |
+| https://github.com/MightyBubble/Ludots/pull/1797 | 销毁关系端点时拆掉幸存者身上的边 | 要在 #1798 之前合 |
+| https://github.com/MightyBubble/Ludots/pull/1798 | 第 6 条：切控制方案发 `ControlSchemeChanged`，由声明方案的 mod 写默认施法方式；销毁实体时清黑板里的引用；`ConstNullEntity` 补上执行 | base 是 #1797 的分支 |
+| https://github.com/MightyBubble/Ludots/pull/1799 | 第 9 条：四种指示器形状，尺寸读技能自己的效果（op 552）；前台状态关掉后，被停的动作等输入相位结束才恢复 | 恢复时机对所有前台状态生效，不只瞄准，审的时候要看；552 假设 #1792 占 551 |
+
+**这些 PR 之外还没做的：** 技能定义上的 `targeting.impactEffect` 装载时必填，解析成 `AbilityTargetingConfig.ImpactEffectTemplateId`，但代码里没有读它的地方（presenter 读的是效果模板上的 `projectile.impactEffect`：`PresentationEntityLifecycleSystem` 发 `ProjectileSpawned`、`ProjectileRuntimeSystem` 发命中效果都用它），要定是删掉这个字段，还是接到 presenter 上；DuelBolt、Challenge 和瞄准方案展示的线形技能，效果上没有长度字段，长度写成正数字面量；op 551、552 的画廊页没录屏。
 
 ### 3.4 不要当成这轮图能力去合
 

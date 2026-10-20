@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
@@ -24,9 +25,11 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -47,7 +50,6 @@ namespace Ludots.Tests.GAS.Production
         private const float DeltaTime = 1f / 60f;
         private const string HubMapId = "interaction_showcase_hub";
         private const string StressMapId = "interaction_showcase_stress";
-        private const string WowModeId = "Interaction.Mode.WoW";
         private const string LolModeId = "Interaction.Mode.LoL";
         private const string Sc2ModeId = "Interaction.Mode.SC2";
         private const string IndicatorModeId = "Interaction.Mode.Indicator";
@@ -59,9 +61,9 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "EntityInfoPanelsMod",
+            "AimInteractionMod",
             "InteractionShowcaseMod"
         };
 
@@ -119,7 +121,9 @@ namespace Ludots.Tests.GAS.Production
             SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
             AssertSelectedEntity(engine, "Arcweaver");
             PressButton(engine, backend, "<Keyboard>/f1", frameTimesMs);
-            Assert.That(GetActiveModeId(engine), Is.EqualTo(WowModeId));
+            // WoW and LoL both write pref.aim.cast_mode = interaction.context.aim.smart. The deleted target_first and smart_cast
+            // contexts mounted the same slot graphs, so the HUD representative for that mode is LoL.
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             PressButton(engine, backend, "<Keyboard>/f2", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "arcweaver_selected_lol");
@@ -166,9 +170,9 @@ namespace Ludots.Tests.GAS.Production
             SetMouseWorld(engine, backend, arcweaverBeforeBlink + new Vector2(400f, 0f), frameTimesMs);
             backend.SetButton("<Keyboard>/w", true);
             Tick(engine, 1, frameTimesMs);
-            string blinkInputDiagnosticsFrame1 = BuildInputActionDiagnostics(engine, "SkillW");
+            string blinkInputDiagnosticsFrame1 = BuildInputActionDiagnostics(engine, "Aim.Slot");
             Tick(engine, 1, frameTimesMs);
-            string blinkInputDiagnosticsFrame2 = BuildInputActionDiagnostics(engine, "SkillW");
+            string blinkInputDiagnosticsFrame2 = BuildInputActionDiagnostics(engine, "Aim.Slot");
             backend.SetButton("<Keyboard>/w", false);
             Tick(engine, 2, frameTimesMs);
             string blinkCastDiagnostics = BuildAbilityDiagnostics(engine, "Arcweaver");
@@ -196,14 +200,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(Vector2.Distance(arcweaverAfterDash, arcweaverBeforeDash), Is.GreaterThan(120f));
 
             float skirmisherAHealthBeforeVector = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 runeOrigin = ReadPosition(engine.World, "Arcweaver");
             Vector2 runeEndpoint = ReadPosition(engine.World, "EnemySkirmisherA");
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
             string runeBurstAfterChord = BuildInputActionDiagnostics(engine, "RuneBurst");
             string arcweaverAfterChord = BuildAbilityDiagnostics(engine, "Arcweaver");
-            LeftClickWorld(engine, backend, runeOrigin, frameTimesMs);
-            string runeBurstAfterOrigin = BuildInputActionDiagnostics(engine, "RuneBurst");
-            string arcweaverAfterOrigin = BuildAbilityDiagnostics(engine, "Arcweaver");
             LeftClickWorld(engine, backend, runeEndpoint, frameTimesMs);
             string runeBurstAfterEndpoint = BuildInputActionDiagnostics(engine, "RuneBurst");
             string arcweaverAfterEndpoint = BuildAbilityDiagnostics(engine, "Arcweaver");
@@ -212,7 +212,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 skirmisherAHealthAfterVector,
                 Is.LessThan(skirmisherAHealthBeforeVector),
-                $"{runeBurstAfterChord} || {arcweaverAfterChord} || {runeBurstAfterOrigin} || {arcweaverAfterOrigin} || {runeBurstAfterEndpoint} || {arcweaverAfterEndpoint} || selected={string.Join(",", GetSelectedNames(engine))}");
+                $"{runeBurstAfterChord} || {arcweaverAfterChord} || {runeBurstAfterEndpoint} || {arcweaverAfterEndpoint} || selected={string.Join(",", GetSelectedNames(engine))}");
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "arcweaver_movement_toggle_vector");
             timeline.Add("[T+005] Arcweaver demoed point blink, toggle stance, double-tap dash, and vector rune burst");
 
@@ -224,22 +224,22 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
             SetMouseScreen(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
             int baselineRings = CountOverlays(overlays, GroundOverlayShape.Ring);
+            float vanguardTargetHealthBeforeR = ReadHealth(engine.World, vanguardTarget);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
             int ringOverlays = CountOverlays(overlays, GroundOverlayShape.Ring);
+            float vanguardTargetHealthDuringHold = ReadHealth(engine.World, vanguardTarget);
             string vanguardIndicatorDiagnostics = string.Join(" || ",
-                BuildInputActionDiagnostics(engine, "SkillR"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
-            Assert.That(ringOverlays, Is.GreaterThan(baselineRings), vanguardIndicatorDiagnostics);
-            float vanguardTargetHealthBeforeR = ReadHealth(engine.World, vanguardTarget);
-            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
-            Tick(engine, 4, frameTimesMs);
-            float vanguardTargetHealthAfterR = ReadHealth(engine.World, vanguardTarget);
+            Assert.That(ringOverlays, Is.EqualTo(baselineRings),
+                "Shockwave's rule graph submits on press, so the hold does not open an aim indicator. " + vanguardIndicatorDiagnostics);
             Assert.That(
-                vanguardTargetHealthAfterR,
+                vanguardTargetHealthDuringHold,
                 Is.LessThan(vanguardTargetHealthBeforeR),
                 BuildVanguardShockwaveDiagnostics(engine, vanguardTarget, overlays));
+            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
 
             PressButton(engine, backend, "<Keyboard>/f3", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(Sc2ModeId));
@@ -249,7 +249,7 @@ namespace Ludots.Tests.GAS.Production
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             Tick(engine, 1, frameTimesMs);
             string vanguardAimDiagnostics = string.Join(" || ",
-                BuildInputActionDiagnostics(engine, "SkillE"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
@@ -268,7 +268,7 @@ namespace Ludots.Tests.GAS.Production
             float vanguardTargetHealthAfterConfirm = ReadHealth(engine.World, vanguardTarget);
             Assert.That(vanguardTargetHealthAfterConfirm, Is.LessThan(vanguardTargetHealthAfterCancel));
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "vanguard_indicator_and_aimcast");
-            timeline.Add("[T+006] Vanguard demoed indicator-release ring AoE plus SC2 aim-cast cancel/confirm branches");
+            timeline.Add("[T+006] Vanguard Shockwave casts on press with no aim indicator; E still does SC2 aim-cast cancel/confirm");
 
             SelectNamedEntity(engine, backend, "Commander", frameTimesMs);
             AssertSelectedEntity(engine, "Commander");
@@ -362,7 +362,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 Vector2.Distance(after, before),
                 Is.GreaterThan(180f),
-                $"{BuildInputActionDiagnostics(engine, "SkillW")} || {BuildAbilityDiagnostics(engine, "Arcweaver")}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot")} || {BuildAbilityDiagnostics(engine, "Arcweaver")}");
         }
 
         [Test]
@@ -440,7 +440,6 @@ namespace Ludots.Tests.GAS.Production
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -503,11 +502,9 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 12, frameTimesMs);
 
             float healthBefore = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 origin = ReadPosition(engine.World, "Arcweaver");
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -564,11 +561,9 @@ namespace Ludots.Tests.GAS.Production
             ExecuteArcweaverBlinkDashPrelude(engine, backend, frameTimesMs);
 
             float healthBefore = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 origin = ReadPosition(engine.World, "Arcweaver");
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -647,7 +642,6 @@ namespace Ludots.Tests.GAS.Production
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -686,11 +680,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(GetSelectionCount(engine), Is.EqualTo(1), $"selected={string.Join(",", GetSelectedNames(engine))}");
 
             float healthBefore = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 origin = ReadPosition(engine.World, "Arcweaver");
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -701,6 +693,53 @@ namespace Ludots.Tests.GAS.Production
                 $"{BuildInputActionDiagnostics(engine, "RuneBurst")} || {BuildAbilityDiagnostics(engine, "Arcweaver")} || selected={string.Join(",", GetSelectedNames(engine))}");
         }
 
+        [Test]
+        public void InteractionShowcase_MidAimReselect_MovesIndicatorWithoutFailure()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            TestInputBackend backend = GetInputBackend(engine);
+            LoadMap(engine, HubMapId, frameTimesMs);
+
+            PlayerInputHandler input = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler missing.");
+            input.PushContext("Aim.Gamepad");
+
+            SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/f4", frameTimesMs);
+            backend.SetAxis("<Gamepad>/rightStick/x", 0f);
+            backend.SetAxis("<Gamepad>/rightStick/y", 0f);
+            Tick(engine, 1, frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/q", holdFrames: 2, frameTimesMs);
+            backend.SetAxis("<Gamepad>/rightStick/x", 1f);
+            Tick(engine, 4, frameTimesMs);
+
+            Entity arcweaver = FindEntityByName(engine.World, "Arcweaver");
+            string before = DescribeAimActors(engine, arcweaver);
+            Assert.That(TriggerErrorText(engine), Is.EqualTo("<none>"), before);
+            Assert.That(CountActivePresenter(engine, "aim.range", arcweaver), Is.GreaterThan(0), before);
+            Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.GreaterThan(0), before);
+
+            // aim.release is foreground, so the battle Select.Begin mount is parked for the gesture.
+            // Selection commit writes command source; that membership event is what rebind hears.
+            ReplaceCommandSource(engine, FindEntityByName(engine.World, "Vanguard"));
+            backend.SetAxis("<Gamepad>/rightStick/x", 0f);
+            Tick(engine, 1, frameTimesMs);
+            backend.SetAxis("<Gamepad>/rightStick/x", 0.75f);
+            Tick(engine, 6, frameTimesMs);
+
+            Entity vanguard = FindEntityByName(engine.World, "Vanguard");
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Vanguard"));
+            Assert.That(TriggerErrorText(engine), Is.EqualTo("<none>"), "stick aim after reselect");
+            Assert.That(CountActivePresenter(engine, "aim.range", vanguard), Is.GreaterThan(0), "range indicator on Vanguard");
+            Assert.That(CountActivePresenter(engine, "aim.line", vanguard), Is.GreaterThan(0), "line indicator on Vanguard");
+            Assert.That(CountActivePresenter(engine, "aim.range", arcweaver), Is.EqualTo(0), "old range indicator");
+            Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.EqualTo(0), "old line indicator");
+            Assert.That(ReadBlackboardInt(engine, vanguard, "aim.stick.valid"), Is.EqualTo(1), "stick sample on the new actor");
+
+            ReleaseButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+        }
+
         private static GameEngine CreateEngine()
         {
             string repoRoot = FindRepoRoot();
@@ -708,7 +747,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
 
             AcceptanceUiHostInstaller.Install(engine);
@@ -754,10 +793,7 @@ namespace Ludots.Tests.GAS.Production
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -993,6 +1029,141 @@ namespace Ludots.Tests.GAS.Production
                 }
             });
             return result;
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity member)
+        {
+            Entity owner = GetLocalPlayer(engine);
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Assert.That(
+                collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view),
+                Is.True,
+                "command source");
+            EntityCollectionDescriptor descriptor = EntityCollectionDescriptor.Create(
+                view.Key,
+                view.SourceKind,
+                view.Role,
+                view.ContextEntity,
+                member,
+                view.Title,
+                view.Summary);
+            collections.Replace(owner, view.KeyId, descriptor, new[] { member }, default, default);
+        }
+
+        private static int ReadBlackboardInt(GameEngine engine, Entity entity, string key)
+        {
+            int keyId = OrderBlackboardKeyRegistry.Resolve(key);
+            if (!engine.World.TryGet(entity, out BlackboardIntBuffer ints) || !ints.TryGet(keyId, out int value))
+            {
+                throw new InvalidOperationException($"blackboard int '{key}' missing on entity {entity.Id}");
+            }
+
+            return value;
+        }
+
+        private static int CountActivePresenter(GameEngine engine, string definitionKey, Entity owner)
+        {
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int defId = definitions.GetId(definitionKey);
+            Assert.That(defId, Is.GreaterThan(0), definitionKey);
+            int found = 0;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (Entity _, ref PresenterState state) =>
+            {
+                if (state.DefId == defId && state.OwnerEntity == owner)
+                {
+                    found++;
+                }
+            });
+            return found;
+        }
+
+        private static string DescribeAimActors(GameEngine engine, Entity actor)
+        {
+            var parts = new List<string>
+            {
+                $"selected={GetSelectedEntityName(engine)}",
+                $"triggers={TriggerErrorText(engine)}",
+                $"contexts={DescribeContexts(engine)}",
+                $"presenters={DescribePresenters(engine, "aim.range")}/{DescribePresenters(engine, "aim.line")}",
+            };
+            try
+            {
+                parts.Add($"stick={ReadBlackboardInt(engine, actor, "aim.stick.valid")}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                parts.Add(ex.Message);
+            }
+
+            return string.Join(" || ", parts);
+        }
+
+        private static string DescribeContexts(GameEngine engine)
+        {
+            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (profiles == null)
+            {
+                return "<no profiles>";
+            }
+
+            var parts = new List<string>();
+            var query = new QueryDescription().WithAll<Name, InteractionContextInstance>();
+            engine.World.Query(in query, (Entity entity, ref Name name, ref InteractionContextInstance instance) =>
+            {
+                parts.Add($"{name.Value}:{profiles.ProfileIdRegistry.GetName(instance.ContextId)}");
+            });
+            var derived = new QueryDescription().WithAll<Name, InteractionContextInstances>();
+            engine.World.Query(in derived, (Entity entity, ref Name name, ref InteractionContextInstances instances) =>
+            {
+                Span<int> ids = stackalloc int[16];
+                int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(engine.World, entity, ids);
+                for (int i = 0; i < count; i++)
+                {
+                    parts.Add($"{name.Value}:{profiles.ProfileIdRegistry.GetName(ids[i])}");
+                }
+            });
+            return parts.Count == 0 ? "<none>" : string.Join(",", parts);
+        }
+
+        private static string DescribePresenters(GameEngine engine, string definitionKey)
+        {
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int defId = definitions.GetId(definitionKey);
+            var names = new List<string>();
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (Entity _, ref PresenterState state) =>
+            {
+                if (state.DefId != defId)
+                {
+                    return;
+                }
+
+                string owner = engine.World.TryGet(state.OwnerEntity, out Name name) ? name.Value : state.OwnerEntity.Id.ToString();
+                names.Add(owner);
+            });
+            return names.Count == 0 ? "<none>" : string.Join(",", names);
+        }
+
+        private static string TriggerErrorText(GameEngine engine)
+        {
+            if (engine.TriggerManager.Errors.Count == 0)
+            {
+                return "<none>";
+            }
+
+            var parts = new List<string>();
+            int limit = Math.Min(4, engine.TriggerManager.Errors.Count);
+            for (int i = 0; i < limit; i++)
+            {
+                var error = engine.TriggerManager.Errors[i];
+                parts.Add($"{error.TriggerName}: {error.Exception.Message}");
+            }
+
+            return string.Join(" | ", parts);
         }
 
         private static Vector2 ReadPosition(World world, string name)
@@ -1247,15 +1418,34 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("InteractionContextInstances is missing.");
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry is missing.");
+            if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId("interaction.context.interaction.context_scored")))
             {
-                Ludots.Core.Input.Orders.CastModeType.TargetFirst => WowModeId,
-                Ludots.Core.Input.Orders.CastModeType.SmartCast => LolModeId,
-                Ludots.Core.Input.Orders.CastModeType.AimCast => Sc2ModeId,
-                Ludots.Core.Input.Orders.CastModeType.SmartCastWithIndicator => IndicatorModeId,
-                Ludots.Core.Input.Orders.CastModeType.ContextScored => ActionModeId,
-                _ => LolModeId
-            };
+                return ActionModeId;
+            }
+
+            string prefValue = ReadAimPrefValue(engine, rep);
+            if (string.Equals(prefValue, "interaction.context.aim.smart", StringComparison.Ordinal))
+            {
+                return LolModeId;
+            }
+
+            if (string.Equals(prefValue, "interaction.context.aim.click", StringComparison.Ordinal))
+            {
+                return Sc2ModeId;
+            }
+
+            if (string.Equals(prefValue, "interaction.context.aim.release", StringComparison.Ordinal))
+            {
+                return IndicatorModeId;
+            }
+
+            throw new InvalidOperationException(
+                $"Interaction showcase has no HUD mode for preference value '{prefValue}'.");
         }
 
         private static string BuildAbilityDiagnostics(GameEngine engine, string actorName)
@@ -1371,28 +1561,6 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("authoritativeInput=<missing>");
             }
 
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingMode={mapping.InteractionMode}");
-                details.Add($"mappingAiming={mapping.IsAiming}");
-                details.Add($"activation={mapping.LastActivationResult.State}");
-                details.Add($"activationOrderId={mapping.LastActivationResult.OrderId}");
-                details.Add($"activationRejection={mapping.LastActivationResult.Rejection}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
-                {
-                    details.Add($"TargetType={actionMapping.TargetType}");
-                    details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
-                }
-                else
-                {
-                    details.Add("mapping=<missing>");
-                }
-            }
-            else
-            {
-                details.Add("activeMapping=<missing>");
-            }
-
             bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
                               uiCapturedObj is bool captured &&
                               captured;
@@ -1410,7 +1578,7 @@ namespace Ludots.Tests.GAS.Production
                 $"vanguard=({vanguardPosition.X:0.##},{vanguardPosition.Y:0.##})",
                 $"target=({targetPosition.X:0.##},{targetPosition.Y:0.##})",
                 $"distance={Vector2.Distance(vanguardPosition, targetPosition):0.##}",
-                BuildInputActionDiagnostics(engine, "SkillR"),
+                BuildInputActionDiagnostics(engine, "Aim.Slot"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
@@ -1441,11 +1609,6 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"dragActive={drag.Active}");
                 details.Add($"dragStart=({drag.StartScreen.X:0.##},{drag.StartScreen.Y:0.##})");
                 details.Add($"dragCurrent=({drag.CurrentScreen.X:0.##},{drag.CurrentScreen.Y:0.##})");
-            }
-
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingAiming={mapping.IsAiming}");
             }
 
             return string.Join(" | ", details);
@@ -1924,7 +2087,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("1. Boot the real engine with the interaction showcase mod and load the hub map.");
             sb.AppendLine("2. Select Arcweaver, switch reference modes, cast unit/point/toggle/double-tap/vector abilities, and validate health/tag/position deltas.");
             sb.AppendLine("3. Drag-select the full hero squad, issue move, queued move, and stop through the shared local order source.");
-            sb.AppendLine("4. Select Vanguard and validate indicator-release plus SC2 aim-cast cancel and confirm branches.");
+            sb.AppendLine("4. Select Vanguard: Shockwave casts on press with no aim indicator, then SC2 aim-cast cancel and confirm on E.");
             sb.AppendLine("5. Select Commander, switch to action mode, and validate context-scored skill resolution on `Space`.");
             sb.AppendLine("6. Load the stress map and wait until 3200 mirrored fireball casters saturate the battlefield.");
             sb.AppendLine();
@@ -1958,7 +2121,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, interaction contexts + TriggerGraph cast graphs, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 
@@ -2222,7 +2385,14 @@ namespace Ludots.Tests.GAS.Production
                 _mouseWheel = wheel;
             }
 
-            public float GetAxis(string devicePath) => 0f;
+            private readonly Dictionary<string, float> _axes = new(StringComparer.Ordinal);
+
+            public void SetAxis(string devicePath, float value)
+            {
+                _axes[devicePath] = value;
+            }
+
+            public float GetAxis(string devicePath) => _axes.TryGetValue(devicePath, out float value) ? value : 0f;
             public bool GetButton(string devicePath) => _buttons.TryGetValue(devicePath, out var isDown) && isDown;
             public Vector2 GetMousePosition() => _mousePosition;
             public float GetMouseWheel() => _mouseWheel;
@@ -2264,5 +2434,31 @@ namespace Ludots.Tests.GAS.Production
                 LastState = state;
             }
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

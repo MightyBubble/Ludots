@@ -241,8 +241,9 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             Assert.That(engine.GetService(CoreServiceKeys.GasGraphRuntimeProductionServices), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GasGraphRuntimeApi), Is.Not.Null);
@@ -304,7 +305,8 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
                 RepoModPaths.ResolveExplicit(
                     repoRoot,
                     new[] { "LudotsCoreMod", "DerivedAttributeGraphAcceptanceMod" }),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             GasGraphRuntimeApi graphApi = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi);
             GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry);
@@ -355,8 +357,9 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             AbilityExecRuntimeState ability = ReadSingle<AbilityExecRuntimeState>(engine.World);
             GasRuntimeState effects = ReadSingle<GasRuntimeState>(engine.World);

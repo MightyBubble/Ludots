@@ -1,22 +1,18 @@
+using System;
 using Arch.Core;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Which lifecycle wrote a mounted <see cref="InteractionContextInstance"/>: the ability exec
-    /// reconciliation, a cast commit <c>pushFrame</c> op, the entity's spawn template, or a
-    /// context-instance graph op (whose instances live on
-    /// <see cref="InteractionContextInstances"/>). Each writer manages only its own
-    /// mounts — the exec reconciliation never reclaims an op-pushed or spawn-mounted context,
-    /// and <c>popFrame</c> never removes an exec-carried one.
+    /// reconciliation, the entity's spawn template, or a context-instance graph op (whose
+    /// instances live on <see cref="InteractionContextInstances"/>). Each writer manages only
+    /// its own mounts — the exec reconciliation never reclaims a spawn-mounted context.
     /// </summary>
     public enum InteractionContextInstanceSource : byte
     {
         /// <summary>Mounted by <see cref="AbilityExecInteractionContextSystem"/> for a running exec carrier.</summary>
         ExecLifecycle = 0,
-
-        /// <summary>Mounted by a cast commit profile <c>pushFrame</c> op; released by <c>popFrame</c>.</summary>
-        CastCommitOp = 1,
 
         /// <summary>
         /// Mounted at entity spawn by the template's <c>initialInteractionContext</c> field;
@@ -38,12 +34,12 @@ namespace Ludots.Core.Input.Interaction
     /// subject (the control-domain representative) only while an interaction context is
     /// active in that entity's control domain, absent otherwise. Absence is the steady
     /// state: the player's <see cref="InteractionPref"/> default applies, and command
-    /// sources resolve to the subject itself. Cast commits take their collection key from
-    /// the caller; the mounted context only supplies the filter profile.
+    /// sources resolve to the subject itself. Collection writes take their key from the
+    /// caller; the mounted context only supplies the filter profile.
     /// Sparse like <see cref="InteractionMode"/> and <see cref="InteractionPref"/>: the vast
     /// majority of entities never carry it, and holders are discoverable by archetype query.
     /// <para>
-    /// As the single-slot component it is the base instance mounted by the exec / cast /
+    /// As the single-slot component it is the base instance mounted by the exec and
     /// spawn chains (ParentContextId stays 0). The <c>ActivateContext</c> graph
     /// op mounts the same shape onto the coexisting set
     /// <see cref="InteractionContextInstances"/> with ParentContextId filled —
@@ -86,7 +82,7 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Filter profile id in the <see cref="FilterProfileRegistry.ProfileIdRegistry"/> id
-        /// space applied to cast commits; 0 = explicit pass-through.
+        /// space applied to collection writes while this context is mounted; 0 = pass-through.
         /// </summary>
         public int FilterProfileId;
 
@@ -107,5 +103,25 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Lifecycle that mounted this context; see <see cref="InteractionContextInstanceSource"/>.</summary>
         public InteractionContextInstanceSource Source;
+
+        /// <summary>
+        /// Command intent for one interaction subject. A mounted context wins, including a
+        /// zero id (the context declares no intent and the command does not route). With no
+        /// context mounted, the representative's player default applies.
+        /// </summary>
+        public static int ResolveCommandIntent(World world, Entity interactionSubject, in InteractionPref playerPref)
+        {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
+            if (world.TryGet<InteractionContextInstance>(interactionSubject, out InteractionContextInstance context))
+            {
+                return context.CommandIntentProfileId;
+            }
+
+            return playerPref.DefaultCommandIntentId;
+        }
     }
 }

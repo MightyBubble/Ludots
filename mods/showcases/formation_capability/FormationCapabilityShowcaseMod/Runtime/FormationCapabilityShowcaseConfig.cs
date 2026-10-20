@@ -16,6 +16,8 @@ internal sealed class FormationCapabilityShowcaseConfig
 {
     public string MapId { get; set; } = string.Empty;
     public FormationCapabilityShowcaseTemplateAuthoringConfig FormationAnchor { get; set; } = new();
+    public string CommandSourceCollectionKey { get; set; } = string.Empty;
+    public string CommandMembersCollectionKey { get; set; } = string.Empty;
     public string InitialCommandSourceFormationId { get; set; } = string.Empty;
     public int InitialCommandSourceEntityCapacity { get; set; }
     public int OrderBatchCapacity { get; set; }
@@ -58,6 +60,8 @@ internal sealed class FormationCapabilityShowcaseConfig
     {
         RequireProperty(root, "mapId");
         RequireProperty(RequireProperty(root, "formationAnchor"), "templateId");
+        RequireProperty(root, "commandSourceCollectionKey");
+        RequireProperty(root, "commandMembersCollectionKey");
         RequireProperty(root, "initialCommandSourceFormationId");
         RequireProperty(root, "initialCommandSourceEntityCapacity");
         RequireProperty(root, "orderBatchCapacity");
@@ -169,6 +173,8 @@ internal sealed class FormationCapabilityShowcaseConfig
     {
         RequireNonEmpty(MapId, nameof(MapId));
         FormationAnchor.Validate(nameof(FormationAnchor));
+        RequireNonEmpty(CommandSourceCollectionKey, nameof(CommandSourceCollectionKey));
+        RequireNonEmpty(CommandMembersCollectionKey, nameof(CommandMembersCollectionKey));
         RequireNonEmpty(InitialCommandSourceFormationId, nameof(InitialCommandSourceFormationId));
         if (InitialCommandSourceEntityCapacity <= 0)
         {

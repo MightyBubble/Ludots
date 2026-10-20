@@ -284,7 +284,8 @@ namespace Ludots.Core.Presentation.Presenters
             in Vector3 worldPosition,
             int stableId,
             Entity parent,
-            PresenterDefinition? definition)
+            PresenterDefinition? definition,
+            Entity scopeSubject = default)
         {
             definition = ResolveDefinition(defId, definition);
             EnsureParentCanAcceptChild(parent, defId);
@@ -296,6 +297,7 @@ namespace Ludots.Core.Presentation.Presenters
                 OwnerStableId = ResolveOwnerStableId(owner, parent),
                 ScopeId = scopeId,
                 OwnerEntity = owner,
+                ScopeSubject = IsAssignedEntity(scopeSubject) ? scopeSubject : Entity.Null,
                 AnchorKind = anchorKind,
                 BehaviorActiveMask = BuildDefaultBehaviorMask(definition),
                 Elapsed = 0f,
@@ -553,7 +555,8 @@ namespace Ludots.Core.Presentation.Presenters
             int stableId,
             Entity parent,
             PresenterDefinition? definition,
-            Func<int>? allocateStableId = null)
+            Func<int>? allocateStableId = null,
+            Entity scopeSubject = default)
         {
             definition = ResolveDefinition(defId, definition);
             if (parent != Entity.Null && (!_world.IsAlive(parent) || !_world.Has<PresenterState>(parent)))
@@ -566,7 +569,7 @@ namespace Ludots.Core.Presentation.Presenters
             Entity entity = Entity.Null;
             try
             {
-                entity = Create(defId, owner, scopeId, anchorKind, in worldPosition, stableId, parent, definition);
+                entity = Create(defId, owner, scopeId, anchorKind, in worldPosition, stableId, parent, definition, scopeSubject);
                 ref PresenterState state = ref _world.Get<PresenterState>(entity);
                 state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
                 SetParamDefault(definition, entity);
@@ -966,7 +969,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (matchCount > 1)
             {
                 throw new InvalidOperationException(
-                    $"DestroyScopedPresenter matched {matchCount} active presenters for defId={defId}, owner={owner.Id}, scopeTag={scopeId}; scoped destroy requires a unique def/owner/scope match.");
+                    $"DestroyScopedPresenter matched {matchCount} active presenters for defId={defId}, scopeSubject={owner.Id}, scopeTag={scopeId}; scoped destroy requires a unique def/subject/scope match.");
             }
 
             entity = match;
@@ -1047,7 +1050,7 @@ namespace Ludots.Core.Presentation.Presenters
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
             if (state.DefId != defId ||
                 state.ScopeId != scopeId ||
-                (requireOwner && state.OwnerEntity != owner) ||
+                (requireOwner && ScopeIdentity(in state) != owner) ||
                 state.Transient)
             {
                 return false;
@@ -3963,11 +3966,23 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 _scopedInstances[new ScopedOwnerKey(
                     state.DefId,
-                    state.OwnerEntity,
+                    ScopeIdentity(in state),
                     state.ScopeId,
                     state.AnchorKind,
                     default)] = presenter;
             }
+        }
+
+        private static Entity ScopeIdentity(in PresenterState state)
+        {
+            return IsAssignedEntity(state.ScopeSubject) ? state.ScopeSubject : state.OwnerEntity;
+        }
+
+        // Entity.Null is (-1, 0, -1). An unset subject is default(Entity), which compares unequal to Null.
+        // Treating that zero value as assigned collapses every direct create onto one scoped key.
+        private static bool IsAssignedEntity(Entity entity)
+        {
+            return entity.Id >= 0 && entity != default;
         }
 
         private void RemoveIndexes(Entity presenter, in PresenterState state)
@@ -3984,7 +3999,7 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 _scopedInstances.Remove(new ScopedOwnerKey(
                     state.DefId,
-                    state.OwnerEntity,
+                    ScopeIdentity(in state),
                     state.ScopeId,
                     state.AnchorKind,
                     default));

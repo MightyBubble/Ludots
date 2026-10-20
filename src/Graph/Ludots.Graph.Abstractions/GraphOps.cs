@@ -529,6 +529,117 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         ActivateVirtualCamera = 530,
 
+        /// <summary>
+        /// TargetPosCm = round(F[A], F[B]) in centimeters, same rounding as ClampTargetToRange.
+        /// </summary>
+        SetTargetPos = 533,
+
+        /// <summary>
+        /// F[Dst] = targeting.castRangeCm of the ability on actor A at slot I[B].
+        /// An empty slot fails closed.
+        /// </summary>
+        LoadAbilityCastRange = 534,
+
+        /// <summary>
+        /// Throw GAS.GRAPH.ERR.{message}. symbols[Imm] is the message; the running graph id is included.
+        /// </summary>
+        Fail = 535,
+
+        /// <summary>
+        /// E[A] = source; F[Dst] = FacingDirection.AngleRad converted to degrees (atan2 convention, not wrapped to 0–360).
+        /// A dead source or a source without FacingDirection fails closed.
+        /// </summary>
+        LoadEntityFacing = 537,
+
+        /// <summary>
+        /// I[Dst] = the ability id resolved for actor E[A] at slot I[B]
+        /// (transient grant, item grant, form, then the base slot).
+        /// A dead actor or an empty slot fails closed. The id is the slot's ability id;
+        /// this op does not read the ability definition.
+        /// </summary>
+        LoadSlotAbilityId = 538,
+
+        /// <summary>
+        /// B[Dst] = 1 when subject E[A] carries the interaction context named by symbols[Imm]
+        /// (base mount or derived instance). A omitted (A = 0xFF) reads the caster.
+        /// A dead subject or an unknown profile fails closed; a known inactive profile returns 0.
+        /// </summary>
+        IsContextActive = 539,
+
+        /// <summary>
+        /// B[Dst] = the rep's resolved preference for key symbols[low Imm] equals symbols[high Imm],
+        /// for the actor's ability at slot I[C]. A is the rep, B is the actor.
+        /// An ability-template pair wins, else the player pair. A resolved value of 0 fails closed.
+        /// </summary>
+        IsPref = 540,
+
+        /// <summary>
+        /// Write the player-level preference named by the two Imm halves onto the rep in A.
+        /// The rep must already carry InteractionPref. Does not write an ability-template pair.
+        /// </summary>
+        SetPref = 541,
+
+        /// <summary>
+        /// Activate the interaction context whose profile id is the resolved preference value
+        /// for key symbols[low Imm], under parent symbols[high Imm]. A is the subject, B is the
+        /// actor, I[C] is the ability slot. The key must be context-valued. An unset preference fails closed.
+        /// </summary>
+        ActivateContextFromPref = 542,
+
+        /// <summary>
+        /// Deactivate the interaction context whose trigger mount or lifecycle slot is running
+        /// this graph, on that mount's subject. Running outside a context mount fails closed.
+        /// </summary>
+        DeactivateOwnContext = 543,
+
+        /// <summary>
+        /// I[Dst] = minimap hit of screen point (F[A], F[B]).
+        /// 0 none, 1 field, 2 zoom slider, 3 preset toggle, 4 rotate toggle.
+        /// Overlaps resolve preset, then rotate, then slider, then field.
+        /// A missing minimap runtime fails closed.
+        /// </summary>
+        QueryMinimapRegion = 544,
+
+        /// <summary>
+        /// B[Dst] = 1 when the minimap can project screen point (F[A], F[B]) into world centimeters,
+        /// clamped to the field. TargetPosCm is that point. 0 when the minimap is hidden.
+        /// </summary>
+        MinimapScreenToWorld = 545,
+
+        /// <summary>
+        /// Move the local camera to TargetPosCm through the minimap jump. The point is clamped to the world bounds.
+        /// </summary>
+        MinimapJumpCamera = 546,
+
+        /// <summary>
+        /// Write normalized minimap zoom from the zoom-slider x of screen point (F[A], F[B]).
+        /// </summary>
+        MinimapSetZoomFromPointer = 547,
+
+        /// <summary>Toggle the minimap between the full-map preset and the follow-camera preset.</summary>
+        MinimapTogglePreset = 548,
+
+        /// <summary>Toggle whether the minimap rotates with the camera.</summary>
+        MinimapToggleRotate = 549,
+
+        /// <summary>
+        /// Apply wheel delta F[A] to minimap zoom at screen point (F[B], F[C]).
+        /// A zero delta does not write.
+        /// </summary>
+        MinimapApplyWheelZoom = 550,
+
+    }
+
+    /// <summary>
+    /// DispatchMapEvent instruction flags. Bit 2 is the ability-id route: I[A] is the ability id,
+    /// stamped as transport metadata so ability-scoped mounts can filter, and the graph caster
+    /// is stamped as SourceEntity so the mount's LoadCaster is that caster.
+    /// </summary>
+    public static class DispatchMapEventFlags
+    {
+        public const byte SelfScope = 1;
+        public const byte GlobalScope = 2;
+        public const byte AbilityRoute = 4;
     }
 
     public static class GraphNodeOpParser

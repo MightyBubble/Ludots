@@ -131,9 +131,9 @@ namespace Ludots.Tests.Presentation
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod" });
+            var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CommandSourceCoreFixtureMod" });
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
             engine.MergedConfig.StartupPresentLayout = layoutId;
             engine.SetService(CoreServiceKeys.ViewController, new ResizablePresentSurface(1920f, 1080f));
@@ -148,8 +148,8 @@ namespace Ludots.Tests.Presentation
                 players,
                 localSeats: new[]
                 {
-                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
-                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.default"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.default"),
                 });
             ParticipantBindingResolver.PublishFocused(engine.GlobalContext, result);
             return engine;

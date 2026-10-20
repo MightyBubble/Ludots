@@ -1,5 +1,10 @@
 [
   {
+    "id": "narrative_player_arcweaver",
+    "extends": "interaction_arcweaver",
+    "initialInteractionContext": "interaction.context.interaction.battle"
+  },
+  {
     "id": "narrative_warden",
     "components": {
       "Name": { "Value": "WardenMirelle" },

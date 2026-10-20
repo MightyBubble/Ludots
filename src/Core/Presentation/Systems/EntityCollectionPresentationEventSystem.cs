@@ -175,7 +175,7 @@ namespace Ludots.Core.Presentation.Systems
                 KeyId = key.KeyId,
                 Source = row.Entity,
                 Target = key.Owner,
-                Viewer = ResolveViewer(key.Owner),
+                Viewer = key.Owner,
                 PayloadA = ComposeCollectionMemberScope(key, row),
                 PayloadB = row.RoleId,
                 Magnitude = (float)row.Flags,
@@ -206,20 +206,6 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return Vector3.Zero;
-        }
-
-        private Entity ResolveViewer(Entity owner)
-        {
-            if (World.IsAlive(owner) && World.Has<AbilityAimSessionState>(owner))
-            {
-                Entity viewer = World.Get<AbilityAimSessionState>(owner).Viewer;
-                if (World.IsAlive(viewer))
-                {
-                    return viewer;
-                }
-            }
-
-            return owner;
         }
 
         private static int ComposeCollectionMemberScope(CollectionKey key, RowSnapshot row)

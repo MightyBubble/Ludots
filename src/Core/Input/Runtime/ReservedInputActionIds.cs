@@ -13,10 +13,11 @@ namespace Ludots.Core.Input.Runtime
         public const string PointerPos = "PointerPos";
 
         /// <summary>
-        /// Per-seat pointer-motion edge (Vector2): fired once per tick when the bound seat's
-        /// live pointer position changed since the last dispatched sample, while the binding
-        /// context is active. Continuous gestures (drag preview) ride this input-domain edge
-        /// instead of a simulation-clock event: no movement means no dispatch, no work.
+        /// Reserved pointer-motion action. Dispatch watches <see cref="PointerPos"/> on the
+        /// same value-change path as an Axis2D <c>firesOn: change</c> action: one sample
+        /// when that position is present in the authoritative snapshot, then only when the
+        /// vector changes. An input context that does not bind <see cref="PointerPos"/>
+        /// never fires it.
         /// </summary>
         public const string PointerMoved = "PointerMoved";
     }

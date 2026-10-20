@@ -1,0 +1,41 @@
+[
+  {
+    "id": "toolbar.champion",
+    "panel": "entity-command-panel",
+    "title": "Cast + Showcase",
+    "subtitle": "Theme Classic | Cast + Camera | F1/F2/F3 Cast | RMB Move",
+    "maps": ["champion_skill_sandbox", "champion_skill_stress"],
+    "byMap": [
+      { "map": "champion_skill_stress", "title": "Stress Harness" }
+    ],
+    "buttons": [
+      {
+        "id": "ChampionSkillSandbox.Mode.SmartCast",
+        "label": "Quick",
+        "accent": "#F6C35B",
+        "actionId": "Aim.CastMode.Smart",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.smart" }
+        }
+      },
+      {
+        "id": "ChampionSkillSandbox.Mode.Indicator",
+        "label": "Indicator",
+        "accent": "#61C3FF",
+        "actionId": "Aim.CastMode.AimRelease",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.release" }
+        }
+      },
+      {
+        "id": "ChampionSkillSandbox.Mode.PressReleaseAim",
+        "label": "RTS",
+        "accent": "#93E07A",
+        "actionId": "Aim.CastMode.AimClick",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.click" }
+        }
+      }
+    ]
+  }
+]

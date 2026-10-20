@@ -160,6 +160,7 @@ namespace Ludots.Core.GraphRuntime
                 EnsureProgramValid(graphId, program, kind);
                 EnsureInvokeTargetsAreScript(allowMissingTargets: true, allowUnpatchedFuncLibNames: true);
                 EnsureNoInvokeCycle(graphId);
+                TriggerGraphSliceBudget.Ensure(graphId, program, entries);
             }
             catch
             {
@@ -280,6 +281,7 @@ namespace Ludots.Core.GraphRuntime
                 EnsureProgramValid(graphId, program, kind);
                 EnsureInvokeTargetsAreScript(allowMissingTargets: true, allowUnpatchedFuncLibNames: true);
                 EnsureNoInvokeCycle(graphId);
+                TriggerGraphSliceBudget.Ensure(graphId, program, entries);
             }
             catch
             {

@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
@@ -200,7 +201,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
                 $"Sandbox gallery requires effect '{_catalog.BuffEffect}' loaded through EffectTemplateLoader.");
         }
 
-        _buffKeyId = ConfigKeyRegistry.Register(_catalog.BuffBlackboardKey);
+        _buffKeyId = OrderBlackboardKeyRegistry.Resolve(_catalog.BuffBlackboardKey);
         _socialBondTypeId = ctx.RelationshipTypes.Register(_catalog.RelationshipType);
         _loyaltyMetricId = ctx.RelationshipMetrics.Register(_catalog.LoyaltyMetric, -100, 100, 0);
         _trustedFlagId = ctx.RelationshipFlags.Register(_catalog.TrustedFlag);

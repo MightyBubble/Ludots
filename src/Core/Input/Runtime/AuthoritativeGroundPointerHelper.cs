@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -28,22 +27,22 @@ namespace Ludots.Core.Input.Runtime
             if (input == null) throw new ArgumentNullException(nameof(input));
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
 
-            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(AuthoritativeGroundPointerHelper));
-            if (TryConsumeOverride(globals, bindings.CommandActionId, out WorldCmInt2 overrideWorldCm))
+            if (TryConsumeOverride(globals, out WorldCmInt2 overrideWorldCm))
             {
-                accumulator.CaptureAction(
-                    ActionId,
-                    new Vector3(overrideWorldCm.X, 0f, overrideWorldCm.Y),
-                    isDown: true,
-                    pressedThisFrame: false,
-                    releasedThisFrame: false,
-                    preserveValueUntilSnapshot: true);
+                CaptureGround(accumulator, overrideWorldCm);
                 return;
             }
 
-            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos), out WorldCmInt2 worldCm))
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
+            if (!TryResolveFromScreen(globals, pointer, out WorldCmInt2 worldCm))
             {
-                accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
+                accumulator.CaptureAction(
+                    ActionId,
+                    Vector3.Zero,
+                    isDown: false,
+                    pressedThisFrame: false,
+                    releasedThisFrame: false,
+                    boundByActiveContext: false);
                 return;
             }
 
@@ -52,18 +51,30 @@ namespace Ludots.Core.Input.Runtime
                 new Vector3(worldCm.X, 0f, worldCm.Y),
                 isDown: true,
                 pressedThisFrame: false,
-                releasedThisFrame: false);
+                releasedThisFrame: false,
+                boundByActiveContext: false);
         }
 
         public static bool TryConsumeOverride(
             IReadOnlyDictionary<string, object> globals,
-            string actionId,
             out WorldCmInt2 worldCm)
         {
             worldCm = default;
             return globals.TryGetValue(CoreServiceKeys.AuthoritativeGroundPointerOverride.Name, out var overrideObj) &&
                 overrideObj is AuthoritativeGroundPointerOverride pointerOverride &&
-                pointerOverride.TryConsume(actionId, out worldCm);
+                pointerOverride.TryConsume(out worldCm);
+        }
+
+        private static void CaptureGround(AuthoritativeInputAccumulator accumulator, WorldCmInt2 worldCm)
+        {
+            accumulator.CaptureAction(
+                ActionId,
+                new Vector3(worldCm.X, 0f, worldCm.Y),
+                isDown: true,
+                pressedThisFrame: false,
+                releasedThisFrame: false,
+                boundByActiveContext: false,
+                preserveValueUntilSnapshot: true);
         }
 
         public static bool TryRead(IInputActionReader input, out WorldCmInt2 worldCm)

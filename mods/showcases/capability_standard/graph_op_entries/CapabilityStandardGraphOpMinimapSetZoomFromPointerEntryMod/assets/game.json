@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_MinimapSetZoomFromPointer",
+  "windowTitle": "Ludots - 按缩放条位置改小地图缩放",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

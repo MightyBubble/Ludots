@@ -1,0 +1,308 @@
+[
+  {
+    "id": "graph.interaction.aim_clear",
+    "kind": "Script",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "op_subtract",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "arcweaver_e_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_e"
+      },
+      {
+        "id": "clear_arcweaver_e",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_e"
+      },
+      {
+        "id": "arcweaver_r_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_r"
+      },
+      {
+        "id": "clear_arcweaver_r",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_r"
+      },
+      {
+        "id": "arcweaver_rune_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_rune"
+      },
+      {
+        "id": "clear_arcweaver_rune",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_rune"
+      },
+      {
+        "id": "vanguard_e_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_e"
+      },
+      {
+        "id": "clear_vanguard_e",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_e"
+      },
+      {
+        "id": "vanguard_r_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_r"
+      },
+      {
+        "id": "clear_vanguard_r",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_r"
+      },
+      {
+        "id": "vanguard_rune_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_rune"
+      },
+      {
+        "id": "clear_vanguard_rune",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_rune"
+      },
+      {
+        "id": "commander_e_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.commander_e"
+      },
+      {
+        "id": "clear_commander_e",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.commander_e"
+      },
+      {
+        "id": "commander_rune_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "interaction_showcase.aim.commander_rune"
+      },
+      {
+        "id": "clear_commander_rune",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.commander_rune"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "op_subtract"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "next",
+        "to": "arcweaver_e_members"
+      },
+      {
+        "from": "arcweaver_e_members",
+        "fromPort": "next",
+        "to": "clear_arcweaver_e"
+      },
+      {
+        "from": "clear_arcweaver_e",
+        "fromPort": "next",
+        "to": "arcweaver_r_members"
+      },
+      {
+        "from": "arcweaver_r_members",
+        "fromPort": "next",
+        "to": "clear_arcweaver_r"
+      },
+      {
+        "from": "clear_arcweaver_r",
+        "fromPort": "next",
+        "to": "arcweaver_rune_members"
+      },
+      {
+        "from": "arcweaver_rune_members",
+        "fromPort": "next",
+        "to": "clear_arcweaver_rune"
+      },
+      {
+        "from": "clear_arcweaver_rune",
+        "fromPort": "next",
+        "to": "vanguard_e_members"
+      },
+      {
+        "from": "vanguard_e_members",
+        "fromPort": "next",
+        "to": "clear_vanguard_e"
+      },
+      {
+        "from": "clear_vanguard_e",
+        "fromPort": "next",
+        "to": "vanguard_r_members"
+      },
+      {
+        "from": "vanguard_r_members",
+        "fromPort": "next",
+        "to": "clear_vanguard_r"
+      },
+      {
+        "from": "clear_vanguard_r",
+        "fromPort": "next",
+        "to": "vanguard_rune_members"
+      },
+      {
+        "from": "vanguard_rune_members",
+        "fromPort": "next",
+        "to": "clear_vanguard_rune"
+      },
+      {
+        "from": "clear_vanguard_rune",
+        "fromPort": "next",
+        "to": "commander_e_members"
+      },
+      {
+        "from": "commander_e_members",
+        "fromPort": "next",
+        "to": "clear_commander_e"
+      },
+      {
+        "from": "clear_commander_e",
+        "fromPort": "next",
+        "to": "commander_rune_members"
+      },
+      {
+        "from": "commander_rune_members",
+        "fromPort": "next",
+        "to": "clear_commander_rune"
+      },
+      {
+        "from": "clear_commander_rune",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "arcweaver_e_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_arcweaver_e",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "arcweaver_r_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_arcweaver_r",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "arcweaver_rune_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_arcweaver_rune",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "vanguard_e_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_vanguard_e",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "vanguard_r_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_vanguard_r",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "vanguard_rune_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_vanguard_rune",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "commander_e_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_commander_e",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "commander_rune_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_commander_rune",
+        "toPort": "value"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

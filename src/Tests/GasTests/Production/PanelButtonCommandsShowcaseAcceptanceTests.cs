@@ -44,7 +44,7 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(ShowcaseMapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         Tick(engine, 8);
 
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
@@ -196,13 +196,11 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
             RepoModPaths.ResolveExplicit(
                 repoRoot,
                 new[] { "LudotsCoreMod", "FireballSharedMod", "PanelButtonCommandsShowcaseMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, backend);

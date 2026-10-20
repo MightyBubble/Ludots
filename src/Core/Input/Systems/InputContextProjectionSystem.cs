@@ -132,13 +132,28 @@ namespace Ludots.Core.Input.Systems
         /// </summary>
         private void AppendActiveContextDemand(Entity possessedRep)
         {
-            if (!_world.TryGet<InteractionContextInstance>(possessedRep, out InteractionContextInstance context) ||
-                context.InputContextId <= _contextProfiles.InputContextIdRegistry.InvalidId)
+            if (_world.TryGet<InteractionContextInstances>(possessedRep, out InteractionContextInstances instances))
+            {
+                for (int i = 0; i < instances.Count; i++)
+                {
+                    AppendInputContextDemand(instances[i].InputContextId);
+                }
+            }
+
+            if (_world.TryGet<InteractionContextInstance>(possessedRep, out InteractionContextInstance context))
+            {
+                AppendInputContextDemand(context.InputContextId);
+            }
+        }
+
+        private void AppendInputContextDemand(int inputContextId)
+        {
+            if (inputContextId <= _contextProfiles.InputContextIdRegistry.InvalidId)
             {
                 return;
             }
 
-            string contextId = _contextProfiles.InputContextIdRegistry.GetName(context.InputContextId);
+            string contextId = _contextProfiles.InputContextIdRegistry.GetName(inputContextId);
             if (!ContainsDesired(contextId, _desired.Count))
             {
                 _desired.Add(new InteractionModeContextBinding(contextId, Priority: 0));

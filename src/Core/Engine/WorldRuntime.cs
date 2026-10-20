@@ -18,7 +18,7 @@ namespace Ludots.Core.Engine
             Engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }
 
-        public static WorldRuntime Create(GameConfig config, string assetsRoot)
+        public static WorldRuntime Create(GameConfig config, string assetsRoot, string userDataRoot)
         {
             var baseDir = Path.GetDirectoryName(Path.GetFullPath(assetsRoot)) ?? ".";
             var modPaths = config?.ModPaths ?? new List<string>();
@@ -40,7 +40,7 @@ namespace Ludots.Core.Engine
                 orderedMods.Add(new ResolvedModLoadEntry(manifest.Name, fullPath));
             }
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(ResolvedModLoadPlan.CreateExplicit(orderedMods), assetsRoot);
+            engine.InitializeWithConfigPipeline(ResolvedModLoadPlan.CreateExplicit(orderedMods), assetsRoot, userDataRoot);
             return new WorldRuntime(engine);
         }
 

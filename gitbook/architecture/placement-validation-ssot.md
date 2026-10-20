@@ -51,7 +51,6 @@ Layer 3  Phase graph bindings             — OnPropose / OnCalculate / OnApply 
 | Ability activation | `AbilityExecSystem` 黑板上报点 | `activationPrecondition.validationGraph` → `ExecuteValidation` |
 | OnPropose | `PlacementPhaseTargetPosResolver` | phase graph `B[0]=0` → proposal `Cancelled=true` |
 | OnCalculate / OnApply | 同上 | 由 graph 自行决定（无全局硬编码） |
-| Aim preview | `AbilityAimPresentationRuntime` | presentation 仅预览，不写权威位置 |
 | Aim gameplay | `AbilityExecAimSyncSystem` | 写 `AbilityExecInstance.TargetPosCm` + cast blackboard |
 
 Presentation 与 gameplay 共用 Layer 0 `PlacementValidation.ClampToRange`；float 仅在 presentation 边界转换。
@@ -70,4 +69,4 @@ Placement Validation **不负责**：
 
 - `src/Tests/GasTests/Effect/PlacementValidationTests.cs`
 - `src/Tests/GasTests/Map/TransportNetworkCoreTests.cs`（GraphQuery 基座）
-- `InputOrderAbilityAuditTests`、`AbilityAimPresentationRuntimeTests`、`EffectPhaseArchitectureTests`
+- `InputOrderAbilityAuditTests`、`EffectPhaseArchitectureTests`

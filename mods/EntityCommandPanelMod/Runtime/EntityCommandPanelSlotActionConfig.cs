@@ -1,0 +1,238 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Nodes;
+using Ludots.Core.Config;
+
+namespace EntityCommandPanelMod.Runtime
+{
+    /// <summary>
+    /// One panel slot's hotkey address: an input action, and the binding integer when that
+    /// action's bindings carry <c>intValue</c>.
+    /// </summary>
+    public readonly struct EntityCommandPanelSlotBinding
+    {
+        public EntityCommandPanelSlotBinding(string actionId, bool hasBindingInt, int bindingInt)
+        {
+            ActionId = actionId;
+            HasBindingInt = hasBindingInt;
+            BindingInt = bindingInt;
+        }
+
+        public string ActionId { get; }
+
+        public bool HasBindingInt { get; }
+
+        public int BindingInt { get; }
+
+        public int? BindingIntOrNull => HasBindingInt ? BindingInt : null;
+    }
+
+    /// <summary>
+    /// Slot hint inputs a game declares next to the interaction contexts that actually bind its keys:
+    /// which input binding sits on each ability slot, and which active interaction context selects
+    /// which ability <c>modeHints</c> entry.
+    /// </summary>
+    public sealed class EntityCommandPanelSlotActionConfig
+    {
+        public const string RelativePath = "UI/entity_command_panel_slot_actions.json";
+
+        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal)
+        {
+            "slots",
+            "modeHintContexts",
+            "modeHintPrefs"
+        };
+
+        private static readonly HashSet<string> SlotFields = new(StringComparer.Ordinal)
+        {
+            "action",
+            "int"
+        };
+
+        private EntityCommandPanelSlotActionConfig(
+            EntityCommandPanelSlotBinding[] slots,
+            string[] modeHintContextIds,
+            string[] modeHintKeys,
+            string modeHintPrefKey,
+            string[] modeHintPrefValueIds,
+            string[] modeHintPrefHintKeys)
+        {
+            Slots = slots;
+            ModeHintContextIds = modeHintContextIds;
+            ModeHintKeys = modeHintKeys;
+            ModeHintPrefKey = modeHintPrefKey;
+            ModeHintPrefValueIds = modeHintPrefValueIds;
+            ModeHintPrefHintKeys = modeHintPrefHintKeys;
+        }
+
+        public IReadOnlyList<EntityCommandPanelSlotBinding> Slots { get; }
+
+        /// <summary>Interaction context ids, checked in declaration order; the first active one wins.</summary>
+        public IReadOnlyList<string> ModeHintContextIds { get; }
+
+        /// <summary><c>modeHints</c> key used while the context at the same index is active.</summary>
+        public IReadOnlyList<string> ModeHintKeys { get; }
+
+        /// <summary>Preference key whose player-level value selects a hint. Empty when the file omits modeHintPrefs.</summary>
+        public string ModeHintPrefKey { get; }
+
+        /// <summary>Allowed values of <see cref="ModeHintPrefKey"/>, checked before interaction contexts.</summary>
+        public IReadOnlyList<string> ModeHintPrefValueIds { get; }
+
+        /// <summary><c>modeHints</c> key used while the preference value at the same index is the player-level value.</summary>
+        public IReadOnlyList<string> ModeHintPrefHintKeys { get; }
+
+        public static EntityCommandPanelSlotActionConfig Load(ConfigPipeline pipeline, ConfigCatalog? catalog, ConfigConflictReport? report)
+        {
+            ArgumentNullException.ThrowIfNull(pipeline);
+            var entry = ConfigPipeline.RequireEntry(catalog, RelativePath, ConfigMergePolicy.DeepObject);
+            JsonObject merged = pipeline.MergeDeepObjectFromCatalog(in entry, report)
+                ?? throw new InvalidOperationException($"Missing required config '{RelativePath}'.");
+            return Parse(merged);
+        }
+
+        public static EntityCommandPanelSlotActionConfig Parse(JsonObject merged)
+        {
+            ArgumentNullException.ThrowIfNull(merged);
+            foreach (KeyValuePair<string, JsonNode?> pair in merged)
+            {
+                if (!RootFields.Contains(pair.Key))
+                {
+                    throw new InvalidOperationException(
+                        $"'{RelativePath}' field '{pair.Key}' is not allowed. Each slot is an object in 'slots'.");
+                }
+            }
+
+            if (merged["slots"] is not JsonArray array)
+            {
+                throw new InvalidOperationException($"'{RelativePath}' must declare a slots array.");
+            }
+
+            var slots = new EntityCommandPanelSlotBinding[array.Count];
+            for (int i = 0; i < array.Count; i++)
+            {
+                slots[i] = ReadSlot(array[i], i);
+            }
+
+            if (merged["modeHintContexts"] is not JsonObject modeHintContexts)
+            {
+                throw new InvalidOperationException($"'{RelativePath}' must declare a modeHintContexts object.");
+            }
+
+            var contextIds = new string[modeHintContexts.Count];
+            var modeKeys = new string[modeHintContexts.Count];
+            int index = 0;
+            foreach (KeyValuePair<string, JsonNode?> pair in modeHintContexts)
+            {
+                string? modeKey = pair.Value?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(modeKey))
+                {
+                    throw new InvalidOperationException(
+                        $"'{RelativePath}' modeHintContexts['{pair.Key}'] must map a context id to a non-empty modeHints key.");
+                }
+
+                contextIds[index] = pair.Key;
+                modeKeys[index] = modeKey;
+                index++;
+            }
+
+            string prefKey = string.Empty;
+            string[] prefValueIds = Array.Empty<string>();
+            string[] prefHintKeys = Array.Empty<string>();
+            if (merged.ContainsKey("modeHintPrefs"))
+            {
+                if (merged["modeHintPrefs"] is not JsonObject modeHintPrefs)
+                {
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintPrefs must be an object.");
+                }
+
+                if (modeHintPrefs["key"] is not JsonValue keyValue ||
+                    !keyValue.TryGetValue<string>(out string? keyName) ||
+                    string.IsNullOrWhiteSpace(keyName))
+                {
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintPrefs.key must be a non-empty preference key.");
+                }
+
+                if (modeHintPrefs["values"] is not JsonObject prefValues)
+                {
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintPrefs.values must be an object.");
+                }
+
+                prefKey = keyName;
+                prefValueIds = new string[prefValues.Count];
+                prefHintKeys = new string[prefValues.Count];
+                int prefIndex = 0;
+                foreach (KeyValuePair<string, JsonNode?> pair in prefValues)
+                {
+                    string? hintKey = pair.Value?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(hintKey))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{RelativePath}' modeHintPrefs.values['{pair.Key}'] must map a preference value to a non-empty modeHints key.");
+                    }
+
+                    prefValueIds[prefIndex] = pair.Key;
+                    prefHintKeys[prefIndex] = hintKey;
+                    prefIndex++;
+                }
+            }
+
+            return new EntityCommandPanelSlotActionConfig(slots, contextIds, modeKeys, prefKey, prefValueIds, prefHintKeys);
+        }
+
+        private static EntityCommandPanelSlotBinding ReadSlot(JsonNode? node, int index)
+        {
+            string where = $"'{RelativePath}' slots[{index}]";
+            if (node is not JsonObject slot)
+            {
+                throw new InvalidOperationException(
+                    $"{where} must be an object with \"action\" and, when that action's bindings carry intValue, \"int\".");
+            }
+
+            string? actionId = null;
+            bool hasInt = false;
+            int bindingInt = 0;
+            foreach (KeyValuePair<string, JsonNode?> pair in slot)
+            {
+                if (!SlotFields.Contains(pair.Key))
+                {
+                    throw new InvalidOperationException($"{where} field '{pair.Key}' is not allowed.");
+                }
+
+                if (pair.Key == "action")
+                {
+                    actionId = pair.Value is JsonValue actionValue && actionValue.TryGetValue<string>(out string? text)
+                        ? text
+                        : null;
+                    continue;
+                }
+
+                bindingInt = ReadBindingInt(pair.Value, where);
+                hasInt = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                throw new InvalidOperationException($"{where} action must be a non-empty action id.");
+            }
+
+            return new EntityCommandPanelSlotBinding(actionId, hasInt, bindingInt);
+        }
+
+        private static int ReadBindingInt(JsonNode? node, string where)
+        {
+            if (node is not JsonValue value)
+            {
+                throw new InvalidOperationException($"{where} int must be an integer.");
+            }
+
+            string raw = value.ToJsonString();
+            if (raw.Contains('.') || raw.Contains('e') || raw.Contains('E') || !value.TryGetValue<int>(out int parsed))
+            {
+                throw new InvalidOperationException($"{where} int must be an integer, not '{raw}'.");
+            }
+
+            return parsed;
+        }
+    }
+}

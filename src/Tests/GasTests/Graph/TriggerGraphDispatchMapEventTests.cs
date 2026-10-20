@@ -100,6 +100,88 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void Compile_AbilityRoute_EncodesTheAbilityRegisterOnTheFire()
+        {
+            var doc = DispatchDocument(nodes => nodes, edges => edges);
+            int fireIndex = doc.Nodes.FindIndex(node => node.Id == "fire");
+            doc.Nodes.Insert(fireIndex, new GraphControlFlowNode { Id = "ability_const", Op = "ConstInt", IntValue = 7 });
+            doc.ControlEdges.RemoveAll(edge => edge.From == "amount_const");
+            doc.ControlEdges.Insert(0, new GraphControlFlowEdge("amount_const", "next", "ability_const"));
+            doc.ControlEdges.Insert(1, new GraphControlFlowEdge("ability_const", "next", "fire"));
+            doc.ValueEdges.Add(new GraphControlFlowValueEdge("ability_const", "value", "fire", "ability"));
+
+            GraphControlFlowCompileResult result = GraphControlFlowCompiler.Compile(doc, BuildRegistry());
+            Assert.That(result.Diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error).ToList(), Is.Empty,
+                () => string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+
+            GraphInstruction[] program = result.Package!.Value.Program;
+            Assert.That(program.Count(i => i.Op == (ushort)GraphNodeOp.StoreArgInt), Is.EqualTo(1),
+                "the ability route is encoded on the fire instruction, not as another StoreArg");
+            GraphInstruction abilityConst = program.Single(i => i.Op == (ushort)GraphNodeOp.ConstInt && i.Imm == 7);
+            GraphInstruction dispatch = program.Single(i => i.Op == (ushort)GraphNodeOp.DispatchMapEvent);
+            Assert.That(dispatch.Flags & DispatchMapEventFlags.AbilityRoute, Is.EqualTo(DispatchMapEventFlags.AbilityRoute));
+            Assert.That(dispatch.A, Is.EqualTo(abilityConst.Dst));
+        }
+
+        [Test]
+        public void Compile_SchemaParameterNamedAbility_IsRejected()
+        {
+            var registry = new EventSchemaRegistry();
+            registry.RegisterCustom(new EventSchema(
+                EventName,
+                EventScope.Map,
+                new EventParamSchema[]
+                {
+                    new("ability", EventParamType.Int, "Probe.Dispatch.Ability"),
+                }));
+            var doc = new GraphControlFlowDocument
+            {
+                Id = "Graph.Probe.Dispatch.AbilityParam",
+                Kind = "TriggerGraph",
+                Entries = new List<TriggerGraphEntryConfig>
+                {
+                    new() { Label = "on_map_loaded", Event = "MapLoaded", Start = "ability_const" },
+                },
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "ability_const", Op = "ConstInt", IntValue = 7 },
+                    new() { Id = "fire", Op = "DispatchMapEvent", Event = EventName },
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("ability_const", "next", "fire"),
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("ability_const", "value", "fire", "ability"),
+                },
+            };
+
+            GraphControlFlowCompileResult result = GraphControlFlowCompiler.Compile(doc, registry);
+            Assert.That(result.Diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("reserved")), Is.True,
+                () => string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+        }
+
+        [Test]
+        public void Compile_GlobalScopeWithAbilityRoute_IsRejected()
+        {
+            var registry = BuildRegistry();
+            registry.RegisterCustom(new EventSchema(
+                "Probe.Dispatch.GlobalEvent",
+                EventScope.Global,
+                new EventParamSchema[] { new("amount", EventParamType.Int, AmountKey) }));
+            var doc = DispatchDocument(nodes => nodes, edges => edges);
+            GraphControlFlowNode fire = doc.Nodes.First(n => n.Id == "fire");
+            fire.Event = "Probe.Dispatch.GlobalEvent";
+            fire.Scope = "global";
+            doc.ValueEdges.Add(new GraphControlFlowValueEdge("amount_const", "value", "fire", "ability"));
+
+            GraphControlFlowCompileResult result = GraphControlFlowCompiler.Compile(doc, registry);
+            Assert.That(result.Diagnostics.Any(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("ability route")), Is.True,
+                () => string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+        }
+
+        [Test]
         public void Compile_UnknownParamPort_IsRejected()
         {
             var doc = DispatchDocument(nodes => nodes, edges => edges);
@@ -198,6 +280,8 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(listener.Seen, Is.Not.Null, "the map-scoped listener must run");
             Assert.That(listener.Seen!.Get<int>(AmountKey), Is.EqualTo(42), "the staged argument must arrive as the schema payload key");
+            Assert.That(listener.Seen.Contains(MapTriggerEventPayloadKeys.AbilityId), Is.False,
+                "a dispatch without the ability route must not stamp MapTrigger.AbilityId");
             Assert.That(listener.Seen.Get<MapId>(ContextKeys.MapId).Value, Is.EqualTo(mapId.Value));
         }
 
@@ -403,6 +487,101 @@ namespace Ludots.Tests.Gas.Graph
                     new("amount_const", "value", "fire", "amount"),
                 }),
             };
+        }
+
+        [Test]
+        public void DispatchMapEvent_AbilityRoute_StampsAbilityIdAndCaster()
+        {
+            var mapId = new MapId("dispatch_probe_ability_route");
+            using var world = World.Create();
+            Entity caster = world.Create();
+
+            var manager = new TriggerManager { EventSchemas = BuildRegistry() };
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
+            var listener = new RecordingTrigger { EventKey = new EventKey(EventName) };
+            manager.RegisterMapTriggers(mapId, new Trigger[] { listener });
+
+            int eventKeyId = ConfigKeyRegistry.Register(EventName);
+            int amountKeyId = ConfigKeyRegistry.Register(AmountKey);
+            int graphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.AbilityRoute");
+            GraphInstruction[] program =
+            {
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 1, Imm = 42 },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 9 },
+                new() { Op = (ushort)GraphNodeOp.StoreArgInt, A = 1, Imm = amountKeyId },
+                new() { Op = (ushort)GraphNodeOp.DispatchMapEvent, Imm = eventKeyId, Flags = DispatchMapEventFlags.AbilityRoute, A = 2 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(
+                graphId,
+                program,
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                new[] { EventName, AmountKey },
+                new[] { new TriggerGraphEntry("main", "MapLoaded", 0, once: false) });
+
+            ExecuteGraph(programs, graphId, world, caster, api, mapId);
+
+            Assert.That(listener.Seen, Is.Not.Null);
+            Assert.That(listener.Seen!.Get<int>(MapTriggerEventPayloadKeys.AbilityId), Is.EqualTo(9));
+            Assert.That(listener.Seen.Get<Entity>(MapTriggerEventPayloadKeys.SourceEntity), Is.EqualTo(caster));
+            Assert.That(listener.Seen.Get<int>(AmountKey), Is.EqualTo(42));
+        }
+
+        [Test]
+        public void DispatchMapEvent_AbilityRouteEmptyOrGlobal_FailsClosed()
+        {
+            var mapId = new MapId("dispatch_probe_ability_route_fail");
+            using var world = World.Create();
+            Entity caster = world.Create();
+            var manager = new TriggerManager { EventSchemas = BuildRegistry() };
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
+            int eventKeyId = ConfigKeyRegistry.Register(EventName);
+            int emptyGraphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.AbilityRoute.Empty");
+            int globalGraphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.AbilityRoute.Global");
+            var programs = new GraphProgramRegistry();
+            programs.Register(
+                emptyGraphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.DispatchMapEvent, Imm = eventKeyId, Flags = DispatchMapEventFlags.AbilityRoute, A = 2 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                new[] { EventName },
+                new[] { new TriggerGraphEntry("main", "MapLoaded", 0, once: false) });
+
+            InvalidOperationException empty = Assert.Throws<InvalidOperationException>(() =>
+                ExecuteGraph(programs, emptyGraphId, world, caster, api, mapId));
+            Assert.That(empty!.Message, Does.Contain("GAS.GRAPH.ERR.DispatchMapEventAbilityRouteEmpty"));
+
+            programs.Register(
+                globalGraphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 9 },
+                    new GraphInstruction
+                    {
+                        Op = (ushort)GraphNodeOp.DispatchMapEvent,
+                        Imm = eventKeyId,
+                        Flags = (byte)(DispatchMapEventFlags.GlobalScope | DispatchMapEventFlags.AbilityRoute),
+                        A = 2,
+                    },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                new[] { EventName },
+                new[] { new TriggerGraphEntry("main", "MapLoaded", 0, once: false) });
+
+            InvalidOperationException global = Assert.Throws<InvalidOperationException>(() =>
+                ExecuteGraph(programs, globalGraphId, world, caster, api, mapId));
+            Assert.That(global!.Message, Does.Contain("GAS.GRAPH.ERR.DispatchMapEventAbilityRouteGlobal"));
         }
 
         private static void ExecuteGraph(

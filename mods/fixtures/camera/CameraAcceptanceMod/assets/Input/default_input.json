@@ -1,30 +1,140 @@
 {
   "actions": [
-    { "id": "CameraAcceptanceModeRts", "name": "CameraAcceptanceModeRts", "type": "Button" },
-    { "id": "CameraAcceptanceModeTps", "name": "CameraAcceptanceModeTps", "type": "Button" },
-    { "id": "CameraAcceptanceModeFollowClose", "name": "CameraAcceptanceModeFollowClose", "type": "Button" },
-    { "id": "CameraAcceptanceModeFollowWide", "name": "CameraAcceptanceModeFollowWide", "type": "Button" },
-    { "id": "CameraAcceptanceLocalAvatarMove", "name": "CameraAcceptanceLocalAvatarMove", "type": "Axis2D" },
-    { "id": "CameraAcceptanceBlendCut", "name": "CameraAcceptanceBlendCut", "type": "Button" },
-    { "id": "CameraAcceptanceBlendLinear", "name": "CameraAcceptanceBlendLinear", "type": "Button" },
-    { "id": "CameraAcceptanceBlendSmooth", "name": "CameraAcceptanceBlendSmooth", "type": "Button" },
-    { "id": "CameraAcceptanceTpsAimHold", "name": "CameraAcceptanceTpsAimHold", "type": "Button" },
-    { "id": "Look", "name": "Gameplay_Look", "type": "Axis2D" },
-    { "id": "Zoom", "name": "Gameplay_Zoom", "type": "Axis1D" },
-    { "id": "CameraAcceptanceStackReveal", "name": "CameraAcceptanceStackReveal", "type": "Button" },
-    { "id": "CameraAcceptanceStackAlert", "name": "CameraAcceptanceStackAlert", "type": "Button" },
-    { "id": "CameraAcceptanceStackClear", "name": "CameraAcceptanceStackClear", "type": "Button" },
-    { "id": "CameraAcceptanceProjectionSpawnCountDecrease", "name": "CameraAcceptanceProjectionSpawnCountDecrease", "type": "Button" },
-    { "id": "CameraAcceptanceProjectionSpawnCountIncrease", "name": "CameraAcceptanceProjectionSpawnCountIncrease", "type": "Button" },
-    { "id": "CameraAcceptanceTogglePanel", "name": "CameraAcceptanceTogglePanel", "type": "Button" },
-    { "id": "CameraAcceptanceToggleHud", "name": "CameraAcceptanceToggleHud", "type": "Button" },
-    { "id": "CameraAcceptanceToggleText", "name": "CameraAcceptanceToggleText", "type": "Button" },
-    { "id": "CameraAcceptanceToggleHotpathBars", "name": "CameraAcceptanceToggleHotpathBars", "type": "Button" },
-    { "id": "CameraAcceptanceToggleHotpathHudText", "name": "CameraAcceptanceToggleHotpathHudText", "type": "Button" },
-    { "id": "CameraAcceptanceToggleTerrain", "name": "CameraAcceptanceToggleTerrain", "type": "Button" },
-    { "id": "CameraAcceptanceToggleGuides", "name": "CameraAcceptanceToggleGuides", "type": "Button" },
-    { "id": "CameraAcceptanceTogglePrimitives", "name": "CameraAcceptanceTogglePrimitives", "type": "Button" },
-    { "id": "CameraAcceptanceToggleHotpathCullCrowd", "name": "CameraAcceptanceToggleHotpathCullCrowd", "type": "Button" }
+    {
+      "id": "CameraAcceptanceModeRts",
+      "name": "CameraAcceptanceModeRts",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceModeTps",
+      "name": "CameraAcceptanceModeTps",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceModeFollowClose",
+      "name": "CameraAcceptanceModeFollowClose",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceModeFollowWide",
+      "name": "CameraAcceptanceModeFollowWide",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceLocalAvatarMove",
+      "name": "CameraAcceptanceLocalAvatarMove",
+      "type": "Axis2D"
+    },
+    {
+      "id": "CameraAcceptanceBlendCut",
+      "name": "CameraAcceptanceBlendCut",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceBlendLinear",
+      "name": "CameraAcceptanceBlendLinear",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceBlendSmooth",
+      "name": "CameraAcceptanceBlendSmooth",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceTpsAimHold",
+      "name": "CameraAcceptanceTpsAimHold",
+      "type": "Button"
+    },
+    {
+      "id": "Look",
+      "name": "Gameplay_Look",
+      "type": "Axis2D"
+    },
+    {
+      "id": "Zoom",
+      "name": "Gameplay_Zoom",
+      "type": "Axis1D"
+    },
+    {
+      "id": "CameraAcceptanceStackReveal",
+      "name": "CameraAcceptanceStackReveal",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceStackAlert",
+      "name": "CameraAcceptanceStackAlert",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceStackClear",
+      "name": "CameraAcceptanceStackClear",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceProjectionSpawnCountDecrease",
+      "name": "CameraAcceptanceProjectionSpawnCountDecrease",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceProjectionSpawnCountIncrease",
+      "name": "CameraAcceptanceProjectionSpawnCountIncrease",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceTogglePanel",
+      "name": "CameraAcceptanceTogglePanel",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleHud",
+      "name": "CameraAcceptanceToggleHud",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleText",
+      "name": "CameraAcceptanceToggleText",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleHotpathBars",
+      "name": "CameraAcceptanceToggleHotpathBars",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleHotpathHudText",
+      "name": "CameraAcceptanceToggleHotpathHudText",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleTerrain",
+      "name": "CameraAcceptanceToggleTerrain",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleGuides",
+      "name": "CameraAcceptanceToggleGuides",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceTogglePrimitives",
+      "name": "CameraAcceptanceTogglePrimitives",
+      "type": "Button"
+    },
+    {
+      "id": "CameraAcceptanceToggleHotpathCullCrowd",
+      "name": "CameraAcceptanceToggleHotpathCullCrowd",
+      "type": "Button"
+    },
+    {
+      "id": "Command",
+      "name": "CameraAcceptance_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Cancel",
+      "name": "CameraAcceptance_Cancel",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -32,32 +142,81 @@
       "name": "Camera Acceptance Controls",
       "priority": 110,
       "bindings": [
-        { "actionId": "CameraAcceptanceModeRts", "path": "<Keyboard>/f1" },
-        { "actionId": "CameraAcceptanceModeTps", "path": "<Keyboard>/f2" },
-        { "actionId": "CameraAcceptanceModeFollowClose", "path": "<Keyboard>/f3" },
-        { "actionId": "CameraAcceptanceModeFollowWide", "path": "<Keyboard>/f4" },
+        {
+          "actionId": "CameraAcceptanceModeRts",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "CameraAcceptanceModeTps",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "CameraAcceptanceModeFollowClose",
+          "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "CameraAcceptanceModeFollowWide",
+          "path": "<Keyboard>/f4"
+        },
         {
           "actionId": "CameraAcceptanceLocalAvatarMove",
           "compositeType": "Vector2",
           "compositeParts": [
-            { "path": "<Keyboard>/w" },
-            { "path": "<Keyboard>/s" },
-            { "path": "<Keyboard>/a" },
-            { "path": "<Keyboard>/d" }
+            {
+              "path": "<Keyboard>/w"
+            },
+            {
+              "path": "<Keyboard>/s"
+            },
+            {
+              "path": "<Keyboard>/a"
+            },
+            {
+              "path": "<Keyboard>/d"
+            }
           ],
           "processors": [
-            { "type": "Normalize" }
+            {
+              "type": "Normalize"
+            }
           ]
         },
-        { "actionId": "Select.Begin", "path": "<Mouse>/LeftButton" },
-        { "actionId": "Select.End", "path": "<Mouse>/LeftButton" },
-        { "actionId": "Command", "path": "<Mouse>/RightButton" },
-        { "actionId": "Cancel", "path": "<Keyboard>/escape" },
-        { "actionId": "PointerPos", "path": "<Mouse>/Pos" },
-        { "actionId": "CameraAcceptanceBlendCut", "path": "<Keyboard>/1" },
-        { "actionId": "CameraAcceptanceBlendLinear", "path": "<Keyboard>/2" },
-        { "actionId": "CameraAcceptanceBlendSmooth", "path": "<Keyboard>/3" },
-        { "actionId": "CameraAcceptanceTpsAimHold", "path": "<Mouse>/RightButton" },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Cancel",
+          "path": "<Keyboard>/escape"
+        },
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "CameraAcceptanceBlendCut",
+          "path": "<Keyboard>/1"
+        },
+        {
+          "actionId": "CameraAcceptanceBlendLinear",
+          "path": "<Keyboard>/2"
+        },
+        {
+          "actionId": "CameraAcceptanceBlendSmooth",
+          "path": "<Keyboard>/3"
+        },
+        {
+          "actionId": "CameraAcceptanceTpsAimHold",
+          "path": "<Mouse>/RightButton"
+        },
         {
           "actionId": "Look",
           "path": "<Mouse>/Delta",
@@ -77,23 +236,73 @@
           "actionId": "Zoom",
           "path": "<Mouse>/ScrollY",
           "processors": [
-            { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
+            {
+              "type": "Scale",
+              "parameters": [
+                {
+                  "name": "Factor",
+                  "value": 0.1
+                }
+              ]
+            }
           ]
         },
-        { "actionId": "CameraAcceptanceStackReveal", "path": "<Keyboard>/r" },
-        { "actionId": "CameraAcceptanceStackAlert", "path": "<Keyboard>/t" },
-        { "actionId": "CameraAcceptanceStackClear", "path": "<Keyboard>/enter" },
-        { "actionId": "CameraAcceptanceProjectionSpawnCountDecrease", "path": "<Keyboard>/q" },
-        { "actionId": "CameraAcceptanceProjectionSpawnCountIncrease", "path": "<Keyboard>/e" },
-        { "actionId": "CameraAcceptanceTogglePanel", "path": "<Keyboard>/f6" },
-        { "actionId": "CameraAcceptanceToggleHud", "path": "<Keyboard>/f7" },
-        { "actionId": "CameraAcceptanceToggleText", "path": "<Keyboard>/f8" },
-        { "actionId": "CameraAcceptanceToggleHotpathBars", "path": "<Keyboard>/f9" },
-        { "actionId": "CameraAcceptanceToggleHotpathHudText", "path": "<Keyboard>/f10" },
-        { "actionId": "CameraAcceptanceToggleTerrain", "path": "<Keyboard>/f11" },
-        { "actionId": "CameraAcceptanceToggleGuides", "path": "<Keyboard>/g" },
-        { "actionId": "CameraAcceptanceTogglePrimitives", "path": "<Keyboard>/f12" },
-        { "actionId": "CameraAcceptanceToggleHotpathCullCrowd", "path": "<Keyboard>/c" }
+        {
+          "actionId": "CameraAcceptanceStackReveal",
+          "path": "<Keyboard>/r"
+        },
+        {
+          "actionId": "CameraAcceptanceStackAlert",
+          "path": "<Keyboard>/t"
+        },
+        {
+          "actionId": "CameraAcceptanceStackClear",
+          "path": "<Keyboard>/enter"
+        },
+        {
+          "actionId": "CameraAcceptanceProjectionSpawnCountDecrease",
+          "path": "<Keyboard>/q"
+        },
+        {
+          "actionId": "CameraAcceptanceProjectionSpawnCountIncrease",
+          "path": "<Keyboard>/e"
+        },
+        {
+          "actionId": "CameraAcceptanceTogglePanel",
+          "path": "<Keyboard>/f6"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleHud",
+          "path": "<Keyboard>/f7"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleText",
+          "path": "<Keyboard>/f8"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleHotpathBars",
+          "path": "<Keyboard>/f9"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleHotpathHudText",
+          "path": "<Keyboard>/f10"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleTerrain",
+          "path": "<Keyboard>/f11"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleGuides",
+          "path": "<Keyboard>/g"
+        },
+        {
+          "actionId": "CameraAcceptanceTogglePrimitives",
+          "path": "<Keyboard>/f12"
+        },
+        {
+          "actionId": "CameraAcceptanceToggleHotpathCullCrowd",
+          "path": "<Keyboard>/c"
+        }
       ]
     }
   ]

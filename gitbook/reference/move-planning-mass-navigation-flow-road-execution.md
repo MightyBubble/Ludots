@@ -72,7 +72,7 @@ dotnet test src/Tests/GasTests/GasTests.csproj --filter "RoadNetworkShowcase_Pla
 | Operation | Visible/test feedback |
 |---|---|
 | Load `RoadNetworkShowcaseMod` with `road_network_showcase_chunked` | Tactical camera opens on Blue Vanguard and map participant binding sets local player 1 |
-| Drag-select Blue Vanguard, Blue North Column, and Blue South Column | `collection.command.source` count becomes 3 through the command-source collection path |
+| Drag-select Blue Vanguard, Blue North Column, and Blue South Column | `road.selection` count becomes 3. That name is the road showcase `commandSource` role in `Input/collection_keys.json` |
 | Right-click a visible ground point | Road orders are submitted through the real input/order bridge |
 | Let fixed steps run | Selected columns receive MassNavigationFlow per-agent navigation targets |
 | Inspect road entities | No retired execution components are required |

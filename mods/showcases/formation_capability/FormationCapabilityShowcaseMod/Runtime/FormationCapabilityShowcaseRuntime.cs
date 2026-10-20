@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -57,7 +58,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private readonly List<PendingObstacleOverlayBinding> _pendingObstacleOverlayBindings = new();
     private ISystem<float>? _scenarioBindingSystem;
     private ISystem<float>? _showcaseStateSystem;
-    private ISystem<float>? _orderPolicySystem;
+    private ISystem<float>? _commandMembersSystem;
     private ISystem<float>? _formationOutlinePresentationSystem;
     private ISystem<float>? _obstacleOverlayPresentationSystem;
     private bool _systemsInstalled;
@@ -155,9 +156,11 @@ internal sealed class FormationCapabilityShowcaseRuntime
             ?? throw new InvalidOperationException("Formation Capability showcase requires OrderQueue.");
         var scenarioBindingSystem = new FormationCapabilityShowcaseScenarioBindingSystem(engine, this);
         var showcaseStateSystem = new FormationCapabilityShowcaseStateSystem(engine, this);
-        var orderPolicySystem = new FormationOrderPolicySystem(
+        var commandMembersSystem = new FormationCommandMembersSystem(
             engine.World,
             engine.GlobalContext,
+            ResolveCommandSourceKey(engine, config),
+            config.CommandMembersCollectionKey,
             ResolveMaxSlotsPerFormation(config),
             config.OrderBatchCapacity);
         var formationOutlinePresentationSystem = new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config);
@@ -169,8 +172,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _scenarioBindingSystem = scenarioBindingSystem;
             engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(showcaseStateSystem, SystemGroup.PostMovement);
             _showcaseStateSystem = showcaseStateSystem;
-            engine.RegisterSystem(orderPolicySystem, SystemGroup.InputCollection);
-            _orderPolicySystem = orderPolicySystem;
+            engine.RegisterSystem(commandMembersSystem, SystemGroup.InputCollection);
+            _commandMembersSystem = commandMembersSystem;
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(formationOutlinePresentationSystem);
             _formationOutlinePresentationSystem = formationOutlinePresentationSystem;
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(obstacleOverlayPresentationSystem);
@@ -189,7 +192,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         bool hadSystems =
             _scenarioBindingSystem != null ||
             _showcaseStateSystem != null ||
-            _orderPolicySystem != null ||
+            _commandMembersSystem != null ||
             _formationOutlinePresentationSystem != null ||
             _obstacleOverlayPresentationSystem != null;
         if (!hadSystems)
@@ -200,7 +203,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         UnregisterPresentationSystem(engine, ref _obstacleOverlayPresentationSystem, nameof(_obstacleOverlayPresentationSystem));
         UnregisterPresentationSystem(engine, ref _formationOutlinePresentationSystem, nameof(_formationOutlinePresentationSystem));
-        UnregisterSystem(engine, ref _orderPolicySystem, SystemGroup.InputCollection, nameof(_orderPolicySystem));
+        UnregisterSystem(engine, ref _commandMembersSystem, SystemGroup.InputCollection, nameof(_commandMembersSystem));
         UnregisterSystem(engine, ref _showcaseStateSystem, SystemGroup.PostMovement, nameof(_showcaseStateSystem));
         UnregisterSystem(engine, ref _scenarioBindingSystem, SystemGroup.RuntimeEntityBinding, nameof(_scenarioBindingSystem));
         _systemsInstalled = false;
@@ -327,7 +330,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("Formation Capability showcase requires RuntimeEntitySpawnQueue.");
 
-        ClearCommandSource(engine);
+        ClearCommandSource(engine, ResolveCommandSourceKey(engine, config));
         BuildAgentPlans(engine, simulation, config);
         DestroyShowcaseOwnedEntities(engine);
 
@@ -1121,7 +1124,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         _initialCommandSourceScratch[0] = formation;
         var descriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            ResolveCommandSourceKey(engine, config),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -1309,13 +1312,13 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
     }
 
-    private static void ClearCommandSource(GameEngine engine)
+    private static void ClearCommandSource(GameEngine engine, string commandSourceKey)
     {
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before clearing command source.");
         if (TryResolveLocalCommandSourceOwner(engine, out Entity owner))
         {
-            collections.Remove(owner, "collection.command.source");
+            collections.Remove(owner, commandSourceKey);
         }
     }
 
@@ -1434,6 +1437,15 @@ internal sealed class FormationCapabilityShowcaseRuntime
         public float WorldXCm { get; }
         public float WorldYCm { get; }
         public float RadiusCm { get; }
+    }
+
+    private static string ResolveCommandSourceKey(GameEngine engine, FormationCapabilityShowcaseConfig config)
+    {
+        return InputCollectionKeyDeclarations.Resolve(
+            InputCollectionKeyDeclarations.Require(engine),
+            config.CommandSourceCollectionKey,
+            "FormationCapabilityShowcaseConfig.commandSourceCollectionKey",
+            "FormationCapabilityShowcaseMod");
     }
 
     private readonly record struct PendingFormationBinding(Entity Entity, int FormationIndex);

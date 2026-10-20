@@ -123,10 +123,21 @@ namespace Ludots.Core.Gameplay.GAS
         public int RotationDeg;        // Rectangle rotation
         public int LengthCm;           // Line length
         public SpatialQueryOrigin Origin;
+        public SpatialQueryDirectionSource DirectionSource;
         public RelationFilter RelationFilter;
         public bool ExcludeSource;
         public int MaxTargets;         // 0 = unlimited (budget-limited only)
         public uint LayerMask;         // 0 = no layer filter
+    }
+
+    /// <summary>
+    /// Where a cone, line, or rectangle takes its aim.
+    /// <see cref="Default"/> keeps preserved params, then the frozen exec point, then blackboard facing.
+    /// </summary>
+    public enum SpatialQueryDirectionSource : byte
+    {
+        Default = 0,
+        SourceCastFacing = 1,
     }
 
     // ── Three-layer Target Resolution ──

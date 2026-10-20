@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Persistence;
 
 namespace Ludots.Core.Input.Runtime
 {
@@ -28,7 +29,9 @@ namespace Ludots.Core.Input.Runtime
             bool isDown,
             bool pressedThisFrame,
             bool releasedThisFrame,
-            bool preserveValueUntilSnapshot = false)
+            bool boundByActiveContext,
+            bool preserveValueUntilSnapshot = false,
+            IReadOnlyList<InputBindingIntFire>? intFires = null)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -45,11 +48,20 @@ namespace Ludots.Core.Input.Runtime
             {
                 state.Value = value;
                 state.IsDown = isDown;
+                state.Present = boundByActiveContext;
             }
 
             state.PressedThisTick |= pressedThisFrame;
             state.ReleasedThisTick |= releasedThisFrame;
             state.PreserveValueUntilSnapshot |= preserveValueUntilSnapshot;
+            if (intFires != null)
+            {
+                state.IntFires ??= new List<InputBindingIntFire>(intFires.Count);
+                for (int i = 0; i < intFires.Count; i++)
+                {
+                    state.IntFires.Add(intFires[i]);
+                }
+            }
         }
 
         public void CaptureVisualFrame(PlayerInputHandler input)
@@ -70,6 +82,7 @@ namespace Ludots.Core.Input.Runtime
             state.IsDown = false;
             state.PressedThisTick = false;
             state.ReleasedThisTick = false;
+            state.IntFires?.Clear();
         }
 
         public void BuildTickSnapshot(FrozenInputActionReader snapshot)
@@ -80,10 +93,18 @@ namespace Ludots.Core.Input.Runtime
             foreach (var pair in _states)
             {
                 var state = pair.Value;
-                snapshot.SetActionState(pair.Key, state.Value, state.IsDown, state.PressedThisTick, state.ReleasedThisTick);
+                snapshot.SetActionState(
+                    pair.Key,
+                    state.Value,
+                    state.IsDown,
+                    state.PressedThisTick,
+                    state.ReleasedThisTick,
+                    state.Present,
+                    state.IntFires);
                 state.PressedThisTick = false;
                 state.ReleasedThisTick = false;
                 state.PreserveValueUntilSnapshot = false;
+                state.IntFires?.Clear();
             }
         }
 
@@ -91,9 +112,11 @@ namespace Ludots.Core.Input.Runtime
         {
             public Vector3 Value;
             public bool IsDown;
+            public bool Present;
             public bool PressedThisTick;
             public bool ReleasedThisTick;
             public bool PreserveValueUntilSnapshot;
+            public List<InputBindingIntFire>? IntFires;
         }
     }
 }

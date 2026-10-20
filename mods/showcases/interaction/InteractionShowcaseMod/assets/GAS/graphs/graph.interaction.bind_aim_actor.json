@@ -1,0 +1,176 @@
+[
+  {
+    "id": "graph.interaction.bind_aim_actor",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "rebind",
+        "event": "EntityCollectionMembershipChanged",
+        "start": "b_rep",
+        "filters": {
+          "payload": {
+            "MapTrigger.CollectionKeyId": "role:commandSource"
+          }
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "b_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "b_qsel",
+        "op": "QueryFromCollection",
+        "collectionKey": "role:commandSource"
+      },
+      {
+        "id": "b_lim",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "b_c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "b_sel",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "b_qaim",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "b_aim",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "b_eq",
+        "op": "CompareEqEntity"
+      },
+      {
+        "id": "b_same",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "b_halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "b_rebind",
+        "op": "InvokeGraph",
+        "functionName": "graph.interaction.rebind_aim_actor"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "b_rep",
+        "fromPort": "next",
+        "to": "b_qsel"
+      },
+      {
+        "from": "b_qsel",
+        "fromPort": "next",
+        "to": "b_lim"
+      },
+      {
+        "from": "b_lim",
+        "fromPort": "next",
+        "to": "b_c0"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "next",
+        "to": "b_sel"
+      },
+      {
+        "from": "b_sel",
+        "fromPort": "next",
+        "to": "b_qaim"
+      },
+      {
+        "from": "b_qaim",
+        "fromPort": "next",
+        "to": "b_aim"
+      },
+      {
+        "from": "b_aim",
+        "fromPort": "next",
+        "to": "b_eq"
+      },
+      {
+        "from": "b_eq",
+        "fromPort": "next",
+        "to": "b_same"
+      },
+      {
+        "from": "b_same",
+        "fromPort": "true",
+        "to": "b_halt"
+      },
+      {
+        "from": "b_same",
+        "fromPort": "false",
+        "to": "b_rebind"
+      },
+      {
+        "from": "b_rebind",
+        "fromPort": "next",
+        "to": "b_halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_halt",
+        "toPort": "value"
+      },
+      {
+        "from": "b_rep",
+        "fromPort": "value",
+        "to": "b_qsel",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_sel",
+        "toPort": "value"
+      },
+      {
+        "from": "b_rep",
+        "fromPort": "value",
+        "to": "b_qaim",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_aim",
+        "toPort": "value"
+      },
+      {
+        "from": "b_sel",
+        "fromPort": "value",
+        "to": "b_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "b_aim",
+        "fromPort": "value",
+        "to": "b_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "b_eq",
+        "fromPort": "value",
+        "to": "b_same",
+        "toPort": "condition"
+      }
+    ]
+  }
+]

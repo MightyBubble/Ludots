@@ -60,6 +60,14 @@
         {
           "actionId": "CameraModeInspect",
           "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
         }
       ]
     }

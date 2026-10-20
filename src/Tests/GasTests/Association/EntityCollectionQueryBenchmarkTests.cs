@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
             store.Replace(
                 collectionOwner,
                 EntityCollectionDescriptor.Create(
-                    "collection.command.source",
+                    "core.selection",
                     EntityCollectionSourceKind.Debug,
                     EntityCollectionRoleKind.CommandSource,
                     collectionOwner,
@@ -150,12 +150,11 @@ namespace Ludots.Tests.GAS
             queries.Register(new EntityCommandPanelCollectionQueryConfig
             {
                 Id = BenchmarkQueryId,
-                CollectionKey = "collection.command.source",
+                CollectionKey = "core.selection",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.OwnerCountThenSlotThenLabel
             });
 
-            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, CreateMappingSystem());
             IEntityCommandPanelSource source = ResolveCollectionSource(engine);
             var context = new EntityCommandPanelSourceContext(collectionOwner, CollectionSourceId, BenchmarkQueryId);
             var slots = new EntityCommandPanelSlotView[8];
@@ -201,8 +200,9 @@ namespace Ludots.Tests.GAS
             // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family,
             // the mod's default profile) is merged before the mod installs at GameStart.
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallUiServices(engine);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
@@ -244,38 +244,6 @@ namespace Ludots.Tests.GAS
             }
 
             return actor;
-        }
-
-        private static InputOrderMappingSystem CreateMappingSystem()
-        {
-            var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
-            {
-                InteractionMode = CastModeType.TargetFirst,
-                Mappings = new List<InputOrderMapping>
-                {
-                    CreateSkillMapping("SkillQ", 0),
-                    CreateSkillMapping("SkillW", 1),
-                    CreateSkillMapping("SkillE", 2),
-                    CreateSkillMapping("SkillR", 3)
-                }
-            });
-            mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetOrderSubmitHandler((in Order _) => OrderSubmitResult.Queued);
-            return mapping;
-        }
-
-        private static InputOrderMapping CreateSkillMapping(string actionId, int slotIndex)
-        {
-            return new InputOrderMapping
-            {
-                ActionId = actionId,
-                Trigger = InputTriggerType.PressedThisFrame,
-                OrderTypeKey = "castAbility",
-                ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex },
-                RequireTarget = false,
-                TargetType = OrderTargetType.None,
-                IsSkillMapping = true
-            };
         }
 
         private static IEntityCommandPanelSource ResolveCollectionSource(GameEngine engine)

@@ -1,0 +1,175 @@
+[
+  {
+    "id": "graph.interaction.enter_action",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "InteractionModeAction",
+        "action": "InteractionModeAction",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "read_flag",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "interaction.action_mode"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "flag1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "write_flag",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "interaction.action_mode"
+      },
+      {
+        "id": "act",
+        "op": "ActivateContext",
+        "context": "interaction.context.interaction.context_scored",
+        "parentContext": "interaction.context.interaction.battle"
+      },
+      {
+        "id": "cam",
+        "op": "ActivateVirtualCamera",
+        "camera": "Camera.Profile.Interaction.Action"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "read_flag"
+      },
+      {
+        "from": "read_flag",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "eq"
+      },
+      {
+        "from": "eq",
+        "fromPort": "next",
+        "to": "jump"
+      },
+      {
+        "from": "jump",
+        "fromPort": "true",
+        "to": "cam"
+      },
+      {
+        "from": "jump",
+        "fromPort": "false",
+        "to": "flag1"
+      },
+      {
+        "from": "flag1",
+        "fromPort": "next",
+        "to": "write_flag"
+      },
+      {
+        "from": "write_flag",
+        "fromPort": "next",
+        "to": "act"
+      },
+      {
+        "from": "act",
+        "fromPort": "next",
+        "to": "cam"
+      },
+      {
+        "from": "cam",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "read_flag",
+        "toPort": "source"
+      },
+      {
+        "from": "read_flag",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "b"
+      },
+      {
+        "from": "eq",
+        "fromPort": "value",
+        "to": "jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "write_flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag1",
+        "fromPort": "value",
+        "to": "write_flag",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

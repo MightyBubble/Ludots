@@ -1,7 +1,6 @@
 using Arch.System;
 using System;
 using Arch.Core;
-using CoreInputMod.Systems;
 using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -26,9 +25,6 @@ namespace RtsDemoMod.Systems
         private MapConfig? _cachedMapConfig;
         private MapConfig? _openingFocusPublishedForMap;
         private RtsCommandSourceUiMapConfig? _cachedUiConfig;
-        private bool _skillBarVisibilityOwned;
-        private bool _hadPreviousSkillBarVisibility;
-        private bool _previousSkillBarVisibility;
 
         public RtsCommandSourceCommandPanelSystem(GameEngine engine)
         {
@@ -54,7 +50,6 @@ namespace RtsDemoMod.Systems
             if (!IsRtsMapActive())
             {
                 ClosePanel(service);
-                RestoreSkillBarVisibility();
                 return;
             }
 
@@ -62,7 +57,6 @@ namespace RtsDemoMod.Systems
 
             int localPlayerId = ResolveLocalPlayerId();
             RtsCommandSourceUiMapConfig uiConfig = ResolveUiConfig();
-            ApplySkillBarVisibility(uiConfig.SkillBarVisible);
 
             Entity commandSource = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity current)
                 ? current
@@ -123,7 +117,6 @@ namespace RtsDemoMod.Systems
             {
                 ClosePanel(service);
             }
-            RestoreSkillBarVisibility();
         }
 
         private bool IsPanelTarget(Entity entity, int localPlayerId)
@@ -191,44 +184,6 @@ namespace RtsDemoMod.Systems
             }
 
             return _cachedUiConfig;
-        }
-
-        private void ApplySkillBarVisibility(bool visible)
-        {
-            if (!_skillBarVisibilityOwned)
-            {
-                _skillBarVisibilityOwned = true;
-                if (_engine.GlobalContext.TryGetValue(
-                        SkillBarOverlaySystem.SkillBarEnabledKey,
-                        out object? previous) &&
-                    previous is bool previousVisibility)
-                {
-                    _hadPreviousSkillBarVisibility = true;
-                    _previousSkillBarVisibility = previousVisibility;
-                }
-            }
-
-            _engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = visible;
-        }
-
-        private void RestoreSkillBarVisibility()
-        {
-            if (!_skillBarVisibilityOwned)
-            {
-                return;
-            }
-
-            if (_hadPreviousSkillBarVisibility)
-            {
-                _engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = _previousSkillBarVisibility;
-            }
-            else
-            {
-                _engine.GlobalContext.Remove(SkillBarOverlaySystem.SkillBarEnabledKey);
-            }
-
-            _skillBarVisibilityOwned = false;
-            _hadPreviousSkillBarVisibility = false;
         }
 
         private void ClosePanel(IEntityCommandPanelService service)

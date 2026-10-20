@@ -96,7 +96,6 @@ namespace Ludots.Core.Client
         private readonly IDictionary<string, object> _globals;
         private readonly ControlSchemeRuntime _schemes;
         private readonly InputConfigRoot _inputConfig;
-        private readonly IReadOnlyList<string> _startupInputContexts;
         private readonly Dictionary<string, ClientLocalSeatInputChannel> _channels = new(StringComparer.Ordinal);
         private readonly List<ClientLocalSeatInputChannel> _orderedChannels = new();
         private EmptyInputBackend? _emptyBackend;
@@ -104,13 +103,11 @@ namespace Ludots.Core.Client
         public ClientLocalSeatInputRuntime(
             IDictionary<string, object> globals,
             ControlSchemeRuntime schemes,
-            InputConfigRoot inputConfig,
-            IReadOnlyList<string>? startupInputContexts = null)
+            InputConfigRoot inputConfig)
         {
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _schemes = schemes ?? throw new ArgumentNullException(nameof(schemes));
             _inputConfig = inputConfig ?? throw new ArgumentNullException(nameof(inputConfig));
-            _startupInputContexts = startupInputContexts ?? Array.Empty<string>();
         }
 
         public int ChannelCount => _orderedChannels.Count;
@@ -144,12 +141,13 @@ namespace Ludots.Core.Client
             for (int i = 0; i < ids.Count; i++)
             {
                 ClientLocalSeat seat = seats.Require(ids[i]);
-                var handler = new PlayerInputHandler(backend, _inputConfig);
-                for (int c = 0; c < _startupInputContexts.Count; c++)
+                if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
                 {
-                    handler.PushContext(_startupInputContexts[c]);
+                    throw new InvalidOperationException(
+                        $"ClientLocalSeat '{seat.SeatId}' requires controlSchemeId.");
                 }
 
+                var handler = new PlayerInputHandler(backend, _inputConfig);
                 var channel = new ClientLocalSeatInputChannel(
                     seat.SeatId,
                     handler,
@@ -158,11 +156,7 @@ namespace Ludots.Core.Client
                     _schemes);
                 _channels.Add(seat.SeatId, channel);
                 _orderedChannels.Add(channel);
-
-                if (!string.IsNullOrWhiteSpace(seat.ControlSchemeId))
-                {
-                    ActivateDeclaredScheme(seat, channel);
-                }
+                ActivateDeclaredScheme(seat, channel);
             }
         }
 

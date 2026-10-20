@@ -13,7 +13,9 @@ namespace Ludots.Core.Commands
         public string MapId { get; set; }
 
         /// <summary>
-        /// Explicit seat table for this load. Empty/null means no local seats (spectate / AI-only client).
+        /// Explicit seat table for this load. Empty or null publishes no local seats.
+        /// A boot that already has a local input handler still fails map completion when the
+        /// map has interaction contexts or action-bound triggers and no valid seat.
         /// </summary>
         public List<StartupLocalSeatConfig>? LocalSeats { get; set; }
 

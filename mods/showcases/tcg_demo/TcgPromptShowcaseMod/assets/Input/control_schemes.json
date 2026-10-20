@@ -1,12 +1,10 @@
 {
   "schemes": [
     {
-      "id": "scheme.default",
-      "inputContexts": []
-    },
-    {
       "id": "scheme.tcg_prompt",
-      "inputContexts": []
+      "inputContexts": [
+        "Camera.Rig"
+      ]
     }
   ],
   "allowedSchemes": [

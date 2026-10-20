@@ -17,6 +17,7 @@ using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using SpatialBoundsShowcaseMod.UI;
+using Ludots.Core.Input.Config;
 
 namespace SpatialBoundsShowcaseMod.Runtime
 {
@@ -399,7 +400,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       "collection.command.source",
+                       InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                        out Entity primary)
                 ? primary
                 : Entity.Null;
@@ -408,14 +409,14 @@ namespace SpatialBoundsShowcaseMod.Runtime
         private static int GetCommandSourceCount(GameEngine engine)
         {
             return TryResolveSolePossessedRep(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"))
                 : 0;
         }
 
         private static int CopyCommandSource(GameEngine engine, Span<Entity> destination)
         {
             return TryResolveSolePossessedRep(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, "collection.command.source", destination)
+                ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), destination)
                 : 0;
         }
 
