@@ -12,6 +12,7 @@
       <Private>false</Private>
     </ProjectReference>
     <ProjectReference Include="External\TKNewtonsoft\TKNewtonsoft.csproj" />
+    <ProjectReference Include="..\..\..\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
   </ItemGroup>
 
   <!-- Vendored TKNewtonsoft lives in its own project; keep it out of this project's automatic glob. -->
