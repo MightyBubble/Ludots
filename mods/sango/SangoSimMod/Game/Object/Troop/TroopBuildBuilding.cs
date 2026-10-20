@@ -64,6 +64,8 @@ namespace Sango.Core
             for (int i = 0; i < 6; i++)
             {
                 Cell cell = TargetCell.Neighbors[i];
+                if (cell == null)
+                    continue;
                 if (cell == troop.cell)
                 {
                     FinalCell = cell;
