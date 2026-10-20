@@ -3,11 +3,13 @@
 `mods/sango/SangoContentMod/TerrainExport/`(命名空间 `Sango.Content.TerrainExport`)把 M0.2 的
 `SangoMapBinArchive` 离线转换成 Ludots 地形管线资产,供 `SangoTerrainMod` 挂载:
 
-- `SangoTerrainExporter.ExportToDirectory(archive, dir)` →
+- `SangoTerrainExporter.ExportToDirectory(archive, dir, biomeProjection)`(biome 投影由
+  `SangoTerrainBiomeProjection.Load` 从 `SangoTerrainMod/assets/terrain/sango_terrain_weight_rules.json`
+  装载,失败关闭)→
   - `sango_default.height`:CHTM v2(`ContinuousHeightmapBinary`,RowMajorInt16Centimeters)单层可视地形;
   - `sango_default_hex.hex`:HexGridBoard 的 DataFile(`VertexMapBinary` v2,HEXM)。
-- `SangoTerrainScale`:换算常数、海平面推导(`DeriveSeaLevelCm`)、terrainType→biome 视觉投影、
-  0..255→0..15 nibble 量化。
+- `SangoTerrainScale`:换算常数、海平面推导(`DeriveSeaLevelCm`)、0..255→0..15 nibble 量化;
+  terrainType→biome 视觉投影已迁数据(T0.9),见 `SangoTerrainBiomeProjection`。
 
 ## 路线选择:离线转换(不是运行时注入)
 
@@ -56,7 +58,7 @@ HexGrid 的 VertexMap col(东)= 格子 y,row(北)= 格子 x。地图 bounds 以�
 |---|---|
 | height nibble | 格中心顶点高度 0..255 → 0..15 线性量化 |
 | water nibble | 格中心顶点 water 字节同法量化(water>height 即被 logic terrain 视为水面) |
-| biome nibble | `ProjectTerrainTypeToBiome`:terrainType → 引擎 6 色的可视投影(仅兜底 hex 顶点色;CHTM 存在时渲染走 CHTM) |
+| biome nibble | 数据驱动投影(`sango_terrain_weight_rules.json` 逐行 `biome` + `terrainTypeBiomeDefault`):terrainType → 引擎 6 色的可视投影(仅兜底 hex 顶点色;CHTM 存在时渲染走 CHTM) |
 | extra byte layer 0 | **原始 TerrainTypes.json terrain 字节(0..255 无损)**,M1 的 `sango.terrainType` Field2D 层以此为准 |
 
 areaId(92 个区域)未入 DataFile(无对应层);走 Field2D persistent 层是 M1 的事,见汇报遗留清单。

@@ -15,6 +15,31 @@ namespace Sango.Tests
     {
         private const string RealMapPath = @"C:\001_AI\SangoPort\content\DefaultMap.bin";
 
+        private static string RepoRoot()
+        {
+            string? dir = TestContext.CurrentContext.TestDirectory;
+            while (!string.IsNullOrWhiteSpace(dir))
+            {
+                if (File.Exists(Path.Combine(dir, "showcase.registry.json")))
+                {
+                    return dir;
+                }
+
+                dir = Path.GetDirectoryName(dir);
+            }
+
+            throw new InvalidOperationException("Could not locate Ludots repo root (showcase.registry.json).");
+        }
+
+        private static SangoTerrainBiomeProjection LoadBiomeRules()
+        {
+            string rules = Path.Combine(
+                RepoRoot(), "mods", "sango", "SangoTerrainMod", "assets", "terrain",
+                SangoTerrainBiomeProjection.RulesFileName);
+            using FileStream stream = File.OpenRead(rules);
+            return SangoTerrainBiomeProjection.Load(stream);
+        }
+
         [Test]
         public void TerrainExport_SyntheticArchive_HeightmapRoundTripsThroughChtmLoader()
         {
@@ -22,7 +47,7 @@ namespace Sango.Tests
             string dir = Path.Combine(Path.GetTempPath(), "sango-m03-" + Path.GetRandomFileName());
             try
             {
-                SangoTerrainExportStats stats = SangoTerrainExporter.ExportToDirectory(archive, dir);
+                SangoTerrainExportStats stats = SangoTerrainExporter.ExportToDirectory(archive, dir, LoadBiomeRules());
                 Assert.That(File.Exists(Path.Combine(dir, SangoTerrainExporter.HeightmapFileName)), Is.True);
                 Assert.That(File.Exists(Path.Combine(dir, SangoTerrainExporter.HexDataFileName)), Is.True);
 
@@ -72,10 +97,11 @@ namespace Sango.Tests
         public void TerrainExport_SyntheticArchive_HexDataFileRoundTripsThroughVertexMapBinary()
         {
             SangoMapBinArchive archive = BuildSyntheticArchive();
+            SangoTerrainBiomeProjection biomes = LoadBiomeRules();
             string dir = Path.Combine(Path.GetTempPath(), "sango-m03-" + Path.GetRandomFileName());
             try
             {
-                SangoTerrainExporter.ExportToDirectory(archive, dir);
+                SangoTerrainExporter.ExportToDirectory(archive, dir, biomes);
 
                 VertexMap map;
                 using (var stream = File.OpenRead(Path.Combine(dir, SangoTerrainExporter.HexDataFileName)))
@@ -96,7 +122,7 @@ namespace Sango.Tests
                     MapVertexData center = CenterVertex(archive, gridVertexCount, gridX, gridY);
                     Assert.That(GetExtraByte(map, gridY, gridX), Is.EqualTo(cell.TerrainType),
                         $"raw terrain byte preserved at grid ({gridX},{gridY})");
-                    Assert.That(map.GetBiome(gridY, gridX), Is.EqualTo(SangoTerrainScale.ProjectTerrainTypeToBiome(cell.TerrainType)));
+                    Assert.That(map.GetBiome(gridY, gridX), Is.EqualTo(biomes.Project(cell.TerrainType)));
                     Assert.That(map.GetHeight(gridY, gridX), Is.EqualTo(SangoTerrainScale.QuantizeToNibbleLevel(center.Height)));
                     Assert.That(map.GetWaterHeight(gridY, gridX), Is.EqualTo(SangoTerrainScale.QuantizeToNibbleLevel(center.Water)));
                 }
@@ -120,7 +146,7 @@ namespace Sango.Tests
             string dir = Path.Combine(Path.GetTempPath(), "sango-m03-" + Path.GetRandomFileName());
             try
             {
-                SangoTerrainExportStats stats = SangoTerrainExporter.ExportToDirectory(archive, dir);
+                SangoTerrainExportStats stats = SangoTerrainExporter.ExportToDirectory(archive, dir, LoadBiomeRules());
 
                 ContinuousHeightmapAsset asset;
                 using (var heightStream = File.OpenRead(Path.Combine(dir, SangoTerrainExporter.HeightmapFileName)))
@@ -169,6 +195,59 @@ namespace Sango.Tests
             finally
             {
                 if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
+        public void TerrainBiomeRules_MatchLegacyCodeSwitchProjection()
+        {
+            // T0.9 迁移合同:原 SangoTerrainScale.ProjectTerrainTypeToBiome 的 32 行
+            // switch 语义逐 id 对齐(0..20 显值、21..31 占位、32 开放海域、33+ 默认)。
+            SangoTerrainBiomeProjection biomes = LoadBiomeRules();
+            byte[] legacy = { 0, 3, 1, 1, 5, 5, 5, 2, 2, 2, 4, 1, 4, 2, 2, 2, 4, 1, 2, 4, 1 };
+            for (byte terrainType = 0; terrainType < legacy.Length; terrainType++)
+            {
+                Assert.That(biomes.Project(terrainType), Is.EqualTo(legacy[terrainType]),
+                    $"terrain type {terrainType} must keep the legacy switch projection");
+            }
+
+            for (byte terrainType = 21; terrainType <= 31; terrainType++)
+            {
+                Assert.That(biomes.Project(terrainType), Is.EqualTo((byte)0), $"placeholder kind {terrainType}");
+            }
+
+            Assert.That(biomes.Project(32), Is.EqualTo((byte)2), "open sea beyond the shipped table");
+            Assert.That(biomes.DefaultBiome, Is.EqualTo((byte)2));
+            for (byte terrainType = 33; terrainType <= 40; terrainType++)
+            {
+                Assert.That(biomes.Project(terrainType), Is.EqualTo((byte)2), $"out-of-table id {terrainType} falls to the declared default");
+            }
+        }
+
+        [Test]
+        public void TerrainExport_RepeatedExportsAreByteIdentical()
+        {
+            // T0.9 验收:重跑导出产物字节等值(数据驱动映射迁移不得改变产物位)。
+            SangoMapBinArchive archive = BuildSyntheticArchive();
+            SangoTerrainBiomeProjection biomes = LoadBiomeRules();
+            string first = Path.Combine(Path.GetTempPath(), "sango-t09-a-" + Path.GetRandomFileName());
+            string second = Path.Combine(Path.GetTempPath(), "sango-t09-b-" + Path.GetRandomFileName());
+            try
+            {
+                SangoTerrainExporter.ExportToDirectory(archive, first, biomes);
+                SangoTerrainExporter.ExportToDirectory(archive, second, biomes);
+
+                Assert.That(File.ReadAllBytes(Path.Combine(first, SangoTerrainExporter.HeightmapFileName)),
+                    Is.EqualTo(File.ReadAllBytes(Path.Combine(second, SangoTerrainExporter.HeightmapFileName))),
+                    "heightmap bytes must be identical across export runs");
+                Assert.That(File.ReadAllBytes(Path.Combine(first, SangoTerrainExporter.HexDataFileName)),
+                    Is.EqualTo(File.ReadAllBytes(Path.Combine(second, SangoTerrainExporter.HexDataFileName))),
+                    "hex data bytes must be identical across export runs");
+            }
+            finally
+            {
+                if (Directory.Exists(first)) Directory.Delete(first, recursive: true);
+                if (Directory.Exists(second)) Directory.Delete(second, recursive: true);
             }
         }
 
