@@ -941,16 +941,17 @@ namespace Sango.Core
                         c.BelongCorps = force.CapitalCorps;
 
                         // 准备兵装,钱粮和士兵
-                        c.food = 43000 - 3000 * scenario.Variables.difficulty;
-                        c.gold = 4300 - 300 * scenario.Variables.difficulty;
-                        c.troops = 11000 - 1000 * scenario.Variables.difficulty + (isCapitalCity ? 10000 : 0);
-                        c.security = 90 - 5 * scenario.Variables.difficulty;
-                        c.morale = 85 - 5 * scenario.Variables.difficulty;
-                        int k = 5500 - 500 * scenario.Variables.difficulty;
+                        var sv = scenario.Variables;
+                        c.food = sv.startFoodBase - sv.startFoodPerDifficulty * sv.difficulty;
+                        c.gold = sv.startGoldBase - sv.startGoldPerDifficulty * sv.difficulty;
+                        c.troops = sv.startTroopsBase - sv.startTroopsPerDifficulty * sv.difficulty + (isCapitalCity ? sv.startCapitalTroopBonus : 0);
+                        c.security = sv.startSecurityBase - sv.startSecurityPerDifficulty * sv.difficulty;
+                        c.morale = sv.startMoraleBase - sv.startMoralePerDifficulty * sv.difficulty;
+                        int k = sv.startWarItemBase - sv.startWarItemPerDifficulty * sv.difficulty;
                         c.itemStore.Add(2, k);
                         c.itemStore.Add(3, k);
                         c.itemStore.Add(4, k);
-                        k = 2500 - 500 * scenario.Variables.difficulty;
+                        k = sv.startSiegeItemBase - sv.startSiegeItemPerDifficulty * sv.difficulty;
                         c.itemStore.Add(5, k);
                     }
                 }
@@ -1755,6 +1756,7 @@ namespace Sango.Core
             return new Troop();
         }
 
+        [System.Obsolete("legacy 磁盘存档旁路:绕过引擎存档容器。存档唯一入口 = 引擎 SavePanel/ISaveStorage(sango.sim 域);写后端缺席时本方法在 VFS 网关响亮失败。")]
         public void Save(string path)
         {
             for (int i = 0; i < prepareList.Count; ++i)
@@ -1777,13 +1779,13 @@ namespace Sango.Core
             jsonSerializerSettings.NullValueHandling = NullValueHandling.Ignore;
             jsonSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; // 忽略循环引用
             JsonSerializer serializer = JsonSerializer.CreateDefault(jsonSerializerSettings);
-            using (StreamWriter writer = System.IO.File.CreateText(path))
-            {
-                serializer.Serialize(writer, this);
-            }
+            var stringWriter = new System.IO.StringWriter();
+            serializer.Serialize(stringWriter, this);
+            Sango.File.WriteAllText(path, stringWriter.ToString());
             CommonData = saveData;
         }
 
+        [System.Obsolete("legacy 导出旁路:同 Save,绕过引擎存档容器,写后端缺席时响亮失败。")]
         public void Export(string path)
         {
             ScenarioCommonData saveData = CommonData;
@@ -1801,10 +1803,9 @@ namespace Sango.Core
             jsonSerializerSettings.DefaultValueHandling = DefaultValueHandling.Ignore;
             jsonSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; // 忽略循环引用
             JsonSerializer serializer = JsonSerializer.CreateDefault(jsonSerializerSettings);
-            using (StreamWriter writer = System.IO.File.CreateText(path))
-            {
-                serializer.Serialize(writer, this);
-            }
+            var stringWriter = new System.IO.StringWriter();
+            serializer.Serialize(stringWriter, this);
+            Sango.File.WriteAllText(path, stringWriter.ToString());
             CommonData = saveData;
             Variables = saveVariables;
             Map = saveMap;

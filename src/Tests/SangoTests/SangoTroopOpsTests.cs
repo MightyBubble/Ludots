@@ -28,6 +28,15 @@ namespace Sango.Tests
         private const int Seed = 20260902;
         private const int TenTurns = 10;
 
+        // 越程拒绝分支依赖「程外不可驻格」存在(真图水/山缘),全草地合成图的
+        // 程外格全部可驻、走委任移动分支;bin 缺席按 RealMap 套件惯例跳过。
+        private static void RequireRealMapBin()
+        {
+            string bin = Path.Combine(RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "Map", "DefaultMap.bin");
+            if (!File.Exists(bin))
+                Assert.Ignore($"scenario calibrated on real-map dynamics; DefaultMap.bin not present (local-only content): {bin}");
+        }
+
         private static string RepoRoot()
         {
             string? dir = TestContext.CurrentContext.TestDirectory;
@@ -357,6 +366,7 @@ namespace Sango.Tests
         [Test]
         public void MoveTroop_OriginalGates_RejectOutOfRangeOccupiedAndSecondOrder()
         {
+            RequireRealMapBin();
             Assembly sim = LoadSangoSimMod();
             var kernel = new Kernel(sim, Seed);
             SeedOneTroop(kernel);

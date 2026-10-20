@@ -17,6 +17,12 @@ namespace Sango.Runtime
 
         public static bool Installed => _vfs != null;
 
+        /// <summary>内核已安装的 VFS 后端(SangoConfigRuntime 共享管线复用)。</summary>
+        public static IVirtualFileSystem? InstalledVfs => _vfs;
+
+        /// <summary>内容 mod id(SangoConfigRuntime 的 LoadedModIds 组成部分)。</summary>
+        public static string ContentModId => _contentModId;
+
         public static void Install(IVirtualFileSystem vfs, string contentModId)
         {
             _vfs = vfs ?? throw new ArgumentNullException(nameof(vfs));

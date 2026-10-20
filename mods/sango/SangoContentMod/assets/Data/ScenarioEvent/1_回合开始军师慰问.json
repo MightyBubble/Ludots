@@ -1,10 +1,14 @@
-[
-  {
-    "Id": 1,
-    "eventType": "PersonTalk",
-    "variables": [
-      "ActionCounsellor"
-    ],
-    "formatContent": "{:ActionForce}大人，\n终于轮到我们了啊。"
-  }
-]
+{
+  "groupId": 1,
+  "name": "回合开始军师慰问",
+  "entries": [
+    {
+      "Id": 1,
+      "eventType": "PersonTalk",
+      "variables": [
+        "ActionCounsellor"
+      ],
+      "formatContent": "{:ActionForce}大人，\n终于轮到我们了啊。"
+    }
+  ]
+}

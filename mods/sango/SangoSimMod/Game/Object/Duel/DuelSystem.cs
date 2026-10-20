@@ -305,16 +305,18 @@ namespace Sango.Core
         /// <returns>攻击成功率（百分比）</returns>
         private int CalculateAttackSuccessRate(Person attacker, Person defender)
         {
+            var v = Sango.Core.Scenario.Cur.Variables;
+
             // 基础命中率
-            int baseRate = 80;
+            int baseRate = v.duelAttackBaseRate;
 
             // 武力差影响
             int strengthDiff = attacker.Strength - defender.Strength;
-            int strengthBonus = strengthDiff / 5;
+            int strengthBonus = strengthDiff / v.duelAttackStrengthDivisor;
 
             // 最终命中率
             int finalRate = baseRate + strengthBonus;
-            return Math.Max(30, Math.Min(95, finalRate));
+            return Math.Max(v.duelAttackRateFloor, Math.Min(v.duelAttackRateCeiling, finalRate));
         }
 
         /// <summary>
@@ -325,16 +327,18 @@ namespace Sango.Core
         /// <returns>暴击率（百分比）</returns>
         private int CalculateCriticalRate(Person attacker, Person defender)
         {
+            var v = Sango.Core.Scenario.Cur.Variables;
+
             // 基础暴击率
-            int baseRate = 10;
+            int baseRate = v.duelCriticalBaseRate;
 
             // 武力差影响
             int strengthDiff = attacker.Strength - defender.Strength;
-            int strengthBonus = strengthDiff / 10;
+            int strengthBonus = strengthDiff / v.duelCriticalStrengthDivisor;
 
             // 最终暴击率
             int finalRate = baseRate + strengthBonus;
-            return Math.Max(0, Math.Min(30, finalRate));
+            return Math.Max(0, Math.Min(v.duelCriticalRateCeiling, finalRate));
         }
 
         /// <summary>
@@ -345,12 +349,14 @@ namespace Sango.Core
         /// <returns>伤害值</returns>
         private int CalculateDamage(Person attacker, Person defender)
         {
+            var v = Sango.Core.Scenario.Cur.Variables;
+
             // 基础伤害
-            int baseDamage = 10;
+            int baseDamage = v.duelBaseDamage;
 
             // 武力差影响
             int strengthDiff = attacker.Strength - defender.Strength;
-            int strengthBonus = strengthDiff / 10;
+            int strengthBonus = strengthDiff / v.duelDamageStrengthDivisor;
 
             // 最终伤害
             int finalDamage = baseDamage + strengthBonus;
@@ -404,20 +410,21 @@ namespace Sango.Core
         /// </summary>
         private void HandleAttackerWin()
         {
+            var v = Sango.Core.Scenario.Cur.Variables;
             // 攻击者部队士气提升
-            AttackerTroop.morale = Math.Min(100, AttackerTroop.morale + 20);
+            AttackerTroop.morale = Math.Min(100, AttackerTroop.morale + v.duelMoraleSwing);
 
             // 防御者部队士气下降
-            DefenderTroop.morale = Math.Max(0, DefenderTroop.morale - 20);
+            DefenderTroop.morale = Math.Max(0, DefenderTroop.morale - v.duelMoraleSwing);
 
             // 有概率俘虏敌方将领
-            if (GameRandom.Chance(30, 100))
+            if (GameRandom.Chance(v.duelCaptureChance, 100))
             {
                 CaptureGeneral(Defender, AttackerTroop);
             }
 
             // 有概率直接消灭敌方部队
-            if (GameRandom.Chance(20, 100))
+            if (GameRandom.Chance(v.duelTroopDestroyChance, 100))
             {
                 DefenderTroop.Clear();
             }
@@ -428,20 +435,21 @@ namespace Sango.Core
         /// </summary>
         private void HandleDefenderWin()
         {
+            var v = Sango.Core.Scenario.Cur.Variables;
             // 防御者部队士气提升
-            DefenderTroop.morale = Math.Min(100, DefenderTroop.morale + 20);
+            DefenderTroop.morale = Math.Min(100, DefenderTroop.morale + v.duelMoraleSwing);
 
             // 攻击者部队士气下降
-            AttackerTroop.morale = Math.Max(0, AttackerTroop.morale - 20);
+            AttackerTroop.morale = Math.Max(0, AttackerTroop.morale - v.duelMoraleSwing);
 
             // 有概率俘虏敌方将领
-            if (GameRandom.Chance(30, 100))
+            if (GameRandom.Chance(v.duelCaptureChance, 100))
             {
                 CaptureGeneral(Attacker, DefenderTroop);
             }
 
             // 有概率直接消灭敌方部队
-            if (GameRandom.Chance(20, 100))
+            if (GameRandom.Chance(v.duelTroopDestroyChance, 100))
             {
                 AttackerTroop.Clear();
             }
