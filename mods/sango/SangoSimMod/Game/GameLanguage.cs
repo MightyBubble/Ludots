@@ -37,7 +37,7 @@ namespace Sango.Core
 #if SANGO_DEBUG
             Sango.Log.Info($"Load  Language File: {filewhere}");
 #endif
-            using (StreamReader file = System.IO.File.OpenText(filewhere))
+            using (StreamReader file = Sango.File.OpenText(filewhere))
             using (JsonTextReader reader = new JsonTextReader(file))
             {
                 while (reader.Read()) // Advances to the next token in the JSON stream.
