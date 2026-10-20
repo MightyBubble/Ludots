@@ -180,14 +180,10 @@ namespace Sango.Runtime
         (EffectRequestQueue, GasBudget, DiscreteClock, GasClocks, AbilitySystem, EffectProcessingLoopSystem) BuildGasStack(
             string modRoot, string coreModRoot)
         {
-            var vfs = new VirtualFileSystem();
-            vfs.Mount(ModId, modRoot);
-
-            vfs.Mount("LudotsCoreMod", coreModRoot);
-            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
-            modLoader.LoadedModIds.Add(ModId);
-            modLoader.LoadedModIds.Add("LudotsCoreMod");
-            var pipeline = new ConfigPipeline(vfs, modLoader);
+            // T1.1:私搭管线退役——不再 new VirtualFileSystem/ModLoader/手工 catalog,
+            // 统一走 SangoConfigRuntime 的进程级官方管线,GAS 三表声明在
+            // SangoSimMod/assets/config_catalog.json(ConfigCatalogLoader 装载)。
+            var pipeline = SangoConfigRuntime.Pipeline(modRoot, coreModRoot);
             Ludots.Core.Config.GameConfig gameConfig = pipeline.MergeGameConfig();
             var chainOrderTypes = Ludots.Core.Gameplay.GAS.Systems.ResponseChainOrderTypes.RequireConfigured(
                 new Ludots.Core.Gameplay.GAS.Systems.ResponseChainOrderTypes
@@ -197,10 +193,7 @@ namespace Sango.Runtime
                     ChainActivateEffect = gameConfig.Constants.ResponseChainOrderTypeIds["chainActivateEffect"],
                 },
                 nameof(SangoCombatNativeRuntime));
-            var catalog = new ConfigCatalog();
-            catalog.Add(new ConfigCatalogEntry("GAS/preset_types.json", ConfigMergePolicy.ArrayById, idField: "id"));
-            catalog.Add(new ConfigCatalogEntry("GAS/effects.json", ConfigMergePolicy.ArrayById, idField: "id"));
-            catalog.Add(new ConfigCatalogEntry("GAS/abilities.json", ConfigMergePolicy.ArrayById, idField: "id"));
+            var catalog = SangoConfigRuntime.Catalog(modRoot, coreModRoot);
             var conflictReport = new ConfigConflictReport();
 
             var builtinHandlers = new BuiltinHandlerRegistry();

@@ -1,0 +1,90 @@
+[
+  {
+    "Path": "Data/Common/Argumentations.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/AttributeChangeTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Buffs.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/BuildingTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/CityLevelTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Features.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Flags.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/ItemTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/JobTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Officials.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/PersonLevels.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/PersonLibrary.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Personalities.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Provinces.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Regions.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Skills.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Techniques.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/TerrainTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/Titles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/TroopAnimations.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/TroopTypes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/Common/ai.json",
+    "Policy": "DeepObject"
+  }
+]
