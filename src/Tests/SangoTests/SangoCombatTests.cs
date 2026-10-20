@@ -30,6 +30,15 @@ namespace Sango.Tests
     {
         private const int Seed = 20260902;
 
+        // 互歼委任链按真图动态校准,均匀草地的合成图打不出校准的交战;
+        // bin 缺席按 RealMap 套件惯例跳过。
+        private static void RequireRealMapBin()
+        {
+            string bin = Path.Combine(RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "Map", "DefaultMap.bin");
+            if (!File.Exists(bin))
+                Assert.Ignore($"scenario calibrated on real-map dynamics; DefaultMap.bin not present (local-only content): {bin}");
+        }
+
         private static string RepoRoot()
         {
             string? dir = TestContext.CurrentContext.TestDirectory;
@@ -515,6 +524,7 @@ namespace Sango.Tests
         [Test]
         public void FieldBattle_MutualDestroyMissions_EndsInTroopDestroyed()
         {
+            RequireRealMapBin();
             Assembly sim = LoadSangoSimMod();
             var kernel = new Kernel(sim, Seed);
             FieldEncounter encounter = SeedFieldEncounter(kernel);

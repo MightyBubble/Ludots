@@ -270,10 +270,9 @@ namespace Sango.Core
                 Cell cell = this.Neighbors[4];
                 for (int j = 1; j < i; j++)
                 {
-                    Cell temp = cell.Neighbors[4];
                     if (cell == null)
                         break;
-                    cell = temp;
+                    cell = cell.Neighbors[4];
                 }
 
                 int dir = 0;
@@ -318,10 +317,9 @@ namespace Sango.Core
                 Cell cell = this.Neighbors[4];
                 for (int j = 1; j < i; j++)
                 {
-                    Cell temp = cell.Neighbors[4];
                     if (cell == null)
                         break;
-                    cell = temp;
+                    cell = cell.Neighbors[4];
                 }
 
                 int dir = 0;
