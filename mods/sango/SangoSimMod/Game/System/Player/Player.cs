@@ -145,11 +145,9 @@ namespace Sango.Core.Player
         }
         public void Save(int index)
         {
-            string fileName = GetSaveFileName(index + 1);
+            // T1.4:legacy 磁盘存档旁路退役(Scenario.Save 已 Obsolete);事件保留,
+            // 落盘唯一入口 = 引擎 SavePanel/ISaveStorage(sango.sim 域)。
             GameEvent.OnGameSave?.Invoke(Scenario.Cur, index, false);
-            Scenario.Cur.Save(fileName);
-            ShortScenario scenario = new ShortScenario(fileName);
-            all_saved_scenario_list[index] = scenario;
         }
 
         public void Load(int index)
@@ -164,11 +162,8 @@ namespace Sango.Core.Player
 
         public void AutoSave()
         {
-            string fileName = GetAutoSaveFileName(autoSaveIndex + 1);
+            // T1.4:同上,自动存档不再直写盘;引擎存档容器是唯一落盘面。
             GameEvent.OnGameSave?.Invoke(Scenario.Cur, autoSaveIndex, true);
-            Scenario.Cur.Save(fileName);
-            ShortScenario scenario = new ShortScenario(fileName);
-            all_auto_saved_scenario_list[autoSaveIndex] = scenario;
             autoSaveIndex++;
             if (autoSaveIndex >= all_auto_saved_scenario_list.Length)
                 autoSaveIndex = 0;

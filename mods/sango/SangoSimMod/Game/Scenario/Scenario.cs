@@ -1756,6 +1756,7 @@ namespace Sango.Core
             return new Troop();
         }
 
+        [System.Obsolete("legacy 磁盘存档旁路:绕过引擎存档容器。存档唯一入口 = 引擎 SavePanel/ISaveStorage(sango.sim 域);写后端缺席时本方法在 VFS 网关响亮失败。")]
         public void Save(string path)
         {
             for (int i = 0; i < prepareList.Count; ++i)
@@ -1778,13 +1779,13 @@ namespace Sango.Core
             jsonSerializerSettings.NullValueHandling = NullValueHandling.Ignore;
             jsonSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; // 忽略循环引用
             JsonSerializer serializer = JsonSerializer.CreateDefault(jsonSerializerSettings);
-            using (StreamWriter writer = System.IO.File.CreateText(path))
-            {
-                serializer.Serialize(writer, this);
-            }
+            var stringWriter = new System.IO.StringWriter();
+            serializer.Serialize(stringWriter, this);
+            Sango.File.WriteAllText(path, stringWriter.ToString());
             CommonData = saveData;
         }
 
+        [System.Obsolete("legacy 导出旁路:同 Save,绕过引擎存档容器,写后端缺席时响亮失败。")]
         public void Export(string path)
         {
             ScenarioCommonData saveData = CommonData;
@@ -1802,10 +1803,9 @@ namespace Sango.Core
             jsonSerializerSettings.DefaultValueHandling = DefaultValueHandling.Ignore;
             jsonSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; // 忽略循环引用
             JsonSerializer serializer = JsonSerializer.CreateDefault(jsonSerializerSettings);
-            using (StreamWriter writer = System.IO.File.CreateText(path))
-            {
-                serializer.Serialize(writer, this);
-            }
+            var stringWriter = new System.IO.StringWriter();
+            serializer.Serialize(stringWriter, this);
+            Sango.File.WriteAllText(path, stringWriter.ToString());
             CommonData = saveData;
             Variables = saveVariables;
             Map = saveMap;

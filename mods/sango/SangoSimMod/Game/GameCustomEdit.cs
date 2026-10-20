@@ -236,8 +236,8 @@ namespace Sango.Core
             if (SelfScenarioAddon == null) return;
             string path = Sango.Path.SaveRootPath + "/CustomEdit/CustomPerson.json";
             string dir = System.IO.Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
-                System.IO.Directory.CreateDirectory(dir);
+            if (!string.IsNullOrEmpty(dir) && !Sango.Directory.Exists(dir))
+                Sango.Directory.Create(dir);
             string json = JsonConvert.SerializeObject(SelfScenarioAddon, Formatting.Indented);
             File.WriteAllText(path, json);
             needUpdate_all = true;
