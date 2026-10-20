@@ -941,16 +941,17 @@ namespace Sango.Core
                         c.BelongCorps = force.CapitalCorps;
 
                         // 准备兵装,钱粮和士兵
-                        c.food = 43000 - 3000 * scenario.Variables.difficulty;
-                        c.gold = 4300 - 300 * scenario.Variables.difficulty;
-                        c.troops = 11000 - 1000 * scenario.Variables.difficulty + (isCapitalCity ? 10000 : 0);
-                        c.security = 90 - 5 * scenario.Variables.difficulty;
-                        c.morale = 85 - 5 * scenario.Variables.difficulty;
-                        int k = 5500 - 500 * scenario.Variables.difficulty;
+                        var sv = scenario.Variables;
+                        c.food = sv.startFoodBase - sv.startFoodPerDifficulty * sv.difficulty;
+                        c.gold = sv.startGoldBase - sv.startGoldPerDifficulty * sv.difficulty;
+                        c.troops = sv.startTroopsBase - sv.startTroopsPerDifficulty * sv.difficulty + (isCapitalCity ? sv.startCapitalTroopBonus : 0);
+                        c.security = sv.startSecurityBase - sv.startSecurityPerDifficulty * sv.difficulty;
+                        c.morale = sv.startMoraleBase - sv.startMoralePerDifficulty * sv.difficulty;
+                        int k = sv.startWarItemBase - sv.startWarItemPerDifficulty * sv.difficulty;
                         c.itemStore.Add(2, k);
                         c.itemStore.Add(3, k);
                         c.itemStore.Add(4, k);
-                        k = 2500 - 500 * scenario.Variables.difficulty;
+                        k = sv.startSiegeItemBase - sv.startSiegeItemPerDifficulty * sv.difficulty;
                         c.itemStore.Add(5, k);
                     }
                 }

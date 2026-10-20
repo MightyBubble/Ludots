@@ -62,9 +62,9 @@ namespace Sango.Core
         public City mBelongCity => Leader?.mBelongCity;
 
         /// <summary>
-        /// 所在城池
+        /// 所在城池(合成图上城圈外格子无 BelongCity,消费面按可空处理,见 Person.Escape)
         /// </summary>
-        public City mCurrentCity => cell.BelongCity.mBelongCity == null ? cell.BelongCity : cell.BelongCity.mBelongCity;
+        public City mCurrentCity => cell?.BelongCity?.mBelongCity ?? cell?.BelongCity;
 
         /// <summary>
         /// 统领（主将）
@@ -953,20 +953,20 @@ namespace Sango.Core
             int damage = (int)(
                 (
 
-                (System.Math.Pow(atkBounds * Variables.fight_base_damage, 0.5) + System.Math.Max(0, (int)((System.Math.Pow(attacker.Attack, 2) - System.Math.Pow(System.Math.Max(40, target.Defence), 2)) / 300)) +
+                (System.Math.Pow(atkBounds * Variables.fight_base_damage, 0.5) + System.Math.Max(0, (int)((System.Math.Pow(attacker.Attack, 2) - System.Math.Pow(System.Math.Max(Variables.fightDefenceFloor, target.Defence), 2)) / Variables.fightAttackDefenceSquareDivisor)) +
                 System.Math.Max(0, (attacker.troops - target.troops) / Variables.fight_base_troops_need) + 50)
 
                 * 10 * ((int)(
 
-                (((int)(attacker.troops * 0.01) + 300) * System.Math.Pow((attacker.Attack + 50), 2)) /
-                (((int)(attacker.troops * 0.01) + 300) * System.Math.Pow((attacker.Attack + 50), 2) * 0.01 +
-                ((int)(target.troops * 0.01) + 300) * System.Math.Pow((target.Defence + 50), 2) * 0.01)
+                (((int)(attacker.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((attacker.Attack + Variables.fightDamageBaseAddend), 2)) /
+                (((int)(attacker.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((attacker.Attack + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor +
+                ((int)(target.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((target.Defence + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor)
 
-                - 50)
+                - Variables.fightDamageBaseAddend)
 
-                + 50)
+                + Variables.fightDamageBaseAddend)
                 // 原有基础上优化System.Math.Max(1, attacker.troops / 4),1兵打出15伤害同于实际测试
-                * System.Math.Min(System.Math.Pow(System.Math.Max(1, attacker.troops / 4), 0.5), 40)
+                * System.Math.Min(System.Math.Pow(System.Math.Max(1, attacker.troops / 4), 0.5), Variables.fightTroopSqrtCap)
 
                 * Variables.fight_damage_magic_number /* * 太鼓台系数*/
 
@@ -1002,7 +1002,7 @@ namespace Sango.Core
 
             if (attacker.IsHelepolis)
             {
-                int damage = (int)(attacker.troops / 25 + System.Math.Pow(attacker.troops, 0.5f) + System.Math.Min(System.Math.Pow(attacker.troops, 0.5f), 40) * attacker.Attack * System.Math.Pow((1f / 1500f), 0.5f) * (1 + (float)skill.atkDurability / 25f) * buildingType.damageBounds
+                int damage = (int)(attacker.troops / Variables.fightHelepolisTroopDivisor + System.Math.Pow(attacker.troops, 0.5f) + System.Math.Min(System.Math.Pow(attacker.troops, 0.5f), Variables.fightTroopSqrtCap) * attacker.Attack * System.Math.Pow(1f / Variables.fightHelepolisDenominator, 0.5f) * (1 + (float)skill.atkDurability / Variables.fightHelepolisDurabilityDivisor) * buildingType.damageBounds
                // 额外增益 (科技系数等)
                * System.Math.Max(0, (1 + attacker.DamageBuildingExtraFactor))
                * attack_troops_type.durabilityDmg / 100
@@ -1013,7 +1013,7 @@ namespace Sango.Core
             }
             else
             {
-                int damage = (int)(System.Math.Pow(attacker.troops, 0.5f) * attacker.Attack * System.Math.Pow((1f / 1500f), 0.5f) * (1 + (float)skill.atkDurability / 25f) * buildingType.damageBounds
+                int damage = (int)(System.Math.Pow(attacker.troops, 0.5f) * attacker.Attack * System.Math.Pow(1f / Variables.fightHelepolisDenominator, 0.5f) * (1 + (float)skill.atkDurability / Variables.fightHelepolisDurabilityDivisor) * buildingType.damageBounds
                 // 额外增益 (科技系数等)
                 * System.Math.Max(0, (1 + attacker.DamageBuildingExtraFactor))
                 * attack_troops_type.durabilityDmg / 100
@@ -1044,20 +1044,20 @@ namespace Sango.Core
             int damage = (int)(
                 (
 
-                (System.Math.Pow(atkBounds * Variables.fight_base_damage, 0.5) + System.Math.Max(0, (int)((System.Math.Pow(attacker.Attack, 2) - System.Math.Pow(System.Math.Max(40, target.GetDefence()), 2)) / 300)) +
+                (System.Math.Pow(atkBounds * Variables.fight_base_damage, 0.5) + System.Math.Max(0, (int)((System.Math.Pow(attacker.Attack, 2) - System.Math.Pow(System.Math.Max(Variables.fightDefenceFloor, target.GetDefence()), 2)) / Variables.fightAttackDefenceSquareDivisor)) +
                 System.Math.Max(0, (attacker.troops - target.troops) / Variables.fight_base_troops_need) + 50)
 
                 * 10 * ((int)(
 
-                (((int)(attacker.troops * 0.01) + 300) * System.Math.Pow((attacker.Attack + 50), 2)) /
-                (((int)(attacker.troops * 0.01) + 300) * System.Math.Pow((attacker.Attack + 50), 2) * 0.01 +
-                ((int)(target.troops * 0.01) + 300) * System.Math.Pow((target.GetDefence() + 50), 2) * 0.01)
+                (((int)(attacker.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((attacker.Attack + Variables.fightDamageBaseAddend), 2)) /
+                (((int)(attacker.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((attacker.Attack + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor +
+                ((int)(target.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((target.GetDefence() + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor)
 
-                - 50)
+                - Variables.fightDamageBaseAddend)
 
-                + 50)
+                + Variables.fightDamageBaseAddend)
                 // 原有基础上优化System.Math.Max(1, attacker.troops / 4),1兵打出15伤害同于实际测试
-                * System.Math.Min(System.Math.Pow(System.Math.Max(1, attacker.troops / 4), 0.5), 40)
+                * System.Math.Min(System.Math.Pow(System.Math.Max(1, attacker.troops / 4), 0.5), Variables.fightTroopSqrtCap)
 
                 * Variables.fight_damage_magic_number /* * 太鼓台系数*/
 
@@ -1098,20 +1098,20 @@ namespace Sango.Core
             int damage = (int)(
                  (
 
-                 (System.Math.Max(0, (int)((System.Math.Pow(base_atk, 2) - System.Math.Pow(System.Math.Max(40, target.Defence), 2)) / 300)) +
+                 (System.Math.Max(0, (int)((System.Math.Pow(base_atk, 2) - System.Math.Pow(System.Math.Max(Variables.fightDefenceFloor, target.Defence), 2)) / Variables.fightAttackDefenceSquareDivisor)) +
                  System.Math.Max(0, (base_troops - target.troops) / Variables.fight_base_troops_need) + 50)
 
                  * 10 * ((int)(
 
-                 (((int)(base_troops * 0.01) + 300) * System.Math.Pow((base_atk + 50), 2)) /
-                 (((int)(base_troops * 0.01) + 300) * System.Math.Pow((base_atk + 50), 2) * 0.01 +
-                 ((int)(target.troops * 0.01) + 300) * System.Math.Pow((target.Defence + 50), 2) * 0.01)
+                 (((int)(base_troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((base_atk + Variables.fightDamageBaseAddend), 2)) /
+                 (((int)(base_troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((base_atk + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor +
+                 ((int)(target.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((target.Defence + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor)
 
-                 - 50)
+                 - Variables.fightDamageBaseAddend)
 
-                 + 50)
+                 + Variables.fightDamageBaseAddend)
 
-                 * System.Math.Min(System.Math.Pow(System.Math.Max(1, base_troops / 4), 0.5), 40)
+                 * System.Math.Min(System.Math.Pow(System.Math.Max(1, base_troops / 4), 0.5), Variables.fightTroopSqrtCap)
 
                  * Variables.fight_damage_magic_number /* * 太鼓台系数*/
 
@@ -1145,20 +1145,20 @@ namespace Sango.Core
             int damage = (int)(
                  (
 
-                 (System.Math.Max(0, (int)((System.Math.Pow(base_atk, 2) - System.Math.Pow(System.Math.Max(40, target.Defence), 2)) / 300)) +
+                 (System.Math.Max(0, (int)((System.Math.Pow(base_atk, 2) - System.Math.Pow(System.Math.Max(Variables.fightDefenceFloor, target.Defence), 2)) / Variables.fightAttackDefenceSquareDivisor)) +
                  System.Math.Max(0, (base_troops - target.troops) / Variables.fight_base_troops_need) + 50)
 
                  * 10 * ((int)(
 
-                 (((int)(base_troops * 0.01) + 300) * System.Math.Pow((base_atk + 50), 2)) /
-                 (((int)(base_troops * 0.01) + 300) * System.Math.Pow((base_atk + 50), 2) * 0.01 +
-                 ((int)(target.troops * 0.01) + 300) * System.Math.Pow((target.Defence + 50), 2) * 0.01)
+                 (((int)(base_troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((base_atk + Variables.fightDamageBaseAddend), 2)) /
+                 (((int)(base_troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((base_atk + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor +
+                 ((int)(target.troops * Variables.fightTroopHundredFactor) + Variables.fightTroopBaseAddend) * System.Math.Pow((target.Defence + Variables.fightDamageBaseAddend), 2) * Variables.fightTroopHundredFactor)
 
-                 - 50)
+                 - Variables.fightDamageBaseAddend)
 
-                 + 50)
+                 + Variables.fightDamageBaseAddend)
 
-                 * System.Math.Min(System.Math.Pow(System.Math.Max(1, base_troops / 4), 0.5), 40)
+                 * System.Math.Min(System.Math.Pow(System.Math.Max(1, base_troops / 4), 0.5), Variables.fightTroopSqrtCap)
 
                  * Variables.fight_damage_magic_number /* * 太鼓台系数*/
 

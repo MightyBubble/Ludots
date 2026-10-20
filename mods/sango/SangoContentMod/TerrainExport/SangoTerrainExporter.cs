@@ -41,15 +41,18 @@ public static class SangoTerrainExporter
     /// and maps to Ludots worldZ (heightmap row), source y is the east axis and maps to worldX
     /// (heightmap column) — mirroring MapData.VertexPosition (y * quadSize, h * 0.5f, x * quadSize).
     /// </summary>
-    public static SangoTerrainExportStats ExportToDirectory(SangoMapBinArchive archive, string outputDirectory)
+    public static SangoTerrainExportStats ExportToDirectory(
+        SangoMapBinArchive archive, string outputDirectory, SangoTerrainBiomeProjection biomeProjection)
     {
         if (archive == null) throw new ArgumentNullException(nameof(archive));
         if (string.IsNullOrWhiteSpace(outputDirectory)) throw new ArgumentException("Output directory is required.", nameof(outputDirectory));
+        if (biomeProjection == null) throw new ArgumentNullException(nameof(biomeProjection));
 
         Directory.CreateDirectory(outputDirectory);
 
         SangoTerrainExportStats stats = ExportHeightmap(archive, Path.Combine(outputDirectory, HeightmapFileName));
-        SangoTerrainExportStats hexStats = ExportHexGrid(archive, Path.Combine(outputDirectory, HexDataFileName));
+        SangoTerrainExportStats hexStats = ExportHexGrid(
+            archive, Path.Combine(outputDirectory, HexDataFileName), biomeProjection);
         return stats with
         {
             HexWidthInChunks = hexStats.HexWidthInChunks,
@@ -137,8 +140,10 @@ public static class SangoTerrainExporter
     /// visual biome projection in the biome nibble, and the raw TerrainTypes.json byte in extra byte
     /// layer 0 (read back via VertexMap.GetExtraByte) so M1 gameplay layers keep the full table index.
     /// </summary>
-    public static SangoTerrainExportStats ExportHexGrid(SangoMapBinArchive archive, string outputPath)
+    public static SangoTerrainExportStats ExportHexGrid(
+        SangoMapBinArchive archive, string outputPath, SangoTerrainBiomeProjection biomeProjection)
     {
+        if (biomeProjection == null) throw new ArgumentNullException(nameof(biomeProjection));
         MapGridSection grid = archive.Grid;
         MapDataSection data = archive.Data;
         int gridVertexCount = Math.Max(1, grid.GridVertexCount);
@@ -167,7 +172,7 @@ public static class SangoTerrainExporter
                 int row = gridX;    // VertexMap row = north axis
                 map.SetHeight(column, row, SangoTerrainScale.QuantizeToNibbleLevel(center.Height));
                 map.SetWaterHeight(column, row, SangoTerrainScale.QuantizeToNibbleLevel(center.Water));
-                map.SetBiome(column, row, SangoTerrainScale.ProjectTerrainTypeToBiome(cell.TerrainType));
+                map.SetBiome(column, row, biomeProjection.Project(cell.TerrainType));
                 // VertexMap only exposes nibble-level setters; the raw terrain byte needs the chunk cell directly.
                 map.GetChunk(column, row, createIfMissing: true)
                     .SetExtraByte(column & VertexChunk.ChunkSizeMask, row & VertexChunk.ChunkSizeMask, 0, cell.TerrainType);

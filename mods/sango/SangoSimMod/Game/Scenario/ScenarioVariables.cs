@@ -73,6 +73,65 @@ namespace Sango.Core
         /// </summary>
         [JsonProperty] public float[] fight_damage_difficulty_factor = new float[] { 1.3f, 1, 0.85f, 0.7f };
 
+        // ---- T1.3(#1842/#1847):战斗/内政公式骨架的裸常数提参(默认值=原字面量,
+        // 类型逐位保真:0.01 为 double、1500f/25f 为 float,公式结构与求值次序不动) ----
+
+        [JsonProperty] public int fightDefenceFloor = 40;
+        [JsonProperty] public int fightAttackDefenceSquareDivisor = 300;
+        [JsonProperty] public int fightDamageBaseAddend = 50;
+        [JsonProperty] public int fightTroopBaseAddend = 300;
+        [JsonProperty] public double fightTroopHundredFactor = 0.01;
+        [JsonProperty] public int fightTroopSqrtCap = 40;
+        [JsonProperty] public int fightHelepolisTroopDivisor = 25;
+        [JsonProperty] public float fightHelepolisDenominator = 1500f;
+        [JsonProperty] public float fightHelepolisDurabilityDivisor = 25f;
+
+        [JsonProperty] public int researchBaseTurns = 3;
+        [JsonProperty] public int researchAbilityDivisor = 70;
+
+        [JsonProperty] public int duelAttackBaseRate = 80;
+        [JsonProperty] public int duelAttackStrengthDivisor = 5;
+        [JsonProperty] public int duelAttackRateFloor = 30;
+        [JsonProperty] public int duelAttackRateCeiling = 95;
+        [JsonProperty] public int duelCriticalBaseRate = 10;
+        [JsonProperty] public int duelCriticalStrengthDivisor = 10;
+        [JsonProperty] public int duelCriticalRateCeiling = 30;
+        [JsonProperty] public int duelBaseDamage = 10;
+        [JsonProperty] public int duelDamageStrengthDivisor = 10;
+        [JsonProperty] public int duelMoraleSwing = 20;
+        [JsonProperty] public int duelCaptureChance = 30;
+        [JsonProperty] public int duelTroopDestroyChance = 20;
+
+        [JsonProperty] public float appointTargetGoldBase = 3000f;
+        [JsonProperty] public float appointTargetGoldStoreMultiplier = 2f;
+        [JsonProperty] public float appointTargetFoodPerTroop = 2.5f;
+        [JsonProperty] public float appointTargetFoodCap = 50000f;
+        [JsonProperty] public float appointTargetTroopFoodDivisor = 2f;
+        [JsonProperty] public float appointTargetTroopCap = 20000f;
+        [JsonProperty] public float appointTargetItemPerTroop = 1.2f;
+        [JsonProperty] public float appointTargetBoat = 100f;
+        [JsonProperty] public float appointTargetMachine = 100f;
+        [JsonProperty] public float appointTargetSecurity = 90f;
+        [JsonProperty] public float appointTargetMorale = 100f;
+        [JsonProperty] public float appointBorderTargetGold = 500f;
+        [JsonProperty] public float appointSecurityBaseline = 50f;
+
+        [JsonProperty] public int startFoodBase = 43000;
+        [JsonProperty] public int startFoodPerDifficulty = 3000;
+        [JsonProperty] public int startGoldBase = 4300;
+        [JsonProperty] public int startGoldPerDifficulty = 300;
+        [JsonProperty] public int startTroopsBase = 11000;
+        [JsonProperty] public int startTroopsPerDifficulty = 1000;
+        [JsonProperty] public int startCapitalTroopBonus = 10000;
+        [JsonProperty] public int startSecurityBase = 90;
+        [JsonProperty] public int startSecurityPerDifficulty = 5;
+        [JsonProperty] public int startMoraleBase = 85;
+        [JsonProperty] public int startMoralePerDifficulty = 5;
+        [JsonProperty] public int startWarItemBase = 5500;
+        [JsonProperty] public int startWarItemPerDifficulty = 500;
+        [JsonProperty] public int startSiegeItemBase = 2500;
+        [JsonProperty] public int startSiegeItemPerDifficulty = 500;
+
         /// <summary>
         /// 难度
         /// </summary>

@@ -356,7 +356,10 @@ namespace Sango.Core
 
         /// <summary>
         /// 加载 Data/ScenarioEvent/*.json(M3.e 激活;进程内一次,表是静态内容)。
-        /// 时机:启动线(SangoKernelBoot.PrepareKernel)在 VFS 网关安装后调用。
+        /// T1.2 收编 catalog:groupId 进 JSON 字段({"groupId", "name", "entries"}
+        /// 包装),文件名契约与目录枚举退役;条目声明在 SangoContentMod 的
+        /// config_catalog(逐文件 DeepObject)。时机:启动线(SangoKernelBoot.
+        /// PrepareKernel)在 VFS 网关安装后调用。
         /// </summary>
         public void Init()
         {
@@ -365,39 +368,53 @@ namespace Sango.Core
                 return;
             }
 
-            var groups = new List<(int GroupId, string File)>();
-            Sango.Directory.EnumFiles(Path.ContentRootPath + "/Data/ScenarioEvent", "*.json",
-                System.IO.SearchOption.TopDirectoryOnly, file =>
-                {
-                    string fileName = System.IO.Path.GetFileNameWithoutExtension(file);
-                    int separator = fileName.IndexOf('_');
-                    if (separator <= 0 || !int.TryParse(fileName.Substring(0, separator), out int groupId))
-                    {
-                        throw new InvalidOperationException(
-                            $"ScenarioEvent table '{fileName}' lacks the '<groupId>_<name>' file contract.");
-                    }
-
-                    groups.Add((groupId, file));
-                });
-
-            // 组序确定性:按组 id 升序装载(文件系统枚举序不做确定性假设)。
-            groups.Sort((a, b) => a.GroupId.CompareTo(b.GroupId));
-            foreach ((int groupId, string file) in groups)
+            var groups = new List<(int GroupId, System.Text.Json.Nodes.JsonArray Entries)>();
+            Ludots.Core.Config.ConfigPipeline pipeline = Sango.Runtime.SangoConfigRuntime.Pipeline();
+            Ludots.Core.Config.ConfigCatalog catalog = Sango.Runtime.SangoConfigRuntime.Catalog();
+            foreach (Ludots.Core.Config.ConfigCatalogEntry entry in catalog.Entries)
             {
-                List<ScenarioEventTableEntry> entries =
-                    TKNewtonsoft.Json.JsonConvert.DeserializeObject<List<ScenarioEventTableEntry>>(File.ReadAllText(file))
+                if (!entry.RelativePath.StartsWith("Data/ScenarioEvent/", System.StringComparison.Ordinal))
+                    continue;
+
+                Ludots.Core.Config.ConfigCatalogEntry declared =
+                    Ludots.Core.Config.ConfigPipeline.RequireEntry(catalog, entry.RelativePath, Ludots.Core.Config.ConfigMergePolicy.DeepObject);
+                var merged = pipeline.MergeDeepObjectFromCatalog(in declared)
                     ?? throw new InvalidOperationException(
-                        $"ScenarioEvent table '{file}' is not a JSON array of event entries.");
-                foreach (ScenarioEventTableEntry entry in entries)
+                        $"ScenarioEvent table '{declared.RelativePath}' merged to null.");
+                if (!merged.TryGetPropertyValue("groupId", out System.Text.Json.Nodes.JsonNode? groupIdNode) ||
+                    groupIdNode.GetValue<int>() <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"ScenarioEvent table '{declared.RelativePath}' lacks a positive groupId field in JSON.");
+                }
+
+                if (merged["entries"] is not System.Text.Json.Nodes.JsonArray entries)
+                {
+                    throw new InvalidOperationException(
+                        $"ScenarioEvent table '{declared.RelativePath}' lacks the entries array.");
+                }
+
+                groups.Add((groupIdNode.GetValue<int>(), entries));
+            }
+
+            // 组序确定性:按组 id 升序装载(catalog 条目序不做确定性假设)。
+            groups.Sort((a, b) => a.GroupId.CompareTo(b.GroupId));
+            foreach ((int groupId, System.Text.Json.Nodes.JsonArray entries) in groups)
+            {
+                List<ScenarioEventTableEntry> parsed =
+                    TKNewtonsoft.Json.JsonConvert.DeserializeObject<List<ScenarioEventTableEntry>>(entries.ToJsonString())
+                    ?? throw new InvalidOperationException(
+                        $"ScenarioEvent group {groupId} is not a JSON array of event entries.");
+                foreach (ScenarioEventTableEntry entry in parsed)
                 {
                     if (string.IsNullOrEmpty(entry.eventType) || string.IsNullOrEmpty(entry.formatContent))
                     {
                         throw new InvalidOperationException(
-                            $"ScenarioEvent table '{file}' has an entry missing eventType/formatContent.");
+                            $"ScenarioEvent group {groupId} has an entry missing eventType/formatContent.");
                     }
                 }
 
-                eventGroups[groupId] = entries;
+                eventGroups[groupId] = parsed;
             }
 
             _loaded = true;
