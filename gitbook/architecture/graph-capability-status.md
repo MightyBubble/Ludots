@@ -229,7 +229,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | https://github.com/MightyBubble/Ludots/pull/1798 | 第 6 条：切控制方案发 `ControlSchemeChanged`，由声明方案的 mod 写默认施法方式；销毁实体时清黑板里的引用；`ConstNullEntity` 补上执行 | base 是 #1797 的分支 |
 | https://github.com/MightyBubble/Ludots/pull/1799 | 第 9 条：四种指示器形状，尺寸读技能自己的效果（op 552）；前台状态关掉后，被停的动作等输入相位结束才恢复 | 恢复时机对所有前台状态生效，不只瞄准，审的时候要看；552 假设 #1792 占 551 |
 
-**这些 PR 之外还没做的：** `targeting.impactEffect` 必填但运行时没人读；DuelBolt、Challenge 和瞄准方案展示的线形技能，效果上没有长度字段，长度写成正数字面量；op 551、552 的画廊页没录屏。
+**这些 PR 之外还没做的：** 技能定义上的 `targeting.impactEffect` 装载时必填，解析成 `AbilityTargetingConfig.ImpactEffectTemplateId`，但代码里没有读它的地方（presenter 读的是效果模板上的 `projectile.impactEffect`：`PresentationEntityLifecycleSystem` 发 `ProjectileSpawned`、`ProjectileRuntimeSystem` 发命中效果都用它），要定是删掉这个字段，还是接到 presenter 上；DuelBolt、Challenge 和瞄准方案展示的线形技能，效果上没有长度字段，长度写成正数字面量；op 551、552 的画廊页没录屏。
 
 ### 3.4 不要当成这轮图能力去合
 
