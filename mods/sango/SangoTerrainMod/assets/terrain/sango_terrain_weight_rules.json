@@ -9,6 +9,7 @@
   },
   "seaLevelCm": 550,
   "peakSpanCm": 12200,
+  "terrainTypeBiomeDefault": 2,
   "output": {
     "controlMap": "assets/Textures/terrain_control_weights.png",
     "columns": 2048,
@@ -22,224 +23,256 @@
       "grass": 0.0,
       "dirt": 0.0,
       "rock": 0.0,
-      "note": "pure height/slope driven"
+      "note": "pure height/slope driven",
+      "biome": 0
     },
     "1": {
       "name": "草地",
       "sand": 0.05,
       "grass": 0.85,
       "dirt": 0.08,
-      "rock": 0.02
+      "rock": 0.02,
+      "biome": 3
     },
     "2": {
       "name": "土",
       "sand": 0.05,
       "grass": 0.1,
       "dirt": 0.8,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 1
     },
     "3": {
       "name": "砂地",
       "sand": 0.85,
       "grass": 0.03,
       "dirt": 0.1,
-      "rock": 0.02
+      "rock": 0.02,
+      "biome": 1
     },
     "4": {
       "name": "湿地",
       "sand": 0.3,
       "grass": 0.15,
       "dirt": 0.45,
-      "rock": 0.1
+      "rock": 0.1,
+      "biome": 5
     },
     "5": {
       "name": "毒泉",
       "sand": 0.1,
       "grass": 0.05,
       "dirt": 0.45,
-      "rock": 0.4
+      "rock": 0.4,
+      "biome": 5
     },
     "6": {
       "name": "森",
       "sand": 0.02,
       "grass": 0.48,
       "dirt": 0.2,
-      "rock": 0.3
+      "rock": 0.3,
+      "biome": 5
     },
     "7": {
       "name": "川",
       "sand": 0.55,
       "grass": 0.2,
       "dirt": 0.2,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 2
     },
     "8": {
       "name": "河",
       "sand": 0.5,
       "grass": 0.18,
       "dirt": 0.25,
-      "rock": 0.07
+      "rock": 0.07,
+      "biome": 2
     },
     "9": {
       "name": "海",
       "sand": 0.8,
       "grass": 0.05,
       "dirt": 0.1,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 2
     },
     "10": {
       "name": "荒地",
       "sand": 0.15,
       "grass": 0.05,
       "dirt": 0.6,
-      "rock": 0.2
+      "rock": 0.2,
+      "biome": 4
     },
     "11": {
       "name": "主径",
       "sand": 0.3,
       "grass": 0.05,
       "dirt": 0.6,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 1
     },
     "12": {
       "name": "栈道",
       "sand": 0.1,
       "grass": 0.05,
       "dirt": 0.35,
-      "rock": 0.5
+      "rock": 0.5,
+      "biome": 4
     },
     "13": {
       "name": "渡所",
       "sand": 0.6,
       "grass": 0.15,
       "dirt": 0.2,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 2
     },
     "14": {
       "name": "浅滩",
       "sand": 0.65,
       "grass": 0.2,
       "dirt": 0.1,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 2
     },
     "15": {
       "name": "岸",
       "sand": 0.7,
       "grass": 0.1,
       "dirt": 0.15,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 2
     },
     "16": {
       "name": "崖",
       "sand": 0.02,
       "grass": 0.03,
       "dirt": 0.15,
-      "rock": 0.8
+      "rock": 0.8,
+      "biome": 4
     },
     "17": {
       "name": "都市",
       "sand": 0.25,
       "grass": 0.02,
       "dirt": 0.43,
-      "rock": 0.3
+      "rock": 0.3,
+      "biome": 1
     },
     "18": {
       "name": "港",
       "sand": 0.45,
       "grass": 0.03,
       "dirt": 0.22,
-      "rock": 0.3
+      "rock": 0.3,
+      "biome": 2
     },
     "19": {
       "name": "关所",
       "sand": 0.1,
       "grass": 0.03,
       "dirt": 0.27,
-      "rock": 0.6
+      "rock": 0.6,
+      "biome": 4
     },
     "20": {
       "name": "小径",
       "sand": 0.35,
       "grass": 0.1,
       "dirt": 0.5,
-      "rock": 0.05
+      "rock": 0.05,
+      "biome": 1
     },
     "21": {
       "name": "地21",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "22": {
       "name": "地22",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "23": {
       "name": "地23",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "24": {
       "name": "地24",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "25": {
       "name": "地25",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "26": {
       "name": "地26",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "27": {
       "name": "地27",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "28": {
       "name": "地28",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "29": {
       "name": "地29",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "30": {
       "name": "地30",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "31": {
       "name": "地31",
       "sand": 0.1,
       "grass": 0.3,
       "dirt": 0.45,
-      "rock": 0.15
+      "rock": 0.15,
+      "biome": 0
     },
     "32": {
       "name": "外海",
@@ -247,7 +280,8 @@
       "grass": 0.05,
       "dirt": 0.1,
       "rock": 0.05,
-      "note": "open ocean sentinel; renderer skips albedo where vertex heightBand<=0"
+      "note": "open ocean sentinel; renderer skips albedo where vertex heightBand<=0",
+      "biome": 2
     }
   },
   "heightSlopeModulation": {

@@ -11,9 +11,9 @@ using Sango.WebUi;
 namespace Ludots.Tests.SangoWebUi;
 
 /// <summary>
-/// M1.c 验收:SangoWebUiMod 投影层与命令路由对真实 sango 内核端到端(headless,Fake transport,
-/// 照 SangoMapStatsDataPlaneTests 范式)。内核经 SangoKernelBoot 以真实 Scenario.json 启动一次,
-/// 全部断言直接读内核单例(Scenario.Cur),不只看命令回执。
+/// M1.c 验收:SangoWebUiMod 投影层与命令路由对真实 sango 内核端到端(headless,Fake transport)。
+/// 内核经 SangoKernelBoot 以真实 Scenario.json 启动一次,全部断言直接读内核单例(Scenario.Cur),
+/// 不只看命令回执。
 /// </summary>
 [TestFixture]
 public sealed class SangoWebUiModTests
