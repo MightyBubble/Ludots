@@ -116,8 +116,8 @@ namespace Sango.Core
         public void Init()
         {
             needUpdate_all = true;
-            // core武将库ID 1-10000  预留10000个应该够了
-            CoreScenarioAddon = LoadScenarioAddon("Data/PersonLibrary.json");
+            // core武将库ID 1-10000  预留10000个应该够了(Data/ 根的逐字节副本已删,与 Common 同源)
+            CoreScenarioAddon = LoadScenarioAddon("Data/Common/PersonLibrary.json");
             CoreScenarioAddon.PersonLibrary.ForEach(x =>
             {
                 CorePersonLibList.Add(x);

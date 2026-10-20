@@ -140,12 +140,13 @@ namespace UnityEngine
         public static float Pow(float f, float p) => (float)Math.Pow(f, p);
     }
 
-    // Framework/Log/Log.cs 与 Object 层直调 Debug.Log* 使用;输出走 Console。
+    // Framework/Log/Log.cs 与 Object 层直调 Debug.Log* 使用;转发平台 Log 的
+    // Sango.Kernel 通道(与 Sango.Log 同宿),不再各自 Console.WriteLine。
     public static class Debug
     {
-        public static void Log(object message) => Console.Out.WriteLine(message);
-        public static void LogWarning(object message) => Console.Out.WriteLine("[Warn] " + message);
-        public static void LogError(object message) => Console.Error.WriteLine("[Error] " + message);
+        public static void Log(object message) => Ludots.Core.Diagnostics.Log.Info(Sango.Log.Channel, message?.ToString() ?? string.Empty);
+        public static void LogWarning(object message) => Ludots.Core.Diagnostics.Log.Warn(Sango.Log.Channel, message?.ToString() ?? string.Empty);
+        public static void LogError(object message) => Ludots.Core.Diagnostics.Log.Error(Sango.Log.Channel, message?.ToString() ?? string.Empty);
     }
 
     // PLAN D7:UnityEngine.Random 直调统一收敛为 GameRandom 委托;Debate 层(后续波)的

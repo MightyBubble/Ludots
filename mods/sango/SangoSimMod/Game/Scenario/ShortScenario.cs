@@ -257,7 +257,7 @@ namespace Sango.Core
         {
             FilePath = path;
 
-            using (StreamReader file = System.IO.File.OpenText(FilePath))
+            using (StreamReader file = Sango.File.OpenText(FilePath))
             using (JsonTextReader reader = new JsonTextReader(file))
             {
                 while (reader.Read()) // Advances to the next token in the JSON stream.
@@ -310,7 +310,7 @@ namespace Sango.Core
             // 主公/军师武将 ID 集合，forceSet 加载完后填充
             HashSet<int> mainPersonIds = null;
 
-            using (StreamReader file = System.IO.File.OpenText(FilePath))
+            using (StreamReader file = Sango.File.OpenText(FilePath))
             using (JsonTextReader reader = new JsonTextReader(file))
             {
                 bool personSetLoaded = false;
@@ -428,7 +428,7 @@ namespace Sango.Core
             // 主公/军师武将 ID 集合，forceSet 加载完后填充
             HashSet<int> mainPersonIds = null;
 
-            using (StreamReader file = System.IO.File.OpenText(FilePath))
+            using (StreamReader file = Sango.File.OpenText(FilePath))
             using (JsonTextReader reader = new JsonTextReader(file))
             {
                 bool personSetLoaded = false;

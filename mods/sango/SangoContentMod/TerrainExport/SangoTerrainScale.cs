@@ -51,42 +51,6 @@ public static class SangoTerrainScale
         return DeriveSeaLevelUnits(archive) * CmPerHeightUnit;
     }
 
-    /// <summary>
-    /// Lossy visual projection of the TerrainTypes.json terrain byte onto the VertexMap biome nibble
-    /// (0..15). The raw terrain byte travels losslessly in the VertexMap extra byte layer 0; this
-    /// projection only feeds engine-side fallback hex vertex colors (TerrainVisualRules biomes).
-    /// 32 appears in the real map grid for open sea beyond the shipped table range.
-    /// </summary>
-    public static byte ProjectTerrainTypeToBiome(byte terrainType)
-    {
-        return terrainType switch
-        {
-            0 => 0,   // 无
-            1 => 3,   // 草地 → engine green
-            2 => 1,   // 土 → engine sand
-            3 => 1,   // 砂地 → engine sand
-            4 => 5,   // 湿地 → engine dark olive
-            5 => 5,   // 毒泉 → engine dark olive
-            6 => 5,   // 森 → engine dark olive
-            7 => 2,   // 川 → engine gray (water)
-            8 => 2,   // 河 → engine gray (water)
-            9 => 2,   // 海 → engine gray (water)
-            10 => 4,  // 荒地 → engine rock gray
-            11 => 1,  // 主径 → engine sand (road)
-            12 => 4,  // 栈道 → engine rock gray
-            13 => 2,  // 渡所 → engine gray (water crossing)
-            14 => 2,  // 浅滩 → engine gray (water)
-            15 => 2,  // 岸 → engine gray
-            16 => 4,  // 崖 → engine rock gray
-            17 => 1,  // 都市 → engine sand (settled)
-            18 => 2,  // 港 → engine gray (harbor)
-            19 => 4,  // 关所 → engine rock gray
-            20 => 1,  // 小径 → engine sand (road)
-            >= 21 and <= 31 => 0, // 地20..地30 placeholder kinds → base brown
-            _ => 2,   // 32+ observed as open sea → engine gray (water)
-        };
-    }
-
     /// <summary>Linear 0..255 source byte → 0..15 VertexMap nibble level.</summary>
     public static byte QuantizeToNibbleLevel(byte value)
     {
