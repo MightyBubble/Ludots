@@ -36,6 +36,15 @@ namespace Sango.Tests
         private const int TurnsToAdvance = 10;
         private static readonly int[] SeedLadder = { 20260902, 20260903, 20260904, 20260905, 20260906, 20260907 };
 
+        // 场景阶梯按真图动态校准(攻陷链依赖地形与城池布局),均匀草地的合成图
+        // 达不到触发条件;bin 缺席按 RealMap 套件惯例跳过。
+        private static void RequireRealMapBin()
+        {
+            string bin = Path.Combine(RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "Map", "DefaultMap.bin");
+            if (!File.Exists(bin))
+                Assert.Ignore($"scenario calibrated on real-map dynamics; DefaultMap.bin not present (local-only content): {bin}");
+        }
+
         private static string RepoRoot()
         {
             string? dir = TestContext.CurrentContext.TestDirectory;
@@ -562,6 +571,7 @@ namespace Sango.Tests
         [Test]
         public void NativeCity_Parity_DigestsBitIdentical_WithCityFall()
         {
+            RequireRealMapBin();
             Assembly sim = LoadSangoSimMod();
 
             // 种子探测(内核路):找攻陷白城命中的种子。

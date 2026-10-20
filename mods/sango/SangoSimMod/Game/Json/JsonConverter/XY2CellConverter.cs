@@ -16,18 +16,23 @@ namespace Sango.Core
             public int x;
             public int y;
             public static List<DelaySetCellValue> delaySetValues_List = new List<DelaySetCellValue>();
-            public static void OnScenarioPrepare(Scenario scenario)
+        public static void OnScenarioPrepare(Scenario scenario)
+        {
+            // 地图未物化(bin 缺席、合成重建尚未发生)时本拍不解析也不退订,
+            // 留给合成重建后的下一次 OnScenarioPrepare;真图路径 Map.Load 已填
+            // CellSet,行为与原版一致(探测式与 SangoKernelBoot 的合成判定同源)。
+            if (scenario.Map.CellSet?.GetCell(0, 0) == null)
+                return;
+            for (int i = 0; i < delaySetValues_List.Count; i++)
             {
-                for (int i = 0; i < delaySetValues_List.Count; i++)
-                {
-                    DelaySetCellValue setValue = delaySetValues_List[i];
-                    var value = scenario.Map.GetCell(setValue.x, setValue.y);
-                    if (value != null && setValue.property != null)
-                        setValue.property.ValueProvider.SetValue(setValue.target, value);
-                }
-                delaySetValues_List.Clear();
-                GameEvent.OnScenarioPrepare -= OnScenarioPrepare;
+                DelaySetCellValue setValue = delaySetValues_List[i];
+                var value = scenario.Map.GetCell(setValue.x, setValue.y);
+                if (value != null && setValue.property != null)
+                    setValue.property.ValueProvider.SetValue(setValue.target, value);
             }
+            delaySetValues_List.Clear();
+            GameEvent.OnScenarioPrepare -= OnScenarioPrepare;
+        }
             public static void Add(DelaySetCellValue setValue)
             {
                 if (delaySetValues_List.Count == 0)

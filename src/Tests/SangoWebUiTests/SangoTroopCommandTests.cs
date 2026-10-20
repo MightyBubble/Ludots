@@ -20,6 +20,16 @@ public sealed class SangoTroopCommandTests
     private const string SessionId = "sango-troop-tests";
     private const int Seed = 20260902;
 
+    // 越程拒绝分支依赖「程外不可驻且非敌对目标格」存在(真图水/山缘);全草地
+    // 合成图的程外不可驻格首先是中立城(敌对目标走委任攻击被 ack)。bin 缺席
+    // 按 RealMap 套件惯例跳过。
+    private static void RequireRealMapBin()
+    {
+        string bin = Path.Combine(RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "Map", "DefaultMap.bin");
+        if (!File.Exists(bin))
+            Assert.Ignore($"scenario calibrated on real-map dynamics; DefaultMap.bin not present (local-only content): {bin}");
+    }
+
     private static string RepoRoot()
     {
         string? dir = TestContext.CurrentContext.TestDirectory;
@@ -333,6 +343,7 @@ public sealed class SangoTroopCommandTests
     [Test]
     public async Task MoveTroopCommand_DataPlaneLoop_MovesKernelTroop()
     {
+        RequireRealMapBin();
         EnsureKernelBooted();
         City city = FindEligibleCity();
         int[] personIds = city.freePersons.Where(person => person != null).Take(1).Select(person => person!.Id).ToArray();
