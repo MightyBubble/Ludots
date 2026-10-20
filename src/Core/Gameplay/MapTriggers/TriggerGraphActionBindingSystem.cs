@@ -32,6 +32,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<ClientLocalSeatRegistry?> _seats;
         private readonly Func<ClientLocalSeatInputRuntime?> _seatInput;
         private readonly Action<Entity> _reconcileContext;
+        private readonly Action? _beginInputPhase;
+        private readonly Action? _endInputPhase;
         private readonly List<string> _actionSnapshot = new(32);
         private readonly List<TriggerGraphMountTrigger> _mountSnapshot = new(16);
         private readonly List<InputBindingIntFire> _intFires = new(4);
@@ -46,7 +48,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
             InputConfigRoot inputConfig,
             Func<ClientLocalSeatRegistry?> seats,
             Func<ClientLocalSeatInputRuntime?> seatInput,
-            Action<Entity> reconcileContext)
+            Action<Entity> reconcileContext,
+            Action? beginInputPhase = null,
+            Action? endInputPhase = null)
         {
             _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
@@ -57,6 +61,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _seats = seats ?? throw new ArgumentNullException(nameof(seats));
             _seatInput = seatInput ?? throw new ArgumentNullException(nameof(seatInput));
             _reconcileContext = reconcileContext ?? throw new ArgumentNullException(nameof(reconcileContext));
+            _beginInputPhase = beginInputPhase;
+            _endInputPhase = endInputPhase;
             _firesOnByAction = BuildFiresOnLookup(inputConfig);
         }
 
@@ -133,52 +139,60 @@ namespace Ludots.Core.Gameplay.MapTriggers
             ReadOnlySpan<int> phases = stackalloc int[] { 3, 0, 1, 2 };
             for (int phaseIndex = 0; phaseIndex < phases.Length; phaseIndex++)
             {
-            int phase = phases[phaseIndex];
-            foreach (string actionId in _actionSnapshot)
-            {
-                if (!_bindings.TryGetMounts(actionId, out var mounts)) continue;
-                bool valueChange = IsValueChange(actionId);
-                if (DispatchPhase(input, actionId, valueChange) != phase) continue;
-
-                System.Numerics.Vector2 actionValue = default;
-                System.Numerics.Vector2 pointer = default;
-                if (valueChange)
+                _beginInputPhase?.Invoke();
+                try
                 {
-                    string watchedId = actionId == ReservedInputActionIds.PointerMoved
-                        ? ReservedInputActionIds.PointerPos
-                        : actionId;
-                    if (!input.TryReadPresentVector2(watchedId, out actionValue)) continue;
-                    if (actionId == ReservedInputActionIds.PointerMoved)
+                    int phase = phases[phaseIndex];
+                    foreach (string actionId in _actionSnapshot)
                     {
-                        pointer = actionValue;
-                    }
-                    else if (!input.TryReadPresentVector2(ReservedInputActionIds.PointerPos, out pointer))
-                    {
-                        pointer = default;
-                    }
-                }
-                else if (!DispatchButtonEdges(session, input, possessedRep, actionId, mounts))
-                {
-                    continue;
-                }
+                        if (!_bindings.TryGetMounts(actionId, out var mounts)) continue;
+                        bool valueChange = IsValueChange(actionId);
+                        if (DispatchPhase(input, actionId, valueChange) != phase) continue;
 
-                if (!valueChange)
-                {
-                    continue;
-                }
+                        System.Numerics.Vector2 actionValue = default;
+                        System.Numerics.Vector2 pointer = default;
+                        if (valueChange)
+                        {
+                            string watchedId = actionId == ReservedInputActionIds.PointerMoved
+                                ? ReservedInputActionIds.PointerPos
+                                : actionId;
+                            if (!input.TryReadPresentVector2(watchedId, out actionValue)) continue;
+                            if (actionId == ReservedInputActionIds.PointerMoved)
+                            {
+                                pointer = actionValue;
+                            }
+                            else if (!input.TryReadPresentVector2(ReservedInputActionIds.PointerPos, out pointer))
+                            {
+                                pointer = default;
+                            }
+                        }
+                        else if (!DispatchButtonEdges(session, input, possessedRep, actionId, mounts))
+                        {
+                            continue;
+                        }
 
-                int modifiers = ReadHeldModifiers(input);
-                CopyMounts(mounts);
-                for (int i = 0; i < _mountSnapshot.Count; i++)
-                {
-                    TriggerGraphMountTrigger mount = _mountSnapshot[i];
-                    Entity rep = mount.Scope;
-                    if (!mount.IsActionRegistered || rep == Entity.Null || rep == default ||
-                        (possessedRep.HasValue && rep != possessedRep.Value)) continue;
-                    if (valueChange && !mount.ConsumeActionValueSample(actionValue)) continue;
-                    Dispatch(session, mount, actionId, rep, pointer, modifiers, valueChange, actionValue, bindingInt: null);
+                        if (!valueChange)
+                        {
+                            continue;
+                        }
+
+                        int modifiers = ReadHeldModifiers(input);
+                        CopyMounts(mounts);
+                        for (int i = 0; i < _mountSnapshot.Count; i++)
+                        {
+                            TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                            Entity rep = mount.Scope;
+                            if (!mount.IsActionRegistered || rep == Entity.Null || rep == default ||
+                                (possessedRep.HasValue && rep != possessedRep.Value)) continue;
+                            if (valueChange && !mount.ConsumeActionValueSample(actionValue)) continue;
+                            Dispatch(session, mount, actionId, rep, pointer, modifiers, valueChange, actionValue, bindingInt: null);
+                        }
+                    }
                 }
-            }
+                finally
+                {
+                    _endInputPhase?.Invoke();
+                }
             }
         }
 

@@ -161,11 +161,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Float declared for <paramref name="fieldKey"/> on <paramref name="currentGraphId"/>
+        /// of the ability at <paramref name="slot"/>. effectFields names either a float on
+        /// the impact effect or a positive literal when that effect has no spatial number.
+        /// A missing key, an unknown field, or a value that is absent or not greater than 0
+        /// fails closed.
+        /// </summary>
+        float LoadAbilityEffectFloat(Entity actor, int slot, int currentGraphId, string fieldKey)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AbilityDefinitionsUnavailable");
+        }
+
+        /// <summary>
         /// Ability id resolved for <paramref name="actor"/> at <paramref name="slot"/>.
         /// A dead actor or an empty slot fails closed. Does not read the ability definition.
         /// </summary>
         int LoadSlotAbilityId(Entity actor, int slot)
         {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LoadSlotAbilityIdUnavailable");
+        }
+
+        /// <summary>
+        /// Same resolution as <see cref="LoadSlotAbilityId"/>. A dead actor fails closed.
+        /// An actor with no ability in the slot returns false and writes 0.
+        /// </summary>
+        bool TryLoadSlotAbilityId(Entity actor, int slot, out int abilityId)
+        {
+            abilityId = 0;
             throw new InvalidOperationException("GAS.GRAPH.ERR.LoadSlotAbilityIdUnavailable");
         }
 

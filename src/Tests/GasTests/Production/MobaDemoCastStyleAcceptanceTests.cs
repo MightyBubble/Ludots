@@ -14,6 +14,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -98,6 +99,10 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         Fix64Vec2 heroBefore = engine.World.Get<WorldPositionCm>(hero).Value;
         Press(engine, input, "<Keyboard>/e");
         Assert.That(IsDerivedContextActive(engine, hero, AimingContext), Is.True);
+        Assert.That(
+            ReadOwnerPresenterFloat(engine, hero, "aim.cone", WellKnownPresenterParamKeys.OverlayRadius),
+            Is.EqualTo(8f).Within(0.02f),
+            "Moba E cone radius 8 m");
         AimPointerAtWorldCm(engine, input, new Vector2(300f, 900f));
         Press(engine, input, "<Mouse>/RightButton");
         Tick(engine, 30);
@@ -349,6 +354,31 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         }
 
         return members;
+    }
+
+    private static float ReadOwnerPresenterFloat(GameEngine engine, Entity owner, string definitionKey, int paramKey)
+    {
+        PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+        int defId = definitions.GetId(definitionKey);
+        float value = float.NaN;
+        int found = 0;
+        var query = new QueryDescription().WithAll<PresenterState, PresenterFloatParams>();
+        engine.World.Query(in query, (Entity _, ref PresenterState state, ref PresenterFloatParams floats) =>
+        {
+            if (state.DefId != defId || state.OwnerEntity != owner)
+            {
+                return;
+            }
+
+            found++;
+            if (!floats.TryGet(paramKey, out value))
+            {
+                value = float.NaN;
+            }
+        });
+        Assert.That(found, Is.EqualTo(1), definitionKey + " " + Diagnostics(engine));
+        return value;
     }
 
     private static string Diagnostics(GameEngine engine)

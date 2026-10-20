@@ -262,6 +262,11 @@
         "id": "write_stick_fail",
         "op": "WriteBlackboardInt",
         "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "sync_unit",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.unit.sync"
       }
     ],
     "controlEdges": [
@@ -453,7 +458,7 @@
       {
         "from": "write_hover",
         "fromPort": "next",
-        "to": "halt_ok"
+        "to": "sync_unit"
       },
       {
         "from": "pick_jump",
@@ -478,7 +483,7 @@
       {
         "from": "clear_hover",
         "fromPort": "next",
-        "to": "halt_ok"
+        "to": "sync_unit"
       },
       {
         "from": "pick_jump",
@@ -553,7 +558,7 @@
       {
         "from": "release_jump",
         "fromPort": "false",
-        "to": "halt_ok"
+        "to": "sync_unit"
       },
       {
         "from": "pick_radius",
@@ -569,6 +574,11 @@
         "from": "pick_rel_1",
         "fromPort": "next",
         "to": "hover_hostile"
+      },
+      {
+        "from": "sync_unit",
+        "fromPort": "next",
+        "to": "halt_ok"
       }
     ],
     "valueEdges": [

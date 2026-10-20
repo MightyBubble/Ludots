@@ -701,15 +701,20 @@ namespace Ludots.Core.Presentation.Config
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key, definitionPath, "behaviors");
             ChildPresenterRef[] children = ParseChildren(node["children"], $"{definitionPath}.children");
             ValidateChildrenCapacity(key, children);
-            Vector3 positionOffset = ParseAnchorOffset(node["anchor"], key, $"{definitionPath}.anchor");
-            ValidateRootTransformSources(key, positionOffset, behaviors);
+            ParsedAnchor anchor = ParseAnchor(node["anchor"], key, $"{definitionPath}.anchor");
+            ValidateRootTransformSources(key, anchor.Offset, behaviors);
 
             var def = new PresenterDefinition
             {
                 Key = key,
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Presenter '{key}' extends"),
                 DefaultLifetime = ParseLifecycle(node["lifecycle"], key, $"{definitionPath}.lifecycle"),
-                PositionOffset = positionOffset,
+                PositionOffset = anchor.Offset,
+                HasWorldPositionBinding = anchor.HasWorldPosition,
+                WorldPositionXKeyId = anchor.WorldPositionXKeyId,
+                WorldPositionYKeyId = anchor.WorldPositionYKeyId,
+                WorldPositionXKey = anchor.WorldPositionXKey,
+                WorldPositionYKey = anchor.WorldPositionYKey,
                 Rules = ParseRules(node["rules"], key, $"{definitionPath}.rules"),
                 Bindings = ParseBindings(node["bindings"], key, $"{definitionPath}.bindings"),
                 Children = children,
@@ -1012,6 +1017,13 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] AnchorFields =
         {
             "offset",
+            "worldPosition",
+        };
+
+        private static readonly string[] WorldPositionFields =
+        {
+            "x",
+            "y",
         };
 
         private static readonly string[] OverrideFields =
@@ -1041,7 +1053,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] BindingFields =
         {
-            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional",
+            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional", "unit",
         };
 
         private static readonly string[] ParamDefaultFields =
@@ -1411,11 +1423,25 @@ namespace Ludots.Core.Presentation.Config
                 $"Presenter '{key}' lifecycle must declare durationSeconds or persistence.");
         }
 
-        private static Vector3 ParseAnchorOffset(JsonNode? node, string key, string path)
+        private readonly struct ParsedAnchor
+        {
+            public Vector3 Offset { get; init; }
+            public bool HasWorldPosition { get; init; }
+            public int WorldPositionXKeyId { get; init; }
+            public int WorldPositionYKeyId { get; init; }
+            public string WorldPositionXKey { get; init; }
+            public string WorldPositionYKey { get; init; }
+        }
+
+        private static ParsedAnchor ParseAnchor(JsonNode? node, string key, string path)
         {
             if (node == null)
             {
-                return Vector3.Zero;
+                return new ParsedAnchor
+                {
+                    WorldPositionXKey = string.Empty,
+                    WorldPositionYKey = string.Empty,
+                };
             }
 
             if (node is not JsonObject obj)
@@ -1430,7 +1456,49 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"Presenter '{key}' anchor requires field 'offset'.");
             }
 
-            return ParseVector3(obj["offset"]);
+            bool hasWorldPosition = obj["worldPosition"] != null;
+            string xKey = string.Empty;
+            string yKey = string.Empty;
+            int xKeyId = 0;
+            int yKeyId = 0;
+            if (hasWorldPosition)
+            {
+                if (obj["worldPosition"] is not JsonObject worldPosition)
+                {
+                    throw new InvalidOperationException($"Presenter '{key}' anchor.worldPosition must be an object.");
+                }
+
+                RejectUnknownFields(worldPosition, $"{path}.worldPosition", WorldPositionFields);
+                xKey = ParseBlackboardKeyName(worldPosition["x"], $"Presenter '{key}' anchor.worldPosition.x");
+                yKey = ParseBlackboardKeyName(worldPosition["y"], $"Presenter '{key}' anchor.worldPosition.y");
+                xKeyId = OrderBlackboardKeyRegistry.Resolve(xKey);
+                yKeyId = OrderBlackboardKeyRegistry.Resolve(yKey);
+            }
+
+            return new ParsedAnchor
+            {
+                Offset = ParseVector3(obj["offset"]),
+                HasWorldPosition = hasWorldPosition,
+                WorldPositionXKeyId = xKeyId,
+                WorldPositionYKeyId = yKeyId,
+                WorldPositionXKey = xKey,
+                WorldPositionYKey = yKey,
+            };
+        }
+
+        private static string ParseBlackboardKeyName(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<string>(out string? key) || string.IsNullOrWhiteSpace(key))
+            {
+                throw new InvalidOperationException($"{context} must be a non-empty blackboard key.");
+            }
+
+            if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must be a trimmed blackboard key.");
+            }
+
+            return key;
         }
 
         private PresenterRule[] ParseRules(JsonNode? node, string owner, string path)
@@ -2280,13 +2348,21 @@ namespace Ludots.Core.Presentation.Config
             RejectRemovedBindingFields(node, context);
             string source = node["source"]?.GetValue<string>();
             bool optional = node["optional"]?.GetValue<bool>() ?? false;
+            ValueUnit unit = ParseValueUnit(node["unit"], context);
+            if (unit != ValueUnit.None && source != "ownerBlackboardFloat")
+            {
+                throw new InvalidOperationException(
+                    $"{context} unit '{node["unit"]}' is only valid when source is ownerBlackboardFloat.");
+            }
+
             ValueRef value = source switch
             {
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
                 "graph" => ValueRef.FromGraph(ResolveGraphProgramId(node["sourceId"], context)),
                 "ownerBlackboardFloat" => ValueRef.FromOwnerBlackboardFloat(
-                    ResolveBlackboardKeyId(node["sourceId"], context)),
+                    ResolveBlackboardKeyId(node["sourceId"], context),
+                    unit),
                 "pointerScreenX" => ValueRef.FromPointerScreenX(),
                 "pointerScreenY" => ValueRef.FromPointerScreenY(),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Presenter binding entityColor.sourceId")),
@@ -2300,6 +2376,27 @@ namespace Ludots.Core.Presentation.Config
             };
             value.Optional = optional;
             return value;
+        }
+
+        private static ValueUnit ParseValueUnit(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                return ValueUnit.None;
+            }
+
+            if (node is not JsonValue value || !value.TryGetValue<string>(out string? unit) || string.IsNullOrWhiteSpace(unit))
+            {
+                throw new InvalidOperationException($"{context} unit must be a non-empty string.");
+            }
+
+            if (string.Equals(unit, "logicCm", StringComparison.Ordinal))
+            {
+                return ValueUnit.LogicCm;
+            }
+
+            throw new InvalidOperationException(
+                $"{context} unit '{unit}' is unknown. Known units: logicCm.");
         }
 
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)

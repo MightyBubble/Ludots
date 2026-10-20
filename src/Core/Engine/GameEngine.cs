@@ -1880,6 +1880,7 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindInteractionModeMap(interactionModeMap);
             gasGraphApi.BindInteractionPrefCatalog(interactionPrefCatalog);
             gasGraphApi.BindAbilityDefinitions(abilityDefinitions);
+            gasGraphApi.BindEffectTemplateRegistry(effectTemplateRegistry);
 
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
@@ -2572,7 +2573,9 @@ namespace Ludots.Core.Engine
                     inputConfigRoot,
                     () => GetService(CoreServiceKeys.ClientLocalSeatRegistry),
                     () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime),
-                    interactionContextTriggerGate.ReconcileAfterInputAction),
+                    interactionContextTriggerGate.ReconcileAfterInputAction,
+                    interactionContextTriggerGate.BeginInputDispatchPhase,
+                    interactionContextTriggerGate.EndInputDispatchPhase),
                 SystemGroup.DeferredTriggerCollection);
             // Sole per-tick writer of CameraManager.State. Action graphs enqueue
             // CameraPoseRequest; publishing here applies that request in the same fixed step.
@@ -4100,7 +4103,8 @@ namespace Ludots.Core.Engine
                 EntityTriggerGraphMounts,
                 GetService(CoreServiceKeys.CustomEventNameRegistry),
                 GetService(CoreServiceKeys.AbilityDefinitionRegistry),
-                TriggerManager.EventSchemas));
+                TriggerManager.EventSchemas,
+                GetService(CoreServiceKeys.EffectTemplateRegistry)));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

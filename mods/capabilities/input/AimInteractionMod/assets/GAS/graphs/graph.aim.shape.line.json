@@ -1,0 +1,306 @@
+[
+  {
+    "id": "graph.aim.shape.line",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "press",
+        "event": "Aim.Rule.Press",
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "bind",
+        "event": "Aim.Shape.Bind",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "load_length",
+        "op": "LoadAbilityEffectFloat",
+        "key": "length"
+      },
+      {
+        "id": "write_length",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.shape.length"
+      },
+      {
+        "id": "load_width",
+        "op": "LoadAbilityEffectFloat",
+        "key": "width"
+      },
+      {
+        "id": "write_width",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.shape.width"
+      },
+      {
+        "id": "is_click",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "act_click",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.shape.line",
+        "parentContext": "interaction.context.aim.click"
+      },
+      {
+        "id": "is_release",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "act_release",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.shape.line",
+        "parentContext": "interaction.context.aim.release"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "read_slot"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "next",
+        "to": "click_jump"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "true",
+        "to": "act_click"
+      },
+      {
+        "from": "act_click",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "false",
+        "to": "is_release"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "next",
+        "to": "release_jump"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "true",
+        "to": "act_release"
+      },
+      {
+        "from": "act_release",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_length"
+      },
+      {
+        "from": "load_length",
+        "fromPort": "next",
+        "to": "write_length"
+      },
+      {
+        "from": "write_length",
+        "fromPort": "next",
+        "to": "load_width"
+      },
+      {
+        "from": "load_width",
+        "fromPort": "next",
+        "to": "write_width"
+      },
+      {
+        "from": "write_width",
+        "fromPort": "next",
+        "to": "is_click"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "source"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "value",
+        "to": "click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_click",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "source"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "value",
+        "to": "release_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_release",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_length",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_length",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_length",
+        "toPort": "source"
+      },
+      {
+        "from": "load_length",
+        "fromPort": "value",
+        "to": "write_length",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_width",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_width",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_width",
+        "toPort": "source"
+      },
+      {
+        "from": "load_width",
+        "fromPort": "value",
+        "to": "write_width",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -1,0 +1,161 @@
+[
+  {
+    "id": "graph.aim.shape.unit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "press",
+        "event": "Aim.Rule.Press",
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "bind",
+        "event": "Aim.Shape.Bind",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "is_click",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "act_click",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.shape.unit",
+        "parentContext": "interaction.context.aim.click"
+      },
+      {
+        "id": "is_release",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "act_release",
+        "op": "ActivateContext",
+        "context": "interaction.context.aim.shape.unit",
+        "parentContext": "interaction.context.aim.release"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "is_click"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "next",
+        "to": "click_jump"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "true",
+        "to": "act_click"
+      },
+      {
+        "from": "act_click",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "false",
+        "to": "is_release"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "next",
+        "to": "release_jump"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "true",
+        "to": "act_release"
+      },
+      {
+        "from": "act_release",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "source"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "value",
+        "to": "click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_click",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "source"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "value",
+        "to": "release_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_release",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -1312,7 +1312,7 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.OwnerBlackboardFloat:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey, value.Optional), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, in value, definition.Key, binding.ParamKey), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.PointerScreenX:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);
@@ -1327,13 +1327,13 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private float ResolveOwnerBlackboardFloat(Entity owner, int blackboardKeyId, string definitionKey, int paramKey, bool optional = false)
+        private float ResolveOwnerBlackboardFloat(Entity owner, in ValueRef valueRef, string definitionKey, int paramKey)
         {
             if (!World.IsAlive(owner) ||
                 !World.TryGet<BlackboardFloatBuffer>(owner, out BlackboardFloatBuffer buffer) ||
-                !buffer.TryGet(blackboardKeyId, out float value))
+                !buffer.TryGet(valueRef.SourceId, out float value))
             {
-                if (optional)
+                if (valueRef.Optional)
                 {
                     // Explicit fallback (author wrote optional: true): a transiently absent
                     // source — e.g. an interaction-context blackboard written only while the
@@ -1342,11 +1342,17 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 throw new InvalidOperationException(
-                    $"Presenter '{definitionKey}' binding paramKey={paramKey} source=ownerBlackboardFloat keyId={blackboardKeyId} " +
+                    $"Presenter '{definitionKey}' binding paramKey={paramKey} source=ownerBlackboardFloat keyId={valueRef.SourceId} " +
                     $"requires a readable BlackboardFloatBuffer value on owner {owner.Id}.");
             }
 
-            return value;
+            return valueRef.Unit switch
+            {
+                ValueUnit.None => value,
+                ValueUnit.LogicCm => WorldUnits.CmToM(value),
+                _ => throw new InvalidOperationException(
+                    $"Presenter '{definitionKey}' binding paramKey={paramKey} unit {(byte)valueRef.Unit} is unknown."),
+            };
         }
 
         private float ResolvePointerScreenAxis(bool axisX, string definitionKey, int paramKey)
@@ -1373,7 +1379,7 @@ namespace Ludots.Core.Presentation.Systems
                 switch (value.Source)
                 {
                     case ValueSourceKind.OwnerBlackboardFloat:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, value.SourceId, definition.Key, binding.ParamKey, value.Optional), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveOwnerBlackboardFloat(owner, in value, definition.Key, binding.ParamKey), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.PointerScreenX:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolvePointerScreenAxis(axisX: true, definition.Key, binding.ParamKey), 0, Vector4.Zero);

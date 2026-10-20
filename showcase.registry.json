@@ -11661,6 +11661,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_MinimapApplyWheelZoom/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadAbilityEffectFloat",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAbilityEffectFloatEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadAbilityEffectFloatEntryMod.csproj",
+      "title": "读出这一槽点名的效果数值",
+      "summary": "图按槽位找到技能，再按这张图在 effectFields 里点的名字，读冲击效果上的那个数。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadAbilityEffectFloat"
+      ],
+      "binding": "capability_standard_graph_op_LoadAbilityEffectFloat",
+      "preset": "capability_standard_graph_op_LoadAbilityEffectFloat_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadAbilityEffectFloat.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadAbilityEffectFloat",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadAbilityEffectFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadAbilityEffectFloat/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [
