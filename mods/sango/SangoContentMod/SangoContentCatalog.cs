@@ -8,8 +8,10 @@ namespace Sango.Content
     /// <summary>
     /// Headless inventory of the Sango JSON tables under a SangoContentMod install's assets/.
     /// Key = asset path relative to assets/ with '/' separators (e.g. "Data/Common/TroopTypes.json").
-    /// Value = row count: array root uses its length; object roots take the largest direct
-    /// collection field (array length, or property count for sango's id-keyed table objects).
+    /// Value = row count: array root uses its length; a root that is itself an id-keyed table
+    /// (every field is a row object carrying Id, e.g. the retired ModelConfig shape) counts its
+    /// fields; other object roots take the largest direct collection field (array length, or
+    /// property count for sango's id-keyed table objects nested under a wrapper key).
     /// </summary>
     public static class SangoContentCatalog
     {
@@ -47,6 +49,20 @@ namespace Sango.Content
 
             if (root.ValueKind != JsonValueKind.Object)
                 return 0;
+
+            // 根即 id 键表:根字段全是带 Id 的行对象时,行数是字段数本身,
+            // 不是最大行属性数(原 bug:ModelConfig 形状报 4 实为 22)。
+            int fieldCount = 0;
+            bool allFieldsAreRows = true;
+            foreach (JsonProperty field in root.EnumerateObject())
+            {
+                fieldCount++;
+                if (field.Value.ValueKind != JsonValueKind.Object || !field.Value.TryGetProperty("Id", out _))
+                    allFieldsAreRows = false;
+            }
+
+            if (fieldCount > 0 && allFieldsAreRows)
+                return fieldCount;
 
             int max = 0;
             foreach (JsonProperty field in root.EnumerateObject())

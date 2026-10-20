@@ -1,0 +1,17 @@
+[
+  {
+    "Path": "GAS/preset_types.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/effects.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/abilities.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

@@ -3,7 +3,7 @@ using Ludots.WebUI.DataPlane;
 
 namespace Sango.WebUi;
 
-// 照 SangoWebUiSpikeMod 范式:命令在每引擎 tick 冲刷,话题按固定间隔节流推送。
+// 命令在每引擎 tick 冲刷,话题按固定间隔节流推送。
 internal sealed class SangoWebUiTickSystem : ISystem<float>
 {
     private const float TopicPublishIntervalSeconds = 0.1f;

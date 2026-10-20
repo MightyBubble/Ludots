@@ -1,10 +1,14 @@
-[
-  {
-    "Id": 1,
-    "eventType": "PersonTalk",
-    "variables": [
-      "ActionPerson"
-    ],
-    "formatContent": "很遗憾, 什么都没有发现..."
-  }
-]
+{
+  "groupId": 10,
+  "name": "搜索失败",
+  "entries": [
+    {
+      "Id": 1,
+      "eventType": "PersonTalk",
+      "variables": [
+        "ActionPerson"
+      ],
+      "formatContent": "很遗憾, 什么都没有发现..."
+    }
+  ]
+}

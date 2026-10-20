@@ -116,8 +116,8 @@ namespace Sango.Core
         public void Init()
         {
             needUpdate_all = true;
-            // core武将库ID 1-10000  预留10000个应该够了
-            CoreScenarioAddon = LoadScenarioAddon("Data/PersonLibrary.json");
+            // core武将库ID 1-10000  预留10000个应该够了(Data/ 根的逐字节副本已删,与 Common 同源)
+            CoreScenarioAddon = LoadScenarioAddon("Data/Common/PersonLibrary.json");
             CoreScenarioAddon.PersonLibrary.ForEach(x =>
             {
                 CorePersonLibList.Add(x);
@@ -236,8 +236,8 @@ namespace Sango.Core
             if (SelfScenarioAddon == null) return;
             string path = Sango.Path.SaveRootPath + "/CustomEdit/CustomPerson.json";
             string dir = System.IO.Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
-                System.IO.Directory.CreateDirectory(dir);
+            if (!string.IsNullOrEmpty(dir) && !Sango.Directory.Exists(dir))
+                Sango.Directory.Create(dir);
             string json = JsonConvert.SerializeObject(SelfScenarioAddon, Formatting.Indented);
             File.WriteAllText(path, json);
             needUpdate_all = true;

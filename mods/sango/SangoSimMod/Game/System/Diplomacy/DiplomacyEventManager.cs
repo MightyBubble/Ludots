@@ -51,37 +51,48 @@ namespace Sango.Core
         }
 
         /// <summary>
-        /// 从内容表加载外交事件(Data/DiplomacyEvent/*.json)。Effect 按 EffectType
-        /// 分派(映射见 ApplyEffect);加载零表时保持空事件面(目录缺席的资产语义,
-        /// 与 GameData.LoadCommonData 的目录缺席空跑一致)。
+        /// 从内容表加载外交事件(catalog 声明驱动:T1.2 收编 SangoContentMod
+        /// assets/config_catalog 的 Data/DiplomacyEvent/*.json 逐文件 DeepObject
+        /// 条目;Id 在 JSON 行内,文件名前缀只是人读装饰)。Effect 按 EffectType
+        /// 分派(映射见 ApplyEffect);加载零表时保持空事件面(声明缺席的资产语义)。
         /// </summary>
         void LoadEventTables()
         {
             var tables = new List<(int Id, DiplomacyEvent Event)>();
-            Sango.Directory.EnumFiles(Path.ContentRootPath + "/Data/DiplomacyEvent", "*.json",
-                System.IO.SearchOption.TopDirectoryOnly, file =>
+            Ludots.Core.Config.ConfigPipeline pipeline = Sango.Runtime.SangoConfigRuntime.Pipeline();
+            Ludots.Core.Config.ConfigCatalog catalog = Sango.Runtime.SangoConfigRuntime.Catalog();
+            foreach (Ludots.Core.Config.ConfigCatalogEntry entry in catalog.Entries)
+            {
+                if (!entry.RelativePath.StartsWith("Data/DiplomacyEvent/", System.StringComparison.Ordinal))
+                    continue;
+
+                Ludots.Core.Config.ConfigCatalogEntry declared =
+                    Ludots.Core.Config.ConfigPipeline.RequireEntry(catalog, entry.RelativePath, Ludots.Core.Config.ConfigMergePolicy.DeepObject);
+                var merged = pipeline.MergeDeepObjectFromCatalog(in declared)
+                    ?? throw new System.InvalidOperationException(
+                        $"DiplomacyEvent table '{declared.RelativePath}' merged to null.");
+                DiplomacyEventTable? table =
+                    JsonConvert.DeserializeObject<DiplomacyEventTable>(merged.ToJsonString());
+                if (table == null || string.IsNullOrEmpty(table.EffectType))
                 {
-                    DiplomacyEventTable? table = JsonConvert.DeserializeObject<DiplomacyEventTable>(File.ReadAllText(file));
-                    if (table == null || string.IsNullOrEmpty(table.EffectType))
-                    {
-                        throw new System.InvalidOperationException(
-                            $"DiplomacyEvent table '{file}' is not a valid event row (missing EffectType).");
-                    }
+                    throw new System.InvalidOperationException(
+                        $"DiplomacyEvent table '{declared.RelativePath}' is not a valid event row (missing EffectType).");
+                }
 
-                    tables.Add((table.Id, new DiplomacyEvent
-                    {
-                        Id = table.Id,
-                        Name = table.Name ?? string.Empty,
-                        Description = table.Description ?? string.Empty,
-                        MinRelation = table.MinRelation,
-                        MaxRelation = table.MaxRelation,
-                        Probability = table.Probability,
-                        EffectType = table.EffectType,
-                        EffectParams = table.EffectParams ?? new JObject(),
-                    }));
-                });
+                tables.Add((table.Id, new DiplomacyEvent
+                {
+                    Id = table.Id,
+                    Name = table.Name ?? string.Empty,
+                    Description = table.Description ?? string.Empty,
+                    MinRelation = table.MinRelation,
+                    MaxRelation = table.MaxRelation,
+                    Probability = table.Probability,
+                    EffectType = table.EffectType,
+                    EffectParams = table.EffectParams ?? new JObject(),
+                }));
+            }
 
-            // 表序 = 触发检查序:按 Id 升序(文件系统枚举序不做确定性假设)。
+            // 表序 = 触发检查序:按 Id 升序(catalog 条目序不做确定性假设)。
             tables.Sort((a, b) => a.Id.CompareTo(b.Id));
             foreach ((_, DiplomacyEvent diplomacyEvent) in tables)
             {
