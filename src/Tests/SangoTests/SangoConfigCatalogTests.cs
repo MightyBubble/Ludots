@@ -36,30 +36,34 @@ namespace Sango.Tests
         }
 
         [Test]
-        public void ContentCatalog_DeclaresExactlyTheCommonTables_NoDrift()
+        public void ContentCatalog_DeclaresExactlyTheTableFiles_NoDrift()
         {
-            string catalogPath = Path.Combine(
-                RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "config_catalog.json");
-            string commonDir = Path.Combine(
-                RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "Data", "Common");
+            // T1.2 起内容面三个目录都进 catalog(Common 表、外交事件表、剧本事件表):
+            // 逐目录断言"声明 = 实际文件",新表未声明即红。
+            string assetsRoot = Path.Combine(RepoRoot(), "mods", "sango", "SangoContentMod", "assets");
+            string[] tableDirs = { "Data/Common", "Data/DiplomacyEvent", "Data/ScenarioEvent" };
 
             var declared = new SortedSet<string>(StringComparer.Ordinal);
             foreach (System.Text.Json.Nodes.JsonNode? node in
-                     System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(catalogPath))!.AsArray())
+                     System.Text.Json.Nodes.JsonNode.Parse(
+                         File.ReadAllText(Path.Combine(assetsRoot, "config_catalog.json")))!.AsArray())
             {
                 Assert.That((string)node!["Policy"]!, Is.EqualTo("DeepObject"),
-                    $"table {(string)node!["Path"]!} must declare DeepObject (wrapper-object id-keyed shape)");
+                    $"table {(string)node!["Path"]!} must declare DeepObject (single-root table shape)");
                 declared.Add((string)node!["Path"]!);
             }
 
             var onDisk = new SortedSet<string>(StringComparer.Ordinal);
-            foreach (string file in Directory.EnumerateFiles(commonDir, "*.json", SearchOption.TopDirectoryOnly))
+            foreach (string dir in tableDirs)
             {
-                onDisk.Add("Data/Common/" + Path.GetFileName(file));
+                foreach (string file in Directory.EnumerateFiles(Path.Combine(assetsRoot, dir), "*.json", SearchOption.TopDirectoryOnly))
+                {
+                    onDisk.Add(dir + "/" + Path.GetFileName(file));
+                }
             }
 
             Assert.That(declared, Is.EqualTo(onDisk),
-                "catalog declarations and Data/Common files must stay in lockstep (new tables must be declared)");
+                "catalog declarations and table files must stay in lockstep (new tables must be declared)");
         }
 
         [Test]

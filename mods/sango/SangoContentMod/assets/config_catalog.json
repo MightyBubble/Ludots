@@ -86,5 +86,89 @@
   {
     "Path": "Data/Common/ai.json",
     "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/10_共同敌人.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/11_文化交流.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/12_使者被扣留.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/13_共同庆典.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/14_边境贸易.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/15_军事威胁.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/16_技术援助.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/17_经济援助.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/18_间谍事件.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/1_使者来访.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/2_边境冲突.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/3_贸易提议.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/4_结盟邀请.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/5_停战请求.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/6_技术交流.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/7_军事援助请求.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/8_和亲提议.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/DiplomacyEvent/9_领土争端.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/ScenarioEvent/10_搜索失败.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/ScenarioEvent/11_搜索到人才.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Data/ScenarioEvent/1_回合开始军师慰问.json",
+    "Policy": "DeepObject"
   }
 ]
