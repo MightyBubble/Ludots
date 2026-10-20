@@ -902,28 +902,29 @@ namespace Sango.Core
             city.allBuildings.ForEach((building) => { if (building.isComplate) building.Workers?.Clear(); });
             city.allPersons.ForEach((person) => { person.workingBuilding = null; });
 
-            float targetGold = 3000f;
+            var v = scenario.Variables;
+            float targetGold = v.appointTargetGoldBase;
             if (city.mBelongCorps.GetAppointValue(Corps.AppointContentType.Donot_Store_Gold) == 1)
-                targetGold *= 2;
+                targetGold *= v.appointTargetGoldStoreMultiplier;
 
-            float targetFood = city.troops * 2.5f;
+            float targetFood = city.troops * v.appointTargetFoodPerTroop;
             if (city.mBelongCorps.GetAppointValue(Corps.AppointContentType.Store_Foood) == 1)
-                targetFood = Math.Min(targetFood, 50000);
+                targetFood = Math.Min(targetFood, v.appointTargetFoodCap);
 
-            float targetTroop = city.food / 2f;
+            float targetTroop = city.food / v.appointTargetTroopFoodDivisor;
             if (city.mBelongCorps.GetAppointValue(Corps.AppointContentType.Store_Troops) == 1)
-                targetTroop = Math.Min(targetTroop, 20000); ;
+                targetTroop = Math.Min(targetTroop, v.appointTargetTroopCap); ;
 
-            float targetItemNumber = city.troops * 1.2f;
+            float targetItemNumber = city.troops * v.appointTargetItemPerTroop;
             float targetHorseNumber = city.troops;
-            float targetBoatNumber = 100f;
-            float targetMachineNumber = 100f;
-            float targetSecurity = 90;
-            float targetMorale = 100;
+            float targetBoatNumber = v.appointTargetBoat;
+            float targetMachineNumber = v.appointTargetMachine;
+            float targetSecurity = v.appointTargetSecurity;
+            float targetMorale = v.appointTargetMorale;
             if (city.IsBorderCity)
             {
                 targetMorale = city.MaxMorale;
-                targetGold = 500;
+                targetGold = v.appointBorderTargetGold;
             }
 
             float goldP = city.gold / targetGold;
@@ -937,7 +938,7 @@ namespace Sango.Core
             float boatP = totalBoatNum / targetBoatNumber;
             int totalMachineNum = city.itemStore.GetNumber(new int[] { (int)ItemStoreKindType.Helepolis, (int)ItemStoreKindType.Catapult });
             float machineP = totalMachineNum / targetMachineNumber;
-            float securityP = Math.Max(0, city.security - 50) / (targetSecurity - 50);
+            float securityP = Math.Max(0, city.security - v.appointSecurityBaseline) / (targetSecurity - v.appointSecurityBaseline);
             float moraleP = city.morale / targetMorale;
             float recruitP = (city.invisiblePersons.Count > 0 || city.wildPersons.Count > 0 || city.captiveList.Count > 0) ? 0 : 1;
             List<PBuilding> pBuildings = new List<PBuilding>();
@@ -1281,12 +1282,12 @@ namespace Sango.Core
 
                         if (building.AccumulatedProduct > 0)
                         {
-                            float targetSecurity = 90;
-                            float targetMorale = 100;
+                            float targetSecurity = scenario.Variables.appointTargetSecurity;
+                            float targetMorale = scenario.Variables.appointTargetMorale;
                             if (city.IsBorderCity)
                                 targetMorale = city.MaxMorale;
 
-                            float securityP = Math.Max(0, city.security - 50) / (targetSecurity - 50);
+                            float securityP = Math.Max(0, city.security - scenario.Variables.appointSecurityBaseline) / (targetSecurity - scenario.Variables.appointSecurityBaseline);
                             float moraleP = city.morale / targetMorale;
 
                             if (moraleP <= securityP)
