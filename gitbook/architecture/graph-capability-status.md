@@ -216,6 +216,21 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条因此只剩数据。第 4、5 条和偏好仓库已落地。第 7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
+**还开着的子 PR（都是草稿，都叠在 #1755 上）：** #1755 先合进 `main`，再合下面这些。每个 PR 都改了本节自己那一行，后合的要 rebase 本页。
+
+| PR | 内容 | 合并注意 |
+|----|------|----------|
+| https://github.com/MightyBubble/Ludots/pull/1790 | 现行文档改成交互状态和控制方案，退役名字守卫扫文档 | 只改文档和守卫，可以最先合 |
+| https://github.com/MightyBubble/Ludots/pull/1789 | 上面的待查已查清：射程留在技能定义，op 534 留着，`targeting` 缺 `castRangeCm` 装载失败 | 合完把待查段落删掉 |
+| https://github.com/MightyBubble/Ludots/pull/1791 | 引擎根不再声明集合角色，`hover` 归 LudotsCoreMod，`castRaw` 由开局声明 | 无 |
+| https://github.com/MightyBubble/Ludots/pull/1792 | 冠军沙盒工具栏的镜头、主题、压测按钮改成数据，删 `ChampionSkillSandboxToolbarTail.cs`；op 551 `ApplyMapDefaultCamera` | 551 被它占用 |
+| https://github.com/MightyBubble/Ludots/pull/1794 | 第 11 条：先选目标再施放；`DispatchMapEvent` 输出本次派发的提交次数 | 和 #1799 都改瞄准图和交互展示工具栏 |
+| https://github.com/MightyBubble/Ludots/pull/1797 | 销毁关系端点时拆掉幸存者身上的边 | 要在 #1798 之前合 |
+| https://github.com/MightyBubble/Ludots/pull/1798 | 第 6 条：切控制方案发 `ControlSchemeChanged`，由声明方案的 mod 写默认施法方式；销毁实体时清黑板里的引用；`ConstNullEntity` 补上执行 | base 是 #1797 的分支 |
+| https://github.com/MightyBubble/Ludots/pull/1799 | 第 9 条：四种指示器形状，尺寸读技能自己的效果（op 552）；前台状态关掉后，被停的动作等输入相位结束才恢复 | 恢复时机对所有前台状态生效，不只瞄准，审的时候要看；552 假设 #1792 占 551 |
+
+**这些 PR 之外还没做的：** `targeting.impactEffect` 必填但运行时没人读；DuelBolt、Challenge 和瞄准方案展示的线形技能，效果上没有长度字段，长度写成正数字面量；op 551、552 的画廊页没录屏。
+
 ### 3.4 不要当成这轮图能力去合
 
 - 过期审计草稿，已经被后来的本子取代。卫生上该关，不是功能缺口。https://github.com/MightyBubble/Ludots/pull/961
