@@ -36,6 +36,15 @@ namespace Sango.Tests
         private const int TurnsToAdvance = 10;
         private static readonly int[] SeedLadder = { 20260902, 20260903, 20260904, 20260905, 20260906, 20260907, 20260908, 20260909 };
 
+        // 十回合交战链按真图动态校准,均匀草地的合成图打不出校准的战斗;
+        // bin 缺席按 RealMap 套件惯例跳过。
+        private static void RequireRealMapBin()
+        {
+            string bin = Path.Combine(RepoRoot(), "mods", "sango", "SangoContentMod", "assets", "Map", "DefaultMap.bin");
+            if (!File.Exists(bin))
+                Assert.Ignore($"scenario calibrated on real-map dynamics; DefaultMap.bin not present (local-only content): {bin}");
+        }
+
         private static string RepoRoot()
         {
             string? dir = TestContext.CurrentContext.TestDirectory;
@@ -724,6 +733,7 @@ namespace Sango.Tests
         [Test]
         public void Mirror_TenTurnBattle_MatchesKernel_AndDigestIgnoresMirror()
         {
+            RequireRealMapBin();
             Assembly sim = LoadSangoSimMod();
 
             // 种子探测:找城陷 + 俘将双命中的种子(镜像缺席,纯剧本确定性)。

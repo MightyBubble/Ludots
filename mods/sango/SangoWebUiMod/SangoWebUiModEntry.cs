@@ -1,5 +1,4 @@
-// SangoWebUiMod 入口(M1.c,D1 真 UI mod):CEF surface + WebUI DataPlane 全链(照
-// SangoWebUiSpikeMod 样板),叠加两件事:
+// SangoWebUiMod 入口(M1.c,D1 真 UI mod):CEF surface + WebUI DataPlane 全链,叠加两件事:
 //   1. GameStart 即启动 sango 内核(SangoKernelBoot.Boot,种子 SangoTurnDriver.DefaultSeed;
 //      SangoSimModEntry 的首次 TurnAdvanced 惰性启动与本入口收敛于同一 Scenario.Cur 判空门);
 //   2. TurnAdvanced 后(SangoSimMod 已推进回合)立即推一轮话题并落回合摘要消息行。

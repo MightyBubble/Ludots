@@ -1,5 +1,6 @@
-// Ludots WebUI DataPlane 客户端(SangoWebUiMod 版,形状照 SangoWebUiSpikeMod 的 client.js;
-// 差异:多话题常量与订阅参数透传——单城详情话题靠 subscribe 参数选城)。
+// Ludots WebUI DataPlane 客户端(SangoWebUiMod 版;多话题常量与订阅参数透传——
+// 单城详情话题靠 subscribe 参数选城;handshake/subscribe/command/流事件四类
+// 取证诊断经 onDiagnostics 订阅者分发)。
 
 const SCHEMA_VERSION = 1;
 const CONTROL_CHANNEL = 'ludots.dataplane.control';
@@ -90,6 +91,7 @@ export function createLudotsDataPlaneClient(options = {}) {
       sessionId: response.sessionId ?? response.payload?.sessionId ?? sessionId,
       transportName: response.payload?.transportName ?? response.transportName ?? status.transportName
     });
+    emitDiagnostic('info', 'handshake', 'DataPlane handshake acknowledged.', response);
     return response;
   }
 
@@ -113,6 +115,7 @@ export function createLudotsDataPlaneClient(options = {}) {
         cursor: subscribeOptions.cursor ?? null,
         ...(subscribeOptions.params ?? {})
       });
+      emitDiagnostic('info', 'subscribe', `Subscribed to ${topic}.`, response);
       return {
         topic,
         subscriptionId: subscription.id,
@@ -149,6 +152,7 @@ export function createLudotsDataPlaneClient(options = {}) {
       entityRefs: commandOptions.entityRefs ?? [],
       payload
     });
+    emitDiagnostic('info', 'command', `Command ${name} acknowledged.`, response);
     return response;
   }
 
@@ -232,6 +236,11 @@ export function createLudotsDataPlaneClient(options = {}) {
         delivered += 1;
       }
     }
+
+    emitDiagnostic('debug', `stream:${event.kind}`, `Received ${event.kind}.`, {
+      topic: event.topic,
+      delivered
+    });
   }
 
   function close() {
@@ -258,6 +267,12 @@ export function createLudotsDataPlaneClient(options = {}) {
 
   function updateStatus(patch) {
     status = { ...status, ...patch };
+  }
+
+  function emitDiagnostic(level, type, message, detail = {}) {
+    for (const listener of diagnosticsListeners) {
+      listener({ level, type, message, detail, at: Date.now() });
+    }
   }
 
   function assertNotClosed() {
