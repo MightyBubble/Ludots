@@ -20,26 +20,16 @@ namespace Sango
     /// GameStart;内核与 SangoWebUiModEntry 收敛于同一 Scenario.Cur 判空门)把内核地图灌入
     /// 引擎 Field2D 层并落地城池标记 presenter;地图会话未启用 sango 层的宿主(非 sango
     /// 地图)整体跳过。
-    /// M2.b:同挂点建 SangoTroopMarkerRuntime(部队增删改经内核部队事件驱动,见其注释);
-    /// 另挂开发播种事件 SangoSeedTroops(AgentBridge events.fire 触发,验收取证用:
-    /// 开局无部队且 AI 不自行编成,需外部播种才能看到部队标记;事件键只在带 AgentBridge
-    /// 的开发宿主存在,生产链路无感)。
-    /// M2.d:开发便利事件 SangoStepTurns{n}(1..99,经引擎 Manual 时钟 RequestStep(n) 累积
-    /// 待步数,GasClockSystem 逐 fixed tick 消费并发 TurnAdvanced——不绕过 clock;取证脚本
-    /// 一次触发推进 n 回合)与 SangoJournalReport(命令 journal 运行时可见性,取证用;
-    /// journal 全量重放会换掉 Scenario.Cur,单世界内核里不可在运行中做,逐位重放由
-    /// headless SangoReplayTests 承担)。
+    /// M2.b:同挂点建 SangoTroopMarkerRuntime(部队增删改经内核部队事件驱动,见其注释)。
+    /// M2.d/T0.8:开发取证面 ludots.sango.* 四个 IAgentTool(播种/敌对播种/回合推进/
+    /// journal 报告,见 SangoAgentTools——步数等参数走 InputSchema 不再编码进键名;
+    /// 无 AgentBridge 的宿主整组不生效)。开局选势力事件族 SangoSelectPlayerForce{n}
+    /// 保留(与 Web UI sango.selectPlayerForce 同数据面)。
     /// </summary>
     public sealed class SangoSimModEntry : IMod
     {
         private static readonly EngineLogChannel EngineChannel = EngineLog.GetOrCreateModChannel("SangoSimMod");
 
-        private const string SeedTroopsEventKey = "SangoSeedTroops";
-        private const int SeedTroopBudget = 8;
-        private const string SeedBattleEventKey = "SangoSeedBattle";
-        private const string StepTurnsEventKey = "SangoStepTurns";
-        private const int MaxStepTurnsPerFire = 99;
-        private const string JournalReportEventKey = "SangoJournalReport";
         private const string SelectPlayerForceEventKey = "SangoSelectPlayerForce";
         private const int MaxPlayerForceIdPerFire = 32;
 
@@ -50,7 +40,7 @@ namespace Sango
         public void OnLoad(IModContext context)
         {
             IVirtualFileSystem vfs = context.VFS;
-            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes; D-2': native person entities + GAS attributes; D-3': native troop/corps entities + GAS attributes)");
+            context.Log("[SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers; T0.8: ludots.sango.* agent tools; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes; D-2': native person entities + GAS attributes; D-3': native troop/corps entities + GAS attributes)");
             // D-1' 城 GAS 属性注册(引擎 AttributeRegistry 唯一表;模板 sango.city 的
             // AttributeBuffer 数据按名解析到同一批 id)。幂等:重名注册由注册表显式拒绝。
             foreach (string attributeName in new[]
@@ -121,15 +111,10 @@ namespace Sango
             context.Systems.RegisterSystem(new SangoTroopSettlementSystem(() => _engine), SystemGroup.Cleanup);
             context.OnEvent(GameEvents.MapLoaded, OnMapLoaded(vfs));
             context.OnEvent(GameEvents.TurnAdvanced, OnTurnAdvanced(vfs));
-            context.OnEvent(new EventKey(SeedTroopsEventKey), OnSeedTroops(vfs));
-            context.OnEvent(new EventKey(SeedBattleEventKey), OnSeedBattle(vfs));
-            // SangoStepTurns{n}:bridge events.fire 只带事件键,步数编码进键名(裸键=1 步)。
-            for (int count = 1; count <= MaxStepTurnsPerFire; count++)
-            {
-                context.OnEvent(new EventKey(count == 1 ? StepTurnsEventKey : $"{StepTurnsEventKey}{count}"), OnStepTurns(count));
-            }
 
-            context.OnEvent(new EventKey(JournalReportEventKey), OnJournalReport());
+            // T0.8:原取证事件键族(SangoSeedTroops/SangoSeedBattle/SangoStepTurns{n}/
+            // SangoJournalReport)退役,改 ludots.sango.* 四个 IAgentTool(见 SangoAgentTools)。
+            context.Systems.RegisterSystem(new SangoAgentToolRegistrationSystem(() => _engine, vfs), SystemGroup.Cleanup);
 
             // SangoSelectPlayerForce{n}:开局选势力的取证事件(与 Web UI sango.selectPlayerForce
             // 命令同一数据面;裸键=势力 1)。forceId 编码进键名,仅带 AgentBridge 的开发宿主可见。
@@ -219,189 +204,6 @@ namespace Sango
             EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.a: field layers populated; {spawned} city markers spawned; M3.b: {labelsSpawned} map labels spawned; M2.b/D-3': troop marker runtime online on native troop entities ({_troopMarkers.ActiveMarkers} troops)");
         }
 
-        // 开发播种(AgentBridge events.fire SangoSeedTroops):按 citySet 顺序找满足出征
-        // 门槛的城市各编成一支部队(SangoTroopOps.CreateTroop 走真实门槛与结算),预算
-        // SeedTroopBudget 支,让标记/部队面板在无玩家操作的可视宿主里有可看对象;
-        // 重复触发继续吃剩余预算,门槛耗尽自然拒绝。
-        private static System.Func<ScriptContext, Task> OnSeedTroops(IVirtualFileSystem vfs)
-        {
-            return context =>
-            {
-                if (Sango.Core.Scenario.Cur == null)
-                {
-                    SangoKernelBoot.Boot(vfs, "SangoContentMod", SangoTurnDriver.DefaultSeed);
-                }
-
-                var scenario = Sango.Core.Scenario.Cur;
-                // 开局各军团行动力为 0(Corps.OnForceTurnStart 才发放),先推进一回合再播种
-                // (与 M1.c 命令测试的次序约定一致);纯开发取证路径,不进正式测试链。
-                SangoTurnDriver.AdvanceTurn();
-                int created = 0;
-                int rejected = 0;
-                scenario.citySet.ForEach(city =>
-                {
-                    if (city == null || created >= SeedTroopBudget)
-                    {
-                        return;
-                    }
-
-                    var persons = new System.Collections.Generic.List<int>();
-                    foreach (Sango.Core.Person person in city.freePersons)
-                    {
-                        if (person != null && persons.Count < SangoTroopOps.MaxMembers)
-                        {
-                            persons.Add(person.Id);
-                        }
-                    }
-
-                    (SangoTroopOpResult result, Sango.Core.Troop? troop) = SangoTroopOps.CreateTroop(
-                        scenario, city, persons,
-                        troops: System.Math.Min(3000, city.troops),
-                        food: System.Math.Min(20000, city.food / 2));
-                    if (result.Succeeded && troop != null)
-                    {
-                        created++;
-                        MoveSeedTroopAside(scenario, troop);
-                    }
-                    else
-                    {
-                        rejected++;
-                    }
-                });
-
-                EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.b seed event: {created} troop(s) created (budget {SeedTroopBudget}), {rejected} city gate rejection(s)");
-                return Task.CompletedTask;
-            };
-        }
-
-        // 取证观感:播种部队走真实移动链挪出城中心几格(与城标 sphere 错开,否则同格叠影);
-        // 移动失败(占位/越程)只影响构图,不影响播种本身,吞掉不抛。
-        static void MoveSeedTroopAside(Sango.Core.Scenario scenario, Sango.Core.Troop troop)
-        {
-            troop.MoveRange.Clear();
-            scenario.Map.GetMoveRange(troop, troop.MoveRange);
-            Sango.Core.Cell? best = null;
-            int bestDistance = 2; // 至少隔 2 格,避免与城标叠影
-            foreach (Sango.Core.Cell cell in troop.MoveRange)
-            {
-                if (cell.troop != null || cell.building != null)
-                {
-                    continue;
-                }
-
-                int distance = System.Math.Abs(cell.x - troop.x) + System.Math.Abs(cell.y - troop.y);
-                if (distance > bestDistance)
-                {
-                    best = cell;
-                    bestDistance = distance;
-                }
-            }
-
-            if (best != null)
-            {
-                SangoTroopOps.MoveTroop(scenario, troop, best);
-            }
-        }
-
-        // 开发播种·敌对遭遇(AgentBridge events.fire SangoSeedBattle,M2.c 取证):找相互
-        // 敌对且都过出征门槛的最近两城各编成一支部队(SangoTroopOps.CreateTroop 真实门槛),
-        // 互授歼灭任务(TroopInteractiveDestroyTroop.OnEnter 的 SetMission 语义)。只摆对阵,
-        // 不推回合——战斗由后续回合推进自然展开(CorpsAI.AITroops 逐回合驱动两军相撞),
-        // 战报行进 SangoCombatAnnals。重复触发幂等拒绝(已有存活歼灭任务即视为已播种)。
-        private static System.Func<ScriptContext, Task> OnSeedBattle(IVirtualFileSystem vfs)
-        {
-            return context =>
-            {
-                if (Sango.Core.Scenario.Cur == null)
-                {
-                    SangoKernelBoot.Boot(vfs, "SangoContentMod", SangoTurnDriver.DefaultSeed);
-                }
-
-                var scenario = Sango.Core.Scenario.Cur;
-                if (scenario.troopsSet.Count > 0)
-                {
-                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.c seed battle: world already has troops; refusing to seed a second encounter");
-                    return Task.CompletedTask;
-                }
-
-                SangoTurnDriver.AdvanceTurn();
-
-                Sango.Core.City? home = null;
-                Sango.Core.City? foe = null;
-                int bestDistance = int.MaxValue;
-                System.Collections.Generic.List<Sango.Core.City> cities = new();
-                scenario.citySet.ForEach(city => cities.Add(city));
-                foreach (Sango.Core.City a in cities)
-                {
-                    if (a?.mBelongForce == null || a.mBelongCorps == null || !PassExpeditionGate(a))
-                    {
-                        continue;
-                    }
-
-                    foreach (Sango.Core.City b in cities)
-                    {
-                        if (b == a || b?.mBelongForce == null || b.mBelongCorps == null || !a.IsEnemy(b) || !PassExpeditionGate(b))
-                        {
-                            continue;
-                        }
-
-                        int distance = scenario.Map.Distance(a.CenterCell, b.CenterCell);
-                        if (distance < bestDistance)
-                        {
-                            (home, foe, bestDistance) = (a, b, distance);
-                        }
-                    }
-                }
-
-                if (home == null || foe == null)
-                {
-                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.c seed battle: no mutually hostile eligible city pair found");
-                    return Task.CompletedTask;
-                }
-
-                Sango.Core.Troop? attacker = SeedEncounterTroop(scenario, home);
-                Sango.Core.Troop? defender = SeedEncounterTroop(scenario, foe);
-                if (attacker == null || defender == null)
-                {
-                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.c seed battle: expedition gate rejected a side; no encounter seeded");
-                    return Task.CompletedTask;
-                }
-
-                SangoTroopWriteFace.ApplyMission(attacker, Sango.Core.MissionType.TroopDestroyTroop, defender.Id);
-                SangoTroopWriteFace.ApplyMission(defender, Sango.Core.MissionType.TroopDestroyTroop, attacker.Id);
-                // Entry 级直接授任务(moveTroop 分派之外的显式入口),入命令 journal;
-                // 编成与回合推进已由 op 层自动记录,seed 对阵由此分解为可重放原语序列。
-                SangoCommandJournal.Record(SangoReplayJournal.SetMissionKind,
-                    new SangoSetMissionArgs(attacker.Id, (int)Sango.Core.MissionType.TroopDestroyTroop, defender.Id));
-                SangoCommandJournal.Record(SangoReplayJournal.SetMissionKind,
-                    new SangoSetMissionArgs(defender.Id, (int)Sango.Core.MissionType.TroopDestroyTroop, attacker.Id));
-                EngineLog.Info(EngineChannel, 
-                    $"[SangoSimMod] M2.c seed battle: {attacker.Name}({home.Name}) vs {defender.Name}({foe.Name}), mutual destroy missions, distance {bestDistance}; advance turns to let the war unfold");
-                return Task.CompletedTask;
-            };
-        }
-
-        // 开发便利·回合推进(AgentBridge events.fire SangoStepTurns{n},M2.d 取证):对引擎
-        // Manual 时钟 stepPolicy 调 RequestStep(n)(循环 RequestStep(1) 的等价累积),由
-        // GasClockSystem 逐 fixed tick 消费并发 TurnAdvanced → 内核逐回合推进 + 话题逐回合
-        // 推送——全程走正式时钟链。宿主无 Manual 时钟服务即类型化拒绝,不代推。
-        private static System.Func<ScriptContext, Task> OnStepTurns(int count)
-        {
-            return context =>
-            {
-                if (!context.TryGet(CoreServiceKeys.GasClockStepPolicy, out Ludots.Core.Gameplay.GAS.GasClockStepPolicy? stepPolicy) ||
-                    stepPolicy == null)
-                {
-                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d step turns: host exposes no GasClockStepPolicy; refusing to step {count} turn(s) outside the clock");
-                    return Task.CompletedTask;
-                }
-
-                stepPolicy.RequestStep(count);
-                EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d step turns: {count} manual step(s) requested via the engine clock; turns will advance one per fixed tick");
-                return Task.CompletedTask;
-            };
-        }
-
         // 开局选势力取证事件:与 Web UI 命令 sango.selectPlayerForce 完全同一数据面
         // (SangoPlayerTurnOps.SelectPlayerForce → BootWithPlayer,CheckPlayer 正式链),
         // 成功后走同一 SyncWorldPresentation 重灌标记;开局外拒绝照原样落日志。
@@ -423,69 +225,6 @@ namespace Sango
                 EngineLog.Info(EngineChannel, $"[SangoSimMod] M3.b select player force {forceId}: world reloaded with player and markers resynced");
                 return Task.CompletedTask;
             };
-        }
-
-        // 开发便利·journal 可见性(AgentBridge events.fire SangoJournalReport,M2.d 取证):
-        // 打印命令 journal 的形状证据(按类计数、JSON 导出、首末记录)。全量重放会替换
-        // Scenario.Cur,单世界内核不可在运行中执行——逐位重放验收在 headless SangoReplayTests。
-        private static System.Func<ScriptContext, Task> OnJournalReport()
-        {
-            return _ =>
-            {
-                SangoJournalCommand[] commands = SangoCommandJournal.Snapshot();
-                if (commands.Length == 0)
-                {
-                    EngineLog.Info(EngineChannel, "[SangoSimMod] M2.d journal report: empty (no simulation entry commands recorded yet)");
-                    return Task.CompletedTask;
-                }
-
-                var byKind = new System.Collections.Generic.SortedDictionary<string, int>();
-                foreach (SangoJournalCommand command in commands)
-                {
-                    byKind[command.Kind] = byKind.GetValueOrDefault(command.Kind) + 1;
-                }
-
-                string kinds = string.Join(", ", System.Linq.Enumerable.Select(byKind, pair => $"{pair.Key}={pair.Value}"));
-                string json = SangoCommandJournal.ExportJson();
-                EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d journal report: {commands.Length} command(s) [{kinds}]; export {json.Length} chars; live turn {commands[^1].Turn}");
-                foreach (SangoJournalCommand command in commands.Take(3))
-                {
-                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d journal #{command.Seq} turn {command.Turn} {command.Kind}: {command.ArgsJson}");
-                }
-
-                SangoJournalCommand? lastStep = System.Linq.Enumerable.LastOrDefault(commands, command => command.Kind == SangoReplayJournal.StepKind);
-                if (lastStep != null)
-                {
-                    EngineLog.Info(EngineChannel, $"[SangoSimMod] M2.d journal last step: turn {lastStep.Turn} digest {lastStep.DigestAfter}");
-                }
-
-                return Task.CompletedTask;
-            };
-        }
-
-        static bool PassExpeditionGate(Sango.Core.City city)
-        {
-            int cost = Sango.Core.JobType.GetJobCostAP((int)Sango.Core.CityJobType.MakeTroop);
-            return city.troops > 0 && city.food > 0 && city.freePersons.Count > 0 &&
-                   SangoCorpsReadFace.ActionPoint(city) >= cost;
-        }
-
-        static Sango.Core.Troop? SeedEncounterTroop(Sango.Core.Scenario scenario, Sango.Core.City city)
-        {
-            var persons = new System.Collections.Generic.List<int>();
-            foreach (Sango.Core.Person person in city.freePersons)
-            {
-                if (person != null && persons.Count < SangoTroopOps.MaxMembers)
-                {
-                    persons.Add(person.Id);
-                }
-            }
-
-            (SangoTroopOpResult result, Sango.Core.Troop? troop) = SangoTroopOps.CreateTroop(
-                scenario, city, persons,
-                troops: System.Math.Min(3000, city.troops),
-                food: System.Math.Min(20000, city.food / 2));
-            return result.Succeeded ? troop : null;
         }
 
         private static System.Func<ScriptContext, Task> OnTurnAdvanced(IVirtualFileSystem vfs)

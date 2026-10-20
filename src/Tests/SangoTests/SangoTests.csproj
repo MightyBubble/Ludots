@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
     <ProjectReference Include="..\..\..\mods\sango\SangoContentMod\SangoContentMod.csproj" />
   </ItemGroup>
 

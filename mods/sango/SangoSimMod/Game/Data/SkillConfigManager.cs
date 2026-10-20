@@ -39,21 +39,10 @@ namespace Sango.Core
             if (_skillConfigs != null && _skillConfigs.Count > 0)
                 return _skillConfigs;
 
+            // "Data/Skill/Skills.json" 是原版继承的幽灵目录(原仓库与移植仓都不存在),
+            // mod 层装载从未命中;本体的技能表走 Data/Common/Skills.json 官方 catalog
+            // (GameData.LoadCommonTablesInto)。此处保留 mod 覆盖层的空表语义。
             _skillConfigs = new SangoObjectMap<Skill>();
-            string skillConfigFileName = "Data/Skill/Skills.json";
-            ModManager.Instance.LoadFile(skillConfigFileName, file =>
-            {
-                JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings();
-                jsonSerializerSettings.Converters.Add(new SangoObjectMapConverter<Skill>());
-                SangoObjectMap<Skill> skills = JsonConvert.DeserializeObject<SangoObjectMap<Skill>>(File.ReadAllText(file), jsonSerializerSettings);
-                if (skills != null)
-                {
-                    skills.ForEach(skill =>
-                    {
-                        _skillConfigs.Add(skill);
-                    });
-                }
-            });
 
             return _skillConfigs;
         }
@@ -67,21 +56,8 @@ namespace Sango.Core
             if (_buffConfigs != null && _buffConfigs.Count > 0)
                 return _buffConfigs;
 
+            // 同上:"Data/Skill/Buffs.json" 幽灵路径,本体 Buff 表在 Common 下。
             _buffConfigs = new SangoObjectMap<Buff>();
-            string buffConfigFileName = "Data/Skill/Buffs.json";
-            ModManager.Instance.LoadFile(buffConfigFileName, file =>
-            {
-                JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings();
-                jsonSerializerSettings.Converters.Add(new SangoObjectMapConverter<Buff>());
-                SangoObjectMap<Buff> buffs = JsonConvert.DeserializeObject<SangoObjectMap<Buff>>(File.ReadAllText(file), jsonSerializerSettings);
-                if (buffs != null)
-                {
-                    buffs.ForEach(buff =>
-                    {
-                        _buffConfigs.Add(buff);
-                    });
-                }
-            });
 
             return _buffConfigs;
         }

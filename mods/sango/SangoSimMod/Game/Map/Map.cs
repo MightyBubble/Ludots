@@ -321,10 +321,9 @@ namespace Sango.Core
             Cell cell = start.Neighbors[startDir];
             for (int i = 1; i < radius; i++)
             {
-                Cell temp = cell.Neighbors[startDir];
                 if (cell == null)
                     return;
-                cell = temp;
+                cell = cell.Neighbors[startDir];
             }
 
             int dir = startDir - 4;
