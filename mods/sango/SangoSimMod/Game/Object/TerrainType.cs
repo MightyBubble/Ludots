@@ -55,7 +55,9 @@ namespace Sango.Core
 
         public int GetRandomFood(int season)
         {
-            int num = GameUtility.Random(foodDeposit / 2) + ((foodDeposit * 3) / 4);
+            // 沿用原 GameUtility.Random 的 maxValue<=0 归零守卫,随机取数改走可种子化的 GameRandom
+            int halfDeposit = foodDeposit / 2;
+            int num = (halfDeposit > 0 ? GameRandom.Range(halfDeposit) : 0) + ((foodDeposit * 3) / 4);
             return (int)(num * foodRate[season]);
         }
         public bool CanMoveBy(Troop troops)

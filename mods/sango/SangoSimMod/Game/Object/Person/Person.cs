@@ -1015,6 +1015,10 @@ namespace Sango.Core
 
         public bool DoMove(City dest, Scenario scenario)
         {
+            // 无当前城(城圈外被释放等合成图情形)无从寻路;留任待下回合,
+            // 真图 areaId 全图分区下不可达本分支。
+            if (mCurrentCity == null)
+                return false;
             City target = dest.mBelongCity == null ? dest : dest.mBelongCity;
             City currentCity = mCurrentCity.mBelongCity == null ? mCurrentCity : mCurrentCity.mBelongCity;
 
