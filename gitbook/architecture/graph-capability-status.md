@@ -229,7 +229,25 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | https://github.com/MightyBubble/Ludots/pull/1798 | 第 6 条：切控制方案发 `ControlSchemeChanged`，由声明方案的 mod 写默认施法方式；销毁实体时清黑板里的引用；`ConstNullEntity` 补上执行 | base 是 #1797 的分支 |
 | https://github.com/MightyBubble/Ludots/pull/1799 | 第 9 条：四种指示器形状，尺寸读技能自己的效果（op 552）；前台状态关掉后，被停的动作等输入相位结束才恢复 | 恢复时机对所有前台状态生效，不只瞄准，审的时候要看；552 假设 #1792 占 551 |
 
-**这些 PR 之外还没做的：** 技能定义上的 `targeting.impactEffect` 装载时必填，解析成 `AbilityTargetingConfig.ImpactEffectTemplateId`，但代码里没有读它的地方（presenter 读的是效果模板上的 `projectile.impactEffect`：`PresentationEntityLifecycleSystem` 发 `ProjectileSpawned`、`ProjectileRuntimeSystem` 发命中效果都用它），要定是删掉这个字段，还是接到 presenter 上；DuelBolt、Challenge 和瞄准方案展示的线形技能，效果上没有长度字段，长度写成正数字面量；op 551、552 的画廊页没录屏。
+**这些 PR 之外还没做的：** 指示器尺寸的取数方式要改，方案已定，等确认后在 #1799 上改，不另开旧版并存。op 551、552 的画廊页没录屏。
+
+#1799 的做法：技能定义写 `targeting.impactEffect` 指一个效果，再用 `effectFields` 按图 id 写要读的字段名或直接写数字；op 552 读出来，形状图写进演员黑板 `aim.shape.*`，presenter 从黑板画。毛病有四个：
+
+- `targeting.impactEffect` 是 Core 技能定义里只给指示器用的指针。67 个带 `targeting` 的技能里，57 个指向的就是执行步骤里已有的效果。剩下 10 个是不执行任何效果的演示技能、图操作画廊，和攻城弩（真正的几何在执行里的弹道效果上）。
+- `effectFields` 用消费方的图 id 做键，技能得知道哪张图会读它，违反「资产方不声明调用方」。
+- 写数字的 9 个技能长度都等于射程，是编出来的：DuelBolt、Challenge 只能点单位（`graph.aim.rule.unit_only`），却配了线形；瞄准方案展示的 7 个技能执行里什么效果都没有。
+- 只给画面用的尺寸写进了演员黑板，跟着快照和回放走。
+
+改法：指示器多大，只看技能执行步骤里真正会放出去的效果。
+
+| 层 | 改动 |
+|----|------|
+| Core GAS | 删 `targeting.impactEffect`、`AbilityTargetingConfig.ImpactEffectTemplateId`、`effectFields` 和字面量表；`targeting` 只剩 `castRangeCm`。op 552 改成「读技能执行效果的几何值」：输入技能 id，节点参数是有序字段表（沿用 `EffectTemplateNamedFloat` 目录），按执行顺序看 `EffectClip` / `EffectSignal` 的效果，恰好命中一个（效果, 字段）就输出，零个或多个就失败并报技能、字段和候选效果。不看效果再触发的效果 |
+| Core 表现 | 不加东西。用现有的 presenter 规则 `CreatePresenter`，参数由图算（`paramGraphProgramId`） |
+| `AimInteractionMod` | 形状图只开形状状态，删写 `aim.shape.*` 的节点。每种形状一张只读度量图 `graph.aim.measure.*`：演员 `aim.slot` → `LoadSlotAbilityId` → op 552。线长读 `targetQuery.length` 或 `projectile.range`，半宽读 `targetQuery.halfWidth` 或 `projectile.collisionHalfWidth`，扇形读 `targetQuery.radius` 和 `targetQuery.halfAngle`，圆读 `targetQuery.radius` 或 `unitCreation.placementRadiusCm`。presenter 规则在形状状态 `ContextActivated` 时创建指示器，尺寸用度量图算一次；颜色、边宽留在 presenter 的 `paramDefaults` |
+| 游戏 mod | 技能只写执行、射程和引用哪张规则 / 形状图。DuelBolt、Challenge 改引用 `graph.aim.shape.unit`。瞄准方案展示的 7 个技能执行里加一个真的线形搜索效果，预览和放出去的一致 |
+
+边界：Core 里不出现瞄准、指示器、形状字样，不装瞄准能力 mod 的游戏什么都不用写。技能引用了形状图、执行里却找不到对应几何时，第一次按下就失败并报错，不画默认尺寸；另加一条生产数据测试，把所有引用形状图的技能都扫一遍。两个效果带同一字段直接报错，不猜。`aim.range_cm` 留在黑板，提交时要用它卡射程。
 
 ### 3.4 不要当成这轮图能力去合
 
