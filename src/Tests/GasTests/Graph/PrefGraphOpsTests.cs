@@ -601,7 +601,6 @@ namespace Ludots.Tests.GasTests.Graph
                     definition.Targeting = new AbilityTargetingConfig
                     {
                         CastRangeCm = 640f,
-                        ImpactEffectTemplateId = 1,
                     };
                 }
 

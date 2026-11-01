@@ -1485,7 +1485,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <inheritdoc />
-        public float LoadAbilityEffectFloat(Entity actor, int slot, int currentGraphId, string fieldKey)
+        public float LoadAbilityEffectFloat(Entity actor, int slot, string fields)
         {
             if (_world == null || !_world.IsAlive(actor))
             {
@@ -1493,10 +1493,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"GAS.GRAPH.ERR.LoadAbilityEffectFloatActorDead: actor {actor} is not alive.");
             }
 
-            if (string.IsNullOrWhiteSpace(fieldKey))
+            if (string.IsNullOrWhiteSpace(fields))
             {
                 throw new InvalidOperationException(
-                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: LoadAbilityEffectFloat requires a non-empty key.");
+                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: LoadAbilityEffectFloat requires a non-empty field list.");
             }
 
             if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
@@ -1514,58 +1514,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"GAS.GRAPH.ERR.LoadAbilityEffectFloatUnknownAbility: actor {actor} slot {slot} ability {slotState.AbilityId} is not installed.");
             }
 
-            string graphName = GraphIdRegistry.GetName(currentGraphId);
-            if (string.IsNullOrEmpty(graphName))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoGraph: graph id {currentGraphId} is not registered.");
-            }
-
-            string abilityName = AbilityIdRegistry.GetName(slotState.AbilityId);
-            if (definition.EffectFieldKeyConflicts(graphName, fieldKey))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' effectFields['{graphName}']['{fieldKey}'] is both an effect field and a literal.");
-            }
-
-            if (!definition.TryReadEffectField(graphName, fieldKey, out bool isLiteral, out string field, out float literal))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: ability '{abilityName}' does not declare effectFields['{graphName}']['{fieldKey}'].");
-            }
-
-            if (isLiteral)
-            {
-                if (!(literal > 0f))
-                {
-                    throw new InvalidOperationException(
-                        $"GAS.EFFECT.ERR.NamedFloatAbsent: ability '{abilityName}' graph '{graphName}' key '{fieldKey}' effectFields literal is not greater than 0.");
-                }
-
-                return literal;
-            }
-
-            if (!definition.HasTargeting || definition.Targeting.ImpactEffectTemplateId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatNoEffect: ability '{abilityName}' has no targeting.impactEffect.");
-            }
-
             EffectTemplateRegistry templates = _installedEffectTemplates
                 ?? throw new InvalidOperationException(
                     "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoRegistry: no effect template registry is bound to the graph runtime.");
-            int effectId = definition.Targeting.ImpactEffectTemplateId;
-            if (!templates.TryGet(effectId, out EffectTemplateData template))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatUnknownEffect: ability '{abilityName}' impact effect {effectId} is not installed.");
-            }
-
-            string effectName = EffectTemplateIdRegistry.GetName(effectId);
-            return EffectTemplateNamedFloat.Require(
-                in template,
-                field,
-                string.IsNullOrEmpty(effectName) ? effectId.ToString() : effectName);
+            return EffectTemplateNamedFloat.RequireFromExec(
+                in definition,
+                templates,
+                fields,
+                AbilityIdRegistry.GetName(slotState.AbilityId));
         }
 
         /// <inheritdoc />

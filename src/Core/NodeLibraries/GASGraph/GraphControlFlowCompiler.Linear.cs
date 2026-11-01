@@ -957,7 +957,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadAbilityEffectFloat:
-                    RequireNonEmpty(node.Key, "key", node, graphId, diagnostics);
+                    RequireEffectFieldList(node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -1016,6 +1016,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitQueue,
                     $"Node '{node.Id}' queue must be '{SubmitQueueFlags.OnQueueModifierName}' or '{SubmitQueueFlags.AlwaysName}' (got '{node.Queue}').", node.Id));
+            }
+        }
+
+        private static void RequireEffectFieldList(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            string? reason = Ludots.Core.Gameplay.GAS.EffectTemplateNamedFloat.ValidateFieldList(node.Key);
+            if (reason != null)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' key: {reason}", node.Id));
             }
         }
 

@@ -1773,8 +1773,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     }
                   },
                   "targeting": {
-                    "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "castRangeCm": 620
                   }
                 }
                 """)!.AsObject();
@@ -1791,7 +1790,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             That(def.HasTargeting, Is.True);
             That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
-            That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
         }
 
         [Test]
@@ -1804,8 +1802,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
                   "targeting": {
-                    "castRangeCm": 1200,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "castRangeCm": 1200
                   }
                 }
                 """)!.AsObject();
@@ -1818,8 +1815,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
                   "targeting": {
-                    "castRangeCm": 0,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "castRangeCm": 0
                   }
                 }
                 """)!.AsObject();
@@ -1837,7 +1833,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var obj = JsonNode.Parse(
                 "{" +
                 "\"exec\":{\"clockId\":\"FixedFrame\",\"items\":[{\"kind\":\"End\",\"tick\":0}]}," +
-                "\"targeting\":{\"castRangeCm\":620,\"impactEffect\":\"Effect.Guard.Impact\",\"" + field + "\":[\"unit\"]}" +
+                "\"targeting\":{\"castRangeCm\":620,\"" + field + "\":[\"unit\"]}" +
                 "}")!.AsObject();
 
             var ex = Throws<InvalidOperationException>(() =>
@@ -1858,7 +1854,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
                   "targeting": {
-                    "impactEffect": "Effect.Guard.Impact"
                   }
                 }
                 """)!.AsObject();
@@ -1880,8 +1875,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
                   "targeting": {
-                    "castRangeCm": -1,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "castRangeCm": -1
                   }
                 }
                 """)!.AsObject();
@@ -1891,6 +1885,66 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             That(ex!.Message, Does.Contain("targeting.castRangeCm"));
             That(ex.Message, Does.Contain("non-negative"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedImpactEffect()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.RemovedImpact", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting.impactEffect' is removed"));
+            That(ex.Message, Does.Contain("'exec'"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsUnknownTargetingField()
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "radius": 180
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.TargetingExtra", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("targeting.radius' is unknown"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsEffectFieldsAsUnexpected()
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
+                  "effectFields": { "graph.aim.shape.line": { "length": 800 } }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.EffectFields", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("unexpected field 'effectFields'"));
         }
 
         [Test]
@@ -1922,7 +1976,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact",
                     "aimVisual": {
                       "areaPresenterId": "presenter.aim.area"
                     }
@@ -1946,8 +1999,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 {
                   "previewPresenterId": "presenter.aim.preview",
                   "targeting": {
-                    "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "castRangeCm": 620
                   }
                 }
                 """)!.AsObject();

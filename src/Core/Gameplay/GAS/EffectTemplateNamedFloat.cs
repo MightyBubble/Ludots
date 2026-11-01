@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace Ludots.Core.Gameplay.GAS
 {
     /// <summary>
-    /// Closed catalog of effect-template floats an ability may name for a graph.
-    /// Lengths are centimeters and angles are degrees, matching the template.
-    /// A value that is absent or not greater than 0 fails closed.
+    /// Closed catalog of effect-template geometry floats a graph may read from the effects an
+    /// ability executes. Lengths are centimeters and angles are degrees, matching the template.
+    /// A field list is <see cref="FieldListSeparator"/>-joined and read in order: the first field
+    /// that any EffectClip / EffectSignal item carries (value greater than 0) wins, and exactly one
+    /// item may carry it.
     /// </summary>
     public static class EffectTemplateNamedFloat
     {
@@ -18,8 +23,11 @@ namespace Ludots.Core.Gameplay.GAS
         public const string ProjectileCollisionHalfWidth = "projectile.collisionHalfWidth";
         public const string UnitCreationPlacementRadiusCm = "unitCreation.placementRadiusCm";
 
+        public const char FieldListSeparator = '|';
+
         public const string UnknownFieldError = "GAS.EFFECT.ERR.UnknownNamedFloat";
         public const string AbsentFieldError = "GAS.EFFECT.ERR.NamedFloatAbsent";
+        public const string AmbiguousFieldError = "GAS.EFFECT.ERR.NamedFloatAmbiguous";
 
         private static readonly string[] KnownFieldNames =
         {
@@ -34,11 +42,11 @@ namespace Ludots.Core.Gameplay.GAS
 
         public static IReadOnlyList<string> KnownFields => KnownFieldNames;
 
-        public static bool IsKnown(string field)
+        public static bool IsKnown(ReadOnlySpan<char> field)
         {
             for (int i = 0; i < KnownFieldNames.Length; i++)
             {
-                if (string.Equals(KnownFieldNames[i], field, StringComparison.Ordinal))
+                if (field.SequenceEqual(KnownFieldNames[i]))
                 {
                     return true;
                 }
@@ -47,24 +55,133 @@ namespace Ludots.Core.Gameplay.GAS
             return false;
         }
 
-        public static float Require(in EffectTemplateData template, string field, string effectName)
+        /// <summary>Returns null when every entry of the list is a known field, otherwise the reason.</summary>
+        public static string? ValidateFieldList(string? fields)
         {
-            if (!IsKnown(field))
+            if (string.IsNullOrWhiteSpace(fields))
             {
-                throw new InvalidOperationException(
-                    $"{UnknownFieldError}: field '{field}' is not one of: {string.Join(", ", KnownFieldNames)}.");
+                return $"{UnknownFieldError}: field list is empty.";
             }
 
-            if (!TryReadPositive(in template, field, out float value))
+            ReadOnlySpan<char> rest = fields;
+            while (true)
             {
-                throw new InvalidOperationException(
-                    $"{AbsentFieldError}: effect '{effectName}' field '{field}' is absent or not greater than 0.");
-            }
+                int cut = rest.IndexOf(FieldListSeparator);
+                ReadOnlySpan<char> field = cut < 0 ? rest : rest.Slice(0, cut);
+                if (!IsKnown(field))
+                {
+                    return $"{UnknownFieldError}: field '{field.ToString()}' in '{fields}' is not one of: {string.Join(", ", KnownFieldNames)}.";
+                }
 
-            return value;
+                if (cut < 0)
+                {
+                    return null;
+                }
+
+                rest = rest.Slice(cut + 1);
+            }
         }
 
-        private static bool TryReadPositive(in EffectTemplateData template, string field, out float value)
+        /// <summary>
+        /// Reads the first listed field any executed effect carries. No field carried, or the winning
+        /// field carried by more than one effect, fails; the message names every candidate effect.
+        /// </summary>
+        public static float RequireFromExec(
+            in AbilityDefinition definition,
+            EffectTemplateRegistry templates,
+            string fields,
+            string abilityName)
+        {
+            string? invalid = ValidateFieldList(fields);
+            if (invalid != null)
+            {
+                throw new InvalidOperationException($"ability '{abilityName}': {invalid}");
+            }
+
+            if (TryReadFromExec(in definition, templates, fields, out float value, out int hits))
+            {
+                return value;
+            }
+
+            string candidates = DescribeExecEffects(in definition, templates);
+            string error = hits == 0 ? AbsentFieldError : AmbiguousFieldError;
+            string reason = hits == 0
+                ? "no executed effect carries a value greater than 0"
+                : $"{hits} executed effects carry the first matching field; exactly one may";
+            throw new InvalidOperationException(
+                $"{error}: ability '{abilityName}' fields '{fields}': {reason}. Executed effects: {candidates}.");
+        }
+
+        private static bool TryReadFromExec(
+            in AbilityDefinition definition,
+            EffectTemplateRegistry templates,
+            string fields,
+            out float value,
+            out int hits)
+        {
+            value = 0f;
+            hits = 0;
+            ref readonly AbilityExecSpec exec = ref definition.ExecSpec;
+            ReadOnlySpan<char> rest = fields;
+            while (true)
+            {
+                int cut = rest.IndexOf(FieldListSeparator);
+                ReadOnlySpan<char> field = cut < 0 ? rest : rest.Slice(0, cut);
+                for (int i = 0; i < exec.ItemCount; i++)
+                {
+                    ExecItemKind kind = exec.GetKind(i);
+                    if (kind is not (ExecItemKind.EffectClip or ExecItemKind.EffectSignal))
+                    {
+                        continue;
+                    }
+
+                    if (templates.TryGet(exec.GetTemplateId(i), out EffectTemplateData template)
+                        && TryReadPositive(in template, field, out float read))
+                    {
+                        hits++;
+                        value = read;
+                    }
+                }
+
+                if (hits > 0 || cut < 0)
+                {
+                    return hits == 1;
+                }
+
+                rest = rest.Slice(cut + 1);
+            }
+        }
+
+        private static string DescribeExecEffects(in AbilityDefinition definition, EffectTemplateRegistry templates)
+        {
+            var text = new StringBuilder();
+            ref readonly AbilityExecSpec exec = ref definition.ExecSpec;
+            for (int i = 0; i < exec.ItemCount; i++)
+            {
+                ExecItemKind kind = exec.GetKind(i);
+                if (kind is not (ExecItemKind.EffectClip or ExecItemKind.EffectSignal))
+                {
+                    continue;
+                }
+
+                int templateId = exec.GetTemplateId(i);
+                string name = EffectTemplateIdRegistry.GetName(templateId);
+                if (text.Length > 0)
+                {
+                    text.Append(", ");
+                }
+
+                text.Append(string.IsNullOrEmpty(name) ? templateId.ToString() : name);
+                if (!templates.TryGet(templateId, out _))
+                {
+                    text.Append(" (not installed)");
+                }
+            }
+
+            return text.Length == 0 ? "none" : text.ToString();
+        }
+
+        private static bool TryReadPositive(in EffectTemplateData template, ReadOnlySpan<char> field, out float value)
         {
             int raw = field switch
             {

@@ -640,9 +640,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ApplyMapDefaultCamera = 551,
 
         /// <summary>
-        /// F[Dst] = one float on the impact effect of the ability on actor A at slot I[B].
-        /// Symbols[Imm] is the key. The running graph id and that key select the entry in effectFields.
-        /// A missing key, an unknown field, or a value that is absent or not greater than 0 fails closed.
+        /// F[Dst] = a geometry float read from the EffectClip / EffectSignal effects of the ability on
+        /// actor A at slot I[B]. Symbols[Imm] is a '|'-joined field list read in order
+        /// (for example targetQuery.length|projectile.range); the first field any effect carries wins.
+        /// No field carried, or the winning field carried by more than one effect, fails closed;
+        /// a graph mounted on an ability is checked against that ability at load.
         /// </summary>
         LoadAbilityEffectFloat = 552,
 

@@ -1967,7 +1967,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.F[ins.Dst] = s.Api.LoadAbilityEffectFloat(
                 s.E[ins.A],
                 s.I[ins.B],
-                s.CurrentGraphId,
                 RequireProgramSymbol(ref s, in ins, nameof(GraphNodeOp.LoadAbilityEffectFloat)));
         }
 

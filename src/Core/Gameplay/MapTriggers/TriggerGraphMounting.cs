@@ -332,100 +332,32 @@ namespace Ludots.Core.Gameplay.MapTriggers
             EffectTemplateRegistry? effectTemplates,
             string ownerLabel)
         {
-            var readKeys = new List<string>();
-            CollectEffectFieldKeys(registration, graph, readKeys);
-            var declaredKeys = new List<string>();
-            definition.CopyEffectFieldKeys(graph, declaredKeys);
+            var fieldLists = new List<string>();
+            CollectEffectFieldKeys(registration, graph, fieldLists);
+            if (fieldLists.Count == 0)
+            {
+                return;
+            }
+
             string abilityLabel = AbilityLabel(abilityId);
-            if (readKeys.Count == 0)
-            {
-                if (declaredKeys.Count > 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{ownerLabel} ability '{abilityLabel}' effectFields names graph '{graph}', which does not read an effect float.");
-                }
-
-                return;
-            }
-
-            if (!definition.HasTargeting || definition.Targeting.CastRangeCm <= 0f)
-            {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads an effect float but targeting.castRangeCm must be > 0.");
-            }
-
-            for (int i = 0; i < readKeys.Count; i++)
-            {
-                RequireOneEffectField(definition, readKeys[i], graph, abilityLabel, effectTemplates, ownerLabel);
-            }
-
-            for (int i = 0; i < declaredKeys.Count; i++)
-            {
-                if (!ContainsKey(readKeys, declaredKeys[i]))
-                {
-                    throw new InvalidOperationException(
-                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields declares key '{declaredKeys[i]}', which that graph does not read.");
-                }
-            }
-        }
-
-        private static void RequireOneEffectField(
-            AbilityDefinition definition,
-            string key,
-            string graph,
-            string abilityLabel,
-            EffectTemplateRegistry? effectTemplates,
-            string ownerLabel)
-        {
-            if (definition.EffectFieldKeyConflicts(graph, key))
-            {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' effectFields['{graph}']['{key}'] is both an effect field and a literal.");
-            }
-
-            if (!definition.TryReadEffectField(graph, key, out bool isLiteral, out string field, out float literal))
-            {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field key '{key}' but effectFields does not declare it.");
-            }
-
-            if (isLiteral)
-            {
-                if (!(literal > 0f))
-                {
-                    throw new InvalidOperationException(
-                        $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' effectFields['{key}'] literal must be greater than 0.");
-                }
-
-                return;
-            }
-
             if (effectTemplates == null)
             {
                 throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field key '{key}' but EffectTemplateRegistry is not available.");
+                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect geometry but EffectTemplateRegistry is not available.");
             }
 
-            int effectId = definition.Targeting.ImpactEffectTemplateId;
-            if (effectId <= 0 || !effectTemplates.TryGet(effectId, out EffectTemplateData template))
+            for (int i = 0; i < fieldLists.Count; i++)
             {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' reads effect field '{field}' but targeting.impactEffect {effectId} is not installed.");
-            }
-
-            string effectName = EffectTemplateIdRegistry.GetName(effectId);
-            try
-            {
-                EffectTemplateNamedFloat.Require(
-                    in template,
-                    field,
-                    string.IsNullOrEmpty(effectName) ? effectId.ToString() : effectName);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new InvalidOperationException(
-                    $"{ownerLabel} ability '{abilityLabel}' graph '{graph}' key '{key}' {ex.Message}",
-                    ex);
+                try
+                {
+                    EffectTemplateNamedFloat.RequireFromExec(in definition, effectTemplates, fieldLists[i], abilityLabel);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"{ownerLabel} graph '{graph}' {ex.Message}",
+                        ex);
+                }
             }
         }
 
@@ -445,7 +377,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if ((uint)index >= (uint)symbols.Length || string.IsNullOrWhiteSpace(symbols[index]))
                 {
                     throw new InvalidOperationException(
-                        $"Graph '{graph}' LoadAbilityEffectFloat at pc={i} has no key symbol.");
+                        $"Graph '{graph}' LoadAbilityEffectFloat at pc={i} has no field list symbol.");
                 }
 
                 if (!ContainsKey(keys, symbols[index]))

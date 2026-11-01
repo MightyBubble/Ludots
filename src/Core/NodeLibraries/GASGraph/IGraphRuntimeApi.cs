@@ -162,13 +162,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Float declared for <paramref name="fieldKey"/> on <paramref name="currentGraphId"/>
-        /// of the ability at <paramref name="slot"/>. effectFields names either a float on
-        /// the impact effect or a positive literal when that effect has no spatial number.
-        /// A missing key, an unknown field, or a value that is absent or not greater than 0
-        /// fails closed.
+        /// First field of the '|'-joined <paramref name="fields"/> list that an EffectClip /
+        /// EffectSignal effect of the ability at <paramref name="slot"/> carries (value greater than 0).
+        /// No field carried, the winning field carried by more than one effect, or an empty slot fails closed.
         /// </summary>
-        float LoadAbilityEffectFloat(Entity actor, int slot, int currentGraphId, string fieldKey)
+        float LoadAbilityEffectFloat(Entity actor, int slot, string fields)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.AbilityDefinitionsUnavailable");
         }

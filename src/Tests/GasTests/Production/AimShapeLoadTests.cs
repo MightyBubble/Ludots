@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Scripting;
@@ -14,16 +16,27 @@ namespace Ludots.Tests.GAS.Production
     [NonParallelizable]
     public sealed class AimShapeLoadTests
     {
+        private const string ShapeGraph = "graph.aim.shape.circle";
+        private const string RadiusFields = "targetQuery.radius|unitCreation.placementRadiusCm";
+        private static int SearchEffect;
+        private static int SummonEffect;
+        private static int OtherSearchEffect;
+
         [SetUp]
         public void SetUp()
         {
             GraphIdRegistry.Clear();
+            EffectTemplateIdRegistry.Clear();
+            SearchEffect = EffectTemplateIdRegistry.Register("Effect.Shape.Search");
+            SummonEffect = EffectTemplateIdRegistry.Register("Effect.Shape.Summon");
+            OtherSearchEffect = EffectTemplateIdRegistry.Register("Effect.Shape.OtherSearch");
         }
 
         [TearDown]
         public void TearDown()
         {
             GraphIdRegistry.Clear();
+            EffectTemplateIdRegistry.Clear();
         }
 
         [Test]
@@ -50,121 +63,101 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void ShapeGraph_MissingEffectField_FailsAtMount()
+        public void ShapeGraph_ExecEffectCarriesField_Mounts()
         {
-            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(Ability(range: 300f, field: null), Effects(radius: 170, halfAngle: 40), withOp: true));
+            List<Trigger> triggers = Mount(Ability(SearchEffect), Effects(searchRadius: 300), RadiusFields);
 
-            Assert.That(ex!.Message, Does.Contain("effectFields"));
-            Assert.That(ex.Message, Does.Contain(ShapeGraph));
+            Assert.That(triggers, Is.Not.Empty);
         }
 
         [Test]
-        public void ShapeGraph_ZeroEffectField_FailsAtMount()
+        public void ShapeGraph_NoExecEffectCarriesField_FailsAtMount()
         {
             InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(Ability(range: 300f, field: EffectTemplateNamedFloat.TargetQueryRadius), Effects(radius: 0, halfAngle: 40), withOp: true));
+                Mount(Ability(SearchEffect), Effects(searchRadius: 0), RadiusFields));
 
             Assert.That(ex!.Message, Does.Contain(EffectTemplateNamedFloat.AbsentFieldError));
-            Assert.That(ex.Message, Does.Contain(EffectTemplateNamedFloat.TargetQueryRadius));
+            Assert.That(ex.Message, Does.Contain(ShapeGraph));
+            Assert.That(ex.Message, Does.Contain("Effect.Shape.Search"));
         }
 
         [Test]
-        public void ShapeGraph_UnknownEffectField_FailsAtMount()
+        public void ShapeGraph_EffectOutsideExec_IsNotRead()
         {
             InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(Ability(range: 300f, field: "not.a.field"), Effects(radius: 170, halfAngle: 40), withOp: true));
+                Mount(Ability(), Effects(searchRadius: 300), RadiusFields));
+
+            Assert.That(ex!.Message, Does.Contain(EffectTemplateNamedFloat.AbsentFieldError));
+            Assert.That(ex.Message, Does.Contain("Executed effects: none"));
+        }
+
+        [Test]
+        public void ShapeGraph_UnknownField_FailsAtMount()
+        {
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
+                Mount(Ability(SearchEffect), Effects(searchRadius: 300), "targetQuery.radius|not.a.field"));
 
             Assert.That(ex!.Message, Does.Contain(EffectTemplateNamedFloat.UnknownFieldError));
             Assert.That(ex.Message, Does.Contain("not.a.field"));
         }
 
         [Test]
-        public void ShapeGraph_ZeroCastRange_FailsAtMount()
+        public void ShapeGraph_SameFieldOnTwoExecEffects_FailsAtMount()
         {
             InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(Ability(range: 0f, field: EffectTemplateNamedFloat.TargetQueryHalfAngle), Effects(radius: 300, halfAngle: 40), withOp: true));
+                Mount(Ability(SearchEffect, OtherSearchEffect), Effects(searchRadius: 300, otherSearchRadius: 200), RadiusFields));
 
-            Assert.That(ex!.Message, Does.Contain("castRangeCm"));
+            Assert.That(ex!.Message, Does.Contain(EffectTemplateNamedFloat.AmbiguousFieldError));
+            Assert.That(ex.Message, Does.Contain("Effect.Shape.Search"));
+            Assert.That(ex.Message, Does.Contain("Effect.Shape.OtherSearch"));
         }
 
         [Test]
-        public void EffectField_OnGraphThatDoesNotReadOne_FailsAtMount()
+        public void GraphWithoutEffectRead_MountsWithoutExecEffects()
         {
-            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(Ability(range: 300f, field: EffectTemplateNamedFloat.TargetQueryHalfAngle), Effects(radius: 300, halfAngle: 40), withOp: false));
-
-            Assert.That(ex!.Message, Does.Contain("does not read an effect float"));
-        }
-
-        [Test]
-        public void ShapeGraph_PositiveLiteral_MountsWithoutAnEffectField()
-        {
-            List<Trigger> triggers = Mount(AbilityLiteral(range: 800f, literal: 90f), Effects(radius: 0, halfAngle: 0), withOp: true);
+            List<Trigger> triggers = Mount(Ability(), Effects(searchRadius: 0), fields: null);
 
             Assert.That(triggers, Is.Not.Empty);
         }
 
         [Test]
-        public void ShapeGraph_ZeroLiteral_FailsAtMount()
+        public void FieldList_FirstCarriedFieldWins()
         {
-            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(AbilityLiteral(range: 800f, literal: 0f), Effects(radius: 0, halfAngle: 0), withOp: true));
+            AbilityDefinition definition = Ability(SearchEffect, SummonEffect);
 
-            Assert.That(ex!.Message, Does.Contain("greater than 0"));
+            float radius = EffectTemplateNamedFloat.RequireFromExec(
+                in definition, Effects(searchRadius: 600, placementRadius: 200), RadiusFields, "Ability.Test");
+
+            Assert.That(radius, Is.EqualTo(600f));
         }
 
         [Test]
-        public void ShapeGraph_PositiveEffectField_Mounts()
+        public void FieldList_FallsThroughToNextField()
         {
-            List<Trigger> triggers = Mount(
-                Ability(range: 300f, field: EffectTemplateNamedFloat.TargetQueryHalfAngle),
-                Effects(radius: 300, halfAngle: 40),
-                withOp: true);
+            AbilityDefinition definition = Ability(SummonEffect);
 
-            Assert.That(triggers, Is.Not.Empty);
+            float radius = EffectTemplateNamedFloat.RequireFromExec(
+                in definition, Effects(searchRadius: 600, placementRadius: 280), RadiusFields, "Ability.Test");
+
+            Assert.That(radius, Is.EqualTo(280f));
         }
 
         [Test]
-        public void ShapeGraph_ReadKeyNotDeclared_FailsAtMount()
+        public void FieldList_ValidatesEveryName()
         {
-            AbilityDefinition definition = AbilityLiteral(range: 300f, literal: 90f, key: "width");
-            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(definition, Effects(radius: 300, halfAngle: 40), withOp: true));
-
-            Assert.That(ex!.Message, Does.Contain(FieldKey));
-            Assert.That(ex.Message, Does.Contain("does not declare"));
+            Assert.That(EffectTemplateNamedFloat.ValidateFieldList(RadiusFields), Is.Null);
+            Assert.That(EffectTemplateNamedFloat.ValidateFieldList(""), Does.Contain(EffectTemplateNamedFloat.UnknownFieldError));
+            Assert.That(EffectTemplateNamedFloat.ValidateFieldList("targetQuery.radius|"), Does.Contain(EffectTemplateNamedFloat.UnknownFieldError));
+            Assert.That(EffectTemplateNamedFloat.ValidateFieldList("radius"), Does.Contain("'radius'"));
         }
 
-        [Test]
-        public void ShapeGraph_ExtraDeclaredKey_FailsAtMount()
-        {
-            AbilityDefinition definition = Ability(range: 300f, field: EffectTemplateNamedFloat.TargetQueryHalfAngle);
-            definition.TriggerGraphEffectLiterals = new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal)
-            {
-                [ShapeGraph] = new Dictionary<string, float>(StringComparer.Ordinal)
-                {
-                    ["width"] = 90f,
-                },
-            };
-
-            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
-                Mount(definition, Effects(radius: 300, halfAngle: 40), withOp: true));
-
-            Assert.That(ex!.Message, Does.Contain("width"));
-            Assert.That(ex.Message, Does.Contain("does not read"));
-        }
-
-        private const string ShapeGraph = "graph.aim.shape.cone";
-        private const string FieldKey = "angle";
-
-        private static List<Trigger> Mount(AbilityDefinition definition, EffectTemplateRegistry effects, bool withOp)
+        private static List<Trigger> Mount(AbilityDefinition definition, EffectTemplateRegistry effects, string? fields)
         {
             var abilities = new AbilityDefinitionRegistry();
             abilities.Register(7, definition);
             var programs = new GraphProgramRegistry();
             int graphId = GraphIdRegistry.Register(ShapeGraph);
-            GraphInstruction[] program = withOp
+            GraphInstruction[] program = fields != null
                 ? new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadAbilityEffectFloat, Imm = 0 },
@@ -179,7 +172,7 @@ namespace Ludots.Tests.GAS.Production
                 program,
                 GraphKind.TriggerGraph,
                 GraphInstructionSourceMap.Empty,
-                withOp ? new[] { FieldKey } : null,
+                fields != null ? new[] { fields } : null,
                 new[] { new TriggerGraphEntry("press", "EntityAliveCountChanged", 0, false) });
             return TriggerGraphMounting.BuildAbilityMountTriggers(
                 programs,
@@ -189,69 +182,48 @@ namespace Ludots.Tests.GAS.Production
                 effects);
         }
 
-        private static AbilityDefinition AbilityLiteral(float range, float literal, string key = FieldKey)
+        private static AbilityDefinition Ability(params int[] execEffects)
         {
+            var exec = default(AbilityExecSpec);
+            exec.SetItem(0, ExecItemKind.TagClip, tick: 0, durationTicks: 1, tagId: 1);
+            for (int i = 0; i < execEffects.Length; i++)
+            {
+                ExecItemKind kind = i % 2 == 0 ? ExecItemKind.EffectSignal : ExecItemKind.EffectClip;
+                exec.SetItem(i + 1, kind, tick: 0, durationTicks: 1, templateId: execEffects[i]);
+            }
+
+            exec.SetItem(execEffects.Length + 1, ExecItemKind.End, tick: 1);
             return new AbilityDefinition
             {
                 TriggerGraphs = new List<string> { ShapeGraph },
+                ExecSpec = exec,
                 HasTargeting = true,
-                Targeting = new AbilityTargetingConfig
-                {
-                    CastRangeCm = range,
-                    ImpactEffectTemplateId = 3,
-                },
-                TriggerGraphEffectLiterals = new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal)
-                {
-                    [ShapeGraph] = new Dictionary<string, float>(StringComparer.Ordinal)
-                    {
-                        [key] = literal,
-                    },
-                },
+                Targeting = new AbilityTargetingConfig { CastRangeCm = 900f },
             };
         }
 
-        private static AbilityDefinition Ability(float range, string? field, string key = FieldKey)
-        {
-            var definition = new AbilityDefinition
-            {
-                TriggerGraphs = new List<string> { ShapeGraph },
-                HasTargeting = true,
-                Targeting = new AbilityTargetingConfig
-                {
-                    CastRangeCm = range,
-                    ImpactEffectTemplateId = 3,
-                },
-            };
-            if (field != null)
-            {
-                definition.TriggerGraphEffectFields = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal)
-                {
-                    [ShapeGraph] = new Dictionary<string, string>(StringComparer.Ordinal)
-                    {
-                        [key] = field,
-                    },
-                };
-            }
-
-            return definition;
-        }
-
-        private static EffectTemplateRegistry Effects(int radius, int halfAngle)
+        private static EffectTemplateRegistry Effects(int searchRadius, int placementRadius = 0, int otherSearchRadius = 0)
         {
             var effects = new EffectTemplateRegistry();
-            effects.Register(3, new EffectTemplateData
+            effects.Register(SearchEffect, Search(searchRadius));
+            effects.Register(OtherSearchEffect, Search(otherSearchRadius));
+            effects.Register(SummonEffect, new EffectTemplateData
+            {
+                UnitCreation = new UnitCreationDescriptor { PlacementRadiusCm = placementRadius },
+            });
+            return effects;
+        }
+
+        private static EffectTemplateData Search(int radius)
+        {
+            return new EffectTemplateData
             {
                 TargetQuery = new TargetQueryDescriptor
                 {
                     Kind = TargetResolverKind.BuiltinSpatial,
-                    Spatial = new BuiltinSpatialDescriptor
-                    {
-                        RadiusCm = radius,
-                        HalfAngleDeg = halfAngle,
-                    },
+                    Spatial = new BuiltinSpatialDescriptor { RadiusCm = radius },
                 },
-            });
-            return effects;
+            };
         }
     }
 }
