@@ -160,6 +160,35 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompositeOrderPlanner_AbilityWithoutTargeting_PassesDistantCastThrough()
+        {
+            using var world = World.Create();
+            var orderQueue = CreateOrderQueue();
+            var registry = new AbilityDefinitionRegistry();
+            registry.Register(TestAbilityId, new AbilityDefinition());
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                registry,
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty());
+
+            Assert.That(
+                planner.Submit(CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate)),
+                Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(orderQueue.TryDequeue(out var submittedOrder), Is.True);
+            Assert.That(submittedOrder.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+        }
+
+        [Test]
         public void CompositeOrderPlanner_OutOfRangeCastWithMissingAbilityDefinition_ReturnsTypedRejection()
         {
             using var world = World.Create();

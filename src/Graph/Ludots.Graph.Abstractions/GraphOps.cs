@@ -536,7 +536,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// F[Dst] = targeting.castRangeCm of the ability on actor A at slot I[B].
-        /// An empty slot fails closed.
+        /// An empty slot, an ability that is not installed, or a definition without that field fails closed.
         /// </summary>
         LoadAbilityCastRange = 534,
 

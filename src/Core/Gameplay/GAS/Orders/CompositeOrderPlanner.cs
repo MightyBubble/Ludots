@@ -240,11 +240,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return rangeResult;
             }
 
-            if (castRangeCm <= 0f)
-            {
-                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
-            }
-
             if (!TryResolvePlanningOrigin(in order, out var actorWorldCm))
             {
                 return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
@@ -287,6 +282,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private MoveThenCastPlanResult ResolveCastRangeCm(in Order order, out float rangeCm)
         {
+            // No targeting block, or a non-positive range: this cast has no approach geometry and passes through.
+            // Whenever the targeting block is present, castRangeCm is required at load.
             rangeCm = 0f;
             if (order.Args.I0 < 0 ||
                 !_world.Has<AbilityStateBuffer>(order.Actor))

@@ -74,6 +74,11 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityTargetingConfig
     {
+        /// <summary>
+        /// Approach distance in centimeters. <c>CompositeOrderPlanner</c> reads it when a cast order
+        /// is beyond this distance and inserts a move to the edge. Zero opts that cast out of the approach.
+        /// Activation and order validation run their graphs and do not read this field.
+        /// </summary>
         public float CastRangeCm;
         public int ImpactEffectTemplateId;
     }
