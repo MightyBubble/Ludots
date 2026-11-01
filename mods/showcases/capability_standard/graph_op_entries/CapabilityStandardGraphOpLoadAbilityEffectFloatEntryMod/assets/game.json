@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadAbilityEffectFloat",
-  "windowTitle": "Ludots - 读出这一槽点名的效果数值",
+  "windowTitle": "Ludots - 读出这一槽技能效果的尺寸",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

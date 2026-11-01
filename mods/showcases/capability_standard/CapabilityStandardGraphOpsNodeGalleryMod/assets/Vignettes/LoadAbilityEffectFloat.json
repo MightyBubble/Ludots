@@ -1,8 +1,8 @@
 {
   "op": "LoadAbilityEffectFloat",
   "driver": "linear",
-  "title": "读出这一槽点名的效果数值",
-  "beat": "图按槽位找到技能，再按这张图在 effectFields 里点的名字，读冲击效果上的那个数。",
+  "title": "读出这一槽技能效果的尺寸",
+  "beat": "图按槽位找到技能，在这招会放出的效果里读出节点写明的尺寸。",
   "detailTemplate": "这一槽的效果读数是{result}，木桩从{healthBefore}掉到{healthAfter}。",
   "assertDetailContains": [
     "320"

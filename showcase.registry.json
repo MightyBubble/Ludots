@@ -11720,8 +11720,8 @@
       "id": "capability_standard_graph_op_LoadAbilityEffectFloat",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAbilityEffectFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpLoadAbilityEffectFloatEntryMod.csproj",
-      "title": "读出这一槽点名的效果数值",
-      "summary": "图按槽位找到技能，再按这张图在 effectFields 里点的名字，读冲击效果上的那个数。",
+      "title": "读出这一槽技能效果的尺寸",
+      "summary": "图按槽位找到技能，在这招会放出的效果里读出节点写明的尺寸。",
       "tier": "T2",
       "category": "capability",
       "tags": [
