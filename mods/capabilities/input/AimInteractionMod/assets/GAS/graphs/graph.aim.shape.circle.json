@@ -43,7 +43,7 @@
       {
         "id": "load_radius",
         "op": "LoadAbilityEffectFloat",
-        "key": "radius"
+        "key": "targetQuery.radius|unitCreation.placementRadiusCm"
       },
       {
         "id": "write_radius",

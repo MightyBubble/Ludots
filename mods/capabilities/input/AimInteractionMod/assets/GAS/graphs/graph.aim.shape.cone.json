@@ -43,7 +43,7 @@
       {
         "id": "load_radius",
         "op": "LoadAbilityEffectFloat",
-        "key": "radius"
+        "key": "targetQuery.radius"
       },
       {
         "id": "write_radius",
@@ -53,7 +53,7 @@
       {
         "id": "load_angle",
         "op": "LoadAbilityEffectFloat",
-        "key": "angle"
+        "key": "targetQuery.halfAngle"
       },
       {
         "id": "write_angle",

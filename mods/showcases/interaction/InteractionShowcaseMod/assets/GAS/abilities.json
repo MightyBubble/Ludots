@@ -29,17 +29,10 @@
     "triggerGraphs": [
       "graph.aim.pick.hostile",
       "graph.aim.rule.unit_only",
-      "graph.aim.shape.line"
+      "graph.aim.shape.unit"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": 900,
-        "width": 70
-      }
-    },
     "targeting": {
-      "castRangeCm": 900,
-      "impactEffect": "Effect.Interaction.DuelBolt"
+      "castRangeCm": 900
     }
   },
   {
@@ -69,8 +62,7 @@
       "graph.aim.rule.ground_only"
     ],
     "targeting": {
-      "castRangeCm": 520,
-      "impactEffect": "Effect.Interaction.BlinkStep"
+      "castRangeCm": 520
     },
     "blockTags": {
       "blockedAny": [
@@ -105,15 +97,8 @@
       "graph.aim.rule.ground_only",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "targetQuery.length",
-        "width": "targetQuery.halfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Interaction.FireLance"
+      "castRangeCm": 760
     },
     "blockTags": {
       "blockedAny": [
@@ -149,8 +134,7 @@
       "graph.aim.rule.none"
     ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Interaction.NovaPulse"
+      "castRangeCm": 0
     },
     "blockTags": {
       "blockedAny": [
@@ -185,8 +169,7 @@
       "graph.aim.rule.ground_only"
     ],
     "targeting": {
-      "castRangeCm": 360,
-      "impactEffect": "Effect.Interaction.ArcDash"
+      "castRangeCm": 360
     },
     "blockTags": {
       "blockedAny": [
@@ -276,15 +259,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "targetQuery.length",
-        "width": "targetQuery.halfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 780,
-      "impactEffect": "Effect.Interaction.RuneBurst"
+      "castRangeCm": 780
     },
     "blockTags": {
       "blockedAny": [
@@ -322,17 +298,10 @@
     "triggerGraphs": [
       "graph.aim.pick.hostile",
       "graph.aim.rule.unit_only",
-      "graph.aim.shape.line"
+      "graph.aim.shape.unit"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": 480,
-        "width": 85
-      }
-    },
     "targeting": {
-      "castRangeCm": 480,
-      "impactEffect": "Effect.Interaction.Challenge"
+      "castRangeCm": 480
     }
   },
   {
@@ -362,8 +331,7 @@
       "graph.aim.rule.ground_only"
     ],
     "targeting": {
-      "castRangeCm": 440,
-      "impactEffect": "Effect.Interaction.BannerLeap"
+      "castRangeCm": 440
     },
     "blockTags": {
       "blockedAny": [
@@ -398,15 +366,8 @@
       "graph.aim.rule.ground_only",
       "graph.aim.shape.cone"
     ],
-    "effectFields": {
-      "graph.aim.shape.cone": {
-        "radius": "targetQuery.radius",
-        "angle": "targetQuery.halfAngle"
-      }
-    },
     "targeting": {
-      "castRangeCm": 360,
-      "impactEffect": "Effect.Interaction.CleaveCone"
+      "castRangeCm": 360
     },
     "blockTags": {
       "blockedAny": [
@@ -442,8 +403,7 @@
       "graph.aim.rule.none"
     ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Interaction.Shockwave"
+      "castRangeCm": 0
     },
     "blockTags": {
       "blockedAny": [
@@ -478,8 +438,7 @@
       "graph.aim.rule.ground_only"
     ],
     "targeting": {
-      "castRangeCm": 300,
-      "impactEffect": "Effect.Interaction.ChargeDash"
+      "castRangeCm": 300
     },
     "blockTags": {
       "blockedAny": [
@@ -564,8 +523,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 520,
-      "impactEffect": "Effect.Interaction.GroundSlam"
+      "castRangeCm": 520
     },
     "blockTags": {
       "blockedAny": [
@@ -605,8 +563,7 @@
       "graph.aim.rule.unit_only"
     ],
     "targeting": {
-      "castRangeCm": 800,
-      "impactEffect": "Effect.Interaction.SupportBeam"
+      "castRangeCm": 800
     }
   },
   {
@@ -636,8 +593,7 @@
       "graph.aim.rule.ground_only"
     ],
     "targeting": {
-      "castRangeCm": 560,
-      "impactEffect": "Effect.Interaction.TacticalJump"
+      "castRangeCm": 560
     },
     "blockTags": {
       "blockedAny": [
@@ -672,15 +628,8 @@
       "graph.aim.rule.ground_only",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "targetQuery.length",
-        "width": "targetQuery.halfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Interaction.VolleyLine"
+      "castRangeCm": 720
     },
     "blockTags": {
       "blockedAny": [
@@ -720,8 +669,7 @@
       "graph.aim.rule.none"
     ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Interaction.Overclock"
+      "castRangeCm": 0
     }
   },
   {
@@ -751,8 +699,7 @@
       "graph.aim.rule.ground_only"
     ],
     "targeting": {
-      "castRangeCm": 320,
-      "impactEffect": "Effect.Interaction.ThrustJump"
+      "castRangeCm": 320
     },
     "blockTags": {
       "blockedAny": [
@@ -837,15 +784,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "targetQuery.length",
-        "width": "targetQuery.halfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 820,
-      "impactEffect": "Effect.Interaction.OrbitalStrike"
+      "castRangeCm": 820
     },
     "blockTags": {
       "blockedAny": [

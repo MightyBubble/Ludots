@@ -47,8 +47,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 440,
-      "impactEffect": "Effect.Champion.Ezreal.ArcaneShift"
+      "castRangeCm": 440
     }
   },
   {
@@ -93,15 +92,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "projectile.range",
-        "width": "projectile.collisionHalfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
+      "castRangeCm": 760
     }
   },
   {
@@ -146,15 +138,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "projectile.range",
-        "width": "projectile.collisionHalfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 840,
-      "impactEffect": "Effect.Champion.Ezreal.MysticShot"
+      "castRangeCm": 840
     }
   },
   {
@@ -199,15 +184,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "projectile.range",
-        "width": "projectile.collisionHalfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 2200,
-      "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
+      "castRangeCm": 2200
     }
   },
   {
@@ -300,8 +278,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 320,
-      "impactEffect": "Effect.Champion.Garen.DecisiveStrike"
+      "castRangeCm": 320
     }
   },
   {
@@ -347,8 +324,7 @@
       "graph.aim.shape.unit"
     ],
     "targeting": {
-      "castRangeCm": 520,
-      "impactEffect": "Effect.Champion.Garen.DemacianJustice"
+      "castRangeCm": 520
     }
   },
   {
@@ -393,8 +369,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Champion.Garen.Judgment"
+      "castRangeCm": 0
     }
   },
   {
@@ -439,8 +414,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Champion.Geomancer.RunicBeacon"
+      "castRangeCm": 720
     }
   },
   {
@@ -485,8 +459,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Champion.Geomancer.RuneField"
+      "castRangeCm": 720
     }
   },
   {
@@ -531,8 +504,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Champion.Geomancer.StonePillar"
+      "castRangeCm": 720
     }
   },
   {
@@ -577,15 +549,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "targetQuery.length",
-        "width": "targetQuery.halfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 920,
-      "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
+      "castRangeCm": 920
     }
   },
   {
@@ -630,8 +595,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 640,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.AccelerationGate"
+      "castRangeCm": 640
     }
   },
   {
@@ -676,8 +640,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.HyperCharge"
+      "castRangeCm": 0
     }
   },
   {
@@ -722,15 +685,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "projectile.range",
-        "width": "projectile.collisionHalfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 880,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
+      "castRangeCm": 880
     }
   },
   {
@@ -775,8 +731,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Champion.Jayce.Hammer.LightningField"
+      "castRangeCm": 0
     }
   },
   {
@@ -821,15 +776,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.cone"
     ],
-    "effectFields": {
-      "graph.aim.shape.cone": {
-        "radius": "targetQuery.radius",
-        "angle": "targetQuery.halfAngle"
-      }
-    },
     "targeting": {
-      "castRangeCm": 300,
-      "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
+      "castRangeCm": 300
     }
   },
   {
@@ -874,14 +822,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.circle"
     ],
-    "effectFields": {
-      "graph.aim.shape.circle": {
-        "radius": "targetQuery.radius"
-      }
-    },
     "targeting": {
-      "castRangeCm": 520,
-      "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
+      "castRangeCm": 520
     }
   },
   {
@@ -1016,14 +958,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.circle"
     ],
-    "effectFields": {
-      "graph.aim.shape.circle": {
-        "radius": "targetQuery.radius"
-      }
-    },
     "targeting": {
-      "castRangeCm": 180,
-      "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
+      "castRangeCm": 180
     }
   },
   {
@@ -1068,15 +1004,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "projectile.range",
-        "width": "projectile.collisionHalfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 1200,
-      "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
+      "castRangeCm": 1200
     }
   },
   {
@@ -1121,15 +1050,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.line"
     ],
-    "effectFields": {
-      "graph.aim.shape.line": {
-        "length": "projectile.range",
-        "width": "projectile.collisionHalfWidth"
-      }
-    },
     "targeting": {
-      "castRangeCm": 1400,
-      "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
+      "castRangeCm": 1400
     }
   },
   {
@@ -1175,8 +1097,7 @@
       "graph.aim.shape.unit"
     ],
     "targeting": {
-      "castRangeCm": 900,
-      "impactEffect": "Effect.ChampionStress.Priest.Heal"
+      "castRangeCm": 900
     }
   },
   {
@@ -1221,8 +1142,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Champion.SpellEngineer.SpellBeacon"
+      "castRangeCm": 760
     }
   },
   {
@@ -1267,8 +1187,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Champion.SpellEngineer.GravityWell"
+      "castRangeCm": 760
     }
   },
   {
@@ -1318,14 +1237,8 @@
       "graph.aim.rule.unit_or_ground",
       "graph.aim.shape.circle"
     ],
-    "effectFields": {
-      "graph.aim.shape.circle": {
-        "radius": "unitCreation.placementRadiusCm"
-      }
-    },
     "targeting": {
-      "castRangeCm": 700,
-      "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
+      "castRangeCm": 700
     }
   },
   {
@@ -1374,8 +1287,7 @@
       "graph.aim.rule.unit_or_ground"
     ],
     "targeting": {
-      "castRangeCm": 1050,
-      "impactEffect": "Effect.Champion.SpellEngineer.GuidedLaser"
+      "castRangeCm": 1050
     }
   }
 ]

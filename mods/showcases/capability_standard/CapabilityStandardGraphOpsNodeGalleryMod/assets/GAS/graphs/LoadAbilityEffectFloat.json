@@ -12,7 +12,7 @@
       {
         "id": "radius",
         "op": "LoadAbilityEffectFloat",
-        "key": "radius"
+        "key": "targetQuery.radius"
       },
       {
         "id": "drain",

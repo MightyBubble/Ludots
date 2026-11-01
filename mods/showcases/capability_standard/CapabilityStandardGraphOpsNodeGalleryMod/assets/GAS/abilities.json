@@ -23,8 +23,7 @@
       ]
     },
     "targeting": {
-      "castRangeCm": 640,
-      "impactEffect": "Effect.GraphOps.ChainOpening"
+      "castRangeCm": 640
     }
   },
   {
@@ -33,19 +32,18 @@
       "clockId": "FixedFrame",
       "items": [
         {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.GraphOps.NamedRadius"
+        },
+        {
           "kind": "End",
           "tick": 0
         }
       ]
     },
     "targeting": {
-      "castRangeCm": 640,
-      "impactEffect": "Effect.GraphOps.NamedRadius"
-    },
-    "effectFields": {
-      "showcase.graph_op.LoadAbilityEffectFloat": {
-        "radius": "targetQuery.radius"
-      }
+      "castRangeCm": 640
     }
   }
 ]

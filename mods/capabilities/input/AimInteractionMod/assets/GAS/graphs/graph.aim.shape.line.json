@@ -43,7 +43,7 @@
       {
         "id": "load_length",
         "op": "LoadAbilityEffectFloat",
-        "key": "length"
+        "key": "targetQuery.length|projectile.range"
       },
       {
         "id": "write_length",
@@ -53,7 +53,7 @@
       {
         "id": "load_width",
         "op": "LoadAbilityEffectFloat",
-        "key": "width"
+        "key": "targetQuery.halfWidth|projectile.collisionHalfWidth"
       },
       {
         "id": "write_width",
