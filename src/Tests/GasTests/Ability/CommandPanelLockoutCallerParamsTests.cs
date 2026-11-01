@@ -1,7 +1,9 @@
 using Arch.Core;
 using EntityCommandPanelMod;
+using EntityCommandPanelMod.Runtime;
 using System;
 using System.IO;
+using System.Text.Json.Nodes;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -231,7 +233,10 @@ namespace Ludots.Tests.GAS
             Type sourceType = typeof(EntityCommandPanelModEntry).Assembly.GetType(
                 "EntityCommandPanelMod.Runtime.GasEntityCommandPanelSource",
                 throwOnError: true)!;
-            return (IEntityCommandPanelSource)Activator.CreateInstance(sourceType, engine)!;
+            var activations = new EntityCommandPanelSlotActivations(engine, maxPendingActivations: 4, maxPendingMembers: 4);
+            EntityCommandPanelSlotActionConfig slotConfig = EntityCommandPanelSlotActionConfig.Parse(
+                JsonNode.Parse("{\"slots\":[],\"modeHintContexts\":{}}")!.AsObject());
+            return (IEntityCommandPanelSource)Activator.CreateInstance(sourceType, engine, activations, slotConfig)!;
         }
 
         private static string FindRepoRoot()
