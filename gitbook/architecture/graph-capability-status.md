@@ -205,9 +205,9 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | **已改**：方案仍只是键位档案。座位方案一切换，Core 发地图事件 `ControlSchemeChanged`（座位 id、代表、旧方案配置键、新方案配置键；没有旧方案时旧键为 0）。代表同时记在 `MapTrigger.SourceEntity`。玩家有没有亲手选过施法方式记在 `pref.aim.cast_mode_origin`（`scheme` / `player`），种在 `InteractionPref` 里，和 `cast_mode` 一起进存档。声明该方案的 mod 用图按新方案 id 过滤；`IsPref` 槽位写 -1，只读玩家级 origin，代表身上没有技能也不失败。origin 是 `player` 就停，否则 `SetPref` 写 `pref.aim.cast_mode`。过滤器里的方案 id 装载时必须已安装，否则失败。`aim_control_schemes` 的 `scheme.aim.gamepad` 默认 `interaction.context.aim.release`，另外三套默认 `interaction.context.aim.smart`。冠军和 MOBA 的 `scheme.aim.kbm` 默认 smart。切换时监听还没挂上，就等这张图挂上再发同一次事件 |
 | 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | **已改**：绑定的 `intValue` 随按下和松开写进快照和回放，`graph.aim.press` 与 `graph.aim.release_confirm` 各留一个入口并从 `MapTrigger.BindingInt` 读槽号，方案展示用 `t` / `y` 绑第 5、6 槽 |
 | 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | **已改**：按下图只 `ActivateContextFromPref`（542），取值就是手势状态 id。即时施放是 `interaction.context.aim.smart`，`onActivated` 提交后 `DeactivateOwnContext`。加一种方式是新 profile 加进键 `pref.aim.cast_mode` 的取值，规则图不用改 |
-| 9 | 指示器只有一种形状 | **已改**：四种形状是 AimInteractionMod 的共用上下文 `interaction.context.aim.shape.line` / `circle` / `cone` / `unit`，技能在 `triggerGraphs` 里引用 `graph.aim.shape.*`。线、圆、锥的 presenter 听这些上下文的 `ContextActivated` / `ContextDeactivated`，主人是 `aim.actors` 第 0 个成员。`effectFields` 按图写成一组键：线是 `length` 和 `width`，锥是 `radius` 和 `angle`，圆是 `radius`。键的值是冲击效果上的字段名；效果上没有这个数时写成正数。线长读 `projectile.range` 或 `targetQuery.length`，锥半径读 `targetQuery.radius`（Moba E 的查询半径是 800，`castRangeCm` 是 1200）。`castRangeCm` 只写入 `aim.range_cm`，`aim.range` 跟着线形状出现。`LoadAbilityEffectFloat`（552）用节点上的 `key` 把数写进 `aim.shape.length` / `aim.shape.width` / `aim.shape.radius` / `aim.shape.angle`。presenter 绑定标了 `unit: logicCm` 的，按 `anchor.worldPosition` 同一条厘米到米的换算进视觉尺寸；角度不换算。缺键、值不是正数，或读了效果数但 `castRangeCm` 不是正数，装载失败。重绑先用 `graph.aim.read_held_slot` 读旧演员：没有旧演员返回 -1，没有整数黑板时 `Fail`（`AimActorMissingBlackboard`），多于一个演员时 `Fail`（`AimActorsNotSingular`），恰好一个且有黑板时读出 `aim.slot`。这个数写到新演员的 `aim.held.code`。刷新手势只在 click 或 release 仍开着时读它：-1 不派 `Aim.Shape.Bind`，其余先写入 `aim.slot` 再派。手势已经关掉时不读这个数。四张形状图听这个事件，用新技能自己的 `effectFields` 重开形状。圆的圆心绑 `aim.point.x_cm` / `aim.point.y_cm`，跟着瞄准点走。单位高亮是 `aim.target`，只在 unit 上下文开着时画在悬停目标上。引用没注册的形状图，装载失败 |
+| 9 | 指示器只有一种形状 | **已改**：四种形状是 AimInteractionMod 的共用上下文 `interaction.context.aim.shape.line` / `circle` / `cone` / `unit`，技能在 `triggerGraphs` 里引用 `graph.aim.shape.*`。线、圆、锥的 presenter 听这些上下文的 `ContextActivated` / `ContextDeactivated`，主人是 `aim.actors` 第 0 个成员。尺寸从这招 `exec` 放出的效果上读，取法见下面「指示器尺寸怎么取」。`castRangeCm` 只写入 `aim.range_cm`，`aim.range` 跟着线形状出现。presenter 绑定标了 `unit: logicCm` 的，按 `anchor.worldPosition` 同一条厘米到米的换算进视觉尺寸；角度不换算。重绑先用 `graph.aim.read_held_slot` 读旧演员：没有旧演员返回 -1，没有整数黑板时 `Fail`（`AimActorMissingBlackboard`），多于一个演员时 `Fail`（`AimActorsNotSingular`），恰好一个且有黑板时读出 `aim.slot`。这个数写到新演员的 `aim.held.code`。刷新手势只在 click 或 release 仍开着时读它：-1 不派 `Aim.Shape.Bind`，其余先写入 `aim.slot` 再派。手势已经关掉时不读这个数。四张形状图听这个事件，按新技能自己的效果重开形状。圆的圆心绑 `aim.point.x_cm` / `aim.point.y_cm`，跟着瞄准点走。单位高亮是 `aim.target`，只在 unit 上下文开着时画在悬停目标上。引用没注册的形状图，装载失败 |
 | 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | **已改**：入口写 `budget: "single-slice"` 后，装载按切片同一套计步算最长路径，超过 64 步就报图名、入口、步数和预算；瞄准的输入入口都标了，指针和摇杆追踪把采样留在宿主，其余放进调用图 |
-| 11 | 没有「先选目标再放」（WoW 式） | **已改**：`pref.aim.cast_mode` 增加取值 `interaction.context.aim.target_first`。`Select.End` 挂 `graph.aim.write_current_target`，它调用 `graph.aim.current_target_hit`：指针周围 20 像素里，知识可见且可选的单位只留第 0 个，`WriteCollection` 替换代表身上的角色 `target`（集合 `aim.current_target`）。这张图不写 `commandSource`。交互展示的战斗状态和瞄准方案展示的战斗状态都挂了它；瞄准方案的 `AimSchemes.Controls` 把 `Select.End` 绑在左键。这个状态的 `onActivated`（`graph.aim.target_first`）读该集合的第 0 个成员。成员活着就写进瞄准演员的 `aim.target`，把 `aim.point.valid` 和 `aim.stick.valid` 写成 0，派 `Aim.Rule.Resolve`，再 `DeactivateOwnContext`。没有活着的成员就先关掉自己的状态，再打开 `interaction.context.aim.click`（父状态 `interaction.context.aim.cast`），指示器跟着这个点击状态出现，不按光标直接提交。地面技能在已有活目标时，规则图仍把 `aim.rule.handled` 写成 1，但不调用 `SubmitCast`。`DispatchMapEvent` 的整数是这次同步派发里监听方调用 `SubmitCast` 和 `SubmitCommandIntent` 的次数。次数为 0 时和没有活着的成员一样：关掉自己并打开点击瞄准，不按光标直接提交。规则图没有改 |
+| 11 | 没有「先选目标再放」（WoW 式） | **已改**：`pref.aim.cast_mode` 增加取值 `interaction.context.aim.target_first`。`Select.End` 挂 `graph.aim.write_current_target`，它调用 `graph.aim.current_target_hit`：指针周围 20 像素里，知识可见且可选的单位只留第 0 个，`WriteCollection` 替换代表身上的角色 `target`（集合 `aim.current_target`）。这张图不写 `commandSource`。交互展示的战斗状态和瞄准方案展示的战斗状态都挂了它；瞄准方案的 `AimSchemes.Controls` 把 `Select.End` 绑在左键。这个状态的 `onActivated`（`graph.aim.target_first`）读该集合的第 0 个成员。成员活着就写进瞄准演员的 `aim.target`，把 `aim.point.valid` 和 `aim.stick.valid` 写成 0，派 `Aim.Rule.Resolve`，再 `DeactivateOwnContext`。没有活着的成员就先关掉自己的状态，再打开 `interaction.context.aim.click`（父状态 `interaction.context.aim.cast`），然后读槽位技能派 `Aim.Shape.Bind`，只叫醒这招自己的形状图，指示器跟着出现，不按光标直接提交。瞄准方案展示的 `Ability.AimSchemes.Ground` 挂圆形，这时看到的是圆，没有施法范围圈。地面技能在已有活目标时，规则图仍把 `aim.rule.handled` 写成 1，但不调用 `SubmitCast`。`DispatchMapEvent` 的整数是这次同步派发里监听方调用 `SubmitCast` 和 `SubmitCommandIntent` 的次数。次数为 0 时和没有活着的成员一样：关掉自己并打开点击瞄准，不按光标直接提交。规则图没有改 |
 | 12 | 指示器在按下后的下一拍才出现 | **已改**：按下那一拍，技能引用的形状 presenter 已经挂上；线形状仍是 `aim.range` 和 `aim.line` |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
 | 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：新演员的槽位、落点、射程、目标、朝向和摇杆清零写在 `graph.aim.prepare_actor`，槽位写成 0。`graph.aim.seed_stick` 只调用它，仍挂在 `interaction.context.aim.cast` 激活时。`graph.aim.enter` 也调用它。四个重绑图在替换 `aim.actors` 之前调用 `graph.aim.read_held_slot`：没有旧演员返回 -1，没有整数黑板时 `Fail`（`AimActorMissingBlackboard`），多于一个演员时 `Fail`（`AimActorsNotSingular`），恰好一个且有黑板时读出 `aim.slot`。`prepare_actor` 之后、刷新手势之前，把这个数写到新演员的 `aim.held.code`。刷新手势在 click 或 release 仍开着时读它：-1 不派 `Aim.Shape.Bind`，其余先写入 `aim.slot` 再派，不重入替换前还开着的那张形状图。手势已经关掉时不读这个数。 |
@@ -217,38 +217,24 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **顺序：** 切片 R → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → `CoreInputMod` 收尾。收尾已做。偏好键、第 8 条、第 13 条已落地，第 11 条已改。第 4、5 条和偏好仓库已落地。第 6、7、10、12 条已改。指针采样改名和小地图指针已改。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
-**还开着的子 PR（都是草稿，都叠在 #1755 上）：** #1755 先合进 `main`，再合下面这些。每个 PR 都改了本节自己那一行，后合的要 rebase 本页。
+**子 PR 已全部并进 #1755：** #1789、#1790、#1791、#1792、#1794、#1797、#1798、#1799 的提交按这个顺序合进 `cursor/aim-context-control-scheme-de53`，#1755 一次合进 `main`。这八个 PR 不用再单独合。合并后冒出的一处冲突：#1799 把施法范围圈改成只跟线形状出现，#1794 的测试还按旧规则断言地面技能有范围圈。保留 #1799 的形状规则，先手图没命中时补派 `Aim.Shape.Bind`（见第 11 条）。
 
-| PR | 内容 | 合并注意 |
-|----|------|----------|
-| https://github.com/MightyBubble/Ludots/pull/1790 | 现行文档改成交互状态和控制方案，退役名字守卫扫文档 | 只改文档和守卫，可以最先合 |
-| https://github.com/MightyBubble/Ludots/pull/1789 | 上面的待查已查清：射程留在技能定义，op 534 留着，`targeting` 缺 `castRangeCm` 装载失败 | 合完把待查段落删掉 |
-| https://github.com/MightyBubble/Ludots/pull/1791 | 引擎根不再声明集合角色，`hover` 归 LudotsCoreMod，`castRaw` 由开局声明 | 无 |
-| https://github.com/MightyBubble/Ludots/pull/1792 | 冠军沙盒工具栏的镜头、主题、压测按钮改成数据，删 `ChampionSkillSandboxToolbarTail.cs`；op 551 `ApplyMapDefaultCamera` | 551 被它占用 |
-| https://github.com/MightyBubble/Ludots/pull/1794 | 第 11 条：先选目标再施放；`DispatchMapEvent` 输出本次派发的提交次数 | 和 #1799 都改瞄准图和交互展示工具栏 |
-| https://github.com/MightyBubble/Ludots/pull/1797 | 销毁关系端点时拆掉幸存者身上的边 | 要在 #1798 之前合 |
-| https://github.com/MightyBubble/Ludots/pull/1798 | 第 6 条：切控制方案发 `ControlSchemeChanged`，由声明方案的 mod 写默认施法方式；销毁实体时清黑板里的引用；`ConstNullEntity` 补上执行 | base 是 #1797 的分支 |
-| https://github.com/MightyBubble/Ludots/pull/1799 | 第 9 条：四种指示器形状，尺寸读技能自己的效果（op 552）；前台状态关掉后，被停的动作等输入相位结束才恢复 | 恢复时机对所有前台状态生效，不只瞄准，审的时候要看；552 假设 #1792 占 551 |
+**还没做的：** op 551、552 的画廊页没录屏。
 
-**这些 PR 之外还没做的：** 指示器尺寸的取数方式要改，方案已定，等确认后在 #1799 上改，不另开旧版并存。op 551、552 的画廊页没录屏。
+**指示器尺寸怎么取（已改）：** 原先技能写 `targeting.impactEffect` 指一个效果，再用 `effectFields` 按图 id 写字段名或直接写数字。毛病是：`targeting.impactEffect` 是 Core 技能定义里只给指示器用的指针；`effectFields` 用消费方的图 id 做键，技能得知道哪张图会读它；写数字的 9 个技能是编出来的（DuelBolt、Challenge 只能点单位却配了线形，瞄准方案展示的 7 个技能执行里没有效果）。
 
-#1799 的做法：技能定义写 `targeting.impactEffect` 指一个效果，再用 `effectFields` 按图 id 写要读的字段名或直接写数字；op 552 读出来，形状图写进演员黑板 `aim.shape.*`，presenter 从黑板画。毛病有四个：
+| 层 | 现在的做法 |
+|----|------------|
+| Core GAS | `targeting.impactEffect`、`AbilityTargetingConfig.ImpactEffectTemplateId`、`effectFields` 和字面量表已删。`targeting` 只收 `castRangeCm`，写别的键装载失败，写 `impactEffect` 报「已删除」。op 552 的节点 `key` 是 `\|` 连接的字段名（目录是 `EffectTemplateNamedFloat`），只看这招 `exec` 里 `EffectClip` / `EffectSignal` 放出的效果，不看效果再触发的效果。按字段顺序找：第一个有效果带值（大于 0）的字段就用它；这个字段有两个效果都带，报歧义；一个字段都没读到，报缺失。错误里写技能、字段和候选效果名。编译期查字段名；图挂在技能 `triggerGraphs` 上时，装载期按这个技能查一遍；运行时同一个函数再查 |
+| `AimInteractionMod` | 线长 `targetQuery.length\|projectile.range`，线宽 `targetQuery.halfWidth\|projectile.collisionHalfWidth`（和原来一样存半宽），锥 `targetQuery.radius`、`targetQuery.halfAngle`，圆 `targetQuery.radius\|unitCreation.placementRadiusCm`。圆按顺序取是为 MOBA 的 R：暴风雪半径 600 和召唤骷髅的摆放半径 200 都在 `exec` 里，取暴风雪；Cataclysm Ring 没有搜索范围，取摆放半径 |
+| 游戏 mod | 技能只写执行、射程和引用哪张规则 / 形状图。DuelBolt、Challenge 改挂 `graph.aim.shape.unit`。瞄准方案展示 Slot1-6 和 Friendly 放出长 800、半宽 90 的直线搜索，Ground 放出半径 180 的圆形搜索并挂圆形，都不带伤害。节点画廊的 `Ability.GraphOps.EffectFloat` 在 `exec` 里放出它要读的搜索效果 |
 
-- `targeting.impactEffect` 是 Core 技能定义里只给指示器用的指针。67 个带 `targeting` 的技能里，57 个指向的就是执行步骤里已有的效果。剩下 10 个是不执行任何效果的演示技能、图操作画廊，和攻城弩（真正的几何在执行里的弹道效果上）。
-- `effectFields` 用消费方的图 id 做键，技能得知道哪张图会读它，违反「资产方不声明调用方」。
-- 写数字的 9 个技能长度都等于射程，是编出来的：DuelBolt、Challenge 只能点单位（`graph.aim.rule.unit_only`），却配了线形；瞄准方案展示的 7 个技能执行里什么效果都没有。
-- 只给画面用的尺寸写进了演员黑板，跟着快照和回放走。
+和原方案不同的两处：
 
-改法：指示器多大，只看技能执行步骤里真正会放出去的效果。
+- 尺寸仍由形状图写进演员黑板 `aim.shape.*`，presenter 用 `ownerBlackboardFloat` 绑定，和 `aim.range_cm` 同一条路。原方案想让 presenter 用 `paramGraphProgramId` 自己算，没这么做：presenter 图绑定算失败时只打警告、保留旧值（`PresenterBehaviorSystem.EvaluateGraphParamBinding`，`PresenterGraphBindingTests` 锁着这个行为），等于静默回退。这是表现层的债，没在本线改。
+- 原方案「恰好命中一个（效果, 字段）」改成按字段顺序取，否则 MOBA 的 R 会被判成歧义。同一个字段两个效果都带仍直接报错。
 
-| 层 | 改动 |
-|----|------|
-| Core GAS | 删 `targeting.impactEffect`、`AbilityTargetingConfig.ImpactEffectTemplateId`、`effectFields` 和字面量表；`targeting` 只剩 `castRangeCm`。op 552 改成「读技能执行效果的几何值」：输入技能 id，节点参数是有序字段表（沿用 `EffectTemplateNamedFloat` 目录），按执行顺序看 `EffectClip` / `EffectSignal` 的效果，恰好命中一个（效果, 字段）就输出，零个或多个就失败并报技能、字段和候选效果。不看效果再触发的效果 |
-| Core 表现 | 不加东西。用现有的 presenter 规则 `CreatePresenter`，参数由图算（`paramGraphProgramId`） |
-| `AimInteractionMod` | 形状图只开形状状态，删写 `aim.shape.*` 的节点。每种形状一张只读度量图 `graph.aim.measure.*`：演员 `aim.slot` → `LoadSlotAbilityId` → op 552。线长读 `targetQuery.length` 或 `projectile.range`，半宽读 `targetQuery.halfWidth` 或 `projectile.collisionHalfWidth`，扇形读 `targetQuery.radius` 和 `targetQuery.halfAngle`，圆读 `targetQuery.radius` 或 `unitCreation.placementRadiusCm`。presenter 规则在形状状态 `ContextActivated` 时创建指示器，尺寸用度量图算一次；颜色、边宽留在 presenter 的 `paramDefaults` |
-| 游戏 mod | 技能只写执行、射程和引用哪张规则 / 形状图。DuelBolt、Challenge 改引用 `graph.aim.shape.unit`。瞄准方案展示的 7 个技能执行里加一个真的线形搜索效果，预览和放出去的一致 |
-
-边界：Core 里不出现瞄准、指示器、形状字样，不装瞄准能力 mod 的游戏什么都不用写。技能引用了形状图、执行里却找不到对应几何时，第一次按下就失败并报错，不画默认尺寸；另加一条生产数据测试，把所有引用形状图的技能都扫一遍。两个效果带同一字段直接报错，不猜。`aim.range_cm` 留在黑板，提交时要用它卡射程。
+边界：Core 里不出现瞄准、指示器、形状字样，不装瞄准能力 mod 的游戏什么都不用写。技能引用了形状图、执行里却找不到对应尺寸时，装载就失败，不画默认尺寸。`aim.range_cm` 留在黑板，提交时要用它卡射程。
 
 ### 3.4 不要当成这轮图能力去合
 
