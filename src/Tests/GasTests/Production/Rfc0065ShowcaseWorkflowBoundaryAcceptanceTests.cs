@@ -118,7 +118,11 @@ namespace Ludots.Tests.GAS.Production
                 Is.True,
                 "Interaction showcase startup must seed command source directly for command routing.");
             Assert.That(CopyCollection(collections, sourceHandle), Is.EquivalentTo(actors));
-            PublishHoveredEntity(collections, localPlayer, vanguard);
+            PublishHoveredEntity(
+                collections,
+                localPlayer,
+                vanguard,
+                InputCollectionKeyDeclarations.RequireRole(engine, "hover"));
             Assert.That(Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered), Is.True);
             Assert.That(hovered, Is.EqualTo(vanguard));
 
@@ -589,10 +593,14 @@ namespace Ludots.Tests.GAS.Production
             return id;
         }
 
-        private static void PublishHoveredEntity(EntityCollectionStore collections, Entity owner, Entity hovered)
+        private static void PublishHoveredEntity(
+            EntityCollectionStore collections,
+            Entity owner,
+            Entity hovered,
+            string hoverKey)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.ui.command.hover",
+                hoverKey,
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 owner,

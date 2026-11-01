@@ -144,6 +144,25 @@ public sealed class CommandSourceCollectionKeyPatchTests
     }
 
     [Test]
+    public void NoDeclaredRoles_LeaveCastRawAndHoverUnbound()
+    {
+        InputCollectionKeyDeclarations declarations = LoadRoles();
+        InvalidOperationException? castRaw = Assert.Throws<InvalidOperationException>(() => declarations.RequireRole("castRaw"));
+        InvalidOperationException? hover = Assert.Throws<InvalidOperationException>(() => declarations.RequireRole("hover"));
+        Assert.That(castRaw!.Message, Does.Contain("RoleUnbound"));
+        Assert.That(hover!.Message, Does.Contain("RoleUnbound"));
+    }
+
+    [Test]
+    public void MissingCollectionKeyFiles_LoadAnEmptyRoleTable()
+    {
+        InputCollectionKeyDeclarations declarations = LoadRoles(includeCoreFile: false);
+        InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => declarations.RequireRole("hover"));
+        Assert.That(ex!.Message, Does.Contain("RoleUnbound"));
+        Assert.That(ex.Message, Does.Contain("hover"));
+    }
+
+    [Test]
     public void SameRoleValueDeclaredTwice_Loads()
     {
         InputCollectionKeyDeclarations declarations = LoadRoles(
@@ -196,6 +215,11 @@ public sealed class CommandSourceCollectionKeyPatchTests
     }
 
     private static InputCollectionKeyDeclarations LoadRoles(params (string ModId, string Json)[] mods)
+        => LoadRoles(includeCoreFile: true, mods);
+
+    private static InputCollectionKeyDeclarations LoadRoles(
+        bool includeCoreFile,
+        params (string ModId, string Json)[] mods)
     {
         string root = Path.Combine(Path.GetTempPath(), "ludots-collection-roles", Guid.NewGuid().ToString("N"));
         try
@@ -205,9 +229,10 @@ public sealed class CommandSourceCollectionKeyPatchTests
             File.WriteAllText(
                 Path.Combine(core, "config_catalog.json"),
                 """[{"Path":"Input/collection_keys.json","Policy":"DeepObject"}]""");
-            File.WriteAllText(
-                Path.Combine(core, "Input", "collection_keys.json"),
-                """{"castRaw":"collection.ui.cast.raw","hover":"collection.ui.command.hover"}""");
+            if (includeCoreFile)
+            {
+                File.WriteAllText(Path.Combine(core, "Input", "collection_keys.json"), "{}");
+            }
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);

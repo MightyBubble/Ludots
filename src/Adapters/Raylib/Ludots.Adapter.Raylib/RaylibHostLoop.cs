@@ -2719,7 +2719,8 @@ namespace Ludots.Adapter.Raylib
             string hoveredSummary = "hovered=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out Entity debugOwner, out EntityCollectionStore debugCollections) &&
                 engine.TryGetService(CoreServiceKeys.InputCollectionKeys, out Ludots.Core.Input.Config.InputCollectionKeyDeclarations inputKeys) &&
-                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, inputKeys.RequireRole("hover"), out Entity hovered) &&
+                inputKeys.TryGetRole("hover", out string hoverKey) &&
+                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, hoverKey, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";

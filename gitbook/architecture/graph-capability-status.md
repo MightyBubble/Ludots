@@ -190,6 +190,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | Core 里 `GraphAimSourceRuntime` / `IGraphAimSourceRuntime` 带 aim 字样 | 做的是指针 / 摇杆采样，名字说成了瞄准 | **已改**：类型、命名空间和服务绑定改成 `GraphPointerSampleRuntime` / `IGraphPointerSampleRuntime`（`Ludots.Core.Input.PointerSample`，`BindPointerSample`）。`ScreenPointToGround` 这些操作名本来就不含 aim，保持不动。`CommandIntentTargetShape`、AI 的 `AimGate`、动画 `AimYaw` 不归这条线 |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
 | `targeting.castRangeCm`（主干上原有）和 `LoadAbilityCastRange`（534）；`context_groups.json` 的 `requiresTarget` | 射程被当成和已撤的目标种类同类的玩法枚举；`requiresTarget` 被当成「技能要不要目标」的另一份 | **已改**：射程留在技能定义上。`CompositeOrderPlanner` 提交 `castAbility` 时读 `targeting.castRangeCm`，目标超出这段距离就先走到射程边缘再施放。值为 0，或技能没有 `targeting` 块，这一单不走近，原单照原样入队。激活校验和订单校验只跑各自的 validation 图。技能引用的规则图不带这个厘米数。`LoadConfigFloat` 的存储是效果模板参数，`TableReadFloat` 的存储是查找表，技能定义上的厘米数仍由 534 读出。槽位空、技能没装上、定义里没有这个字段，图操作直接失败。`targeting` 块缺 `castRangeCm` 或写成负数，装载直接失败，不补默认距离。`requiresTarget` 留下：它决定这一候选是无实体打一次分，还是对搜索半径里每个实体打一次，距离、角度、悬停分写在候选上。瞄准规则图决定玩家瞄哪一类。交互展示里 `Ability.Interaction.Arcweaver.ArcDash` 引用 `graph.aim.rule.ground_only`，同组候选仍写 `requiresTarget: true` |
+| 引擎根 `Input/collection_keys.json` 给 `castRaw` 和 `hover` 配了默认集合 | 开局自己没写这两个角色，也会拿到引擎给的集合名 | **已改**：根文件删除。`config_catalog.json` 仍登记 `Input/collection_keys.json`，一个片段都没有时角色表是空的。`hover` 写在 LudotsCoreMod 的 `Input/collection_keys.json`，因为 `graph.core.hover_tick` 写这个集合；图、presenter 和读取处用 `role:hover`。`castRaw` 由调用 `CommitCast` 的开局声明，超级武器展示写成 `collection.ui.cast.raw`；没声明时提交报 `RoleUnbound`。两处值不同报 `RoleConflict` |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**
 

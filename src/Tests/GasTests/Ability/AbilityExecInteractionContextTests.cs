@@ -612,7 +612,12 @@ namespace Ludots.Tests.GAS
                 }, keyRegistry, filterProfileIds, commandIntentProfileIds);
 
                 var writer = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
-                writer.BindInputInteraction(filters, domains, keyRegistry.Register("collection.ui.cast.raw"));
+                writer.BindInputInteraction(
+                    filters,
+                    domains,
+                    InputCollectionKeyDeclarations.ForResolvedRoles(
+                        keyRegistry,
+                        new Dictionary<string, string> { ["castRaw"] = "collection.ui.cast.raw" }));
 
                 int stunTagId = TagRegistry.Register(StunTagName);
                 var waitSpec = default(AbilityExecSpec);
