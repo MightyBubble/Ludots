@@ -8,9 +8,11 @@ plumbing.
 
 Current implementation references:
 
-- `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`
+- `gitbook/architecture/graph-capability-status.md` section 3.3.2
 - `src/Core/Input/Interaction/`
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
+
+RFC-0065 keeps its decision text. It is not the current input contract.
 
 Any new drag workflow needs data-driven geometry, filter, commit, and order contracts with
 focused acceptance coverage.

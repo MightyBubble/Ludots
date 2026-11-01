@@ -1,16 +1,14 @@
 # Order Continuation And Composite Planning
 
-> SSOT scope: `CoreInputMod` raw order submit seam之后，通用的“复合命令规划 + 完成后续接”基建。  
+> SSOT scope: 触发图提交原子命令之后，通用的“复合命令规划 + 完成后续接”基建。  
 > 本文只覆盖 `move-then-cast` 这类组合命令如何进入现有 GAS order 体系，不覆盖 MassNavigationFlow move runtime、路径可视化 presenter、或 UI queue 面板。
 
 ## 1. 现状缺口
 
 现有仓库已经具备这些可复用能力：
 
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs`
-  - 负责输入到原子 `Order` 的映射。
-- `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs`
-  - 负责把本地输入映射接到权威 `OrderQueue`。
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
+  - 排干触发图写入的 `SubmitCommandIntent` / `SubmitCast`，得到原子 `Order`。
 - `src/Core/Gameplay/GAS/Orders/OrderQueue.cs`
   - 负责跨系统的入队。
 - `src/Core/Gameplay/GAS/Components/OrderBuffer.cs`
@@ -30,10 +28,10 @@
 
 按 `docs/conventions/02_ai_assisted_development.md` §4，本切片显式复用：
 
-- System: `InputOrderMappingSystem`
-  - 继续只产出原子 order，不承接组合行为。
-- Mod seam: `LocalOrderSourceHelper`
-  - 作为 raw submit handler 的唯一接缝。
+- System: `CommandIntentBufferDrainSystem`
+  - 只把图提交的意图排成原子 order，不承接组合行为。
+- Planner: `CompositeOrderPlanner`
+  - 排干时决定超距施法要不要先 `moveTo`。
 - Registry: `AbilityDefinitionRegistry`
   - 读取 `targeting.castRangeCm` 作为通用 cast 几何。
 - Queue / Buffer: `OrderQueue`、`OrderBuffer`、`OrderSubmitter`
@@ -45,13 +43,13 @@
 
 ### 3.1 输入层只做原子命令
 
-`InputOrderMappingSystem` 只负责：
+触发图和 `CommandIntentBufferDrainSystem` 只负责：
 
-- 输入触发
-- 目标采样
-- 构建单个原子 `Order`
+- 读当前交互状态和绑定
+- 采样指针或摇杆（`GraphPointerSampleRuntime`）
+- 提交单个原子意图
 
-它不负责：
+它们不负责：
 
 - move-then-cast
 - 队列重排
@@ -155,9 +153,9 @@
 - `src/Core/Gameplay/GAS/Systems/OrderContinuationSystem.cs`
 - `src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs`
 - `src/Core/Gameplay/GAS/Orders/OrderQueue.cs`
-- `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 - `src/Core/Engine/GameEngine.cs`
-- `src/Tests/GasTests/OrderCompositePlannerTests.cs`
+- `src/Tests/GasTests/Ability/OrderCompositePlannerTests.cs`
 
 ## 7. 后续切片衔接
 

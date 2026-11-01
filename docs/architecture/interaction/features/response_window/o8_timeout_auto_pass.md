@@ -21,7 +21,7 @@
 
 - **Trigger**: 无（时间触发）
 - **TargetType**: `None`
-- **InteractionMode**: 不适用
+- **手势**: 偏好 `pref.aim.cast_mode`
 
 ```json5
 // 配置路径: mods/<yourMod>/ResponseChainListeners/<listener_id>.json

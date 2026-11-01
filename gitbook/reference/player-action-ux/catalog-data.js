@@ -12552,7 +12552,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "松手按蓄力档位结算强化射击"
         }
       ],
-      "ludots": "按住：PressReleaseAimCast / 持续输入快照；引导/举盾靠 ability 通道与标签。",
+      "ludots": "松开确认是 interaction.context.aim.release（graph.aim.release_confirm）。引导和举盾靠 ability 通道与标签。",
       "todos": [
         "按住连发与通道打断的统一手感表仍分散在各 ability"
       ],
@@ -12628,7 +12628,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按住期间按射速持续开火"
         }
       ],
-      "ludots": "按住：PressReleaseAimCast / 持续输入快照；引导/举盾靠 ability 通道与标签。",
+      "ludots": "松开确认是 interaction.context.aim.release（graph.aim.release_confirm）。引导和举盾靠 ability 通道与标签。",
       "todos": [
         "按住连发与通道打断的统一手感表仍分散在各 ability"
       ],
@@ -12740,7 +12740,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "推进引导读条并套用可否移动规则"
         }
       ],
-      "ludots": "按住：PressReleaseAimCast / 持续输入快照；引导/举盾靠 ability 通道与标签。",
+      "ludots": "松开确认是 interaction.context.aim.release（graph.aim.release_confirm）。引导和举盾靠 ability 通道与标签。",
       "todos": [
         "按住连发与通道打断的统一手感表仍分散在各 ability"
       ],

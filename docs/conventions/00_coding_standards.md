@@ -61,7 +61,6 @@ Core 本身也作为 Mod 挂载。所有 gameplay 内容（技能、效果、地
 
 | 问题 | 位置 | 说明 |
 |------|------|------|
-| InputOrderMappingSystem fallback order type key | `InputOrderMappingSystem.cs:544` | Falls back from a suffixed order type key to the base order type key. |
 | ConfigCatalogEntry IdField 隐式 fallback | `ConfigCatalogEntry.cs:14` | `idField` 为空时静默回退为 `"id"`，应显式要求调用方指定 |
 | Editor Bridge MergeMapConfig board fallback | 审计 doc 15 | 找不到 `default` board 时 fallback 到第一个含 DataFile 的 board |
 

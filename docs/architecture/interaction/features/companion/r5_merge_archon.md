@@ -12,14 +12,9 @@
 
 > ⚠️ **Architecture note**: Graph VM 不能执行结构变更（创建/销毁实体）。实体合并必须通过 BuiltinHandler → RuntimeEntitySpawnQueue 实现。
 
-```
-InputOrderMapping:
-  actionId: "MergeUnits"
-  targetType: Entities
-  targetCollectionGate:
-    requiredCount: 2
-    requiredTag: "high_templar"
+目标规则图是 `graph.aim.rule.unit_or_ground`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
 
+```
 Phase Graph (OnCalculate):
   1. TargetCollectionGate: 等待玩家选择 2 个 High Templar
   2. ValidatePrecondition: 两个单位都 HasTag("high_templar")

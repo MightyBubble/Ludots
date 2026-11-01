@@ -19,22 +19,11 @@
 
 - **Trigger**: `PressedThisFrame`
 - **TargetType**: 根据技能需求
-- **InteractionMode**: 根据技能需求
+- **手势**: 偏好 `pref.aim.cast_mode`
 - **ModifierSubmitBehavior**: `QueueOnModifier`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/move_order.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "move_to_point",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "move",
-  "targetType": "Position",
-  "isSkillMapping": false,
-  "modifierSubmitBehavior": "QueueOnModifier",    // Shift 按住时 = Queued
-  "modifierKey": "Shift"                          // 修饰键为 Shift
-}
-```
+排队修饰键是 `QueueModifier`，绑在根资产输入上下文 `Camera.Rig` 的 Shift 上。提交写 `queue: "onQueueModifier"`，按下时的 `MapTrigger.Modifiers` 带上这个修饰。按住时订单 `SubmitMode` 为 `Queued`，由 `OrderSubmitter` 排进队列。
+
 
 **OrderBuffer 行为**：
 ```
@@ -78,9 +67,9 @@ public struct OrderBuffer
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有（ModifierSubmitBehavior 字段） |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | OrderBuffer | `src/Core/Input/Orders/OrderBuffer.cs` | ✅ 已有（QueuedOrders 队列） |
-| InputOrderMappingSystem | `src/Core/Input/Orders/InputOrderMappingSystem.cs` | ✅ 已有（队列提交逻辑） |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 
 ---
 
@@ -88,7 +77,7 @@ public struct OrderBuffer
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| 无 | - | 现有基建可完整表达。`InputOrderMapping.modifierSubmitBehavior = QueueOnModifier` 已支持，`OrderBuffer.QueuedOrders` 已实现队列管理。 |
+| 无 | - | `Camera.Rig` 上的 `QueueModifier` 配合提交图的 `queue: "onQueueModifier"`，`OrderSubmitter` 处理 `SubmitMode.Queued`。 |
 
 ---
 

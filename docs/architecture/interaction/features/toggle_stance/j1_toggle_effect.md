@@ -14,20 +14,10 @@
 
 - **Trigger**: `PressedThisFrame`
 - **TargetType**: `None`
-- **InteractionMode**: `SmartCast`（无需目标，按即生效）
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/ability_toggle.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_Q",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "None",
-  "isSkillMapping": true,
-  "castModeOverride": null
-}
-```
+目标规则图是 `graph.aim.rule.none`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ---
 
@@ -102,7 +92,7 @@ Effect 模板（关闭 — 移除 Buff）：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | AbilityToggleSpec | `src/Core/Gameplay/GAS/AbilityDefinition.cs` | ✅ 已有 |
 | GameplayTagContainer | `src/Core/Gameplay/GAS/Components/GameplayTagContainer.cs` | ✅ 已有 |
 | HasTag (op 33) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |

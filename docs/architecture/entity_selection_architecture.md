@@ -20,8 +20,9 @@ Current architecture:
 Current reference documents:
 
 - `docs/architecture/entity_collection_query_infrastructure.md`
-- `docs/audits/rfc_0065_pr581_workflow_closeout.md`
-- `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`
+- `gitbook/architecture/graph-capability-status.md` section 3.3.2 for aim, control schemes, and the retired input names
+
+The RFC and the closeout audit keep their decision text. They are not the current input contract.
 
 Retirement guard:
 
