@@ -1624,6 +1624,13 @@ namespace Ludots.Core.Presentation.Presenters
                 hasEmitWork = emitCache.CachedVersion != 0;
             }
 
+            // Retained requests skip emit while the transform is unchanged. A world-position binding
+            // moves the overlay without moving that transform, so the presenter stays on the emit path.
+            if (definition.HasWorldPositionBinding)
+            {
+                hasEmitWork = true;
+            }
+
             SyncTickBehaviorMarker<PerfHasEmitWork>(entity, hasEmitWork);
             SyncTickBehaviorMarker<PerfRetainedPresentationRequest>(entity, retainedPresentationRequest);
             SyncTickBehaviorMarker<PerfRetainedPresentationRequestLifecycleTick>(entity, retainedPresentationLifecycleTick);

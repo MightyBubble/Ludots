@@ -92,6 +92,16 @@ public sealed class GraphOpsNodeGalleryPrefAcceptanceTests
         AssertDetail(runtime, "LoadAbilityCastRange");
     }
 
+    [Test]
+    public void LoadAbilityEffectFloatVignette_QuotesTheAuthoredRadius()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadAbilityEffectFloat");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        AssertDetail(runtime, "LoadAbilityEffectFloat");
+    }
+
     private static void AssertDetail(GraphOpsNodeGalleryRuntime runtime, string op)
     {
         foreach (string phrase in runtime.Vignette.AssertDetailContains)

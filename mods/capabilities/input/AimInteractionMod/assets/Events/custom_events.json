@@ -20,5 +20,10 @@
         "key": "Aim.Modifiers"
       }
     ]
+  },
+  {
+    "id": "Aim.Shape.Bind",
+    "scope": "map",
+    "params": []
   }
 ]

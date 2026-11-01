@@ -79,6 +79,18 @@
       "onActivated": [
         "graph.aim.target_first"
       ]
+    },
+    {
+      "id": "interaction.context.aim.shape.line"
+    },
+    {
+      "id": "interaction.context.aim.shape.circle"
+    },
+    {
+      "id": "interaction.context.aim.shape.cone"
+    },
+    {
+      "id": "interaction.context.aim.shape.unit"
     }
   ]
 }

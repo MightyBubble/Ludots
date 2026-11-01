@@ -28,8 +28,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 900,
+        "width": 70
+      }
+    },
     "targeting": {
       "castRangeCm": 900,
       "impactEffect": "Effect.Interaction.DuelBolt"
@@ -95,8 +102,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.ground_only"
+      "graph.aim.rule.ground_only",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
+    },
     "targeting": {
       "castRangeCm": 760,
       "impactEffect": "Effect.Interaction.FireLance"
@@ -259,8 +273,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
+    },
     "targeting": {
       "castRangeCm": 780,
       "impactEffect": "Effect.Interaction.RuneBurst"
@@ -300,8 +321,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 480,
+        "width": 85
+      }
+    },
     "targeting": {
       "castRangeCm": 480,
       "impactEffect": "Effect.Interaction.Challenge"
@@ -367,8 +395,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.ground_only"
+      "graph.aim.rule.ground_only",
+      "graph.aim.shape.cone"
     ],
+    "effectFields": {
+      "graph.aim.shape.cone": {
+        "radius": "targetQuery.radius",
+        "angle": "targetQuery.halfAngle"
+      }
+    },
     "targeting": {
       "castRangeCm": 360,
       "impactEffect": "Effect.Interaction.CleaveCone"
@@ -634,8 +669,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.ground_only"
+      "graph.aim.rule.ground_only",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
+    },
     "targeting": {
       "castRangeCm": 720,
       "impactEffect": "Effect.Interaction.VolleyLine"
@@ -792,8 +834,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": "targetQuery.length",
+        "width": "targetQuery.halfWidth"
+      }
+    },
     "targeting": {
       "castRangeCm": 820,
       "impactEffect": "Effect.Interaction.OrbitalStrike"

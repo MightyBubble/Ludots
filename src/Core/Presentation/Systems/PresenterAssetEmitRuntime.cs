@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -684,10 +685,20 @@ namespace Ludots.Core.Presentation.Systems
             float borderWidth = MathF.Max(
                 ResolveOptionalFloatParam(entity, WellKnownPresenterParamKeys.OverlayBorderWidth, scale.Z),
                 0f);
+            if (definition.HasWorldPositionBinding)
+            {
+                position = ResolveBoundWorldCenter(in state, in definition, position.Y);
+            }
+
+            // Presenter stable id 0 still hashes to a retained overlay id. A world-position sample
+            // taken before the id exists would stick after the center moves, so that sample stays transient.
+            int overlayStableId = definition.HasWorldPositionBinding && state.StableId <= 0
+                ? 0
+                : PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, definitionId);
 
             GroundOverlayItem item = new GroundOverlayItem
             {
-                StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, definitionId),
+                StableId = overlayStableId,
                 Shape = shape,
                 Center = position,
                 Radius = radius,
@@ -701,6 +712,36 @@ namespace Ludots.Core.Presentation.Systems
                 BorderWidth = borderWidth,
             };
             _requests.AddGroundOverlay(state.OwnerEntity, in item, lod);
+        }
+
+        private Vector3 ResolveBoundWorldCenter(in PresenterState state, in PresenterDefinition definition, float heightMeters)
+        {
+            Entity owner = state.OwnerEntity;
+            if (!_world.IsAlive(owner))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definition.Key}' anchor.worldPosition requires a live owner for blackboard keys '{definition.WorldPositionXKey}' and '{definition.WorldPositionYKey}'.");
+            }
+
+            if (!_world.TryGet<BlackboardFloatBuffer>(owner, out BlackboardFloatBuffer buffer))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definition.Key}' anchor.worldPosition requires BlackboardFloatBuffer on owner {owner.Id} for '{definition.WorldPositionXKey}' and '{definition.WorldPositionYKey}'.");
+            }
+
+            if (!buffer.TryGet(definition.WorldPositionXKeyId, out float xCm))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definition.Key}' anchor.worldPosition is missing blackboard key '{definition.WorldPositionXKey}' on owner {owner.Id}.");
+            }
+
+            if (!buffer.TryGet(definition.WorldPositionYKeyId, out float yCm))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{definition.Key}' anchor.worldPosition is missing blackboard key '{definition.WorldPositionYKey}' on owner {owner.Id}.");
+            }
+
+            return WorldPlane2D.LogicCmToVisualMeters(xCm, yCm, heightMeters);
         }
 
         private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)

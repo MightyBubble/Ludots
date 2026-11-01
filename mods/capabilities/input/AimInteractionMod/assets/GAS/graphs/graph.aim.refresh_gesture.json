@@ -88,6 +88,56 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "re_click",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "re_click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "re_release",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "re_release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_code",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.held.code"
+      },
+      {
+        "id": "code_absent",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "code_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "code_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "put_slot",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "load_ability",
+        "op": "LoadSlotAbilityId"
+      },
+      {
+        "id": "dispatch",
+        "op": "DispatchMapEvent",
+        "event": "Aim.Shape.Bind"
       }
     ],
     "controlEdges": [
@@ -169,17 +219,87 @@
       {
         "from": "act_release",
         "fromPort": "next",
-        "to": "c1"
+        "to": "re_click"
       },
       {
         "from": "release_jump",
         "fromPort": "false",
-        "to": "c1"
+        "to": "re_click"
       },
       {
         "from": "c1",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "re_click",
+        "fromPort": "next",
+        "to": "re_click_jump"
+      },
+      {
+        "from": "re_click_jump",
+        "fromPort": "false",
+        "to": "re_release"
+      },
+      {
+        "from": "re_release",
+        "fromPort": "next",
+        "to": "re_release_jump"
+      },
+      {
+        "from": "re_release_jump",
+        "fromPort": "false",
+        "to": "c1"
+      },
+      {
+        "from": "re_click_jump",
+        "fromPort": "true",
+        "to": "read_code"
+      },
+      {
+        "from": "re_release_jump",
+        "fromPort": "true",
+        "to": "read_code"
+      },
+      {
+        "from": "read_code",
+        "fromPort": "next",
+        "to": "code_absent"
+      },
+      {
+        "from": "code_absent",
+        "fromPort": "next",
+        "to": "code_eq"
+      },
+      {
+        "from": "code_eq",
+        "fromPort": "next",
+        "to": "code_jump"
+      },
+      {
+        "from": "code_jump",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "code_jump",
+        "fromPort": "false",
+        "to": "put_slot"
+      },
+      {
+        "from": "put_slot",
+        "fromPort": "next",
+        "to": "load_ability"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "next",
+        "to": "dispatch"
+      },
+      {
+        "from": "dispatch",
+        "fromPort": "next",
+        "to": "c1"
       }
     ],
     "valueEdges": [
@@ -266,6 +386,84 @@
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "re_click",
+        "toPort": "source"
+      },
+      {
+        "from": "re_click",
+        "fromPort": "value",
+        "to": "re_click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "re_release",
+        "toPort": "source"
+      },
+      {
+        "from": "re_release",
+        "fromPort": "value",
+        "to": "re_release_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_code",
+        "toPort": "source"
+      },
+      {
+        "from": "read_code",
+        "fromPort": "value",
+        "to": "code_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "code_absent",
+        "fromPort": "value",
+        "to": "code_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "code_eq",
+        "fromPort": "value",
+        "to": "code_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "read_code",
+        "fromPort": "value",
+        "to": "put_slot",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "put_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "read_code",
+        "fromPort": "value",
+        "to": "load_ability",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_ability",
+        "toPort": "source"
+      },
+      {
+        "from": "load_ability",
+        "fromPort": "value",
+        "to": "dispatch",
+        "toPort": "ability"
       }
     ]
   }

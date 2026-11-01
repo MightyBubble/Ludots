@@ -1,0 +1,168 @@
+[
+  {
+    "id": "graph.aim.shape.unit.sync",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "sync",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "is_unit",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.shape.unit"
+      },
+      {
+        "id": "unit_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_hover",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_hi",
+        "op": "WriteCollection",
+        "collectionKey": "aim.unit.highlight"
+      },
+      {
+        "id": "q_hi",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.unit.highlight"
+      },
+      {
+        "id": "c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "clear_hi",
+        "op": "WriteCollection",
+        "collectionKey": "aim.unit.highlight"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "is_unit"
+      },
+      {
+        "from": "is_unit",
+        "fromPort": "next",
+        "to": "unit_jump"
+      },
+      {
+        "from": "unit_jump",
+        "fromPort": "true",
+        "to": "q_hover"
+      },
+      {
+        "from": "q_hover",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "write_hi"
+      },
+      {
+        "from": "write_hi",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "unit_jump",
+        "fromPort": "false",
+        "to": "q_hi"
+      },
+      {
+        "from": "q_hi",
+        "fromPort": "next",
+        "to": "c2"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "clear_hi"
+      },
+      {
+        "from": "clear_hi",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_unit",
+        "toPort": "source"
+      },
+      {
+        "from": "is_unit",
+        "fromPort": "value",
+        "to": "unit_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hover",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_hi",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hi",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "clear_hi",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

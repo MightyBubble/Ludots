@@ -163,6 +163,11 @@
         "id": "fc_wf",
         "op": "WriteBlackboardFloat",
         "blackboardKey": "Cast.Facing"
+      },
+      {
+        "id": "sync_unit",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.unit.sync"
       }
     ],
     "controlEdges": [
@@ -239,7 +244,7 @@
       {
         "from": "write_hover",
         "fromPort": "next",
-        "to": "c1"
+        "to": "sync_unit"
       },
       {
         "from": "tgt_jump",
@@ -259,7 +264,7 @@
       {
         "from": "clear_hover",
         "fromPort": "next",
-        "to": "c1"
+        "to": "sync_unit"
       },
       {
         "from": "c1",
@@ -345,6 +350,11 @@
         "from": "pick_rel",
         "fromPort": "next",
         "to": "hover_hostile"
+      },
+      {
+        "from": "sync_unit",
+        "fromPort": "next",
+        "to": "c1"
       }
     ],
     "valueEdges": [

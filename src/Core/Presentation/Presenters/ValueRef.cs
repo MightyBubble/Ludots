@@ -71,6 +71,17 @@ namespace Ludots.Core.Presentation.Presenters
     }
 
     /// <summary>
+    /// Scale of a bound float. <see cref="LogicCm"/> uses the same centimeter-to-meter
+    /// scale as a world-position anchor (<see cref="Ludots.Platform.Abstractions.WorldUnits.CmToM"/>).
+    /// Angles and colors stay <see cref="None"/>.
+    /// </summary>
+    public enum ValueUnit : byte
+    {
+        None = 0,
+        LogicCm = 1,
+    }
+
+    /// <summary>
     /// A declarative data source for a single float parameter.
     /// Resolved each frame by PresenterEmitSystem for visible instances.
     /// This ensures parameters are always fresh after off-screen → on-screen transitions.
@@ -100,6 +111,9 @@ namespace Ludots.Core.Presentation.Presenters
         /// remains a hard fail-fast contract error.
         /// </summary>
         public bool Optional;
+
+        /// <summary>Scale applied after the source is read. Constants are already in the consumer's unit.</summary>
+        public ValueUnit Unit;
 
         public static ValueRef FromConstant(float value) => new()
         {
@@ -135,10 +149,11 @@ namespace Ludots.Core.Presentation.Presenters
             Source = ValueSourceKind.FacingDegrees
         };
 
-        public static ValueRef FromOwnerBlackboardFloat(int blackboardKeyId) => new()
+        public static ValueRef FromOwnerBlackboardFloat(int blackboardKeyId, ValueUnit unit = ValueUnit.None) => new()
         {
             Source = ValueSourceKind.OwnerBlackboardFloat,
-            SourceId = blackboardKeyId
+            SourceId = blackboardKeyId,
+            Unit = unit,
         };
 
         public static ValueRef FromPointerScreenX() => new()

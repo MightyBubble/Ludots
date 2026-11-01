@@ -12,8 +12,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
@@ -32,8 +39,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
@@ -52,8 +66,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
@@ -72,8 +93,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
@@ -92,8 +120,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
@@ -112,8 +147,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.hostile",
-      "graph.aim.rule.unit_or_ground"
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
@@ -132,8 +174,15 @@
     },
     "triggerGraphs": [
       "graph.aim.pick.friendly",
-      "graph.aim.rule.unit_only"
+      "graph.aim.rule.unit_only",
+      "graph.aim.shape.line"
     ],
+    "effectFields": {
+      "graph.aim.shape.line": {
+        "length": 800,
+        "width": 90
+      }
+    },
     "targeting": {
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"

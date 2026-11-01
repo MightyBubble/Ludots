@@ -4,8 +4,8 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "body",
         "event": "AimBind",
+        "label": "body",
         "start": "rep"
       }
     ],
@@ -326,6 +326,11 @@
         "id": "write_point_off",
         "op": "WriteBlackboardInt",
         "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "sync_unit",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.shape.unit.sync"
       }
     ],
     "controlEdges": [
@@ -530,11 +535,6 @@
         "to": "write_hover"
       },
       {
-        "from": "write_hover",
-        "fromPort": "next",
-        "to": "halt_ok"
-      },
-      {
         "from": "near_jump",
         "fromPort": "true",
         "to": "write_target"
@@ -553,11 +553,6 @@
         "from": "q_hover",
         "fromPort": "next",
         "to": "clear_hover"
-      },
-      {
-        "from": "clear_hover",
-        "fromPort": "next",
-        "to": "halt_ok"
       },
       {
         "from": "near_jump",
@@ -685,11 +680,6 @@
         "to": "read_tgt"
       },
       {
-        "from": "release_jump",
-        "fromPort": "false",
-        "to": "halt_ok"
-      },
-      {
         "from": "pick_radius",
         "fromPort": "next",
         "to": "assist"
@@ -708,6 +698,26 @@
         "from": "c2",
         "fromPort": "next",
         "to": "member"
+      },
+      {
+        "from": "write_hover",
+        "fromPort": "next",
+        "to": "sync_unit"
+      },
+      {
+        "from": "clear_hover",
+        "fromPort": "next",
+        "to": "sync_unit"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "sync_unit"
+      },
+      {
+        "from": "sync_unit",
+        "fromPort": "next",
+        "to": "halt_ok"
       }
     ],
     "valueEdges": [

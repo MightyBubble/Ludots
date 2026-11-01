@@ -4,8 +4,8 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "lifecycle",
         "event": "AimBind",
+        "label": "lifecycle",
         "start": "rep"
       }
     ],
@@ -73,6 +73,16 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "q_hi",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.unit.highlight"
+      },
+      {
+        "id": "sub_hi",
+        "op": "WriteCollection",
+        "collectionKey": "aim.unit.highlight"
       }
     ],
     "controlEdges": [
@@ -90,11 +100,6 @@
         "from": "q_hov",
         "fromPort": "next",
         "to": "sub_hov"
-      },
-      {
-        "from": "sub_hov",
-        "fromPort": "next",
-        "to": "q_act"
       },
       {
         "from": "q_act",
@@ -145,6 +150,21 @@
         "from": "alive_jump",
         "fromPort": "true",
         "to": "null_get"
+      },
+      {
+        "from": "sub_hov",
+        "fromPort": "next",
+        "to": "q_hi"
+      },
+      {
+        "from": "q_hi",
+        "fromPort": "next",
+        "to": "sub_hi"
+      },
+      {
+        "from": "sub_hi",
+        "fromPort": "next",
+        "to": "q_act"
       }
     ],
     "valueEdges": [
@@ -212,6 +232,18 @@
         "from": "null_get",
         "fromPort": "value",
         "to": "write_null",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hi",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "sub_hi",
         "toPort": "value"
       }
     ]

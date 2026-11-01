@@ -80,6 +80,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<Trigger> _actionTriggerScratch = new(4);
         private readonly List<Trigger> _mountScratch = new(8);
         private readonly List<int> _staleOpenScratch = new(4);
+        private readonly List<Entity> _deferredUnparkSubjects = new(2);
+        private bool _deferUnpark;
         // Window lifecycle marks: per subject the currently-open profiles and
         // their mount regime. Keyed subject-first so a reconcile only touches its own entry —
         // never a whole-window scan (same bounded-scan discipline the retired heartbeat sweep
@@ -225,6 +227,38 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         /// <summary>
+        /// Hold parked-window restores until <see cref="EndInputDispatchPhase"/>.
+        /// Parking stays immediate: a foreground context opened earlier in this phase
+        /// still hides ancestor actions from later actions. The restore waits because
+        /// the action that closes the foreground context is often earlier in the same
+        /// phase than the actions that context had parked.
+        /// </summary>
+        public void BeginInputDispatchPhase()
+        {
+            _deferUnpark = true;
+        }
+
+        /// <summary>
+        /// End the phase opened by <see cref="BeginInputDispatchPhase"/> and restore
+        /// any window that is no longer parked.
+        /// </summary>
+        public void EndInputDispatchPhase()
+        {
+            _deferUnpark = false;
+            int count = _deferredUnparkSubjects.Count;
+            for (int i = 0; i < count; i++)
+            {
+                Entity subject = _deferredUnparkSubjects[i];
+                if (World.IsAlive(subject))
+                {
+                    ReconcileAfterInputAction(subject);
+                }
+            }
+
+            _deferredUnparkSubjects.Clear();
+        }
+
+        /// <summary>
         /// One pass per subject: unmount context mounts that are no longer desired, demote the
         /// interactive mounts of profiles parked by an active foreground descendant, and mount
         /// the missing ones. The desired set is computed once per subject per frame;
@@ -312,6 +346,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 if (state == WindowMountState.Parked && !parked)
                 {
+                    if (_deferUnpark)
+                    {
+                        DeferUnpark(subject);
+                        continue;
+                    }
+
                     // Foreground descendant gone: restore the interactive mounts — the window
                     // never closed, so no Activated slot (park/unpark is a regime change only).
                     SetWindowState(subject, profileId, WindowMountState.Interactive);
@@ -353,6 +393,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// Siblings and the foreground profile itself are never parked — scope coexistence stays
         /// a non-stack set.
         /// </summary>
+        private void DeferUnpark(Entity subject)
+        {
+            for (int i = 0; i < _deferredUnparkSubjects.Count; i++)
+            {
+                if (_deferredUnparkSubjects[i] == subject)
+                {
+                    return;
+                }
+            }
+
+            _deferredUnparkSubjects.Add(subject);
+        }
+
         private void CollectParkedProfiles(Entity subject, List<int> parkedSink)
         {
             parkedSink.Clear();

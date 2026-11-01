@@ -74,7 +74,8 @@
         "sourceId": { "type": ["string", "integer"] },
         "textToken": { "type": "string" },
         "constantValue": { "type": "number" },
-        "attributeId": { "type": ["string", "integer"] }
+        "attributeId": { "type": ["string", "integer"] },
+        "unit": { "enum": ["logicCm"] }
       }
     },
     "child": {
