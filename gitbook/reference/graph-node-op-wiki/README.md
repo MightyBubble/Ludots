@@ -315,6 +315,7 @@
 > 作者语义与全量字段见手册分册 [视野与相机 · infra-03](../mod-editor-prd/config/infra-03-vision-camera.md)。
 
 - [图里切镜头](ActivateVirtualCamera.md) — 开场是俯瞰全场的远景，图点名一台近景机位，镜头拉近到指挥和木桩身边。
+- [回到地图机位](ApplyMapDefaultCamera.md) — 开场已经站在地图写好的远景上，图不点名机位，直接把镜头按这张地图的默认机位和姿态摆回去。
 
 ## 集合写入
 

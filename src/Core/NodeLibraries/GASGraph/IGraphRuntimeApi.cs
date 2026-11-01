@@ -250,6 +250,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Replaces the local camera stack with the current map DefaultCamera and applies its pose at blend zero.
+        /// A collection follow reads <paramref name="rep"/>.
+        /// </summary>
+        void ApplyMapDefaultCamera(Entity rep)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+        }
+
+        /// <summary>
         /// Pushes one engage intent into the per-tick submission buffer (constitution §12);
         /// the drain runs the profile's EQS query around the target and lands per-actor
         /// move-then-cast with the assigned ring point.

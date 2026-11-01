@@ -2171,6 +2171,7 @@ namespace Ludots.Core.Engine
                 inputCollectionKeyDeclarations).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             _gasGraphRuntimeApi.BindVirtualCameras(virtualCameraRegistry, GlobalContext);
+            _gasGraphRuntimeApi.BindMapDefaultCamera(() => CurrentMapSession?.MapConfig?.DefaultCamera);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
             var providerServices = new ProviderServices();
             SetService(CoreServiceKeys.ProviderServices, providerServices);

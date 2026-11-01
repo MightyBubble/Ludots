@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
-using ChampionSkillSandboxMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -32,8 +32,6 @@ namespace ChampionSkillSandboxMod.Systems
 
         private readonly GameEngine _engine;
         private readonly RuntimeEntitySpawnQueue _spawnQueue;
-        private readonly ChampionSkillStressControlState _control;
-        private readonly ChampionSkillStressTelemetry _telemetry;
         private readonly List<Entity> _teamAWarriors = new();
         private readonly List<Entity> _teamAFireMages = new();
         private readonly List<Entity> _teamALaserMages = new();
@@ -45,14 +43,10 @@ namespace ChampionSkillSandboxMod.Systems
 
         public ChampionSkillStressSpawnSystem(
             GameEngine engine,
-            RuntimeEntitySpawnQueue spawnQueue,
-            ChampionSkillStressControlState control,
-            ChampionSkillStressTelemetry telemetry)
+            RuntimeEntitySpawnQueue spawnQueue)
         {
             _engine = engine;
             _spawnQueue = spawnQueue;
-            _control = control;
-            _telemetry = telemetry;
         }
 
         public void Initialize() { }
@@ -64,15 +58,17 @@ namespace ChampionSkillSandboxMod.Systems
         {
             if (!ChampionSkillSandboxIds.IsStressMap(_engine.CurrentMapSession?.MapId.Value))
             {
-                _telemetry.Reset();
                 return;
             }
 
-            _telemetry.IsActive = true;
+            MapVariableStore variables = _engine.CurrentMapSession!.Variables
+                ?? throw new InvalidOperationException("champion_skill_stress requires map variables.");
+            int desiredTeamA = variables.ReadInt("stress.teamA.desired");
+            int desiredTeamB = variables.ReadInt("stress.teamB.desired");
             CollectUnits();
             MaintainTeam(
                 mapId: _engine.CurrentMapSession!.MapId,
-                desiredTotal: _control.DesiredTeamA,
+                desiredTotal: desiredTeamA,
                 warriors: _teamAWarriors,
                 fireMages: _teamAFireMages,
                 laserMages: _teamALaserMages,
@@ -84,7 +80,7 @@ namespace ChampionSkillSandboxMod.Systems
                 teamA: true);
             MaintainTeam(
                 mapId: _engine.CurrentMapSession!.MapId,
-                desiredTotal: _control.DesiredTeamB,
+                desiredTotal: desiredTeamB,
                 warriors: _teamBWarriors,
                 fireMages: _teamBFireMages,
                 laserMages: _teamBLaserMages,
@@ -95,10 +91,12 @@ namespace ChampionSkillSandboxMod.Systems
                 priestTemplateId: "champion_skill_stress_team_b_priest",
                 teamA: false);
 
-            _telemetry.DesiredTeamA = _control.DesiredTeamA;
-            _telemetry.DesiredTeamB = _control.DesiredTeamB;
-            _telemetry.LiveTeamA = _teamAWarriors.Count + _teamAFireMages.Count + _teamALaserMages.Count + _teamAPriests.Count;
-            _telemetry.LiveTeamB = _teamBWarriors.Count + _teamBFireMages.Count + _teamBLaserMages.Count + _teamBPriests.Count;
+            variables.WriteInt(
+                "stress.teamA.live",
+                _teamAWarriors.Count + _teamAFireMages.Count + _teamALaserMages.Count + _teamAPriests.Count);
+            variables.WriteInt(
+                "stress.teamB.live",
+                _teamBWarriors.Count + _teamBFireMages.Count + _teamBLaserMages.Count + _teamBPriests.Count);
         }
 
         private void CollectUnits()

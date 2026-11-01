@@ -11661,6 +11661,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_MinimapApplyWheelZoom/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ApplyMapDefaultCamera",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyMapDefaultCameraEntryMod",
+      "projectPath": "CapabilityStandardGraphOpApplyMapDefaultCameraEntryMod.csproj",
+      "title": "回到地图机位",
+      "summary": "开场已经站在地图写好的远景上，图不点名机位，直接把镜头按这张地图的默认机位和姿态摆回去。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ApplyMapDefaultCamera"
+      ],
+      "binding": "capability_standard_graph_op_ApplyMapDefaultCamera",
+      "preset": "capability_standard_graph_op_ApplyMapDefaultCamera_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ApplyMapDefaultCamera.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ApplyMapDefaultCamera",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ApplyMapDefaultCamera/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ApplyMapDefaultCamera/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

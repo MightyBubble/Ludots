@@ -4733,6 +4733,22 @@
         "InteractionContextInstanceTests.IsContextActive_FailsClosedWhenDeadOrUnknownAndReadsTheMountedSet"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "ApplyMapDefaultCamera",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_ApplyMapDefaultCamera",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.ApplyMapDefaultCameraVignette_RequestsTheMapCamera"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

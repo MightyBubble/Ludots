@@ -35,6 +35,9 @@
         },
         {
           "trigger": "graph.champion.restore_default_pick"
+        },
+        {
+          "trigger": "graph.champion.toolbar"
         }
       ],
       "onActivated": [

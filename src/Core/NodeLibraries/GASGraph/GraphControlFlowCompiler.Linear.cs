@@ -745,6 +745,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ActivateVirtualCamera:
                     RequireNonEmpty(node.Camera, "camera", node, graphId, diagnostics);
                     break;
+                case GraphNodeOp.ApplyMapDefaultCamera:
+                    break;
 
                 case GraphNodeOp.LoadEntityPosValid:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -2154,6 +2156,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.ActivateVirtualCamera:
                     instruction.Imm = RequireSymbol(node.Camera, "camera", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ApplyMapDefaultCamera:
                     break;
 
                 case GraphNodeOp.LoadEntityPosValid:

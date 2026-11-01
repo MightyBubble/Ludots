@@ -2890,6 +2890,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod",
         "projectPath": "CapabilityStandardGraphOpMinimapApplyWheelZoomEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ApplyMapDefaultCamera",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyMapDefaultCameraEntryMod",
+        "projectPath": "CapabilityStandardGraphOpApplyMapDefaultCameraEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

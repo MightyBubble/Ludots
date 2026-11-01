@@ -200,6 +200,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SubmitEngageBatch, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTarget, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SubmitResponseChainOrder, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.ActivateVirtualCamera, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.ApplyMapDefaultCamera, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, worldSideEffect: true);
             // to the caller; GraphReturnWriter must not steal collection writes). Optional source
             // resolves the owner entity (defaults to caster) — map-domain observers writing another
             // rep's collection declare it explicitly.
